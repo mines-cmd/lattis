@@ -1,0 +1,21 @@
+# RPCS3 (PlayStation 3). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and RPCS3's sources, 2026-09.
+id = "rpcs3"
+name = "RPCS3"
+platforms = ["ps3"]
+flatpak = "net.rpcs3.RPCS3"
+executables = ["rpcs3"]
+# Releases are rpcs3-v*_linux64.AppImage.
+appimage = "rpcs3*.AppImage"
+# Runs the game without RPCS3's window, and quits with it.
+command = ["{exe}", "{args}", "--no-gui", "{rom}"]
+# Disc games are folders: <game>/PS3_GAME/USRDIR/EBOOT.BIN. Games installed from PSN
+# packages live inside RPCS3 (dev_hdd0) and aren't found here.
+files = ["eboot.bin"]
+# Its data is in ~/.config/rpcs3, or in a `portable` folder next to the program or its
+# AppImage (Utilities/File.cpp, fs::get_config_dir, 2026-09). dev_hdd0/home holds each
+# user's saves and trophies (not the games installed in dev_hdd0/game), dev_flash the
+# firmware.
+portable = "portable"
+saves = { native = "~/.config/rpcs3/dev_hdd0/home", flatpak = "~/.var/app/net.rpcs3.RPCS3/config/rpcs3/dev_hdd0/home", portable = "portable/dev_hdd0/home" }
+keys = { native = "~/.config/rpcs3/dev_flash", flatpak = "~/.var/app/net.rpcs3.RPCS3/config/rpcs3/dev_flash", portable = "portable/dev_flash" }

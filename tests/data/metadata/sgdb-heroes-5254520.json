@@ -1,0 +1,134 @@
+{
+ "success": true,
+ "page": 0,
+ "total": 6,
+ "limit": 50,
+ "data": [
+  {
+   "id": 36195,
+   "score": 0,
+   "style": "alternate",
+   "width": 1920,
+   "height": 620,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/c5d566ec3c2d5e81193cec5703b0c71c.png?",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/c5d566ec3c2d5e81193cec5703b0c71c.jpg?",
+   "lock": true,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "Supreme Ricardo"
+   }
+  },
+  {
+   "id": 105222,
+   "score": 0,
+   "style": "alternate",
+   "width": 1920,
+   "height": 620,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/a9eeef62298d9240b49fcc66a377fbf3.png",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/a9eeef62298d9240b49fcc66a377fbf3.jpg",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "M3th0D"
+   }
+  },
+  {
+   "id": 131187,
+   "score": 0,
+   "style": "alternate",
+   "width": 3840,
+   "height": 1240,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/f2bffa645459e95c43c4e7a129e834fc.png",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/f2bffa645459e95c43c4e7a129e834fc.jpg",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "SimLaps"
+   }
+  },
+  {
+   "id": 119125,
+   "score": 0,
+   "style": "alternate",
+   "width": 1920,
+   "height": 620,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/f9f2014b28099bd9498ef108b23cc3f6.png",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/f9f2014b28099bd9498ef108b23cc3f6.jpg",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "setogabes"
+   }
+  },
+  {
+   "id": 21445,
+   "score": 0,
+   "style": "alternate",
+   "width": 1920,
+   "height": 620,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/jpeg",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/4e5e71560b8b77d54f765f790ceafcfa.jpg?",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/4e5e71560b8b77d54f765f790ceafcfa.jpg?",
+   "lock": true,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "yst"
+   }
+  },
+  {
+   "id": 115806,
+   "score": 0,
+   "style": "alternate",
+   "width": 3840,
+   "height": 1240,
+   "nsfw": false,
+   "humor": false,
+   "notes": "Hero alternative with perfect logo placement. Simply reduce the logo to the minimum size or use an empty png.\n\nMade with good taste by ZazaMastro.",
+   "mime": "image/jpeg",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/hero/4793aa4bc34b2ef101bc07182d4fcf00.jpg",
+   "thumb": "https://cdn2.steamgriddb.com/hero_thumb/4793aa4bc34b2ef101bc07182d4fcf00.jpg",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "ZazaMastro"
+   }
+  }
+ ]
+}

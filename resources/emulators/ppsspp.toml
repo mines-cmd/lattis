@@ -1,0 +1,15 @@
+# PPSSPP (PSP). Built into the app; change it in library/emulators.toml. Checked
+# against Flathub, the releases and PPSSPP's sources, 2026-09.
+id = "ppsspp"
+name = "PPSSPP"
+platforms = ["psp"]
+flatpak = "org.ppsspp.PPSSPP"
+executables = ["PPSSPPSDL", "ppsspp", "PPSSPPQt"]
+# Releases are PPSSPP-v*-anylinux-x86_64.AppImage.
+appimage = "PPSSPP*.AppImage"
+command = ["{exe}", "{args}", "{rom}"]
+extensions = ["iso", "cso", "chd", "pbp", "elf"]
+# Its memory stick is ~/.config/ppsspp, unless memstick_dir.txt points elsewhere; Linux
+# builds have no portable mode (UI/NativeApp.cpp, NativeInit, 2026-09). PSP/SAVEDATA holds
+# the saves, PSP/PPSSPP_STATE the save states. It needs no keys.
+saves = { native = ["~/.config/ppsspp/PSP/SAVEDATA", "~/.config/ppsspp/PSP/PPSSPP_STATE"], flatpak = ["~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/SAVEDATA", "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/PPSSPP_STATE"] }

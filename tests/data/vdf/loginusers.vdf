@@ -1,0 +1,25 @@
+"users"
+{
+	"76561198000000001"
+	{
+		"AccountName"		"player_one"
+		"PersonaName"		"Player One"
+		"RememberPassword"		"1"
+		"WantsOfflineMode"		"0"
+		"SkipOfflineModeWarning"		"0"
+		"AllowAutoLogin"		"1"
+		"MostRecent"		"1"
+		"Timestamp"		"1790445095"
+	}
+	"76561198000000002"
+	{
+		"AccountName"		"player_two"
+		"PersonaName"		"Player \"Two\""
+		"RememberPassword"		"1"
+		"WantsOfflineMode"		"0"
+		"SkipOfflineModeWarning"		"0"
+		"AllowAutoLogin"		"0"
+		"MostRecent"		"0"
+		"Timestamp"		"1780000000"
+	}
+}

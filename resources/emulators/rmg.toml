@@ -1,0 +1,18 @@
+# Rosalie's Mupen GUI (Nintendo 64). Built into the app; change it in
+# library/emulators.toml. Checked against Flathub and RMG's sources, 2026-09.
+id = "rmg"
+name = "Rosalie's Mupen GUI"
+platforms = ["n64"]
+flatpak = "com.github.Rosalie241.RMG"
+executables = ["RMG"]
+# Releases are RMG-Portable-Linux64-v*.AppImage; Gear Lever renames them to
+# rosalies_mupen_gui.appimage.
+appimage = "RMG*.AppImage;rosalie*.AppImage"
+# Quits RMG when the game stops.
+command = ["{exe}", "{args}", "--quit-after-emulation", "{rom}"]
+extensions = ["z64", "n64", "v64"]
+# Its data is in ~/.local/share/RMG (Source/RMG-Core/Directories.cpp, 2026-09). Its
+# portable folders are relative to the working folder, not the program, and the launcher
+# starts emulators in the home folder, so there's no portable entry. Save/Game holds the
+# saves, Save/State the save states. It needs no keys.
+saves = { native = ["~/.local/share/RMG/Save/Game", "~/.local/share/RMG/Save/State"], flatpak = ["~/.var/app/com.github.Rosalie241.RMG/data/RMG/Save/Game", "~/.var/app/com.github.Rosalie241.RMG/data/RMG/Save/State"] }

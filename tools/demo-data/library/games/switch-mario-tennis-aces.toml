@@ -1,0 +1,11 @@
+title = "Mario Tennis Aces"
+platform = "switch"
+year = 2018
+description = """
+Tennis with special shots, zone speed and a racket that can break."""
+rating = 3.5
+tags = ["Party"]
+favorite = true
+play_minutes = 804
+last_played = 2026-09-23T19:56:00-03:00
+added = 2026-01-20

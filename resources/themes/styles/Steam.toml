@@ -1,0 +1,83 @@
+# Built-in Steam style: inspired by the Steam client: square-ish, no borders, "PLAY" labels.
+description = "Flat and borderless, like the Steam client"
+
+[radius]
+large = 4
+medium = 2
+small = 0
+tiny = 0
+
+[rail]
+logo_radius = 100
+container = false
+show_logo = true
+logo_mark_size = 50
+button_radius = 4
+
+[search]
+border_width = 0
+radius = 4
+
+[icon_button]
+border_width = 0
+radius = 4
+
+[launch_button]
+gradient_direction = "right"
+label = "▶  PLAY"
+bold = false
+running_label = "X  STOP"
+install_label = "⬇  INSTALL"
+uninstalled_label = "NOT INSTALLED"
+missing_rom_label = "NOT FOUND"
+missing_game_label = "NOT FOUND"
+update_label = "⟲ UPDATE"
+paused_label = "⟲ UPDATE"
+updating_label = "⏸ PAUSE"
+installing_label = "⏸ PAUSE"
+hover_brightness = 1.11
+
+[info_panel]
+border_width = 0
+
+[filters]
+chip_radius = 2
+border_width = 0
+
+[tags]
+radius = 4
+
+[toast]
+border_width = 2
+
+[game_editor]
+border_width = 0
+lookup_radius = 2
+progress_radius = 2
+
+[settings_window]
+window_border_width = 0
+card_border_width = 0
+sidebar_border_width = 0
+input_border_width = 0
+key_chip_border_width = 0
+controls_margin = 10
+sidebar_item_radius = 2
+source_tag_radius = 2
+input_radius = 2
+checkbox_radius = 2
+key_chip_radius = 2
+
+[notice]
+border_width = 2
+radius = 4
+
+[backdrop]
+area = "details"
+
+[window_controls]
+margin = 2
+radius = 4
+
+[details]
+padding = 0

@@ -1,0 +1,448 @@
+# The UI (`qml/`)
+
+The `qml/` folder is the entire visible application. It reads the library, launch state, theme and settings from C++ singletons, and delegates every write back through those singletons — no QML file touches a file or spawns a process directly. The C++ side is documented per folder in `docs/code/`; this doc covers what the QML does with it.
+
+## Contents
+
+- [Windows](#windows)
+- [Data flow](#data-flow)
+- [Named actions](#named-actions)
+- [Lazy loading](#lazy-loading)
+- [Main window layout](#main-window-layout)
+- [Play history and statistics](#play-history-and-statistics)
+- [The game editor](#the-game-editor)
+- [Metadata lookups](#metadata-lookups)
+- [Setup guide](#setup-guide)
+- [Settings window](#settings-window)
+- [Components](#components)
+- [Files](#files)
+- [Reference](#reference)
+
+## Windows
+
+There are three windows:
+
+- **`Main.qml`** is the `ApplicationWindow` that opens at startup. It holds the rail, the game list, the details view and the setup guide overlay. The game editor opens inside it as a dialog.
+- **`SettingsWindow.qml`** is a separate `ApplicationWindow` created the first time Settings is opened and kept alive afterwards. It is non-modal so the main window updates live while a theme is edited.
+- **`BulkLookup.qml`** ("Look up missing info") is its own `ApplicationWindow` with its own window frame and controls, created the first time it opens.
+
+All three windows are frameless (`Qt.FramelessWindowHint`): the system title bar is replaced by `WindowControls` (the three buttons, top-right) and `WindowFrame` (resize edges). Each window moves only by dragging its title strip (the strip above the hero, the page description in settings), never empty space elsewhere.
+
+## Data flow
+
+QML reads the library and app state through C++ singletons exposed to every file as global names:
+
+| Singleton | What it gives QML |
+|---|---|
+| `Library` | The game list model, platform and tag lists, search/filter state, emulator choices, write operations |
+| `GameRunner` | Running games, launch, the Steam-running flag |
+| `Theme` | Every visual value, the active theme, live editing |
+| `Actions` | Named action keys, triggering actions, the model for the Keyboard page |
+| `Metadata` | Lookup progress, art downloads, `discardDownloads()` |
+| `Backups` | Last backups, backup and restore jobs |
+| `General` | Startup settings (fullscreen, login), session length, Reduce motion |
+
+QML never stores data from these in its own properties except as a last resort (a pending value while a save is in flight, or a value being animated). The source of truth is always the C++ side.
+
+## Named actions
+
+Keyboard shortcuts and menu entries go through **named actions** rather than hard-coded `Shortcut` or `Keys` handlers. Every action is declared in `actionschema.cpp` with a group, a title, and default keys; `[shortcuts]` in `settings.toml` overrides them. `Actions.trigger(name)` signals `Actions.triggered(name)`, which each window catches in its `run(name)` function.
+
+`ActionShortcuts` (a thin `Item`) creates one `Shortcut` per action a window handles. Its `scope` is `"main"` or `"settings"` — actions that work in both windows are included in either — and its optional `only` list restricts which actions fire while the setup guide covers the window.
+
+`run(name)` in Main.qml handles app-wide and list/detail actions. `runOn(name, game)` is the same for "selected game" actions: both the selected game and a game's right-click menu arrive there, so the logic lives in one place. SettingsWindow has its own `run(name)`.
+
+`Actions.recording` turns shortcuts off while the Keyboard page waits for a key press; the pressed key reaches the recording row's `Keys` handler instead.
+
+## Lazy loading
+
+Startup must reach the first frame quickly (the target is 300 ms), so secondary views are loaded on demand via `Loader`. Nothing is created until it's first needed:
+
+- The game editor, detailed lookup, art browser, game menu, app menu, about dialog, filter panel, Steam prompts, locate picker, setup guide, play history popup and statistics page are all `Loader { active: false }` in Main.qml, activated the first time their function is called.
+- SettingsWindow is created the first time `openSettings()` runs, and BulkLookup the first time `openBulkLookup()` runs, each with `createWindow(url)` (`Qt.createComponent()` and `createObject()`). Nothing keeps the `Component`, so Qt can drop the compiled file later.
+- The setup guide's step pages are loaded on first visit and kept, so Back returns to what was entered.
+- Inside the settings window, each category page is its own file, loaded when the category is first selected (a `PageLoader`, whose `item` is the page) and kept after that, so it keeps its scroll position and fields. The page you leave slides out as the new one slides into its place (see [Settings window](#settings-window)).
+- The backdrop's `SetupBackdrop` loads with the setup guide, not at startup.
+
+**A `Loader` names its file, not its type.** Write `source: "views/GameEditor.qml"`, never `sourceComponent: GameEditor { … }`: an inline type is resolved when the file containing the `Loader` loads, so every file the view uses loads before the first frame even though the view is closed (102 of the 134 files did, until this was fixed). What the inline type used to set moves out of it:
+
+- signal handlers go in a `Connections { target: loader.item }`;
+- one-off values go in `onLoaded` or `setSource(url, { … })`;
+- bindings that must stay live go in a `Binding { target: loader.item; … }`.
+
+Loading stays synchronous, so a function can use `loader.item` right after setting `active = true`. A view that only a hidden menu needs gets its own file for the same reason (`LogoMenu.qml`, which the hero's inline menu used to be).
+
+What is loaded immediately: Rail, GameList, GameDetails, Hero, and Backdrop — everything visible on the first frame.
+
+## Main window layout
+
+The main window is three columns side by side:
+
+```
+┌──────┬─────────────┬───────────────────┐
+│ Rail │  Game list  │   Game details    │
+│      │  (search,   │  (hero, actions,  │
+│      │   rows)     │   info, tags)     │
+└──────┴─────────────┴───────────────────┘
+```
+
+**Rail** (`Rail.qml`) is the left icon strip: the logo (with its app menu), an "All games" button, one button per platform, and add/settings at the bottom; the platform buttons sit in a `Flickable` between them, scrolled by the wheel only (a press-and-drag on a button reorders it), scrolled to keep the selected platform in view (`showSelected()`), and scrolled by a drag held near its top or bottom edge (`scrollDuringDrag()`). All of these jump rather than ease, so a held key or the wheel never lags. `Library.platforms` leaves out platforms with `in_rail = false`. Right-clicking a platform button (`RailButton.hasMenu`, `menuRequested`) opens `PlatformMenu` right of the rail, lazily loaded, its top level with the button's like the logo's `AppMenu`; right-clicking another button while it shows closes it and opens that one's once it is gone (`platformMenu.next`), as reopening a closing popup only moves it; the button stays highlighted while it shows (`menuOpen`). "Edit platform" opens Settings → Platforms with its row expanded (`editPlatform`), and "Hide from the rail" writes `in_rail = false`, clears the platform filter if it was that platform, and hands the toast an Undo (`undoable`). Right-clicking the rail's empty space (a `MouseArea` under the buttons that takes only the right button, so the buttons' own presses and the platform menus come first) opens `RailMenu` the same way, its top level with the press: a check row per platform with games (`CheckRow`, not a `MenuItem`, so a click leaves the menu open; the rows are counted, not bound to the list, so a toggle doesn't rebuild them) (`Library.platformSettings`) that flips `in_rail` (hiding the selected platform clears the filter), then the bottom buttons, which flip `General.railHiddenButtons`. The `LATTIS_RAIL_MENU=1` hook opens it. It draws as a floating rounded panel or a plain full-height bar based on `rail.container`. Clicking the logo opens `AppMenu`; `app_menu` / F10 does the same. The menu's Hide rail / Show rail entry runs `toggle_rail`, which flips `General.railHidden`. The rail keeps its slot in `Main.qml`'s `RowLayout`: `shown` (eased at `motion.normal`, instant at startup and with Reduce motion) fades everything but the logo (the "All games" button sets `easeOpacity: false` so it follows `shown` instead of easing it a second time and lagging; a spacer holds it at the top once the platforms have faded out of the layout), and while hidden the buttons and the right-click area are disabled and a drag in progress is cancelled. The logo moves right by half of `list.padding` so its gaps match. A platform button can be dragged to a new place in the rail: `RailButton` (with `draggable`) arms after the press has been held still for `rail.drag_hold` ms, then reports the pointer (`dragStarted`, `dragMoved`, `dragEnded(dropped)`), and the Rail keeps the drag (`dragFrom`, `dragTo`, `dragDy`): the others slide aside (`shiftOf()`), a line shows the slot, and a drop calls `Library.movePlatformBefore(id, <the platform now after it>)`, since the rail lists only platforms with games and a step count wouldn't mean the same in the file. Esc, a drop outside the panel or a reload of `Library.platforms` ends it. `Settings → Platforms` has the same with a handle on each defined row (`PlatformRow.handle`; `PlatformsPage` keeps `dragFrom`/`dragTo`, only while the search is empty); a drop there is written inside `SettingsWindow.change()`, so its Undo shows in that window. The `LATTIS_DRAG_PLATFORM=<id>:<pixels>` hook shows either mid-drag. The bottom buttons (`bottomDefs`, shown in `General.railButtonOrder` without the hidden ones) drag the same way among themselves, with the drag state under `bottom*` names; a drop calls `General.setRailButtonOrder()`, keeping the hidden buttons' places.
+
+**GameList** (`GameList.qml`) shows the search box and the scrollable list of games and group headers. Typing in the list continues the search; arrow keys and Enter still reach list actions while typing. The filter panel (`FilterPanel`) opens beside the filter button, not modally. The list part (rows, scrollbar, highlight, empty label, selection bar and the list's background) reaches `reach` left of where the layout puts it, over the rail's slot, and starts `extraTop` lower; the search row and chips don't move. The chip row sits in a container (`chipRow`) that takes its space the moment the first filter turns on, and gives it up in two steps when the last turns off: the chip pops out, then the list eases up (`chipRow.space`, in and out, at `motion.normal`). `Main.qml` binds both to `General.railHidden` (`list.rail_hidden_margin`, `rail_hidden_top_margin` while hidden, `rail_margin`, `rail_top_margin` while shown) and they ease. The rows fade out at the top and bottom edges while there is more to scroll to (`list.edge_fade`). While the rail is hidden the platform shows as the first filter chip (× returns to All), lights the filter button's badge and is cleared by `clear_filters`; `Library.filtersActive` and `clearFilters()` don't count it, so nothing changes with the rail shown. Printable characters typed anywhere in the list start or extend the search. Escape in the list clears the selection first when several games are selected, then the search; Escape in the search box collapses back to the list. While Up or Down (`previous_game`, `next_game`) repeats from a held key, the selection moves but `currentGame`, so the details, stays put (`detailsHeld`) and catches up on the key's release, which reaches the list's `Keys.onReleased` (a `Shortcut` takes only presses; repeats are auto-repeat release and press pairs). Losing focus counts as a release. A game added to or removed from the list fades and slides (`list.change_slide`) while the rows after it move over (`add`, `remove` and `displaced` transitions). A group collapsing or expanding (announced by the model as `Library.groupChange` just before it sends the rows: the first row and the signed count, empty again after half a second) folds instead, over `list.fold_duration` for a block as tall as the list and less for a shorter one (by the square root of the ratio, at least `motion.normal`), so a group of one game doesn't crawl: everything after the group's header moves as one block, the group's rows sliding up under the header (collapsing) or down out from under it (expanding), with the rows below attached. The list's transitions stand down for it; every row after the header follows one shared offset, `foldShift`, so rows the list creates while it runs land in the block too. Removed rows are held by a remove transition that only waits out the fold (`foldRemove`), not by `ListView.delayRemove`, which keeps the rows after a delayed row below it and so opened a gap the height of the group. The block moves at most the height left below the header, rounded up to whole rows, so a group of hundreds folds as quickly as one of three; rows of a collapsing group that were off screen never show, and a row fades out over the half row before its middle, where its text is, reaches the header's bottom edge (and in the same way), so it never shows over the header's title, the header having no background. A search, filter or sort resets the model instead and animates nothing.
+
+GameList keeps a **multi-selection**: `selection` (a map of ids; empty with fewer than two games), `selectionCount`, and `anchorId` (the last plain or Ctrl click). `selectedIds()` is the selection, or the current game alone. Ctrl+click toggles, Shift+click selects the range between the anchor and the click over the visible game rows, and `extend(step)` is Shift+Up/Down (`extend_previous`, `extend_next`; `select_all`; `clear_selection` has no default key, as Escape is handled in the list's key handler so a global Escape shortcut doesn't take it from dialogs and the search box). `syncSelection()` drops ids that left the list after a reset, and a change of search, filters or platform clears the selection. With two or more selected, a bar ("N selected", × to clear) takes the place of the filtered-count line (`list.selection_bar_*`).
+
+**GameMenu** has a selection mode: `games` holds the selected games when the menu was opened on one of them (`multi`), and `game` is the one clicked. It then shows only Favorites, Tags, Emulator and Hide/Unhide, acting through `Library.setGamesValue` and `Library.retagGames`, which make one Undo. Tags rows are plain items rather than `MenuItem`s, since those close the menu; each shows on, off or mixed (`tagStates`) and a pick adds to every game unless all have it. "New tag" emits `newTagRequested(ids)`, which Main opens as **NewTagPrompt** (a name field; lazy). Emulator is enabled when every game is a ROM game of one platform; otherwise its title says why, as a disabled entry gets no hover for a tooltip. `LATTIS_SELECT_GAMES` and `LATTIS_GAME_MENU` show them.
+
+**GameDetails** (`GameDetails.qml`) shows the hero, the action row (Launch and stat chips), the description with tags, and the info panel (`InfoPanel`). It goes **compact** when the window is narrower than `details.compact_width`: the stat chips move below Launch, the info panel drops below the description, and the right margin widens. The hero follows the selected game after a short delay so holding an arrow key doesn't decode every image on the way; the rest switches at once, except the description and tags (`textColumn`, a `TextBlock` showing `textGame`), which follow the hero's shown game (`shownHeroGame`) and move with its logo, started by the hero's own switch: as soon as another game is picked, the old content (the description and Show more, and the Tags section unless both games have tags) rises `hero.switch_rise` px away and fades out over `motion.fast` (`textExit`, its own animation on the style's ease-out: on the hero's curve, which reaches the logo's start in a frame or two, it was a cut), while the hero waits and loads; then the new content rises the same distance into place over `motion.normal` (`textIn`, its own animation, started when the hero's new layer begins to arrive, so it settles before the logo does). A game picked while a switch is still in flight (`riseOn` off) only fades: no rise, so holding an arrow key doesn't make the text wobble. One after the other, so they never overlap: drawn over each other, two texts read as doubled. The Description heading, always in the same place, stays on screen between them, so the moment without content doesn't blink; it fades with the content only when one game has no description (`TextBlock.contentOpacity`, `contentShift`, `descriptionHeadingOpacity`). When both games have tags, the Tags section stays through the exit instead (`tagsStay`) and, as the new content comes in, morphs (`tagsMorphing`): the heading glides from its old place to its new one with the new text (`tagsShift`), and the live chips hide (`chipsHidden`) under a Repeater of morph chips over the body, each going from the old chip in its slot to the new one (place, width and color, from `leavingText`'s and `textColumn`'s `tagRepeater`), its name crossfading in place: the old fades out as the new fades in, the two opacities always adding up to 1 (faded one after the other, or with the old gone early, there was a moment with no name, which read as blinking). A chip without a partner moves with the heading, under the others, and fades out in the first half or in during the second. When only one game has tags, the section goes with the content. When the hero switches before the exit has ended, `leavingText`, a second `TextBlock` holding the old game's text, maximum lines and Show more state, finishes it with its own fade (`leavingExit`), so a game picked while the new text is still rising, which restarts `textExit` from where the text is, doesn't bring the old text back. Both are real text; a snapshot of the old read as blurry. So the text waits for the hero (its load delay, and its art up to `hero.switch_timeout`), and while the hero settles, a game picked in the meantime waits with it. Each part can switch without motion on its own: `details.animate_description` (off by default: the description and Show more swap when `textGame` does; on, they fade and rise), `details.animate_tags` (off: no fade, rise, heading glide or chip morph) and, in the hero, `hero.animate_art` (no fade or zoom) and `hero.animate_logo` (no fade-in or rise). For a game picked within `details.rapid_switch` ms of the previous pick (holding or tapping an arrow key) everything skips it: the text takes the selected game at once (`textGame = game`, no exit, rise or fade), and the hero does the same (`Hero.instant`: the new art and logo replace the old with no fade, zoom or rise, still after the art has loaded), and `onShownHeroGameChanged` ignores the hero catching up with an earlier game until it reaches the selection, so the text never goes back. A refresh of the same game and the first game switch without motion. The content's width is computed from the window's width in one expression, with `compactAt()` picking the right margin, rather than from `marginRight`: `compact` starts true while the width is 0, and a binding on `marginRight` would see that old value for a moment, so the hero loaded its first game at the wrong width and then again at the right one.
+
+**Hero** (`Hero.qml`) shows the hero art and logo (or the game's title on a gradient when there's neither). The logo can be adjusted by right-clicking it; its scale, anchor and offsets are saved to the game file (`logo_scale`, `logo_position`, `logo_offset_x`, `logo_offset_y`). Each layer puts the logo's box at its anchor's spot (one of nine: the corners, edges and middle, at `hero.logo_margin` from the sides) plus the offset times the hero's height, and moves it back when the drawn logo (`target`, from its painted size, not the box) would leave the hero; the window shrinking clamps on display without changing the saved offset. What darkens the art behind the logo is the game's own choice, else the theme's: `logo_scrim` is `gradient`, `shadow` or `none`, and when it isn't set the theme's `hero.scrim` (on or off) and `hero.scrim_style` decide, so a game's choice wins over the theme both ways (a gradient shows with `hero.scrim` off, `none` hides it with it on). A gradient (`hero.scrim_color`) goes on the side `logo_scrim_side` names, else `hero.scrim_side`: `top` and `bottom` cover the logo and the margin past it when the logo is on that half (never under 55% of the height), `left` and `right` the same across the width (never under 35%), `full` is a flat dim over the whole hero, and `auto` is the logo's own top or bottom (the whole height, dark at the bottom, for a centered logo). A side away from the logo is the user's choice and isn't corrected. A shadow follows the logo's outline (the title's, without a logo image): a padded `ShaderEffectSource` copy of the logo's box through `MultiEffect`'s shadow in `hero.shadow_color`, `hero.shadow_size` wide and `hero.shadow_offset` down, drawn behind the logo. It is made by a `Loader` only while a layer's style is the shadow, and padded by hand because `MultiEffect`'s own padding doesn't reach outside a `Loader`'s item; inside that component `layer` is `Item.layer`, not the delegate, so the strength is passed in through the `Loader`. `logo_scrim_strength` (0 to 2) multiplies the alpha of the gradient's or shadow's color, capped at fully opaque; 0 shows nothing. Each layer works out its own game's style, side and strength, so a switch doesn't jump. With `logoOnly` neither is drawn, and the logo's offset is ignored. With `logoOnly` the offset is ignored and only the anchor's side applies. `pendingScale`, `pendingPosition`, `pendingOffsetX/Y` and `pendingScrimStyle`, `pendingScrimSide` and `pendingScrimStrength` (`"theme"` for the theme's own, `-1` for none) show a choice until the game comes back with it saved; the strength is set live while the menu's slider moves and saved when it's let go. With `logoOnly` (very narrow details), only the logo fills the item — no art behind it. Like the backdrop, it has two layers: a new game loads into the hidden one and fades in (`hero.fade_duration`) once its art and logo have loaded, so the placeholder and the title never flash between games. As it fades in, the art settles from `hero.switch_zoom` to full size and the logo or title rises `hero.switch_rise` pixels and fades in a little later. The old layer stays opaque until the new one has covered it, so while that settles a game picked in the meantime waits, and only the latest is loaded after (holding an arrow key never shows the window background through the art). If the art takes longer than `hero.switch_timeout`, it switches anyway. A refresh of the same game (saving the logo's scale) updates the visible layer in place. Whether the art is the same is decided by `heroArt`, the original, not by `heroUrl`, which becomes the display copy when one is made: the copy arriving for the game on screen keeps the URL it shows until the user leaves that game, with no reload or motion. Before the first game arrives the empty layer shows nothing and doesn't settle, so the first game loads at once. The logo decodes at the hero's decode width whatever its scale: Qt's image reader runs one read at a time, newest first, and can't abort one that has started, so a size that depends on the game made a switch decode the logo twice (the old size, started as soon as the source changed, then the new). `shownGame` is the visible layer's game: it changes when a switch completes, after the art and logo are ready. `logoIn` is its logo's arrival (starting at `logoStart`), so the description and tags in `GameDetails` move with the logo.
+
+**Backdrop** (`Backdrop.qml`) blurs the hero art behind the window. It decodes tiny (`backdrop.decode_size`) and blurs on the GPU; once rendered, each layer is static and costs nothing at idle. Two layers crossfade between games. The fade into the background is a small fragment shader (`shaders/backdropfade.frag`): a smoothstep by default (`backdrop.fade_curve`), since a linear ramp ends with a slope kink that shows as a line over bright art, plus about one 8-bit step of static noise (`backdrop.dither`) so the last few levels near black don't band on high-contrast panels. It follows the hero's shown game (`GameDetails.shownHeroGame`), not the selection, so its read, which costs nearly as much as the hero's own decode, queues behind the hero's and never holds up a switch; it still reads when the backdrop is only hidden by the stats page. With `backdrop.enabled` off `Main.qml` gives it no game, so it reads nothing. When a switch times out (`hero.switch_timeout`) the shown game changes while the hero's art is still loading, so the Backdrop's read can run ahead of the hero's; that only happens with art slow enough to time out.
+
+The window has no system title bar, so the strip above the hero in `GameDetails` is the only area that moves it. It stops short of the window controls (`dragReserve`), so a click just beside a button doesn't start a drag.
+
+## Play history and statistics
+
+Two views show the play history the library keeps (see [library.md](library.md#play-history)).
+
+**LogoAdjuster** (`LogoAdjuster.qml`) is Adjust logo, loaded by `Hero.startAdjust()` the first time it's used (`hero` is its Hero). One mouse area decides on press: the corner handle resizes (the logo grows away from its anchor, up to `maxScale`), the logo moves, anywhere else finishes on release. While moving, the logo's edges snap to the margin lines and its middle to the center lines within `hero.snap_distance` pixels, with a guide (`hero.guide_color`, `hero.guide_width`) for each; Shift moves freely. The offsets are `(drawn position - the anchor's spot) / hero height`, the spot being where the logo is with no offset. On drop (and, debounced 400 ms, after arrow nudges: 1 px, Shift 10) `commit()` re-anchors to the third of the hero holding the logo's middle, recomputes the offsets from that spot so the logo doesn't move, and saves anchor, offsets and, after a resize, scale in one `Library.saveGame()` call. Enter finishes, and so does a click anywhere in `GameDetails` off the hero (`Hero.finishAdjust()`, through a mouse area over the page that takes only that click); Esc puts back the scale, anchor and offsets the mode opened with. `busy` (dragging or a nudge waiting) keeps the Hero from clearing its pending values when an earlier save arrives.
+
+**`PlayHistoryPopup`** is one game's history: its totals, then its sessions, newest first. The play time chip (`GameDetails.historyRequested`) and the game menu's "Play history" (the `play_history` action) open it, through `window.openPlayHistory(game)`. It calls `Library.historyFor(id)` each time it opens. A session's right-click menu deletes it with `Library.deleteSession()`, and the toast's Undo (its `link`) calls `restoreSession()`. Ctrl+click and Shift+click select sessions (`selection`, keyed by the session's `end`, as the game list does for games); a Delete selected button over the Close row's free space deletes them all with one Undo (`deleteSessions`), and Esc clears the selection before it closes the popup. Selected rows use `play_history.row_selected`. When the popup closes while an Undo is still showing, `undoHandedOver` passes the Undo to the main window's toast for the rest of its time. The `LATTIS_PLAY_HISTORY=<game id>` hook opens it for a game.
+
+**`StatsPage`** is the Play statistics page. It covers the rail, the list and the details; only the toolbar, the toast and the window controls stay above it. `Main.qml` loads it on first use (`window.setStatsOpen()`), and the `play_statistics` action (F9, the rail's bar chart button, the toolbar's button) toggles it. It has two modes, `mode` = `"month"` or `"year"`, switched by the Month | Year toggle in the header (`setMode()`). It asks for one period with `Library.monthStats(year, month)` or `Library.yearStats(year)` and shows the answer when `monthStatsReady` or `yearStatsReady` delivers it, ignoring an answer for a period or mode it has left, so stepping quickly never shows a stale one. Until the answer arrives the old period stays on screen: the layout follows the shape of `stats` (`yearShape`), not `mode`, so switching doesn't collapse and re-grow the page. Going from Year back to Month keeps `monthYear`, the year the month belonged to, and falls back to that year's last pickable month when the year changed. `start()` always opens on the current month. Left and Right step the month, or the year in year mode (`step()`, bounded by `canPrevious` and `canNext`), `pick(y, m)` and `pickYear(y)` jump, Esc and "Back to games" emit `closeRequested`, and a click on a Most played row emits `gameRequested(id)`, which selects the game and leaves the page. Hidden games are in the numbers only when the library's filters show them. In windows narrower than `stats.compact_width` the columns stack.
+
+The charts are plain QML (rectangles in `Repeater`s), with every color and size from the `[stats]` theme section. The page's own pieces (`Card`, `Highlight`, `ChromeButton`, `Share`…) are inline components in the file. The year view's Hours by month and Hours by weekday cards are `Component`s in `Loader`s, made the first time the year view is used. Hours by month takes its chart height from the day chart's card, so the cards below don't move when the mode changes.
+
+The page fades in and out over the views (`Main.qml` keeps them drawn until it covers them, `statsCovering`) as one layer, so the cards don't fade separately over the background, its content rising `stats.page_offset` px as it opens and sinking back as it closes (`leave()`). The fade-out waits until the content has mostly sunk; a mirrored close (the reversed curve) would save the movement for when the page has all but faded, where it can't be seen. The bars grow from the baseline when the page opens and move to the new hours when the period changes: the day, week, month, weekday and strip charts repeat a fixed count of columns (31, 6, 12, 7, the strip's length) and read their period's entry by index, since an array model would rebuild the columns on every change and there would be nothing to animate from. Each column animates its share of the chart's height, not its height, so a resize doesn't animate. `start()` sets `resetting` while it clears `stats`, so the bars drop to nothing at once and every open grows them again. A new period lands as soon as it arrives (`land()`). Text that changes crossfades: a `FadeLabel` keeps two labels that take turns (`Turns`), the new text fading in on the hidden one as the old fades out in place, so there's never a moment with neither; the row icons do the same. The labels read `shownYear`/`shownMonth`, the period on screen, not the picked one, so they change once, with the data. `fading` turns the crossfade off for the first period after opening, which has nothing to fade from. The tile values count to the new numbers instead (`tileValue()`). The rest is kept rather than rebuilt, in fixed slots: the day columns, day labels and week lines narrow or widen as the month length eases (`dayCount`), the week lines slide and stretch to their new days, the Hours by week columns follow the week count, and the scale's gridlines and labels (`GridLines`, `TickLabels`) move to the new ticks. The platform and Most played rows are `ListSlot`s, so their bars glide to the new shares and extra rows fold in and out; Hours by platform's slot count only grows (`platformSlots`), since a new count rebuilds the rows. `settled` turns this off for a period with nothing to move from, the first after opening or the other view's cards coming back, so the layout lands in place there. The chart tips fade, and glide on a spring from column to column; `tipIndex` keeps a tip's column while it fades out.
+
+Switching between month and year swaps what differs: Hours by day for Hours by month, Hours by week for Hours by weekday, and the month strip for the year strip. Each view's own cards read the last period that landed in that view (`monthStats`, `yearStats`), not `stats`, so the view on its way out keeps its period while it fades. The two views crossfade (`yearness`, eased, gives `monthPresence` and `yearPresence`), and their bars are scaled by their view's presence as well as faded, so the outgoing bars sink to the baseline as the incoming ones grow instead of two full charts standing over each other. Fading one view out before the other in would leave the card empty halfway, which shows as a flash. Each pair of cards sits on one `CardFrame` that stays, its two `Card`s unframed (`framed: false`), since two crossfading frames would let the background show through halfway. The incoming view starts from nothing, as on opening: `land()` clears its copy under `resetting` first, so its bars grow from the baseline and the rest lands in place. The cards both views share (the tiles, Hours by platform, Most played, the highlights) move to the new period as they do between months. The title button keeps one width for months and years, so switching doesn't move the arrows; a longer month name glides to its width.
+
+**`StatsPeriodPicker`** (`views/StatsPeriodPicker.qml`) is the popup under the title, loaded on first use. In `"month"` mode it is a grid of months with the grid year's arrows (changing them doesn't change the picked month) and an "All of <year>" link (`yearViewRequested`); in `"year"` mode a list of years with their hours (`yearPicked`). `StatsPage` sets `mode`, `pickedYear/Month`, `firstYear/Month`, `todayYear/Month` and `history` (the stats' `historyMonths`) before `show()`. It takes focus; arrows, Page Up/Down, Enter and Esc work from the keyboard, and Esc closes only the popup. It uses the filter panel's popup look.
+
+The `LATTIS_STATS=<yyyy-mm>` hook opens it on a month, `<yyyy>` on a year, or `now` for the current month; a `/picker` suffix also opens the title picker.
+
+**`TopToolbar`** (`components/TopToolbar.qml`) is a row of icon buttons placed in `Main.qml` like `WindowControls`, centered on the window level with the search box and shifted to stay between the list and the window controls when the window is narrow. Which buttons it shows is `[toolbar] buttons`; it is empty by default, since the stats button lives on the rail, and a theme can turn it on with `buttons = "stats"`. A button is an entry in the `known` table at the top of the file (`{icon, tip, action}`): a view button joins the toolbar by getting an entry there, a named action in `actionschema.cpp` that `window.run()` handles, and `checkedButton` set from the window to show its view as open. Its background is a `MouseArea` so the strip's drag-to-move zone doesn't start beneath it.
+
+## The game editor
+
+`GameEditor.qml` is both the game settings dialog (opening a game) and the "+" flow (adding a new one). It opens as a dialog over the main window, created on first use. It handles four game kinds, each with a different set of fields:
+
+- **ROM games**: ROM path, platform, emulator, launch arguments.
+- **Steam games**: launch options, Proton version — both saved to the game file and written into Steam's files; play time and last played are Steam's, shown read-only.
+- **Proton games**: a Steam shortcut (kept in step with the game file), plus a program, start folder and install folder.
+- **Linux games**: a program the launcher runs directly; play time is recorded by the launcher.
+
+The `pick` object (from `Library.inspectRom()`) drives the "+" flow: it names the platforms the file matches, whether it's a Windows or Linux program, and what the title is. On Save, only the keys that changed from the game's current values are written in one call to `Library.saveGame()`. Cancel and Escape discard everything, including art downloads and tag changes.
+
+The editor tracks `steamPending` (edits waiting for Steam to close) and `steamEdited` (edits changed but not yet saved). When saving would queue changes for Steam, it says so and lets the user save first to avoid a second visit.
+
+The lookup, art browser, and detailed lookup live in the editor's own sub-views (`LookupRow`, `ArtBrowser`, `DetailedLookup`), created on first use. Nothing is saved until the editor's own Save.
+
+## Metadata lookups
+
+**`LookupRow.qml`** is the thin bar under the game editor's title field. It transitions between four states — `running`, `matched`, `pick` (a list of candidates), and `hint` — as the lookup progresses. "Not this game?" triggers a re-search; "Undo" puts the fields back.
+
+**`DetailedLookup.qml`** searches IGDB for any name on a chosen platform and lists up to 50 results with their details. It is shared by the game editor and BulkLookup (for a game not found automatically). The `chosen` signal gives the selected candidate and the name searched back to the editor, which applies it as it would any automatic match.
+
+**`ArtBrowser.qml`** shows SteamGridDB's art for a game, one tab per kind. In the editor, "Use selected" downloads the picks and hands them to the editor as local files; nothing is saved until the editor's Save. In BulkLookup (`bulk: true`), picks are kept in the results rather than downloaded immediately; Apply downloads them all.
+
+**`BulkLookup.qml`** runs in two stages: choosing the games to look up (filtered, checked), then reviewing the results and choosing what to apply. Nothing is written before Apply. The `forTags` mode lists every game and proposes tags that fit the IGDB match. `reviewing` switches the stages.
+
+Both stages share one layout: a title row, a sidebar `game_editor.bulk_sidebar_width` wide with the list beside it, and a bottom bar under a line. The sidebar scrolls on its own and has its own `SettingsScrollBar`; the list's rows leave `scrollGap` free so a row's highlight never runs under the bar. Its sections are built from `SideHeading` (an inline component), `BulkOption` rows and `TextLink`s. A `BulkOption` is a checkbox, or with `radio` a radio button, or with `showDot` a round dot in the color `dot` (a result state), or a `swatch` (a tag's color), then the label and a `count`; the radio's ring uses `game_editor.bulk_radio_border_width`, not the input border, since a style can set that to 0. The two stages are `ScreenSwap`s in one `Item`: going to the results slides the list screen up and out while the results slide up into place (`settings_window.page_offset`, `motion.normal`, linear fades at half that, like Settings pages), and back down the other way; a result row's pick, error, not-on-IGDB and apply-error panels are one `Unfold` that folds with the chevron; `BulkOption` rows and the window's check boxes fade between states and pop their check marks and radio dots (`MarkPop`).
+
+- **Choosing:** the sidebar has a `SegmentedToggle` (Missing info | All games, bound to `includeComplete`), the Missing (or, with `replaceExisting`, Look for) checkboxes, the Platform radios, the tags button with the checked tags under it, and the not-on-IGDB row; Clear filters is pinned under the scrolling part. Counts come from the model (`missingCounts`, `platforms[].count`, `tagCounts`, `notOnIgdbCount`). The tags button opens `BulkTagsPopup`, a `MotionPopup` inside the window (not a window of its own) that filters `allTags` by the typed text. The list has a header with a tri-state checkbox that checks or unchecks every listed game, and a chip per missing field in each row; chips of categories unchecked in the sidebar are dimmed.
+- **Reviewing:** the sidebar has the progress pill, the state rows (`stateCounts`, which set `resultFilter`) and the actions for every match. Every result is a card; a matched one with details open has a darker tray hanging under the row, holding the match column (the cover, `coverLarge`, shrinks with the window; 24% of the tray's width, at most `bulk_match_cover_width`) and the Info, Tags and Art `SectionCard`s. The art grid scales its pictures to the card's width, so a window near its minimum width doesn't push the cover out of the card; it is sized from `bulk_art_height` otherwise.
+- **Folding:** a row folds with its chevron or a click anywhere on it. Which rows are folded is kept by game id in `collapsed`, not on the delegates, since the list recycles them; it is cleared when a lookup starts.
+- **Pictures:** `ArtThumb` rounds with a masked threshold, so the corner matches the hover overlay, and masks only once loaded.
+
+## Setup guide
+
+`SetupGuide.qml` overlays the main window from the first start of a new library, and is also openable from the app menu. It shows one centered card with a step bar and the current step's page. The card's scale is 1 on 1080p screens or smaller, and grows toward `onboarding.large_screen_scale` on larger ones. The window moves only by dragging the strip along the top (short of the window controls, by `dragReserve`, which `Main.qml` sets). Clicking a step in the step bar jumps to it, except Done, which only Look's Finish reaches.
+
+Each step page is a QML file in `qml/setup/`, loaded on first visit and kept so Back returns to what was typed. Pages can override the card's title and description, add a `headerAction` component under the description, change `nextText`, and handle Next themselves by returning `true` from `next()`.
+
+The Steam step holds imports while the setup runs: shortcuts picked wait in the guide's `shortcutsToAdd` until Finish, so they're added in the same batch as the scan-triggered lookups. The Look step applies a theme immediately on each pick; the guide itself reflects the change. Finish starts the scans and ends the guide.
+
+Every step gets a card `onboarding.card_height` tall (the Game info step's size; a taller step scrolls, and a short window shrinks it), its bottom edge fixed so the buttons stay put between steps. The guide opens after the first frame (`ready`, set after `Component.onCompleted`): the card grows in like a popup over a fading backdrop. Closing goes through `dismiss()`, which plays the exit and emits `closed` when it ends, so `Main.qml` unloads the `Loader` after it; with Reduce motion it emits at once. Each page sits in a slot; changing step slides the old page out and the new one in (the direction is `direction`, set by `goTo`), the old one taking no room.
+
+`SetupBackdrop.qml` is the base color (`onboarding.background`) with `SetupCoverWall.qml` loaded over it, tinted by `onboarding.backdrop_tint` (the theme's background) at `backdrop_dim` with a `backdrop_vignette` toward the edges, and passes its `active` on to the wall (paused rather than stopped while false, so the rows keep their place). The cover wall's look (tilt, covers' size, speed) is fixed in `SetupCoverWall.qml`, not a theme setting; its `moving`, `tint` (default `onboarding.background`), `dim` and `vignette` are properties, which `SetupWelcome.qml` sets from `onboarding.welcome_art_*` for the second, darker, still wall in its panel. Only that wall is rounded with a `MultiEffect` mask; the logo, tagline and screenshot sit outside the layer in a plain clip, because a layer under the card's `scale` is drawn at the unscaled size and stretched blurry on a 1440p screen. The screenshot (`resources/setup/welcome.webp`) goes through `coverround.frag` for its corners. The guide passes its `cardScale` in as `renderScale`, and the wordmark (`Wordmark.pixelScale`) and the screenshot are decoded at that size. The screenshot is also sized and placed on whole device pixels (re-aligned on the window's `afterAnimating`, since nothing signals a change of scene position), so it is drawn 1:1 rather than resampled at the card's fractional offset. It lays 44 bundled Steam covers (`resources/covers/<app id>.webp`) out flat in rows that move in alternating directions (one set of covers per row; a cover leaving on one side comes back on the other), draws that into a texture, and `qml/shaders/coverwall.frag` tilts it per pixel by inverting the perspective projection, with the wall sized to the part of the plane the window shows. Qt's own 3D `Matrix4x4` transform on the individual covers dropped the ones on the near side. `qml/shaders/coverround.frag` rounds each cover's corners. The rows stop when `onboarding.backdropMotion` is false or Reduce motion is on. Their speed is the wall's own literal, passed through `Motion.duration()`, so `duration_scale` scales it.
+
+## Settings window
+
+`SettingsWindow.qml` is a category sidebar with a scrollable content area. Categories are declared in `categories` (a constant list of `{key, title, icon, page, sections}`); `showCategory(key, item)` opens one. Each page is a `PageLoader` that loads when first shown; once the window is visible, a timer loads the pages not yet opened, one every 120 ms, so the first click on a heavy page (Emulators, Platforms) is instant. Switching category moves along the sidebar's axis over `motion.normal`: going down, the old page slides `settings_window.page_offset` px up while the new one rises the same distance into its place; going up reverses both. Both fades run together over the first half, linearly, so the two opacities always add up to 1: staggered, there were frames with both pages nearly gone, which read as a blink. Each page has its own description label above, whose opacity follows its page's, so the descriptions crossfade with the pages. The window drives it (`onCurrentCategoryChanged` calls the loaders' `leave()` and `enter(direction)`), not each loader's `current`, so the direction is known before either page reacts. The sidebar shows section links under the active category; the link for the section currently scrolled to is marked.
+
+Each page provides `currentSection` (name of the topmost visible section), `jumpTo(section)`, `jumpBy(step)`, and `focusSearch()`. The sidebar uses these to scroll and highlight. On the Customize and Keyboard pages `jumpTo` switches section the way the window switches category (`SectionJump`): it grabs the list into an image (`grabToImage`, so it costs nothing while idle), waits until that image can be drawn (jumping before leaves a frame with neither view), jumps the list there at once, then slides the snapshot away and fades it out while the rows (the list's `contentItem`, so they stay clipped) slide into its place and fade in. It uses the same timing as the category switch. The snapshot leaves out the scroll bar strip; the real bar stays and its handle glides to its new place (`SettingsScrollBar.glide()`), since a faded copy over it brightened the track. The page ignores scrolling meanwhile, so the sidebar keeps the section jumped to. `swap(changeRows, direction)` runs the same slide around any other change to the rows: the Changed only and Show filters on Customize use it, sliding like going down when they narrow the list and like going up when they widen it. Pages also have `clearSearch()` for the Escape chain: Escape steps out of the focused field, then clears the page's search, then closes the window.
+
+Escape is handled at the window level, not inside each page, so it behaves consistently. Clicking empty space unfocuses the active field (same as the first Escape), via `isEmptySpace()`.
+
+The General, Library, Steam, Platforms, Emulators, Metadata, Appearance, Customize and Keyboard pages each own their section. Appearance is short: the theme cards, a picker each for the colors and the style in use, and Save as theme. Customize (`CustomizePage`) lists every section once from `Theme.customizeSchema`, colors first and then style settings (a divider heading names each group in a section that has both). Its toolbar is search, This session (`SessionChangesPopup`; each entry says whether it is a Colors or Style change), a theme chip and Show. The chip opens a popover of two equal `ThemePickColumn`s (Colors, Style), sized by the `settings_window.theme_popup_*` settings and clamped to the window. Each column is a header with a `⋯` menu (Reset to built-in, which asks first, while a file layers on the active built-in; Rename and Delete, and Edit description on styles, for the user's own), a fixed-height list that fades at the bottom, and a New / Open file footer whose tooltips carry the key hints. Rows read `Theme.preview` (colors: four dots; style: `Theme.styleDescription` or `Theme.styleSummary` and a mini scene of the style's radii, border width, rail container and launch label on the previewed colors' background); the active row gets the selected tint and outline. The previews are re-read each time the popover opens. Show holds All settings / Colors only / Style only and Changed only; it resets when Settings opens. The list and rows are `ThemeSettingsList`. `NewThemeDialog` takes a description for a new style (48 characters, with a counter); `EditDescriptionDialog` changes a user style's (`CustomizePage.askDescription()`). `RenameThemeDialog` (shared the same way, from a user theme card's right-click Rename) checks the name with `Theme.nameError` as you type and says which themes and files will follow the new name. `DeleteThemeDialog` (shared with the Appearance page, where a user theme's card has an × on hover and a right-click Delete) names the file and lists the themes and files that use it, and asks again before deleting for good when there is no trash. `reveal(item, half)` scrolls to a section, for `LATTIS_OPEN_SETTINGS=customize/<section>`; `colors/<section>` and `style/<section>` also narrow the list to that half (the window's `showCategory("colors")` does the same, as Library's tag colors link does), `menu` opens the theme popover and `delete` the Delete dialog for that half, and on Appearance `appearance/hover:<theme>` shows that card's × and `appearance/delete:<theme>` its dialog. The settings editors in `settings/editors/` (BoolEditor, ColorEditor, ColorListEditor, ColorPickerPopup, EnumEditor, NumberEditor, StringEditor, StringListEditor) are shared controls used by ThemeSettingsList.
+
+## Components
+
+`qml/components/` holds building blocks used across the app.
+
+**Surface** is the universal colored panel, card, button and dialog background. When `fill` and `fillEnd` differ it draws a two-stop gradient in `direction` (`"down"` / `"up"` / `"right"` / `"left"`); when they're equal it's flat, with no `Gradient` object active.
+
+**Icon** renders a vector icon from `Icons.qml`'s SVG path data on a 24×24 grid, scaled to `size`. `Icons.qml` holds the path strings (mostly Remix Icon) as a static QML type. The icons traced from Icons8 come from `LicensedIcons`, which has stand-ins in the public repo (`qml/components/LicensedIcons.qml`, built when `licensed/` is missing).
+
+**Motion** is a singleton that reads the style's `[motion]` section and the General setting Reduce motion. `Motion.on` (full motion) is false when `duration_scale` is 0 or Reduce motion is set; a `Behavior` on a moving value (scale, position, size, rotation, a spring) sets `enabled: Motion.on`. `Motion.fades` is false only when `duration_scale` is 0, and `Motion.reduced` is Reduce motion itself: a `Behavior` on a fade or a color sets `enabled: Motion.fades`, so Reduce motion keeps it. `Motion.duration(ms)` scales a duration by `duration_scale` and gives 0 when motion is off; `Motion.fadeDuration(ms)` does the same for fades, which Reduce motion leaves alone. Per-element durations such as `hero.fade_duration` go through one of them. **MotionNumber** picks by its `fade` property, true for `property: "opacity"`; a `Behavior on opacity` can't tell it which property it animates, so it sets `fade: true` (`Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }`). **MotionColor** is always a fade, and **MotionSpring** lands at once when `Motion.on` is false. The animation types read the theme, so a call site is one line (`Behavior on scale { enabled: Motion.on; MotionNumber {} }`): **MotionNumber** and **MotionColor** take `speed` (`"fast"`, `"normal"` or `"slow"`) and the style's easing curve (`MotionNumber { linear: true }` fades at an even rate instead, for large surfaces such as `Scrim`, where the curves' steep start lands a third of the fade in the first frame and reads as a flash); **MotionPop** is an `OutBack` number animation with the style's `overshoot`; **MotionSpring** is a `SpringAnimation` with the style's `spring` and `damping`, for things that follow the pointer.
+
+**MotionPopup** is a `Popup` that fades in while growing from `motion.popup_scale` (`PopupEnter`) and shrinks back to it while fading out faster (`PopupExit`); every dialog and popup uses it instead of `Popup`. Menus and dropdowns drop down instead: `DropdownEnter` grows them from their top edge to full height while they fade in, and `DropdownExit` folds them back up. Their entries slide down with the growing bottom edge like a drawer (the list is translated up by the hidden fraction and the popup clips it) rather than staying put under a growing window. They animate a `reveal` fraction rather than `height`, so the popup declares `property real reveal: 1`, `height: implicitHeight * reveal` and `clip: true`; `SettingsMenu` (so every context menu) and `SettingsComboBox`'s list do. A `SettingsMenu` opened from a button that's its parent can set `growFrom` to it instead: the popup keeps its full size, its background's outline grows from a sliver just under the button, as wide as it, to its own as `reveal` goes to 1, and a `MultiEffect` mask shows the entries only inside the outline (the Colors and Style pickers do this). One that opens beside what opened it or at the cursor (the rail logo's menu, the game menu, and their submenus) sets `pops` instead, so it springs out of the corner it opened from rather than dropping down from nothing: `MenuPopEnter` grows it from `motion.menu_scale` while it slides in from `motion.menu_offset` away (a `slide` property its background and list are translated by, since `popup()` owns its position), and `MenuPopExit` simply fades it out over `motion.fast`. While it closes the menu is drawn as one layer (`flatten()`, on the popup item), since faded as separate items the entries showed over whatever was behind the see-through panel; the layer is dropped once it has closed, as it softens text. `popDirection` says which way: `"right"` for a submenu or a menu beside a button, `"down"` below the cursor, `"up"` when it flipped above it. A menu only flips once it has laid out its entries, after `popup()` returns, so `GameList` binds `popDirection` to the menu's `y` against the point it asked for. A menu that simply opens where it is asked to (every right-click menu: the logo's, a text field's, a theme card's, a color swatch's) sets `atPointer`, which implies `pops` and binds `popDirection` that way itself as it opens, so whoever opens it needs no code (a text field's `TextContextMenu` moves itself under the pointer as it opens, since Qt would place it at the text cursor). The entries move with the menu as one piece: a per-entry cascade made long menus slow to read. An expanding section, like a Platforms or Emulators row's fields, is an `Unfold`: its height eases between 0 and its column's while the entries fade, clipped only while it moves, and only the column hides when folded, so the wrapper keeps the width its layout gives it. A `SettingsMenu`'s `showing` is true from the moment it starts opening until it starts closing, for turning a chevron in step. While one of its entries has its submenu open (`openSubmenuItem`), the other entries take no hover, which in Qt closes the submenu at once and lost it on a diagonal path to it. Instead each entry's `HoverHandler` decides: when the pointer, from its last position (`lastPointer`), is inside the triangle to the submenu's near corners, taken 40 px past them (`headingToSubmenu()`), it is on its way there and the submenu stays, unless it rests on the entry for 300 ms; anywhere else the entry takes over at once (`SettingsMenuItem.takeOver()`: the other submenu closes, it becomes current and its own submenu opens). A new popup should be a `MotionPopup`, and a modal one dims the window with `Overlay.modal: Scrim {}`, which fades with it (the popup sets the overlay's opacity on open and close; `Scrim` animates it). `IconButton`, `LaunchButton` and `RailButton` dip to `motion.press_scale` while pressed (the rail logo dips and springs back on its own, since the menu it opens takes the pointer) and fade their fill between states. The game list's rows fade their selected color, but not while a pooled row is being reused (`fading`), which would fade from the previous game's color. Hover is one highlight behind the rows (`hoverHighlight`, a child of the list's content so it scrolls with them): it springs (`MotionSpring`, with its own `list.hover_spring` and `list.hover_damping`) to the row under the pointer, or to the game whose menu is open, and fades out over headers (whose text brightens to `list.header_hover_text` instead, so a group never looks like a game), outside the list and under selected rows, whose overlay it would add to. Coming back after it faded out, it appears in place instead of springing from where it left.
+
+**Keeping a menu open.** Qt closes a menu whenever a direct entry's `triggered` fires, and a click reaches the button before any `MouseArea` or `TapHandler` in it. An entry with `keepOpen` (the logo menu's Behind logo options) stays a direct entry, so the keyboard still reaches it, and carries an invisible inner `MenuItem` over it that takes the mouse: that one isn't the menu's entry, so nothing closes. Enter and Space are handled on the outer entry (`Keys`), and both emit `activated`. `SettingsMenuSlider` has the same inner item under its slider for the clicks beside it, and the same wait for the pointer as `SettingsMenuItem` while another entry's submenu (Side) is open. `tests/qml/tst_menukeepopen.qml` checks the pattern in a plain `Menu`.
+
+**IconButton** is a square icon-only button with a tooltip, a `badge` dot, and a `busy` spinner. Its look comes from `[icon_button]`; it exposes `hovered`, `badgeColor` and `hoverTint` (a color laid over the fill under the mouse) so a button with its own section can override the fill, border and radius, as the filter button beside the search box does with `[filter_button]`, whose values default to `[search]`'s. Both brighten on hover by a translucent `hover_tint` over their fill rather than a hover color, so it works on any background. **LaunchButton** is the full-width Launch button. Under the mouse its label fades in a soft shadow (`hover_text_shadow`, `_blur`, `_offset`), a `MultiEffect` layer that is only enabled while the shadow shows. With `updateState` it becomes Update (waiting), Updating (downloading) or Paused, with the `update_*` and `updating_*` colors and labels from `[launch_button]`; a click opens the game's page in Steam or its downloads.
+
+**TagChip** draws a tag: filled normally, outlined with a leading `+` when `outlined` (an addable tag), and with a leading dot for `dot`. `removable` adds a trailing `×` with its own tooltip. `lit` fades in a lighter copy of the fill (`tags.hover_lighten`) on a layer of its own, so a recolor or a morph doesn't animate; the details pane sets it while a tag, which toggles it in the tag filter, is under the mouse. **FilterChip** is the smaller chip under the search box for an active filter. `raised`, `raiseBy` and `pressed` make the chip rise while hovered and dip while held (as transforms, so a Flow's animations stay free).
+
+**Toast** is the short message bar at the bottom of the main window. It slides in from the window's bottom edge (normal) and back out (fast) (`open` is whether it should show, `shown` how far it has slid; 0 off the window), like the download bar. It stays up while the mouse is on it so the optional `link` can be reached. `showUndo(text, token)` shows a change `Library.undoOffered` announced: an Undo link (`isUndo`) that calls `Library.undo(token)`, up for `undoDuration` (15 s); token 0 is a plain message. `undo()` runs that link, for the `undo` action (Ctrl+Z). The main window and the Settings window each have a Toast and show `undoOffered` in the window that made the change: a settings page wraps its change in `Window.window.change(fn)`, which sets `SettingsWindow.changing` so only that window's toast shows it (`Main.qml`, `SettingsWindow.qml`); the `LATTIS_UNDO=<hide|save|delete_game|delete_tag|move_platform>` hook makes one of those changes.
+
+**Wordmark** is the horizontal logo lockup: the icon beside "Lattis", in light text on dark backgrounds and dark text on light ones (or forced with `text: "light"/"dark"`). The PNG has a margin; the item is the art's box, so it aligns with what's around it.
+
+**AboutContent** is the About content shared by AboutDialog and Settings → General: the wordmark with the version, description, and credits. The host provides the colors.
+
+**KeyedListModel** is a `ListModel` for a short JS array that animates (the filter chips, the rail's platforms): set `source` to an array of objects with a unique `key` and it applies only the inserts and removes, so a positioner's `add` and `move` transitions play for the entry that changed. A removed entry stays with `leaving: true` for `leaveSpeed` (its delegate plays its exit in that time: the filter chips, the rail's platforms and the tags in the details pane and the tag editor play their pop backwards with **PopLeave**) and then leaves; `leaving` on the model says one is on its way out. A different order of the entries that stay replaces everything and sets `rebuilt` for a moment, which the transitions check so the delegates don't enter again. So does a `source` with a new `scope` (set before `source`): the details pane's tags are scoped to the game, so another game's tags replace them at once while a tag added to the same game pops in. Delegates read their entry as `required property var model`. **AppLogo** draws the rail logo in the style `rail.logo_style` names: the simple mark, the mark on a colored square, or the wordmark.
+
+**Tooltips** are the attached `ToolTip`'s one shared instance, and the Basic style gives it no transitions: `Main.qml` assigns its `enter` and `exit` (fades over `motion.fast`) after the first frame, since making that instance earlier would delay it. **FadeImage** is an `Image` that fades in (`MotionNumber`, fast, linear) when an asynchronous load finishes; an image that is ready at once shows at once. Game icons, art thumbnails and the art browser, Detailed lookup and lookup row pictures use it. The game editor's `Hint` is an `Unfold`: set `open` instead of `visible`, so a note that appears while the editor is open unfolds.
+
+**ActionShortcuts** is a thin `Item` that creates one `Shortcut` per action a window handles (see [Named actions](#named-actions)).
+
+**WindowControls** draws the minimize/maximize/close buttons for frameless windows. In `dialog` mode only close shows. **WindowFrame** puts resize edges around a frameless window.
+
+**StatChip** is the small label/value chip next to Launch (play time, last played). With `attention` it shows in notice colors, or the outline and icon in `attentionColor` (the Steam update chip uses the Launch button's update color). With `clickable` it takes a hand cursor, can change its label, value and icon colors under the mouse (`stat_chip.hover_*_color`, which default to the resting colors, so nothing lights up unless a theme sets them) and dips to `motion.press_scale` while pressed, as a whole, and emits `clicked` (the play time chip opens play history).
+
+**NoticeBar** is the thin status bar for a lasting state (a read-only library), with action buttons as its children.
+
+**DownloadBar** is the bar pinned to the bottom of `GameDetails` (a `Loader`, active only while `Library.download` is not empty and `download_bar.show` is on) while Steam downloads a game: the game's icon (the Steam icon without one), the label (Updating, Installing, Paused), the name, the percentage and a progress bar that animates to each value (`fill_duration`). A click opens Steam's downloads through `GameRunner.update()`; its error is its `message` signal. A chevron (`chevron_size`; 0 = none) sits after the percentage in the name row, always shown, with its own click area above the bar's; it emits `collapse()`.
+
+**DownloadPill** is what's left in the bottom-right corner of `GameDetails` (a `Loader` next to the bar's) while the bar is hidden (`General.downloadBarCollapsed`): the download icon (`pill_icon_size`, `paused_fill` while paused), the percentage and a chevron up, on the bar's colors with `pill_radius` (the bar's `radius` by default). It emits `expand()` and doesn't open Steam. `GameDetails` animates `slide` (0 bar, 1 pill) over `collapse_duration`: the bar morphs into the pill (one rect shrinking toward the bottom-right corner, lowered so the percent and chevron row stays put) while the bar fades out over the opaque pill beneath it and the download symbol travels from the bar's game icon to its place in the pill, and tooltips stay off until it settles, and both `Loader`s stay active while a download runs (the pill's width is known before the morph starts, so nothing jumps on its first frame). `flick` makes room for whichever shows.
+
+**GameIcon** shows the small game icon: art from `art/<id>/icon.*` if present, otherwise a tile in the game's hue (`list.icon_placeholder_*`) with the first letter. Both have `list.icon_radius` corners; the art is masked only once loaded.
+
+**ArtPlaceholder** is what a game without hero art shows instead: a gradient in the game's hue, from left to right, with the `hero.placeholder_*` settings. The hero and the backdrop both use it, so they always match.
+
+**`Args.js`** splits and joins program argument strings as typed in a text field, like a shell does: an argument can have quoted parts anywhere in it (`--config="My Config.ini"`), and a quote without its closing one is kept as a character (`it's`). Joining quotes an argument that has spaces or quotes in it, with the kind of quote it doesn't contain.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `Main.qml` | Main window; launch logic; lazy-loaded views; window-level actions |
+| `components/AboutContent.qml` | About content: logo, version, description, credits |
+| `components/ActionShortcuts.qml` | One `Shortcut` per action for a window |
+| `components/AppLogo.qml` | Rail logo in the three logo styles |
+| `components/ArtPlaceholder.qml` | Hue gradient for a game without hero art |
+| `components/Args.js` | Split/join program argument strings |
+| `components/FilterChip.qml` | Active-filter chip under the search box |
+| `components/FadeImage.qml` | An Image that fades in after an asynchronous load |
+| `components/GameIcon.qml` | Small icon: art or colored letter tile |
+| `components/KeyedListModel.qml` | A list model for animated JS arrays: only inserts and removes, matched by key |
+| `components/Icon.qml` | Vector icon from Icons.qml path data |
+| `components/Stars.qml` | Five stars filled to a rating (any fraction: IGDB ratings come to a tenth), with an optional faint preview fill; the rating editor and the info panel use it |
+| `components/IconButton.qml` | Square icon button with tooltip, badge, busy state |
+| `components/Icons.qml` | SVG path data for every icon |
+| `components/LicensedIcons.qml` | Public stand-ins for `licensed/LicensedIcons.qml` |
+| `components/Motion.qml` | Singleton: whether motion is on, `duration()`, the easing curve |
+| `components/MotionPopup.qml`, `PopupEnter.qml`, `PopupExit.qml` | A `Popup` with the theme's open and close transitions, and the transitions themselves |
+| `components/Scrim.qml` | The fading dim behind a modal popup |
+| `components/PopoverBackground.qml` | A Customize popup's panel with its shadow (`settings_window.popup_shadow_*`); those popups also dim the page with `dim: true` and `Overlay.modeless: Scrim { color: Theme.settingsWindow.popupScrim }` |
+| `components/BoxBump.qml` | Child of a check box that makes the box swell and spring back whenever its `value` changes after the first frame (checking and unchecking alike); a box created or reused already in its state stays still |
+| `components/ScreenSwap.qml` | One of two screens that replace each other in the same place: the one turning off slides toward its `side` and fades out as the other slides in from its own; the lookup window's list and results |
+| `components/DropdownEnter.qml`, `DropdownExit.qml` | The drop-down open and close transitions of menus and dropdowns |
+| `components/MenuPopEnter.qml`, `MenuPopExit.qml` | The sideways open and close transitions of a `SettingsMenu` with `pops` |
+| `components/Unfold.qml` | A column that unfolds to its height and folds away, fading its entries; the expanded part of a Platforms or Emulators row |
+| `components/MotionColor.qml`, `MotionNumber.qml`, `MotionPop.qml`, `MotionSpring.qml` | Animations that use the style's motion settings |
+| `components/MarkPop.qml` | A check mark or radio dot that pops in (`shown`): grows from `hiddenScale` (`motion.mark_scale`) past its size by `motion.mark_overshoot` and settles, fades out without overshoot; states rather than a `Behavior`, and still on the first frame |
+| `components/PopLeave.qml` | A removed chip, tag or rail button: shrinks to `motion.chip_scale` while fading out over `motion.fast`, on the theme curve and without a swell; its `KeyedListModel` has `leaveSpeed: "fast"` to match |
+| `components/LaunchButton.qml` | Launch button |
+| `components/NoticeBar.qml` | Thin status bar for a lasting state |
+| `components/StatChip.qml` | Label/value chip next to Launch |
+| `components/Surface.qml` | Flat or gradient background rectangle |
+| `components/SegmentedToggle.qml` | Pick-one toggle (`choices`, `current`, `picked(id)`), drawn from `[segmented]`; the stats page and the lookup window |
+| `components/TextLink.qml` | Muted text that acts as a button; only the text lights up under the mouse |
+| `components/TagChip.qml` | Tag: filled, outlined (addable), or with a dot |
+| `components/TagPalettePopup.qml` | Color-picker popup for tag palette editing |
+| `components/Toast.qml` | Short message bar at the window bottom |
+| `components/TopToolbar.qml` | Row of view buttons above the details, centered on the window |
+| `components/WindowControls.qml` | Minimize/maximize/close for frameless windows |
+| `components/WindowFrame.qml` | Resize edges for frameless windows |
+| `components/Wordmark.qml` | Horizontal logo lockup (light or dark) |
+| `views/AboutDialog.qml` | About dialog (logo, version, credits); lazy |
+| `views/AppMenu.qml` | Rail logo menu (app-wide actions, theme picker); lazy |
+| `views/PlatformMenu.qml` | Rail platform button right-click menu (Edit platform, Hide from the rail); lazy |
+| `views/RailMenu.qml` | The rail's empty-space right-click menu: which platforms and bottom buttons it shows; lazy |
+| `views/ArtBrowser.qml` | SteamGridDB art per kind, for editor and bulk; lazy |
+| `views/ArtEditor.qml` | Art section inside the game editor: previews shaped like each kind, click to choose |
+| `views/ArtThumb.qml` | A picture with rounded corners, a loading spinner and a mark when it fails (the editor's art and the lookup's review) |
+| `views/Backdrop.qml` | Blurred hero art behind the main window |
+| `shaders/backdropfade.frag` | The backdrop's fade into the background, with dither |
+| `views/BulkLookup.qml` | "Look up missing info" window; lazy |
+| `views/BulkOption.qml` | A sidebar row of the lookup window: checkbox, radio, state dot or tag swatch, label, count |
+| `views/BulkTagsPopup.qml` | The lookup window's tag filter: search box, checkable tags with counts; inside the window |
+| `views/DateEditor.qml` | Date field in the game editor |
+| `views/DetailedLookup.qml` | IGDB search by name/platform, up to 50 results; lazy |
+| `views/FilterPanel.qml` | Sort and filter panel from the filter button; lazy; a Platforms section (All, then each platform with games and its `Library.gameCounts` count) while the rail is hidden, `filters.panel_width_rail_hidden` wide, scrolling when the window is short |
+| `views/GameDetails.qml` | Hero, action row, description, tags, info panel |
+| `views/GameEditor.qml` | Add/edit game dialog; lazy |
+| `views/GameList.qml` | Search box and game list |
+| `views/GameMenu.qml` | Game right-click menu; lazy |
+| `views/NewTagPrompt.qml` | Name for a new tag put on the selected games; lazy |
+| `views/Hero.qml` | Hero art with logo/title, placed by anchor plus offset |
+| `views/LogoAdjuster.qml` | Adjust logo: move, resize, snapping, keys; lazy |
+| `views/ImageFileDialog.qml` | File picker for art |
+| `views/ImportNotice.qml` | "Import moved X aside" notice bar; lazy |
+| `views/DownloadBar.qml` | The bar along the bottom of a game's page while Steam downloads; lazy |
+| `views/DownloadPill.qml` | The pill left in the corner while the bar is hidden; lazy |
+| `views/InfoPanel.qml` | Facts about the game in the details view; hovering the rating stars shows the number as a tooltip; clicking the Platform row sets `Library.platformFilter` to the game's platform (its value brightens on hover, `info_panel.value_hover_color`, and dips by `motion.press_scale` while pressed) |
+| `views/LookupRow.qml` | Lookup state bar in the game editor |
+| `views/PlayHistoryPopup.qml` | A game's play history popup; lazy |
+| `views/ProtonUninstall.qml` | Proton game uninstall dialog; lazy |
+| `views/Rail.qml` | Left icon rail: logo, platforms, add, settings |
+| `views/RailButton.qml` | One button in the rail |
+| `views/RatingEditor.qml` | Star-rating editor in the game editor; hovering previews the rating a click sets, faint (`game_editor.star_preview_opacity`), springing (`MotionSpring`) to it and back when the pointer leaves; a rating loaded with a game appears without the spring |
+| `views/RomFileDialog.qml` | File picker for ROMs |
+| `views/SetupGuide.qml` | Setup guide overlay; lazy |
+| `views/ForceClosePrompt.qml` | "Force close <game>?" from the running Launch button; lazy |
+| `views/SteamLaunchPrompt.qml` | "Restart Steam and launch?" dialog; lazy |
+| `views/SteamUndoPrompt.qml` | "Undo changes waiting for Steam?" dialog; lazy |
+| `views/SteamUninstallPrompt.qml` | "Uninstall \<game\>?" for Steam games; lazy |
+| `views/StatsPage.qml` | The Play statistics page; lazy |
+| `views/StatsPeriodPicker.qml` | The stats page's title picker popup; lazy |
+| `views/StepField.qml` | Numeric step field |
+| `views/TagsEditor.qml` | Tag editor section inside the game editor |
+| `setup/FindRomFoldersDialog.qml` | "Find from one folder" ROM folder matcher |
+| `setup/SetupBackdrop.qml` | Animated backdrop for the setup guide |
+| `setup/SetupDone.qml` | Setup guide: final step (scan progress, tips) |
+| `setup/SetupEmulators.qml` | Setup guide: emulators and ROM folders step |
+| `setup/SetupLook.qml` | Setup guide: colors cards and a Style row; each picks only its half, and the cards wear the chosen style's corners. The cards scroll in their own list (`onboarding.theme_rows` rows tall) while the Style row stays in view |
+| `setup/SetupMetadata.qml` | Setup guide: API keys step |
+| `setup/SetupSteam.qml` | Setup guide: Steam import step |
+| `setup/SetupWelcome.qml` | Setup guide: welcome step |
+| `settings/AppearancePage.qml` | The theme in use: theme cards, colors and style pickers, Save as theme |
+| `settings/CustomizePage.qml` | Every color and style setting by section, generated from ThemeSchema, with the theme popover and Show |
+| `settings/ThemeSettingsList.qml` | Customize's list of sections and setting rows |
+| `settings/ThemePickColumn.qml` | One half's names and actions in the theme popover |
+| `settings/BackupDialog.qml` | "Back up library" / "Back up saves" dialog |
+| `settings/ConnectionRow.qml` | A connected-service row in settings |
+| `settings/editors/` | Theme setting editors: Bool, Color, ColorList, ColorPicker, Enum, Number, String, StringList |
+| `settings/EmulatorRow.qml` | One emulator row in the Emulators page: a preset edits its program and arguments; a user emulator also its name, platforms, Flatpak, ROM extensions and command, and has Remove with its confirmation |
+| `settings/EmulatorsPage.qml` | Emulators settings page: "Built in" and "Yours" cards, and the Add emulator dialog (start from blank or a preset, name, id preview) |
+| `settings/GeneralPage.qml` | General settings page |
+| `settings/HelpSectionHeader.qml` | Section header with a help link |
+| `settings/ImportDialog.qml` | Import: file picker, backup plan, progress, restart |
+| `settings/KeyboardPage.qml` | Keyboard shortcuts, generated from ActionSchema |
+| `settings/KeyChip.qml` | Single key chip in the Keyboard page |
+| `settings/KeyRow.qml` | One key in a shortcut's key list |
+| `settings/ListAction.qml` | "+ Add …" (or another icon) beside a Section's title |
+| `settings/ListButton.qml` | Small square button on a ListRow |
+| `settings/ListRow.qml` | One row of a Section's list |
+| `settings/LibraryPage.qml` | Library settings: backups, hidden games, tags, problems |
+| `settings/MetadataPage.qml` | API keys for IGDB and SteamGridDB |
+| `settings/PathField.qml` | Path input with a browse button |
+| `settings/PlatformRow.qml` | One platform row in the Platforms page |
+| `settings/PlatformsPage.qml` | Platforms: order, name, icon |
+| `settings/ProblemsButton.qml` | Problems indicator button; a problem that names a `.toml` file (`GameRunner.problemFile`) gets an open-file button |
+| `settings/ProgramDialog.qml` | Program/exe file picker dialog |
+| `settings/RomFolderDialog.qml` | ROM folder picker dialog |
+| `settings/Section.qml` | Titled list in an expanded platform or emulator row, with its actions and a note |
+| `settings/SectionTitle.qml` | Bold title over a field or Section in an expanded row |
+| `settings/SettingRow.qml` | One labeled row in a settings card |
+| `settings/SettingsButton.qml` | Button with `danger` style for destructive actions; `bordered` (off by default) draws the input outline on a plain button |
+| `settings/SettingsCard.qml` | Rounded card that groups a settings section |
+| `settings/SettingsCheckBox.qml` | Check box in settings style; `bordered` (on by default) turns off the outline except under the mouse |
+| `settings/SettingsComboBox.qml` | Combo box in settings style |
+| `settings/SettingsMenuItem.qml` | One entry in a settings menu; `keepOpen` makes it emit `activated` instead of `triggered` and leave the menu open |
+| `settings/SettingsMenuSlider.qml` | A row in a settings menu with a slider and its value (`changed` live, `committed` on release or 400 ms after Left and Right steps), so the menu stays open while it's dragged |
+| `settings/SettingsMenuSeparator.qml` | A divider in a settings menu, taking no room while hidden |
+| `settings/SettingsMenu.qml` | Pop-up menu in settings style |
+| `settings/TextContextMenu.qml` | Right-click menu of a text field (Undo, Cut, Copy, Paste…), set as its `ContextMenu.menu` |
+| `settings/SettingsNote.qml` | Explanatory note under a setting |
+| `settings/SettingsRadioButton.qml` | Radio button in settings style |
+| `settings/SectionJump.qml` | Jumps a sectioned `ListView` to a section with the category switch's slide and crossfade, for `jumpTo` and the Changed toggle |
+| `settings/SettingsScrollBar.qml` | Scroll bar in settings style |
+| `settings/SettingsSearchField.qml` | Search field at the top of a page |
+| `settings/SettingsSlider.qml` | Slider in settings style, which `SettingsMenuSlider` reuses |
+| `settings/SettingsSwitch.qml` | Toggle switch in settings style |
+| `settings/SettingsTextField.qml` | Text field in settings style |
+| `settings/SettingsWindow.qml` | Settings window shell: sidebar and content area |
+| `settings/ShortcutPicker.qml` | "Add existing shortcuts…" dialog for Steam; lazy |
+| `settings/ShortcutRow.qml` | One action row in the Keyboard page |
+| `settings/SteamAccountBox.qml` | Steam account selector in Steam settings |
+| `settings/SteamPage.qml` | Steam settings: import, presets, queued edits |
+
+## Reference
+
+### Main.qml
+
+Functions other parts of the app call on the main window (through `window`):
+
+| Function | What it does |
+|---|---|
+| `launch(game)` | Launches a game; handles Locate, Steam install, pending edits |
+| `openSettings()` | Opens the settings window |
+| `openSettingsAt(category, item)` | Opens settings at a category and optional item |
+| `openSetup(step)` | Opens the setup guide at step 0 (Welcome) |
+| `openBulkLookup(from, forTags)` | Opens "Look up missing info"; `from` is returned-to window |
+| `editGame(id)` | Opens the game editor for `id` |
+| `addGame()` | Opens "+" file picker, then the editor |
+| `selectGame(id)` | Selects a game in the list |
+| `hideGame(game)` | Hides a game (`Library.removeGame`); the toast's Undo comes from `undoOffered` |
+| `uninstallGame(game)` | Uninstalls a game (hands to Steam, or dialog) |
+| `run(name)` | Handles a named action |
+| `runOn(name, game)` | Handles a "selected game" named action on `game` |
+
+Screenshot hooks (`LATTIS_*` env vars) call private functions (`selectAndLaunch`, `selectAndEdit`, etc.) from `main.cpp`; each hook is described in the comment above them in `main.cpp`.
+
+### SettingsWindow.qml
+
+| Function / signal | What it does |
+|---|---|
+| `showCategory(key, item)` | Navigates to `key` and calls `reveal(item)` on the page |
+| `lookUpMissing` (signal) | Main window opens BulkLookup |
+| `suggestTagsFromIgdb` (signal) | Main window opens BulkLookup in tags mode |
+| `runSetupGuide` (signal) | Main window hides settings and opens the setup guide |
+| `run(name)` | Handles a named action |
+
+### GameEditor.qml
+
+| Function | What it does |
+|---|---|
+| `open(id)` | Opens for editing an existing game |
+| `openForFile(file)` | Opens for adding: inspects the file, fills the form |
+| `lookUp(search)` | Starts a lookup; `search` forces a search even with a remembered match |
+| `browseArt(kind)` | Opens the art browser on `kind` |
+
+Signals: `message(text)` (a toast), `shortcutFound(text)` (already a shortcut in Steam), `removed(next)` (game was hidden or deleted).
+
+### GameList.qml
+
+| Property / function | What it does |
+|---|---|
+| `selectedGame` | The currently selected game map |
+| `selectGame(id)` | Selects a game by id |
+| `scrollThrough(pixelsPerSecond)` | Scrolls the list top to bottom at a steady speed (the `LATTIS_SCROLL` hook; Main.qml's `scrollList`) |
+| `focusList()` | Gives keyboard focus to the list |
+| `navigationActions` | Action names this view handles (passed to Main.qml) |
+| `activeFilters` | `[{text, tagColor, off}]` for the shown filter chips |
+| `gameAction` (signal) | A game menu action to run on `game` |
+
+### GameDetails.qml
+
+| Property / signal | What it does |
+|---|---|
+| `game` | The game to show |
+| `compact` | True when the window is below `details.compact_width` |
+| `shownHeroGame` | The game the hero is showing (its visible layer's); the Backdrop follows it |
+| `emulatorMessage(text, gameId)` (signal) | A message from launching the emulator |
+| `editRequested` (signal) | Settings button: open the game editor |
+| `steamUndoRequested` (signal) | Steam chip Undo: ask before undoing |
+
+### Hero.qml
+
+| Property | What it does |
+|---|---|
+| `game` | The game to show art for |
+| `logoOnly` | Only the logo fills the item (narrow details) |
+| `shownGame` | The visible layer's game (empty before the first) |
+| `message(text)` (signal) | Logo save failed |

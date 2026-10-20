@@ -1,0 +1,48 @@
+# Built-in Ember colors: near-black blue-tinted slate with ember-orange accents from the logo.
+
+[palette]
+background = "#0d1117"
+surface = "#161b22"
+surface_raised = "#262b31"
+surface_hover = "#30363d"
+border = "#f0f6fc1a"
+hover_overlay = "#b1bac40f"
+selected_overlay = "#b1bac421"
+text = "#e6edf3"
+text_muted = "#8b949e"
+accent = "#e15f24"
+accent_end = "#d14e11"
+
+[game_editor]
+scrim = "#010409a6"
+checker_light = "#484f58"
+checker_dark = "#30363d"
+
+[rail]
+background = "#161b227a"
+hover_background = "#adbccd39"
+logo_mark = "@text"
+
+[search]
+background = "#161b227a"
+
+[hero]
+scrim_color = "#0104098c"
+
+[launch_button]
+running_background = "#4fc82f"
+running_background_end = "#18b04e"
+install_background = "#04a5ff"
+install_background_end = "#0379ff"
+
+[icon_button]
+background = "#161b22ca"
+hover_background = "#262c36ca"
+hover_background_end = "#262c36ca"
+
+[settings_window]
+scrollbar_handle_hover = "#6e7681"
+
+[stat_chip]
+value_color = "#7d8590"
+label_color = "#c9d1d9"

@@ -1,0 +1,92 @@
+{
+ "success": true,
+ "data": [
+  {
+   "id": 4997889,
+   "name": "Hades",
+   "verified": true,
+   "types": [
+    "steam",
+    "egs"
+   ],
+   "release_date": 1575997566
+  },
+  {
+   "id": 23616,
+   "name": "Hades' Star",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1551282908
+  },
+  {
+   "id": 5257382,
+   "name": "Hades Ultimate Fighting Ball",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1585699200
+  },
+  {
+   "id": 5376530,
+   "name": "Hades II",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1715014140
+  },
+  {
+   "id": 5404760,
+   "name": "Hades Nebula",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1685577600
+  },
+  {
+   "id": 5486438,
+   "name": "Hades Harem",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1746057600
+  },
+  {
+   "id": 5525782,
+   "name": "Hades Hinderance",
+   "verified": true,
+   "types": [
+    "steam"
+   ]
+  },
+  {
+   "id": 5467919,
+   "name": "Escape Hades's jails VR",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1730332800
+  },
+  {
+   "id": 26778,
+   "name": "The Road to Hades",
+   "verified": true,
+   "types": [
+    "steam"
+   ],
+   "release_date": 1523540771
+  },
+  {
+   "id": 5254898,
+   "name": "Saint Seiya: The Hades",
+   "verified": true,
+   "types": []
+  }
+ ]
+}

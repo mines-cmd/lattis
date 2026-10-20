@@ -1,0 +1,22 @@
+# Built-in Mythos colors: near-black with one blue accent, inspired by the Mythos theme for
+# Playnite by bansakai.
+
+[palette]
+accent = "#04a5ff"
+accent_end = "#0379ff"
+
+[launch_button]
+running_background = "#4fc82f"
+running_background_end = "#18b04e"
+install_background = "#4fc82f"
+install_background_end = "#18b04e"
+
+[icon_button]
+background = "#10101080"
+hover_background = "#26262690"
+hover_background_end = "#26262690"
+
+[stat_chip]
+icon_color = "#9b9b9b"
+value_color = "#838383"
+label_color = "#cecece"

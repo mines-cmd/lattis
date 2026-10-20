@@ -1,0 +1,26 @@
+"AppState"
+{
+	"appid"		"2231450"
+	"Universe"		"1"
+	"name"		"Pizza Tower"
+	"StateFlags"		"4"
+	"installdir"		"Pizza Tower"
+	"LastUpdated"		"1788302379"
+	"LastPlayed"		"1788735087"
+	"SizeOnDisk"		"404028818"
+	"StagingSize"		"0"
+	"buildid"		"16727860"
+	"LastOwner"		"76561198000000001"
+	"InstalledDepots"
+	{
+		"2231451"
+		{
+			"manifest"		"6913777767294465277"
+			"size"		"404028818"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+}

@@ -1,0 +1,10 @@
+title = "Kirby and the Forgotten Land"
+platform = "switch"
+year = 2022
+description = """
+Kirby's first fully 3D adventure, through the ruins of an abandoned city."""
+tags = ["Platformer"]
+play_minutes = 540
+last_played = 2026-06-26T20:35:00-03:00
+added = 2026-01-17
+status = "finished"

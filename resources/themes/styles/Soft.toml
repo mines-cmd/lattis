@@ -1,0 +1,8 @@
+# Built-in Soft style: rounded corners (12/8/6/4). Everything else is the schema's default.
+description = "Rounded corners, 12 to 4 pixels"
+
+[radius]
+large = 12
+medium = 8
+small = 6
+tiny = 4

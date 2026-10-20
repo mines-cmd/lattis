@@ -1,0 +1,9 @@
+title = "Super Mario Bros. Wonder"
+platform = "switch"
+year = 2023
+description = """
+A 2D Mario where Wonder Flowers turn every level into something strange."""
+tags = ["Platformer", "Co-op"]
+play_minutes = 610
+last_played = 2026-09-04T21:42:00-03:00
+added = 2026-01-18

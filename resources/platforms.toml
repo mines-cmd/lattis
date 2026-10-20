@@ -1,0 +1,92 @@
+# Platforms, in rail order. Games refer to a platform by its id.
+#
+# `id` is permanent once games use it: every game file names its platform by id. Use
+# lowercase a-z, 0-9 and -. `name` is what the app shows, and can change any time.
+# `icon` is an icon name from the app (switch, 3ds, wiiu, wii, gamecube, n64, nds, gba,
+# psp, ps1, ps2, ps3, ps4, steam, proton, linux, gamepad); optional.
+#
+# `emulators` lists emulator ids in order of preference (see emulators.reference.toml).
+# `rom_folders` are scanned for games at startup; a relative path is inside the data dir.
+# Add them in Settings → Platforms, or here: rom_folders = ["~/Games/switch"]
+#
+# The app wrote this file with its default platforms because there wasn't one; it's yours
+# to change. A platform without games doesn't show in the rail. Delete the file to get the
+# defaults back.
+
+[[platform]]
+id = "switch"
+name = "Switch"
+icon = "switch"
+emulators = ["ryubing"]
+
+[[platform]]
+id = "3ds"
+name = "3DS"
+icon = "3ds"
+emulators = ["azahar"]
+
+[[platform]]
+id = "wiiu"
+name = "Wii U"
+icon = "wiiu"
+emulators = ["cemu"]
+
+[[platform]]
+id = "wii"
+name = "Wii"
+icon = "wii"
+emulators = ["dolphin"]
+
+[[platform]]
+id = "gamecube"
+name = "GameCube"
+icon = "gamecube"
+emulators = ["dolphin"]
+
+[[platform]]
+id = "n64"
+name = "Nintendo 64"
+icon = "n64"
+emulators = ["rmg"]
+
+[[platform]]
+id = "nds"
+name = "Nintendo DS"
+icon = "nds"
+emulators = ["melonds"]
+
+[[platform]]
+id = "gba"
+name = "Game Boy Advance"
+icon = "gba"
+emulators = ["mgba"]
+
+[[platform]]
+id = "ps4"
+name = "PlayStation 4"
+icon = "ps4"
+emulators = ["shadps4"]
+
+[[platform]]
+id = "ps3"
+name = "PlayStation 3"
+icon = "ps3"
+emulators = ["rpcs3"]
+
+[[platform]]
+id = "ps2"
+name = "PlayStation 2"
+icon = "ps2"
+emulators = ["pcsx2"]
+
+[[platform]]
+id = "ps1"
+name = "PlayStation"
+icon = "ps1"
+emulators = ["duckstation"]
+
+[[platform]]
+id = "psp"
+name = "PSP"
+icon = "psp"
+emulators = ["ppsspp"]

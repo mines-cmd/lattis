@@ -1,0 +1,7 @@
+# 3DS ROMs found by the folder scan, as path = { id, title }. Paths are relative to a
+# folder in rom_folders. Written by the scan; ids never change. You can fix a title here.
+[games]
+"Fire Emblem - Awakening (USA).3ds" = { id = "3ds-fire-emblem-awakening", title = "Fire Emblem Awakening" }
+"Kid Icarus - Uprising (USA) (En,Fr,Es).3ds" = { id = "3ds-kid-icarus-uprising", title = "Kid Icarus: Uprising" }
+"Pokemon Ultra Sun (USA, Europe) (En,Ja,Fr,De,Es,It,Zh,Ko).3ds" = { id = "3ds-pokemon-ultra-sun", title = "Pokémon Ultra Sun" }
+"The Legend of Zelda - A Link Between Worlds (USA).3ds" = { id = "3ds-the-legend-of-zelda-a-link-between-worlds", title = "The Legend of Zelda: A Link Between Worlds" }

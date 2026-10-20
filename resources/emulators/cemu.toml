@@ -1,0 +1,21 @@
+# Cemu (Wii U). Built into the app; change it in library/emulators.toml. Checked against
+# Flathub, the releases and Cemu's sources, 2026-09.
+id = "cemu"
+name = "Cemu"
+platforms = ["wiiu"]
+flatpak = "info.cemu.Cemu"
+executables = ["cemu", "Cemu"]
+# Releases are Cemu-*-x86_64.AppImage.
+appimage = "Cemu*.AppImage"
+command = ["{exe}", "{args}", "-g", "{rom}"]
+# Disc images and .wua archives. Unpacked games (a folder with code/*.rpx) aren't found:
+# their program's name varies, so boot them from Cemu.
+extensions = ["wud", "wux", "wua"]
+# Its data is in ~/.local/share/Cemu, or in a `portable` folder next to the program or its
+# AppImage (src/gui/wxgui/CemuApp.cpp, 2026-09). Saves are mlc01/usr/save, unless
+# Settings moved the MLC folder (src/config/ActiveSettings.cpp); keys.txt, otp.bin and
+# seeprom.bin are at the top (src/Cafe/Filesystem/FST/KeyCache.cpp,
+# src/Cafe/IOSU/legacy/iosu_crypto.cpp).
+portable = "portable"
+saves = { native = "~/.local/share/Cemu/mlc01/usr/save", flatpak = "~/.var/app/info.cemu.Cemu/data/Cemu/mlc01/usr/save", portable = "portable/mlc01/usr/save" }
+keys = { native = ["~/.local/share/Cemu/keys.txt", "~/.local/share/Cemu/otp.bin", "~/.local/share/Cemu/seeprom.bin"], flatpak = ["~/.var/app/info.cemu.Cemu/data/Cemu/keys.txt", "~/.var/app/info.cemu.Cemu/data/Cemu/otp.bin", "~/.var/app/info.cemu.Cemu/data/Cemu/seeprom.bin"], portable = ["portable/keys.txt", "portable/otp.bin", "portable/seeprom.bin"] }

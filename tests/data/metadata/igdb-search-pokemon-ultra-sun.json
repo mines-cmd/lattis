@@ -1,0 +1,112 @@
+[
+ {
+  "id": 36792,
+  "alternative_names": [
+   {
+    "id": 30196,
+    "name": "Pokémon Ultrasole"
+   },
+   {
+    "id": 30198,
+    "name": "Pokémon Ultrasol"
+   },
+   {
+    "id": 30195,
+    "name": "Pokémon Ultra-Soleil"
+   },
+   {
+    "id": 30197,
+    "name": "Pokémon Ultrasonne"
+   },
+   {
+    "id": 37576,
+    "name": "Pokemon Ultra Sun"
+   },
+   {
+    "id": 74187,
+    "name": "Pokémon US"
+   },
+   {
+    "id": 137588,
+    "name": "Pocket Monsters Ultra Sun"
+   },
+   {
+    "id": 138537,
+    "name": "精灵宝可梦 究极之日"
+   },
+   {
+    "id": 138538,
+    "name": "Jīnglíng Bǎokěmèng Jiūjí-zhī Rì"
+   }
+  ],
+  "cover": {
+   "id": 92728,
+   "image_id": "co1zjs"
+  },
+  "external_games": [
+   {
+    "id": 1184762,
+    "uid": "UCjRb94D3gd29Ewt9Pp51yqQ",
+    "external_game_source": 10
+   },
+   {
+    "id": 1976564,
+    "uid": "351385416",
+    "external_game_source": 14
+   },
+   {
+    "id": 1936496,
+    "uid": "B072QRN7GM",
+    "external_game_source": 20
+   },
+   {
+    "id": 1933230,
+    "uid": "B0788S1TYH",
+    "external_game_source": 20
+   },
+   {
+    "id": 1933481,
+    "uid": "B075S869SW",
+    "external_game_source": 20
+   },
+   {
+    "id": 1929032,
+    "uid": "B071WNTGFY",
+    "external_game_source": 20
+   },
+   {
+    "id": 1934107,
+    "uid": "B071X75JC4",
+    "external_game_source": 20
+   },
+   {
+    "id": 1928919,
+    "uid": "B072X3QNN6",
+    "external_game_source": 20
+   },
+   {
+    "id": 1937099,
+    "uid": "B072MMXJFH",
+    "external_game_source": 20
+   },
+   {
+    "id": 1936155,
+    "uid": "B071WQ2NRN",
+    "external_game_source": 20
+   }
+  ],
+  "first_release_date": 1510876800,
+  "name": "Pokémon Ultra Sun",
+  "platforms": [
+   37
+  ],
+  "release_dates": [
+   {
+    "id": 81321,
+    "date": 1510876800,
+    "platform": 37
+   }
+  ],
+  "summary": "\"Take on the role of a Pokémon Trainer and uncover new tales, and unravel the mystery behind the two forms reminiscent of the Legendary Pokémon. With new story additions and features this earns Pokémon Ultra Sun and Pokémon Ultra Moon the name \"Ultra!\" Another adventure is about to begin!\n\nNew Pokémon forms have been discovered in the Alola region in Pokémon Ultra Sun and Pokémon Ultra Moon! These forms are reminiscent of the Legendary Pokémon Solgaleo, Lunala, and Necrozma, first revealed in Pokémon Sun and Pokémon Moon. Head out on an epic journey as you solve the mystery behind these fascinating Pokémon! In this expanded adventure, get ready to explore more of the Alola region, catch more amazing Pokémon, and battle more formidable foes in Pokémon Ultra Sun and Pokémon Ultra Moon!\""
+ }
+]

@@ -1,0 +1,3 @@
+# The demo's Steam is a small fake one inside the data dir, not your real Steam.
+[steam]
+path = "steam"

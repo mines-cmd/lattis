@@ -1,0 +1,19 @@
+# Ryubing, the maintained Ryujinx fork (Switch). Built into the app; change it in
+# library/emulators.toml. Checked against Flathub and the Ryubing docs, 2026-09.
+id = "ryubing"
+name = "Ryubing"
+platforms = ["switch"]
+flatpak = "io.github.ryubing.Ryujinx"
+executables = ["Ryujinx", "ryujinx"]
+# Release AppImages are named like ryujinx-1.3.3-x64.AppImage.
+appimage = "ryujinx*.AppImage"
+command = ["{exe}", "{args}", "{rom}"]
+extensions = ["nsp", "xci", "nro", "nso", "nca"]
+# Its data is in ~/.config/Ryujinx, or in a `portable` folder next to the program (the
+# Ryubing docs: guides/setup-guide.md, "Portable Mode", and info/faq-&-troubleshooting.md,
+# 2026-09). Saves are bis/user/save, with the save index and the system's saves in
+# bis/system/save; keys are system/ (prod.keys, title.keys, the user profiles) and the
+# firmware bis/system/Contents/registered.
+portable = "portable"
+saves = { native = ["~/.config/Ryujinx/bis/user/save", "~/.config/Ryujinx/bis/system/save"], flatpak = ["~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/user/save", "~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/system/save"], portable = ["portable/bis/user/save", "portable/bis/system/save"] }
+keys = { native = ["~/.config/Ryujinx/system", "~/.config/Ryujinx/bis/system/Contents/registered"], flatpak = ["~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/system", "~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/system/Contents/registered"], portable = ["portable/system", "portable/bis/system/Contents/registered"] }

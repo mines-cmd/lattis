@@ -1,0 +1,72 @@
+# The AppImage build image: Ubuntu 22.04 so the result needs glibc 2.35 at most, with the
+# official Qt binaries (no distro patches, no KDE image plugins) and GCC 13 for C++20.
+#
+#   podman build -t lattis-appimage tools/appimage
+FROM docker.io/library/ubuntu:22.04
+
+ARG QT_VERSION=6.11.3
+ARG AQT_VERSION=3.3.0
+ARG TOMLPLUSPLUS_VERSION=v3.4.0
+ARG PATCHELF_VERSION=0.19.1
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common gpg-agent \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        gcc-13 g++-13 make cmake ninja-build git curl ca-certificates file xz-utils zstd locales \
+        python3 python3-venv \
+        libarchive-dev \
+        libgl-dev libegl-dev libopengl-dev libfontconfig1 libfreetype6 libdbus-1-3 libglib2.0-0 \
+        libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 libxcb1 libxcb-cursor0 libxcb-icccm4 \
+        libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
+        libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 libxcb-glx0 \
+        libwayland-client0 libwayland-cursor0 libwayland-egl1 libgtk-3-0 libssl3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && locale-gen en_US.UTF-8 \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 \
+    && update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-13 100 \
+    && update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-13 100
+
+RUN python3 -m venv /opt/aqt \
+    && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==$AQT_VERSION \
+    && /opt/aqt/bin/aqt install-qt -O /opt/qt linux desktop $QT_VERSION linux_gcc_64 \
+        -m qtimageformats qtshadertools qttasktree \
+    && rm -rf /root/.cache aqtinstall.log
+
+# The aqt install carries no licence texts, so the AppImage gets them from here: Qt's are the
+# LGPL and GPL texts of qtbase (the tag of the last release the mirror has; they don't change
+# between patch releases), and the ICU libraries next to Qt's have their own.
+RUN mkdir -p /opt/licenses/qt \
+    && for f in LGPL-3.0-only GPL-3.0-only; do \
+        curl -fsSL -o /opt/licenses/qt/$f.txt https://raw.githubusercontent.com/qt/qtbase/v6.11.2/LICENSES/$f.txt; done \
+    && curl -fsSL -o /opt/licenses/qt/ICU-LICENSE.txt https://raw.githubusercontent.com/unicode-org/icu/release-73-2/icu4c/LICENSE
+
+RUN git clone --depth 1 --branch $TOMLPLUSPLUS_VERSION https://github.com/marzer/tomlplusplus /tmp/toml \
+    && cmake -S /tmp/toml -B /tmp/toml/build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --install /tmp/toml/build \
+    && rm -rf /tmp/toml
+
+# linuxdeploy can't mount itself without FUSE in a container, hence APPIMAGE_EXTRACT_AND_RUN.
+# Its bundled patchelf is too old for current libraries; $PATCHELF points at a newer one.
+RUN mkdir -p /opt/tools/bin && cd /opt/tools \
+    && curl -fLO https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage \
+    && curl -fLO https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage \
+    && chmod +x *.AppImage \
+    && curl -fL https://github.com/NixOS/patchelf/releases/download/$PATCHELF_VERSION/patchelf-$PATCHELF_VERSION-x86_64.tar.gz \
+        | tar -xz -C /opt/tools ./bin/patchelf
+
+# A real locale, not C: in C, QCollator's numeric sort and QLocale's list joining fall back,
+# and the tests expect "Game 9" before "Game 10" and "Hades and Celeste".
+ENV QTDIR=/opt/qt/$QT_VERSION/gcc_64
+# Run with --userns=keep-id, the user has no home of its own; without one Qt's caches land in
+# the mounted repo. Not /tmp: the tests' temp dirs would then show as ~/ paths.
+RUN mkdir -m 1777 /home/build
+ENV HOME=/home/build
+ENV PATH=$QTDIR/bin:/opt/tools:/opt/tools/bin:$PATH \
+    CMAKE_PREFIX_PATH=$QTDIR \
+    QMAKE=$QTDIR/bin/qmake \
+    LD_LIBRARY_PATH=$QTDIR/lib \
+    PATCHELF=/opt/tools/bin/patchelf \
+    APPIMAGE_EXTRACT_AND_RUN=1 \
+    LANG=en_US.UTF-8

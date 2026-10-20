@@ -1,0 +1,48 @@
+# Built-in Steam colors: inspired by the Steam client's dark UI.
+
+[palette]
+background = "#171d25"
+surface = "#2c313a"
+surface_raised = "#3d4450"
+surface_hover = "#48505e"
+selected_overlay = "#3e4e69"
+hover_overlay = "#3e4e697e"
+accent = "#1999ff"
+accent_end = "#0379ff"
+border = "#424a5699"
+text_muted = "#959595"
+
+[rail]
+background = "#171d25"
+logo_background = "#1955aa"
+
+[search]
+background = "#3d4450"
+
+[icon_button]
+background = "#3d4450"
+
+[launch_button]
+background = "#4fc82f"
+background_end = "#18b04e"
+running_background = "#3a9bed"
+running_background_end = "#235ecf"
+install_background = "#3a9bed"
+install_background_end = "#235ecf"
+
+[list]
+background = "#24282f"
+
+[settings_window]
+scrollbar_handle = "#3d4450"
+scrollbar_handle_hover = "#48505e"
+scrollbar_track = "#2c313a"
+
+[stat_chip]
+value_color = "#838383"
+label_color = "#cecece"
+icon_color = "#9b9b9b"
+
+[onboarding]
+card_background = "#171d25"
+panel_background = "#2c313a"

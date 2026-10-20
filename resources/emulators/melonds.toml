@@ -1,0 +1,18 @@
+# melonDS (Nintendo DS). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and melonDS's sources, 2026-09.
+id = "melonds"
+name = "melonDS"
+platforms = ["nds"]
+flatpak = "net.kuribo64.melonDS"
+executables = ["melonDS"]
+# Releases are a zip holding the AppImage.
+appimage = "melonDS*.AppImage"
+command = ["{exe}", "{args}", "{rom}"]
+extensions = ["nds", "dsi", "srl"]
+# Saves and save states are written next to the ROM unless its settings choose a folder
+# (SaveFilePath, SavestatePath; src/frontend/qt_sdl/Config.cpp, 2026-09), so there's no
+# save folder here. The BIOS and firmware files are wherever its settings
+# point, so there are no keys either.
+# Next to the ROM, under its name: .sav and the save states .ml0 to .ml9
+# (src/frontend/qt_sdl/EmuInstance.cpp, 2026-09).
+saves_beside_rom = ["sav", "ml0", "ml1", "ml2", "ml3", "ml4", "ml5", "ml6", "ml7", "ml8", "ml9"]

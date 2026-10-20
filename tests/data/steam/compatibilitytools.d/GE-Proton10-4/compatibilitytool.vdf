@@ -1,0 +1,20 @@
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "GE-Proton10-4" // Internal name of this tool
+    {
+      // Can register this tool with Steam in two ways:
+      //
+      // - The tool can be shipped as a subdirectory of compatibilitytools.d, in which case
+      //   the install path is relative to the compatibilitytool.vdf file.
+      "install_path" "."
+
+      // For this template, we're going to substitute the display_name key in here, e.g.:
+      "display_name" "GE-Proton10-4"
+
+      "from_oslist"  "windows"
+      "to_oslist"    "linux"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+userdef.reg
+user.reg
+system.reg
+.update-timestamp
+drive_c/windows/
+drive_c/windows/system32/
+drive_c/windows/system32/kernel32.dll
+drive_c/users/
+drive_c/users/steamuser/
+drive_c/users/steamuser/AppData/
+drive_c/users/steamuser/AppData/Roaming/

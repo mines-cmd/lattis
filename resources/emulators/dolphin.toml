@@ -1,0 +1,20 @@
+# Dolphin (GameCube and Wii). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and Dolphin's sources, 2026-09.
+id = "dolphin"
+name = "Dolphin"
+platforms = ["gamecube", "wii"]
+flatpak = "org.DolphinEmu.dolphin-emu"
+executables = ["dolphin-emu"]
+# No official AppImage; community builds are named like Dolphin_Emulator-*.AppImage.
+appimage = "dolphin*.AppImage"
+# -e boots the game; -b (batch) quits Dolphin when the game stops.
+command = ["{exe}", "{args}", "-b", "-e", "{rom}"]
+# Not bin or json (also used for other things), nor nfs (Wii U virtual console).
+extensions = ["iso", "gcm", "gcz", "ciso", "rvz", "wia", "wbfs", "tgc", "dol", "elf", "wad"]
+# Its data is in ~/.local/share/dolphin-emu, or User/ next to the program when
+# portable.txt is there (Source/Core/UICommon/UICommon.cpp, SetUserDirectory, and
+# Source/Core/Common/CommonPaths.h, 2026-09); an old ~/.dolphin-emu folder wins over the
+# first, so set saves in emulators.toml if you have one. GC/ holds the memory cards, Wii/
+# the Wii's storage with its saves, StateSaves/ the save states. It needs no keys.
+portable = "portable.txt"
+saves = { native = ["~/.local/share/dolphin-emu/GC", "~/.local/share/dolphin-emu/Wii", "~/.local/share/dolphin-emu/StateSaves"], flatpak = ["~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC", "~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/Wii", "~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/StateSaves"], portable = ["User/GC", "User/Wii", "User/StateSaves"] }

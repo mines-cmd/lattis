@@ -1,0 +1,9 @@
+title = "The Legend of Zelda: A Link Between Worlds"
+platform = "3ds"
+year = 2013
+description = """
+A return to the Hyrule of A Link to the Past, where Link can merge into walls as a painting."""
+tags = ["Adventure"]
+play_minutes = 1200
+last_played = 2025-08-20T20:03:00-03:00
+added = 2026-01-21

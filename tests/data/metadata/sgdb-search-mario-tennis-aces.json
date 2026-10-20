@@ -1,0 +1,83 @@
+{
+ "success": true,
+ "data": [
+  {
+   "id": 5254520,
+   "name": "Mario Tennis Aces",
+   "verified": true,
+   "types": [],
+   "release_date": 1529625600
+  },
+  {
+   "id": 25642,
+   "name": "Mario Tennis",
+   "verified": true,
+   "types": [
+    "eshop"
+   ],
+   "release_date": 967420800
+  },
+  {
+   "id": 34458,
+   "name": "Mario Tennis: Ultra Smash",
+   "verified": true,
+   "types": [
+    "eshop"
+   ],
+   "release_date": 1447977600
+  },
+  {
+   "id": 34786,
+   "name": "Mario Tennis: Power Tour",
+   "verified": true,
+   "types": [
+    "eshop"
+   ],
+   "release_date": 1126569600
+  },
+  {
+   "id": 5253136,
+   "name": "Mario Tennis Open",
+   "verified": true,
+   "types": [],
+   "release_date": 1337472000
+  },
+  {
+   "id": 5504602,
+   "name": "Mario Tennis Fever",
+   "verified": true,
+   "types": [],
+   "release_date": 1770854400
+  },
+  {
+   "id": 5512948,
+   "name": "Mario Tennis 64",
+   "verified": true,
+   "types": [],
+   "release_date": 964137600
+  },
+  {
+   "id": 5512949,
+   "name": "Mario Tennis GB",
+   "verified": true,
+   "types": [],
+   "release_date": 973036800
+  },
+  {
+   "id": 35201,
+   "name": "Mario's Tennis",
+   "verified": true,
+   "types": [],
+   "release_date": 806284800
+  },
+  {
+   "id": 36655,
+   "name": "Mario Power Tennis",
+   "verified": true,
+   "types": [
+    "eshop"
+   ],
+   "release_date": 1098921600
+  }
+ ]
+}

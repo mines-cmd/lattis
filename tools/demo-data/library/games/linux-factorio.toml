@@ -1,0 +1,12 @@
+title = "Factorio"
+platform = "linux"
+year = 2020
+description = """
+Build and automate a factory on an alien planet."""
+tags = ["Co-op"]
+added = 2026-05-02
+status = "finished"
+play_minutes = 2310
+last_played = 2026-06-14T01:02:00-03:00
+exe = "~/Games/factorio/bin/x64/factorio"
+install_dir = "~/Games/factorio"

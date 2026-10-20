@@ -1,0 +1,10 @@
+title = "Metroid Dread"
+platform = "switch"
+year = 2021
+description = """
+Samus explores planet ZDR while hiding from the E.M.M.I. robots that hunt her through its corridors."""
+tags = ["Metroidvania", "Adventure"]
+play_minutes = 720
+last_played = 2026-07-26T22:21:00-03:00
+added = 2026-01-15
+status = "completed"

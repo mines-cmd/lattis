@@ -1,0 +1,53 @@
+# Built-in Rose Pine colors: deep indigo with a love-pink accent.
+# From the Rose Pine palette (https://rosepinetheme.com).
+
+[palette]
+background = "#191724"
+surface = "#1f1d2e"
+surface_raised = "#312e43"
+surface_hover = "#403d52"
+border = "#e0def41a"
+hover_overlay = "#e0def40d"
+selected_overlay = "#e0def421"
+text = "#e0def4"
+text_muted = "#908caa"
+accent = "#eb6f92"
+
+[game_editor]
+scrim = "#191724a6"
+checker_light = "#403d52"
+checker_dark = "#26233a"
+
+[rail]
+background = "#1f1d2eca"
+logo_mark = "@text"
+
+[search]
+background = "#1f1d2eca"
+
+[hero]
+scrim_color = "#1917248c"
+
+[launch_button]
+running_background = "#5e9474"
+install_background = "#6492c0"
+
+[icon_button]
+background = "#1f1d2eca"
+hover_background = "#26233aca"
+hover_background_end = "#26233aca"
+
+[settings_window]
+scrollbar_handle_hover = "#6e6a86"
+
+[stat_chip]
+icon_color = "#6e6a86"
+value_color = "#6e6a86"
+label_color = "#908caa"
+
+[onboarding]
+background = "#191724"
+
+[tags]
+# Rose Pine has few colors, so this takes them from all three variants: the Dawn and Moon accents, which suit white text, then the muted and highlight shades.
+palette = ["#eb6f92", "#b4637a", "#ea9a97", "#d7827e", "#ea9d34", "#6d8f89", "#56949f", "#3e8fb0", "#31748f", "#286983", "#c4a7e7", "#907aa9", "#908caa", "#9893a5", "#797593", "#6e6a86", "#56526e", "#524f67", "#44415a"]

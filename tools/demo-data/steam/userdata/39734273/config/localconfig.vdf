@@ -1,0 +1,63 @@
+"UserLocalConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"-1836832030"
+					{
+						"Playtime"		"16000"
+					}
+					"-1184525450"
+					{
+						"Playtime"		"1500"
+					}
+					"730"
+					{
+						"LastPlayed"		"1739579400"
+						"Playtime"		"240"
+					}
+					"367520"
+					{
+						"LastPlayed"		"1786412700"
+						"Playtime"		"3300"
+					}
+					"413150"
+					{
+						"LastPlayed"		"1790117520"
+						"Playtime"		"9000"
+					}
+					"1086940"
+					{
+						"LastPlayed"		"1790298780"
+						"Playtime"		"7300"
+					}
+					"1091500"
+					{
+						"LastPlayed"		"1764374760"
+						"Playtime"		"3600"
+					}
+					"1145360"
+					{
+						"LastPlayed"		"1789860660"
+						"Playtime"		"4100"
+					}
+					"1245620"
+					{
+						"LastPlayed"		"1789603140"
+						"Playtime"		"11200"
+					}
+					"1462040"
+					{
+						"LastPlayed"		"1790202000"
+						"Playtime"		"2454"
+					}
+				}
+			}
+		}
+	}
+}

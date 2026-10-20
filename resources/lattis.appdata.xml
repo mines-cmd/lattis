@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>lattis</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Lattis</name>
+  <summary>A fast, fully themable game launcher for Linux</summary>
+  <description>
+    <p>Lattis keeps emulated games, Steam games, Proton games and native Linux games in one library, stored in a single folder you can back up.</p>
+    <p>Every color, size and radius comes from a theme you can edit, and the launcher is built to start fast and stay out of the way.</p>
+  </description>
+  <launchable type="desktop-id">lattis.desktop</launchable>
+  <url type="homepage">https://github.com/mines-cmd/lattis</url>
+  <url type="bugtracker">https://github.com/mines-cmd/lattis/issues</url>
+  <developer_name>mines-cmd</developer_name>
+  <categories>
+    <category>Game</category>
+  </categories>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/mines-cmd/lattis/main/resources/screenshots/hades.webp</image>
+      <caption>The library: games grouped by platform, and a game's page</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/mines-cmd/lattis/main/resources/screenshots/customize.webp</image>
+      <caption>Customize: every color is a theme setting</caption>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-10-20"/>
+  </releases>
+</component>

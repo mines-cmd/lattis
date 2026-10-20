@@ -1,0 +1,40 @@
+# Platforms, in rail order. Games refer to a platform by its id.
+#
+# `id` is permanent once games use it: every game file names its platform by id. Use
+# lowercase a-z, 0-9 and -. `name` is what the app shows, and can change any time.
+# `icon` is an icon name from the app (switch, 3ds, wiiu, wii, gamecube, n64, nds, gba,
+# psp, ps1, ps2, ps3, ps4, steam, proton, linux, gamepad); optional.
+#
+# `emulators` lists emulator ids in order of preference (see emulators.reference.toml).
+# `rom_folders` are scanned for games at startup; a relative path is inside the data dir.
+
+[[platform]]
+id = "switch"
+name = "Switch"
+icon = "switch"
+emulators = ["ryubing"]
+rom_folders = ["roms/switch"]
+
+[[platform]]
+id = "3ds"
+name = "3DS"
+icon = "3ds"
+emulators = ["azahar"]
+rom_folders = ["roms/3ds"]
+
+[[platform]]
+id = "steam"
+name = "Steam"
+icon = "steam"
+
+# Non-Steam games that run through Proton.
+[[platform]]
+id = "proton"
+name = "Proton"
+icon = "proton"
+
+# Native Linux games, run by the launcher itself.
+[[platform]]
+id = "linux"
+name = "Linux"
+icon = "linux"

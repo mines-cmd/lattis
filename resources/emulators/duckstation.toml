@@ -1,0 +1,21 @@
+# DuckStation (PlayStation). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and DuckStation's sources, 2026-09.
+id = "duckstation"
+name = "DuckStation"
+platforms = ["ps1"]
+# The Flatpak hasn't been updated since 2025-08; upstream ships AppImages.
+flatpak = "org.duckstation.DuckStation"
+executables = ["duckstation-qt"]
+# Releases are DuckStation-x64.AppImage (and -SSE2, -arm64 variants).
+appimage = "DuckStation*.AppImage"
+# -batch quits when the game stops; -- ends the options, whatever the file is called.
+command = ["{exe}", "{args}", "-batch", "--", "{rom}"]
+# Not bin (it comes with a cue, listed once) nor m3u (its discs are listed already).
+extensions = ["cue", "chd", "iso", "img", "ecm", "mds", "ccd", "pbp"]
+# Its data is in ~/.local/share/duckstation ($XDG_CONFIG_HOME/duckstation when that's
+# set, as in the Flatpak), or next to the program or its AppImage when portable.txt is
+# there (src/core/core.cpp, Core::SetDataRoot, and src/core/settings.cpp, 2026-09).
+# memcards/ and savestates/ are the saves, bios/ the BIOS.
+portable = "portable.txt"
+saves = { native = ["~/.local/share/duckstation/memcards", "~/.local/share/duckstation/savestates"], flatpak = ["~/.var/app/org.duckstation.DuckStation/config/duckstation/memcards", "~/.var/app/org.duckstation.DuckStation/config/duckstation/savestates"], portable = ["memcards", "savestates"] }
+keys = { native = "~/.local/share/duckstation/bios", flatpak = "~/.var/app/org.duckstation.DuckStation/config/duckstation/bios", portable = "bios" }

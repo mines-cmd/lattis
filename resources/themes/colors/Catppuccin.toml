@@ -1,0 +1,52 @@
+# Built-in Catppuccin colors: rich mauve accents on a deep blue-purple base.
+# From the Catppuccin Mocha palette, and Latte for the tags (https://catppuccin.com).
+
+[palette]
+background = "#1e1e2e"
+surface = "#181825"
+surface_raised = "#313244"
+surface_hover = "#45475a"
+border = "#cdd6f41a"
+hover_overlay = "#cdd6f40d"
+selected_overlay = "#cdd6f421"
+text = "#cdd6f4"
+text_muted = "#9399b2"
+accent = "#9d78d4"
+
+[game_editor]
+scrim = "#11111ba6"
+checker_light = "#45475a"
+checker_dark = "#313244"
+
+[rail]
+background = "#181825ca"
+logo_mark = "@text"
+
+[search]
+background = "#181825ca"
+
+[hero]
+scrim_color = "#1e1e2e8c"
+
+[launch_button]
+running_background = "#a6e3a1"
+running_background_end = "#4dbb43"
+install_background = "#5797ff"
+install_background_end = "#4d85d1"
+
+[icon_button]
+background = "#181825ca"
+hover_background = "#313244ca"
+hover_background_end = "#313244ca"
+
+[settings_window]
+scrollbar_handle_hover = "#6c7086"
+
+[stat_chip]
+icon_color = "#7f849c"
+value_color = "#6c7086"
+label_color = "#bac2de"
+
+[tags]
+# Latte accents, then shades of its mauve and lavender (the Mocha pastels need dark text, which looks odd on a dark theme).
+palette = ["#d20f39", "#e64553", "#fe640b", "#df8e1d", "#40a02b", "#179299", "#04a5e5", "#209fb5", "#1e66f5", "#7287fd", "#8839ef", "#ea76cb", "#dd7878", "#dc8a78", "#a66af3", "#662bb3", "#441c78", "#5b6cca", "#4a4fa8"]

@@ -1,0 +1,13 @@
+{
+ "success": true,
+ "data": {
+  "id": 4997889,
+  "name": "Hades",
+  "release_date": 1575997566,
+  "types": [
+   "steam",
+   "egs"
+  ],
+  "verified": true
+ }
+}

@@ -1,0 +1,180 @@
+[
+ {
+  "id": 323061,
+  "cover": {
+   "id": 423995,
+   "image_id": "co935n"
+  },
+  "name": "Metroid Dread",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 669618,
+    "platform": 6,
+    "status": 5
+   }
+  ]
+ },
+ {
+  "id": 233651,
+  "name": "Metroid Dread",
+  "platforms": [
+   20
+  ],
+  "release_dates": [
+   {
+    "id": 945757,
+    "platform": 20,
+    "status": 5
+   }
+  ],
+  "summary": "Metroid Dread is a cancelled DS game for the Metroid series that was later reworked into the Nintendo Switch game of the same name. The game is notable for being in development hell, having been originally developed for the Nintendo DS. This early version of the game has never been publicly shown off.\n\nThis early version has the same basic premise as the final one, with Samus trapped on an alien world, trying to survive against an unstoppable foe. And as it's a sequel to Metroid Fusion, it presumably would have carried the plot point of Samus being on the run from the Galactic Federation.\n\nNo prototype builds or ROMs have ever surfaced for this DS version, and it is unlikely Nintendo will release any. It's a possibility that concept art or screenshots of this early version will be revealed in the upcoming art book, as Nintendo is open to talking about Metroid Dread's development history.\n\nLiam Robertson of Unseen64 claims that a synopsis of the game was given out to select members of the press. And in 2010, IGN's Craig Harris said in a podcast that he had seen a complete script for Metroid Dread, and that \"Nintendo could use it anytime they wanted.\" It's possible that this was the synopsis that Liam Robertson was referring to. After the 2021 announcement of the game, Harris was asked on Twitter if he remembered anything from this script. He said he didn't"
+ },
+ {
+  "id": 15698,
+  "cover": {
+   "id": 526516,
+   "image_id": "coba9g"
+  },
+  "external_games": [
+   {
+    "id": 2062135,
+    "uid": "212029556",
+    "external_game_source": 14
+   },
+   {
+    "id": 2062948,
+    "uid": "B097F76RF5",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063101,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062984,
+    "uid": "B097C51H38",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064489,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064603,
+    "uid": "B097Q2VRTX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064426,
+    "uid": "B0979WXCWS",
+    "external_game_source": 20
+   },
+   {
+    "id": 2120552,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2075542,
+    "uid": "B099269RZM",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064553,
+    "uid": "B097F76RF5",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063048,
+    "uid": "B0979NM878",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062907,
+    "uid": "B097BP5DLQ",
+    "external_game_source": 20
+   }
+  ],
+  "first_release_date": 1633564800,
+  "name": "Metroid Dread",
+  "platforms": [
+   130
+  ],
+  "release_dates": [
+   {
+    "id": 296763,
+    "date": 1633651200,
+    "platform": 130
+   },
+   {
+    "id": 339239,
+    "date": 1633564800,
+    "platform": 130
+   }
+  ],
+  "summary": "Join intergalactic bounty hunter Samus Aran in her first new 2D Metroid story in 19 years. Samus’ story continues after the events of the Metroid Fusion game when she descends upon planet ZDR to investigate a mysterious transmission sent to the Galactic Federation. The remote planet has become overrun by vicious alien lifeforms and chilling mechanical menaces. Samus is more agile and capable than ever, but can she overcome the inhuman threat stalking the depths of ZDR?",
+  "genres": [
+   5,
+   8,
+   31
+  ],
+  "themes": [
+   1,
+   18
+  ],
+  "game_modes": [
+   1
+  ],
+  "keywords": [
+   {
+    "id": 2129,
+    "slug": "metroidvania"
+   },
+   {
+    "id": 381,
+    "slug": "aliens"
+   },
+   {
+    "id": 4515,
+    "slug": "2-5d"
+   }
+  ]
+ },
+ {
+  "id": 195336,
+  "cover": {
+   "id": 232466,
+   "image_id": "co4zde"
+  },
+  "external_games": [
+   {
+    "id": 2412342,
+    "uid": "627070661",
+    "external_game_source": 14
+   },
+   {
+    "id": 3009466,
+    "uid": "1267586",
+    "external_game_source": 30
+   }
+  ],
+  "first_release_date": 1636243200,
+  "name": "Metroid Dread Demake",
+  "platforms": [
+   22
+  ],
+  "release_dates": [
+   {
+    "id": 351227,
+    "date": 1636243200,
+    "platform": 22
+   }
+  ],
+  "summary": "A demake of the introduction of Metroid Dread for the Game Boy Color. A demo (v1) was released, but the author stopped working on it due to copyright."
+ }
+]

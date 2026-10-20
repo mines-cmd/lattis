@@ -1,0 +1,22 @@
+# Built-in Sharp style: square corners, except on tags, chips and game icons, which read better rounded.
+extends = "Soft"
+description = "Square corners, rounded tags and chips"
+
+[radius]
+large = 0
+medium = 0
+small = 0
+tiny = 0
+
+[tags]
+radius = 6
+
+[filters]
+chip_radius = 12
+
+[list]
+icon_radius = 4
+
+[settings_window]
+source_tag_radius = 6
+key_chip_radius = 6

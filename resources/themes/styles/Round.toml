@@ -1,0 +1,9 @@
+# Built-in Round style: rounder corners (16/12/8/4) than Soft.
+extends = "Soft"
+description = "Rounder corners than Soft"
+
+[radius]
+large = 16
+medium = 12
+small = 8
+tiny = 4

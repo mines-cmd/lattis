@@ -1,0 +1,127 @@
+[
+ {
+  "id": 81145,
+  "rating": 72.35,
+  "rating_count": 400,
+  "alternative_names": [
+   {
+    "id": 96998,
+    "name": "MTA"
+   },
+   {
+    "id": 96999,
+    "name": "MT Aces"
+   },
+   {
+    "id": 175605,
+    "name": "Mario Tennis: Aces"
+   }
+  ],
+  "cover": {
+   "id": 84812,
+   "image_id": "co1tfw"
+  },
+  "external_games": [
+   {
+    "id": 1184682,
+    "uid": "UCwp9bBSRIMf6C8kHaxO43hA",
+    "external_game_source": 10
+   },
+   {
+    "id": 1192962,
+    "uid": "502429",
+    "external_game_source": 14
+   },
+   {
+    "id": 209800,
+    "uid": "64951",
+    "external_game_source": 3
+   },
+   {
+    "id": 1865714,
+    "uid": "B07C8X7GBG",
+    "external_game_source": 20
+   },
+   {
+    "id": 1934147,
+    "uid": "B07912VF4J",
+    "external_game_source": 20
+   },
+   {
+    "id": 1930766,
+    "uid": "B07BB2KZJG",
+    "external_game_source": 20
+   },
+   {
+    "id": 1928758,
+    "uid": "B078XYF9SV",
+    "external_game_source": 20
+   },
+   {
+    "id": 1928825,
+    "uid": "B07BVY39ZX",
+    "external_game_source": 20
+   },
+   {
+    "id": 1865824,
+    "uid": "B078YKBGYZ",
+    "external_game_source": 20
+   },
+   {
+    "id": 1931408,
+    "uid": "B07BB3G8BD",
+    "external_game_source": 20
+   },
+   {
+    "id": 1932240,
+    "uid": "B07BHGDR4L",
+    "external_game_source": 20
+   },
+   {
+    "id": 1865635,
+    "uid": "B07BC51XJL",
+    "external_game_source": 20
+   }
+  ],
+  "first_release_date": 1529625600,
+  "name": "Mario Tennis Aces",
+  "platforms": [
+   130
+  ],
+  "release_dates": [
+   {
+    "id": 442915,
+    "date": 1529625600,
+    "platform": 130
+   },
+   {
+    "id": 248677,
+    "date": 1529625600,
+    "platform": 130
+   }
+  ],
+  "summary": "A new Mario Tennis game is bringing a new level of skill and competition to Nintendo Switch. Mario steps onto the court in classy tennis garb for intense rallies against a variety of characters in full-blown tennis battles. New wrinkles in tennis gameplay will challenge your ability to read an opponent's position and stroke to determine which shot will give you the advantage. And this time the game adds the first story mode since the Mario Tennis game on Game Boy Advance, offering a new flavor of tennis gameplay, with a variety of missions, boss battles and more",
+  "genres": [
+   14
+  ],
+  "themes": [
+   1
+  ],
+  "game_modes": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "keywords": [
+   {
+    "id": 2257,
+    "slug": "tennis"
+   },
+   {
+    "id": 6,
+    "slug": "mario"
+   }
+  ]
+ }
+]

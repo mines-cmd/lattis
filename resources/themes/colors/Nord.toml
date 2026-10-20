@@ -1,0 +1,53 @@
+# Built-in Nord colors: arctic blue-greys with a blue accent.
+# From the Nord palette (https://www.nordtheme.com).
+
+[palette]
+background = "#2e3440"
+surface = "#272c36"
+surface_raised = "#3b4252"
+surface_hover = "#434c5e"
+border = "#d8dee91a"
+hover_overlay = "#d8dee90d"
+selected_overlay = "#d8dee921"
+text = "#eceff4"
+text_muted = "#a3adc0"
+accent = "#5e81ac"
+
+[game_editor]
+scrim = "#272c36a6"
+checker_light = "#434c5e"
+checker_dark = "#3b4252"
+
+[rail]
+background = "#272c36ca"
+logo_mark = "@text"
+
+[search]
+background = "#272c36ca"
+
+[hero]
+scrim_color = "#2e34408c"
+
+[launch_button]
+running_background = "#66a8a7"
+install_background = "#596c82"
+
+[icon_button]
+background = "#272c36ca"
+hover_background = "#3b4252ca"
+hover_background_end = "#3b4252ca"
+
+[settings_window]
+scrollbar_handle_hover = "#4c566a"
+
+[stat_chip]
+icon_color = "#7b88a1"
+value_color = "#7b88a1"
+label_color = "#d8dee9"
+
+[onboarding]
+background = "#272c36"
+
+[tags]
+# Nord has only 16 colors: its accents, then darker shades of them (white text needs the extra depth), a grey and a dark green.
+palette = ["#bf616a", "#d08770", "#ebcb8b", "#a3be8c", "#8fbcbb", "#88c0d0", "#81a1c1", "#5e81ac", "#b48ead", "#8a464c", "#966151", "#a99264", "#758965", "#678787", "#628a96", "#82667d", "#445d7c", "#4c566a", "#525f46"]

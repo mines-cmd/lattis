@@ -1,0 +1,73 @@
+[
+ {
+  "id": 1030,
+  "cover": {
+   "id": 86215,
+   "image_id": "co1ksn"
+  },
+  "first_release_date": 1163894400,
+  "game_modes": [
+   1
+  ],
+  "genres": [
+   12,
+   31
+  ],
+  "name": "The Legend of Zelda: Twilight Princess",
+  "platforms": [
+   5,
+   21
+  ],
+  "release_dates": [
+   {
+    "id": 29460,
+    "date": 1163894400,
+    "platform": 5,
+    "status": 6
+   },
+   {
+    "id": 29461,
+    "date": 1165795200,
+    "platform": 21,
+    "status": 6
+   }
+  ],
+  "summary": "Link, a young ranch hand in the village of Ordon, is pulled into the Twilight Realm, where he turns into a wolf. With the help of Midna, a mysterious imp, he sets out to free Hyrule from the twilight that covers it.",
+  "themes": [
+   1,
+   17
+  ],
+  "rating": 91.4,
+  "rating_count": 900
+ },
+ {
+  "id": 11195,
+  "cover": {
+   "id": 86216,
+   "image_id": "co1kso"
+  },
+  "first_release_date": 1457049600,
+  "game_modes": [
+   1
+  ],
+  "genres": [
+   12,
+   31
+  ],
+  "name": "The Legend of Zelda: Twilight Princess HD",
+  "platforms": [
+   41
+  ],
+  "release_dates": [
+   {
+    "id": 110123,
+    "date": 1457049600,
+    "platform": 41,
+    "status": 6
+   }
+  ],
+  "summary": "A high-definition remaster of The Legend of Zelda: Twilight Princess for Wii U, with sharper graphics, a new Hero Mode and support for amiibo.",
+  "rating": 86.2,
+  "rating_count": 300
+ }
+]

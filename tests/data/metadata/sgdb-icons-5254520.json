@@ -1,0 +1,50 @@
+{
+ "success": true,
+ "page": 0,
+ "total": 10,
+ "limit": 50,
+ "data": [
+  {
+   "id": 13662,
+   "score": 0,
+   "style": "official",
+   "width": 1024,
+   "height": 1024,
+   "nsfw": false,
+   "humor": false,
+   "notes": "**[Nintendo E3 2018 asset](https://www.flickr.com/photos/25792657@N00/42708959862/in/album-72157670051600008/)**",
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/icon/6a57122a72d2bd5e8a156c678952f88b.png",
+   "thumb": "https://cdn2.steamgriddb.com/icon_thumb/6a57122a72d2bd5e8a156c678952f88b.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "CluckenDip"
+   }
+  },
+  {
+   "id": 8381,
+   "score": 0,
+   "style": "custom",
+   "width": 0,
+   "height": 0,
+   "nsfw": false,
+   "humor": false,
+   "notes": "A Tennis Ball with Mario Tennis Aces Written on it. Multiple Dimensions for better Quality.",
+   "mime": "image/vnd.microsoft.icon",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/icon/8606bdb6f1fa707fc6ca309943eea443.ico",
+   "thumb": "https://cdn2.steamgriddb.com/icon/8606bdb6f1fa707fc6ca309943eea443/32/256x256.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "Talis_Myn"
+   }
+  }
+ ]
+}

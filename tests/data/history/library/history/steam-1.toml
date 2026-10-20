@@ -1,0 +1,16 @@
+[[session]]
+end = 2026-09-05T22:00:00+02:00
+minutes = 100
+
+[[session]]
+end = 2026-10-20T12:00:00+02:00
+minutes = 500
+merged = true
+
+[[session]]
+end = 2026-10-21T22:00:00+02:00
+minutes = 120
+
+[[session]]
+end = 2026-10-23T22:00:00+02:00
+minutes = 30

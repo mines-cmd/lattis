@@ -1,0 +1,130 @@
+# Tags and their colors. `color` is an index into the theme's tags.palette.
+# A game can use a tag that isn't listed here; it shows in the first color.
+#
+# `igdb` says what a tag stands for on IGDB, so looking a game up there can suggest it:
+# "genre:<id>", "theme:<id>", "mode:<id>" (game mode) or "keyword:<slug>". A tag fits a
+# game when any of them does. `igdb = []` never suggests the tag.
+#
+# The app wrote this file with its default tags when it made the library; they're yours
+# to rename, recolor or delete. Settings → Library's "Add default tags" brings back the
+# ones you don't have.
+
+[[tag]]
+name = "Metroidvania"
+color = 10
+igdb = ["keyword:metroidvania"]
+
+[[tag]]
+name = "Roguelike"
+color = 0
+igdb = ["keyword:roguelike", "keyword:roguelite", "keyword:action-roguelike", "keyword:action-roguelite", "keyword:traditional-roguelike", "keyword:roguelike-deckbuilder", "keyword:roguelike-platform", "keyword:roguelike-horror"]
+
+[[tag]]
+name = "Soulslike"
+color = 23
+igdb = ["keyword:soulslike"]
+
+[[tag]]
+name = "Deckbuilder"
+color = 2
+igdb = ["keyword:deck-building--1", "keyword:roguelike-deckbuilder", "keyword:deckbuilder", "keyword:deck-building", "keyword:deckbuilding"]
+
+[[tag]]
+name = "Shoot 'em up"
+color = 8
+igdb = ["keyword:shoot-em-up", "keyword:shmup"]
+
+[[tag]]
+name = "JRPG"
+color = 14
+igdb = ["keyword:jrpg", "keyword:japanese-rpg"]
+
+[[tag]]
+name = "Immersive sim"
+color = 19
+igdb = ["keyword:immersive-sim"]
+
+[[tag]]
+name = "Platformer"
+color = 4
+igdb = ["genre:8"]
+
+[[tag]]
+name = "Fighting"
+color = 1
+igdb = ["genre:4"]
+
+[[tag]]
+name = "Racing"
+color = 15
+igdb = ["genre:10"]
+
+[[tag]]
+name = "Sports"
+color = 5
+igdb = ["genre:14"]
+
+[[tag]]
+name = "Puzzle"
+color = 11
+igdb = ["genre:9"]
+
+[[tag]]
+name = "Beat 'em up"
+color = 17
+igdb = ["genre:25"]
+
+[[tag]]
+name = "RTS"
+color = 20
+igdb = ["genre:11"]
+
+[[tag]]
+name = "Turn-based strategy"
+color = 9
+igdb = ["genre:16"]
+
+[[tag]]
+name = "Tactics"
+color = 3
+igdb = ["genre:24"]
+
+[[tag]]
+name = "Visual novel"
+color = 13
+igdb = ["genre:34"]
+
+[[tag]]
+name = "Point-and-click"
+color = 12
+igdb = ["genre:2"]
+
+[[tag]]
+name = "Horror"
+color = 16
+igdb = ["theme:19"]
+
+[[tag]]
+name = "Stealth"
+color = 21
+igdb = ["theme:23"]
+
+[[tag]]
+name = "Survival"
+color = 18
+igdb = ["theme:21"]
+
+[[tag]]
+name = "Open world"
+color = 6
+igdb = ["theme:38"]
+
+[[tag]]
+name = "Co-op"
+color = 7
+igdb = ["mode:3"]
+
+[[tag]]
+name = "Split screen"
+color = 22
+igdb = ["mode:4"]

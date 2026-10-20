@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lattis
+Comment=Emulated games, Steam and Proton in one library
+Exec=lattis
+Icon=lattis
+Terminal=false
+Categories=Game;
+StartupWMClass=lattis

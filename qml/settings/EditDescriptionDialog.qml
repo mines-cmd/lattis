@@ -1,0 +1,75 @@
+import QtQuick
+import QtQuick.Controls.Basic
+import QtQuick.Layouts
+
+MotionPopup {
+    id: root
+
+    property string name
+
+    signal saved(string text)
+
+    function openFor(name) {
+        root.name = name
+        field.text = Theme.styleDescription(name)
+        open()
+        field.forceActiveFocus()
+        field.selectAll()
+    }
+
+    function save() {
+        if (Theme.setStyleDescription(name, field.text))
+            saved(qsTr("Changed the description of %1").arg(name))
+        close()
+    }
+
+    anchors.centerIn: parent
+    modal: true
+    Overlay.modal: Scrim {}
+    padding: Theme.settingsWindow.dialogPadding
+    width: 340
+
+    background: Rectangle {
+        color: Theme.settingsWindow.popupBackground
+        border.color: Theme.settingsWindow.inputBorder
+        border.width: Theme.settingsWindow.inputBorderWidth
+        radius: Theme.settingsWindow.inputRadius
+    }
+
+    ColumnLayout {
+        width: parent.width
+        spacing: 10
+
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("Description of %1").arg(root.name)
+            color: Theme.settingsWindow.labelColor
+            font.bold: true
+            elide: Text.ElideRight
+        }
+
+        SettingsTextField {
+            id: field
+            Layout.fillWidth: true
+            implicitHeight: Theme.settingsWindow.inputHeight
+            maximumLength: 48
+            onAccepted: root.save()
+        }
+        Label {
+            Layout.alignment: Qt.AlignRight
+            text: field.length + "/48"
+            color: Theme.settingsWindow.descriptionColor
+        }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            spacing: Theme.settingsWindow.controlSpacing
+            SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
+            SettingsButton {
+                primary: true
+                text: qsTr("Save")
+                onClicked: root.save()
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+# Build output
+build/
+build-*/
+*.user
+
+# Design references (screenshots of other apps, copyrighted art); kept locally only
+reference/
+
+# Generated logo SVGs and identity page (node tools/logo/build.js)
+tools/logo*/out/
+
+# Cache and state written next to the demo data dir by tools/screenshot.sh
+launcher-demo-cache/
+launcher-demo-state/

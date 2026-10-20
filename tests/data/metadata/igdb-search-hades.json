@@ -1,0 +1,711 @@
+[
+ {
+  "id": 80529,
+  "cover": {
+   "id": 222627,
+   "image_id": "co4rs3"
+  },
+  "external_games": [
+   {
+    "id": 102327,
+    "uid": "59708",
+    "external_game_source": 3
+   }
+  ],
+  "first_release_date": 799286400,
+  "name": "Hades",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 211790,
+    "date": 799286400,
+    "platform": 6
+   }
+  ],
+  "summary": "A South Korean-made first person shooter (potentially the first ever from that country)."
+ },
+ {
+  "id": 113112,
+  "alternative_names": [
+   {
+    "id": 186710,
+    "name": "Hades.exe"
+   }
+  ],
+  "cover": {
+   "id": 525627,
+   "image_id": "cob9kr"
+  },
+  "external_games": [
+   {
+    "id": 1697473,
+    "uid": "510590",
+    "external_game_source": 14
+   },
+   {
+    "id": 1744299,
+    "uid": "71297",
+    "external_game_source": 3
+   },
+   {
+    "id": 2118714,
+    "uid": "54fb014e-a694-4a6c-b945-0c132e1e2d6a",
+    "external_game_source": 26
+   },
+   {
+    "id": 2627428,
+    "uid": "2ae6edb2223c4f8c97e9839b5b6497bb",
+    "external_game_source": 26
+   },
+   {
+    "id": 3118554,
+    "uid": "9P8DL6W0JBB8",
+    "external_game_source": 54
+   },
+   {
+    "id": 2175860,
+    "uid": "10002648",
+    "external_game_source": 36
+   },
+   {
+    "id": 2083731,
+    "uid": "9P8DL6W0JBB8",
+    "external_game_source": 11
+   },
+   {
+    "id": 1740294,
+    "uid": "1145360",
+    "external_game_source": 1
+   },
+   {
+    "id": 2001907,
+    "uid": "B08WWC6GBX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2001700,
+    "uid": "B08WY6CRHL",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062831,
+    "uid": "B097FM6WLH",
+    "external_game_source": 20
+   },
+   {
+    "id": 2682222,
+    "uid": "B08WWC6GBX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2080734,
+    "uid": "B09BNKGGFN",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064521,
+    "uid": "B096C4TK3J",
+    "external_game_source": 20
+   },
+   {
+    "id": 2001908,
+    "uid": "B08WWC6GBX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2075504,
+    "uid": "B096C4TK3J",
+    "external_game_source": 20
+   },
+   {
+    "id": 2075537,
+    "uid": "B096C3295Z",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062971,
+    "uid": "B097FJDYRT",
+    "external_game_source": 20
+   },
+   {
+    "id": 2001592,
+    "uid": "B08WY6WVTL",
+    "external_game_source": 20
+   },
+   {
+    "id": 2592142,
+    "uid": "B08WWC6GBX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2410999,
+    "uid": "B0978XR29N",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064619,
+    "uid": "B096C3295Z",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063075,
+    "uid": "B097FN1GYK",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063056,
+    "uid": "B0978WFK2B",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062817,
+    "uid": "B0978XDDMD",
+    "external_game_source": 20
+   },
+   {
+    "id": 2885277,
+    "uid": "B08WWC6GBX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2717182,
+    "uid": "B096C4TK3J",
+    "external_game_source": 20
+   },
+   {
+    "id": 2750505,
+    "uid": "B0983N4QJP",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063078,
+    "uid": "B0978XR29N",
+    "external_game_source": 20
+   },
+   {
+    "id": 2080660,
+    "uid": "B09BNLT4BT",
+    "external_game_source": 20
+   }
+  ],
+  "first_release_date": 1600300800,
+  "name": "Hades",
+  "platforms": [
+   169,
+   48,
+   6,
+   39,
+   167,
+   14,
+   49,
+   130
+  ],
+  "release_dates": [
+   {
+    "id": 465216,
+    "date": 1600300800,
+    "platform": 6,
+    "status": 6
+   },
+   {
+    "id": 482856,
+    "date": 1628812800,
+    "platform": 167,
+    "status": 6
+   },
+   {
+    "id": 482857,
+    "date": 1628812800,
+    "platform": 49,
+    "status": 6
+   },
+   {
+    "id": 482858,
+    "date": 1628812800,
+    "platform": 169,
+    "status": 6
+   },
+   {
+    "id": 575593,
+    "date": 1710806400,
+    "platform": 39,
+    "status": 6
+   },
+   {
+    "id": 482849,
+    "date": 1600300800,
+    "platform": 14,
+    "status": 6
+   },
+   {
+    "id": 482850,
+    "date": 1624492800,
+    "platform": 130,
+    "status": 6
+   },
+   {
+    "id": 482855,
+    "date": 1628812800,
+    "platform": 48,
+    "status": 6
+   },
+   {
+    "id": 482848,
+    "date": 1575936000,
+    "platform": 14,
+    "status": 3
+   },
+   {
+    "id": 482851,
+    "date": 1600300800,
+    "platform": 130,
+    "status": 6
+   },
+   {
+    "id": 482852,
+    "date": 1616025600,
+    "platform": 130,
+    "status": 6
+   },
+   {
+    "id": 482853,
+    "date": 1600300800,
+    "platform": 130,
+    "status": 6
+   },
+   {
+    "id": 482854,
+    "date": 1544140800,
+    "platform": 6,
+    "status": 3
+   }
+  ],
+  "summary": "A rogue-lite hack and slash dungeon crawler in which Zagreus, son of Hades the Greek god of the dead, attempts to escape his home and his oppressive father by fighting the souls of the dead through the various layers of the ever-shifting underworld, while getting to know and forging relationships with its inhabitants.",
+  "genres": [
+   12,
+   25,
+   31,
+   32
+  ],
+  "themes": [
+   1,
+   17
+  ],
+  "game_modes": [
+   1
+  ],
+  "keywords": [
+   {
+    "id": 1797,
+    "slug": "roguelike"
+   },
+   {
+    "id": 24126,
+    "slug": "roguelite"
+   },
+   {
+    "id": 1026,
+    "slug": "greek-mythology"
+   },
+   {
+    "id": 4134,
+    "slug": "hack-and-slash"
+   }
+  ]
+ },
+ {
+  "id": 134619,
+  "cover": {
+   "id": 555679,
+   "image_id": "cobwrj"
+  },
+  "external_games": [
+   {
+    "id": 1962445,
+    "uid": "1131749400",
+    "external_game_source": 14
+   }
+  ],
+  "first_release_date": 1009756800,
+  "name": "Hades 2",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 223392,
+    "date": 1009756800,
+    "platform": 6
+   }
+  ],
+  "summary": "Hades 2 is a first-person shooter developed by Espaço Informática, a Brazilian company. Espaço Informática placed Hades 2 in the public domain and offered a Freeware download of the game on 20 September 2009 to celebrate the project's 10th anniversary. On the game's opening screen, users can select to play the game in English or Portuguese. The distribution package includes a Portuguese-language manual in Firefox Document format.\n\nHades 2 was Espaço Informática's biggest hit, selling over 50,000 copies in Brazil with additional distribution in Europe."
+ },
+ {
+  "id": 228525,
+  "alternative_names": [
+   {
+    "id": 118119,
+    "name": "Hades 2"
+   },
+   {
+    "id": 178774,
+    "name": "Hades2.exe"
+   }
+  ],
+  "cover": {
+   "id": 493341,
+   "image_id": "coaknx"
+  },
+  "external_games": [
+   {
+    "id": 2632738,
+    "uid": "376500771",
+    "external_game_source": 14
+   },
+   {
+    "id": 2636814,
+    "uid": "adbc94588a184ce3a6122a19aae940ae",
+    "external_game_source": 26
+   },
+   {
+    "id": 3164946,
+    "uid": "9PCR3Z2MSM4T",
+    "external_game_source": 54
+   },
+   {
+    "id": 3171337,
+    "uid": "10018449",
+    "external_game_source": 36
+   },
+   {
+    "id": 2665941,
+    "uid": "1145350",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 1758758400,
+  "name": "Hades II",
+  "platforms": [
+   169,
+   508,
+   6,
+   167,
+   14,
+   130
+  ],
+  "release_dates": [
+   {
+    "id": 655046,
+    "date": 1729036800,
+    "platform": 14,
+    "status": 3
+   },
+   {
+    "id": 591682,
+    "date": 1714953600,
+    "platform": 6,
+    "status": 3
+   },
+   {
+    "id": 800771,
+    "date": 1758758400,
+    "platform": 14,
+    "status": 6
+   },
+   {
+    "id": 800772,
+    "date": 1758758400,
+    "platform": 130,
+    "status": 6
+   },
+   {
+    "id": 800773,
+    "date": 1758758400,
+    "platform": 508,
+    "status": 6
+   },
+   {
+    "id": 800774,
+    "date": 1758758400,
+    "platform": 6,
+    "status": 6
+   },
+   {
+    "id": 893566,
+    "date": 1776124800,
+    "platform": 169,
+    "status": 6
+   },
+   {
+    "id": 893567,
+    "date": 1776124800,
+    "platform": 167,
+    "status": 6
+   }
+  ],
+  "summary": "Battle beyond the Underworld using dark sorcery to take on the Titan of Time in this bewitching sequel to the award-winning rogue-like dungeon crawler."
+ },
+ {
+  "id": 30655,
+  "alternative_names": [
+   {
+    "id": 230551,
+    "name": "Hade.exe"
+   }
+  ],
+  "cover": {
+   "id": 484615,
+   "image_id": "coadxj"
+  },
+  "external_games": [
+   {
+    "id": 1974629,
+    "uid": "489537425",
+    "external_game_source": 14
+   },
+   {
+    "id": 2204,
+    "uid": "552160",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 1480636800,
+  "name": "Hade",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 73599,
+    "date": 1480636800,
+    "platform": 6
+   }
+  ],
+  "summary": "Hade is a minimalist logic game with severely difficult puzzles softened by relaxing ambient music."
+ },
+ {
+  "id": 346885,
+  "cover": {
+   "id": 462130,
+   "image_id": "co9wky"
+  },
+  "external_games": [
+   {
+    "id": 3067394,
+    "uid": "394317278",
+    "external_game_source": 14
+   },
+   {
+    "id": 3016144,
+    "uid": "3695570",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 1750809600,
+  "name": "H.A.D.E.S Zero",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 759617,
+    "date": 1750809600,
+    "platform": 6,
+    "status": 6
+   }
+  ],
+  "summary": "Survival horror where you explore collapsed facilities, face biotechnological horrors, and survive with limited resources."
+ },
+ {
+  "id": 56959,
+  "alternative_names": [
+   {
+    "id": 191147,
+    "name": "hadesstar.exe"
+   }
+  ],
+  "cover": {
+   "id": 566234,
+   "image_id": "coc4wq"
+  },
+  "external_games": [
+   {
+    "id": 1188739,
+    "uid": "495173",
+    "external_game_source": 14
+   },
+   {
+    "id": 104229,
+    "uid": "57777",
+    "external_game_source": 3
+   },
+   {
+    "id": 1683181,
+    "uid": "755800",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 1551225600,
+  "name": "Hades' Star",
+  "platforms": [
+   34,
+   6,
+   39,
+   14
+  ],
+  "release_dates": [
+   {
+    "id": 194805,
+    "date": 1551225600,
+    "platform": 39
+   },
+   {
+    "id": 194804,
+    "date": 1551225600,
+    "platform": 34
+   },
+   {
+    "id": 194806,
+    "date": 1551225600,
+    "platform": 6
+   },
+   {
+    "id": 919191,
+    "date": 1551225600,
+    "platform": 14
+   }
+  ],
+  "summary": "Hades' Star is a 4x MMO, allowing thousands of players in the same universe. In the game, you will create your Empire from scratch over time, and cooperate or battle against other players in shared Star Systems."
+ },
+ {
+  "id": 345742,
+  "cover": {
+   "id": 560575,
+   "image_id": "coc0jj"
+  },
+  "external_games": [
+   {
+    "id": 2944931,
+    "uid": "3184970",
+    "external_game_source": 1
+   }
+  ],
+  "name": "Hades-Plan",
+  "platforms": [
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 906339,
+    "platform": 6
+   }
+  ],
+  "summary": "Hades, Zeus, and Athena are embroiled in a vortex of emotional power. Identity secrets are exposed, and the relationship between the three is tumultuous."
+ },
+ {
+  "id": 13867,
+  "cover": {
+   "id": 381544,
+   "image_id": "co86eg"
+  },
+  "external_games": [
+   {
+    "id": 1921616,
+    "uid": "24873",
+    "external_game_source": 14
+   },
+   {
+    "id": 132074,
+    "uid": "27580",
+    "external_game_source": 3
+   },
+   {
+    "id": 2713153,
+    "uid": "2447330",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 567907200,
+  "name": "Hades Nebula",
+  "platforms": [
+   15,
+   26,
+   63,
+   6
+  ],
+  "release_dates": [
+   {
+    "id": 485359,
+    "date": 1686614400,
+    "platform": 6,
+    "status": 6
+   },
+   {
+    "id": 87890,
+    "date": 567907200,
+    "platform": 15
+   },
+   {
+    "id": 87892,
+    "date": 567907200,
+    "platform": 26
+   },
+   {
+    "id": 87891,
+    "date": 567907200,
+    "platform": 63
+   }
+  ],
+  "summary": "Hades Nebula is a futuristic vertical scrolling shooter set in the year 2124. As humanity searches for new habitable planets due to dwindling energy reserves, players pilot a small spacecraft on a mission to thwart the villainous Emperor Hades. The game unfolds against a backdrop of interstellar colonization and conflict, with players navigating through asteroid fields and waves of enemy forces. Gameplay focuses on skillful dodging and precise shooting, while power-ups enhance the ship's capabilities. With its blend of sci-fi narrative and classic arcade action, Hades Nebula offers a challenging space combat experience as players fight to secure humanity's future among the stars."
+ },
+ {
+  "id": 158772,
+  "alternative_names": [
+   {
+    "id": 83377,
+    "name": "Cinders Of Hades"
+   },
+   {
+    "id": 193084,
+    "name": "Cinders_Of_Hades.exe"
+   }
+  ],
+  "cover": {
+   "id": 169982,
+   "image_id": "co3n5q"
+  },
+  "external_games": [
+   {
+    "id": 2074704,
+    "uid": "300070017",
+    "external_game_source": 14
+   },
+   {
+    "id": 2026202,
+    "uid": "1496530",
+    "external_game_source": 1
+   }
+  ],
+  "first_release_date": 1611619200,
+  "name": "Cinders of Hades",
+  "platforms": [
+   6,
+   163
+  ],
+  "release_dates": [
+   {
+    "id": 308314,
+    "date": 1611619200,
+    "platform": 6
+   },
+   {
+    "id": 504290,
+    "date": 1611619200,
+    "platform": 163
+   }
+  ],
+  "summary": "Cinders of Hades is a relaxing, wave shooter arcade-style VR game that all ages will enjoy. It has some classic, arcade influences translated to VR that veteran arcade players will appreciate."
+ }
+]

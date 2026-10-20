@@ -1,0 +1,19 @@
+# Built-in Moss colors: Ember's dark slate with a moss-green accent.
+extends = "Ember"
+
+[palette]
+accent = "#67a715"
+accent_end = "#569209"
+
+[launch_button]
+running_background = "#04a5ff"
+running_background_end = "#0379ff"
+background = "#78b922"
+background_end = "#49b018"
+
+[onboarding]
+background = "#050a05"
+
+[list]
+row_hover = "#9baec42a"
+row_selected = "#97a8bc4b"

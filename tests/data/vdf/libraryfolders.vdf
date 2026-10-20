@@ -1,0 +1,29 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"/home/player/.local/share/Steam"
+		"label"		""
+		"contentid"		"1234567890123456789"
+		"totalsize"		"0"
+		"update_clean_bytes_tally"		"1704416687"
+		"time_last_update_verified"		"1790445101"
+		"apps"
+		{
+			"8000"		"4152617944"
+			"228980"		"128606066"
+			"1493710"		"1534759362"
+			"2231450"		"404028818"
+		}
+	}
+	"1"
+	{
+		"path"		"/mnt/games/SteamLibrary"
+		"label"		"Games"
+		"contentid"		"9876543210987654321"
+		"totalsize"		"1000203837440"
+		"apps"
+		{
+		}
+	}
+}

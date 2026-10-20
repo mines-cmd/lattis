@@ -1,0 +1,65 @@
+"UserLocalConfigStore"
+{
+	"Broadcast"
+	{
+		"Permissions"		"1"
+	}
+	"friends"
+	{
+		"39734273"
+		{
+			"name"		"Player One"
+			"NameHistory"
+			{
+				"0"		"Player One"
+			}
+		}
+		"PersonaName"		"Player One"
+	}
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"7"
+					{
+						"cloud"
+						{
+							"last_sync_state"		"synchronized"
+						}
+					}
+					"2231450"
+					{
+						"LastPlayed"		"1788735088"
+						"Playtime"		"4085"
+						"cloud"
+						{
+							"last_sync_state"		"synchronized"
+						}
+						"autocloud"
+						{
+							"lastlaunch"		"1788734499"
+							"lastexit"		"1788735087"
+						}
+						"BadgeData"		"0a000000082d1206080310011800"
+					}
+					"8000"
+					{
+						"LastPlayed"		"1787843593"
+						"Playtime"		"70"
+						"LaunchOptions"		"PROTON_LOG=1 %command% -window \"C:\\Games\\save dir\""
+						"8000_eula_0"		"4"
+					}
+				}
+				"LastPlayedTimesSyncTime"		"1790445153"
+			}
+		}
+	}
+	"WebStorage"
+	{
+		"SteamVoiceSettings_39734273"		"{\"inputGain\":1,\"outputGain\":1,\"selectedMic\":\"default\"}"
+	}
+}

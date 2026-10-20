@@ -1,0 +1,18 @@
+"AppState"
+{
+	"appid"		"8000"
+	"Universe"		"1"
+	"name"		"Tomb Raider: Anniversary"
+	"StateFlags"		"4"
+	"installdir"		"Tomb Raider Anniversary"
+	"LastUpdated"		"1787000000"
+	"LastPlayed"		"1787843593"
+	"SizeOnDisk"		"4152617944"
+	"StagingSize"		"0"
+	"buildid"		"1234567"
+	"LastOwner"		"76561198000000001"
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+}

@@ -1,0 +1,12 @@
+title = "Diablo IV"
+platform = "proton"
+year = 2023
+description = """
+Dungeon crawling across the open world of Sanctuary."""
+tags = ["RPG", "Co-op"]
+added = 2026-02-02
+exe = "~/Games/Diablo IV/Diablo IV Launcher.exe"
+install_dir = "~/Games/Diablo IV"
+shortcut = 3110441846
+proton = "proton_experimental"
+launch_options = "mangohud %command%"

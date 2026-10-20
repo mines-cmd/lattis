@@ -1,0 +1,53 @@
+# Built-in Gruvbox colors: warm browns with a yellow accent.
+# From the Gruvbox palette (https://github.com/morhetz/gruvbox).
+
+[palette]
+background = "#282828"
+surface = "#1d2021"
+surface_raised = "#3c3836"
+surface_hover = "#504945"
+border = "#ebdbb21a"
+hover_overlay = "#ebdbb20d"
+selected_overlay = "#ebdbb221"
+text = "#ebdbb2"
+text_muted = "#a89984"
+accent = "#d79921"
+
+[game_editor]
+scrim = "#1d2021a6"
+checker_light = "#504945"
+checker_dark = "#3c3836"
+
+[rail]
+background = "#1d2021ca"
+logo_mark = "@text"
+
+[search]
+background = "#1d2021ca"
+
+[hero]
+scrim_color = "#2828288c"
+
+[launch_button]
+running_background = "#98971a"
+install_background = "#458588"
+
+[icon_button]
+background = "#1d2021ca"
+hover_background = "#3c3836ca"
+hover_background_end = "#3c3836ca"
+
+[settings_window]
+scrollbar_handle_hover = "#7c6f64"
+
+[stat_chip]
+icon_color = "#928374"
+value_color = "#7c6f64"
+label_color = "#bdae93"
+
+[onboarding]
+background = "#1d2021"
+
+[tags]
+# Gruvbox neutral then faded accents, a few bright ones and the gray; the bright yellow, green and aqua are left out, as white text is unreadable on them.
+palette = ["#cc241d", "#d65d0e", "#d79921", "#98971a", "#689d6a", "#458588", "#b16286", "#9d0006", "#af3a03", "#b57614", "#79740e", "#427b58", "#076678", "#8f3f71", "#fb4934", "#fe8019", "#83a598", "#d3869b", "#928374"]

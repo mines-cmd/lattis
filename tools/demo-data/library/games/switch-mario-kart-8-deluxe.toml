@@ -1,0 +1,9 @@
+title = "Mario Kart 8 Deluxe"
+platform = "switch"
+year = 2017
+description = """
+Kart racing across 48 tracks, with items, gliders and underwater sections. Up to four players on one screen."""
+tags = ["Racing", "Party"]
+play_minutes = 2460
+last_played = 2026-09-21T19:00:00-03:00
+added = 2026-01-12

@@ -1,0 +1,19 @@
+# shadPS4 (PlayStation 4). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and the sources of shadPS4 and its Qt launcher, 2026-09.
+id = "shadps4"
+name = "shadPS4"
+platforms = ["ps4"]
+flatpak = "net.shadps4.shadPS4"
+executables = ["shadps4"]
+# The emulator and its Qt launcher both take -g <game>.
+appimage = "shadps4*.AppImage"
+command = ["{exe}", "{args}", "-g", "{rom}"]
+# Games are folders with an eboot.bin at the top (dumps named like CUSA00900).
+files = ["eboot.bin"]
+# Its data is in ~/.local/share/shadPS4 (src/common/path_util.cpp and path_util.h,
+# 2026-09). Its portable `user/` folder is looked for in the working folder, not next to
+# the program, and the launcher starts emulators in the home folder, so there's no
+# portable entry. home/ holds each user's saves (home/<user>/savedata,
+# src/core/libraries/save_data/savedata.cpp), sys_modules/ the firmware's modules.
+saves = { native = "~/.local/share/shadPS4/home", flatpak = "~/.var/app/net.shadps4.shadPS4/data/shadPS4/home" }
+keys = { native = "~/.local/share/shadPS4/sys_modules", flatpak = "~/.var/app/net.shadps4.shadPS4/data/shadPS4/sys_modules" }

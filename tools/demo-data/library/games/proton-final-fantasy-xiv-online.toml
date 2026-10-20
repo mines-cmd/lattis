@@ -1,0 +1,12 @@
+title = "Final Fantasy XIV Online"
+platform = "proton"
+year = 2013
+description = """
+The online Final Fantasy, set in Eorzea."""
+tags = ["MMO", "JRPG"]
+added = 2026-02-03
+status = "dropped"
+exe = "pc-games/Final Fantasy XIV Online/boot/ffxivboot.exe"
+install_dir = "pc-games/Final Fantasy XIV Online"
+shortcut = 2458135266
+proton = "proton_experimental"

@@ -1,0 +1,11 @@
+title = "SuperTuxKart"
+platform = "linux"
+description = """
+A free kart racer with Tux and friends from open source."""
+tags = ["Racing"]
+added = 2026-04-12
+status = "playing"
+play_minutes = 640
+last_played = 2026-09-20T21:14:00-03:00
+exe = "linux-games/SuperTuxKart/run_game.sh"
+install_dir = "linux-games/SuperTuxKart"

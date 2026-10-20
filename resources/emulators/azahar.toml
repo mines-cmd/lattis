@@ -1,0 +1,19 @@
+# Azahar, the Citra successor (3DS). Built into the app; change it in
+# library/emulators.toml. Checked against Flathub and Azahar's sources, 2026-09.
+id = "azahar"
+name = "Azahar"
+platforms = ["3ds"]
+flatpak = "org.azahar_emu.Azahar"
+executables = ["azahar", "azahar-qt"]
+# Releases ship azahar.AppImage and azahar-wayland.AppImage.
+appimage = "azahar*.AppImage"
+command = ["{exe}", "{args}", "{rom}"]
+# Not cia: those are installed into the emulator (azahar -i), not booted.
+extensions = ["3ds", "cci", "cxi", "3dsx", "app", "elf"]
+# Its data is in ~/.local/share/azahar-emu (src/common/file_util.cpp, SetUserPath, and
+# src/common/common_paths.h, 2026-09). Its portable `user/` folder is looked for in the
+# working folder, not next to the program, and the launcher starts emulators in the home
+# folder, so there's no portable entry. sdmc/ holds the saves (and titles installed from
+# CIAs), states/ the save states; sysdata/ the keys and nand/ the system's files.
+saves = { native = ["~/.local/share/azahar-emu/sdmc", "~/.local/share/azahar-emu/states"], flatpak = ["~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sdmc", "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/states"] }
+keys = { native = ["~/.local/share/azahar-emu/sysdata", "~/.local/share/azahar-emu/nand"], flatpak = ["~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sysdata", "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/nand"] }

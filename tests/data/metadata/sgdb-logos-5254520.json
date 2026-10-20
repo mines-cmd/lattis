@@ -1,0 +1,92 @@
+{
+ "success": true,
+ "page": 0,
+ "total": 4,
+ "limit": 50,
+ "data": [
+  {
+   "id": 8214,
+   "score": 0,
+   "style": "official",
+   "width": 6113,
+   "height": 1826,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "en",
+   "url": "https://cdn2.steamgriddb.com/logo/8b048efecbe64fe76045e0109de0c2f1.png",
+   "thumb": "https://cdn2.steamgriddb.com/logo_thumb/8b048efecbe64fe76045e0109de0c2f1.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "RealSayakaMaizono"
+   }
+  },
+  {
+   "id": 96467,
+   "score": 0,
+   "style": "official",
+   "width": 572,
+   "height": 244,
+   "nsfw": false,
+   "humor": false,
+   "notes": "Traditional Chinese\nArchive: https://imgur.com/Y3jEJJn",
+   "mime": "image/png",
+   "language": "zh",
+   "url": "https://cdn2.steamgriddb.com/logo/54fa54dd24672d1f09ff3f2cfaabc758.png",
+   "thumb": "https://cdn2.steamgriddb.com/logo_thumb/54fa54dd24672d1f09ff3f2cfaabc758.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "riotgrrrl"
+   }
+  },
+  {
+   "id": 96466,
+   "score": 0,
+   "style": "official",
+   "width": 1109,
+   "height": 479,
+   "nsfw": false,
+   "humor": false,
+   "notes": "Simplified Chinese\nArchive: https://imgur.com/B2r5mPh",
+   "mime": "image/png",
+   "language": "zh",
+   "url": "https://cdn2.steamgriddb.com/logo/6c403b0636d807b48489efd501169062.png",
+   "thumb": "https://cdn2.steamgriddb.com/logo_thumb/6c403b0636d807b48489efd501169062.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "riotgrrrl"
+   }
+  },
+  {
+   "id": 78958,
+   "score": 0,
+   "style": "official",
+   "width": 572,
+   "height": 246,
+   "nsfw": false,
+   "humor": false,
+   "notes": null,
+   "mime": "image/png",
+   "language": "ja",
+   "url": "https://cdn2.steamgriddb.com/logo/ec5205928d905ea263a69ab15c89e4c6.png",
+   "thumb": "https://cdn2.steamgriddb.com/logo_thumb/ec5205928d905ea263a69ab15c89e4c6.png",
+   "lock": false,
+   "epilepsy": false,
+   "upvotes": 0,
+   "downvotes": 0,
+   "author": {
+    "name": "Oli the Guy"
+   }
+  }
+ ]
+}

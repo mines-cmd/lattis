@@ -1,0 +1,61 @@
+"InstallConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"AutoUpdateWindowEnabled"		"0"
+				"ShaderCacheManager"
+				{
+					"HasCurrentBucket"		"1"
+					"ProcessingQueue"		"8000;2231450;"
+					"App"
+					{
+						"2231450"
+						{
+							"ShaderCacheSize"		"40978176"
+						}
+					}
+					"CompatToolBucketHashes"
+					{
+						"1493710"		"25502719;G7:VulkanPipelinesV6_923fa87291dfec1c"
+					}
+					"FozFiles"
+					{
+						"8000"		"82787438_4946956858242743328_1404838_fozpipelinesv6\\steamapprun_pipeline_cache.923fa87291dfec1c\\steam_pipeline_cache.foz"
+					}
+				}
+				"CellIDServerOverride"		"154"
+				"Rate"		"30000"
+				"RecentDownloadRate"		"1499413"
+				"CompatToolMapping"
+				{
+					"0"
+					{
+						"name"		"proton_experimental"
+						"config"		""
+						"priority"		"75"
+					}
+					"2900000001"
+					{
+						"name"		"GE-Proton10-4"
+						"config"		""
+						"priority"		"250"
+					}
+					"8000"
+					{
+						"name"		"GE-Proton10-4"
+						"config"		""
+						"priority"		"250"
+					}
+				}
+			}
+		}
+	}
+	"streaming"
+	{
+		"ClientID"		"1234567890"
+	}
+}

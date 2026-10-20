@@ -1,0 +1,115 @@
+[
+ {
+  "id": 15698,
+  "cover": {
+   "id": 526516,
+   "image_id": "coba9g"
+  },
+  "external_games": [
+   {
+    "id": 2062135,
+    "uid": "212029556",
+    "external_game_source": 14
+   },
+   {
+    "id": 2062948,
+    "uid": "B097F76RF5",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063101,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062984,
+    "uid": "B097C51H38",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064489,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064603,
+    "uid": "B097Q2VRTX",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064426,
+    "uid": "B0979WXCWS",
+    "external_game_source": 20
+   },
+   {
+    "id": 2120552,
+    "uid": "B097B1149G",
+    "external_game_source": 20
+   },
+   {
+    "id": 2075542,
+    "uid": "B099269RZM",
+    "external_game_source": 20
+   },
+   {
+    "id": 2064553,
+    "uid": "B097F76RF5",
+    "external_game_source": 20
+   },
+   {
+    "id": 2063048,
+    "uid": "B0979NM878",
+    "external_game_source": 20
+   },
+   {
+    "id": 2062907,
+    "uid": "B097BP5DLQ",
+    "external_game_source": 20
+   }
+  ],
+  "first_release_date": 1633564800,
+  "name": "Metroid Dread",
+  "platforms": [
+   130
+  ],
+  "release_dates": [
+   {
+    "id": 296763,
+    "date": 1633651200,
+    "platform": 130
+   },
+   {
+    "id": 339239,
+    "date": 1633564800,
+    "platform": 130
+   }
+  ],
+  "summary": "Join intergalactic bounty hunter Samus Aran in her first new 2D Metroid story in 19 years. Samus’ story continues after the events of the Metroid Fusion game when she descends upon planet ZDR to investigate a mysterious transmission sent to the Galactic Federation. The remote planet has become overrun by vicious alien lifeforms and chilling mechanical menaces. Samus is more agile and capable than ever, but can she overcome the inhuman threat stalking the depths of ZDR?",
+  "genres": [
+   5,
+   8,
+   31
+  ],
+  "themes": [
+   1,
+   18
+  ],
+  "game_modes": [
+   1
+  ],
+  "keywords": [
+   {
+    "id": 2129,
+    "slug": "metroidvania"
+   },
+   {
+    "id": 381,
+    "slug": "aliens"
+   },
+   {
+    "id": 4515,
+    "slug": "2-5d"
+   }
+  ]
+ }
+]

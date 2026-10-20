@@ -1,0 +1,11 @@
+# Steam games found by the import, kept when uninstalled, as app ID = title. Written by the Steam import.
+[games]
+1145360 = "Hades"
+504230 = "Celeste"
+367520 = "Hollow Knight"
+413150 = "Stardew Valley"
+1245620 = "Elden Ring"
+1091500 = "Cyberpunk 2077"
+1086940 = "Baldur's Gate 3"
+1462040 = "Final Fantasy VII Remake Intergrade"
+730 = "Counter-Strike 2"

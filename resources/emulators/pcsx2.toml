@@ -1,0 +1,20 @@
+# PCSX2 (PlayStation 2). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and PCSX2's sources, 2026-09.
+id = "pcsx2"
+name = "PCSX2"
+platforms = ["ps2"]
+flatpak = "net.pcsx2.PCSX2"
+executables = ["pcsx2-qt"]
+# Releases are pcsx2-v*-linux-appimage-x64-Qt.AppImage.
+appimage = "pcsx2*.AppImage"
+# -batch quits when the game stops; -- ends the options, whatever the file is called.
+command = ["{exe}", "{args}", "-batch", "--", "{rom}"]
+# Not bin (it usually comes with a cue PCSX2 doesn't boot).
+extensions = ["iso", "chd", "cso", "zso", "gz", "img", "mdf", "elf"]
+# Its data is in ~/.config/PCSX2, or next to the program when portable.txt (or
+# portable.ini) is there (pcsx2/Pcsx2Config.cpp, EmuFolders::SetDataDirectory, 2026-09).
+# The AppImage looks for it inside the image, so it's never portable that way.
+# memcards/ and sstates/ are the saves, bios/ the BIOS.
+portable = "portable.txt"
+saves = { native = ["~/.config/PCSX2/memcards", "~/.config/PCSX2/sstates"], flatpak = ["~/.var/app/net.pcsx2.PCSX2/config/PCSX2/memcards", "~/.var/app/net.pcsx2.PCSX2/config/PCSX2/sstates"], portable = ["memcards", "sstates"] }
+keys = { native = "~/.config/PCSX2/bios", flatpak = "~/.var/app/net.pcsx2.PCSX2/config/PCSX2/bios", portable = "bios" }
