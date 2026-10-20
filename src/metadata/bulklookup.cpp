@@ -101,7 +101,7 @@ bool BulkLookup::matches(const LookupGame &g, int skip) const
         return false;
     QStringList wanted = g.missing();
     if (m_replaceExisting)
-        wanted += {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating")};
+        wanted += {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating"), QStringLiteral("cover")};
     if (!m_includeComplete
         && std::none_of(wanted.cbegin(), wanted.cend(), [&](const QString &m) { return m_missing.contains(category(m)); }))
         return false;
@@ -372,6 +372,8 @@ void BulkLookup::pump()
         r.game = g;
         r.searched = g.title;
         r.replace = m_replaceExisting;
+        // Each replaced kind costs SteamGridDB requests, so only when art is looked for.
+        r.replaceArt = m_replaceExisting && m_missing.contains(QStringLiteral("art"));
         m_rows.append(r);
         m_lookups.insert(g.id);
         lookUp(m_rows.last());
@@ -452,8 +454,7 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
         // Offered when the same too, to record that it came from IGDB.
         offer(QStringLiteral("rating"), rating, rating != r.game.rating || !r.game.ratingFromIgdb);
 
-    const bool lacksArt = std::any_of(kKinds.cbegin(), kKinds.cend(), [&](const QString &k) { return missing.contains(k); });
-    if (!lacksArt || !m_client->hasSteamGridDbKey()) {
+    if (artKinds(r).isEmpty() || !m_client->hasSteamGridDbKey()) {
         r.state = State::Matched;
         return rowDone(r);
     }
@@ -464,12 +465,24 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
                       {r.game.id, Step::FindArt, {}});
 }
 
+// The kinds of art the lookup offers: the missing ones, and with replaceArt the rest too.
+QStringList BulkLookup::artKinds(const Row &r)
+{
+    if (r.replaceArt)
+        return kKinds;
+    const QStringList missing = r.game.missing();
+    QStringList out;
+    for (const QString &kind : kKinds) {
+        if (missing.contains(kind))
+            out.append(kind);
+    }
+    return out;
+}
+
 // Art for a game IGDB doesn't have (a ROM hack), from SteamGridDB's clear match for the title as searched.
 bool BulkLookup::findArtByTitle(Row &r)
 {
-    const QStringList missing = r.game.missing();
-    const bool lacksArt = std::any_of(kKinds.cbegin(), kKinds.cend(), [&](const QString &k) { return missing.contains(k); });
-    if (!lacksArt || !m_client->hasSteamGridDbKey())
+    if (artKinds(r).isEmpty() || !m_client->hasSteamGridDbKey())
         return false;
     r.pending = 1;
     m_requests.insert(m_client->findArt(r.searched, 0, r.game.steamAppId), {r.game.id, Step::FindArt, {}});
@@ -540,10 +553,12 @@ void BulkLookup::finished(int request, const QVariantMap &result)
     case Step::FindArt: {
         r->steamgriddb = result.value(QStringLiteral("steamgriddb")).toInt();
         const QStringList missing = r->game.missing();
-        for (const QString &kind : kKinds) {
-            if (!missing.contains(kind) || (r->steamgriddb <= 0 && r->state != State::Running))
+        for (const QString &kind : artKinds(*r)) {
+            const bool replaces = !missing.contains(kind);
+            // A game that has the art keeps it quietly when SteamGridDB has nothing to offer instead.
+            if (r->steamgriddb <= 0 && (r->state != State::Running || replaces))
                 continue;
-            r->art.insert(kind, {{}, {}, false, true});
+            r->art.insert(kind, {{}, {}, false, true, replaces});
             if (r->steamgriddb > 0) {
                 ++r->pending;
                 m_requests.insert(m_client->artChoices(r->steamgriddb, kind, {}, 0), {r->game.id, Step::ArtChoices, kind});
@@ -553,9 +568,14 @@ void BulkLookup::finished(int request, const QVariantMap &result)
     }
     case Step::ArtChoices: {
         const QVariantList images = result.value(QStringLiteral("images")).toList();
-        if (!images.isEmpty()) {
+        Art &art = r->art[req.kind];
+        if (images.isEmpty()) {
+            if (art.replaces)
+                r->art.remove(req.kind);
+        } else {
             const QVariantMap first = images.first().toMap();
-            r->art[req.kind] = {first, first, true, false};
+            // A replacement starts unchecked, like a replaced field.
+            art = {first, first, !art.replaces, false, art.replaces};
         }
         break;
     }
@@ -779,9 +799,11 @@ void BulkLookup::setCategoryChecked(const QString &category, bool checked)
                 r.uncheckedTags.clear();
             else
                 r.uncheckedTags = QSet<QString>(r.tags.cbegin(), r.tags.cend());
-        } else if (category == QLatin1String("art")) {
-            for (Art &a : r.art)
-                checkArt(a, checked);
+        } else if (category == QLatin1String("art") || category == QLatin1String("replaceArt")) {
+            for (Art &a : r.art) {
+                if (a.replaces == (category == QLatin1String("replaceArt")))
+                    checkArt(a, checked);
+            }
         } else if (r.replaces.contains(category)) {
             if (checked)
                 r.uncheckedFields.remove(category);
@@ -812,12 +834,12 @@ QVariantMap BulkLookup::categories() const
             count(QStringLiteral("tags"), !r.uncheckedTags.contains(tag));
         for (const Art &a : r.art) {
             if (!a.none || !a.byDefault.isEmpty())
-                count(QStringLiteral("art"), a.checked);
+                count(a.replaces ? QStringLiteral("replaceArt") : QStringLiteral("art"), a.checked);
         }
     }
     QVariantMap out;
     for (const QString &key : {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating"),
-                               QStringLiteral("tags"), QStringLiteral("art")})
+                               QStringLiteral("replaceArt"), QStringLiteral("tags"), QStringLiteral("art")})
         out.insert(key, QVariantMap{{QStringLiteral("total"), tally[key].total}, {QStringLiteral("on"), tally[key].on}});
     return out;
 }
@@ -903,6 +925,7 @@ QVariantList BulkLookup::resultList(const QString &state) const
                                    {QStringLiteral("name"), kindName(kind)},
                                    {QStringLiteral("image"), a.image.isEmpty() ? QVariant() : QVariant(a.image)},
                                    {QStringLiteral("checked"), a.checked},
+                                   {QStringLiteral("replaces"), a.replaces},
                                    {QStringLiteral("changed"), a.image.value(QStringLiteral("id")) != a.byDefault.value(QStringLiteral("id"))},
                                    {QStringLiteral("none"), a.none && a.byDefault.isEmpty()}});
         }
@@ -965,6 +988,11 @@ void BulkLookup::apply()
         if ((r.state != State::Matched && r.state != State::NotOnIgdb && !artOnly) || !now.contains(r.game.id))
             continue;
         const QStringList missing = now.value(r.game.id).missing();
+        // A replacement only over the art the game had at the lookup, not art set since.
+        const auto takesArt = [&](const QString &kind) {
+            return missing.contains(kind)
+                || (r.art.value(kind).replaces && now.value(r.game.id).artUrls.value(kind) == r.game.artUrls.value(kind));
+        };
         QVariantMap values;
         if (r.state != State::Matched) {
             if (r.state == State::NotOnIgdb)
@@ -972,7 +1000,7 @@ void BulkLookup::apply()
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
             for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
-                if (it->checked && !it->image.isEmpty() && missing.contains(it.key()))
+                if (it->checked && !it->image.isEmpty() && takesArt(it.key()))
                     m_toDownload.append({r.game.id, it.key(), it->image.value(QStringLiteral("url")).toString()});
             }
         } else {
@@ -1000,7 +1028,7 @@ void BulkLookup::apply()
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
             for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
-                if (it->checked && !it->image.isEmpty() && missing.contains(it.key()))
+                if (it->checked && !it->image.isEmpty() && takesArt(it.key()))
                     m_toDownload.append({r.game.id, it.key(), it->image.value(QStringLiteral("url")).toString()});
             }
         }

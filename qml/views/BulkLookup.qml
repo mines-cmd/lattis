@@ -375,6 +375,12 @@ ApplicationWindow {
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
             ChipText {
+                visible: artCheck.found && artCheck.entry.replaces
+                text: qsTr("replaces yours")
+                color: Theme.gameEditor.hintColor
+                font.pixelSize: Theme.gameEditor.hintFontSize
+            }
+            ChipText {
                 visible: artCheck.found && artCheck.entry.changed
                 text: qsTr("changed")
                 color: Theme.gameEditor.changedColor
@@ -394,13 +400,15 @@ ApplicationWindow {
         readonly property var icon: entry("icon")
         readonly property var cover: entry("cover")
         function shows(e) { return e !== undefined && !(e?.none ?? false) }
+        // A replacement left unchecked keeps the game's own, so checking it swaps the two.
+        function keepsOwn(e) { return e === undefined || (e.replaces && !e.checked) }
         // What the game will show for a kind: the new picture, or its own when the lookup leaves that kind alone.
         function source(kind) {
             const e = entry(kind)
-            return shows(e) ? e.image?.thumbnail ?? "" : e === undefined ? r.ownArt?.[kind] ?? "" : ""
+            return keepsOwn(e) ? r.ownArt?.[kind] ?? "" : shows(e) ? e.image?.thumbnail ?? "" : ""
         }
         // Over the hero, transparency would let the art show through: the logo and icon are darkened instead.
-        function dim(e) { return e === undefined || e.checked ? 1 : Theme.gameEditor.bulkArtUncheckedOpacity }
+        function dim(e) { return keepsOwn(e) || e.checked ? 1 : Theme.gameEditor.bulkArtUncheckedOpacity }
 
         readonly property real gap: Theme.layout.spacing * 2.5
         // Fills the width with a hero at the theme's aspect and the cover beside it, up to bulk_art_height tall.
@@ -821,7 +829,7 @@ ApplicationWindow {
                                         BulkOption {
                                             required property var modelData
                                             readonly property int games: lookupModel.missingCounts[modelData.id] ?? 0
-                                            readonly property bool uncounted: lookupModel.replaceExisting && modelData.id !== "art"
+                                            readonly property bool uncounted: lookupModel.replaceExisting
                                             Layout.fillWidth: true
                                             text: modelData.name
                                             checked: lookupModel.missing.includes(modelData.id)
@@ -1257,10 +1265,11 @@ ApplicationWindow {
                                 SideHeading { text: qsTr("For every match") }
                                 CategoryGroup {
                                     title: qsTr("Replace existing")
-                                    tip: qsTr("IGDB's values in place of the games' own")
+                                    tip: qsTr("IGDB's values and SteamGridDB's art in place of the games' own")
                                     items: [{ id: "description", name: qsTr("Description"), tip: qsTr("Replace each game's description with IGDB's") },
                                             { id: "year", name: qsTr("Year"), tip: qsTr("Replace each game's year with IGDB's") },
-                                            { id: "rating", name: qsTr("Rating"), tip: qsTr("Replace each game's rating with IGDB's") }]
+                                            { id: "rating", name: qsTr("Rating"), tip: qsTr("Replace each game's rating with IGDB's") },
+                                            { id: "replaceArt", name: qsTr("Art"), tip: qsTr("Replace each game's art with SteamGridDB's top image of each kind") }]
                                 }
                                 CategoryGroup {
                                     title: qsTr("Add")
@@ -1269,7 +1278,7 @@ ApplicationWindow {
                                             { id: "art", name: qsTr("Art"), tip: qsTr("Use SteamGridDB's top image of each kind found") }]
                                 }
                                 Muted {
-                                    visible: root.categoryTally(["description", "year", "rating", "tags", "art"]).total === 0
+                                    visible: root.categoryTally(["description", "year", "rating", "replaceArt", "tags", "art"]).total === 0
                                     Layout.fillWidth: true
                                     Layout.leftMargin: Theme.layout.spacing
                                     Layout.rightMargin: Theme.layout.spacing

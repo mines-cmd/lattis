@@ -144,6 +144,7 @@ private:
         QVariantMap byDefault;
         bool checked = false;
         bool none = false;
+        bool replaces = false;
     };
     struct Row
     {
@@ -157,6 +158,7 @@ private:
         QList<std::pair<QString, QVariant>> fields;
         QSet<QString> uncheckedFields;
         bool replace = false;
+        bool replaceArt = false;
         QSet<QString> replaces;
         QStringList tags;
         QSet<QString> uncheckedTags;
@@ -186,6 +188,7 @@ private:
     void pump();
     void lookUp(Row &row);
     void resolve(Row &row, const QVariantMap &candidate);
+    static QStringList artKinds(const Row &row);
     bool findArtByTitle(Row &row);
     void finished(int request, const QVariantMap &result);
     void rowDone(Row &row);

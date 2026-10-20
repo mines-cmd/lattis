@@ -100,6 +100,7 @@ private slots:
     void bulkApply();
     void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
+    void bulkReplaceArt();
     void bulkTags();
     void bulkIncludeComplete();
     void bulkFetchedAhead();
@@ -1329,7 +1330,7 @@ void MetadataTest::bulkChoiceCounts()
     bulk.setReplaceExisting(true);
     QCOMPARE(platformCounts(bulk), (Counts{{"switch", 4}, {"steam", 1}, {"3ds", 0}}));
     bulk.setMissing({QStringLiteral("art")});
-    QCOMPARE(platformCounts(bulk), (Counts{{"switch", 1}, {"steam", 1}, {"3ds", 0}})); // only what lacks art
+    QCOMPARE(platformCounts(bulk), (Counts{{"switch", 4}, {"steam", 1}, {"3ds", 0}})); // art is replaced too
 }
 
 void MetadataTest::bulkStateCounts()
@@ -1894,6 +1895,18 @@ void MetadataTest::bulkReplaceExisting()
     bulk.setCategoryChecked(QStringLiteral("tags"), true);
     QCOMPARE(tally("tags").value("on").toInt(), tags);
 
+    // The cover Hades has is offered a replacement, unchecked; "art" leaves it alone.
+    const QVariantMap cover = artOf(resultFor(bulk, "steam-1145360"), "cover");
+    QVERIFY(cover.value("replaces").toBool());
+    QVERIFY(!cover.value("checked").toBool());
+    QVERIFY(!artOf(resultFor(bulk, "steam-1145360"), "hero").value("replaces").toBool());
+    QCOMPARE(tally("replaceArt").value("total").toInt(), 1);
+    QCOMPARE(tally("replaceArt").value("on").toInt(), 0);
+    bulk.setCategoryChecked(QStringLiteral("art"), true);
+    QVERIFY(!artOf(resultFor(bulk, "steam-1145360"), "cover").value("checked").toBool());
+    bulk.setCategoryChecked(QStringLiteral("replaceArt"), true);
+    QVERIFY(artOf(resultFor(bulk, "steam-1145360"), "cover").value("checked").toBool());
+
     bulk.setCategoryChecked(QStringLiteral("description"), true);
     bulk.setCategoryChecked(QStringLiteral("year"), true);
     for (const QVariant &f : described())
@@ -1906,6 +1919,37 @@ void MetadataTest::bulkReplaceExisting()
     const QVariantMap values = s.written.first().second;
     QCOMPARE(values.value("description").toString(), summary);
     QVERIFY(!values.contains("year"));
+    QCOMPARE(s.art.size(), 1);
+    QCOMPARE(s.art.first()[1], QStringLiteral("cover"));
+}
+
+void MetadataTest::bulkReplaceArt()
+{
+    BulkSetup s;
+    s.games[1].artUrls = {{QStringLiteral("cover"), QStringLiteral("file:///art/cover.png?v=1")}};
+    BulkLookup &bulk = s.bulk;
+    bulk.setReplaceExisting(true);
+    bulk.setMissing({QStringLiteral("description")});
+    bulk.setAllChecked(false);
+    bulk.setChecked(QStringLiteral("steam-1145360"), true);
+    bulk.start();
+    QTRY_VERIFY(!bulk.running());
+
+    // Art isn't looked for, so none is replaced; the missing kinds are still offered.
+    QVERIFY(!artOf(resultFor(bulk, "steam-1145360"), "cover").contains("kind"));
+    bulk.clearResults();
+
+    bulk.setMissing({QStringLiteral("art")});
+    bulk.start();
+    QTRY_VERIFY(!bulk.running());
+    bulk.setCategoryChecked(QStringLiteral("replaceArt"), true);
+
+    // Art set since the lookup isn't replaced.
+    s.games[1].artUrls = {{QStringLiteral("cover"), QStringLiteral("file:///art/cover.png?v=2")}};
+    QSignalSpy applied(&bulk, &BulkLookup::applied);
+    bulk.apply();
+    QTRY_COMPARE(applied.size(), 1);
+    QVERIFY(std::none_of(s.art.cbegin(), s.art.cend(), [](const auto &a) { return a[1] == QLatin1String("cover"); }));
 }
 
 void MetadataTest::idListModel()
