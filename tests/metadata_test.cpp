@@ -98,6 +98,7 @@ private slots:
     void bulkStopKeepsResults();
     void bulkArtDefaults();
     void bulkApply();
+    void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
     void bulkTags();
     void bulkIncludeComplete();
@@ -1613,6 +1614,46 @@ void MetadataTest::bulkApply()
     QCOMPARE(applied.first().first().toInt(), 3);
     QCOMPARE(bulk.results().size(), 1);
     QCOMPARE(resultFor(bulk, "switch-metroid-dread").value("applyError").toString(), QStringLiteral("Not saved: read-only"));
+}
+
+void MetadataTest::bulkArtForGameNotOnIgdb()
+{
+    BulkSetup s;
+    LookupGame hack = s.games.at(2);
+    hack.id = QStringLiteral("switch-star-road-hack");
+    hack.title = QStringLiteral("Star Road Hack");
+    hack.art = {};
+    s.games = {hack};
+    s.bulk.reload();
+    s.bulk.start();
+    QTRY_VERIFY(!s.bulk.running());
+    const QString id = hack.id;
+
+    // IGDB has nothing, SteamGridDB does: its art is offered, and Apply saves it without marking the game.
+    QCOMPARE(resultFor(s.bulk, id).value("state").toString(), QStringLiteral("notFound"));
+    QVERIFY(artOf(resultFor(s.bulk, id), "cover").value("checked").toBool());
+    QVERIFY(s.bulk.hasArt());
+    QCOMPARE(s.bulk.applyCount(), 1);
+    s.bulk.setArtChecked(id, "hero", false);
+    s.bulk.setArtChecked(id, "logo", false);
+    s.bulk.setArtChecked(id, "icon", false);
+    QCOMPARE(s.bulk.applyCount(), 1);
+    s.bulk.setArtChecked(id, "cover", false);
+    QCOMPARE(s.bulk.applyCount(), 0);
+    s.bulk.setArtChecked(id, "cover", true);
+
+    // Marked as not on IGDB, the art stays.
+    s.bulk.markNotOnIgdb(id);
+    QVERIFY(artOf(resultFor(s.bulk, id), "cover").value("checked").toBool());
+    QVERIFY(!s.bulk.running());
+
+    QSignalSpy applied(&s.bulk, &BulkLookup::applied);
+    s.bulk.apply();
+    QTRY_COMPARE(applied.size(), 1);
+    QCOMPARE(s.written.size(), 1);
+    QCOMPARE(s.written.first().second, (QVariantMap{{"igdb", 0}, {"steamgriddb", 5254520}}));
+    QCOMPARE(s.art.size(), 1);
+    QCOMPARE(s.art.first()[1], QStringLiteral("cover"));
 }
 
 namespace {

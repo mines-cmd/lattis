@@ -464,6 +464,18 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
                       {r.game.id, Step::FindArt, {}});
 }
 
+// Art for a game IGDB doesn't have (a ROM hack), from SteamGridDB's clear match for the title as searched.
+bool BulkLookup::findArtByTitle(Row &r)
+{
+    const QStringList missing = r.game.missing();
+    const bool lacksArt = std::any_of(kKinds.cbegin(), kKinds.cend(), [&](const QString &k) { return missing.contains(k); });
+    if (!lacksArt || !m_client->hasSteamGridDbKey())
+        return false;
+    r.pending = 1;
+    m_requests.insert(m_client->findArt(r.searched, 0, r.game.steamAppId), {r.game.id, Step::FindArt, {}});
+    return true;
+}
+
 void BulkLookup::finished(int request, const QVariantMap &result)
 {
     const auto it = m_requests.constFind(request);
@@ -515,6 +527,8 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         const int match = result.value(QStringLiteral("match")).toInt();
         if (r->candidates.isEmpty()) {
             r->state = State::NotFound;
+            if (findArtByTitle(*r))
+                return emit resultsChanged();
             return rowDone(*r);
         }
         if (match < 0) {
@@ -527,7 +541,7 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         r->steamgriddb = result.value(QStringLiteral("steamgriddb")).toInt();
         const QStringList missing = r->game.missing();
         for (const QString &kind : kKinds) {
-            if (!missing.contains(kind))
+            if (!missing.contains(kind) || (r->steamgriddb <= 0 && r->state != State::Running))
                 continue;
             r->art.insert(kind, {{}, {}, false, true});
             if (r->steamgriddb > 0) {
@@ -549,7 +563,8 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         break;
     }
     if (r->pending == 0) {
-        r->state = State::Matched;
+        if (r->state == State::Running)
+            r->state = State::Matched;
         rowDone(*r);
     } else {
         emit resultsChanged();
@@ -664,8 +679,16 @@ void BulkLookup::markNotOnIgdb(const QString &id)
         r->before = r->state;
         r->state = State::NotOnIgdb;
         r->fields.clear();
-        r->art.clear();
+        const bool searching = r->pending > 0;
         r->pending = 0;
+        if (r->before != State::NotFound || searching) {
+            r->art.clear();
+            r->steamgriddb = 0;
+            if (findArtByTitle(*r))
+                return emit resultsChanged();
+        }
+        if (m_lookups.contains(id))
+            return rowDone(*r);
         emit resultsChanged();
     }
 }
@@ -681,6 +704,10 @@ void BulkLookup::unmarkNotOnIgdb(const QString &id)
         lookUp(*r);
     } else {
         r->state = r->before;
+        if (r->before != State::NotFound) {
+            r->art.clear();
+            r->steamgriddb = 0;
+        }
     }
     emit resultsChanged();
 }
@@ -903,7 +930,7 @@ QVariantList BulkLookup::resultList(const QString &state) const
 bool BulkLookup::hasArt() const
 {
     return std::any_of(m_rows.cbegin(), m_rows.cend(), [](const Row &r) {
-        return r.state == State::Matched
+        return (r.state == State::Matched || r.state == State::NotFound || r.state == State::NotOnIgdb)
             && std::any_of(r.art.cbegin(), r.art.cend(), [](const Art &a) { return !a.none || !a.byDefault.isEmpty(); });
     });
 }
@@ -911,13 +938,15 @@ bool BulkLookup::hasArt() const
 int BulkLookup::applyCount() const
 {
     return int(std::count_if(m_rows.cbegin(), m_rows.cend(), [](const Row &r) {
-        return r.state == State::NotOnIgdb || r.state == State::Matched;
+        return r.state == State::NotOnIgdb || r.state == State::Matched
+            || (r.state == State::NotFound
+                && std::any_of(r.art.cbegin(), r.art.cend(), [](const Art &a) { return a.checked && !a.image.isEmpty(); }));
     }));
 }
 
 void BulkLookup::apply()
 {
-    if (m_applying || running())
+    if (m_applying || running() || std::any_of(m_rows.cbegin(), m_rows.cend(), [](const Row &r) { return r.pending > 0; }))
         return;
     QHash<QString, LookupGame> now;
     for (const LookupGame &g : m_source())
@@ -927,13 +956,24 @@ void BulkLookup::apply()
     m_toDownload.clear();
     m_downloaded.clear();
     m_applyIds.clear();
+    const auto savesArt = [](const Row &r) {
+        return std::any_of(r.art.cbegin(), r.art.cend(), [](const Art &a) { return a.checked && !a.image.isEmpty(); });
+    };
     for (Row &r : m_rows) {
-        if ((r.state != State::Matched && r.state != State::NotOnIgdb) || !now.contains(r.game.id))
+        const bool artOnly = r.state == State::NotFound && savesArt(r);
+        if ((r.state != State::Matched && r.state != State::NotOnIgdb && !artOnly) || !now.contains(r.game.id))
             continue;
         const QStringList missing = now.value(r.game.id).missing();
         QVariantMap values;
-        if (r.state == State::NotOnIgdb) {
-            values.insert(QStringLiteral("igdb"), 0);
+        if (r.state != State::Matched) {
+            if (r.state == State::NotOnIgdb)
+                values.insert(QStringLiteral("igdb"), 0);
+            if (r.steamgriddb > 0)
+                values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
+            for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
+                if (it->checked && !it->image.isEmpty() && missing.contains(it.key()))
+                    m_toDownload.append({r.game.id, it.key(), it->image.value(QStringLiteral("url")).toString()});
+            }
         } else {
             const LookupGame &game = now.value(r.game.id);
             for (const auto &[key, value] : r.fields) {

@@ -76,7 +76,7 @@ The review sidebar shows how far the lookup has got, and **Show** narrows the li
 
 - **Matched:** the game's row opens to show IGDB's match, with its cover. **Info** has what would be filled in, as checked chips; **Tags** has the tags that fit (see below); **Art** has, for each missing kind of art, SteamGridDB's top image. Uncheck a chip or a picture to leave it out. Click a picture to choose another image from SteamGridDB. A kind SteamGridDB has nothing for reads "None found".
 - **Which game?:** pick one of the candidates, or open **Detailed lookup** to search another name or platform, or choose **Not on IGDB**.
-- **Not found:** **Detailed lookup**, or **Not on IGDB** to skip the game in later lookups. A game marked that way shows **Undo**, which puts it back as it was.
+- **Not found:** **Detailed lookup**, or **Not on IGDB** to skip the game in later lookups. A game marked that way shows **Undo**, which puts it back as it was. With a SteamGridDB key, a game IGDB doesn't know (a ROM hack, say) still gets art when SteamGridDB has a game of that exact name: its row shows the art to review, and Apply saves it, whether the game is marked Not on IGDB or not.
 - **Couldn't look up:** the error, and **Retry**.
 
 ### Tags from IGDB

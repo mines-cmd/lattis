@@ -140,7 +140,7 @@ ApplicationWindow {
     }
 
     function artSteps() {
-        return lookupModel.results.filter(r => r.state === "matched" && r.art.some(a => !a.none)).map(r => {
+        return lookupModel.results.filter(r => ["matched", "notFound", "notOnIgdb"].includes(r.state) && r.art.some(a => !a.none)).map(r => {
             const picks = {}
             for (const a of r.art) {
                 if (a.checked && a.image)
@@ -1178,7 +1178,7 @@ ApplicationWindow {
                             readonly property var r: item
                             // Kept by game, not here: a list's rows are made and dropped as it scrolls.
                             readonly property bool open: !root.collapsed[r.id]
-                            readonly property bool hasTray: open && r.state === "matched"
+                            readonly property bool hasTray: open && (r.state === "matched" || (r.art.length > 0 && (r.state === "notFound" || r.state === "notOnIgdb")))
                             readonly property int bw: Theme.gameEditor.bulkCardBorderWidth
                             width: resultList.width - scrollGap
                             property real trayProgress: hasTray ? 1 : 0
@@ -1220,6 +1220,7 @@ ApplicationWindow {
 
                                         ColumnLayout {
                                             id: matchColumn
+                                            visible: result.r.state === "matched"
                                             readonly property int matchWidth: Math.min(Theme.gameEditor.bulkMatchCoverWidth,
                                                                                        Math.max(88, Math.round(trayContent.width * 0.24)))
                                             Layout.alignment: Qt.AlignTop
@@ -1444,7 +1445,7 @@ ApplicationWindow {
                                         Badge {
                                             kind: result.r.state
                                             text: ({ running: qsTr("Looking up…"), matched: qsTr("Matched"), pick: qsTr("Which game?"),
-                                                     notFound: qsTr("Not found"), error: qsTr("Failed"),
+                                                     notFound: result.r.art.length > 0 ? qsTr("Art only") : qsTr("Not found"), error: qsTr("Failed"),
                                                      notOnIgdb: qsTr("Not on IGDB") })[result.r.state] ?? ""
                                         }
                                         AbstractButton {
@@ -1548,14 +1549,12 @@ ApplicationWindow {
                                             spacing: Theme.layout.spacing
 
                                             Muted {
-                                                id: why
                                                 Layout.fillWidth: true
-                                                // Not its own implicitWidth: an eliding Label's follows the width it was given.
-                                                Layout.maximumWidth: Math.ceil(whyFull.implicitWidth) + 2
                                                 elide: Text.ElideRight
-                                                Muted { id: whyFull; visible: false; text: why.text }
                                                 text: result.r.state === "pick" ? qsTr("None of these?")
-                                                    : qsTr("IGDB has nothing called \"%1\" on %2.").arg(result.r.searched).arg(result.r.platformName)
+                                                    : result.r.art.length > 0
+                                                      ? qsTr("IGDB didn't find it, but SteamGridDB has art for \"%1\".").arg(result.r.searched)
+                                                      : qsTr("IGDB has nothing called \"%1\" on %2.").arg(result.r.searched).arg(result.r.platformName)
                                             }
                                             SettingsButton {
                                                 implicitHeight: root.barButtonHeight
@@ -1595,7 +1594,9 @@ ApplicationWindow {
                                             Muted {
                                                 Layout.fillWidth: true
                                                 wrapMode: Text.WordWrap
-                                                text: qsTr("Will be marked as not on IGDB, so it's skipped next time.")
+                                                text: result.r.art.length > 0
+                                                      ? qsTr("Will be marked as not on IGDB, so it's skipped next time. The art is from SteamGridDB.")
+                                                      : qsTr("Will be marked as not on IGDB, so it's skipped next time.")
                                             }
                                             TextLink {
                                                 text: qsTr("Undo")

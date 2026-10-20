@@ -186,6 +186,7 @@ private:
     void pump();
     void lookUp(Row &row);
     void resolve(Row &row, const QVariantMap &candidate);
+    bool findArtByTitle(Row &row);
     void finished(int request, const QVariantMap &result);
     void rowDone(Row &row);
     void cancelRow(const QString &id);
