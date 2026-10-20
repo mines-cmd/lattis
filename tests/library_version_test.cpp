@@ -271,8 +271,12 @@ void LibraryVersionTest::setupHoldsGamesBack()
     QVERIFY(library->rowOfGame(QStringLiteral("switch-pikmin-4")) >= 0);
     QVERIFY(library->rowOfGame(QStringLiteral("steam-2231450")) >= 0);
     const QVariantList counts = library->gameCounts();
-    QCOMPARE(counts.first().toMap().value("id").toString(), QStringLiteral("switch"));
-    QCOMPARE(counts.first().toMap().value("count").toInt(), 1);
+    QCOMPARE(counts.first().toMap().value("id").toString(), QStringLiteral("steam")); // a new library's built-ins come first
+    const auto switchCount = std::find_if(counts.cbegin(), counts.cend(), [](const QVariant &c) {
+        return c.toMap().value("id").toString() == QLatin1String("switch");
+    });
+    QVERIFY(switchCount != counts.cend());
+    QCOMPARE(switchCount->toMap().value("count").toInt(), 1);
 
     // And it stays done.
     library.reset();

@@ -124,8 +124,10 @@ void LibrarySteamImportTest::steamGamesInList()
     writeFile(platforms, withoutSteam);
     auto library = openLibrary();
 
-    // Steam found: its platform is added back, once.
-    QCOMPARE(readFile(platforms), withoutSteam + "\n[[platform]]\nid = \"steam\"\nname = \"Steam\"\nicon = \"steam\"\n");
+    // Steam found: its platform is added back, once, first.
+    QByteArray withSteam = withoutSteam;
+    withSteam.insert(withSteam.indexOf("[[platform]]"), "[[platform]]\nid = \"steam\"\nname = \"Steam\"\nicon = \"steam\"\n\n");
+    QCOMPARE(readFile(platforms), withSteam);
     QCOMPARE(library->game(QStringLiteral("steam-2231450"))->platformName, QStringLiteral("Steam"));
 
     // Installed, with the size, the folder and Steam's play time.

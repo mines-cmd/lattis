@@ -12,7 +12,7 @@ A platform (Switch, 3DS, GameCube…) is a button in the rail and a group in the
 - Behind each platform's name is an id made from it (`switch`, `3ds`). Games refer to their platform by this id, so it can't change once games use it; the name can.
 - **Remove platform** keeps its games in the library, with their favorites and play time. Add a platform with the same id to show them again.
 
-Steam, Proton and Linux are platforms too. Lattis adds them by itself when they're needed, and you can rename or move them like any other.
+Steam, Proton and Linux are platforms too. Lattis adds them by itself when they're needed, at the top of the rail in that order, and you can rename or move them like any other.
 
 ## Emulators
 

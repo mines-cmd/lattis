@@ -997,16 +997,33 @@ bool LibraryStore::addBuiltInPlatforms()
     if (m_versionStatus.readOnly || !m_snapshot.files.value(kPlatforms).ok)
         return false;
     bool added = false;
+    const QStringList builtIns = {kSteamPlatform, kProtonPlatform, kLinuxPlatform};
     const auto add = [&](const QString &id, const QString &name) {
         if (std::any_of(platforms.cbegin(), platforms.cend(), [&](const Platform &p) { return p.id == id; }))
             return;
         const QString problem = patchAndLoad(kPlatforms, defaultPlatforms(), [&](const QString &text) {
             if (TomlPatch::blockValues(text, QStringLiteral("platform"), QStringLiteral("id")).contains(id))
                 return TomlPatch::Result{true, text, {}};
-            return TomlPatch::appendBlock(text, QStringLiteral("platform"),
-                                          {{QStringLiteral("id"), tomlString(id)},
-                                           {QStringLiteral("name"), tomlString(name)},
-                                           {QStringLiteral("icon"), tomlString(id)}});
+            const TomlPatch::Result appended
+                = TomlPatch::appendBlock(text, QStringLiteral("platform"),
+                                         {{QStringLiteral("id"), tomlString(id)},
+                                          {QStringLiteral("name"), tomlString(name)},
+                                          {QStringLiteral("icon"), tomlString(id)}});
+            if (!appended.ok)
+                return appended;
+            // Steam, Proton and Linux go before the emulators' platforms, in that order: right after the
+            // last built-in that comes before this one, or first. Where the user moved them is kept.
+            const QStringList ids = TomlPatch::blockValues(appended.text, QStringLiteral("platform"), QStringLiteral("id"));
+            const QStringList before = builtIns.mid(0, builtIns.indexOf(id));
+            qsizetype after = -1;
+            for (qsizetype i = 0; i < ids.size(); ++i) {
+                if (before.contains(ids.at(i)))
+                    after = i;
+            }
+            const QString target = ids.value(after + 1);
+            if (target.isEmpty() || target == id)
+                return appended;
+            return TomlPatch::moveBlock(appended.text, {QStringLiteral("platform"), id}, target);
         });
         if (problem.isEmpty()) {
             added = true;

@@ -32,7 +32,7 @@ A game can be known from two kinds of file, and is usually known from both:
 
 `buildLibrary()` merges the two by id, the file's values winning over the entry's. Either one alone is a game. The result is a list of `Game`s: what the UI shows, with platform names, tag colors and art URLs resolved, and with what no file says filled in from the system (whether it's installed, its size, Steam's play time).
 
-**Platforms** come from `library/platforms.toml`, in the order the rail shows them. A platform names its emulators in order of preference and its ROM folders. Its `id` is permanent once games use it; its `name` is free to change. Games on a platform that isn't defined there still show, under their platform id. The built-in platforms `steam`, `proton` and `linux` are added to the file when they're first needed.
+**Platforms** come from `library/platforms.toml`, in the order the rail shows them. A platform names its emulators in order of preference and its ROM folders. Its `id` is permanent once games use it; its `name` is free to change. Games on a platform that isn't defined there still show, under their platform id. The built-in platforms `steam`, `proton` and `linux` are added to the file when they're first needed (`LibraryStore::addBuiltInPlatforms()`), ahead of the emulators' platforms and in that order: each goes right after the last built-in that comes before it, or first when there is none, so a built-in the user moved keeps the later ones next to it.
 
 ## From files to the list
 

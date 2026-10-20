@@ -46,6 +46,7 @@ private slots:
     void platformProblems();
     void addAndRemovePlatforms();
     void defaultPlatforms();
+    void builtInPlatformsFollowTheUsersOrder();
     void linuxPlatformAdded();
     void linuxPlatformFromCache();
     void linuxPlatformKept();
@@ -308,13 +309,14 @@ void LibraryPlatformsTest::defaultPlatforms()
     QFile resource(QStringLiteral(":/qt/qml/Launcher/resources/platforms.toml"));
     QVERIFY(resource.open(QIODevice::ReadOnly));
     // The demo's Steam is found, and it has Proton games, so the Steam and Proton platforms
-    // are added after them, then Linux, which every library gets.
-    const QByteArray withSteam = resource.readAll() + "\n[[platform]]\nid = \"steam\"\nname = \"Steam\"\nicon = \"steam\"\n"
-                                 "\n[[platform]]\nid = \"proton\"\nname = \"Proton\"\nicon = \"proton\"\n"
-                                 "\n[[platform]]\nid = \"linux\"\nname = \"Linux\"\nicon = \"linux\"\n";
+    // are added before the emulators' ones, then Linux, which every library gets.
+    QByteArray withSteam = resource.readAll();
+    withSteam.insert(withSteam.indexOf("[[platform]]"), "[[platform]]\nid = \"steam\"\nname = \"Steam\"\nicon = \"steam\"\n\n"
+                                                         "[[platform]]\nid = \"proton\"\nname = \"Proton\"\nicon = \"proton\"\n\n"
+                                                         "[[platform]]\nid = \"linux\"\nname = \"Linux\"\nicon = \"linux\"\n\n");
     QCOMPARE(readFile(file), withSteam);
-    QCOMPARE(platformIds(*library), QStringList({"switch", "3ds", "wiiu", "wii", "gamecube", "n64", "nds", "gba",
-                                                 "ps4", "ps3", "ps2", "ps1", "psp", "steam", "proton", "linux"}));
+    QCOMPARE(platformIds(*library), QStringList({"steam", "proton", "linux", "switch", "3ds", "wiiu", "wii", "gamecube",
+                                                 "n64", "nds", "gba", "ps4", "ps3", "ps2", "ps1", "psp"}));
     // Every default platform's emulator is a preset. Steam, Proton and Linux need none.
     for (const QVariant &p : library->platformSettings()) {
         const QVariantMap platform = p.toMap();
@@ -326,6 +328,17 @@ void LibraryPlatformsTest::defaultPlatforms()
     // No ROM folders yet, so nothing to warn about, even with emulators not installed.
     QVERIFY2(library->problems().isEmpty(), qPrintable(library->problems().join(u'\n')));
     QCOMPARE(library->gameAt(library->rowOfGame("switch-pikmin-4")).value("platformName"), QStringLiteral("Switch"));
+}
+
+void LibraryPlatformsTest::builtInPlatformsFollowTheUsersOrder()
+{
+    // Steam moved below an emulator's platform: Proton and Linux are added right after it.
+    writeFile(m_data + QStringLiteral("/library/platforms.toml"),
+              "[[platform]]\nid = \"switch\"\nname = \"Switch\"\nemulators = [\"ryubing\"]\n\n"
+              "[[platform]]\nid = \"steam\"\nname = \"Steam\"\n\n"
+              "[[platform]]\nid = \"3ds\"\nname = \"3DS\"\nemulators = [\"azahar\"]\n");
+    auto library = openLibrary();
+    QCOMPARE(platformIds(*library), QStringList({"switch", "steam", "proton", "linux", "3ds"}));
 }
 
 void LibraryPlatformsTest::linuxPlatformAdded()
