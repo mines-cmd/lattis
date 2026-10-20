@@ -1410,7 +1410,11 @@ ApplicationWindow {
                                         }
 
                                         ColumnLayout {
+                                            readonly property bool empty: result.r.fields.length === 0 && result.r.tags.length === 0
+                                                                          && result.r.art.length === 0
                                             Layout.fillWidth: true
+                                            // Only when empty: with sections, the extra height would spread them apart.
+                                            Layout.fillHeight: empty
                                             Layout.alignment: Qt.AlignTop
                                             spacing: Theme.layout.spacing * 1.5
 
@@ -1495,7 +1499,11 @@ ApplicationWindow {
                                             }
 
                                             Muted {
-                                                visible: result.r.fields.length === 0 && result.r.tags.length === 0 && result.r.art.length === 0
+                                                visible: parent.empty
+                                                Layout.fillWidth: true
+                                                Layout.fillHeight: true
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
                                                 text: qsTr("Nothing to fill in.")
                                             }
                                         }
