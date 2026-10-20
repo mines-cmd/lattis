@@ -189,11 +189,35 @@ Item {
             border.width: Theme.gameEditor.borderWidth
         }
 
+        Icon {
+            parent: popup.background
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: Theme.gameEditor.padding
+            path: Icons.close
+            size: Theme.about.closeSize
+            color: closeMouse.containsMouse ? Theme.about.closeHoverColor : Theme.about.closeColor
+
+            MouseArea {
+                id: closeMouse
+                anchors.fill: parent
+                anchors.margins: -6
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: popup.close()
+            }
+
+            ToolTip.visible: closeMouse.containsMouse
+            ToolTip.delay: Theme.tooltip.delay
+            ToolTip.text: qsTr("Close")
+        }
+
         contentItem: ColumnLayout {
             spacing: Theme.gameEditor.rowSpacing
 
             Label {
                 Layout.fillWidth: true
+                Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
                 text: root.bulk ? qsTr("%1 of %2 · Art for %3").arg(root.stepIndex + 1).arg(root.steps.length).arg(root.gameTitle)
                                 : qsTr("Art for %1").arg(root.gameTitle)
                 color: Theme.gameEditor.headingColor

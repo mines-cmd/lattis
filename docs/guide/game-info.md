@@ -42,7 +42,7 @@ When the name you searched isn't the game's title, the title is kept: a Linux re
 
 ## Choosing art
 
-Art is never picked for you in a game's Properties. **Browse SteamGridDB** (by the Images heading) or **Choose art** (after a lookup) opens the art browser: a tab for each kind (hero, cover, logo, icon), with SteamGridDB's images, a Style filter and **Load more**. Pick at most one per tab, then **Use selected**.
+Art is never picked for you in a game's Properties. **Browse SteamGridDB** (by the Images heading) or **Choose art** (after a lookup) opens the art browser: a tab for each kind (hero, cover, logo, icon), with SteamGridDB's images, a Style filter and **Load more**. Pick at most one per tab, then **Use selected**. **Cancel**, the X in the corner or Escape closes it without changes; in Look up missing info, where picks count as you make them, the X closes it like **Done**.
 
 You can also use your own images: click a kind of art's preview to choose any image file. The × in its corner, shown on hover, removes it.
 
