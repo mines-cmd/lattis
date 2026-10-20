@@ -922,6 +922,7 @@ QVariantList BulkLookup::resultList(const QString &state) const
                                {QStringLiteral("fields"), fields},
                                {QStringLiteral("tags"), tags},
                                {QStringLiteral("art"), art},
+                               {QStringLiteral("ownArt"), r.game.artUrls},
                                {QStringLiteral("applyError"), r.applyError}});
     }
     return out;

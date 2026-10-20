@@ -276,8 +276,6 @@ Item {
                 readonly property string scrimSide: scrimSideChoice !== "" ? scrimSideChoice : Theme.hero.scrimSide
                 readonly property real scrimStrength: isCurrent && root.pendingScrimStrength >= 0
                     ? root.pendingScrimStrength : (game.logoScrimStrength ?? 1)
-                readonly property color scrimColor: Qt.rgba(Theme.hero.scrimColor.r, Theme.hero.scrimColor.g, Theme.hero.scrimColor.b,
-                                                            Math.min(1, Theme.hero.scrimColor.a * scrimStrength))
 
                 property alias plainLogo: plainLogoImage
                 property alias plainTitle: plainTitleLabel
@@ -394,69 +392,15 @@ Item {
                     }
                 }
 
-                Rectangle {
-                    id: gradientScrim
-                    readonly property bool autoSide: layer.scrimSide === "auto"
-                    readonly property string side: autoSide ? (layer.vAlign === "top" ? "top" : "bottom") : layer.scrimSide
-                    readonly property bool vertical: side === "top" || side === "bottom" || side === "full"
-                    readonly property bool darkFirst: side === "top" || side === "left"
-                    readonly property real logoMiddleX: layer.drawnRect.x + layer.drawnRect.width / 2
-                    readonly property real logoMiddleY: layer.drawnRect.y + layer.drawnRect.height / 2
-
-                    opacity: layer.scrimStyle === "gradient" && layer.scrimStrength > 0 && !root.logoOnly ? 1 : 0
-                    x: side === "right" ? parent.width - width : 0
-                    y: side === "bottom" ? parent.height - height : 0
-                    width: side === "left" ? Math.min(parent.width, Math.max(parent.width * 0.35, autoSide || logoMiddleX < parent.width / 2
-                                                      ? layer.drawnRect.x + layer.drawnRect.width + root.edge : 0))
-                        : side === "right" ? Math.min(parent.width, Math.max(parent.width * 0.35, logoMiddleX > parent.width / 2
-                                                      ? parent.width - layer.drawnRect.x + root.edge : 0))
-                        : parent.width
-                    height: side === "top" ? Math.min(parent.height, Math.max(parent.height * 0.55, autoSide || logoMiddleY < parent.height / 2
-                                                      ? layer.drawnRect.y + layer.drawnRect.height + root.edge : 0))
-                        : side === "bottom" ? (autoSide && layer.vAlign === "center" ? parent.height
-                              : Math.min(parent.height, Math.max(parent.height * 0.55, autoSide || logoMiddleY > parent.height / 2
-                                                      ? parent.height - layer.drawnRect.y + root.edge : 0)))
-                        : parent.height
-                    gradient: Gradient {
-                        orientation: gradientScrim.vertical ? Gradient.Vertical : Gradient.Horizontal
-                        GradientStop { position: 0; color: gradientScrim.side === "full" || gradientScrim.darkFirst ? layer.scrimColor : "transparent" }
-                        GradientStop { position: 1; color: gradientScrim.side === "full" || !gradientScrim.darkFirst ? layer.scrimColor : "transparent" }
-                    }
-                }
-
-                // A shadow that follows the logo's outline (or the title's): the logo blurred and colored,
-                // drawn behind it. Made only for the games that use it. The texture is padded by hand: the
-                // effect's own padding doesn't reach outside a Loader's item.
-                Loader {
-                    id: shadow
-                    active: layer.scrimStyle === "shadow" && layer.scrimStrength > 0 && !root.logoOnly
-                    readonly property Item box: layer.logoShown ? logoImage : titleLabel
-                    readonly property real pad: Theme.hero.shadowSize
-                    readonly property real strength: layer.scrimStrength
-                    x: box.x - pad
-                    y: box.y - pad
-                    width: box.width + 2 * pad
-                    height: box.height + 2 * pad
-                    transform: Translate { y: layer.logoRise }
-                    sourceComponent: Item {
-                        ShaderEffectSource {
-                            id: copy
-                            visible: false
-                            sourceItem: shadow.box
-                            sourceRect: Qt.rect(-shadow.pad, -shadow.pad, shadow.width, shadow.height)
-                        }
-                        MultiEffect {
-                            anchors.fill: parent
-                            source: copy
-                            autoPaddingEnabled: false
-                            blurMax: Theme.hero.shadowSize
-                            shadowEnabled: true
-                            shadowBlur: 1
-                            shadowVerticalOffset: Theme.hero.shadowOffset
-                            shadowColor: Qt.rgba(Theme.hero.shadowColor.r, Theme.hero.shadowColor.g, Theme.hero.shadowColor.b, 1)
-                            shadowOpacity: Math.min(1, Theme.hero.shadowColor.a * shadow.strength)
-                        }
-                    }
+                LogoScrim {
+                    style: root.logoOnly ? "none" : layer.scrimStyle
+                    side: layer.scrimSide
+                    strength: layer.scrimStrength
+                    logo: layer.logoShown ? logoImage : titleLabel
+                    drawnRect: layer.drawnRect
+                    vAlign: layer.vAlign
+                    edge: root.edge
+                    rise: layer.logoRise
                 }
 
                 Image {

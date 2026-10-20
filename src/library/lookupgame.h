@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <QVariantMap>
 
 // See docs/code/library.md.
 struct LookupGame
@@ -21,6 +22,7 @@ struct LookupGame
     double rating = -1;
     bool ratingFromIgdb = false;
     QStringList art;
+    QVariantMap artUrls;
     QStringList tags;
     int igdb = -1;
     int steamgriddb = -1;

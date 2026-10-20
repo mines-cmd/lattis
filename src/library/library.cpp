@@ -2351,8 +2351,10 @@ QList<LookupGame> Library::lookupGames() const
         const std::pair<const char *, QUrl> art[] = {{"cover", g.coverUrl}, {"hero", g.heroUrl}, {"logo", g.logoUrl},
                                                      {"icon", g.iconUrl}};
         for (const auto &[kind, url] : art) {
-            if (!url.isEmpty())
+            if (!url.isEmpty()) {
                 l.art.append(QLatin1String(kind));
+                l.artUrls.insert(QLatin1String(kind), url.toString());
+            }
         }
         for (const GameTag &tag : g.tags)
             l.tags.append(tag.name);
