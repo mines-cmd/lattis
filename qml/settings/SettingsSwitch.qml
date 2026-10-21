@@ -27,15 +27,19 @@ Switch {
         Rectangle {
             readonly property real inset: 3
 
-            width: parent.height - inset * 2
-            height: width
-            radius: width / 2
+            readonly property real restWidth: parent.height - inset * 2
+            readonly property real targetWidth: root.down ? restWidth * 1.3 : restWidth
+
+            width: targetWidth
+            height: restWidth
+            radius: height / 2
             y: inset
-            x: root.checked ? parent.width - width - inset : inset
+            x: root.checked ? parent.width - targetWidth - inset : inset
             color: root.checked ? Theme.controls.switchHandleOn : Theme.controls.switchHandle
-            scale: root.hovered ? 1.08 : 1
+            scale: root.hovered && !root.down ? 1.08 : 1
 
             Behavior on x { enabled: Motion.on; MotionSpring {} }
+            Behavior on width { enabled: Motion.on; MotionNumber { speed: "fast" } }
             Behavior on scale { enabled: Motion.on; MotionNumber {} }
         }
     }
