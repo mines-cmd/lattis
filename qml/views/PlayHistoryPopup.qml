@@ -258,14 +258,11 @@ MotionPopup {
         Layout.preferredWidth: 0
         spacing: 2
 
-        Label {
+        CaptionLabel {
             Layout.fillWidth: true
             text: parent.label
             color: Theme.gameEditor.labelColor
             font.pixelSize: Theme.playHistory.headerSize
-            font.capitalization: Font.AllUppercase
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.06 * Theme.playHistory.headerSize
             elide: Text.ElideRight
         }
         Label {
@@ -374,12 +371,9 @@ MotionPopup {
                 spacing: Theme.layout.spacing
                 visible: root.sessions.length > 0
 
-                component HeaderLabel: Label {
+                component HeaderLabel: CaptionLabel {
                     color: Theme.gameEditor.labelColor
                     font.pixelSize: Theme.playHistory.headerSize
-                    font.capitalization: Font.AllUppercase
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.06 * Theme.playHistory.headerSize
                 }
 
                 HeaderLabel {

@@ -235,6 +235,11 @@ ApplicationWindow {
         font.pixelSize: Theme.gameEditor.hintFontSize
     }
 
+    component Caption: CaptionLabel {
+        color: Theme.gameEditor.hintColor
+        font.pixelSize: Theme.gameEditor.hintFontSize
+    }
+
     component SideHeading: RowLayout {
         property alias text: headingLabel.text
         property string note
@@ -243,12 +248,7 @@ ApplicationWindow {
         Layout.rightMargin: Theme.layout.spacing
         Layout.topMargin: Theme.layout.spacing / 2
         Layout.bottomMargin: Theme.layout.spacing * 0.75
-        Muted {
-            id: headingLabel
-            font.weight: Font.DemiBold
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 0.8
-        }
+        Caption { id: headingLabel }
         Item { Layout.fillWidth: true }
         Muted { visible: note !== ""; text: note }
     }
@@ -555,12 +555,9 @@ ApplicationWindow {
         default property alias content: sectionBody.data
         Layout.fillWidth: true
         spacing: root.sectionHeadingGap
-        Muted {
+        Caption {
             Layout.leftMargin: 2
             text: section.label
-            font.weight: Font.DemiBold
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 0.8
         }
         Surface {
             readonly property int inset: section.padding + Theme.gameEditor.bulkCardBorderWidth

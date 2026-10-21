@@ -162,6 +162,11 @@ constexpr Setting kSettings[] = {
     integer("font", "on_accent_weight", "600", 100, 900,
             "Weight of text drawn on the accent (selected sort order, selected Settings category, main dialog button, current setup step): 400 = normal, 600 = semibold, 700 = bold"),
 
+    integer("font", "label_weight", "600", 100, 900,
+            "Weight of the small headings above groups of controls (Show, Colors, section names in the bulk lookup, the stats cards)"),
+    real("font", "label_letter_spacing", "0.8", 0, 5, "Space between the letters of those headings, in pixels"),
+    boolean("font", "label_uppercase", "true", "Write those headings in capitals"),
+
     integer("layout", "margin", "16", 0, 200, "Distance from the top of the window to the logo and search box"),
     integer("layout", "spacing", "8", 0, 100,
             "Gap below the logo/search row; the rail, list and hero start there"),

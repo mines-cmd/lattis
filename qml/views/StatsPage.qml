@@ -783,11 +783,9 @@ FocusScope {
         }
     }
 
-    component CardLabel: Muted {
+    component CardLabel: CaptionLabel {
+        color: Theme.stats.textMuted
         font.pixelSize: Theme.stats.labelSize
-        font.capitalization: Font.AllUppercase
-        font.weight: Font.DemiBold
-        font.letterSpacing: 0.06 * Theme.stats.labelSize
     }
 
     component Highlight: Card {

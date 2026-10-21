@@ -44,9 +44,6 @@ ColumnLayout {
             text: root.isColors ? qsTr("Colors") : qsTr("Style")
             color: Theme.settingsWindow.themePopupHeaderColor
             font.pixelSize: Theme.settingsWindow.themePopupHeaderFontSize
-            font.weight: Font.DemiBold
-            font.capitalization: Font.AllUppercase
-            font.letterSpacing: 0.8
         }
 
         SettingsButton {

@@ -326,14 +326,11 @@ Item {
                         width: parent.width
                         spacing: 10
 
-                        Label {
+                        CaptionLabel {
                             Layout.fillWidth: true
                             text: qsTr("Show")
                             color: Theme.controls.descriptionColor
                             font.pixelSize: Theme.controls.descriptionFontSize + 1
-                            font.weight: Font.DemiBold
-                            font.capitalization: Font.AllUppercase
-                            font.letterSpacing: 0.8
                         }
 
                         SegmentedToggle {

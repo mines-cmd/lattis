@@ -107,6 +107,7 @@ qt_add_qml_module(lattis
         ${licensed_icons}
         qml/components/LaunchButton.qml
         qml/components/NoticeBar.qml
+        qml/components/CaptionLabel.qml
         qml/components/StatChip.qml
         qml/components/Surface.qml
         qml/components/SegmentedToggle.qml
