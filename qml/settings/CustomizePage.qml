@@ -25,6 +25,18 @@ Item {
 
     signal message(string text, var link)
 
+    // Screenshot hook: the list has built the row by the time this fires.
+    Timer {
+        id: openRowMenu
+        property string target
+        interval: 600
+        onTriggered: {
+            const row = root.schema.rowOf(target.slice(0, target.indexOf(".")), target.slice(target.indexOf(".") + 1))
+            list.positionViewAtIndex(row, ListView.Center)
+            list.itemAtIndex(row)?.rowItem.openMoreMenu()
+        }
+    }
+
     function reveal(item, half) {
         if (half !== undefined && half !== "")
             schema.show = half
@@ -34,6 +46,13 @@ Item {
             themePopup.open()
         else if (item === "show")
             showPopup.open()
+        else if (item.startsWith("row:")) {
+            const target = item.slice(4)
+            const dot = target.indexOf(".")
+            showSetting(target.slice(0, dot), target.slice(dot + 1))
+            openRowMenu.target = target
+            openRowMenu.restart()
+        }
         else if (item === "session")
             sessionPopup.open()
         else if (item === "changed") {
@@ -87,6 +106,9 @@ Item {
             search.clear()
             root.schema.changedOnly = false
             root.schema.show = "all"
+            root.schema.sharedOnly = false
+            root.schema.group = "everything"
+            root.schema.following = ""
         }
         const row = root.schema.rowOf(section, key)
         if (row >= 0)
@@ -398,6 +420,7 @@ Item {
                        : qsTr("No settings match.")
             onMessage: (text, link) => root.message(text, link)
             onFollowersRequested: (section, key) => root.showFollowers(section, key)
+            onGoToRequested: (section, key) => root.showSetting(section, key)
         }
     }
 

@@ -90,6 +90,9 @@ public:
     Q_INVOKABLE void revertAll();
     Q_INVOKABLE void undoReset();
     QString revertText(const QString &section, const QString &key) const;
+    Q_INVOKABLE QVariantMap rowMenu(const QString &section, const QString &key);
+    Q_INVOKABLE void useDefault(const QString &section, const QString &key);
+    Q_INVOKABLE void useOwnValue(const QString &section, const QString &key);
     QVariantList sessionChanges() const;
 
     Q_INVOKABLE QVariant rawValue(const QString &section, const QString &key) const;
@@ -180,7 +183,9 @@ private:
     QString deriveActiveTheme() const;
     void setAppearance(const QString &colors, const QString &style);
     bool applyHalfFile(Half half, const QString &name, bool builtInOnly, QHash<QString, Entry> &merged,
-                       QStringList &chain);
+                       QStringList &chain, bool parentsOnly = false);
+    QVariant parentRaw(const QString &full);
+    QString describeRaw(const QString &full, const QVariant &raw) const;
 
     QVariant valueOf(const ThemeSchema::Setting &setting);
     QVariant convert(const QVariant &raw, const ThemeSchema::Setting &setting, QString *error);
@@ -210,6 +215,7 @@ private:
     QTimer m_saveTimer;
     bool m_loaded = false;
     bool m_savingOwnChange = false;
+    bool m_quiet = false;
 
     QString m_activeColors;
     QString m_activeStyle;

@@ -5,6 +5,6 @@ import QtQuick
 // translates its background and list by it, since popup() owns its x.
 Transition {
     MotionNumber { property: "opacity"; from: 0; to: 1; speed: "fast" }
-    MotionPop { property: "scale"; from: Theme.motion.menuScale; to: 1 }
+    MotionPop { property: "pop"; from: Theme.motion.menuScale; to: 1 }
     MotionPop { property: "slide"; from: -Theme.motion.menuOffset; to: 0 }
 }

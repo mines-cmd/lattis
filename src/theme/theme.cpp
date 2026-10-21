@@ -369,6 +369,8 @@ Theme *Theme::create(QQmlEngine *, QJSEngine *)
 
 void Theme::warn(const QString &message)
 {
+    if (m_quiet)
+        return;
     qCWarning(lcTheme).noquote() << message;
     m_problems.append(message);
 }
@@ -634,7 +636,7 @@ QString Theme::deriveActiveTheme() const
 }
 
 bool Theme::applyHalfFile(Half half, const QString &name, bool builtInOnly, QHash<QString, Entry> &merged,
-                          QStringList &chain)
+                          QStringList &chain, bool parentsOnly)
 {
     const QString chainKey = name + (builtInOnly ? QStringLiteral(" (built in)") : QString());
     if (chain.contains(chainKey)) {
@@ -685,6 +687,8 @@ bool Theme::applyHalfFile(Half half, const QString &name, bool builtInOnly, QHas
     }
     if (!parent.isEmpty() && !applyHalfFile(half, parent, parentBuiltIn, merged, chain))
         return false;
+    if (parentsOnly)
+        return true;
 
     QStringList sectionNames;
     for (const ThemeSchema::Section &s : ThemeSchema::sections())
@@ -1340,6 +1344,13 @@ QVariantList Theme::paletteColors() const
     return out;
 }
 
+static QString unquoted(QString text)
+{
+    if (text.size() >= 2 && text.startsWith(u'"') && text.endsWith(u'"') && text.count(u'"') == 2)
+        text = text.mid(1, text.size() - 2);
+    return text;
+}
+
 static Type typeOf(const QString &full)
 {
     const Setting *s = findSetting(full);
@@ -1402,11 +1413,6 @@ QString Theme::resolvedText(const QString &full) const
 
 QString Theme::shownValue(const QString &full, const QVariant &raw, const QString &resolved) const
 {
-    const auto unquoted = [](QString text) {
-        if (text.size() >= 2 && text.startsWith(u'"') && text.endsWith(u'"') && text.count(u'"') == 2)
-            text = text.mid(1, text.size() - 2);
-        return text;
-    };
     if (raw.isValid())
         return unquoted(formatScalar(raw, typeOf(full)));
     return QStringLiteral("default (%1)").arg(unquoted(resolved));
@@ -1466,6 +1472,69 @@ QString Theme::revertText(const QString &section, const QString &key) const
     if (it == m_sessionStart.constEnd() || !it->raw.isValid() || !changedThisSession(full, *it))
         return {};
     return shownValue(full, it->raw, it->resolved);
+}
+
+QVariant Theme::parentRaw(const QString &full)
+{
+    const Half half = halfOf(full);
+    QHash<QString, Entry> parents;
+    QStringList chain;
+    m_quiet = true;
+    applyHalfFile(half, activeName(half), false, parents, chain, true);
+    m_quiet = false;
+    const auto it = parents.constFind(full);
+    return it == parents.constEnd() ? QVariant() : it->raw;
+}
+
+QString Theme::describeRaw(const QString &full, const QVariant &raw) const
+{
+    if (raw.typeId() == QMetaType::QString && raw.toString().startsWith(u'@')) {
+        const QString ref = raw.toString().mid(1);
+        const QString target = ref.contains(u'.') ? ref : QStringLiteral("palette.") + ref;
+        return QStringLiteral("%1, %2").arg(ref, resolvedText(target));
+    }
+    return shownValue(full, raw, {});
+}
+
+QVariantMap Theme::rowMenu(const QString &section, const QString &key)
+{
+    const QString full = section + u'.' + key;
+    const Setting *s = findSetting(full);
+    if (!s)
+        return {};
+    QVariantMap out;
+    out.insert(QStringLiteral("revert"), revertText(section, key));
+    const QVariant def = defaultRaw(*s);
+    if (isCustomized(section, key)) {
+        const QVariant parent = parentRaw(full);
+        out.insert(QStringLiteral("file"), activeFile(section, key));
+        out.insert(QStringLiteral("fallback"), describeRaw(full, parent.isValid() ? parent : def));
+    }
+    const auto it = m_merged.constFind(full);
+    out.insert(QStringLiteral("fromParent"), it != m_merged.constEnd() && it->user && it->name != activeName(it->half));
+    out.insert(QStringLiteral("default"), describeRaw(full, def));
+    QString defaultTarget;
+    if (def.typeId() == QMetaType::QString && def.toString().startsWith(u'@')) {
+        defaultTarget = def.toString().mid(1);
+        if (!defaultTarget.contains(u'.'))
+            defaultTarget.prepend(QLatin1String("palette."));
+    }
+    out.insert(QStringLiteral("defaultTarget"), defaultTarget);
+    out.insert(QStringLiteral("defaultValue"),
+               defaultTarget.isEmpty() ? shownValue(full, def, {}) : unquoted(resolvedText(defaultTarget)));
+    out.insert(QStringLiteral("current"), shownValue(full, resolvedValue(section, key), {}));
+    return out;
+}
+
+void Theme::useDefault(const QString &section, const QString &key)
+{
+    if (const Setting *s = findSetting(section + u'.' + key))
+        setValue(section, key, defaultRaw(*s));
+}
+
+void Theme::useOwnValue(const QString &section, const QString &key)
+{
+    setValue(section, key, resolvedValue(section, key));
 }
 
 QVariantList Theme::sessionChanges() const

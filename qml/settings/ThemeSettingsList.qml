@@ -14,6 +14,7 @@ ListView {
 
     signal message(string text, var link)
     signal followersRequested(string section, string key)
+    signal goToRequested(string section, string key)
 
     function jumpTo(section) {
         const row = schema.firstRow(section)
@@ -80,6 +81,7 @@ ListView {
     delegate: ColumnLayout {
         readonly property string section: model.section
         readonly property string subsection: model.subsection
+        readonly property Item rowItem: settingRow
 
         width: root.width - scrollBar.width - 8
         spacing: 0
@@ -190,6 +192,10 @@ ListView {
                 ownValue: model.ownValue
 
                 onFollowersClicked: root.followersRequested(model.section, model.key)
+                onGoToRequested: target => {
+                    const dot = target.indexOf(".")
+                    root.goToRequested(target.slice(0, dot), target.slice(dot + 1))
+                }
 
                 onResetClicked: root.message(qsTr("%1 reset to default").arg(title),
                                              { text: qsTr("Undo"), run: () => Theme.undoReset() })

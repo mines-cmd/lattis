@@ -16,7 +16,12 @@ Menu {
     property string popDirection: "right"
     property real slide: 0
     readonly property real slideX: popDirection === "right" ? slide : 0
-    readonly property real slideY: popDirection === "down" ? slide : popDirection === "up" ? -slide : 0
+    readonly property real slideY: popDirection === "down" || popDirection === "below" ? slide : popDirection === "up" ? -slide : 0
+    // Under a button at the menu's right edge, it grows only downward: grown from that corner, its whole left
+    // edge travelled, and the menu looked like it opened off to the right and slid into place.
+    property real pop: 1
+    readonly property real popY: popDirection === "below" ? pop : 1
+    scale: popDirection === "below" ? 1 : pop
 
     clip: !grows
     property real reveal: 1
@@ -76,13 +81,14 @@ Menu {
         }
     }
 
+    property real minWidth: Theme.menu.minWidth
     property bool checkColumn: false
     property string iconPath: ""
     readonly property bool iconColumn: {
         if (!Theme.menu.icons) return false
         for (let i = 0; i < count; ++i) {
             const item = itemAt(i)
-            if (item?.iconPath || item?.subMenu?.iconPath) return true
+            if (item && (item.want ?? item.visible) && (item.iconPath || item.subMenu?.iconPath)) return true
         }
         return false
     }
@@ -92,8 +98,8 @@ Menu {
         let widest = implicitBackgroundWidth - leftPadding - rightPadding
         for (let i = 0; i < count; ++i) {
             const item = itemAt(i)
-            if (item && item.visible)
-                widest = Math.max(widest, item.implicitWidth)
+            if (item && (item.want ?? item.visible))
+                widest = Math.max(widest, item.naturalWidth ?? item.implicitWidth)
         }
         return widest + leftPadding + rightPadding
     }
@@ -109,7 +115,10 @@ Menu {
         // Dropping down, the entries slide with the bottom edge like a drawer instead of staying put under
         // a window that grows (the popup clips them).
         readonly property real drawerShift: root.grows || root.pops ? 0 : (1 - root.reveal) * contentHeight
-        transform: Translate { x: root.slideX; y: root.slideY - entries.drawerShift }
+        transform: [
+            Scale { origin.y: -entries.y; yScale: root.popY },
+            Translate { x: root.slideX; y: root.slideY - entries.drawerShift }
+        ]
         model: root.contentModel
         interactive: Window.window
                      ? contentHeight + root.topPadding + root.bottomPadding > root.height
@@ -131,7 +140,10 @@ Menu {
 
     background: Rectangle {
         id: outline
-        transform: Translate { x: root.slideX; y: root.slideY }
+        transform: [
+            Scale { yScale: root.popY },
+            Translate { x: root.slideX; y: root.slideY }
+        ]
 
         // The popup keeps its full size while growing; only its outline moves, from a sliver under the
         // button as wide as it.
@@ -142,7 +154,7 @@ Menu {
         x: fromX * (1 - t)
         width: fromWidth + (root.width - fromWidth) * t
         height: root.height * t
-        implicitWidth: Theme.menu.minWidth
+        implicitWidth: root.minWidth
         radius: Theme.controls.inputRadius
         color: Theme.menu.popupBackground
         border.color: Theme.controls.inputBorder

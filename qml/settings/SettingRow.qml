@@ -31,6 +31,7 @@ Rectangle {
 
     signal resetClicked()
     signal followersClicked()
+    signal goToRequested(string target)
 
     color: hover.containsMouse ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
@@ -98,6 +99,9 @@ Rectangle {
                             visible: root.linkTarget !== ""
                             text: "→ " + root.linkTitle
                             tint: Theme.settingsWindow.linkTagColor
+                            clickable: true
+                            tip: qsTr("Go to %1").arg(root.linkTarget)
+                            onClicked: root.goToRequested(root.linkTarget)
                         }
 
                         SettingTag {
@@ -214,58 +218,61 @@ Rectangle {
                 }
             }
 
-            // Both slots are kept on every row: a button appearing in the middle of a slider drag
-            // must not move the editor under the pointer.
-            Row {
-                spacing: Theme.settingsWindow.resetButtonSpacing
-
-                Item {
-                    width: Theme.settingsWindow.smallButtonSize
-                    height: Theme.settingsWindow.smallButtonSize
-                    opacity: root.revertText !== "" ? 1 : 0
-
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-
-                    IconButton {
-                        anchors.fill: parent
-                        enabled: root.revertText !== ""
-                        plain: true
-                        iconSize: Theme.settingsWindow.smallIconSize
-                        icon: Icons.history
-                        iconColor: Theme.settingsWindow.resetButtonColor
-                        tip: qsTr("Revert to %1, the value when Settings opened").arg(root.revertText)
-                        onClicked: {
-                            root.forceActiveFocus() // the editor shows the new value only when it has let go of focus
-                            Theme.revertValue(root.section, root.key)
-                        }
-                    }
-                }
-
-                Item {
-                    width: Theme.settingsWindow.smallButtonSize
-                    height: Theme.settingsWindow.smallButtonSize
-                    opacity: root.isCustom ? 1 : 0
-
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-
-                    IconButton {
-                        anchors.fill: parent
-                        enabled: root.isCustom
-                        plain: true
-                        iconSize: Theme.settingsWindow.smallIconSize
-                        icon: Icons.close
-                        iconColor: Theme.settingsWindow.resetButtonColor
-                        tip: qsTr("Reset (remove from %1)").arg(Theme.activeFile(root.section, root.key))
-                        onClicked: {
-                            root.forceActiveFocus() // the editor shows the new value only when it has let go of focus
-                            // First: with "Changed" on, the reset removes this row.
-                            root.resetClicked()
-                            Theme.resetValue(root.section, root.key)
-                        }
-                    }
-                }
+            IconButton {
+                id: moreButton
+                Layout.preferredWidth: Theme.settingsWindow.smallButtonSize
+                Layout.preferredHeight: Theme.settingsWindow.smallButtonSize
+                Layout.alignment: Qt.AlignVCenter
+                plain: true
+                iconSize: Theme.settingsWindow.smallIconSize
+                icon: Icons.more
+                iconColor: Theme.settingsWindow.resetButtonColor
+                tip: qsTr("More")
+                onClicked: root.openMenu(moreButton)
             }
         }
+    }
+
+    Loader {
+        id: menuLoader
+        active: false
+        sourceComponent: SettingRowMenu { row: root }
+    }
+
+    function openMoreMenu() { openMenu(moreButton) }
+
+    // The click that opens the menu again is the one that closed it, so it comes while the menu still runs
+    // its exit transition, and a popup() then is undone when that ends: the menu reopens once it has closed.
+    property var pendingMenu: null
+
+    function openMenu(item, at) {
+        menuLoader.active = true
+        const menu = menuLoader.item
+        if (menu.visible) {
+            pendingMenu = { item: item, at: at }
+            menu.close()
+            return
+        }
+        menu.atPointer = item === null
+        if (item)
+            menu.openAt(item, item.width, item.height)
+        else
+            menu.openAt(null, at?.x ?? 0, at?.y ?? 0)
+    }
+
+    Connections {
+        target: menuLoader.item
+        function onClosed() {
+            const pending = root.pendingMenu
+            root.pendingMenu = null
+            if (pending)
+                root.openMenu(pending.item, pending.at)
+        }
+    }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: eventPoint => root.openMenu(null, eventPoint.position)
     }
 
     Component { id: colorC; ColorEditor {} }

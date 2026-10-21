@@ -117,6 +117,9 @@ typeName(type)          → "Color", "Int", …
 | `themePair(name)` | `{colors, style}` of a theme; empty if there is none |
 | `setValue(section, key, value)` | Apply immediately; save after 400 ms debounce |
 | `resetValue(section, key)` | Remove from active file; revert to inherited/default |
+| `rowMenu(section, key)` | What a setting row's menu needs, read when it opens: `revert` (the session's value, if changed), `file` and `fallback` (the active file and what removing the value falls back to: the parent theme's value, else the default; only when the active file sets it), `fromParent`, `default` (`target, value` for a link), `defaultTarget` and `defaultValue`, `current` |
+| `useDefault(section, key)` | Write the schema default (a plain value or its `@` link) to the active file |
+| `useOwnValue(section, key)` | Write the value now in effect to the active file, which unlinks a setting that follows another |
 | `colorsFilePath()`, `styleFilePath()` | The file edits to that half go to; created (with a header on a built-in) when missing |
 | `canResetToBuiltIn(half)` | A user file layers on the active built-in colors (`"colors"`) or style (`"style"`) |
 | `resetToBuiltIn(half)` | Delete that file; the built-in's values return |

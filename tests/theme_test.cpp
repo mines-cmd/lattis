@@ -80,6 +80,8 @@ private slots:
     void schemaModelRows();
     void schemaModelFilter();
     void schemaModelLinks();
+    void rowMenuDescribesEachItem();
+    void rowMenuWrites();
     void schemaModelGroups();
     void schemaModelFilterCombinations();
 
@@ -2019,6 +2021,72 @@ void ThemeTest::schemaModelFilterCombinations()
     QCOMPARE(model->following(), QStringLiteral("radius.small"));
     model->setFollowing("");
     QCOMPARE(model->rowCount() > 0, true);
+}
+
+void ThemeTest::rowMenuDescribesEachItem()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/settings.toml", "[appearance]\nstyle = \"child\"\n");
+    write(dataDir + "/themes/styles/base.toml", "extends = \"Soft\"\n[radius]\nsmall = 7\n");
+    write(dataDir + "/themes/styles/child.toml", "extends = \"base\"\n[radius]\nlarge = 20\n[filters]\nsort_radius = 3\n");
+    Theme theme(dataDir);
+
+    // Set by the active file over its parent: removing falls back to the parent's value.
+    QVariantMap menu = theme.rowMenu("radius", "large");
+    QCOMPARE(menu.value("file").toString(), QStringLiteral("child.toml"));
+    QCOMPARE(menu.value("fallback").toString(), QStringLiteral("12"));
+    QCOMPARE(menu.value("fromParent").toBool(), false);
+    QCOMPARE(menu.value("revert").toString(), QString());
+
+    // Set by the active file where the parent has nothing: it falls back to the link.
+    menu = theme.rowMenu("filters", "sort_radius");
+    QCOMPARE(menu.value("fallback").toString(), QStringLiteral("radius.small, 7"));
+    QCOMPARE(menu.value("defaultTarget").toString(), QStringLiteral("radius.small"));
+    QCOMPARE(menu.value("defaultValue").toString(), QStringLiteral("7"));
+    QCOMPARE(menu.value("current").toString(), QStringLiteral("3"));
+
+    // Set only by the parent theme.
+    menu = theme.rowMenu("radius", "small");
+    QCOMPARE(menu.value("fromParent").toBool(), true);
+    QVERIFY(!menu.contains("file"));
+    QCOMPARE(menu.value("default").toString(), QStringLiteral("6"));
+    QCOMPARE(menu.value("current").toString(), QStringLiteral("7"));
+
+    // Not set anywhere, with a plain default.
+    menu = theme.rowMenu("hero", "placeholder_hue_shift");
+    QVERIFY(!menu.contains("file"));
+    QCOMPARE(menu.value("fromParent").toBool(), false);
+    QCOMPARE(menu.value("defaultTarget").toString(), QString());
+
+    // Opening the menu adds nothing to the problems.
+    QCOMPARE(theme.problems().size(), 0);
+}
+
+void ThemeTest::rowMenuWrites()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/settings.toml", "[appearance]\nstyle = \"child\"\n");
+    write(dataDir + "/themes/styles/child.toml", "extends = \"Soft\"\n");
+    Theme theme(dataDir);
+
+    // Unlinking writes the value the link resolves to.
+    theme.useOwnValue("filters", "sort_radius");
+    QTest::qWait(700);
+    QVERIFY(read(dataDir + "/themes/styles/child.toml").contains("sort_radius = 6"));
+
+    // Following the link again writes it.
+    theme.useDefault("filters", "sort_radius");
+    QTest::qWait(700);
+    QVERIFY(read(dataDir + "/themes/styles/child.toml").contains("sort_radius = \"@radius.small\""));
+
+    // A value from the parent theme goes back to the schema default.
+    theme.useDefault("radius", "small");
+    QTest::qWait(700);
+    QVERIFY(read(dataDir + "/themes/styles/child.toml").contains("small = 6"));
 }
 
 QTEST_MAIN(ThemeTest)
