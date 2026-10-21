@@ -91,6 +91,7 @@ The tag color palette (`tags.palette`) has its own editor in Settings → Librar
 
 ```
 sections()              → all sections (name, doc)
+headings()              → sub-headings (section, title, index of the first setting in settings())
 settings()              → all settings (section, key, type, def, doc, min, max, choices, fallback)
 typeName(type)          → "Color", "Int", …
 ```
@@ -139,7 +140,8 @@ Signals: `activeColorsChanged`, `activeStyleChanged`, `activeThemeChanged`, `ava
 | `changedOnly` | When true, only settings the active theme sets |
 | `show` | `"all"`, `"colors"` or `"style"`; only `customizeSchema` narrows by it |
 | `changedCount` | Count of settings in the active theme's own file |
-| `sections` | `[{name, title}]` for sections with visible rows |
+| `sections` | `[{name, title, subsections: [{title, count}]}]` for sections with visible rows; a sub-heading with no visible row is left out |
 | `firstRow(section)` | Index of the first visible row in the section, or -1 |
+| `firstRow(section, subsection)` | Index of the first visible row under that sub-heading, or -1 |
 
-Row roles: `SectionRole`, `SectionDocRole`, `SectionTitleRole`, `KeyRole`, `TitleRole`, `CamelKeyRole`, `TypeRole`, `DocRole`, `MinRole`, `MaxRole`, `ChoicesRole`, `DefaultRole`, `ValueRole`, `RawRole`, `SourceLabelRole`, `IsCustomRole`, `FirstInSectionRole`, `LastInSectionRole`.
+Row roles: `SectionRole`, `SectionDocRole`, `SectionTitleRole`, `KeyRole`, `TitleRole`, `CamelKeyRole`, `TypeRole`, `DocRole`, `MinRole`, `MaxRole`, `ChoicesRole`, `DefaultRole`, `ValueRole`, `RawRole`, `SourceLabelRole`, `IsCustomRole`, `FirstInSectionRole`, `LastInSectionRole`, `SubsectionRole` (the row's sub-heading, empty in a section without them), `SubsectionCountRole` (visible rows in its card), `FirstInCardRole`, `LastInCardRole`. In the both-halves model a sub-heading's colors come before its style settings.

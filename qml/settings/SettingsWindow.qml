@@ -438,59 +438,158 @@ ApplicationWindow {
                                     Repeater {
                                         model: category.sections
 
-                                        Rectangle {
-                                            id: link
+                                        ColumnLayout {
+                                            id: entry
                                             required property var modelData
                                             required property int index
-                                            readonly property bool current: category.modelData.page.item?.currentSection === modelData.name
+                                            readonly property var subsections: modelData.subsections ?? []
+                                            readonly property bool sectionCurrent: category.modelData.page.item?.currentSection === modelData.name
+                                            readonly property string currentSubsection: sectionCurrent ? category.modelData.page.item?.currentSubsection ?? "" : ""
 
-                                            onCurrentChanged: if (current && links.shown === 1) sidebar.ensureVisible(link)
+                                            Layout.fillWidth: true
+                                            spacing: 2
 
-                                            Connections {
-                                                target: links
-                                                function onShownChanged() {
-                                                    if (link.current && links.shown === 1)
-                                                        sidebar.ensureVisible(link)
+                                            Rectangle {
+                                                id: link
+                                                readonly property bool current: entry.sectionCurrent
+
+                                                onCurrentChanged: if (current && links.shown === 1) sidebar.ensureVisible(link)
+
+                                                Connections {
+                                                    target: links
+                                                    function onShownChanged() {
+                                                        if (link.current && links.shown === 1)
+                                                            sidebar.ensureVisible(link)
+                                                    }
+                                                }
+
+                                                Layout.fillWidth: true
+                                                Layout.leftMargin: Theme.settingsWindow.sidebarSectionIndent
+                                                Layout.preferredHeight: Theme.settingsWindow.sidebarSectionHeight
+                                                radius: Theme.settingsWindow.sidebarItemRadius
+                                                color: current ? Theme.settingsWindow.sidebarSectionSelectedBackground
+                                                     : linkMouse.containsMouse ? Theme.controls.hover
+                                                     : "transparent"
+
+                                                Rectangle {
+                                                    visible: link.current && entry.subsections.length === 0
+                                                    x: 0
+                                                    width: 3
+                                                    height: parent.height - 12
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    radius: 1.5
+                                                    color: Theme.settingsWindow.sidebarSectionMarker
+                                                }
+
+                                                Label {
+                                                    anchors.fill: parent
+                                                    anchors.leftMargin: 10
+                                                    anchors.rightMargin: entry.subsections.length > 0 ? 10 + chevron.width + 4 : 10
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    text: entry.modelData.title
+                                                    color: link.current || linkMouse.containsMouse
+                                                           ? Theme.settingsWindow.sidebarSectionSelectedText
+                                                           : Theme.settingsWindow.sidebarSectionText
+                                                    font.pixelSize: Theme.settingsWindow.sidebarSectionFontSize
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Icon {
+                                                    id: chevron
+                                                    visible: entry.subsections.length > 0
+                                                    anchors.right: parent.right
+                                                    anchors.rightMargin: 10
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    path: Icons.chevron
+                                                    size: Theme.controls.iconSize
+                                                    color: link.current || linkMouse.containsMouse
+                                                           ? Theme.settingsWindow.sidebarSectionSelectedText
+                                                           : Theme.settingsWindow.sidebarSectionText
+                                                    rotation: 90 * subLinks.shown
+
+                                                    Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                                }
+
+                                                MouseArea {
+                                                    id: linkMouse
+                                                    anchors.fill: parent
+                                                    hoverEnabled: true
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: category.modelData.page.item.jumpTo(entry.modelData.name)
                                                 }
                                             }
 
-                                            Layout.fillWidth: true
-                                            Layout.leftMargin: Theme.settingsWindow.sidebarSectionIndent
-                                            Layout.preferredHeight: Theme.settingsWindow.sidebarSectionHeight
-                                            radius: Theme.settingsWindow.sidebarItemRadius
-                                            color: current ? Theme.settingsWindow.sidebarSectionSelectedBackground
-                                                 : linkMouse.containsMouse ? Theme.controls.hover
-                                                 : "transparent"
+                                            Item {
+                                                id: subLinks
+                                                readonly property real reveal: entry.sectionCurrent && entry.subsections.length > 0 ? 1 : 0
+                                                property real shown: reveal
 
-                                            Rectangle {
-                                                visible: link.current
-                                                x: 0
-                                                width: 3
-                                                height: parent.height - 12
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                radius: 1.5
-                                                color: Theme.settingsWindow.sidebarSectionMarker
-                                            }
+                                                Behavior on shown { enabled: Motion.on; MotionNumber { speed: "normal" } }
 
-                                            Label {
-                                                anchors.fill: parent
-                                                anchors.leftMargin: Math.max(10, 38 - Theme.settingsWindow.sidebarSectionIndent)
-                                                anchors.rightMargin: 10
-                                                verticalAlignment: Text.AlignVCenter
-                                                text: link.modelData.title
-                                                color: link.current || linkMouse.containsMouse
-                                                       ? Theme.settingsWindow.sidebarSectionSelectedText
-                                                       : Theme.settingsWindow.sidebarSectionText
-                                                font.pixelSize: Theme.settingsWindow.sidebarSectionFontSize
-                                                elide: Text.ElideRight
-                                            }
+                                                visible: shown > 0
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: subColumn.implicitHeight * shown
+                                                clip: true
 
-                                            MouseArea {
-                                                id: linkMouse
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: category.modelData.page.item.jumpTo(link.modelData.name)
+                                                ColumnLayout {
+                                                    id: subColumn
+                                                    width: parent.width
+                                                    spacing: 2
+                                                    opacity: subLinks.shown
+
+                                                    Repeater {
+                                                        model: entry.subsections
+
+                                                        Rectangle {
+                                                            id: subLink
+                                                            required property var modelData
+                                                            readonly property bool current: entry.currentSubsection === modelData.title
+
+                                                            onCurrentChanged: if (current && links.shown === 1) sidebar.ensureVisible(subLink)
+
+                                                            Layout.fillWidth: true
+                                                            Layout.leftMargin: Theme.settingsWindow.sidebarSectionIndent
+                                                                               + Theme.settingsWindow.sidebarSubsectionIndent
+                                                            Layout.preferredHeight: Theme.settingsWindow.sidebarSectionHeight
+                                                            radius: Theme.settingsWindow.sidebarItemRadius
+                                                            color: current ? Theme.settingsWindow.sidebarSectionSelectedBackground
+                                                                 : subMouse.containsMouse ? Theme.controls.hover
+                                                                 : "transparent"
+
+                                                            Rectangle {
+                                                                visible: subLink.current
+                                                                x: 0
+                                                                width: 3
+                                                                height: parent.height - 12
+                                                                anchors.verticalCenter: parent.verticalCenter
+                                                                radius: 1.5
+                                                                color: Theme.settingsWindow.sidebarSectionMarker
+                                                            }
+
+                                                            Label {
+                                                                anchors.fill: parent
+                                                                anchors.leftMargin: 10
+                                                                anchors.rightMargin: 10
+                                                                verticalAlignment: Text.AlignVCenter
+                                                                text: subLink.modelData.title
+                                                                color: subLink.current || subMouse.containsMouse
+                                                                       ? Theme.settingsWindow.sidebarSectionSelectedText
+                                                                       : Theme.settingsWindow.sidebarSectionText
+                                                                font.pixelSize: Theme.settingsWindow.sidebarSectionFontSize
+                                                                elide: Text.ElideRight
+                                                            }
+
+                                                            MouseArea {
+                                                                id: subMouse
+                                                                anchors.fill: parent
+                                                                hoverEnabled: true
+                                                                cursorShape: Qt.PointingHandCursor
+                                                                onClicked: category.modelData.page.item.jumpToSubsection(
+                                                                               entry.modelData.name, subLink.modelData.title)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }

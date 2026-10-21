@@ -39,6 +39,10 @@ public:
         RevertTextRole,
         FirstInSectionRole,
         LastInSectionRole,
+        SubsectionRole,
+        SubsectionCountRole,
+        FirstInCardRole,
+        LastInCardRole,
         HalfRole,
     };
     Q_ENUM(Role)
@@ -61,6 +65,7 @@ public:
 
     QVariantList sections() const;
     Q_INVOKABLE int firstRow(const QString &section) const;
+    Q_INVOKABLE int firstRow(const QString &section, const QString &subsection) const;
     Q_INVOKABLE int rowOf(const QString &section, const QString &key) const;
 
 signals:
@@ -74,6 +79,8 @@ private:
     bool listsHalf(bool color) const;
     QList<int> visibleRows() const;
     void rebuildVisibleRows();
+    void setVisible(const QList<int> &rows);
+    bool sameCard(int row, int other) const;
     void refresh();
     void updateChangedCount();
 
@@ -84,4 +91,7 @@ private:
     bool m_changedOnly = false;
     int m_changedCount = 0;
     QList<int> m_visible;
+    QList<int> m_headingOfSetting;
+    QList<int> m_headingOfRow;
+    QList<int> m_cardSize;
 };

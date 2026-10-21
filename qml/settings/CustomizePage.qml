@@ -7,6 +7,7 @@ Item {
 
     readonly property var schema: Theme.customizeSchema
     readonly property string currentSection: list.currentSection
+    readonly property string currentSubsection: list.currentSubsection
 
     readonly property string description:
         qsTr("Every color and style setting, by section. Changes show immediately.")
@@ -46,19 +47,26 @@ Item {
     }
 
     function jumpTo(section) { list.jumpTo(section) }
+    function jumpToSubsection(section, subsection) { list.jumpToSubsection(section, subsection) }
     function jumpBy(step) { list.jumpBy(step) }
 
     // A filter rebuilds the rows, which would drop the view to the top; stay on the section.
     function keepingSection(change) {
         const section = list.currentSection
+        const subsection = list.currentSubsection
         return () => {
             change()
-            const row = root.schema.firstRow(section)
+            let row = root.schema.firstRow(section, subsection)
+            const inSubsection = row >= 0
+            if (!inSubsection)
+                row = root.schema.firstRow(section)
             if (row < 0)
                 return
-            list.sectionJump.jump(row)
+            list.sectionJump.jump(row, inSubsection ? Theme.settingsWindow.subsectionSpacing
+                                                    : Theme.settingsWindow.sectionSpacing)
             // The rebuild moved currentSection to the top row; the jump itself is not tracked.
             list.currentSection = section
+            list.currentSubsection = inSubsection ? subsection : list.itemAt(0, list.contentY + 1)?.subsection ?? ""
         }
     }
 

@@ -39,6 +39,7 @@ private slots:
     void saveThemeNamesTheActivePair();
     void halfModelsListOnlyTheirOwnSettings();
     void customizeModelListsBothHalves();
+    void subHeadingsGroupSettingsIntoCards();
     void previewReadsAnotherTheme();
     void previewCarriesThePopupFields();
     void themePopupSettingsHaveTheirDefaults();
@@ -1566,7 +1567,7 @@ void ThemeTest::customizeModelListsBothHalves()
     for (int row = 0; row < style->rowCount(); ++row)
         QVERIFY(seen.contains(full(style, row)));
 
-    // Each section is one run, colors before style.
+    // Each section is one run, and within each sub-heading colors come before style.
     QSet<QString> closed;
     QString section;
     bool sawStyle = false;
@@ -1582,6 +1583,8 @@ void ThemeTest::customizeModelListsBothHalves()
             sawStyle = false;
             QVERIFY(i.data(ThemeSettingsModel::FirstInSectionRole).toBool());
         }
+        if (i.data(ThemeSettingsModel::FirstInCardRole).toBool())
+            sawStyle = false;
         if (half == "style")
             sawStyle = true;
         else
@@ -1751,6 +1754,68 @@ void ThemeTest::openingAnUneditedBuiltInWritesTheHeaderFirst()
     QFile::remove(dataDir + "/themes/colors/mine.toml");
     QCOMPARE(theme.colorsFilePath(), dataDir + "/themes/colors/mine.toml");
     QCOMPARE(read(dataDir + "/themes/colors/mine.toml"), QString());
+}
+
+// A heading starts a card inside its section; headings with no matching rows are left out.
+void ThemeTest::subHeadingsGroupSettingsIntoCards()
+{
+    for (const ThemeSchema::Setting &s : ThemeSchema::settings())
+        QVERIFY2(!s.heading, qPrintable(QString::fromUtf8(s.key)));
+    const auto headings = ThemeSchema::headings();
+    QVERIFY(!headings.empty());
+    for (size_t i = 0; i < headings.size(); ++i) {
+        const ThemeSchema::Heading &h = headings[i];
+        QVERIFY(h.first < int(ThemeSchema::settings().size()));
+        QCOMPARE(ThemeSchema::settings()[h.first].section, h.section);
+        if (i > 0)
+            QVERIFY(h.first > headings[i - 1].first);
+    }
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+    auto *both = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+
+    const auto section = [&](const QString &name) {
+        for (const QVariant &s : both->sections()) {
+            if (s.toMap().value("name") == name)
+                return s.toMap();
+        }
+        return QVariantMap();
+    };
+    QVERIFY(section("palette").value("subsections").toList().isEmpty());
+    const QVariantList sidebar = section("settings_window").value("subsections").toList();
+    QCOMPARE(sidebar.size(), 5);
+    QCOMPARE(sidebar.first().toMap().value("title").toString(), QStringLiteral("Window"));
+
+    int total = 0;
+    for (const QVariant &s : sidebar)
+        total += s.toMap().value("count").toInt();
+    int rows = 0;
+    for (int row = 0; row < both->rowCount(); ++row) {
+        const QModelIndex i = both->index(row);
+        if (i.data(ThemeSettingsModel::SectionRole).toString() != QStringLiteral("settings_window"))
+            continue;
+        ++rows;
+        QVERIFY(!i.data(ThemeSettingsModel::SubsectionRole).toString().isEmpty());
+        if (i.data(ThemeSettingsModel::FirstInCardRole).toBool())
+            QVERIFY(row == 0 || i.data(ThemeSettingsModel::SubsectionRole)
+                                    != both->index(row - 1).data(ThemeSettingsModel::SubsectionRole));
+    }
+    QCOMPARE(total, rows);
+
+    const int popup = both->firstRow("settings_window", "Theme popup");
+    QVERIFY(popup > both->firstRow("settings_window", "Sidebar"));
+    QVERIFY(both->index(popup).data(ThemeSettingsModel::FirstInCardRole).toBool());
+    QVERIFY(both->index(popup - 1).data(ThemeSettingsModel::LastInCardRole).toBool());
+    QCOMPARE(both->firstRow("settings_window", "Nope"), -1);
+
+    // Searching narrows each card; a heading with nothing left disappears.
+    both->setFilterText(QStringLiteral("key_chip"));
+    const QVariantList narrowed = section("settings_window").value("subsections").toList();
+    QCOMPARE(narrowed.size(), 1);
+    QCOMPARE(narrowed.first().toMap().value("title").toString(), QStringLiteral("Pages"));
+    QCOMPARE(both->firstRow("settings_window", "Sidebar"), -1);
 }
 
 QTEST_MAIN(ThemeTest)

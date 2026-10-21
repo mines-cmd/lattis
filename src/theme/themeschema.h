@@ -19,6 +19,7 @@ struct Setting
     std::string_view choices;
     std::string_view fallback;
     bool onRelease = false;
+    bool heading = false;
 };
 
 struct Section
@@ -28,7 +29,15 @@ struct Section
 };
 
 std::span<const Section> sections();
+struct Heading
+{
+    std::string_view section;
+    std::string_view title;
+    int first;
+};
+
 std::span<const Setting> settings();
+std::span<const Heading> headings();
 
 std::string_view typeName(Type type);
 

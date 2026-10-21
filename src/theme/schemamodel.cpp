@@ -91,6 +91,17 @@ ThemeSettingsModel::ThemeSettingsModel(Theme *theme, Mode mode, QObject *parent)
     , m_theme(theme)
     , m_mode(mode)
 {
+    const auto settings = ThemeSchema::settings();
+    const auto headings = ThemeSchema::headings();
+    m_headingOfSetting.resize(settings.size(), -1);
+    int current = -1;
+    int next = 0;
+    for (int i = 0; i < int(settings.size()); ++i) {
+        while (next < int(headings.size()) && headings[next].first <= i)
+            current = next++;
+        if (current >= 0 && headings[current].section == settings[i].section)
+            m_headingOfSetting[i] = current;
+    }
     rebuildVisibleRows();
     updateChangedCount();
     connect(m_theme, &Theme::reloaded, this, &ThemeSettingsModel::refresh);
@@ -107,7 +118,7 @@ void ThemeSettingsModel::refresh()
         const QList<int> rows = visibleRows();
         if (rows != m_visible) {
             beginResetModel();
-            m_visible = rows;
+            setVisible(rows);
             endResetModel();
             emit sectionsChanged();
             return;
@@ -172,6 +183,13 @@ QVariant ThemeSettingsModel::data(const QModelIndex &index, int role) const
     case LastInSectionRole:
         return index.row() == m_visible.size() - 1
             || toQString(ThemeSchema::settings()[m_visible[index.row() + 1]].section) != section;
+    case SubsectionRole: {
+        const int heading = m_headingOfRow[index.row()];
+        return heading < 0 ? QString() : toQString(ThemeSchema::headings()[heading].title);
+    }
+    case SubsectionCountRole: return m_cardSize[index.row()];
+    case FirstInCardRole: return index.row() == 0 || !sameCard(index.row() - 1, index.row());
+    case LastInCardRole: return index.row() == m_visible.size() - 1 || !sameCard(index.row(), index.row() + 1);
     case HalfRole:
         return ThemeSchema::isColorSetting(s) ? QStringLiteral("colors") : QStringLiteral("style");
     }
@@ -201,6 +219,10 @@ QHash<int, QByteArray> ThemeSettingsModel::roleNames() const
         {RevertTextRole, "revertText"},
         {FirstInSectionRole, "firstInSection"},
         {LastInSectionRole, "lastInSection"},
+        {SubsectionRole, "subsection"},
+        {SubsectionCountRole, "subsectionCount"},
+        {FirstInCardRole, "firstInCard"},
+        {LastInCardRole, "lastInCard"},
         {HalfRole, "half"},
     };
 }
@@ -266,15 +288,51 @@ void ThemeSettingsModel::setChangedOnly(bool changedOnly)
 QVariantList ThemeSettingsModel::sections() const
 {
     QVariantList out;
+    QVariantList subsections;
     QString last;
-    for (const int i : m_visible) {
-        const QString section = toQString(ThemeSchema::settings()[i].section);
-        if (section == last)
-            continue;
-        last = section;
-        out.append(QVariantMap{{QStringLiteral("name"), section}, {QStringLiteral("title"), title(section)}});
+    const auto flush = [&] {
+        if (out.isEmpty())
+            return;
+        QVariantMap section = out.takeLast().toMap();
+        section.insert(QStringLiteral("subsections"), subsections);
+        out.append(section);
+        subsections.clear();
+    };
+    for (int row = 0; row < m_visible.size(); ++row) {
+        const QString section = toQString(ThemeSchema::settings()[m_visible[row]].section);
+        if (section != last) {
+            flush();
+            last = section;
+            out.append(QVariantMap{{QStringLiteral("name"), section}, {QStringLiteral("title"), title(section)}});
+        }
+        const int heading = m_headingOfRow[row];
+        if (heading >= 0 && (row == 0 || !sameCard(row - 1, row))) {
+            subsections.append(QVariantMap{
+                {QStringLiteral("title"), toQString(ThemeSchema::headings()[heading].title)},
+                {QStringLiteral("count"), m_cardSize[row]},
+            });
+        }
     }
+    flush();
     return out;
+}
+
+bool ThemeSettingsModel::sameCard(int row, int other) const
+{
+    return ThemeSchema::settings()[m_visible[row]].section == ThemeSchema::settings()[m_visible[other]].section
+        && m_headingOfRow[row] == m_headingOfRow[other];
+}
+
+int ThemeSettingsModel::firstRow(const QString &section, const QString &subsection) const
+{
+    for (int row = 0; row < m_visible.size(); ++row) {
+        const int heading = m_headingOfRow[row];
+        if (heading >= 0 && toQString(ThemeSchema::settings()[m_visible[row]].section) == section
+            && toQString(ThemeSchema::headings()[heading].title) == subsection) {
+            return row;
+        }
+    }
+    return -1;
 }
 
 int ThemeSettingsModel::firstRow(const QString &section) const
@@ -334,7 +392,8 @@ QList<int> ThemeSettingsModel::visibleRows() const
         rows.append(i);
     }
     if (m_mode == Mode::Both) {
-        // The schema may interleave a section's colors and style settings.
+        // The schema may interleave a section's colors and style settings; within a sub-heading,
+        // colors come first.
         QHash<QByteArray, int> order;
         for (const int i : rows)
             order.insert(QByteArray(settings[i].section.data(), settings[i].section.size()), order.size());
@@ -345,6 +404,8 @@ QList<int> ThemeSettingsModel::visibleRows() const
             const int oy = order.value(QByteArray(y.section.data(), y.section.size()));
             if (ox != oy)
                 return ox < oy;
+            if (m_headingOfSetting[a] != m_headingOfSetting[b])
+                return m_headingOfSetting[a] < m_headingOfSetting[b];
             return ThemeSchema::isColorSetting(x) && !ThemeSchema::isColorSetting(y);
         });
     }
@@ -353,5 +414,22 @@ QList<int> ThemeSettingsModel::visibleRows() const
 
 void ThemeSettingsModel::rebuildVisibleRows()
 {
-    m_visible = visibleRows();
+    setVisible(visibleRows());
+}
+
+void ThemeSettingsModel::setVisible(const QList<int> &rows)
+{
+    m_visible = rows;
+    m_headingOfRow.resize(rows.size());
+    m_cardSize.resize(rows.size());
+    for (int row = 0; row < rows.size(); ++row)
+        m_headingOfRow[row] = m_headingOfSetting[rows[row]];
+    for (int row = 0; row < rows.size();) {
+        int end = row + 1;
+        while (end < rows.size() && sameCard(row, end))
+            ++end;
+        for (int i = row; i < end; ++i)
+            m_cardSize[i] = end - row;
+        row = end;
+    }
 }

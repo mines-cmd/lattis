@@ -25,19 +25,19 @@ Item {
     anchors.fill: parent
     z: 1
 
-    function jump(toRow) {
+    function jump(toRow, gap = Theme.settingsWindow.sectionSpacing) {
         jumping = true
         list.positionViewAtIndex(toRow, ListView.Beginning)
         // Skip the gap above the heading so the heading lands at the top.
         if (toRow > 0)
             list.contentY = Math.max(list.originY,
-                                     Math.min(list.contentY + Theme.settingsWindow.sectionSpacing,
+                                     Math.min(list.contentY + gap,
                                               list.contentHeight - list.height + list.originY))
         jumping = false
     }
 
-    function go(toRow) {
-        run(() => jump(toRow), 0)
+    function go(toRow, gap) {
+        run(() => jump(toRow, gap), 0)
     }
 
     function swap(changeRows, direction) {
