@@ -19,6 +19,10 @@ Rectangle {
     required property var raw
     required property string sourceLabel
     required property bool isCustom
+    required property string linkTarget
+    required property string linkTitle
+    required property int followers
+    required property bool ownValue
     required property string revertText
     property bool firstInCard: false
     property bool lastInCard: false
@@ -26,6 +30,7 @@ Rectangle {
                                                       Theme.settingsWindow.cardRadius - Theme.settingsWindow.cardPadding)
 
     signal resetClicked()
+    signal followersClicked()
 
     color: hover.containsMouse ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
@@ -79,47 +84,80 @@ Rectangle {
                     ToolTip.text: "[%1] %2".arg(root.section).arg(root.key)
                 }
 
-                Rectangle {
-                    id: sourceTag
-                    readonly property color tint: root.isCustom ? Theme.settingsWindow.sourceTagCustom
-                                                                : Theme.settingsWindow.sourceTagInherited
-
-                    // Kept after the label goes back to "default" so the text doesn't change while it fades out.
-                    property string shownLabel: root.sourceLabel
-
-                    visible: opacity > 0
-                    opacity: root.sourceLabel !== "default" ? 1 : 0
+                Row {
+                    id: tags
                     x: titleLabel.width + Theme.controls.controlSpacing
                     anchors.verticalCenter: parent.verticalCenter
-                    implicitWidth: sourceText.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
-                    implicitHeight: sourceText.implicitHeight + 2
-                    width: Math.max(0, Math.min(implicitWidth, content.width - x))
-                    radius: Theme.settingsWindow.sourceTagRadius
-                    color: Qt.alpha(tint, Theme.settingsWindow.sourceTagFillOpacity)
-                    border.color: tint
-                    border.width: Theme.settingsWindow.sourceTagBorderWidth
+                    spacing: Theme.controls.controlSpacing
 
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                    Connections {
-                        target: root
-                        function onSourceLabelChanged() {
-                            if (root.sourceLabel !== "default") sourceTag.shownLabel = root.sourceLabel
+                    Row {
+                        id: extraTags
+                        spacing: tags.spacing
+
+                        SettingTag {
+                            visible: root.linkTarget !== ""
+                            text: "→ " + root.linkTitle
+                            tint: Theme.settingsWindow.linkTagColor
+                        }
+
+                        SettingTag {
+                            visible: root.followers > 0
+                            filled: false
+                            clickable: true
+                            text: qsTr("%1 follow").arg(root.followers)
+                            tint: Theme.settingsWindow.followTagColor
+                            tip: qsTr("Show the settings that follow this one")
+                            onClicked: root.followersClicked()
+                        }
+
+                        SettingTag {
+                            visible: root.ownValue
+                            text: qsTr("own value")
+                            tint: Theme.settingsWindow.ownValueTagColor
+                            tip: qsTr("Follows a shared value by default, but this theme gives it its own")
                         }
                     }
 
-                    Label {
-                        id: sourceText
-                        anchors.centerIn: parent
-                        width: Math.min(implicitWidth, parent.width - Theme.settingsWindow.sourceTagPadding * 2)
-                        text: sourceTag.shownLabel
-                        elide: Text.ElideRight
-                        color: parent.tint
-                        font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+                    Rectangle {
+                        id: sourceTag
+                        readonly property color tint: root.isCustom ? Theme.settingsWindow.sourceTagCustom
+                                                                    : Theme.settingsWindow.sourceTagInherited
 
-                        HoverHandler { id: sourceHover }
-                        ToolTip.visible: sourceHover.hovered && truncated
-                        ToolTip.delay: Theme.tooltip.delay
-                        ToolTip.text: root.sourceLabel
+                        // Kept after the label goes back to "default" so the text doesn't change while it fades out.
+                        property string shownLabel: root.sourceLabel
+
+                        visible: opacity > 0
+                        opacity: root.sourceLabel !== "default" ? 1 : 0
+                        implicitWidth: sourceText.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
+                        implicitHeight: sourceText.implicitHeight + 2
+                        width: Math.max(0, Math.min(implicitWidth, content.width - tags.x - extraTags.width - (extraTags.width > 0 ? tags.spacing : 0)))
+                        radius: Theme.settingsWindow.sourceTagRadius
+                        color: Qt.alpha(tint, Theme.settingsWindow.sourceTagFillOpacity)
+                        border.color: tint
+                        border.width: Theme.settingsWindow.sourceTagBorderWidth
+
+                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                        Connections {
+                            target: root
+                            function onSourceLabelChanged() {
+                                if (root.sourceLabel !== "default") sourceTag.shownLabel = root.sourceLabel
+                            }
+                        }
+
+                        Label {
+                            id: sourceText
+                            anchors.centerIn: parent
+                            width: Math.min(implicitWidth, parent.width - Theme.settingsWindow.sourceTagPadding * 2)
+                            text: sourceTag.shownLabel
+                            elide: Text.ElideRight
+                            color: parent.tint
+                            font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+
+                            HoverHandler { id: sourceHover }
+                            ToolTip.visible: sourceHover.hovered && truncated
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: root.sourceLabel
+                        }
                     }
                 }
             }

@@ -250,6 +250,11 @@ QVariant ThemeSettingsModel::data(const QModelIndex &index, int role) const
     case LinkTargetRole:
         ensureLinks();
         return m_linkTarget[m_visible[index.row()]];
+    case LinkTitleRole: {
+        ensureLinks();
+        const QString &target = m_linkTarget[m_visible[index.row()]];
+        return target.isEmpty() ? QString() : title(target.mid(target.indexOf(u'.') + 1));
+    }
     case FollowersRole:
         ensureLinks();
         return m_followers[m_visible[index.row()]];
@@ -289,6 +294,7 @@ QHash<int, QByteArray> ThemeSettingsModel::roleNames() const
         {LastInCardRole, "lastInCard"},
         {HalfRole, "half"},
         {LinkTargetRole, "linkTarget"},
+        {LinkTitleRole, "linkTitle"},
         {FollowersRole, "followers"},
         {OwnValueRole, "ownValue"},
     };

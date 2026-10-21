@@ -78,6 +78,10 @@ Item {
         list.sectionJump.swap(keepingSection(() => root.schema.changedOnly = on), on ? 1 : -1)
     }
 
+    function showFollowers(section, key) {
+        list.sectionJump.swap(keepingSection(() => root.schema.following = section + "." + key), 1)
+    }
+
     function showSetting(section, key) {
         if (root.schema.rowOf(section, key) < 0) {
             search.clear()
@@ -393,6 +397,7 @@ Item {
                        ? qsTr("Nothing changed yet.")
                        : qsTr("No settings match.")
             onMessage: (text, link) => root.message(text, link)
+            onFollowersRequested: (section, key) => root.showFollowers(section, key)
         }
     }
 

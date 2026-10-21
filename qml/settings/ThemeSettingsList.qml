@@ -13,6 +13,7 @@ ListView {
     readonly property alias sectionJump: sectionJump
 
     signal message(string text, var link)
+    signal followersRequested(string section, string key)
 
     function jumpTo(section) {
         const row = schema.firstRow(section)
@@ -183,6 +184,12 @@ ListView {
                 sourceLabel: model.sourceLabel
                 isCustom: model.isCustom
                 revertText: model.revertText
+                linkTarget: model.linkTarget
+                linkTitle: model.linkTitle
+                followers: model.followers
+                ownValue: model.ownValue
+
+                onFollowersClicked: root.followersRequested(model.section, model.key)
 
                 onResetClicked: root.message(qsTr("%1 reset to default").arg(title),
                                              { text: qsTr("Undo"), run: () => Theme.undoReset() })

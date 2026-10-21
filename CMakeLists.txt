@@ -218,6 +218,7 @@ qt_add_qml_module(lattis
         qml/settings/ProblemsButton.qml
         qml/settings/SessionChangesPopup.qml
         qml/settings/SettingRow.qml
+        qml/settings/SettingTag.qml
         qml/settings/SettingsButton.qml
         qml/settings/SettingsCard.qml
         qml/settings/SettingsNote.qml

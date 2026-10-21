@@ -51,6 +51,7 @@ public:
         LastInCardRole,
         HalfRole,
         LinkTargetRole,
+        LinkTitleRole,
         FollowersRole,
         OwnValueRole,
     };
