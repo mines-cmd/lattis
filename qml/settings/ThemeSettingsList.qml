@@ -43,7 +43,7 @@ ListView {
     }
 
     function updateCurrentSection() {
-        if (sectionJump.busy)
+        if (sectionJump.busy || scrollBar.probing)
             return
         const item = itemAt(0, contentY + 1)
         if (item) {
@@ -57,7 +57,72 @@ ListView {
     model: schema
     boundsBehavior: Flickable.StopAtBounds
 
-    ScrollBar.vertical: SettingsScrollBar { id: scrollBar }
+    readonly property alias scrollBar: scrollBar
+
+    // Rows differ in height and only those near the view exist, so contentHeight is an estimate
+    // that changes as rows are made. An attached bar drags in pixels of that estimate, so the page
+    // and the current section jump while dragging; this bar drags by row index instead.
+    SettingsScrollBar {
+        id: scrollBar
+
+        property real lastTop: 0
+        // Keeps the probe's trip to the end from changing the current section, which the sidebar follows.
+        property bool probing: false
+
+        parent: root
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        orientation: Qt.Vertical
+        size: root.visibleArea.heightRatio
+
+        function rowAt(y) {
+            const i = root.indexAt(0, y)
+            const item = root.itemAtIndex(i)
+            return item ? i + (y - item.y) / item.height : i
+        }
+
+        function follow() {
+            if (!pressed)
+                position = root.visibleArea.yPosition
+        }
+
+        function showRow(t) {
+            const i = Math.floor(t)
+            root.positionViewAtIndex(i, ListView.Beginning)
+            const item = root.itemAtIndex(i)
+            if (item)
+                root.contentY = Math.min(root.contentY + (t - i) * item.height,
+                                         root.originY + root.contentHeight - root.height)
+        }
+
+        onPressedChanged: {
+            if (!pressed) {
+                follow()
+                return
+            }
+            if (root.count === 0)
+                return
+            // Restored by row, not by contentY: jumping to the end moves originY, so the old
+            // contentY can point past the rows.
+            const top = Math.max(0, rowAt(root.contentY))
+            probing = true
+            root.positionViewAtEnd()
+            lastTop = Math.max(0, rowAt(root.contentY + 1))
+            showRow(top)
+            probing = false
+        }
+
+        onPositionChanged: {
+            if (pressed && root.count > 0)
+                showRow(size < 1 ? Math.min(1, position / (1 - size)) * lastTop : 0)
+        }
+
+        Connections {
+            target: root.visibleArea
+            function onYPositionChanged() { scrollBar.follow() }
+        }
+    }
 
     SectionJump {
         id: sectionJump

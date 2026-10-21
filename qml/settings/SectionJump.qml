@@ -71,7 +71,7 @@ Item {
     function start() {
         grabbing = false
         const from = list.contentY
-        const bar = list.ScrollBar.vertical
+        const bar = list.scrollBar ?? list.ScrollBar.vertical
         const handleY = bar?.contentItem?.y ?? 0
         root.change()
         if (forcedDirection === 0 && list.contentY === from) {
