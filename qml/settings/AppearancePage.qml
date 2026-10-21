@@ -178,9 +178,9 @@ Item {
                 IconButton {
                     visible: card.removable && (card.hovered || card.modelData === root.hoverTheme)
                     anchors { top: parent.top; right: parent.right; margins: 4 }
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    iconSize: 14
+                    implicitWidth: Theme.settingsWindow.smallButtonSize
+                    implicitHeight: Theme.settingsWindow.smallButtonSize
+                    iconSize: Theme.settingsWindow.smallIconSize
                     icon: Icons.close
                     tip: qsTr("Delete")
                     onClicked: deleteDialog.openFor("theme", card.modelData)

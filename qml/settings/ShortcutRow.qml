@@ -103,9 +103,9 @@ Rectangle {
             enabled: root.keyLabels.length > 0 && !root.recording
 
             Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-            implicitWidth: 28
-            implicitHeight: 28
-            iconSize: 14
+            implicitWidth: Theme.settingsWindow.smallButtonSize
+            implicitHeight: Theme.settingsWindow.smallButtonSize
+            iconSize: Theme.settingsWindow.smallIconSize
             icon: Icons.close
             iconColor: Theme.settingsWindow.resetButtonColor
             tip: qsTr("Remove the shortcut")
@@ -118,9 +118,9 @@ Rectangle {
             enabled: root.isCustom
 
             Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-            implicitWidth: 28
-            implicitHeight: 28
-            iconSize: 14
+            implicitWidth: Theme.settingsWindow.smallButtonSize
+            implicitHeight: Theme.settingsWindow.smallButtonSize
+            iconSize: Theme.settingsWindow.smallIconSize
             icon: Icons.undo
             iconColor: Theme.settingsWindow.resetButtonColor
             tip: root.defaultLabels.length > 0 ? qsTr("Reset to %1").arg(root.defaultLabels.join(", "))

@@ -58,9 +58,9 @@ Rectangle {
                         visible: row.file !== ""
                         Layout.alignment: Qt.AlignVCenter
                         plain: true
-                        implicitWidth: 24
-                        implicitHeight: 24
-                        iconSize: 18
+                        implicitWidth: Theme.settingsWindow.problemsButtonSize
+                        implicitHeight: Theme.settingsWindow.problemsButtonSize
+                        iconSize: Theme.settingsWindow.problemsIconSize
                         iconColor: Theme.controls.problemsText
                         icon: Icons.openExternal
                         tip: qsTr("Open the file")

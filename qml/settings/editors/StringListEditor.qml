@@ -49,8 +49,8 @@ ColumnLayout {
                 color: Theme.controls.inputText
             }
             IconButton {
-                implicitWidth: 22; implicitHeight: 22
-                iconSize: 12
+                implicitWidth: Theme.settingsWindow.listButtonSize; implicitHeight: Theme.settingsWindow.listButtonSize
+                iconSize: Theme.settingsWindow.listIconSize
                 icon: Icons.chevron
                 rotation: -90
                 enabled: index > 0
@@ -58,8 +58,8 @@ ColumnLayout {
                 onClicked: root.move(index, -1)
             }
             IconButton {
-                implicitWidth: 22; implicitHeight: 22
-                iconSize: 12
+                implicitWidth: Theme.settingsWindow.listButtonSize; implicitHeight: Theme.settingsWindow.listButtonSize
+                iconSize: Theme.settingsWindow.listIconSize
                 icon: Icons.chevron
                 rotation: 90
                 enabled: index < root.value.length - 1
@@ -67,8 +67,8 @@ ColumnLayout {
                 onClicked: root.move(index, 1)
             }
             IconButton {
-                implicitWidth: 22; implicitHeight: 22
-                iconSize: 12
+                implicitWidth: Theme.settingsWindow.listButtonSize; implicitHeight: Theme.settingsWindow.listButtonSize
+                iconSize: Theme.settingsWindow.listIconSize
                 icon: Icons.close
                 onClicked: root.removeAt(index)
             }

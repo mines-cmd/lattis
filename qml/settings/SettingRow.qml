@@ -182,8 +182,8 @@ Rectangle {
                 spacing: Theme.settingsWindow.resetButtonSpacing
 
                 Item {
-                    width: 28
-                    height: 28
+                    width: Theme.settingsWindow.smallButtonSize
+                    height: Theme.settingsWindow.smallButtonSize
                     opacity: root.revertText !== "" ? 1 : 0
 
                     Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
@@ -192,7 +192,7 @@ Rectangle {
                         anchors.fill: parent
                         enabled: root.revertText !== ""
                         plain: true
-                        iconSize: 14
+                        iconSize: Theme.settingsWindow.smallIconSize
                         icon: Icons.history
                         iconColor: Theme.settingsWindow.resetButtonColor
                         tip: qsTr("Revert to %1, the value when Settings opened").arg(root.revertText)
@@ -204,8 +204,8 @@ Rectangle {
                 }
 
                 Item {
-                    width: 28
-                    height: 28
+                    width: Theme.settingsWindow.smallButtonSize
+                    height: Theme.settingsWindow.smallButtonSize
                     opacity: root.isCustom ? 1 : 0
 
                     Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
@@ -214,7 +214,7 @@ Rectangle {
                         anchors.fill: parent
                         enabled: root.isCustom
                         plain: true
-                        iconSize: 14
+                        iconSize: Theme.settingsWindow.smallIconSize
                         icon: Icons.close
                         iconColor: Theme.settingsWindow.resetButtonColor
                         tip: qsTr("Reset (remove from %1)").arg(Theme.activeFile(root.section, root.key))

@@ -136,7 +136,7 @@ GridLayout {
         Layout.preferredHeight: Theme.colorPicker.swatchSize
         Layout.alignment: Qt.AlignTop
         icon: Icons.add
-        iconSize: 14
+        iconSize: Theme.settingsWindow.smallIconSize
         tip: qsTr("Add a color")
         // Adds a copy of the last color, then opens the new swatch's picker: the picker stays
         // with its swatch while this button moves along to the next cell.
