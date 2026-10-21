@@ -477,7 +477,7 @@ ApplicationWindow {
                                                     width: 3
                                                     height: parent.height - 12
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    radius: 1.5
+                                                    radius: width / 2
                                                     color: Theme.settingsWindow.sidebarSectionMarker
                                                 }
 
@@ -562,7 +562,7 @@ ApplicationWindow {
                                                                 width: 3
                                                                 height: parent.height - 12
                                                                 anchors.verticalCenter: parent.verticalCenter
-                                                                radius: 1.5
+                                                                radius: width / 2
                                                                 color: Theme.settingsWindow.sidebarSectionMarker
                                                             }
 

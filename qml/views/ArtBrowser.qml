@@ -423,7 +423,7 @@ Item {
                                     visible: root.picks[tabButton.modelData.id] !== undefined
                                     implicitWidth: 7
                                     implicitHeight: 7
-                                    radius: 3.5
+                                    radius: height / 2
                                     color: Theme.gameEditor.selectedColor
                                 }
                             }
@@ -724,7 +724,7 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 11
+                            radius: height / 2
                             color: Theme.gameEditor.selectedColor
                             Icon {
                                 anchors.centerIn: parent

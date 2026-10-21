@@ -604,7 +604,7 @@ FocusScope {
         property int minutes
         Layout.fillWidth: true
         Layout.preferredHeight: 6
-        radius: 3
+        radius: height / 2
         color: Theme.stats.track
 
         property real fraction: 0
@@ -614,7 +614,7 @@ FocusScope {
         Surface {
             height: parent.height
             width: parent.width * shareBar.fraction
-            radius: 3
+            radius: height / 2
             fill: Theme.stats.bar
             fillEnd: Theme.stats.barEnd
             opacity: Theme.stats.barOpacity

@@ -154,7 +154,7 @@ Item {
                         y: modelData
                         width: 7
                         height: 7
-                        radius: 2
+                        radius: Theme.settingsWindow.previewDotRadius
                         color: card.c.railIcon ?? "transparent"
                         opacity: 0.4
                     }

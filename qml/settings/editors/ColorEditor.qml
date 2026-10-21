@@ -30,7 +30,7 @@ RowLayout {
     Rectangle {
         Layout.preferredWidth: Theme.colorPicker.swatchSize
         Layout.preferredHeight: Theme.colorPicker.swatchSize
-        radius: 4
+        radius: Theme.colorPicker.editorSwatchRadius
         color: root.value ?? "transparent"
         border.color: Theme.controls.inputBorder
         border.width: Theme.controls.inputBorderWidth > 0 ? Theme.controls.inputBorderWidth : 1

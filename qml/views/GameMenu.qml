@@ -128,7 +128,7 @@ SettingsMenu {
             Rectangle {
                 implicitWidth: 10
                 implicitHeight: 10
-                radius: 5
+                radius: height / 2
                 color: Theme.tags.palette.length > 0 ? Theme.tags.palette[tagRow.tag.color % Theme.tags.palette.length]
                                                      : Theme.filters.chipBackground
             }

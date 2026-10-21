@@ -253,6 +253,7 @@ constexpr Setting kSettings[] = {
     integer("menu", "popup_shadow_size", "32", 0, 200, "How far that shadow spreads; 0 = none"),
 
     integer("color_picker", "swatch_size", "24", 8, 100, "Color swatch size"),
+    integer("color_picker", "editor_swatch_radius", "@radius.tiny", 0, 50, "Corner radius of color swatches in the color editors"),
     integer("color_picker", "palette_columns", "8", 1, 12, "Colors per row in color lists (Tags palette)"),
     color("color_picker", "background", "@surface_raised", "Background of the color picker"),
     color("color_picker", "border", "@surface_raised", "Outline of the color picker"),
@@ -1317,6 +1318,7 @@ constexpr Setting kSettings[] = {
     integer("settings_window", "key_chip_font_size", "@font.small_size", 6, 48, "Key text size"),
     integer("settings_window", "key_chip_height", "26", 12, 100, "Key height"),
     integer("settings_window", "key_chip_padding", "8", 0, 50, "Space on either side of the key text"),
+    integer("settings_window", "preview_dot_radius", "2", 0, 20, "Corner radius of the rail dots in the Appearance page's theme previews"),
     integer("settings_window", "key_chip_radius", "@radius.small", 0, 50, "Key corner radius"),
     color("settings_window", "key_chip_conflict", "@controls.problems_text",
           "Outline and text of keys that another action also uses"),

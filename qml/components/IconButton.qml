@@ -63,7 +63,7 @@ Surface {
         visible: root.badge
         width: 9
         height: 9
-        radius: 4.5
+        radius: height / 2
         color: root.badgeColor
         border.color: Theme.palette.background
         border.width: 2
