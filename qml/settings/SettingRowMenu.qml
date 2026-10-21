@@ -52,7 +52,7 @@ SettingsMenu {
         want: root.hasOwn
         iconPath: Icons.unlink
         text: qsTr("Use own value")
-        keys: qsTr("keeps %1").arg(root.info.current ?? "")
+        keys: root.info.current ?? ""
         onTriggered: {
             root.row.forceActiveFocus()
             Theme.useOwnValue(root.row.section, root.row.key)
