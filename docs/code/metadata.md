@@ -120,6 +120,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `lookup(title, igdbPlatforms, igdbId, steamAppId, limit)` | Searches IGDB, or fetches a remembered match when `igdbId > 0` |
 | `igdbPlatforms()` | The built-in IGDB platforms as `[{id, name}]`, sorted by name |
 | `findArt(name, year, steamAppId)` | Finds the game on SteamGridDB |
+| `searchArtGames(text)` | One plain SteamGridDB search: no numeral retry, no clear-match rule |
 | `artChoices(steamGridDbId, kind, style, page)` | A page of art images |
 | `download(url, kind)` | Downloads a picked image |
 | `testKeys(service)` | Checks the keys of `"igdb"` or `"steamgriddb"` |
@@ -143,6 +144,12 @@ match        clear match index, or -1
 steamgriddb   its id, or 0
 name
 candidates    [{steamgriddb, name, year}]
+```
+
+`searchArtGames()` result:
+
+```
+games   [{steamgriddb, name, year}]
 ```
 
 `artChoices()` result:
