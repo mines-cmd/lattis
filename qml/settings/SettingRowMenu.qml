@@ -25,7 +25,10 @@ SettingsMenu {
         info = Theme.rowMenu(row.section, row.key)
         if (item) {
             popDirection = "below"
-            popup(item, x, y + 2)
+            // Placed from the row, not the button: the button is still shrunk by its press when the click opens
+            // the menu, and a menu placed in its coordinates showed off to the right and slid left as it grew back.
+            const at = item.parent.mapToItem(row, item.x + x, item.y + y)
+            popup(row, at.x - root.width, at.y + 2)
         }
         // At the click, not the cursor: a reopening waits for the old menu's exit, and the pointer may have moved.
         else popup(row, x, y)

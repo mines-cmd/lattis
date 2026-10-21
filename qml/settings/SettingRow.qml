@@ -259,7 +259,7 @@ Rectangle {
         }
         menu.atPointer = item === null
         if (item)
-            menu.openAt(item, 0, item.height)
+            menu.openAt(item, item.width, item.height)
         else
             menu.openAt(null, at?.x ?? 0, at?.y ?? 0)
     }
