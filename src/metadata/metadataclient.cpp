@@ -285,6 +285,28 @@ void MetadataClient::findArtByTitle(int request, QObject *context, const QString
     });
 }
 
+int MetadataClient::searchArtGames(const QString &text)
+{
+    int request = 0;
+    QObject *context = start(&request);
+    m_http.steamGridDb(SteamGridDb::searchPath(text), {}, context, [this, request](const MetadataReply &reply) {
+        if (!reply.ok())
+            return finish(request, failure(reply.error));
+        QString error;
+        const QList<SgdbGame> games = SteamGridDb::parseGames(reply.json, &error);
+        if (!error.isEmpty())
+            return finish(request, failure(error));
+        QVariantList out;
+        for (const SgdbGame &g : games) {
+            out.append(QVariantMap{{QStringLiteral("steamgriddb"), g.id},
+                                   {QStringLiteral("name"), g.name},
+                                   {QStringLiteral("year"), g.year}});
+        }
+        finish(request, {{QStringLiteral("games"), out}});
+    });
+    return request;
+}
+
 int MetadataClient::artChoices(int steamGridDbId, const QString &kind, const QString &style, int page)
 {
     int request = 0;

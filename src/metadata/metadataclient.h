@@ -43,6 +43,7 @@ public:
     Q_INVOKABLE QVariantList igdbPlatforms() const;
     int lookupIds(const QHash<int, QList<int>> &platformsById);
     Q_INVOKABLE int findArt(const QString &name, int year, qint64 steamAppId = 0);
+    Q_INVOKABLE int searchArtGames(const QString &text);
     Q_INVOKABLE int artChoices(int steamGridDbId, const QString &kind, const QString &style, int page);
     Q_INVOKABLE int download(const QString &url, const QString &kind);
     Q_INVOKABLE int testKeys(const QString &service);
