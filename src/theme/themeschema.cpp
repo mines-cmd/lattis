@@ -1033,6 +1033,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "bulk_art_height", "220", 30, 600, "Tallest the art preview in the results of \"Look up missing info\" gets; it fills the card's width up to this height"),
     real("game_editor", "bulk_art_icon_size", "0.26", 0.05, 1, "The icon's size on the art preview's hero, as a fraction of the hero's height"),
     real("game_editor", "bulk_art_unchecked_opacity", "0.35", 0, 1, "How bright an unchecked picture stays in the art preview (faded on the card, darkened on the hero)"),
+    real("game_editor", "bulk_art_unchecked_saturation", "-1", -1, 0, "How much color an unchecked picture loses in the art preview; -1 = fully gray, 0 = none"),
     integer("game_editor", "bulk_card_border_width", "@game_editor.card_border_width", 0, 20,
             "Outline thickness of the results' cards in \"Look up missing info\"; 0 = none"),
     color("game_editor", "bulk_tray_background", "@game_editor.card_background",

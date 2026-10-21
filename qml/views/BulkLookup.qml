@@ -304,6 +304,23 @@ ApplicationWindow {
     readonly property real artHeaderHeight: Math.max(chipFont.height, Theme.gameEditor.checkSize) + 2 * Theme.layout.spacing
     readonly property var artKindNames: ({ cover: qsTr("Cover"), hero: qsTr("Hero"), logo: qsTr("Logo"), icon: qsTr("Icon") })
 
+    function artEntry(r, kind) { return r.art.find(a => a.kind === kind) }
+    function artFound(e) { return e !== undefined && !(e?.none ?? false) }
+    // The suggestion, checked or not; the game's own picture only for a kind the lookup leaves alone.
+    function artSource(r, kind) {
+        const e = artEntry(r, kind)
+        return e === undefined ? r.ownArt?.[kind] ?? "" : artFound(e) ? e.image?.thumbnail ?? "" : ""
+    }
+    function artUnchecked(e) { return artFound(e) && !e.checked }
+    function artDim(e) { return artUnchecked(e) ? Theme.gameEditor.bulkArtUncheckedOpacity : 1 }
+
+    component UncheckedGray: MultiEffect {
+        property real darkness: 0
+        saturation: Theme.gameEditor.bulkArtUncheckedSaturation
+        colorization: darkness
+        colorizationColor: "black"
+    }
+
     // A picture of the art about to be added; click it to choose another.
     component ArtPick: Item {
         id: pick
@@ -351,7 +368,14 @@ ApplicationWindow {
         hoverEnabled: true
         leftPadding: Theme.layout.spacing
         rightPadding: Theme.layout.spacing * 1.5
+        readonly property bool elided: width < implicitWidth
+        readonly property string fullText: [root.artKindNames[kind], !found ? (none ? qsTr("none found") : qsTr("yours")) : "",
+                                            found && entry.replaces ? qsTr("replaces yours") : "",
+                                            found && entry.changed ? qsTr("changed") : ""].filter(t => t !== "").join(", ")
         onClicked: lookupModel.setArtChecked(gameId, kind, !entry.checked)
+        ToolTip.visible: elided && hovered
+        ToolTip.delay: Theme.tooltip.delay
+        ToolTip.text: fullText
         HoverHandler { cursorShape: artCheck.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
         background: Rectangle {
             radius: Theme.radius.tiny
@@ -361,28 +385,39 @@ ApplicationWindow {
             spacing: Theme.layout.spacing
             Check {
                 visible: artCheck.found
+                Layout.minimumWidth: implicitWidth
                 checked: artCheck.entry?.checked ?? false
                 onToggled: artCheck.clicked()
             }
             ChipText {
                 text: root.artKindNames[artCheck.kind]
+                Layout.minimumWidth: implicitWidth
                 color: artCheck.found ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor
             }
             ChipText {
                 visible: !artCheck.found
                 text: artCheck.none ? qsTr("none found") : qsTr("yours")
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 color: Theme.gameEditor.hintColor
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
             ChipText {
                 visible: artCheck.found && artCheck.entry.replaces
                 text: qsTr("replaces yours")
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 color: Theme.gameEditor.hintColor
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
             ChipText {
                 visible: artCheck.found && artCheck.entry.changed
                 text: qsTr("changed")
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 color: Theme.gameEditor.changedColor
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
@@ -394,21 +429,14 @@ ApplicationWindow {
     component ArtPreview: Item {
         id: preview
         required property var r
-        function entry(kind) { return r.art.find(a => a.kind === kind) }
+        function entry(kind) { return root.artEntry(r, kind) }
+        function source(kind) { return root.artSource(r, kind) }
         readonly property var hero: entry("hero")
         readonly property var logo: entry("logo")
         readonly property var icon: entry("icon")
         readonly property var cover: entry("cover")
-        function shows(e) { return e !== undefined && !(e?.none ?? false) }
-        // A replacement left unchecked keeps the game's own, so checking it swaps the two.
-        function keepsOwn(e) { return e === undefined || (e.replaces && !e.checked) }
-        // What the game will show for a kind: the new picture, or its own when the lookup leaves that kind alone.
-        function source(kind) {
-            const e = entry(kind)
-            return keepsOwn(e) ? r.ownArt?.[kind] ?? "" : shows(e) ? e.image?.thumbnail ?? "" : ""
-        }
         // Over the hero, transparency would let the art show through: the logo and icon are darkened instead.
-        function dim(e) { return keepsOwn(e) || e.checked ? 1 : Theme.gameEditor.bulkArtUncheckedOpacity }
+        function darkness(e) { return 1 - root.artDim(e) }
 
         readonly property real gap: Theme.layout.spacing * 2.5
         // Fills the width with a hero at the theme's aspect and the cover beside it, up to bulk_art_height tall.
@@ -443,12 +471,14 @@ ApplicationWindow {
                 visible: preview.source("hero") !== ""
                 cornerRadius: Theme.radius.small
                 source: preview.source("hero")
-                opacity: preview.dim(preview.hero)
+                opacity: root.artDim(preview.hero)
+                layer.enabled: root.artUnchecked(preview.hero)
+                layer.effect: UncheckedGray {}
             }
             ArtPick { anchors.fill: parent; kind: "hero"; gameId: preview.r.id; entry: preview.hero }
 
             LogoScrim {
-                style: logoImage.visible && preview.dim(preview.logo) === 1 && Theme.hero.scrim ? Theme.hero.scrimStyle : "none"
+                style: logoImage.visible && !root.artUnchecked(preview.logo) && Theme.hero.scrim ? Theme.hero.scrimStyle : "none"
                 side: Theme.hero.scrimSide
                 logo: logoImage
                 drawnRect: Qt.rect(logoImage.x + (banner.hAlign === "left" ? 0 : banner.hAlign === "right"
@@ -473,8 +503,8 @@ ApplicationWindow {
                 horizontalAlignment: banner.hAlign === "left" ? Image.AlignLeft : banner.hAlign === "right" ? Image.AlignRight : Image.AlignHCenter
                 verticalAlignment: banner.vAlign === "top" ? Image.AlignTop : banner.vAlign === "bottom" ? Image.AlignBottom : Image.AlignVCenter
                 asynchronous: true
-                layer.enabled: preview.dim(preview.logo) < 1
-                layer.effect: MultiEffect { colorization: 1 - preview.dim(preview.logo); colorizationColor: "black" }
+                layer.enabled: root.artUnchecked(preview.logo)
+                layer.effect: UncheckedGray { darkness: preview.darkness(preview.logo) }
             }
             ArtPick {
                 x: logoImage.x + (logoImage.width - logoImage.paintedWidth) * (banner.hAlign === "left" ? 0 : banner.hAlign === "right" ? 1 : 0.5)
@@ -495,8 +525,8 @@ ApplicationWindow {
                 cornerRadius: Theme.radius.small
                 fillMode: Image.PreserveAspectFit
                 source: preview.source("icon")
-                layer.enabled: preview.dim(preview.icon) < 1
-                layer.effect: MultiEffect { colorization: 1 - preview.dim(preview.icon); colorizationColor: "black" }
+                layer.enabled: root.artUnchecked(preview.icon)
+                layer.effect: UncheckedGray { darkness: preview.darkness(preview.icon) }
             }
             ArtPick { x: iconThumb.x; y: iconThumb.y; width: iconThumb.width; height: iconThumb.height; kind: "icon"; gameId: preview.r.id; entry: preview.icon }
         }
@@ -525,7 +555,9 @@ ApplicationWindow {
                 visible: preview.source("cover") !== ""
                 cornerRadius: Theme.radius.small
                 source: preview.source("cover")
-                opacity: preview.dim(preview.cover)
+                opacity: root.artDim(preview.cover)
+                layer.enabled: root.artUnchecked(preview.cover)
+                layer.effect: UncheckedGray {}
             }
             ArtPick { anchors.fill: parent; kind: "cover"; gameId: preview.r.id; entry: preview.cover }
         }
@@ -545,6 +577,89 @@ ApplicationWindow {
                     entry: preview.entry(modelData)
                 }
             }
+        }
+    }
+
+    // One kind's check above its picture.
+    component ArtCell: ColumnLayout {
+        id: cell
+        required property string kind
+        required property var r
+        property var entry
+        property real previewHeight
+        readonly property real aspect: ({ cover: 2 / 3, hero: Theme.hero.aspect, logo: 2.5, icon: 1 })[kind]
+        readonly property real pictureWidth: Math.round(previewHeight * aspect)
+        readonly property string gameId: r.id
+        readonly property string source: root.artSource(r, kind)
+        spacing: Theme.layout.spacing
+
+        ArtCheck {
+            // The hover's room around the checkbox, without moving the checkbox off the picture's edge.
+            Layout.leftMargin: -Theme.layout.spacing
+            Layout.preferredWidth: Math.min(implicitWidth, cell.pictureWidth + Theme.layout.spacing)
+            Layout.maximumWidth: cell.pictureWidth + Theme.layout.spacing
+            kind: cell.kind
+            gameId: cell.gameId
+            entry: cell.entry
+        }
+        Item {
+            Layout.preferredWidth: cell.pictureWidth
+            Layout.preferredHeight: cell.previewHeight
+            Rectangle {
+                anchors.fill: parent
+                visible: cell.source === ""
+                radius: Theme.radius.small
+                color: Theme.gameEditor.artPreviewBackground
+                opacity: 0.5
+            }
+            ArtThumb {
+                anchors.fill: parent
+                visible: cell.source !== ""
+                cornerRadius: Theme.radius.small
+                // Logos and icons are cut out on transparency; cropping would lose their edges.
+                fillMode: cell.kind === "logo" || cell.kind === "icon" ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+                source: cell.source
+                opacity: root.artDim(cell.entry)
+                layer.enabled: root.artUnchecked(cell.entry)
+                layer.effect: UncheckedGray {}
+            }
+            Muted {
+                anchors.centerIn: parent
+                visible: cell.entry?.none ?? false
+                text: qsTr("None found")
+            }
+            ArtPick { anchors.fill: parent; kind: cell.kind; gameId: cell.gameId; entry: cell.entry }
+        }
+    }
+
+    // The pictures apart, as Properties arranges them: the hero with the logo and icon under it, the cover as tall as both.
+    component ArtGrid: GridLayout {
+        id: grid
+        required property var r
+        function entry(kind) { return root.artEntry(r, kind) }
+        // Shrinks the pictures when the card is too narrow for them (a window near its minimum width); the sum is the
+        // grid's width at hero height h, solved for h.
+        readonly property real fixedWidth: 2 * columnSpacing + 2 / 3 * (rowSpacing + root.artHeaderHeight + Theme.layout.spacing)
+        readonly property int heroHeight: Math.max(24, Math.min(Theme.gameEditor.bulkArtHeight,
+            Math.floor((width - fixedWidth) / (Theme.hero.aspect + 2 / 3 * 1.82))))
+        readonly property int smallHeight: Math.round(heroHeight * 0.82)
+        columns: 2
+        columnSpacing: Theme.layout.spacing * 2.5
+        rowSpacing: Theme.layout.spacing * 2
+
+        ArtCell { kind: "hero"; r: grid.r; entry: grid.entry("hero"); previewHeight: grid.heroHeight }
+        ArtCell {
+            kind: "cover"
+            r: grid.r
+            entry: grid.entry("cover")
+            Layout.rowSpan: 2
+            Layout.alignment: Qt.AlignTop
+            previewHeight: grid.heroHeight + grid.rowSpacing + root.artHeaderHeight + Theme.layout.spacing + grid.smallHeight
+        }
+        RowLayout {
+            spacing: grid.columnSpacing
+            ArtCell { kind: "logo"; r: grid.r; entry: grid.entry("logo"); previewHeight: grid.smallHeight }
+            ArtCell { kind: "icon"; r: grid.r; entry: grid.entry("icon"); previewHeight: grid.smallHeight }
         }
     }
 
@@ -1492,7 +1607,13 @@ ApplicationWindow {
                                                 visible: result.r.art.length > 0
                                                 label: qsTr("Art")
                                                 padding: Theme.layout.spacing * 2
-                                                ArtPreview { r: result.r }
+                                                Loader {
+                                                    Layout.fillWidth: true
+                                                    // Chosen once per tray: a row's state only changes with a pick, which rebuilds it.
+                                                    sourceComponent: matchColumn.visible ? artGrid : artPreview
+                                                    Component { id: artGrid; ArtGrid { r: result.r } }
+                                                    Component { id: artPreview; ArtPreview { r: result.r } }
+                                                }
                                             }
 
                                             Muted {
