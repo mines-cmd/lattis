@@ -17,6 +17,7 @@ Item {
     property int ownId: 0
     property string ownTitle
     readonly property bool other: steamGridDbId !== ownId
+    property bool noGame: false
 
     property bool searching: false
     property string searchText
@@ -40,6 +41,7 @@ Item {
 
     signal chosen(var files)
     signal stepPicked(string id, string kind, var image)
+    signal gamePicked(int steamGridDbId)
     signal closed()
 
     function openSteps(allSteps, index, startKind) {
@@ -65,14 +67,29 @@ Item {
         downloading = {}
         downloaded = {}
         error.text = ""
+        noGame = false
         resetSearch()
         showGame(steamGridDbId, title, startKind)
         if (!bulk)
             popup.open()
     }
 
-    // The tabs start over; the picks stay.
-    function showGame(id, title, startKind) {
+    function openWithoutGame(title, startKind) {
+        ownId = 0
+        ownTitle = title
+        picks = {}
+        downloading = {}
+        downloaded = {}
+        error.text = ""
+        shownKinds = kinds.map(k => k.id)
+        resetSearch()
+        resetTabs(0, title, startKind)
+        noGame = true
+        searching = true
+        popup.open()
+    }
+
+    function resetTabs(id, title, startKind) {
         for (const k of Object.keys(tabs))
             Metadata.cancel(tabs[k].request)
         steamGridDbId = id
@@ -84,6 +101,11 @@ Item {
         for (const k of kinds)
             fresh[k.id] = { style: "", page: 0, end: false, loading: false, error: "", request: 0 }
         tabs = fresh
+    }
+
+    // The tabs start over; the picks stay.
+    function showGame(id, title, startKind) {
+        resetTabs(id, title, startKind)
         load(kind)
     }
 
@@ -95,7 +117,10 @@ Item {
     }
 
     function closeSearch() {
-        searching = false
+        if (noGame)
+            popup.close()
+        else
+            searching = false
     }
 
     function resetSearch() {
@@ -142,6 +167,14 @@ Item {
     }
 
     function pickGame(game) {
+        if (noGame) {
+            noGame = false
+            searching = false
+            ownId = game.steamgriddb
+            gamePicked(game.steamgriddb)
+            showGame(ownId, ownTitle)
+            return
+        }
         closeSearch()
         if (game.steamgriddb === ownId)
             backToOwn()
@@ -271,6 +304,7 @@ Item {
         focus: true
         padding: Theme.gameEditor.padding
         closePolicy: Popup.CloseOnEscape
+        onOpened: if (root.searching) searchField.forceActiveFocus()
         onClosed: {
             for (const k of Object.keys(root.tabs))
                 Metadata.cancel(root.tabs[k].request)
@@ -278,6 +312,7 @@ Item {
                 Metadata.cancel(root.downloading[k])
             root.downloading = {}
             root.resetSearch()
+            root.noGame = false
             root.bulk = false
             root.closed()
         }
@@ -359,6 +394,10 @@ Item {
                         implicitWidth: tabRow.implicitWidth + 24
                         hoverEnabled: true
                         onClicked: {
+                            if (root.noGame) {
+                                root.kind = modelData.id
+                                return
+                            }
                             root.closeSearch()
                             root.kind = modelData.id
                             root.load(modelData.id)
@@ -433,7 +472,15 @@ Item {
                             anchors.margins: -6
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.closeSearch()
+                            onClicked: {
+                                if (!root.noGame) {
+                                    root.closeSearch()
+                                    return
+                                }
+                                root.searchText = ""
+                                root.searchSoon()
+                                searchField.forceActiveFocus()
+                            }
                         }
                     }
                 }
@@ -523,19 +570,17 @@ Item {
                             Rectangle {
                                 visible: resultRow.modelData.steamgriddb === root.ownId
                                 Layout.rightMargin: Theme.layout.spacing
-                                implicitWidth: thisGameLabel.implicitWidth + Theme.layout.spacing * 1.5 + 2
-                                implicitHeight: thisGameLabel.implicitHeight + 5
+                                implicitWidth: thisGameLabel.implicitWidth + 2 * Theme.layout.spacing
+                                implicitHeight: thisGameLabel.implicitHeight + Theme.layout.spacing
                                 radius: height / 2
-                                color: Qt.alpha(Theme.gameEditor.selectedColor, Theme.gameEditor.suggestionFillOpacity)
-                                border.color: Theme.gameEditor.selectedColor
-                                border.width: Theme.filters.tagBorderWidth
+                                color: Qt.alpha(Theme.gameEditor.selectedColor, Theme.gameEditor.bulkBadgeOpacity)
 
                                 Label {
                                     id: thisGameLabel
                                     anchors.centerIn: parent
                                     text: qsTr("This game")
-                                    color: Theme.gameEditor.selectedColor
-                                    font.pixelSize: Theme.tags.fontSize - 1
+                                    color: Qt.lighter(Theme.gameEditor.selectedColor, Theme.segmented.lightBrightness)
+                                    font.pixelSize: Theme.gameEditor.hintFontSize
                                 }
                             }
                             Label {

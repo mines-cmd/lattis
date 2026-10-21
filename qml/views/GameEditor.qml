@@ -383,10 +383,14 @@ Item {
     function browseFound(result) {
         browseRequest = 0
         lookupRow.phase = lookupMatch !== null ? "matched" : ""
-        if (result.error !== "" || result.steamgriddb <= 0) {
-            lookupRow.hint = result.error !== "" ? result.error
-                                                 : qsTr("SteamGridDB has no game called %1.").arg(lookupRow.title)
+        if (result.error !== "") {
+            lookupRow.hint = result.error
             lookupRow.phase = "hint"
+            return
+        }
+        if (result.steamgriddb <= 0) {
+            artBrowser.active = true
+            artBrowser.item.openWithoutGame(lookupRow.title, browseKind)
             return
         }
         lookupIds = Object.assign({}, lookupIds, { steamgriddb: result.steamgriddb })
@@ -1491,6 +1495,7 @@ Item {
         id: artBrowser
         active: false
         sourceComponent: ArtBrowser {
+            onGamePicked: id => root.lookupIds = Object.assign({}, root.lookupIds, { steamgriddb: id })
             onChosen: files => {
                 for (const kind of Object.keys(files))
                     artEditor.set(kind, files[kind])
