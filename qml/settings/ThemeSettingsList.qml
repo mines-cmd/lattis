@@ -123,7 +123,7 @@ ListView {
                 color: Theme.controls.descriptionColor
                 // Digits are cap height and semibold, so at the same size they read larger than the lowercase title.
                 font.pixelSize: Math.round(Theme.settingsWindow.subsectionFontSize * 0.9)
-                font.weight: Font.DemiBold
+                font.weight: Theme.font.emphasisWeight
             }
             Item { Layout.fillWidth: true }
         }

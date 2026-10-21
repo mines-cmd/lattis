@@ -134,7 +134,7 @@ MotionPopup {
             Label {
                 visible: segment.detail !== ""
                 text: segment.detail
-                font.weight: Font.DemiBold
+                font.weight: Theme.font.emphasisWeight
                 color: Theme.filters.hintColor
                 opacity: segment.selected ? 0.75 : 1
                 // On the selected color the muted text would vanish, so it follows the selected text instead.

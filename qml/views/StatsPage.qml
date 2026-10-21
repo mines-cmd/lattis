@@ -488,7 +488,7 @@ FocusScope {
     component CardTitle: Label {
         color: Theme.palette.text
         font.pixelSize: Theme.stats.cardTitleSize
-        font.weight: Font.DemiBold
+        font.weight: Theme.font.emphasisWeight
     }
 
     component Muted: Label {
@@ -762,7 +762,7 @@ FocusScope {
                     color: stripMonth.selected ? Theme.palette.text : Theme.stats.textMuted
                     opacity: stripMonth.modelData.future ? 0.3 : stripMonth.available ? 1 : 0.5
                     font.pixelSize: Theme.font.smallSize
-                    font.weight: stripMonth.selected ? Font.DemiBold : Font.Normal
+                    font.weight: stripMonth.selected ? Theme.font.emphasisWeight : Font.Normal
                 }
 
                 MouseArea {
@@ -829,7 +829,7 @@ FocusScope {
                     text: highlight.value
                     color: Theme.palette.text
                     pixelSize: Theme.font.headingSize
-                    weight: Font.DemiBold
+                    weight: Theme.font.emphasisWeight
                     elide: Text.ElideRight
                 }
                 FadeLabel {
@@ -1095,7 +1095,7 @@ FocusScope {
                                           : qsTr("%1 %2").arg(root.longMonth(monthTip.column.month)).arg(monthsCard.shownYear)
                                             + (monthsCard.tipIndex === monthsCard.currentMonthIndex ? qsTr(" · So far") : "")
                                     color: Theme.tooltip.text
-                                    font.weight: Font.DemiBold
+                                    font.weight: Theme.font.emphasisWeight
                                     font.pixelSize: Theme.font.headingSize
                                 }
                                 Label {
@@ -1161,7 +1161,7 @@ FocusScope {
                             text: root.shortMonth(index + 1)
                             color: index === monthsCard.currentMonthIndex ? Qt.lighter(Theme.stats.barActive, Theme.stats.lightBrightness)
                                                                           : Theme.stats.textMuted
-                            font.weight: index === monthsCard.currentMonthIndex ? Font.DemiBold : Font.Normal
+                            font.weight: index === monthsCard.currentMonthIndex ? Theme.font.emphasisWeight : Font.Normal
                             opacity: pickable ? 1 : 0.4
 
                             Behavior on color { enabled: Motion.fades; MotionColor { speed: "normal" } }
@@ -1290,7 +1290,7 @@ FocusScope {
                         text: qsTr("Play statistics")
                         color: Theme.palette.text
                         font.pixelSize: Theme.stats.titleSize
-                        font.weight: Font.DemiBold
+                        font.weight: Theme.font.emphasisWeight
                     }
 
                     RowLayout {
@@ -1336,7 +1336,7 @@ FocusScope {
                                 text: root.yearMode ? String(root.year) : qsTr("%1 %2").arg(root.longMonth(root.month)).arg(root.year)
                                 color: Theme.palette.text
                                 pixelSize: Theme.stats.monthSize
-                                weight: Font.DemiBold
+                                weight: Theme.font.emphasisWeight
                             }
                             Icon {
                                 id: titleIcon
@@ -1657,7 +1657,7 @@ FocusScope {
                                                 text: dayTip.day === null ? "" : root.dateText(dayTip.day.day)
                                                       + (root.shownCurrentMonth && dayTip.day.day === root.today.getDate() ? qsTr(" · Today") : "")
                                                 color: Theme.tooltip.text
-                                                font.weight: Font.DemiBold
+                                                font.weight: Theme.font.emphasisWeight
                                                 font.pixelSize: Theme.font.headingSize
                                             }
                                             Label {
@@ -1739,7 +1739,7 @@ FocusScope {
                                             text: dayLabel.day
                                             color: dayLabel.isToday ? Qt.lighter(Theme.stats.barActive, Theme.stats.lightBrightness)
                                                                     : Theme.stats.textMuted
-                                            font.weight: dayLabel.isToday ? Font.DemiBold : Font.Normal
+                                            font.weight: dayLabel.isToday ? Theme.font.emphasisWeight : Font.Normal
 
                                             Behavior on color { enabled: Motion.fades; MotionColor { speed: "normal" } }
                                         }

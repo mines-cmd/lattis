@@ -586,7 +586,7 @@ Item {
                             Label {
                                 text: resultRow.modelData.year > 0 ? resultRow.modelData.year : qsTr("–")
                                 color: Theme.gameEditor.hintColor
-                                font.weight: Font.DemiBold
+                                font.weight: Theme.font.emphasisWeight
                             }
                             Icon {
                                 path: Icons.chevronRight

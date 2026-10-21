@@ -37,7 +37,7 @@ Rectangle {
             required property var modelData
             visible: false
             text: modelData.text
-            font.weight: Font.DemiBold
+            font.weight: Theme.font.emphasisWeight
         }
     }
 
@@ -82,7 +82,7 @@ Rectangle {
                     text: segment.modelData.text
                     color: segment.checked ? Qt.lighter(Theme.segmented.checkedText, Theme.segmented.lightBrightness)
                                            : segmentMouse.containsMouse ? Theme.palette.text : Theme.segmented.text
-                    font.weight: segment.checked ? Font.DemiBold : Font.Normal
+                    font.weight: segment.checked ? Theme.font.emphasisWeight : Font.Normal
                 }
                 MouseArea {
                     id: segmentMouse

@@ -433,7 +433,7 @@ Item {
                     elide: Text.ElideRight
                     horizontalAlignment: layer.hAlign === "left" ? Text.AlignLeft : layer.hAlign === "right" ? Text.AlignRight : Text.AlignHCenter
                     font.pixelSize: Math.min(Theme.hero.titleMaxFontSize, Math.max(16, root.height * 0.13)) * layer.logoScale
-                    font.weight: Font.Black
+                    font.weight: Theme.hero.titleWeight
                 }
 
                 Image {
@@ -461,7 +461,7 @@ Item {
                     horizontalAlignment: layer.hAlign === "left" ? Text.AlignLeft : layer.hAlign === "right" ? Text.AlignRight : Text.AlignHCenter
                     verticalAlignment: layer.vAlign === "top" ? Text.AlignTop : layer.vAlign === "bottom" ? Text.AlignBottom : Text.AlignVCenter
                     font.pixelSize: Math.max(12, Math.min(Theme.hero.titleMaxFontSize, height * 0.36))
-                    font.weight: Font.Black
+                    font.weight: Theme.hero.titleWeight
                 }
             }
         }

@@ -274,7 +274,7 @@ ApplicationWindow {
     FontMetrics {
         id: sectionHeadingFont
         font.pixelSize: Theme.gameEditor.hintFontSize
-        font.weight: Font.DemiBold
+        font.weight: Theme.font.emphasisWeight
     }
     readonly property int sectionHeadingGap: Theme.layout.spacing * 0.75
 
@@ -608,7 +608,7 @@ ApplicationWindow {
 
         BulkOption {
             Layout.fillWidth: true
-            font.weight: Font.DemiBold
+            font.weight: Theme.font.emphasisWeight
             text: group.title
             checked: group.tally.on === group.tally.total
             partial: group.tally.on > 0 && !checked
@@ -694,7 +694,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 text: qsTr("Discard the results?")
                 color: Theme.gameEditor.headingColor
-                font.weight: Font.DemiBold
+                font.weight: Theme.font.emphasisWeight
             }
             Label {
                 Layout.fillWidth: true
@@ -737,7 +737,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 text: root.reviewing ? qsTr("Review what was found") : qsTr("Look up missing info")
                 color: Theme.gameEditor.headingColor
-                font.weight: Font.DemiBold
+                font.weight: Theme.font.emphasisWeight
                 font.pixelSize: Theme.gameEditor.headingFontSize
             }
         }
@@ -1395,7 +1395,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 text: result.r.match?.name ?? ""
                                                 color: Theme.gameEditor.lookupText
-                                                font.weight: Font.DemiBold
+                                                font.weight: Theme.font.emphasisWeight
                                                 font.pixelSize: Theme.font.size + 2
                                                 wrapMode: Text.WordWrap
                                             }
@@ -1560,7 +1560,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 text: result.r.title
                                                 color: Theme.gameEditor.lookupText
-                                                font.weight: Font.DemiBold
+                                                font.weight: Theme.font.emphasisWeight
                                                 font.pixelSize: Theme.font.size + 1
                                                 elide: Text.ElideRight
                                             }

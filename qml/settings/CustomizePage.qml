@@ -367,7 +367,7 @@ Item {
                             Label {
                                 visible: root.schema.changedCount > 0
                                 text: root.schema.changedCount
-                                font.weight: Font.DemiBold
+                                font.weight: Theme.font.emphasisWeight
                                 color: Theme.controls.descriptionColor
                             }
                             SettingsSwitch {

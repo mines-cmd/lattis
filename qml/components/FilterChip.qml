@@ -44,7 +44,7 @@ Surface {
              : Qt.hsla(root.tagColor.hslHue, root.tagColor.hslSaturation,
                        Theme.tags.textStyle === "light" ? Theme.tags.lightTextLightness : Theme.tags.darkTextLightness, 1)
         font.pixelSize: Theme.filters.chipFontSize
-        font.weight: !root.isTag ? Font.DemiBold
+        font.weight: !root.isTag ? Theme.font.emphasisWeight
                    : Theme.tags.fontWeight === "thin" ? Font.Thin
                    : Theme.tags.fontWeight === "semibold" ? Font.DemiBold
                    : Theme.tags.fontWeight === "bold" ? Font.Bold : Font.Normal

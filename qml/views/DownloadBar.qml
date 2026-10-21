@@ -91,7 +91,7 @@ Surface {
                     text: root.download.name ?? ""
                     elide: Text.ElideRight
                     color: Theme.downloadBar.title
-                    font.weight: Font.DemiBold
+                    font.weight: Theme.font.emphasisWeight
                 }
                 Label {
                     id: percentLabel

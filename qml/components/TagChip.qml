@@ -113,7 +113,7 @@ Rectangle {
             text: root.detail
             color: root.detailColor
             font.pixelSize: Theme.tags.fontSize
-            font.weight: Font.DemiBold
+            font.weight: Theme.font.emphasisWeight
         }
         Rectangle {
             id: remove

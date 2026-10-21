@@ -134,7 +134,7 @@ MotionPopup {
                 text: cell.text
                 color: cell.picked ? Qt.lighter(Theme.stats.toggleCheckedText, Theme.stats.lightBrightness)
                                    : Theme.stats.toggleText
-                font.weight: cell.picked ? Font.DemiBold : Font.Normal
+                font.weight: cell.picked ? Theme.font.emphasisWeight : Font.Normal
                 Behavior on color { enabled: Motion.fades; MotionColor {} }
             }
             Label {
@@ -244,7 +244,7 @@ MotionPopup {
                     horizontalAlignment: Text.AlignHCenter
                     text: root.gridYear
                     color: Theme.palette.text
-                    font.weight: Font.DemiBold
+                    font.weight: Theme.font.emphasisWeight
                 }
                 PageButton {
                     icon: Icons.chevronRight
