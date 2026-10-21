@@ -265,8 +265,10 @@ Rectangle {
         function onClosed() {
             const pending = root.pendingMenu
             root.pendingMenu = null
+            // Later: right after closed(), Popup restores the opacity and scale the exit transition
+            // changed, which would show the reopened menu whole for a frame before it springs in.
             if (pending)
-                root.openMenu(pending.item, pending.at)
+                Qt.callLater(root.openMenu, pending.item, pending.at)
         }
     }
 
