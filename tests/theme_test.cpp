@@ -432,7 +432,7 @@ void ThemeTest::themePopupSettingsHaveTheirDefaults()
     QCOMPARE(number("theme_popup_selected_border_width"), 1);
     QCOMPARE(number("theme_popup_swatch_size"), 16);
     QCOMPARE(number("theme_popup_swatch_spacing"), 4);
-    QCOMPARE(number("theme_popup_button_height"), number("footer_button_height"));
+    QCOMPARE(number("theme_popup_button_height"), theme.resolvedValue("controls", "footer_button_height").toInt());
     QCOMPARE(number("theme_popup_fade_height"), 18);
     QCOMPARE(number("theme_popup_header_font_size"), 11);
     QCOMPARE(number("theme_popup_description_font_size"), theme.resolvedValue("font", "small_size").toInt());
@@ -575,7 +575,7 @@ void ThemeTest::builtInStylesDifferWhereDecided()
     theme.setStyle("Sharp");
     QCOMPARE(radii(), (QList<int>{0, 0, 0, 0}));
     QCOMPARE(theme.resolvedValue("hero", "radius").toInt(), 0);
-    QCOMPARE(theme.resolvedValue("settings_window", "checkbox_radius").toInt(), 0);
+    QCOMPARE(theme.resolvedValue("controls", "checkbox_radius").toInt(), 0);
     // The kept corners.
     QCOMPARE(theme.resolvedValue("tags", "radius").toInt(), 6);
     QCOMPARE(theme.resolvedValue("settings_window", "source_tag_radius").toInt(), 6);
@@ -1144,16 +1144,16 @@ void ThemeTest::paletteEndCascades()
     QCOMPARE(theme.resolvedValue("launch_button", "background_end").value<QColor>(), QColor("#ff4400"));
     QCOMPARE(theme.resolvedValue("rail", "selected_background_end").value<QColor>(), QColor("#ff4400"));
     QCOMPARE(theme.resolvedValue("filters", "chip_background_end").value<QColor>(), QColor("#ff4400"));
-    QCOMPARE(theme.resolvedValue("settings_window", "button_primary_background_end").value<QColor>(), QColor("#ff4400"));
+    QCOMPARE(theme.resolvedValue("controls", "button_primary_background_end").value<QColor>(), QColor("#ff4400"));
     QCOMPARE(theme.resolvedValue("settings_window", "sidebar_selected_background_end").value<QColor>(), QColor("#ff4400"));
 
     theme.setValue("palette", "surface_raised_end", QColor("#334455"));
     QCOMPARE(theme.resolvedValue("launch_button", "uninstalled_background_end").value<QColor>(), QColor("#334455"));
-    QCOMPARE(theme.resolvedValue("settings_window", "button_background_end").value<QColor>(), QColor("#334455"));
+    QCOMPARE(theme.resolvedValue("controls", "button_background_end").value<QColor>(), QColor("#334455"));
 
     theme.setValue("palette", "surface_hover_end", QColor("#223344"));
     QCOMPARE(theme.resolvedValue("icon_button", "hover_background_end").value<QColor>(), QColor("#223344"));
-    QCOMPARE(theme.resolvedValue("settings_window", "button_hover_background_end").value<QColor>(), QColor("#223344"));
+    QCOMPARE(theme.resolvedValue("controls", "button_hover_background_end").value<QColor>(), QColor("#223344"));
 }
 
 void ThemeTest::onboardingNewKeysResolveInDefault()
