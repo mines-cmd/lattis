@@ -14,6 +14,17 @@ Item {
     ]
     property int steamGridDbId: 0
     property string gameTitle
+    property int ownId: 0
+    property string ownTitle
+    readonly property bool other: steamGridDbId !== ownId
+
+    property bool searching: false
+    property string searchText
+    property string searchedText
+    property var searchResults: []
+    property int searchHighlight: -1
+    property int searchRequest: 0
+    property string searchError
     property string kind: "cover"
     property var picks: ({})
     property var tabs: ({})
@@ -48,22 +59,99 @@ Item {
     function openFor(steamGridDbId, title, startKind, preselected) {
         if (!popup.opened && !bulk)
             shownKinds = kinds.map(k => k.id)
-        root.steamGridDbId = steamGridDbId
-        gameTitle = title
-        kind = startKind
+        ownId = steamGridDbId
+        ownTitle = title
         picks = Object.assign({}, preselected ?? {})
         downloading = {}
         downloaded = {}
         error.text = ""
+        resetSearch()
+        showGame(steamGridDbId, title, startKind)
+        if (!bulk)
+            popup.open()
+    }
+
+    // The tabs start over; the picks stay.
+    function showGame(id, title, startKind) {
+        for (const k of Object.keys(tabs))
+            Metadata.cancel(tabs[k].request)
+        steamGridDbId = id
+        gameTitle = title
+        kind = startKind ?? kind
         for (const k of kinds)
             models[k.id].clear()
         const fresh = {}
         for (const k of kinds)
             fresh[k.id] = { style: "", page: 0, end: false, loading: false, error: "", request: 0 }
         tabs = fresh
-        if (!bulk)
-            popup.open()
         load(kind)
+    }
+
+    function openSearch() {
+        searching = true
+        searchHighlight = searchResults.findIndex(g => g.steamgriddb === steamGridDbId)
+        searchField.forceActiveFocus()
+        searchField.selectAll()
+    }
+
+    function closeSearch() {
+        searching = false
+    }
+
+    function resetSearch() {
+        Metadata.cancel(searchRequest)
+        searchTimer.stop()
+        searching = false
+        searchRequest = 0
+        searchText = ""
+        searchedText = ""
+        searchResults = []
+        searchHighlight = -1
+        searchError = ""
+    }
+
+    function searchSoon() {
+        Metadata.cancel(searchRequest)
+        searchRequest = 0
+        searchError = ""
+        searchResults = []
+        searchHighlight = -1
+        searchedText = ""
+        if (searchText.trim() === "")
+            searchTimer.stop()
+        else
+            searchTimer.restart()
+    }
+
+    function searchNow() {
+        searchedText = searchText.trim()
+        searchRequest = Metadata.searchArtGames(searchedText)
+    }
+
+    function pickHighlighted() {
+        const game = searchResults[Math.max(0, searchHighlight)]
+        if (game)
+            pickGame(game)
+    }
+
+    function moveHighlight(by) {
+        if (searchResults.length === 0)
+            return
+        searchHighlight = Math.max(0, Math.min(searchResults.length - 1, searchHighlight + by))
+        resultList.positionViewAtIndex(searchHighlight, ListView.Contain)
+    }
+
+    function pickGame(game) {
+        closeSearch()
+        if (game.steamgriddb === ownId)
+            backToOwn()
+        else
+            showGame(game.steamgriddb, game.name)
+    }
+
+    function backToOwn() {
+        if (steamGridDbId !== ownId)
+            showGame(ownId, ownTitle)
     }
 
     function setTab(k, values) {
@@ -116,6 +204,14 @@ Item {
     Connections {
         target: Metadata
         function onFinished(request, result) {
+            if (request === root.searchRequest) {
+                root.searchRequest = 0
+                if (result.error !== "")
+                    root.searchError = result.error
+                else
+                    root.searchResults = result.games
+                return
+            }
             for (const k of Object.keys(root.tabs)) {
                 if (root.tabs[k].request !== request)
                     continue
@@ -153,6 +249,12 @@ Item {
         }
     }
 
+    Timer {
+        id: searchTimer
+        interval: 300
+        onTriggered: root.searchNow()
+    }
+
     ListModel { id: coverModel }
     ListModel { id: heroModel }
     ListModel { id: logoModel }
@@ -175,6 +277,7 @@ Item {
             for (const k of Object.keys(root.downloading))
                 Metadata.cancel(root.downloading[k])
             root.downloading = {}
+            root.resetSearch()
             root.bulk = false
             root.closed()
         }
@@ -215,15 +318,30 @@ Item {
         contentItem: ColumnLayout {
             spacing: Theme.gameEditor.rowSpacing
 
-            Label {
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
-                text: root.bulk ? qsTr("%1 of %2 · Art for %3").arg(root.stepIndex + 1).arg(root.steps.length).arg(root.gameTitle)
-                                : qsTr("Art for %1").arg(root.gameTitle)
-                color: Theme.gameEditor.headingColor
-                font.bold: true
-                font.pixelSize: Theme.gameEditor.headingFontSize
-                elide: Text.ElideRight
+                spacing: Theme.layout.spacing
+
+                Label {
+                    Layout.maximumWidth: parent.width - (backLink.visible ? backLink.width + parent.spacing : 0)
+                    text: (root.bulk ? qsTr("%1 of %2 · ").arg(root.stepIndex + 1).arg(root.steps.length) : "")
+                          + (root.other ? qsTr("Art from %1") : qsTr("Art for %1")).arg(root.gameTitle)
+                    color: Theme.gameEditor.headingColor
+                    font.bold: true
+                    font.pixelSize: Theme.gameEditor.headingFontSize
+                    elide: Text.ElideRight
+                }
+                TextLink {
+                    id: backLink
+                    visible: root.other
+                    text: qsTr("Back to %1").arg(root.ownTitle)
+                    onClicked: {
+                        root.closeSearch()
+                        root.backToOwn()
+                    }
+                }
+                Item { Layout.fillWidth: true }
             }
 
             RowLayout {
@@ -237,10 +355,11 @@ Item {
                         id: tabButton
                         required property var modelData
                         readonly property bool current: root.kind === modelData.id
-                        implicitHeight: Theme.settingsWindow.toolbarHeight
+                        implicitHeight: Theme.settingsWindow.buttonHeight
                         implicitWidth: tabRow.implicitWidth + 24
                         hoverEnabled: true
                         onClicked: {
+                            root.closeSearch()
                             root.kind = modelData.id
                             root.load(modelData.id)
                         }
@@ -273,12 +392,59 @@ Item {
                     }
                 }
                 Item { Layout.fillWidth: true }
+                SettingsTextField {
+                    id: searchField
+                    visible: root.searching
+                    Layout.preferredWidth: parent.width / 2
+                    implicitHeight: Theme.settingsWindow.buttonHeight
+                    leftPadding: Theme.settingsWindow.iconSize + 22
+                    rightPadding: Theme.settingsWindow.iconSize + 22
+                    placeholderText: qsTr("Search SteamGridDB")
+                    text: root.searchText
+                    onTextEdited: {
+                        root.searchText = text
+                        root.searchSoon()
+                    }
+                    Keys.onEscapePressed: root.closeSearch()
+                    Keys.onUpPressed: root.moveHighlight(-1)
+                    Keys.onDownPressed: root.moveHighlight(1)
+                    Keys.onReturnPressed: root.pickHighlighted()
+                    Keys.onEnterPressed: root.pickHighlighted()
+
+                    Icon {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        path: Icons.search
+                        size: Theme.settingsWindow.iconSize
+                        color: Theme.settingsWindow.iconColor
+                    }
+                    Icon {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        path: Icons.close
+                        size: Theme.settingsWindow.iconSize
+                        color: searchCloseMouse.containsMouse ? Theme.settingsWindow.inputText : Theme.settingsWindow.iconColor
+
+                        MouseArea {
+                            id: searchCloseMouse
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.closeSearch()
+                        }
+                    }
+                }
                 Label {
+                    visible: !root.searching
                     text: qsTr("Style")
                     color: Theme.gameEditor.labelColor
                 }
                 SettingsComboBox {
                     id: styleBox
+                    visible: !root.searching
                     readonly property var styles: [{ id: "", name: qsTr("All styles") }].concat(Metadata.styles(root.kind))
                     Layout.preferredWidth: 170
                     model: styles.map(s => s.name)
@@ -288,10 +454,143 @@ Item {
                         root.load(root.kind, true)
                     }
                 }
+                SettingsButton {
+                    visible: !root.searching
+                    text: qsTr("Other game")
+                    tip: qsTr("Browse art from a different SteamGridDB game, such as a remaster")
+                    onClicked: root.openSearch()
+                }
+            }
+
+            Surface {
+                id: results
+                visible: root.searching
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Theme.gameEditor.cardRadius
+                fill: Theme.gameEditor.cardBackground
+                fillEnd: Theme.gameEditor.cardBackgroundEnd
+                direction: Theme.gameEditor.gradientDirection
+                border.color: Theme.gameEditor.cardBorder
+                border.width: Theme.gameEditor.cardBorderWidth
+
+                ListView {
+                    id: resultList
+                    anchors.fill: parent
+                    anchors.margins: Theme.gameEditor.cardBorderWidth
+                    clip: true
+                    model: root.searchResults
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: SettingsScrollBar {}
+
+                    delegate: Item {
+                        id: resultRow
+                        required property var modelData
+                        required property int index
+                        readonly property bool highlighted: root.searchHighlight === index
+                        width: ListView.view.width
+                        height: Theme.settingsWindow.toolbarHeight
+
+                        Rectangle {
+                            readonly property real corner: Math.max(0, Theme.gameEditor.cardRadius - Theme.gameEditor.cardBorderWidth)
+                            anchors.fill: parent
+                            topLeftRadius: resultRow.index === 0 ? corner : 0
+                            topRightRadius: topLeftRadius
+                            bottomLeftRadius: resultRow.index === root.searchResults.length - 1 && resultList.contentHeight >= resultList.height ? corner : 0
+                            bottomRightRadius: bottomLeftRadius
+                            color: resultRow.highlighted ? Theme.settingsWindow.rowHover : "transparent"
+                        }
+                        Rectangle {
+                            visible: resultRow.index < root.searchResults.length - 1
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: Theme.gameEditor.cardBorderWidth
+                            color: Theme.gameEditor.cardBorder
+                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: Theme.layout.spacing
+                            anchors.rightMargin: Theme.layout.spacing
+                            spacing: Theme.layout.spacing
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: resultRow.modelData.name
+                                color: Theme.settingsWindow.buttonText
+                                elide: Text.ElideRight
+                            }
+                            Rectangle {
+                                visible: resultRow.modelData.steamgriddb === root.ownId
+                                Layout.rightMargin: Theme.layout.spacing
+                                implicitWidth: thisGameLabel.implicitWidth + Theme.layout.spacing * 1.5 + 2
+                                implicitHeight: thisGameLabel.implicitHeight + 5
+                                radius: height / 2
+                                color: Qt.alpha(Theme.gameEditor.selectedColor, Theme.gameEditor.suggestionFillOpacity)
+                                border.color: Theme.gameEditor.selectedColor
+                                border.width: Theme.filters.tagBorderWidth
+
+                                Label {
+                                    id: thisGameLabel
+                                    anchors.centerIn: parent
+                                    text: qsTr("This game")
+                                    color: Theme.gameEditor.selectedColor
+                                    font.pixelSize: Theme.tags.fontSize - 1
+                                }
+                            }
+                            Label {
+                                text: resultRow.modelData.year > 0 ? resultRow.modelData.year : qsTr("–")
+                                color: Theme.gameEditor.hintColor
+                                font.weight: Font.DemiBold
+                            }
+                            Icon {
+                                path: Icons.chevronRight
+                                size: Theme.settingsWindow.iconSize
+                                color: Theme.settingsWindow.iconColor
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: root.searchHighlight = resultRow.index
+                            onClicked: root.pickGame(resultRow.modelData)
+                        }
+                    }
+                }
+
+                Icon {
+                    id: searchSpinner
+                    readonly property bool waiting: root.searchRequest !== 0 || searchTimer.running
+                    anchors.centerIn: parent
+                    visible: waiting && root.searchText.trim() !== ""
+                    path: Icons.loader
+                    size: Theme.settingsWindow.iconSize * 1.5
+                    color: Theme.gameEditor.hintColor
+                    RotationAnimation on rotation {
+                        running: searchSpinner.visible
+                        from: 0
+                        to: 360
+                        duration: Theme.iconButton.spinDuration
+                        loops: Animation.Infinite
+                    }
+                }
+                Label {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    visible: !searchSpinner.visible && root.searchResults.length === 0
+                    text: root.searchError !== "" ? root.searchError
+                        : root.searchText.trim() === "" ? qsTr("Search SteamGridDB for a game whose art you want")
+                        : qsTr("No games match \"%1\"").arg(root.searchedText)
+                    color: root.searchError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
+                }
             }
 
             GridView {
                 id: grid
+                visible: !root.searching
 
                 readonly property real thumbHeight: ({ cover: Theme.gameEditor.browserCoverHeight,
                                                        hero: Theme.gameEditor.browserHeroHeight,
