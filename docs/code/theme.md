@@ -151,6 +151,7 @@ Signals: `activeColorsChanged`, `activeStyleChanged`, `activeThemeChanged`, `ava
 | `sharedOnly` | When true, only the settings of shared sections |
 | `group` | A group name from `groups`, `"everything"` for none; replaces `following` |
 | `following` | `section.key`: only the settings that link directly to it; replaces `group` |
+| `followingTitle` | `following` as "Section → Setting" for the banner's chip, empty when not following |
 | `groups` | `[{name, title, count}]`, Everything first |
 | `changedCount` | Count of settings in the active theme's own file |
 | `sections` | `[{name, title, shared, subsections: [{title, count}]}]` for sections with visible rows; a sub-heading with no visible row is left out |
