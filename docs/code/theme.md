@@ -73,7 +73,11 @@ Two small migrations of the old single-file themes still run on start, before re
 
 The model refreshes on every theme change and on every `setValue()` call. When `changedOnly` is on, a reset or theme switch can add or remove rows. To avoid rebuilding every delegate (which would close an open color picker mid-drag), the model diffs the visible rows and only resets when they actually change.
 
-`sections` returns the sections with at least one visible row, in schema order. The Customize page uses this for its section navigation and the search highlights matching sections' headers.
+`sections` returns the sections with at least one visible row, in schema order, each with a `shared` flag (the `Section::shared` flag in `themeschema.cpp`: Palette, Radius, Motion, Font, Layout, Controls and Menu, listed first). The Customize page uses this for its section navigation and the search highlights matching sections' headers.
+
+Links: a setting whose value (the theme's, else the schema default) is `@section.key` or `@name` (a palette color) has that target, normalised to `section.key`, in the `LinkTargetRole` (empty when it isn't a link). `FollowersRole` counts the settings that link to a setting directly; a chain counts once per step. `OwnValueRole` is true when the schema default is a link and the theme sets a plain value. All three are computed on first use after each theme change, not at start.
+
+Groups: `ThemeSchema::groups()` is a table (name, title, rule on the key name) in `themeschema.cpp`, with a short exceptions list (`kGroupExceptions`) for keys a rule gets wrong; `ThemeSchema::inGroup()` applies both. The model's `group` filters by one (`"everything"` by default), and `following` (a `section.key`, empty by default) lists the settings that link directly to that target. A group and `following` are one slot: setting one clears the other. Both combine with `show`, `changedOnly` and the search. `groups` lists `{name, title, count}`, Everything first; the counts apply every other filter, so they show what picking that group would list.
 
 The tag color palette (`tags.palette`) has its own editor in Settings → Library and is excluded from this model.
 
@@ -90,7 +94,9 @@ The tag color palette (`tags.palette`) has its own editor in Settings → Librar
 ### ThemeSchema
 
 ```
-sections()              → all sections (name, doc)
+sections()              → all sections (name, doc, shared)
+groups()                → the Customize groups (name, title, rule)
+inGroup(group, setting) → the rule and the exceptions list
 headings()              → sub-headings (section, title, index of the first setting in settings())
 settings()              → all settings (section, key, type, def, doc, min, max, choices, fallback)
 typeName(type)          → "Color", "Int", …
@@ -139,9 +145,12 @@ Signals: `activeColorsChanged`, `activeStyleChanged`, `activeThemeChanged`, `ava
 | `filterText` | Current search text |
 | `changedOnly` | When true, only settings the active theme sets |
 | `show` | `"all"`, `"colors"` or `"style"`; only `customizeSchema` narrows by it |
+| `group` | A group name from `groups`, `"everything"` for none; replaces `following` |
+| `following` | `section.key`: only the settings that link directly to it; replaces `group` |
+| `groups` | `[{name, title, count}]`, Everything first |
 | `changedCount` | Count of settings in the active theme's own file |
-| `sections` | `[{name, title, subsections: [{title, count}]}]` for sections with visible rows; a sub-heading with no visible row is left out |
+| `sections` | `[{name, title, shared, subsections: [{title, count}]}]` for sections with visible rows; a sub-heading with no visible row is left out |
 | `firstRow(section)` | Index of the first visible row in the section, or -1 |
 | `firstRow(section, subsection)` | Index of the first visible row under that sub-heading, or -1 |
 
-Row roles: `SectionRole`, `SectionDocRole`, `SectionTitleRole`, `KeyRole`, `TitleRole`, `CamelKeyRole`, `TypeRole`, `DocRole`, `MinRole`, `MaxRole`, `ChoicesRole`, `DefaultRole`, `ValueRole`, `RawRole`, `SourceLabelRole`, `IsCustomRole`, `FirstInSectionRole`, `LastInSectionRole`, `SubsectionRole` (the row's sub-heading, empty in a section without them), `SubsectionCountRole` (visible rows in its card), `FirstInCardRole`, `LastInCardRole`. In the both-halves model a sub-heading's colors come before its style settings.
+Row roles: `SectionRole`, `SectionDocRole`, `SectionTitleRole`, `KeyRole`, `TitleRole`, `CamelKeyRole`, `TypeRole`, `DocRole`, `MinRole`, `MaxRole`, `ChoicesRole`, `DefaultRole`, `ValueRole`, `RawRole`, `SourceLabelRole`, `IsCustomRole`, `FirstInSectionRole`, `LastInSectionRole`, `SubsectionRole` (the row's sub-heading, empty in a section without them), `SubsectionCountRole` (visible rows in its card), `FirstInCardRole`, `LastInCardRole`, `LinkTargetRole` (`linkTarget`), `FollowersRole` (`followers`), `OwnValueRole` (`ownValue`). In the both-halves model a sub-heading's colors come before its style settings.

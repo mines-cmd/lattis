@@ -79,6 +79,9 @@ private slots:
     void motionDefaultsAndRanges();
     void schemaModelRows();
     void schemaModelFilter();
+    void schemaModelLinks();
+    void schemaModelGroups();
+    void schemaModelFilterCombinations();
 
 private:
     QString writeDataDir(QTemporaryDir &dir);
@@ -1816,6 +1819,190 @@ void ThemeTest::subHeadingsGroupSettingsIntoCards()
     QCOMPARE(narrowed.size(), 1);
     QCOMPARE(narrowed.first().toMap().value("title").toString(), QStringLiteral("Pages"));
     QCOMPARE(both->firstRow("settings_window", "Sidebar"), -1);
+}
+
+namespace {
+QModelIndex findRow(ThemeSettingsModel *model, const QString &section, const QString &key)
+{
+    const int row = model->rowOf(section, key);
+    return row < 0 ? QModelIndex() : model->index(row);
+}
+
+QStringList rowKeys(ThemeSettingsModel *model)
+{
+    QStringList out;
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const QModelIndex i = model->index(row);
+        out.append(i.data(ThemeSettingsModel::SectionRole).toString() + u'.'
+                   + i.data(ThemeSettingsModel::KeyRole).toString());
+    }
+    return out;
+}
+
+int groupCount(ThemeSettingsModel *model, const QString &name)
+{
+    for (const QVariant &g : model->groups()) {
+        if (g.toMap().value("name") == name)
+            return g.toMap().value("count").toInt();
+    }
+    return -1;
+}
+}
+
+void ThemeTest::schemaModelLinks()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+    auto *model = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+    const auto role = [&](const char *section, const char *key, ThemeSettingsModel::Role r) {
+        const QModelIndex i = findRow(model, section, key);
+        return i.isValid() ? i.data(r) : QVariant();
+    };
+
+    QCOMPARE(role("filters", "sort_radius", ThemeSettingsModel::LinkTargetRole).toString(),
+             QStringLiteral("radius.small"));
+    // A bare palette name is a palette color.
+    QCOMPARE(role("controls", "input_border", ThemeSettingsModel::LinkTargetRole).toString(),
+             QStringLiteral("palette.border"));
+    QCOMPARE(role("hero", "placeholder_hue_shift", ThemeSettingsModel::LinkTargetRole).toString(), QString());
+
+    // Direct links only: a chain counts once per step.
+    int toSearch = 0;
+    int toLayout = 0;
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const QString target = model->index(row).data(ThemeSettingsModel::LinkTargetRole).toString();
+        toSearch += target == QLatin1String("search.border_width");
+        toLayout += target == QLatin1String("layout.border_width");
+    }
+    QVERIFY(toSearch >= 2);
+    QCOMPARE(role("search", "border_width", ThemeSettingsModel::FollowersRole).toInt(), toSearch);
+    QCOMPARE(role("layout", "border_width", ThemeSettingsModel::FollowersRole).toInt(), toLayout);
+    QCOMPARE(role("filters", "sort_radius", ThemeSettingsModel::FollowersRole).toInt(), 0);
+
+    // Own value: the default links, the theme sets a plain value.
+    const int small = role("radius", "small", ThemeSettingsModel::FollowersRole).toInt();
+    QVERIFY(small > 1);
+    QVERIFY(!role("filters", "sort_radius", ThemeSettingsModel::OwnValueRole).toBool());
+    theme.setValue("filters", "sort_radius", 5);
+    QVERIFY(role("filters", "sort_radius", ThemeSettingsModel::OwnValueRole).toBool());
+    QCOMPARE(role("filters", "sort_radius", ThemeSettingsModel::LinkTargetRole).toString(), QString());
+    QCOMPARE(role("radius", "small", ThemeSettingsModel::FollowersRole).toInt(), small - 1);
+    // A plain default never gets the tag, even when changed.
+    theme.setValue("hero", "placeholder_hue_shift", 0.3);
+    QVERIFY(!role("hero", "placeholder_hue_shift", ThemeSettingsModel::OwnValueRole).toBool());
+    // Writing a link again follows it again.
+    theme.setValue("filters", "sort_radius", QStringLiteral("@radius.small"));
+    QVERIFY(!role("filters", "sort_radius", ThemeSettingsModel::OwnValueRole).toBool());
+    QCOMPARE(role("radius", "small", ThemeSettingsModel::FollowersRole).toInt(), small);
+
+    // The following filter lists the direct followers only.
+    model->setFollowing("search.border_width");
+    QCOMPARE(model->rowCount(), toSearch);
+    QVERIFY(rowKeys(model).contains("filter_button.border_width"));
+    QVERIFY(!rowKeys(model).contains("search.border_width"));
+    QCOMPARE(model->following(), QStringLiteral("search.border_width"));
+}
+
+void ThemeTest::schemaModelGroups()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+    auto *model = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+    const int all = model->rowCount();
+
+    const QVariantList groups = model->groups();
+    QCOMPARE(groups.first().toMap().value("name").toString(), QStringLiteral("everything"));
+    QCOMPARE(groups.first().toMap().value("count").toInt(), all);
+
+    model->setGroup("corners");
+    QVERIFY(rowKeys(model).contains("filters.sort_radius"));
+    QVERIFY(rowKeys(model).contains("radius.tiny"));
+    QVERIFY(!rowKeys(model).contains("filters.heading_font_size"));
+    QCOMPARE(model->rowCount(), groupCount(model, "corners"));
+
+    model->setGroup("text_sizes");
+    QVERIFY(rowKeys(model).contains("filters.heading_font_size"));
+    QVERIFY(rowKeys(model).contains("font.small_size"));
+    QVERIFY(rowKeys(model).contains("font.size"));
+    QVERIFY(!rowKeys(model).contains("filters.sort_radius"));
+
+    // A rule's wrong guess is fixed by the exceptions list.
+    model->setGroup("spacing");
+    QVERIFY(rowKeys(model).contains("layout.margin"));
+    QVERIFY(!rowKeys(model).contains("font.label_letter_spacing"));
+    model->setGroup("borders");
+    QVERIFY(rowKeys(model).contains("layout.border_width"));
+    QVERIFY(!rowKeys(model).contains("window_controls.resize_border"));
+    QVERIFY(!rowKeys(model).contains("settings_window.window_border_radius"));
+    model->setGroup("shadows");
+    QVERIFY(rowKeys(model).contains("menu.popup_shadow_size"));
+    model->setGroup("gradients");
+    QVERIFY(rowKeys(model).contains("palette.background_end"));
+    QVERIFY(rowKeys(model).contains("layout.gradient_direction"));
+
+    // An unknown name means everything.
+    model->setGroup("nonsense");
+    QCOMPARE(model->group(), QStringLiteral("everything"));
+    QCOMPARE(model->rowCount(), all);
+}
+
+void ThemeTest::schemaModelFilterCombinations()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+    auto *model = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+
+    model->setGroup("corners");
+    const int corners = model->rowCount();
+    // Show narrows a group; the group's count follows it.
+    model->setShow("colors");
+    QCOMPARE(model->rowCount(), 0);
+    QCOMPARE(groupCount(model, "corners"), 0);
+    model->setShow("style");
+    QCOMPARE(model->rowCount(), corners);
+    QCOMPARE(groupCount(model, "borders") > 0, true);
+
+    // Changed narrows it further, and the group counts follow.
+    theme.setValue("filters", "sort_radius", 5);
+    model->setChangedOnly(true);
+    QCOMPARE(rowKeys(model), QStringList{"filters.sort_radius"});
+    QCOMPARE(groupCount(model, "corners"), 1);
+    QCOMPARE(groupCount(model, "borders"), 0);
+    // The search narrows it too.
+    model->setFilterText("no such setting");
+    QCOMPARE(model->rowCount(), 0);
+    model->setFilterText("");
+    model->setChangedOnly(false);
+
+    // A group and following are one slot: picking one replaces the other.
+    QSignalSpy groupChanged(model, &ThemeSettingsModel::groupChanged);
+    QSignalSpy followingChanged(model, &ThemeSettingsModel::followingChanged);
+    model->setFollowing("radius.small");
+    QCOMPARE(model->group(), QStringLiteral("everything"));
+    QCOMPARE(groupChanged.size(), 1);
+    QVERIFY(model->rowCount() > 0);
+    for (const QString &key : rowKeys(model)) {
+        const QModelIndex i = findRow(model, key.section('.', 0, 0), key.section('.', 1));
+        QCOMPARE(i.data(ThemeSettingsModel::LinkTargetRole).toString(), QStringLiteral("radius.small"));
+    }
+    model->setGroup("borders");
+    QCOMPARE(model->following(), QString());
+    QCOMPARE(followingChanged.size(), 2);
+    model->setFollowing("radius.small");
+    QCOMPARE(model->group(), QStringLiteral("everything"));
+
+    // Following combines with Show: radius.small has only style followers.
+    model->setShow("colors");
+    QCOMPARE(model->rowCount(), 0);
+    model->setShow("all");
+    // Clearing the group alone leaves following as it is.
+    model->setGroup("everything");
+    QCOMPARE(model->following(), QStringLiteral("radius.small"));
+    model->setFollowing("");
+    QCOMPARE(model->rowCount() > 0, true);
 }
 
 QTEST_MAIN(ThemeTest)

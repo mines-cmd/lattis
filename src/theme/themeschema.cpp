@@ -51,16 +51,16 @@ constexpr Setting heading(sv section, sv title)
 constexpr Section kSections[] = {
     {"palette", "The main colors of the app. Most other colors are based on these, so changing one here "
                 "restyles everything that uses it.\n"
-                "You can add your own colors here and use them elsewhere as \"@<name>\"."},
+                "You can add your own colors here and use them elsewhere as \"@<name>\".", true},
     {"radius", "How round corners are, in four sizes. Each element's own radius defaults to one of "
-               "these, so changing a tier re-rounds everything that follows it."},
-    {"motion", "How things move: speeds, curves and springs. Each animation uses one of these."},
-    {"font", "The typeface and text sizes used across the app: regular text, small labels and headings."},
-    {"layout", "Spacing, corner roundness and outlines shared by the whole window."},
+               "these, so changing a tier re-rounds everything that follows it.", true},
+    {"motion", "How things move: speeds, curves and springs. Each animation uses one of these.", true},
+    {"font", "The typeface and text sizes used across the app: regular text, small labels and headings.", true},
+    {"layout", "Spacing, corner roundness and outlines shared by the whole window.", true},
     {"controls", "Buttons, text fields, switches, sliders, check boxes and scroll bars, everywhere in the app: "
-                 "Settings, the game editor, the setup guide and the dialogs."},
+                 "Settings, the game editor, the setup guide and the dialogs.", true},
     {"menu", "Menus, popovers and small dialogs: the game menu, the app menu, right-click menus and the popups in "
-             "Settings."},
+             "Settings.", true},
     {"color_picker", "The color picker and the color swatches and palettes beside it, used by the color editors in "
                      "Customize, the tag palette and the Library page."},
     {"backdrop", "A blurred copy of the game's banner behind the window, fading into the background toward the "
@@ -1360,6 +1360,53 @@ constexpr Setting kSettings[] = {
 std::span<const Section> sections()
 {
     return kSections;
+}
+
+namespace {
+bool has(std::string_view key, std::string_view part)
+{
+    return key.find(part) != std::string_view::npos;
+}
+
+constexpr Group kGroups[] = {
+    {"corners", "Corners", [](std::string_view section, std::string_view key) {
+         return section == "radius" || has(key, "radius");
+     }},
+    {"borders", "Borders", [](std::string_view, std::string_view key) {
+         return has(key, "border") && !has(key, "radius");
+     }},
+    {"text_sizes", "Text sizes", [](std::string_view section, std::string_view key) {
+         return has(key, "font_size") || (section == "font" && (key == "size" || key.ends_with("_size")));
+     }},
+    {"spacing", "Spacing", [](std::string_view, std::string_view key) {
+         return has(key, "spacing") || has(key, "padding") || has(key, "gap") || has(key, "margin");
+     }},
+    {"shadows", "Shadows", [](std::string_view, std::string_view key) { return has(key, "shadow"); }},
+    {"gradients", "Gradients", [](std::string_view, std::string_view key) {
+         return key.ends_with("_end") || has(key, "gradient");
+     }},
+};
+
+// Keys the rules above get wrong.
+constexpr GroupException kGroupExceptions[] = {
+    {"font", "label_letter_spacing", "spacing", false},
+    {"hero", "logo_margin", "spacing", false},
+    {"window_controls", "resize_border", "borders", false},
+};
+}
+
+std::span<const Group> groups()
+{
+    return kGroups;
+}
+
+bool inGroup(const Group &group, const Setting &setting)
+{
+    for (const GroupException &e : kGroupExceptions) {
+        if (e.group == group.name && e.section == setting.section && e.key == setting.key)
+            return e.in;
+    }
+    return group.matches(setting.section, setting.key);
 }
 
 namespace {

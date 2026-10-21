@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QStringList>
+#include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
 class Theme;
@@ -14,6 +16,9 @@ class ThemeSettingsModel : public QAbstractListModel
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(bool changedOnly READ changedOnly WRITE setChangedOnly NOTIFY changedOnlyChanged)
     Q_PROPERTY(QString show READ show WRITE setShow NOTIFY showChanged)
+    Q_PROPERTY(QString group READ group WRITE setGroup NOTIFY groupChanged)
+    Q_PROPERTY(QString following READ following WRITE setFollowing NOTIFY followingChanged)
+    Q_PROPERTY(QVariantList groups READ groups NOTIFY groupsChanged)
     Q_PROPERTY(int changedCount READ changedCount NOTIFY changedCountChanged)
     Q_PROPERTY(QVariantList sections READ sections NOTIFY sectionsChanged)
 
@@ -44,6 +49,9 @@ public:
         FirstInCardRole,
         LastInCardRole,
         HalfRole,
+        LinkTargetRole,
+        FollowersRole,
+        OwnValueRole,
     };
     Q_ENUM(Role)
 
@@ -61,6 +69,11 @@ public:
     void setChangedOnly(bool changedOnly);
     QString show() const;
     void setShow(const QString &show);
+    QString group() const { return m_group; }
+    void setGroup(const QString &group);
+    QString following() const { return m_following; }
+    void setFollowing(const QString &target);
+    QVariantList groups() const;
     int changedCount() const { return m_changedCount; }
 
     QVariantList sections() const;
@@ -72,15 +85,21 @@ signals:
     void filterTextChanged();
     void changedOnlyChanged();
     void showChanged();
+    void groupChanged();
+    void followingChanged();
+    void groupsChanged();
     void changedCountChanged();
     void sectionsChanged();
 
 private:
     bool listsHalf(bool color) const;
+    bool passes(int setting, bool withSlot) const;
     QList<int> visibleRows() const;
     void rebuildVisibleRows();
+    void applyFilters();
     void setVisible(const QList<int> &rows);
     bool sameCard(int row, int other) const;
+    void ensureLinks() const;
     void refresh();
     void updateChangedCount();
 
@@ -88,10 +107,20 @@ private:
     Mode m_mode;
     enum class Show { All, Colors, Style } m_show = Show::All;
     QString m_filterText;
+    QString m_group = QStringLiteral("everything");
+    int m_groupBit = -1;
+    QString m_following;
     bool m_changedOnly = false;
     int m_changedCount = 0;
     QList<int> m_visible;
     QList<int> m_headingOfSetting;
     QList<int> m_headingOfRow;
     QList<int> m_cardSize;
+    // Links and followers depend on the merged values, so they are computed on first use after
+    // each theme change, not at start.
+    mutable bool m_linksDirty = true;
+    mutable QStringList m_linkTarget;
+    mutable QList<int> m_followers;
+    mutable QList<bool> m_ownValue;
+    mutable QList<quint32> m_groupMask;
 };

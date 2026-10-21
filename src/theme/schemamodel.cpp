@@ -76,6 +76,15 @@ QString defaultText(const Setting &s)
     }
 }
 
+bool sectionShared(const QString &section)
+{
+    for (const ThemeSchema::Section &s : ThemeSchema::sections()) {
+        if (toQString(s.name) == section)
+            return s.shared;
+    }
+    return false;
+}
+
 QString sectionDoc(const QString &section)
 {
     for (const ThemeSchema::Section &s : ThemeSchema::sections()) {
@@ -108,21 +117,67 @@ ThemeSettingsModel::ThemeSettingsModel(Theme *theme, Mode mode, QObject *parent)
     connect(m_theme, &Theme::valueChanged, this, &ThemeSettingsModel::refresh);
 }
 
+void ThemeSettingsModel::ensureLinks() const
+{
+    const auto settings = ThemeSchema::settings();
+    if (m_groupMask.isEmpty()) {
+        m_groupMask.resize(settings.size());
+        const auto groups = ThemeSchema::groups();
+        for (int i = 0; i < int(settings.size()); ++i) {
+            quint32 mask = 0;
+            for (int g = 0; g < int(groups.size()); ++g) {
+                if (ThemeSchema::inGroup(groups[g], settings[i]))
+                    mask |= quint32(1) << g;
+            }
+            m_groupMask[i] = mask;
+        }
+    }
+    if (!m_linksDirty)
+        return;
+    m_linksDirty = false;
+    m_linkTarget.assign(settings.size(), QString());
+    m_followers.assign(settings.size(), 0);
+    m_ownValue.assign(settings.size(), false);
+    QHash<QString, int> counts;
+    for (int i = 0; i < int(settings.size()); ++i) {
+        const Setting &s = settings[i];
+        const QVariant raw = m_theme->rawValue(toQString(s.section), toQString(s.key));
+        const bool set = raw.isValid();
+        const QString effective = set ? (raw.typeId() == QMetaType::QString ? raw.toString() : QString())
+                                      : toQString(s.def);
+        if (effective.startsWith(u'@')) {
+            QString target = effective.mid(1);
+            if (!target.contains(u'.'))
+                target.prepend(QLatin1String("palette."));
+            m_linkTarget[i] = target;
+            ++counts[target];
+        } else if (set && s.def.starts_with('@')) {
+            m_ownValue[i] = true;
+        }
+    }
+    for (int i = 0; i < int(settings.size()); ++i)
+        m_followers[i] = counts.value(toQString(settings[i].section) + u'.' + toQString(settings[i].key));
+}
+
 void ThemeSettingsModel::refresh()
 {
+    m_linksDirty = true;
     updateChangedCount();
-    // With "changed only" on, a reset or theme switch can add or remove rows. Only reset the
-    // model when the rows really change: a reset rebuilds every delegate, which would close
-    // an open color picker in the middle of a drag.
-    if (m_changedOnly) {
+    // With "changed only" or "following" on, a reset or theme switch can add or remove rows. Only
+    // reset the model when the rows really change: a reset rebuilds every delegate, which would
+    // close an open color picker in the middle of a drag.
+    if (m_changedOnly || !m_following.isEmpty()) {
         const QList<int> rows = visibleRows();
         if (rows != m_visible) {
             beginResetModel();
             setVisible(rows);
             endResetModel();
             emit sectionsChanged();
+            emit groupsChanged();
             return;
         }
+        if (m_changedOnly)
+            emit groupsChanged();
     }
     if (rowCount() > 0)
         emit dataChanged(index(0), index(rowCount() - 1));
@@ -192,6 +247,15 @@ QVariant ThemeSettingsModel::data(const QModelIndex &index, int role) const
     case LastInCardRole: return index.row() == m_visible.size() - 1 || !sameCard(index.row(), index.row() + 1);
     case HalfRole:
         return ThemeSchema::isColorSetting(s) ? QStringLiteral("colors") : QStringLiteral("style");
+    case LinkTargetRole:
+        ensureLinks();
+        return m_linkTarget[m_visible[index.row()]];
+    case FollowersRole:
+        ensureLinks();
+        return m_followers[m_visible[index.row()]];
+    case OwnValueRole:
+        ensureLinks();
+        return bool(m_ownValue[m_visible[index.row()]]);
     }
     return {};
 }
@@ -224,6 +288,9 @@ QHash<int, QByteArray> ThemeSettingsModel::roleNames() const
         {FirstInCardRole, "firstInCard"},
         {LastInCardRole, "lastInCard"},
         {HalfRole, "half"},
+        {LinkTargetRole, "linkTarget"},
+        {FollowersRole, "followers"},
+        {OwnValueRole, "ownValue"},
     };
 }
 
@@ -245,10 +312,85 @@ void ThemeSettingsModel::setShow(const QString &show)
         return;
     m_show = value;
     emit showChanged();
+    applyFilters();
+}
+
+void ThemeSettingsModel::applyFilters()
+{
     beginResetModel();
     rebuildVisibleRows();
     endResetModel();
     emit sectionsChanged();
+    emit groupsChanged();
+}
+
+void ThemeSettingsModel::setGroup(const QString &group)
+{
+    int bit = -1;
+    const auto groups = ThemeSchema::groups();
+    for (int g = 0; g < int(groups.size()); ++g) {
+        if (toQString(groups[g].name) == group)
+            bit = g;
+    }
+    const QString value = bit >= 0 ? group : QStringLiteral("everything");
+    const bool clearsFollowing = bit >= 0 && !m_following.isEmpty();
+    if (value == m_group && !clearsFollowing)
+        return;
+    const bool groupChange = value != m_group;
+    m_group = value;
+    m_groupBit = bit;
+    if (clearsFollowing) {
+        m_following.clear();
+        emit followingChanged();
+    }
+    if (groupChange)
+        emit groupChanged();
+    applyFilters();
+}
+
+void ThemeSettingsModel::setFollowing(const QString &target)
+{
+    const bool clearsGroup = !target.isEmpty() && m_group != QLatin1String("everything");
+    if (target == m_following && !clearsGroup)
+        return;
+    const bool followingChange = target != m_following;
+    m_following = target;
+    if (clearsGroup) {
+        m_group = QStringLiteral("everything");
+        m_groupBit = -1;
+        emit groupChanged();
+    }
+    if (followingChange)
+        emit followingChanged();
+    applyFilters();
+}
+
+QVariantList ThemeSettingsModel::groups() const
+{
+    ensureLinks();
+    const auto groups = ThemeSchema::groups();
+    QList<int> counts(groups.size(), 0);
+    int all = 0;
+    const auto settings = ThemeSchema::settings();
+    for (int i = 0; i < int(settings.size()); ++i) {
+        if (!passes(i, false))
+            continue;
+        ++all;
+        for (int g = 0; g < int(groups.size()); ++g) {
+            if (m_groupMask[i] & (quint32(1) << g))
+                ++counts[g];
+        }
+    }
+    QVariantList out;
+    out.append(QVariantMap{{QStringLiteral("name"), QStringLiteral("everything")},
+                           {QStringLiteral("title"), QStringLiteral("Everything")},
+                           {QStringLiteral("count"), all}});
+    for (int g = 0; g < int(groups.size()); ++g) {
+        out.append(QVariantMap{{QStringLiteral("name"), toQString(groups[g].name)},
+                               {QStringLiteral("title"), toQString(groups[g].title)},
+                               {QStringLiteral("count"), counts[g]}});
+    }
+    return out;
 }
 
 bool ThemeSettingsModel::listsHalf(bool color) const
@@ -267,10 +409,7 @@ void ThemeSettingsModel::setFilterText(const QString &text)
         return;
     m_filterText = text;
     emit filterTextChanged();
-    beginResetModel();
-    rebuildVisibleRows();
-    endResetModel();
-    emit sectionsChanged();
+    applyFilters();
 }
 
 void ThemeSettingsModel::setChangedOnly(bool changedOnly)
@@ -279,10 +418,7 @@ void ThemeSettingsModel::setChangedOnly(bool changedOnly)
         return;
     m_changedOnly = changedOnly;
     emit changedOnlyChanged();
-    beginResetModel();
-    rebuildVisibleRows();
-    endResetModel();
-    emit sectionsChanged();
+    applyFilters();
 }
 
 QVariantList ThemeSettingsModel::sections() const
@@ -303,7 +439,9 @@ QVariantList ThemeSettingsModel::sections() const
         if (section != last) {
             flush();
             last = section;
-            out.append(QVariantMap{{QStringLiteral("name"), section}, {QStringLiteral("title"), title(section)}});
+            out.append(QVariantMap{{QStringLiteral("name"), section},
+                                   {QStringLiteral("title"), title(section)},
+                                   {QStringLiteral("shared"), sectionShared(section)}});
         }
         const int heading = m_headingOfRow[row];
         if (heading >= 0 && (row == 0 || !sameCard(row - 1, row))) {
@@ -354,42 +492,56 @@ int ThemeSettingsModel::rowOf(const QString &section, const QString &key) const
     return -1;
 }
 
+// withSlot: also apply the group / following filter. The group counts leave it out.
+bool ThemeSettingsModel::passes(int setting, bool withSlot) const
+{
+    const Setting &s = ThemeSchema::settings()[setting];
+    if (!listsHalf(ThemeSchema::isColorSetting(s)))
+        return false;
+    if (s.section == "tags" && s.key == "palette")
+        return false;
+    if (m_changedOnly && !m_theme->isCustomized(toQString(s.section), toQString(s.key)))
+        return false;
+    if (withSlot) {
+        ensureLinks();
+        if (!m_following.isEmpty() && m_linkTarget[setting] != m_following)
+            return false;
+        if (m_groupBit >= 0 && !(m_groupMask[setting] & (quint32(1) << m_groupBit)))
+            return false;
+    }
+    if (!m_filterText.isEmpty()) {
+        const QString section = toQString(s.section);
+        const QString key = toQString(s.key);
+        QString haystack = section + u' ' + key + u' ' + toQString(s.doc);
+        if (s.type == Type::Color) {
+            const QVariant raw = m_theme->rawValue(section, key);
+            if (raw.typeId() == QMetaType::QString)
+                haystack += u' ' + raw.toString();
+            const QVariant resolved = m_theme->resolvedValue(section, key);
+            if (resolved.typeId() == QMetaType::QColor) {
+                const QColor c = resolved.value<QColor>();
+                haystack += u' ' + c.name(QColor::HexRgb);
+                if (c.alpha() < 255) {
+                    // App convention: #rrggbbaa, not Qt's #aarrggbb.
+                    haystack += u' ' + QString::asprintf("#%02x%02x%02x%02x",
+                                                         c.red(), c.green(), c.blue(), c.alpha());
+                }
+            }
+        }
+        haystack.replace(u'_', u' ');
+        if (!haystack.contains(QString(m_filterText).replace(u'_', u' '), Qt::CaseInsensitive))
+            return false;
+    }
+    return true;
+}
+
 QList<int> ThemeSettingsModel::visibleRows() const
 {
     QList<int> rows;
     const auto settings = ThemeSchema::settings();
     for (int i = 0; i < int(settings.size()); ++i) {
-        const Setting &s = settings[i];
-        if (!listsHalf(ThemeSchema::isColorSetting(s)))
-            continue;
-        if (s.section == "tags" && s.key == "palette")
-            continue;
-        if (m_changedOnly && !m_theme->isCustomized(toQString(s.section), toQString(s.key)))
-            continue;
-        if (!m_filterText.isEmpty()) {
-            const QString section = toQString(s.section);
-            const QString key = toQString(s.key);
-            QString haystack = section + u' ' + key + u' ' + toQString(s.doc);
-            if (s.type == Type::Color) {
-                const QVariant raw = m_theme->rawValue(section, key);
-                if (raw.typeId() == QMetaType::QString)
-                    haystack += u' ' + raw.toString();
-                const QVariant resolved = m_theme->resolvedValue(section, key);
-                if (resolved.typeId() == QMetaType::QColor) {
-                    const QColor c = resolved.value<QColor>();
-                    haystack += u' ' + c.name(QColor::HexRgb);
-                    if (c.alpha() < 255) {
-                        // App convention: #rrggbbaa, not Qt's #aarrggbb.
-                        haystack += u' ' + QString::asprintf("#%02x%02x%02x%02x",
-                                                             c.red(), c.green(), c.blue(), c.alpha());
-                    }
-                }
-            }
-            haystack.replace(u'_', u' ');
-            if (!haystack.contains(QString(m_filterText).replace(u'_', u' '), Qt::CaseInsensitive))
-                continue;
-        }
-        rows.append(i);
+        if (passes(i, true))
+            rows.append(i);
     }
     if (m_mode == Mode::Both) {
         // The schema may interleave a section's colors and style settings; within a sub-heading,
