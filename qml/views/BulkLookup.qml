@@ -1530,6 +1530,45 @@ ApplicationWindow {
                                             Layout.alignment: Qt.AlignTop
                                             spacing: Theme.layout.spacing * 1.5
 
+                                            Rectangle {
+                                                visible: result.r.state === "notFound" && result.r.art.length > 0
+                                                Layout.fillWidth: true
+                                                implicitHeight: bannerRow.implicitHeight + Theme.layout.spacing * 2
+                                                radius: Theme.radius.small
+                                                color: Theme.gameEditor.bulkBannerBackground
+                                                border.color: Theme.gameEditor.bulkBannerBorder
+                                                border.width: Theme.layout.borderWidth
+                                                RowLayout {
+                                                    id: bannerRow
+                                                    anchors.fill: parent
+                                                    anchors.leftMargin: Theme.layout.spacing * 3
+                                                    anchors.rightMargin: Theme.layout.spacing * 2
+                                                    spacing: Theme.layout.spacing * 2.5
+                                                    Icon {
+                                                        path: Icons.informationLine
+                                                        size: Theme.controls.iconSize
+                                                        color: Theme.gameEditor.bulkBannerIcon
+                                                    }
+                                                    Label {
+                                                        Layout.fillWidth: true
+                                                        elide: Text.ElideRight
+                                                        text: qsTr("IGDB didn't find it, but SteamGridDB has art for \"%1\".").arg(result.r.searched)
+                                                        color: Theme.gameEditor.bulkBannerText
+                                                        font.pixelSize: Theme.font.size - 1
+                                                    }
+                                                    SettingsButton {
+                                                        implicitHeight: root.barButtonHeight
+                                                        text: qsTr("Detailed lookup")
+                                                        tip: qsTr("Search another name or platform, and see every result")
+                                                        onClicked: root.openDetailedLookup(result.r)
+                                                    }
+                                                    TextLink {
+                                                        text: qsTr("Not on IGDB")
+                                                        onClicked: lookupModel.markNotOnIgdb(result.r.id)
+                                                    }
+                                                }
+                                            }
+
                                             SectionCard {
                                                 visible: result.r.fields.length > 0
                                                 label: qsTr("Info")
@@ -1735,7 +1774,8 @@ ApplicationWindow {
                                     // empty one adds no gap; its top margin cancels the column's spacing so that gap
                                     // grows with it.
                                     Unfold {
-                                        readonly property bool hasPanel: ["pick", "notFound", "error", "notOnIgdb"].includes(result.r.state)
+                                        readonly property bool hasPanel: ["pick", "error", "notOnIgdb"].includes(result.r.state)
+                                                                         || (result.r.state === "notFound" && result.r.art.length === 0)
                                                                          || result.r.applyError !== ""
                                         open: result.open
                                         visible: hasPanel && (open || progress > 0)
@@ -1794,7 +1834,7 @@ ApplicationWindow {
                                         }
 
                                         RowLayout {
-                                            visible: result.r.state === "pick" || result.r.state === "notFound"
+                                            visible: result.r.state === "pick" || (result.r.state === "notFound" && result.r.art.length === 0)
                                             Layout.fillWidth: true
                                             Layout.leftMargin: root.detailIndent
                                             spacing: Theme.layout.spacing
@@ -1803,9 +1843,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 elide: Text.ElideRight
                                                 text: result.r.state === "pick" ? qsTr("None of these?")
-                                                    : result.r.art.length > 0
-                                                      ? qsTr("IGDB didn't find it, but SteamGridDB has art for \"%1\".").arg(result.r.searched)
-                                                      : qsTr("IGDB has nothing called \"%1\" on %2.").arg(result.r.searched).arg(result.r.platformName)
+                                                    : qsTr("IGDB has nothing called \"%1\" on %2.").arg(result.r.searched).arg(result.r.platformName)
                                             }
                                             SettingsButton {
                                                 implicitHeight: root.barButtonHeight
