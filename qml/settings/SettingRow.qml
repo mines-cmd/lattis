@@ -224,10 +224,10 @@ Rectangle {
                 Layout.preferredHeight: Theme.settingsWindow.smallButtonSize
                 Layout.alignment: Qt.AlignVCenter
                 plain: true
+                hoverTint: Theme.search.hoverTint
                 iconSize: Theme.settingsWindow.smallIconSize
                 icon: Icons.more
                 iconColor: Theme.settingsWindow.resetButtonColor
-                tip: qsTr("More")
                 onClicked: root.openMenu(moreButton)
             }
         }
@@ -249,6 +249,10 @@ Rectangle {
         menuLoader.active = true
         const menu = menuLoader.item
         if (menu.visible) {
+            if (item && !menu.atPointer) {
+                menu.close()
+                return
+            }
             pendingMenu = { item: item, at: at }
             menu.close()
             return

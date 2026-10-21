@@ -37,6 +37,7 @@ MenuItem {
     hoverEnabled: !blocked
     HoverHandler {
         id: pointer
+        cursorShape: item.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         onHoveredChanged: if (!hovered) rest.stop()
         onPointChanged: {
             if (!hovered || !item.menu)
