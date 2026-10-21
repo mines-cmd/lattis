@@ -16,6 +16,7 @@ class ThemeSettingsModel : public QAbstractListModel
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(bool changedOnly READ changedOnly WRITE setChangedOnly NOTIFY changedOnlyChanged)
     Q_PROPERTY(QString show READ show WRITE setShow NOTIFY showChanged)
+    Q_PROPERTY(bool sharedOnly READ sharedOnly WRITE setSharedOnly NOTIFY sharedOnlyChanged)
     Q_PROPERTY(QString group READ group WRITE setGroup NOTIFY groupChanged)
     Q_PROPERTY(QString following READ following WRITE setFollowing NOTIFY followingChanged)
     Q_PROPERTY(QVariantList groups READ groups NOTIFY groupsChanged)
@@ -67,6 +68,8 @@ public:
     void setFilterText(const QString &text);
     bool changedOnly() const { return m_changedOnly; }
     void setChangedOnly(bool changedOnly);
+    bool sharedOnly() const { return m_sharedOnly; }
+    void setSharedOnly(bool sharedOnly);
     QString show() const;
     void setShow(const QString &show);
     QString group() const { return m_group; }
@@ -84,6 +87,7 @@ public:
 signals:
     void filterTextChanged();
     void changedOnlyChanged();
+    void sharedOnlyChanged();
     void showChanged();
     void groupChanged();
     void followingChanged();
@@ -111,6 +115,7 @@ private:
     int m_groupBit = -1;
     QString m_following;
     bool m_changedOnly = false;
+    bool m_sharedOnly = false;
     int m_changedCount = 0;
     QList<int> m_visible;
     QList<int> m_headingOfSetting;

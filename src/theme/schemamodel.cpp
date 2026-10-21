@@ -421,6 +421,15 @@ void ThemeSettingsModel::setChangedOnly(bool changedOnly)
     applyFilters();
 }
 
+void ThemeSettingsModel::setSharedOnly(bool sharedOnly)
+{
+    if (sharedOnly == m_sharedOnly)
+        return;
+    m_sharedOnly = sharedOnly;
+    emit sharedOnlyChanged();
+    applyFilters();
+}
+
 QVariantList ThemeSettingsModel::sections() const
 {
     QVariantList out;
@@ -501,6 +510,8 @@ bool ThemeSettingsModel::passes(int setting, bool withSlot) const
     if (s.section == "tags" && s.key == "palette")
         return false;
     if (m_changedOnly && !m_theme->isCustomized(toQString(s.section), toQString(s.key)))
+        return false;
+    if (m_sharedOnly && !sectionShared(toQString(s.section)))
         return false;
     if (withSlot) {
         ensureLinks();

@@ -77,7 +77,7 @@ The model refreshes on every theme change and on every `setValue()` call. When `
 
 Links: a setting whose value (the theme's, else the schema default) is `@section.key` or `@name` (a palette color) has that target, normalised to `section.key`, in the `LinkTargetRole` (empty when it isn't a link). `FollowersRole` counts the settings that link to a setting directly; a chain counts once per step. `OwnValueRole` is true when the schema default is a link and the theme sets a plain value. All three are computed on first use after each theme change, not at start.
 
-Groups: `ThemeSchema::groups()` is a table (name, title, rule on the key name) in `themeschema.cpp`, with a short exceptions list (`kGroupExceptions`) for keys a rule gets wrong; `ThemeSchema::inGroup()` applies both. The model's `group` filters by one (`"everything"` by default), and `following` (a `section.key`, empty by default) lists the settings that link directly to that target. A group and `following` are one slot: setting one clears the other. Both combine with `show`, `changedOnly` and the search. `groups` lists `{name, title, count}`, Everything first; the counts apply every other filter, so they show what picking that group would list.
+Groups: `ThemeSchema::groups()` is a table (name, title, rule on the key name) in `themeschema.cpp`, with a short exceptions list (`kGroupExceptions`) for keys a rule gets wrong; `ThemeSchema::inGroup()` applies both. The model's `group` filters by one (`"everything"` by default), and `following` (a `section.key`, empty by default) lists the settings that link directly to that target. A group and `following` are one slot: setting one clears the other. Both combine with `show`, `changedOnly`, `sharedOnly` and the search. `groups` lists `{name, title, count}`, Everything first; the counts apply every other filter (including `sharedOnly`), so they show what picking that group would list.
 
 The tag color palette (`tags.palette`) has its own editor in Settings → Library and is excluded from this model.
 
@@ -145,6 +145,7 @@ Signals: `activeColorsChanged`, `activeStyleChanged`, `activeThemeChanged`, `ava
 | `filterText` | Current search text |
 | `changedOnly` | When true, only settings the active theme sets |
 | `show` | `"all"`, `"colors"` or `"style"`; only `customizeSchema` narrows by it |
+| `sharedOnly` | When true, only the settings of shared sections |
 | `group` | A group name from `groups`, `"everything"` for none; replaces `following` |
 | `following` | `section.key`: only the settings that link directly to it; replaces `group` |
 | `groups` | `[{name, title, count}]`, Everything first |

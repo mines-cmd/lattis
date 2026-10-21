@@ -1977,7 +1977,23 @@ void ThemeTest::schemaModelFilterCombinations()
     model->setFilterText("");
     model->setChangedOnly(false);
 
+    // Shared values only keeps the shared sections, and combines with a group.
+    model->setShow("all");
+    model->setGroup("corners");
+    const int allCorners = model->rowCount();
+    model->setSharedOnly(true);
+    QVERIFY(model->rowCount() > 0 && model->rowCount() < allCorners);
+    QVERIFY(rowKeys(model).contains("radius.small"));
+    QVERIFY(!rowKeys(model).contains("filters.sort_radius"));
+    QCOMPARE(groupCount(model, "corners"), model->rowCount());
+    for (const QVariant &s : model->sections())
+        QVERIFY(s.toMap().value("shared").toBool());
+    model->setSharedOnly(false);
+    QCOMPARE(model->rowCount(), allCorners);
+    model->setGroup("everything");
+
     // A group and following are one slot: picking one replaces the other.
+    model->setGroup("corners");
     QSignalSpy groupChanged(model, &ThemeSettingsModel::groupChanged);
     QSignalSpy followingChanged(model, &ThemeSettingsModel::followingChanged);
     model->setFollowing("radius.small");
