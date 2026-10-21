@@ -18,16 +18,13 @@ Menu {
     property real slide: 0
     readonly property real slideX: popDirection === "right" ? slide : 0
     readonly property real slideY: popDirection === "down" || popDirection === "below" ? slide : popDirection === "up" ? -slide : 0
-    // Under a button at the menu's right edge, it grows only downward: grown from that corner, its whole left
-    // edge travelled, and the menu looked like it opened off to the right and slid into place.
     property real pop: 1
-    readonly property real popY: popDirection === "below" ? pop : 1
-    scale: popDirection === "below" ? 1 : pop
+    scale: pop
 
     clip: !grows
     property real reveal: 1
     height: grows ? implicitHeight : implicitHeight * reveal
-    transformOrigin: !pops ? Popup.Center : popDirection === "up" ? Popup.BottomLeft : Popup.TopLeft
+    transformOrigin: !pops ? Popup.Center : popDirection === "up" ? Popup.BottomLeft : popDirection === "below" ? Popup.TopRight : Popup.TopLeft
     readonly property Transition dropEnter: DropdownEnter {}
     readonly property Transition dropExit: DropdownExit {}
     readonly property Transition popEnter: MenuPopEnter {}
@@ -117,7 +114,6 @@ Menu {
         // a window that grows (the popup clips them).
         readonly property real drawerShift: root.grows || root.pops ? 0 : (1 - root.reveal) * contentHeight
         transform: [
-            Scale { origin.y: -entries.y; yScale: root.popY },
             Translate { x: root.slideX; y: root.slideY - entries.drawerShift }
         ]
         model: root.contentModel
@@ -142,7 +138,6 @@ Menu {
     background: Rectangle {
         id: outline
         transform: [
-            Scale { yScale: root.popY },
             Translate { x: root.slideX; y: root.slideY }
         ]
 
