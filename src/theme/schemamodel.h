@@ -19,6 +19,7 @@ class ThemeSettingsModel : public QAbstractListModel
     Q_PROPERTY(bool sharedOnly READ sharedOnly WRITE setSharedOnly NOTIFY sharedOnlyChanged)
     Q_PROPERTY(QString group READ group WRITE setGroup NOTIFY groupChanged)
     Q_PROPERTY(QString following READ following WRITE setFollowing NOTIFY followingChanged)
+    Q_PROPERTY(QString followingTitle READ followingTitle NOTIFY followingChanged)
     Q_PROPERTY(QVariantList groups READ groups NOTIFY groupsChanged)
     Q_PROPERTY(int changedCount READ changedCount NOTIFY changedCountChanged)
     Q_PROPERTY(QVariantList sections READ sections NOTIFY sectionsChanged)
@@ -77,6 +78,7 @@ public:
     void setGroup(const QString &group);
     QString following() const { return m_following; }
     void setFollowing(const QString &target);
+    QString followingTitle() const;
     QVariantList groups() const;
     int changedCount() const { return m_changedCount; }
 

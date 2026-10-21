@@ -371,6 +371,12 @@ void ThemeSettingsModel::setFollowing(const QString &target)
     applyFilters();
 }
 
+QString ThemeSettingsModel::followingTitle() const
+{
+    const int dot = m_following.indexOf(u'.');
+    return dot < 0 ? QString() : title(m_following.left(dot)) + QStringLiteral(" → ") + title(m_following.mid(dot + 1));
+}
+
 QVariantList ThemeSettingsModel::groups() const
 {
     ensureLinks();

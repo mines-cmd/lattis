@@ -12,14 +12,24 @@ Item {
     readonly property string description:
         qsTr("Every color and style setting, by section. Changes show immediately.")
 
+    // One entry per active filter: the banner shows `text`, the Show button `label`; `clear` drops it.
     readonly property var filters: {
         const out = []
         if (schema.show === "colors")
-            out.push(qsTr("Colors"))
+            out.push({ text: qsTr("Colors"), label: qsTr("Colors"), clear: () => setShow("all") })
         else if (schema.show === "style")
-            out.push(qsTr("Style"))
+            out.push({ text: qsTr("Style"), label: qsTr("Style"), clear: () => setShow("all") })
+        if (schema.sharedOnly)
+            out.push({ text: qsTr("Shared values"), label: qsTr("Shared"), clear: () => setSharedOnly(false) })
+        if (schema.following !== "")
+            out.push({ text: qsTr("Following %1").arg(schema.followingTitle), label: qsTr("Following"),
+                       clear: () => setFollowing("") })
+        else if (schema.group !== "everything") {
+            const title = schema.groups.find(g => g.name === schema.group)?.title ?? schema.group
+            out.push({ text: title, label: title, clear: () => setGroup("everything") })
+        }
         if (schema.changedOnly)
-            out.push(qsTr("Changed"))
+            out.push({ text: qsTr("Changed"), label: qsTr("Changed"), clear: () => setChangedOnly(false) })
         return out
     }
 
@@ -53,6 +63,12 @@ Item {
             openRowMenu.target = target
             openRowMenu.restart()
         }
+        else if (item.startsWith("group:"))
+            schema.group = item.slice(6)
+        else if (item.startsWith("following:"))
+            schema.following = item.slice(10)
+        else if (item === "shared")
+            schema.sharedOnly = true
         else if (item === "session")
             sessionPopup.open()
         else if (item === "changed") {
@@ -97,8 +113,28 @@ Item {
         list.sectionJump.swap(keepingSection(() => root.schema.changedOnly = on), on ? 1 : -1)
     }
 
-    function showFollowers(section, key) {
-        list.sectionJump.swap(keepingSection(() => root.schema.following = section + "." + key), 1)
+    function setSharedOnly(on) {
+        list.sectionJump.swap(keepingSection(() => root.schema.sharedOnly = on), on ? 1 : -1)
+    }
+
+    function setGroup(group) {
+        list.sectionJump.swap(keepingSection(() => root.schema.group = group), group === "everything" ? -1 : 1)
+    }
+
+    function setFollowing(target) {
+        list.sectionJump.swap(keepingSection(() => root.schema.following = target), target === "" ? -1 : 1)
+    }
+
+    function showFollowers(section, key) { setFollowing(section + "." + key) }
+
+    function clearFilters() {
+        list.sectionJump.swap(keepingSection(() => {
+            root.schema.show = "all"
+            root.schema.sharedOnly = false
+            root.schema.group = "everything"
+            root.schema.following = ""
+            root.schema.changedOnly = false
+        }), -1)
     }
 
     function showSetting(section, key) {
@@ -154,6 +190,9 @@ Item {
             if (root.Window.window.visible) {
                 root.schema.show = "all"
                 root.schema.changedOnly = false
+                root.schema.sharedOnly = false
+                root.schema.group = "everything"
+                root.schema.following = ""
             }
         }
     }
@@ -321,7 +360,7 @@ Item {
 
                     Label {
                         id: showLabel
-                        text: (root.filters.length > 0 ? root.filters.join(" · ") : qsTr("Show"))
+                        text: (root.filters.length > 0 ? root.filters.map(f => f.label).join(" · ") : qsTr("Show"))
                               + (root.schema.changedCount > 0 ? " (" + root.schema.changedCount + ")" : "")
                         color: showButton.foreground
                     }
@@ -369,10 +408,77 @@ Item {
                             onPicked: id => root.setShow(id)
                         }
 
+                        CaptionLabel {
+                            Layout.fillWidth: true
+                            text: qsTr("Group")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize + 1
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.settingsWindow.themePopupRowSpacing
+
+                            Repeater {
+                                model: root.schema.groups
+
+                                delegate: Rectangle {
+                                    id: groupRow
+                                    required property var modelData
+                                    readonly property bool picked: root.schema.following === ""
+                                                                   && root.schema.group === modelData.name
+
+                                    Layout.fillWidth: true
+                                    implicitHeight: groupLabel.implicitHeight + 8
+                                    radius: Theme.settingsWindow.themePopupRowRadius
+                                    color: picked ? Theme.settingsWindow.themePopupSelectedBackground : "transparent"
+
+                                    Label {
+                                        id: groupLabel
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: groupRow.modelData.title
+                                        color: Theme.controls.descriptionColor
+                                        font.weight: groupRow.picked ? Theme.font.emphasisWeight : Font.Normal
+                                    }
+                                    Label {
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: groupRow.modelData.count
+                                        color: Theme.controls.descriptionColor
+                                        opacity: 0.7
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.setGroup(groupRow.modelData.name)
+                                    }
+                                }
+                            }
+                        }
+
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: 1
                             color: Theme.settingsWindow.rowDivider
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Label {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                text: qsTr("Shared values only")
+                                color: Theme.controls.descriptionColor
+                            }
+                            SettingsSwitch {
+                                checked: root.schema.sharedOnly
+                                onToggled: root.setSharedOnly(checked)
+                            }
                         }
 
                         RowLayout {
@@ -410,12 +516,106 @@ Item {
             }
         }
 
+        Rectangle {
+            Layout.fillWidth: true
+            visible: root.filters.length > 0
+            implicitHeight: Math.max(Theme.settingsWindow.filterBannerHeight, bannerRow.implicitHeight)
+            radius: Theme.settingsWindow.filterBannerRadius
+            color: Qt.alpha(Theme.settingsWindow.filterBannerColor, Theme.settingsWindow.filterBannerFillOpacity)
+            border.color: Theme.settingsWindow.filterBannerColor
+            border.width: Theme.settingsWindow.filterBannerBorderWidth
+
+            RowLayout {
+                id: bannerRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: Theme.settingsWindow.filterBannerPadding
+                anchors.rightMargin: Theme.settingsWindow.filterBannerPadding
+                spacing: Theme.settingsWindow.filterBannerSpacing
+
+                Icon {
+                    Layout.alignment: Qt.AlignVCenter
+                    size: Theme.controls.iconSize
+                    path: root.schema.following !== "" ? Icons.link : Icons.filter
+                    color: Theme.settingsWindow.filterBannerColor
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: Theme.settingsWindow.filterBannerSpacing
+
+                    Repeater {
+                        model: root.filters
+
+                        delegate: Rectangle {
+                            id: chip
+                            required property var modelData
+
+                            implicitWidth: chipLabel.implicitWidth + chipClose.width + 12 + Theme.settingsWindow.sourceTagPadding
+                            implicitHeight: chipLabel.implicitHeight + 4
+                            radius: height / 2
+                            color: Qt.alpha(Theme.settingsWindow.filterBannerColor, Theme.settingsWindow.filterBannerChipOpacity)
+
+                            Label {
+                                id: chipLabel
+                                x: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: chip.modelData.text
+                                color: Theme.settingsWindow.filterBannerTextColor
+                                font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+                            }
+                            Icon {
+                                id: chipClose
+                                anchors.right: parent.right
+                                anchors.rightMargin: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                size: Theme.settingsWindow.sourceTagFontSize + 2
+                                path: Icons.close
+                                color: Theme.settingsWindow.filterBannerTextColor
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: chip.modelData.clear()
+                            }
+                        }
+                    }
+
+                    Label {
+                        height: Math.ceil(chipMetrics.height) + 4
+                        verticalAlignment: Text.AlignVCenter
+                        text: list.count === 1 ? qsTr("1 setting") : qsTr("%1 settings").arg(list.count)
+                        color: Theme.settingsWindow.filterBannerColor
+
+                        TextMetrics {
+                            id: chipMetrics
+                            font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+                            text: "0"
+                        }
+                    }
+                }
+
+                Label {
+                    text: qsTr("Clear all")
+                    color: Theme.settingsWindow.filterBannerColor
+                    font.weight: Theme.font.emphasisWeight
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.clearFilters()
+                    }
+                }
+            }
+        }
+
         ThemeSettingsList {
             id: list
             Layout.fillWidth: true
             Layout.fillHeight: true
             schema: root.schema
-            emptyText: root.schema.changedOnly && search.text === ""
+            emptyText: root.filters.length === 1 && root.schema.changedOnly && search.text === ""
                        ? qsTr("Nothing changed yet.")
                        : qsTr("No settings match.")
             onMessage: (text, link) => root.message(text, link)
