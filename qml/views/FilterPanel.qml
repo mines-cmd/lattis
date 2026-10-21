@@ -77,7 +77,7 @@ MotionPopup {
         radius: Theme.filters.sortRadius + 3
         color: "transparent"
         border.color: Theme.filters.focusRing
-        border.width: 2
+        border.width: Theme.filters.focusRingWidth
         property var control: parent
         visible: control?.visualFocus ?? false
     }

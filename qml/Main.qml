@@ -657,7 +657,7 @@ ApplicationWindow {
                 radius: Theme.radius.tiny
                 color: Theme.tooltip.background
                 border.color: Theme.tooltip.border
-                border.width: 1
+                border.width: Theme.tooltip.borderWidth
             }
         }
         Transition {

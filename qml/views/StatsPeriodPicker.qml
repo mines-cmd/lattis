@@ -121,7 +121,7 @@ MotionPopup {
         scale: cellMouse.pressed ? Theme.motion.pressScale : 1
         Behavior on scale { enabled: Motion.on; MotionNumber {} }
         border.color: Theme.filters.focusRing
-        border.width: focused && root.keyboardActive ? 2 : 0
+        border.width: focused && root.keyboardActive ? Theme.filters.focusRingWidth : 0
 
         RowLayout {
             anchors.fill: parent

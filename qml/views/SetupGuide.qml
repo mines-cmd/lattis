@@ -240,7 +240,7 @@ FocusScope {
             fill: Theme.onboarding.cardBackground
             fillEnd: Theme.onboarding.cardBackgroundEnd
             radius: Theme.onboarding.cardRadius
-            border.width: 1
+            border.width: Theme.onboarding.cardBorderWidth
             border.color: Theme.onboarding.cardBorder
             clip: true
 
@@ -300,7 +300,7 @@ FocusScope {
                                     color: step.done ? Qt.alpha(Theme.onboarding.stepDone, Theme.onboarding.stepDoneOpacity)
                                          : step.isCurrent ? Theme.onboarding.stepCurrent
                                          : Qt.alpha(Theme.onboarding.stepCurrent, 0)
-                                    border.width: 2
+                                    border.width: Theme.onboarding.stepBorderWidth
                                     border.color: step.done || step.isCurrent ? Qt.alpha(Theme.onboarding.stepBorder, 0)
                                                                               : Theme.onboarding.stepBorder
 

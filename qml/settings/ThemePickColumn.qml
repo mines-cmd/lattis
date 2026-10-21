@@ -177,7 +177,7 @@ ColumnLayout {
                                 radius: width / 2
                                 color: modelData ?? "transparent"
                                 border.color: Theme.settingsWindow.rowDivider
-                                border.width: 1
+                                border.width: Theme.settingsWindow.themePopupSwatchBorderWidth
                             }
                         }
                     }
