@@ -156,7 +156,7 @@ Item {
                         height: 7
                         radius: Theme.settingsWindow.previewDotRadius
                         color: card.c.railIcon ?? "transparent"
-                        opacity: 0.4
+                        opacity: Theme.settingsWindow.previewDotOpacity
                     }
                 }
                 Rectangle {

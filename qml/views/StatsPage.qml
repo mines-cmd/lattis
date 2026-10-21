@@ -1812,7 +1812,7 @@ FocusScope {
                                             horizontalAlignment: Text.AlignHCenter
                                             text: weekLine.week !== null && weekLine.week.lastDay - weekLine.week.firstDay >= 2
                                                   ? qsTr("Week %1").arg(weekLine.week.number) : ""
-                                            opacity: 0.8
+                                            opacity: Theme.stats.weekLabelOpacity
                                         }
                                     }
                                 }

@@ -41,7 +41,7 @@ Rectangle {
         path: Icons.image
         size: Math.min(Theme.controls.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
         color: Theme.gameEditor.hintColor
-        opacity: 0.5
+        opacity: Theme.gameEditor.placeholderIconOpacity
     }
     Icon {
         id: spinner
@@ -51,7 +51,7 @@ Rectangle {
         path: Icons.loader
         size: Math.min(Theme.controls.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
         color: Theme.gameEditor.hintColor
-        opacity: 0.5
+        opacity: Theme.gameEditor.placeholderIconOpacity
         RotationAnimation on rotation {
             running: spinner.waiting
             from: 0
