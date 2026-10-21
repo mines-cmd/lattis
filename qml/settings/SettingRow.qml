@@ -27,7 +27,7 @@ Rectangle {
 
     signal resetClicked()
 
-    color: hover.containsMouse ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+    color: hover.containsMouse ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
     Behavior on color { enabled: Motion.fades; MotionColor {} }
     radius: Theme.settingsWindow.rowRadius
@@ -70,8 +70,8 @@ Rectangle {
                     id: titleLabel
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.title
-                    color: Theme.settingsWindow.labelColor
-                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
 
                     HoverHandler { id: titleHover }
                     ToolTip.visible: titleHover.hovered
@@ -89,7 +89,7 @@ Rectangle {
 
                     visible: opacity > 0
                     opacity: root.sourceLabel !== "default" ? 1 : 0
-                    x: titleLabel.width + Theme.settingsWindow.controlSpacing
+                    x: titleLabel.width + Theme.controls.controlSpacing
                     anchors.verticalCenter: parent.verticalCenter
                     implicitWidth: sourceText.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
                     implicitHeight: sourceText.implicitHeight + 2
@@ -126,8 +126,8 @@ Rectangle {
             Label {
                 Layout.fillWidth: true
                 text: root.doc
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
         }

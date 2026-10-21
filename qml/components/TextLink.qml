@@ -13,10 +13,10 @@ AbstractButton {
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
     background: Rectangle {
-        radius: Theme.settingsWindow.inputRadius / 2
+        radius: Theme.controls.inputRadius / 2
         color: "transparent"
-        border.color: Theme.settingsWindow.inputBorderFocus
-        border.width: root.visualFocus ? Theme.settingsWindow.inputBorderWidth : 0
+        border.color: Theme.controls.inputBorderFocus
+        border.width: root.visualFocus ? Theme.controls.inputBorderWidth : 0
     }
     contentItem: Label {
         text: root.text

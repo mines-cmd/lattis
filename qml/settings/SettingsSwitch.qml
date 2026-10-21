@@ -13,14 +13,14 @@ Switch {
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
     indicator: Rectangle {
-        implicitWidth: Theme.settingsWindow.switchWidth
-        implicitHeight: Theme.settingsWindow.switchHeight
+        implicitWidth: Theme.controls.switchWidth
+        implicitHeight: Theme.controls.switchHeight
         x: root.leftPadding
         y: root.topPadding + (root.availableHeight - height) / 2
         radius: height / 2
-        color: root.checked ? Theme.settingsWindow.switchTrackOn : Theme.settingsWindow.switchTrack
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: root.checked ? 0 : Theme.settingsWindow.inputBorderWidth
+        color: root.checked ? Theme.controls.switchTrackOn : Theme.controls.switchTrack
+        border.color: Theme.controls.inputBorder
+        border.width: root.checked ? 0 : Theme.controls.inputBorderWidth
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
 
@@ -32,7 +32,7 @@ Switch {
             radius: width / 2
             y: inset
             x: root.checked ? parent.width - width - inset : inset
-            color: root.checked ? Theme.settingsWindow.switchHandleOn : Theme.settingsWindow.switchHandle
+            color: root.checked ? Theme.controls.switchHandleOn : Theme.controls.switchHandle
             scale: root.hovered ? 1.08 : 1
 
             Behavior on x { enabled: Motion.on; MotionSpring {} }

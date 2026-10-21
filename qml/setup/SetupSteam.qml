@@ -55,8 +55,8 @@ ColumnLayout {
             Label {
                 id: name
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
                 wrapMode: Text.Wrap
             }
             SettingsNote {
@@ -103,7 +103,7 @@ ColumnLayout {
                                              : qsTr("Not in ~/.steam/steam or the Flatpak's folder."))
                       : root.steam.problem ? root.steam.status
                       : (root.steam.flatpak ? qsTr("%1 · Flatpak") : qsTr("%1 · native")).arg(root.steam.shownRoot)
-                noteColor: root.steam.problem ? Theme.settingsWindow.problemsText : Theme.settingsWindow.descriptionColor
+                noteColor: root.steam.problem ? Theme.controls.problemsText : Theme.controls.descriptionColor
 
                 SettingsNote {
                     visible: account.visible
@@ -118,8 +118,8 @@ ColumnLayout {
                 Label {
                     visible: root.steam.found && root.steam.users.length === 1
                     text: root.steam.users[0]?.name ?? ""
-                    color: Theme.settingsWindow.labelColor
-                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
                     font.bold: true
                 }
                 SettingsButton {
@@ -292,7 +292,7 @@ ColumnLayout {
                 anchors.centerIn: parent
                 text: qsTr("No installed games")
                 color: Theme.onboarding.descriptionColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                font.pixelSize: Theme.controls.labelFontSize
             }
         }
 

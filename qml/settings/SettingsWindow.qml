@@ -226,7 +226,7 @@ ApplicationWindow {
         anchors.fill: parent
         fill: Theme.settingsWindow.background
         fillEnd: Theme.settingsWindow.backgroundEnd
-        direction: Theme.settingsWindow.gradientDirection
+        direction: Theme.controls.gradientDirection
     }
 
     RowLayout {
@@ -279,7 +279,7 @@ ApplicationWindow {
                 radius: parent.container ? Theme.settingsWindow.sidebarContainerRadius : 0
                 fill: Theme.settingsWindow.sidebarBackground
                 fillEnd: Theme.settingsWindow.sidebarBackgroundEnd
-                direction: Theme.settingsWindow.gradientDirection
+                direction: Theme.controls.gradientDirection
                 border.color: Theme.settingsWindow.sidebarBorder
                 border.width: parent.container ? Theme.settingsWindow.sidebarBorderWidth : 0
             }
@@ -341,12 +341,12 @@ ApplicationWindow {
                                 Layout.preferredHeight: Theme.settingsWindow.sidebarItemHeight
                                 radius: Theme.settingsWindow.sidebarItemRadius
                                 fill: category.selected ? Theme.settingsWindow.sidebarSelectedBackground
-                                    : mouse.containsMouse && category.modelData.enabled ? Theme.settingsWindow.rowHover
-                                    : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+                                    : mouse.containsMouse && category.modelData.enabled ? Theme.controls.hover
+                                    : Qt.alpha(Theme.controls.hover, 0)
                                 fillEnd: category.selected ? Theme.settingsWindow.sidebarSelectedBackgroundEnd
-                                       : mouse.containsMouse && category.modelData.enabled ? Theme.settingsWindow.rowHover
-                                       : Qt.alpha(Theme.settingsWindow.rowHover, 0)
-                                direction: Theme.settingsWindow.gradientDirection
+                                       : mouse.containsMouse && category.modelData.enabled ? Theme.controls.hover
+                                       : Qt.alpha(Theme.controls.hover, 0)
+                                direction: Theme.controls.gradientDirection
                                 opacity: category.modelData.enabled ? 1 : 0.45
 
                                 Behavior on fill { enabled: Motion.fades; MotionColor {} }
@@ -382,7 +382,7 @@ ApplicationWindow {
                                     Icon {
                                         visible: category.sections.length > 0
                                         path: Icons.chevron
-                                        size: Theme.settingsWindow.iconSize
+                                        size: Theme.controls.iconSize
                                         color: category.selected ? Theme.settingsWindow.sidebarSelectedText
                                              : Theme.settingsWindow.sidebarText
                                         rotation: category.selected && category.expanded ? 90 : 0
@@ -459,7 +459,7 @@ ApplicationWindow {
                                             Layout.preferredHeight: Theme.settingsWindow.sidebarSectionHeight
                                             radius: Theme.settingsWindow.sidebarItemRadius
                                             color: current ? Theme.settingsWindow.sidebarSectionSelectedBackground
-                                                 : linkMouse.containsMouse ? Theme.settingsWindow.rowHover
+                                                 : linkMouse.containsMouse ? Theme.controls.hover
                                                  : "transparent"
 
                                             Rectangle {
@@ -541,8 +541,8 @@ ApplicationWindow {
                             opacity: modelData.page.opacity
                             visible: opacity > 0
                             text: modelData.page.item?.description ?? ""
-                            color: Theme.settingsWindow.descriptionColor
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
                             wrapMode: Text.WordWrap
                             maximumLineCount: 2
                             elide: Text.ElideRight

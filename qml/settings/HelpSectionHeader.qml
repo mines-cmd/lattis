@@ -45,15 +45,15 @@ ColumnLayout {
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
                     path: Icons.openExternal
-                    size: Theme.settingsWindow.iconSize
+                    size: Theme.controls.iconSize
                     color: helpLabel.color
                 }
                 Label {
                     id: helpLabel
                     anchors.verticalCenter: parent.verticalCenter
                     text: helpText
-                    color: helpLink.hovered || helpLink.visualFocus ? Theme.settingsWindow.labelColor
-                                                                    : Theme.settingsWindow.descriptionColor
+                    color: helpLink.hovered || helpLink.visualFocus ? Theme.controls.labelColor
+                                                                    : Theme.controls.descriptionColor
                 }
             }
         }

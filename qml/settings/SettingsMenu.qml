@@ -79,7 +79,7 @@ Menu {
     property bool checkColumn: false
     property string iconPath: ""
     readonly property bool iconColumn: {
-        if (!Theme.settingsWindow.menuIcons) return false
+        if (!Theme.menu.icons) return false
         for (let i = 0; i < count; ++i) {
             const item = itemAt(i)
             if (item?.iconPath || item?.subMenu?.iconPath) return true
@@ -87,7 +87,7 @@ Menu {
         return false
     }
 
-    padding: 4
+    padding: Theme.menu.padding
     width: {
         let widest = implicitBackgroundWidth - leftPadding - rightPadding
         for (let i = 0; i < count; ++i) {
@@ -142,11 +142,11 @@ Menu {
         x: fromX * (1 - t)
         width: fromWidth + (root.width - fromWidth) * t
         height: root.height * t
-        implicitWidth: 160
-        radius: Theme.settingsWindow.inputRadius
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+        implicitWidth: Theme.menu.minWidth
+        radius: Theme.controls.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Math.max(1, Theme.controls.inputBorderWidth)
 
         Item {
             id: growMask

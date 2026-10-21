@@ -82,7 +82,7 @@ Item {
 
             SettingsButton {
                 implicitHeight: Theme.settingsWindow.toolbarHeight
-                leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                 rightPadding: leftPadding
                 tip: qsTr("Open settings.toml")
                 iconPath: Icons.openExternal
@@ -114,7 +114,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 40
                 text: qsTr("No shortcuts match.")
-                color: Theme.settingsWindow.descriptionColor
+                color: Theme.controls.descriptionColor
             }
 
             onContentYChanged: root.updateCurrentSection()

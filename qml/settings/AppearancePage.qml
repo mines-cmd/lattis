@@ -39,8 +39,8 @@ Item {
             Label {
                 id: name
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
                 wrapMode: Text.WordWrap
             }
             SettingsNote {
@@ -103,9 +103,9 @@ Item {
             radius: Theme.settingsWindow.cardRadius
             fill: Theme.settingsWindow.cardBackground
             fillEnd: Theme.settingsWindow.cardBackgroundEnd
-            direction: Theme.settingsWindow.gradientDirection
+            direction: Theme.controls.gradientDirection
             border.width: card.active || card.visualFocus ? 2 : Theme.settingsWindow.cardBorderWidth
-            border.color: card.active || card.visualFocus ? Theme.settingsWindow.inputBorderFocus
+            border.color: card.active || card.visualFocus ? Theme.controls.inputBorderFocus
                                                          : Theme.settingsWindow.cardBorder
 
             Rectangle {
@@ -190,8 +190,8 @@ Item {
             Label {
                 Layout.fillWidth: true
                 text: card.modelData
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
                 elide: Text.ElideRight
             }
         }
@@ -282,7 +282,7 @@ Item {
         anchors.centerIn: parent
         modal: true
         Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.dialogPadding
+        padding: Theme.menu.dialogPadding
         width: 320
 
         function openFresh() {
@@ -299,10 +299,10 @@ Item {
         }
 
         background: Rectangle {
-            color: Theme.settingsWindow.popupBackground
-            border.color: Theme.settingsWindow.inputBorder
-            border.width: Theme.settingsWindow.inputBorderWidth
-            radius: Theme.settingsWindow.inputRadius
+            color: Theme.menu.popupBackground
+            border.color: Theme.controls.inputBorder
+            border.width: Theme.controls.inputBorderWidth
+            radius: Theme.controls.inputRadius
         }
 
         ColumnLayout {
@@ -311,21 +311,21 @@ Item {
 
             Label {
                 text: qsTr("Save as theme")
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
             }
             Label {
                 Layout.fillWidth: true
                 text: qsTr("%1 colors with the %2 style").arg(Theme.activeColors).arg(Theme.activeStyle)
-                color: Theme.settingsWindow.descriptionColor
+                color: Theme.controls.descriptionColor
                 wrapMode: Text.WordWrap
             }
 
-            Label { text: qsTr("Name"); color: Theme.settingsWindow.descriptionColor }
+            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
             SettingsTextField {
                 id: saveName
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 onAccepted: if (saveButton.enabled) saveButton.clicked()
             }
             Label {
@@ -334,12 +334,12 @@ Item {
                 Layout.fillWidth: true
                 text: error
                 wrapMode: Text.WordWrap
-                color: Theme.settingsWindow.descriptionColor
+                color: Theme.controls.descriptionColor
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
                 SettingsButton { text: qsTr("Cancel"); onClicked: saveDialog.close() }
                 SettingsButton {
                     id: saveButton
@@ -357,14 +357,14 @@ Item {
         anchors.centerIn: parent
         modal: true
         Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.dialogPadding
+        padding: Theme.menu.dialogPadding
         width: 320
 
         background: Rectangle {
-            color: Theme.settingsWindow.popupBackground
-            border.color: Theme.settingsWindow.inputBorder
-            border.width: Theme.settingsWindow.inputBorderWidth
-            radius: Theme.settingsWindow.inputRadius
+            color: Theme.menu.popupBackground
+            border.color: Theme.controls.inputBorder
+            border.width: Theme.controls.inputBorderWidth
+            radius: Theme.controls.inputRadius
         }
 
         ColumnLayout {
@@ -373,7 +373,7 @@ Item {
 
             Label {
                 text: qsTr("Replace %1?").arg(saveName.text)
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
             }
             Label {
@@ -381,12 +381,12 @@ Item {
                 text: qsTr("There is already a theme with this name. It will name %1 colors and the %2 style instead.")
                           .arg(Theme.activeColors).arg(Theme.activeStyle)
                 wrapMode: Text.WordWrap
-                color: Theme.settingsWindow.descriptionColor
+                color: Theme.controls.descriptionColor
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
                 SettingsButton { text: qsTr("Cancel"); onClicked: replaceDialog.close() }
                 SettingsButton {
                     primary: true

@@ -34,8 +34,8 @@ MotionPopup {
     function openFor(anchorItem, initial, raw) {
         setFromColor(initial)
         reference = (typeof raw === "string" && raw.startsWith("@")) ? raw : ""
-        themeColors = Theme.paletteColors().filter(t => t.name !== excludedName).slice(0, Theme.settingsWindow.colorPickerPaletteColumns
-                                                     * Theme.settingsWindow.colorPickerPaletteRows)
+        themeColors = Theme.paletteColors().filter(t => t.name !== excludedName).slice(0, Theme.colorPicker.themeColumns
+                                                     * Theme.colorPicker.themeRows)
         parent = anchorItem
         // Line up with the swatch's right edge (editors sit on the right), and open above it
         // when there's no room below. `margins` then keeps it inside the window regardless.
@@ -70,30 +70,30 @@ MotionPopup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
     background: Rectangle {
-        color: Theme.settingsWindow.colorPickerBackground
-        border.color: Theme.settingsWindow.colorPickerBorder
-        border.width: Theme.settingsWindow.colorPickerBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.colorPicker.background
+        border.color: Theme.colorPicker.border
+        border.width: Theme.colorPicker.borderWidth
+        radius: Theme.controls.inputRadius
     }
 
     component Marker: Rectangle {
         color: "transparent"
-        border.color: Theme.settingsWindow.colorPickerMarkerOutline
+        border.color: Theme.colorPicker.markerOutline
         border.width: 1
         Rectangle {
             anchors.fill: parent
             anchors.margins: 1
             color: "transparent"
             radius: Math.max(0, parent.radius - 1)
-            border.color: Theme.settingsWindow.colorPickerMarker
+            border.color: Theme.colorPicker.marker
             border.width: 2
         }
     }
 
     component Checker: Canvas {
         property real radius: 0
-        readonly property var look: [Theme.settingsWindow.checkerSize, Theme.settingsWindow.checkerLight,
-                                     Theme.settingsWindow.checkerDark, radius]
+        readonly property var look: [Theme.colorPicker.checkerSize, Theme.colorPicker.checkerLight,
+                                     Theme.colorPicker.checkerDark, radius]
         onLookChanged: requestPaint()
         onPaint: {
             const ctx = getContext("2d")
@@ -101,11 +101,11 @@ MotionPopup {
             ctx.beginPath()
             ctx.roundedRect(0, 0, width, height, radius, radius)
             ctx.clip()
-            const size = Theme.settingsWindow.checkerSize
+            const size = Theme.colorPicker.checkerSize
             for (let y = 0; y < height; y += size) {
                 for (let x = 0; x < width; x += size) {
-                    ctx.fillStyle = ((x + y) / size) % 2 === 0 ? Theme.settingsWindow.checkerLight
-                                                               : Theme.settingsWindow.checkerDark
+                    ctx.fillStyle = ((x + y) / size) % 2 === 0 ? Theme.colorPicker.checkerLight
+                                                               : Theme.colorPicker.checkerDark
                     ctx.fillRect(x, y, size, size)
                 }
             }
@@ -132,16 +132,16 @@ MotionPopup {
 
     ColumnLayout {
         width: parent.width
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
 
         RowLayout {
             id: pickerRow
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             Item {
                 id: svSquare
-                Layout.preferredWidth: Theme.settingsWindow.colorPickerSize
-                Layout.preferredHeight: Theme.settingsWindow.colorPickerSize
+                Layout.preferredWidth: Theme.colorPicker.size
+                Layout.preferredHeight: Theme.colorPicker.size
 
                 Rectangle {
                     anchors.fill: parent
@@ -182,8 +182,8 @@ MotionPopup {
             // Hue runs from 360° at the top to 0° at the bottom, as in Photoshop.
             Item {
                 id: hueStrip
-                Layout.preferredWidth: Theme.settingsWindow.colorPickerStripWidth
-                Layout.preferredHeight: Theme.settingsWindow.colorPickerSize
+                Layout.preferredWidth: Theme.colorPicker.stripWidth
+                Layout.preferredHeight: Theme.colorPicker.size
 
                 Rectangle {
                     anchors.fill: parent
@@ -203,8 +203,8 @@ MotionPopup {
 
             Item {
                 id: alphaStrip
-                Layout.preferredWidth: Theme.settingsWindow.colorPickerStripWidth
-                Layout.preferredHeight: Theme.settingsWindow.colorPickerSize
+                Layout.preferredWidth: Theme.colorPicker.stripWidth
+                Layout.preferredHeight: Theme.colorPicker.size
 
                 Checker { anchors.fill: parent }
                 Rectangle {
@@ -224,7 +224,7 @@ MotionPopup {
             readonly property real cell: Math.floor((pickerRow.implicitWidth - (columns - 1) * spacing) / columns)
             visible: root.themeColors.length > 0
             Layout.topMargin: 4
-            columns: Theme.settingsWindow.colorPickerPaletteColumns
+            columns: Theme.colorPicker.themeColumns
             spacing: 4
 
             Repeater {
@@ -239,14 +239,14 @@ MotionPopup {
 
                     Checker {
                         anchors.fill: parent
-                        radius: Theme.settingsWindow.colorPickerSwatchRadius
+                        radius: Theme.colorPicker.swatchRadius
                     }
                     Rectangle {
                         anchors.fill: parent
-                        radius: Theme.settingsWindow.colorPickerSwatchRadius
+                        radius: Theme.colorPicker.swatchRadius
                         color: themeSwatch.modelData.color
-                        border.color: Theme.settingsWindow.colorPickerSwatchBorder
-                        border.width: Theme.settingsWindow.colorPickerSwatchBorderWidth
+                        border.color: Theme.colorPicker.swatchBorder
+                        border.width: Theme.colorPicker.swatchBorderWidth
                     }
                     Marker {
                         visible: opacity > 0
@@ -254,7 +254,7 @@ MotionPopup {
                         Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
                         anchors.fill: parent
                         anchors.margins: -2
-                        radius: Theme.settingsWindow.colorPickerSwatchRadius + 2
+                        radius: Theme.colorPicker.swatchRadius + 2
                     }
                     MouseArea {
                         id: swatchMouse

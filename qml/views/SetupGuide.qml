@@ -178,7 +178,7 @@ FocusScope {
             verticalAlignment: Text.AlignVCenter
         }
         background: Rectangle {
-            radius: Theme.settingsWindow.inputRadius
+            radius: Theme.controls.inputRadius
             color: skipButton.hovered ? Theme.palette.hoverOverlay : "transparent"
         }
     }
@@ -379,7 +379,7 @@ FocusScope {
                     ColumnLayout {
                         id: contentCol
                         width: flick.width - (flick.ScrollBar.vertical.visible
-                                              ? Theme.settingsWindow.scrollbarWidth + Theme.layout.spacing : 0)
+                                              ? Theme.controls.scrollbarWidth + Theme.layout.spacing : 0)
                         // Look scrolls its own list of colors so the styles below stay in view. The
                         // other pages fill a card taller than they are, so Welcome can center.
                         height: root.current === root.lookStep ? flick.height

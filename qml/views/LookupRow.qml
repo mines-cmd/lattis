@@ -32,7 +32,7 @@ Rectangle {
     color: Theme.gameEditor.lookupBackground
 
     component Action: SettingsButton {
-        implicitHeight: Theme.settingsWindow.buttonHeight
+        implicitHeight: Theme.controls.buttonHeight
         leftPadding: 10
         rightPadding: 10
     }
@@ -41,7 +41,7 @@ Rectangle {
         property string source
         implicitHeight: Theme.gameEditor.pickCoverHeight
         implicitWidth: implicitHeight * 3 / 4
-        radius: Theme.settingsWindow.inputRadius
+        radius: Theme.controls.inputRadius
         color: Theme.gameEditor.artPreviewBackground
         clip: true
 
@@ -66,7 +66,7 @@ Rectangle {
 
             Icon {
                 path: Icons.loader
-                size: Theme.settingsWindow.iconSize
+                size: Theme.controls.iconSize
                 color: Theme.gameEditor.lookupText
                 RotationAnimation on rotation {
                     running: root.phase === "running"
@@ -167,7 +167,7 @@ Rectangle {
                     required property var modelData
                     width: Math.min(pickRow.implicitWidth + 2 * Theme.layout.spacing, content.width)
                     height: pickRow.implicitHeight + 2 * Theme.layout.spacing / 2
-                    radius: Theme.settingsWindow.inputRadius
+                    radius: Theme.controls.inputRadius
                     color: pickMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
 
                     RowLayout {

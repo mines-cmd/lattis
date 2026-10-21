@@ -65,10 +65,10 @@ FocusScope {
 
     Rectangle {
         anchors.fill: parent
-        radius: Theme.settingsWindow.inputRadius
-        color: Theme.settingsWindow.inputBackground
-        border.color: root.activeFocus ? Theme.settingsWindow.inputBorderFocus : Theme.settingsWindow.inputBorder
-        border.width: root.activeFocus ? Theme.settingsWindow.inputBorderFocusWidth : Theme.settingsWindow.inputBorderWidth
+        radius: Theme.controls.inputRadius
+        color: Theme.controls.inputBackground
+        border.color: root.activeFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
+        border.width: root.activeFocus ? Theme.controls.inputBorderFocusWidth : Theme.controls.inputBorderWidth
 
         TapHandler { onTapped: if (!root.activeFocus) root.edit() }
     }
@@ -99,7 +99,7 @@ FocusScope {
                 width: Math.ceil(text === "" ? placeholder.advanceWidth : digits.advanceWidth)
                 activeFocusOnTab: true
                 font: fontSource.font
-                color: Theme.settingsWindow.inputText
+                color: Theme.controls.inputText
                 horizontalAlignment: TextInput.AlignHCenter
                 maximumLength: spec.digits
                 inputMethodHints: Qt.ImhDigitsOnly
@@ -149,7 +149,7 @@ FocusScope {
                     anchors.fill: parent
                     anchors.leftMargin: -Theme.gameEditor.dateSpacing / 2
                     anchors.rightMargin: -Theme.gameEditor.dateSpacing / 2
-                    radius: Theme.settingsWindow.inputRadius
+                    radius: Theme.controls.inputRadius
                     color: Theme.gameEditor.dateSegmentFocus
                     visible: segment.activeFocus
                 }
@@ -166,7 +166,7 @@ FocusScope {
                     visible: segment.text === ""
                     text: segment.spec.placeholder
                     font: segment.font
-                    color: Theme.settingsWindow.placeholderColor
+                    color: Theme.controls.placeholderColor
                 }
                 TextMetrics {
                     id: digits

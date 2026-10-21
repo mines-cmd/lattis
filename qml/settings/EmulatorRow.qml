@@ -53,7 +53,7 @@ ColumnLayout {
         topRightRadius: topLeftRadius
         bottomLeftRadius: root.lastInCard && details.progress === 0 ? root.cardCornerRadius : radius
         bottomRightRadius: bottomLeftRadius
-        color: headerHover.hovered || header.activeFocus ? Theme.settingsWindow.rowHover : "transparent"
+        color: headerHover.hovered || header.activeFocus ? Theme.controls.hover : "transparent"
         activeFocusOnTab: true
 
         Keys.onReturnPressed: root.toggleRequested()
@@ -73,8 +73,8 @@ ColumnLayout {
 
             Icon {
                 path: Icons.chevron
-                size: Theme.settingsWindow.iconSize
-                color: Theme.settingsWindow.iconColor
+                size: Theme.controls.iconSize
+                color: Theme.controls.iconColor
                 rotation: root.expanded ? 90 : 0
 
                 Behavior on rotation { enabled: Motion.on; MotionNumber {} }
@@ -87,8 +87,8 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: root.emulator.name
-                    color: Theme.settingsWindow.labelColor
-                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
                     elide: Text.ElideRight
 
                     HoverHandler { id: nameHover }
@@ -100,8 +100,8 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: root.emulator.platforms.length > 0 ? root.emulator.platforms.join(", ")
                                                              : qsTr("No platforms")
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     elide: Text.ElideRight
                 }
             }
@@ -110,8 +110,8 @@ ColumnLayout {
                 Layout.maximumWidth: Theme.settingsWindow.editorWidth
                 visible: root.emulator.found
                 text: root.emulator.install
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 elide: Text.ElideMiddle
             }
 
@@ -142,7 +142,7 @@ ColumnLayout {
         id: details
         open: root.expanded
         Layout.fillWidth: true
-        leftPadding: Theme.settingsWindow.rowPadding * 2 + Theme.settingsWindow.iconSize
+        leftPadding: Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize
         rightPadding: Theme.settingsWindow.rowPadding
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
@@ -168,8 +168,8 @@ ColumnLayout {
                     background: null
                     contentItem: Icon {
                         path: Icons.help
-                        size: Theme.settingsWindow.descriptionFontSize
-                        color: idHelp.hovered ? Theme.settingsWindow.labelColor : Theme.settingsWindow.descriptionColor
+                        size: Theme.controls.descriptionFontSize
+                        color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
                     }
                     ToolTip.visible: hovered
                     ToolTip.delay: Theme.tooltip.delay
@@ -179,7 +179,7 @@ ColumnLayout {
             SettingsTextField {
                 id: nameField
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 text: root.emulator.name
                 onEditingFinished: {
                     if (text.trim() === root.emulator.name)
@@ -241,7 +241,7 @@ ColumnLayout {
                         Label {
                             Layout.fillWidth: true
                             text: root.platformChoices.find(c => c.id === platformItem.modelData)?.name ?? platformItem.modelData
-                            color: Theme.settingsWindow.labelColor
+                            color: Theme.controls.labelColor
                             elide: Text.ElideRight
                         }
                         ListButton {
@@ -258,8 +258,8 @@ ColumnLayout {
                     Label {
                         Layout.fillWidth: true
                         text: qsTr("None yet: add the platforms it runs games for.")
-                        color: Theme.settingsWindow.descriptionColor
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.descriptionColor
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         wrapMode: Text.WordWrap
                     }
                 }
@@ -275,7 +275,7 @@ ColumnLayout {
                 SettingsTextField {
                     id: extensionsField
                     Layout.fillWidth: true
-                    implicitHeight: Theme.settingsWindow.inputHeight
+                    implicitHeight: Theme.controls.inputHeight
                     text: root.emulator.extensions.join(" ")
                     placeholderText: qsTr("e.g. 3ds cci cxi")
                     onEditingFinished: {
@@ -293,8 +293,8 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: qsTr("The files in ROM folders that are its games, separated by spaces.")
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
             }
@@ -307,12 +307,12 @@ ColumnLayout {
             SectionTitle { text: qsTr("Program") }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
 
                 SettingsTextField {
                     id: pathField
                     Layout.fillWidth: true
-                    implicitHeight: Theme.settingsWindow.inputHeight
+                    implicitHeight: Theme.controls.inputHeight
                     text: root.emulator.path
                     placeholderText: root.emulator.found ? qsTr("Found automatically")
                                                          : qsTr("Not found; choose the program")
@@ -345,7 +345,7 @@ ColumnLayout {
                     : root.emulator.found ? qsTr("Nothing is at this path, so the one found automatically is used.")
                                           : qsTr("Nothing is at this path.")
                 color: Theme.settingsWindow.installMissing
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
         }
@@ -359,7 +359,7 @@ ColumnLayout {
             SettingsTextField {
                 id: flatpakField
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 text: root.emulator.flatpak
                 placeholderText: qsTr("e.g. org.citra_emu.citra")
                 onEditingFinished: if (text.trim() !== root.emulator.flatpak) root.save("flatpak", text)
@@ -387,7 +387,7 @@ ColumnLayout {
                 SettingsTextField {
                     id: commandField
                     Layout.fillWidth: true
-                    implicitHeight: Theme.settingsWindow.inputHeight
+                    implicitHeight: Theme.controls.inputHeight
                     text: Args.join(root.emulator.commandArgs)
                     placeholderText: "{exe} {args} {rom}"
                     onEditingFinished: {
@@ -408,8 +408,8 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: qsTr("{exe} is the program, {args} the arguments, {rom} the game.")
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
             }
@@ -438,7 +438,7 @@ ColumnLayout {
                 SettingsTextField {
                     id: argsField
                     Layout.fillWidth: true
-                    implicitHeight: Theme.settingsWindow.inputHeight
+                    implicitHeight: Theme.controls.inputHeight
                     text: Args.join(root.emulator.args)
                     placeholderText: qsTr("None")
                     onEditingFinished: {
@@ -454,8 +454,8 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: qsTr("Added for every game, like --fullscreen.")
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
             }
@@ -469,10 +469,10 @@ ColumnLayout {
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: runsText.implicitHeight + 12
-                radius: Theme.settingsWindow.inputRadius
-                color: Theme.settingsWindow.inputBackground
-                border.color: Theme.settingsWindow.inputBorder
-                border.width: Theme.settingsWindow.inputBorderWidth
+                radius: Theme.controls.inputRadius
+                color: Theme.controls.inputBackground
+                border.color: Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth
 
                 TextEdit {
                     id: runsText
@@ -484,10 +484,10 @@ ColumnLayout {
                     readOnly: true
                     selectByMouse: true
                     wrapMode: TextEdit.WrapAnywhere
-                    color: Theme.settingsWindow.descriptionColor
-                    selectionColor: Theme.settingsWindow.inputBorderFocus
+                    color: Theme.controls.descriptionColor
+                    selectionColor: Theme.controls.inputBorderFocus
                     font.family: Theme.font.monoFamily
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    font.pixelSize: Theme.controls.descriptionFontSize
                 }
             }
         }
@@ -496,8 +496,8 @@ ColumnLayout {
             visible: root.error !== ""
             Layout.fillWidth: true
             text: root.error
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
@@ -507,14 +507,14 @@ ColumnLayout {
             text: root.emulator.fileOnly.length > 0
                   ? qsTr("Also set in emulators.toml: %1.").arg(root.emulator.fileOnly.join(", "))
                   : qsTr("Saves and keys, for backups, are set in emulators.toml.")
-            color: Theme.settingsWindow.descriptionColor
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
         RowLayout {
             visible: root.own
             Layout.alignment: Qt.AlignRight
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             SettingsButton {
                 text: qsTr("Open emulators.toml")
@@ -546,13 +546,13 @@ ColumnLayout {
             anchors.centerIn: parent
             modal: true
             Overlay.modal: Scrim {}
-            padding: Theme.settingsWindow.dialogPadding
+            padding: Theme.menu.dialogPadding
             width: 380
             background: Rectangle {
-                color: Theme.settingsWindow.popupBackground
-                border.color: Theme.settingsWindow.inputBorder
-                border.width: Theme.settingsWindow.inputBorderWidth
-                radius: Theme.settingsWindow.inputRadius
+                color: Theme.menu.popupBackground
+                border.color: Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth
+                radius: Theme.controls.inputRadius
             }
 
             ColumnLayout {
@@ -561,7 +561,7 @@ ColumnLayout {
 
                 Label {
                     text: qsTr("Remove %1?").arg(root.emulator.name)
-                    color: Theme.settingsWindow.labelColor
+                    color: Theme.controls.labelColor
                     font.bold: true
                 }
                 Label {
@@ -571,21 +571,21 @@ ColumnLayout {
                              ? " " + (popup.pinned === 1 ? qsTr("1 game is pinned to it and will use its platform's emulators.")
                                                          : qsTr("%1 games are pinned to it and will use their platform's emulators.").arg(popup.pinned))
                              : "")
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
                 Label {
                     visible: popup.error !== ""
                     Layout.fillWidth: true
                     text: popup.error
-                    color: Theme.settingsWindow.problemsText
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.problemsText
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
                 RowLayout {
                     Layout.alignment: Qt.AlignRight
-                    spacing: Theme.settingsWindow.controlSpacing
+                    spacing: Theme.controls.controlSpacing
                     SettingsButton { text: qsTr("Cancel"); onClicked: popup.close() }
                     SettingsButton {
                         danger: true

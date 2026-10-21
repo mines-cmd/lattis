@@ -60,12 +60,12 @@ FocusScope {
 
     Rectangle {
         anchors.fill: parent
-        anchors.margins: -2 * Theme.gameEditor.starSpacing - Theme.settingsWindow.inputBorderWidth
+        anchors.margins: -2 * Theme.gameEditor.starSpacing - Theme.controls.inputBorderWidth
         visible: root.activeFocus
         color: "transparent"
-        radius: Theme.settingsWindow.inputRadius
-        border.color: Theme.settingsWindow.inputBorderFocus
-        border.width: Theme.settingsWindow.inputBorderWidth
+        radius: Theme.controls.inputRadius
+        border.color: Theme.controls.inputBorderFocus
+        border.width: Theme.controls.inputBorderWidth
     }
 
     MouseArea {

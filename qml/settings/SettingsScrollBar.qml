@@ -4,10 +4,10 @@ import QtQuick.Controls.Basic
 ScrollBar {
     id: root
 
-    property int thickness: Theme.settingsWindow.scrollbarWidth
+    property int thickness: Theme.controls.scrollbarWidth
     property bool trackless: false
-    property color handleColor: Theme.settingsWindow.scrollbarHandle
-    property color handleHoverColor: Theme.settingsWindow.scrollbarHandleHover
+    property color handleColor: Theme.controls.scrollbarHandle
+    property color handleHoverColor: Theme.controls.scrollbarHandleHover
 
     policy: ScrollBar.AlwaysOn
     visible: size < 1
@@ -18,7 +18,7 @@ ScrollBar {
     background: Rectangle {
         implicitWidth: root.thickness
         radius: width / 2
-        color: root.trackless ? "transparent" : Theme.settingsWindow.scrollbarTrack
+        color: root.trackless ? "transparent" : Theme.controls.scrollbarTrack
     }
 
     function glide(fromY, duration) {

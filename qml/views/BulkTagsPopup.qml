@@ -65,7 +65,7 @@ MotionPopup {
         Rectangle {
             anchors.fill: parent
             radius: Theme.gameEditor.cardRadius
-            color: Theme.settingsWindow.popupBackground
+            color: Theme.menu.popupBackground
             border.color: Theme.gameEditor.cardBorder
             border.width: Theme.gameEditor.cardBorderWidth
         }
@@ -137,7 +137,7 @@ MotionPopup {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 1
-            color: Theme.settingsWindow.inputBorder
+            color: Theme.controls.inputBorder
         }
 
         RowLayout {
@@ -162,7 +162,7 @@ MotionPopup {
                 }
             }
             SettingsButton {
-                implicitHeight: Theme.settingsWindow.buttonHeight
+                implicitHeight: Theme.controls.buttonHeight
                 leftPadding: Theme.layout.spacing * 1.25
                 rightPadding: leftPadding
                 text: qsTr("Done")

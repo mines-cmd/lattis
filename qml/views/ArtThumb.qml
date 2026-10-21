@@ -39,7 +39,7 @@ Rectangle {
         anchors.centerIn: parent
         visible: thumb.source !== "" && thumbImage.status === Image.Error
         path: Icons.image
-        size: Math.min(Theme.settingsWindow.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
+        size: Math.min(Theme.controls.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
         color: Theme.gameEditor.hintColor
         opacity: 0.5
     }
@@ -49,7 +49,7 @@ Rectangle {
         anchors.centerIn: parent
         visible: waiting
         path: Icons.loader
-        size: Math.min(Theme.settingsWindow.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
+        size: Math.min(Theme.controls.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
         color: Theme.gameEditor.hintColor
         opacity: 0.5
         RotationAnimation on rotation {

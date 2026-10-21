@@ -50,14 +50,14 @@ MotionPopup {
     anchors.centerIn: parent
     modal: true
     Overlay.modal: Scrim {}
-    padding: Theme.settingsWindow.dialogPadding
+    padding: Theme.menu.dialogPadding
     width: 380
 
     background: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     ColumnLayout {
@@ -67,7 +67,7 @@ MotionPopup {
         Label {
             Layout.fillWidth: true
             text: root.permanent ? qsTr("Delete %1 for good?").arg(root.name) : qsTr("Delete %1?").arg(root.name)
-            color: Theme.settingsWindow.labelColor
+            color: Theme.controls.labelColor
             font.bold: true
             elide: Text.ElideRight
         }
@@ -77,7 +77,7 @@ MotionPopup {
                   ? qsTr("There is no trash to move %1 to. Deleting it can't be undone.").arg(root.file)
                   : qsTr("This moves %1 to the trash.").arg(root.file)
             wrapMode: Text.WordWrap
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
         Label {
             visible: root.themes.length > 0
@@ -88,26 +88,26 @@ MotionPopup {
                   : qsTr("Used by the themes %1, which will fall back to %2 until you pick others.")
                         .arg(root.names(root.themes)).arg(root.fallback)
             wrapMode: Text.WordWrap
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
         Label {
             visible: root.files.length > 0
             Layout.fillWidth: true
             text: qsTr("Extended by %1, which will fall back the same way.").arg(root.names(root.files))
             wrapMode: Text.WordWrap
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
         Label {
             visible: root.active
             Layout.fillWidth: true
             text: qsTr("It is in use now; %1 takes its place.").arg(root.fallback)
             wrapMode: Text.WordWrap
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
             SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
             SettingsButton {
                 danger: true

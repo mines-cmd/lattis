@@ -91,7 +91,7 @@ MotionPopup {
         font.pixelSize: Theme.gameEditor.hintFontSize
     }
     component BoxHint: Hint {
-        leftPadding: Theme.settingsWindow.checkboxSize + Theme.layout.spacing
+        leftPadding: Theme.controls.checkboxSize + Theme.layout.spacing
     }
     component PathHint: BoxHint {
         font.family: Theme.font.monoFamily

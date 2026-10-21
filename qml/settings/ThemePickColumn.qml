@@ -32,11 +32,11 @@ ColumnLayout {
     onActiveNameChanged: refresh()
     Component.onCompleted: refresh()
 
-    spacing: Theme.settingsWindow.controlSpacing
+    spacing: Theme.controls.controlSpacing
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
 
         Label {
             Layout.fillWidth: true
@@ -131,12 +131,12 @@ ColumnLayout {
             }
 
             width: ListView.view.width - scrollBarGap
-            readonly property real scrollBarGap: list.contentHeight > list.height ? Theme.settingsWindow.themePopupScrollbarWidth + Theme.settingsWindow.controlSpacing : 0
+            readonly property real scrollBarGap: list.contentHeight > list.height ? Theme.settingsWindow.themePopupScrollbarWidth + Theme.controls.controlSpacing : 0
             implicitHeight: content.implicitHeight + 2 * Theme.settingsWindow.themePopupPadding
             height: implicitHeight
             radius: Theme.settingsWindow.themePopupRowRadius
             color: active ? Theme.settingsWindow.themePopupSelectedBackground
-                          : hover.hovered ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+                          : hover.hovered ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
             border.color: Theme.settingsWindow.themePopupSelectedBorder
             border.width: active ? Theme.settingsWindow.themePopupSelectedBorderWidth : 0
 
@@ -153,12 +153,12 @@ ColumnLayout {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Theme.settingsWindow.controlSpacing
+                    spacing: Theme.controls.controlSpacing
 
                     Label {
                         Layout.fillWidth: true
                         text: row.modelData
-                        color: Theme.settingsWindow.inputText
+                        color: Theme.controls.inputText
                         elide: Text.ElideRight
                     }
 
@@ -187,7 +187,7 @@ ColumnLayout {
                     visible: !root.isColors
                     Layout.fillWidth: true
                     text: row.text
-                    color: Theme.settingsWindow.descriptionColor
+                    color: Theme.controls.descriptionColor
                     font.pixelSize: Theme.settingsWindow.themePopupDescriptionFontSize
                     elide: Text.ElideRight
                 }
@@ -216,7 +216,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
 
         SettingsButton {
             Layout.fillWidth: true

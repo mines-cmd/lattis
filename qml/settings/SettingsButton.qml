@@ -13,12 +13,12 @@ AbstractButton {
     property bool danger: false
     property string tip
 
-    readonly property color foreground: primary ? Theme.settingsWindow.buttonPrimaryText
-                                        : danger ? Theme.settingsWindow.buttonDangerText : Theme.settingsWindow.buttonText
+    readonly property color foreground: primary ? Theme.controls.buttonPrimaryText
+                                        : danger ? Theme.controls.buttonDangerText : Theme.controls.buttonText
     readonly property bool filled: primary || danger
     property color textColor: foreground
 
-    implicitHeight: text === "" ? Theme.settingsWindow.inputHeight : Theme.settingsWindow.buttonHeight
+    implicitHeight: text === "" ? Theme.controls.inputHeight : Theme.controls.buttonHeight
     implicitWidth: content.implicitWidth + leftPadding + rightPadding
     leftPadding: 14
     rightPadding: 14
@@ -43,12 +43,12 @@ AbstractButton {
         RowLayout {
             id: content
             anchors.centerIn: parent
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             Icon {
                 visible: root.iconPath !== ""
                 path: root.iconPath
-                size: Theme.settingsWindow.iconSize
+                size: Theme.controls.iconSize
                 color: root.textColor
                 rotation: root.iconRotation
 
@@ -67,20 +67,20 @@ AbstractButton {
 
     background: Surface {
         scale: root.dip
-        radius: Theme.settingsWindow.inputRadius
+        radius: Theme.controls.inputRadius
         fill: root.flat ? "transparent"
-            : root.primary ? Theme.settingsWindow.buttonPrimaryBackground
-            : root.danger ? Theme.settingsWindow.buttonDangerBackground
-            : root.hovered ? Theme.settingsWindow.buttonHoverBackground
-            : Theme.settingsWindow.buttonBackground
+            : root.primary ? Theme.controls.buttonPrimaryBackground
+            : root.danger ? Theme.controls.buttonDangerBackground
+            : root.hovered ? Theme.controls.buttonHoverBackground
+            : Theme.controls.buttonBackground
         fillEnd: root.flat ? "transparent"
-               : root.primary ? Theme.settingsWindow.buttonPrimaryBackgroundEnd
-               : root.danger ? Theme.settingsWindow.buttonDangerBackground
-               : root.hovered ? Theme.settingsWindow.buttonHoverBackgroundEnd
-               : Theme.settingsWindow.buttonBackgroundEnd
-        direction: Theme.settingsWindow.gradientDirection
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: root.filled || root.flat || !root.bordered ? 0 : Theme.settingsWindow.inputBorderWidth
+               : root.primary ? Theme.controls.buttonPrimaryBackgroundEnd
+               : root.danger ? Theme.controls.buttonDangerBackground
+               : root.hovered ? Theme.controls.buttonHoverBackgroundEnd
+               : Theme.controls.buttonBackgroundEnd
+        direction: Theme.controls.gradientDirection
+        border.color: Theme.controls.inputBorder
+        border.width: root.filled || root.flat || !root.bordered ? 0 : Theme.controls.inputBorderWidth
 
         Behavior on fill { enabled: Motion.fades; MotionColor {} }
         Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }

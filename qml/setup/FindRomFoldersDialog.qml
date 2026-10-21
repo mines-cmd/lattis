@@ -47,10 +47,10 @@ MotionPopup {
     y: Math.round((parent.height - height) / 2)
     modal: true
     Overlay.modal: Scrim {}
-    padding: Theme.settingsWindow.dialogPadding
+    padding: Theme.menu.dialogPadding
     width: 480
     background: Rectangle {
-        color: Theme.settingsWindow.popupBackground
+        color: Theme.menu.popupBackground
         border.color: Theme.onboarding.cardBorder
         border.width: 1
         radius: Theme.onboarding.cardRadius
@@ -68,23 +68,23 @@ MotionPopup {
         width: parent.width
         spacing: 12
 
-        Label { text: qsTr("Find ROM folders"); color: Theme.settingsWindow.labelColor; font.bold: true }
+        Label { text: qsTr("Find ROM folders"); color: Theme.controls.labelColor; font.bold: true }
         Label {
             Layout.fillWidth: true
             text: qsTr("Pick the folder that holds one folder per platform. Its folders are matched to platforms by name.")
-            color: Theme.settingsWindow.descriptionColor
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             SettingsTextField {
                 id: field
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 placeholderText: qsTr("e.g. ~/Games/roms")
                 onEditingFinished: root.refresh(text)
             }
@@ -110,17 +110,17 @@ MotionPopup {
 
             Label {
                 text: qsTr("Matched")
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 font.bold: true
             }
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: matchedColumn.implicitHeight + 8
-                radius: Theme.settingsWindow.inputRadius
-                color: Theme.settingsWindow.inputBackground
-                border.color: Theme.settingsWindow.inputBorder
-                border.width: Theme.settingsWindow.inputBorderWidth
+                radius: Theme.controls.inputRadius
+                color: Theme.controls.inputBackground
+                border.color: Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth
 
                 ColumnLayout {
                     id: matchedColumn
@@ -138,7 +138,7 @@ MotionPopup {
 
                             Layout.fillWidth: true
                             Layout.preferredHeight: 32
-                            spacing: Theme.settingsWindow.controlSpacing
+                            spacing: Theme.controls.controlSpacing
                             opacity: matchRow.modelData.already ? 0.5 : 1
 
                             SettingsCheckBox {
@@ -150,21 +150,21 @@ MotionPopup {
                                 Layout.preferredWidth: 130
                                 text: matchRow.modelData.folder
                                 font.family: Theme.font.monoFamily
-                                font.pixelSize: Theme.settingsWindow.pathFontSize
-                                color: Theme.settingsWindow.inputText
+                                font.pixelSize: Theme.controls.pathFontSize
+                                color: Theme.controls.inputText
                                 elide: Text.ElideRight
                             }
-                            Icon { path: Icons.chevron; size: 14; color: Theme.settingsWindow.iconColor }
+                            Icon { path: Icons.chevron; size: 14; color: Theme.controls.iconColor }
                             Label {
                                 Layout.fillWidth: true
                                 text: matchRow.modelData.platformName
-                                color: Theme.settingsWindow.labelColor
+                                color: Theme.controls.labelColor
                             }
                             Label {
                                 visible: matchRow.modelData.already
                                 text: qsTr("Already added")
-                                color: Theme.settingsWindow.descriptionColor
-                                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                                color: Theme.controls.descriptionColor
+                                font.pixelSize: Theme.controls.descriptionFontSize
                             }
                         }
                     }
@@ -179,8 +179,8 @@ MotionPopup {
 
             Label {
                 text: qsTr("Not matched")
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 font.bold: true
             }
             Flow {
@@ -196,16 +196,16 @@ MotionPopup {
 
                         implicitWidth: chipLabel.implicitWidth + 16
                         implicitHeight: 24
-                        radius: Theme.settingsWindow.inputRadius
-                        color: Theme.settingsWindow.inputBackground
+                        radius: Theme.controls.inputRadius
+                        color: Theme.controls.inputBackground
 
                         Label {
                             id: chipLabel
                             anchors.centerIn: parent
                             text: chip.modelData.folder
                             font.family: Theme.font.monoFamily
-                            font.pixelSize: Theme.settingsWindow.pathFontSize
-                            color: Theme.settingsWindow.descriptionColor
+                            font.pixelSize: Theme.controls.pathFontSize
+                            color: Theme.controls.descriptionColor
                         }
                     }
                 }
@@ -213,8 +213,8 @@ MotionPopup {
             Label {
                 Layout.fillWidth: true
                 text: qsTr("Add these by hand if they hold games.")
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
         }
@@ -223,13 +223,13 @@ MotionPopup {
             visible: root.folder !== "" && root.matches.length === 0
             Layout.fillWidth: true
             text: qsTr("Nothing found in this folder.")
-            color: Theme.settingsWindow.descriptionColor
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.descriptionFontSize
         }
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
             SettingsButton {

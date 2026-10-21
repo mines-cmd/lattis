@@ -163,7 +163,7 @@ Item {
                 SessionChangesPopup {
                     id: sessionPopup
                     x: sessionButton.width - width
-                    y: sessionButton.height + Theme.settingsWindow.controlSpacing
+                    y: sessionButton.height + Theme.controls.controlSpacing
                     onShowSetting: (section, key) => root.showSetting(section, key)
                 }
             }
@@ -178,7 +178,7 @@ Item {
                 }
 
                 implicitHeight: Theme.settingsWindow.toolbarHeight
-                implicitWidth: Math.ceil(Math.min(themeMetrics.advanceWidth, 200)) + 1 + Theme.settingsWindow.iconSize + Theme.settingsWindow.controlSpacing + leftPadding + rightPadding
+                implicitWidth: Math.ceil(Math.min(themeMetrics.advanceWidth, 200)) + 1 + Theme.controls.iconSize + Theme.controls.controlSpacing + leftPadding + rightPadding
                 Layout.preferredWidth: implicitWidth
                 Layout.minimumWidth: 70
                 leftPadding: 12
@@ -187,7 +187,7 @@ Item {
                 onClicked: themePopup.opened ? themePopup.close() : themePopup.open()
 
                 contentItem: RowLayout {
-                    spacing: Theme.settingsWindow.controlSpacing
+                    spacing: Theme.controls.controlSpacing
 
                     Label {
                         id: themeLabel
@@ -198,8 +198,8 @@ Item {
                     }
                     Icon {
                         path: Icons.chevron
-                        size: Theme.settingsWindow.iconSize
-                        color: Theme.settingsWindow.iconColor
+                        size: Theme.controls.iconSize
+                        color: Theme.controls.iconColor
                         rotation: themePopup.opened ? -90 : 90
 
                         Behavior on rotation { enabled: Motion.on; MotionNumber {} }
@@ -219,7 +219,7 @@ Item {
                     x: Math.max(pageLeft + edgeGap - buttonLeft,
                                 Math.min(themeButton.width - width,
                                          windowWidth - edgeGap - buttonLeft - width))
-                    y: themeButton.height + Theme.settingsWindow.controlSpacing
+                    y: themeButton.height + Theme.controls.controlSpacing
                     width: fitWidth
                     padding: Theme.settingsWindow.themePopupPadding
                     // The button toggles it; a press on it must not close and reopen it.
@@ -227,7 +227,7 @@ Item {
                     onAboutToShow: { buttonRight = themeButton.mapToItem(null, themeButton.width, 0).x; pageLeft = root.mapToItem(null, 0, 0).x; colorsColumn.refresh(); styleColumn.refresh() }
 
                     dim: true
-                    Overlay.modeless: Scrim { color: Theme.settingsWindow.popupScrim }
+                    Overlay.modeless: Scrim { color: Theme.menu.popupScrim }
 
                     background: PopoverBackground {}
 
@@ -274,7 +274,7 @@ Item {
             SettingsButton {
                 id: showButton
                 implicitHeight: Theme.settingsWindow.toolbarHeight
-                implicitWidth: showLabel.implicitWidth + Theme.settingsWindow.iconSize + Theme.settingsWindow.controlSpacing + leftPadding + rightPadding
+                implicitWidth: showLabel.implicitWidth + Theme.controls.iconSize + Theme.controls.controlSpacing + leftPadding + rightPadding
                 Layout.minimumWidth: implicitWidth
                 primary: root.filters.length > 0
                 leftPadding: 12
@@ -283,7 +283,7 @@ Item {
                 onClicked: showPopup.opened ? showPopup.close() : showPopup.open()
 
                 contentItem: RowLayout {
-                    spacing: Theme.settingsWindow.controlSpacing
+                    spacing: Theme.controls.controlSpacing
 
                     Label {
                         id: showLabel
@@ -293,8 +293,8 @@ Item {
                     }
                     Icon {
                         path: Icons.chevron
-                        size: Theme.settingsWindow.iconSize
-                        color: showButton.primary ? showButton.foreground : Theme.settingsWindow.iconColor
+                        size: Theme.controls.iconSize
+                        color: showButton.primary ? showButton.foreground : Theme.controls.iconColor
                         rotation: showPopup.opened ? -90 : 90
 
                         Behavior on rotation { enabled: Motion.on; MotionNumber {} }
@@ -304,13 +304,13 @@ Item {
                 MotionPopup {
                     id: showPopup
                     x: showButton.width - width
-                    y: showButton.height + Theme.settingsWindow.controlSpacing
+                    y: showButton.height + Theme.controls.controlSpacing
                     padding: 10
                     width: 260
                     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
                     dim: true
-                    Overlay.modeless: Scrim { color: Theme.settingsWindow.popupScrim }
+                    Overlay.modeless: Scrim { color: Theme.menu.popupScrim }
 
                     background: PopoverBackground {}
 
@@ -321,8 +321,8 @@ Item {
                         Label {
                             Layout.fillWidth: true
                             text: qsTr("Show")
-                            color: Theme.settingsWindow.descriptionColor
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize + 1
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize + 1
                             font.weight: Font.DemiBold
                             font.capitalization: Font.AllUppercase
                             font.letterSpacing: 0.8
@@ -356,14 +356,14 @@ Item {
                                     Layout.fillWidth: true
                                     elide: Text.ElideRight
                                     text: qsTr("Hide unchanged settings")
-                                    color: Theme.settingsWindow.descriptionColor
+                                    color: Theme.controls.descriptionColor
                                 }
                             }
                             Label {
                                 visible: root.schema.changedCount > 0
                                 text: root.schema.changedCount
                                 font.weight: Font.DemiBold
-                                color: Theme.settingsWindow.descriptionColor
+                                color: Theme.controls.descriptionColor
                             }
                             SettingsSwitch {
                                 checked: root.schema.changedOnly

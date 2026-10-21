@@ -100,13 +100,13 @@ ColumnLayout {
 
                     Icon {
                         path: Icons.forPlatform(entry.modelData.icon)
-                        size: Theme.settingsWindow.iconSize + 4
-                        color: Theme.settingsWindow.labelColor
+                        size: Theme.controls.iconSize + 4
+                        color: Theme.controls.labelColor
                     }
                     Label {
                         text: entry.modelData.name
-                        color: Theme.settingsWindow.labelColor
-                        font.pixelSize: Theme.settingsWindow.labelFontSize
+                        color: Theme.controls.labelColor
+                        font.pixelSize: Theme.controls.labelFontSize
                         font.bold: true
                     }
                     Rectangle {
@@ -134,7 +134,7 @@ ColumnLayout {
                         visible: !entry.platformInstalled
                         text: qsTr("Needs %1").arg(root.emulatorOf(entry.modelData)?.name ?? "")
                         color: Theme.settingsWindow.installMissing
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        font.pixelSize: Theme.controls.descriptionFontSize
                     }
                     SettingsButton {
                         visible: entry.platformInstalled
@@ -151,7 +151,7 @@ ColumnLayout {
                 ColumnLayout {
                     visible: entry.platformInstalled
                     Layout.fillWidth: true
-                    Layout.leftMargin: Theme.settingsWindow.iconSize + 14
+                    Layout.leftMargin: Theme.controls.iconSize + 14
                     spacing: 6
 
                     Repeater {
@@ -168,8 +168,8 @@ ColumnLayout {
                             Rectangle {
                                 Layout.fillWidth: true
                                 implicitHeight: pathLabel.implicitHeight + 12
-                                radius: Theme.settingsWindow.inputRadius
-                                color: Theme.settingsWindow.inputBackground
+                                radius: Theme.controls.inputRadius
+                                color: Theme.controls.inputBackground
 
                                 Label {
                                     id: pathLabel
@@ -178,15 +178,15 @@ ColumnLayout {
                                     anchors.verticalCenter: parent.verticalCenter
                                     anchors.margins: 10
                                     text: folderRow.modelData
-                                    color: Theme.settingsWindow.inputText
+                                    color: Theme.controls.inputText
                                     font.family: Theme.font.monoFamily
-                                    font.pixelSize: Theme.settingsWindow.pathFontSize
+                                    font.pixelSize: Theme.controls.pathFontSize
                                     elide: Text.ElideMiddle
                                 }
                             }
                             SettingsButton {
                                 implicitHeight: pathLabel.implicitHeight + 12
-                                leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                                leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                 rightPadding: leftPadding
                                 iconPath: Icons.close
                                 tip: qsTr("Stop scanning this folder")
@@ -199,8 +199,8 @@ ColumnLayout {
                         visible: entry.modelData.romFolders.length === 0
                         Layout.fillWidth: true
                         text: qsTr("No ROM folders yet.")
-                        color: Theme.settingsWindow.descriptionColor
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.descriptionColor
+                        font.pixelSize: Theme.controls.descriptionFontSize
                     }
                 }
             }

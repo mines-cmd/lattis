@@ -59,14 +59,16 @@ progress_radius = 2
 window_border_width = 0
 card_border_width = 0
 sidebar_border_width = 0
-input_border_width = 0
 key_chip_border_width = 0
 controls_margin = 10
 sidebar_item_radius = 2
 source_tag_radius = 2
+key_chip_radius = 2
+
+[controls]
+input_border_width = 0
 input_radius = 2
 checkbox_radius = 2
-key_chip_radius = 2
 
 [notice]
 border_width = 2

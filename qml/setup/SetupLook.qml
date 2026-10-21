@@ -193,12 +193,12 @@ ColumnLayout {
 
                 Rectangle {
                     Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: Theme.settingsWindow.checkboxSize
-                    implicitHeight: Theme.settingsWindow.checkboxSize
+                    implicitWidth: Theme.controls.checkboxSize
+                    implicitHeight: Theme.controls.checkboxSize
                     radius: width / 2
-                    color: Theme.settingsWindow.inputBackground
-                    border.color: card.active ? Theme.settingsWindow.checkboxOn : Theme.settingsWindow.inputBorder
-                    border.width: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+                    color: Theme.controls.inputBackground
+                    border.color: card.active ? Theme.controls.checkboxOn : Theme.controls.inputBorder
+                    border.width: Math.max(1, Theme.controls.inputBorderWidth)
                     Behavior on border.color { enabled: Motion.fades; MotionColor {} }
 
                     MarkPop {
@@ -212,7 +212,7 @@ ColumnLayout {
                             width: parent.width - 2 * inset
                             height: width
                             radius: width / 2
-                            color: Theme.settingsWindow.checkboxOn
+                            color: Theme.controls.checkboxOn
                         }
                     }
                 }
@@ -313,7 +313,7 @@ ColumnLayout {
                         onClicked: Theme.setStyle(modelData)
 
                         background: Surface {
-                            radius: Theme.settingsWindow.inputRadius
+                            radius: Theme.controls.inputRadius
                             fill: Theme.onboarding.panelBackground
                             fillEnd: Theme.onboarding.panelBackgroundEnd
                             direction: Theme.onboarding.gradientDirection

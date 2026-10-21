@@ -92,20 +92,20 @@ SettingsMenu {
         readonly property var tag: modelData
         readonly property int state: root.tagStates[tag.name] ?? 0
 
-        implicitHeight: Theme.settingsWindow.menuItemHeight
+        implicitHeight: Theme.menu.itemHeight
         implicitWidth: tagContent.implicitWidth + 20
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.settingsWindow.menuItemRadius
-            color: tagHover.hovered ? Theme.settingsWindow.rowHover : "transparent"
+            radius: Theme.menu.itemRadius
+            color: tagHover.hovered ? Theme.controls.hover : "transparent"
         }
         RowLayout {
             id: tagContent
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            spacing: 6
+            anchors.leftMargin: Theme.menu.itemPadding
+            anchors.rightMargin: Theme.menu.itemPadding
+            spacing: Theme.menu.itemSpacing
 
             Item {
                 implicitWidth: 16
@@ -115,14 +115,14 @@ SettingsMenu {
                     visible: tagRow.state === 1
                     path: Icons.check
                     size: 16
-                    color: Theme.settingsWindow.inputText
+                    color: Theme.controls.inputText
                 }
                 Rectangle {
                     anchors.centerIn: parent
                     visible: tagRow.state === 2
                     width: 8
                     height: 2
-                    color: Theme.settingsWindow.inputText
+                    color: Theme.controls.inputText
                 }
             }
             Rectangle {
@@ -136,7 +136,7 @@ SettingsMenu {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 text: tagRow.tag.name
-                color: Theme.settingsWindow.inputText
+                color: Theme.controls.inputText
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
             }

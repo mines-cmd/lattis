@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 
 Label {
-    color: Theme.settingsWindow.descriptionColor
-    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+    color: Theme.controls.descriptionColor
+    font.pixelSize: Theme.controls.descriptionFontSize
     wrapMode: Text.WordWrap
 }

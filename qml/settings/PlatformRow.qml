@@ -79,7 +79,7 @@ ColumnLayout {
         topRightRadius: topLeftRadius
         bottomLeftRadius: root.lastInCard && details.progress === 0 && !problemList.visible ? root.cardCornerRadius : radius
         bottomRightRadius: bottomLeftRadius
-        color: headerHover.hovered || header.activeFocus ? Theme.settingsWindow.rowHover : "transparent"
+        color: headerHover.hovered || header.activeFocus ? Theme.controls.hover : "transparent"
         activeFocusOnTab: root.editable
 
         Keys.onReturnPressed: root.toggleRequested()
@@ -103,15 +103,15 @@ ColumnLayout {
             Item {
                 id: handle
                 opacity: root.editable ? (root.draggable ? 1 : 0.4) : 0
-                Layout.preferredWidth: Theme.settingsWindow.iconSize
-                Layout.preferredHeight: Theme.settingsWindow.iconSize
+                Layout.preferredWidth: Theme.controls.iconSize
+                Layout.preferredHeight: Theme.controls.iconSize
 
                 Icon {
                     anchors.centerIn: parent
                     path: Icons.grip
-                    size: Theme.settingsWindow.iconSize
-                    color: handleMouse.containsMouse || handleMouse.pressed ? Theme.settingsWindow.labelColor
-                                                                              : Theme.settingsWindow.iconColor
+                    size: Theme.controls.iconSize
+                    color: handleMouse.containsMouse || handleMouse.pressed ? Theme.controls.labelColor
+                                                                              : Theme.controls.iconColor
                 }
 
                 MouseArea {
@@ -162,8 +162,8 @@ ColumnLayout {
 
             Icon {
                 path: Icons.chevron
-                size: Theme.settingsWindow.iconSize
-                color: Theme.settingsWindow.iconColor
+                size: Theme.controls.iconSize
+                color: Theme.controls.iconColor
                 rotation: root.expanded ? 90 : 0
                 opacity: root.editable ? 1 : 0
 
@@ -172,8 +172,8 @@ ColumnLayout {
 
             Icon {
                 path: Icons.forPlatform(root.platform.icon)
-                size: Theme.settingsWindow.iconSize + 4
-                color: Theme.settingsWindow.labelColor
+                size: Theme.controls.iconSize + 4
+                color: Theme.controls.labelColor
             }
 
             ColumnLayout {
@@ -187,8 +187,8 @@ ColumnLayout {
                     Label {
                         Layout.fillWidth: !inlineProblems.visible
                         text: root.platform.name
-                        color: Theme.settingsWindow.labelColor
-                        font.pixelSize: Theme.settingsWindow.labelFontSize
+                        color: Theme.controls.labelColor
+                        font.pixelSize: Theme.controls.labelFontSize
                         elide: Text.ElideRight
 
                         HoverHandler { id: nameHover }
@@ -201,8 +201,8 @@ ColumnLayout {
                         visible: text !== ""
                         Layout.fillWidth: true
                         text: root.platform.problems.filter(p => p.command === "").map(p => p.text).join(" · ")
-                        color: Theme.settingsWindow.problemsText
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.problemsText
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         elide: Text.ElideRight
 
                         HoverHandler { id: problemsHover }
@@ -222,8 +222,8 @@ ColumnLayout {
                             parts.push(root.platform.emulatorNames.join(", "))
                         return parts.join(" · ")
                     }
-                    color: Theme.settingsWindow.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     elide: Text.ElideRight
                 }
             }
@@ -241,7 +241,7 @@ ColumnLayout {
                 Layout.preferredWidth: Theme.settingsWindow.toolbarHeight + 12
                 leftPadding: 16
                 rightPadding: 2
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 horizontalAlignment: TextInput.AlignHCenter
                 validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
                 text: root.position
@@ -253,7 +253,7 @@ ColumnLayout {
                     anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
                     text: "#"
                     font: positionField.font
-                    color: Theme.settingsWindow.placeholderColor
+                    color: Theme.controls.placeholderColor
                 }
 
                 function apply() {
@@ -280,7 +280,7 @@ ColumnLayout {
         readonly property var withCommand: root.platform.problems.filter(p => p.command !== "")
         visible: withCommand.length > 0
         Layout.fillWidth: true
-        Layout.leftMargin: Theme.settingsWindow.rowPadding * 2 + Theme.settingsWindow.iconSize
+        Layout.leftMargin: Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize
         Layout.rightMargin: Theme.settingsWindow.rowPadding
         Layout.bottomMargin: Theme.settingsWindow.rowPadding
         spacing: 6
@@ -298,22 +298,22 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: problem.modelData.text
-                    color: Theme.settingsWindow.problemsText
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.problemsText
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
                 RowLayout {
                     visible: problem.modelData.command !== ""
                     Layout.fillWidth: true
-                    spacing: Theme.settingsWindow.controlSpacing
+                    spacing: Theme.controls.controlSpacing
 
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: commandText.implicitHeight + 12
-                        radius: Theme.settingsWindow.inputRadius
-                        color: Theme.settingsWindow.inputBackground
-                        border.color: Theme.settingsWindow.inputBorder
-                        border.width: Theme.settingsWindow.inputBorderWidth
+                        radius: Theme.controls.inputRadius
+                        color: Theme.controls.inputBackground
+                        border.color: Theme.controls.inputBorder
+                        border.width: Theme.controls.inputBorderWidth
 
                         TextEdit {
                             id: commandText
@@ -325,9 +325,9 @@ ColumnLayout {
                             readOnly: true
                             selectByMouse: true
                             wrapMode: TextEdit.WrapAnywhere
-                            color: Theme.settingsWindow.inputText
-                            selectionColor: Theme.settingsWindow.inputBorderFocus
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                            color: Theme.controls.inputText
+                            selectionColor: Theme.controls.inputBorderFocus
+                            font.pixelSize: Theme.controls.descriptionFontSize
                         }
                     }
                     SettingsButton {
@@ -348,7 +348,7 @@ ColumnLayout {
         id: details
         open: root.expanded && root.editable
         Layout.fillWidth: true
-        leftPadding: Theme.settingsWindow.rowPadding * 2 + Theme.settingsWindow.iconSize
+        leftPadding: Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize
         rightPadding: Theme.settingsWindow.rowPadding
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
@@ -373,8 +373,8 @@ ColumnLayout {
                     background: null
                     contentItem: Icon {
                         path: Icons.help
-                        size: Theme.settingsWindow.descriptionFontSize
-                        color: idHelp.hovered ? Theme.settingsWindow.labelColor : Theme.settingsWindow.descriptionColor
+                        size: Theme.controls.descriptionFontSize
+                        color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
                     }
                     ToolTip.visible: hovered
                     ToolTip.delay: Theme.tooltip.delay
@@ -383,12 +383,12 @@ ColumnLayout {
             }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
 
                 SettingsTextField {
                     id: nameField
                     Layout.fillWidth: true
-                    implicitHeight: Theme.settingsWindow.inputHeight
+                    implicitHeight: Theme.controls.inputHeight
                     text: root.platform.name
                     onEditingFinished: if (text.trim() !== root.platform.name) root.save("name", text)
                 }
@@ -405,10 +405,10 @@ ColumnLayout {
                         x: iconButton.width - width
                         padding: 6
                         background: Rectangle {
-                            radius: Theme.settingsWindow.inputRadius
-                            color: Theme.settingsWindow.popupBackground
-                            border.color: Theme.settingsWindow.inputBorder
-                            border.width: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+                            radius: Theme.controls.inputRadius
+                            color: Theme.menu.popupBackground
+                            border.color: Theme.controls.inputBorder
+                            border.width: Math.max(1, Theme.controls.inputBorderWidth)
                         }
 
                         Grid {
@@ -421,7 +421,7 @@ ColumnLayout {
                                 SettingsButton {
                                     required property string modelData
 
-                                    leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                                    leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                     rightPadding: leftPadding
                                     iconPath: Icons.forPlatform(modelData)
                                     primary: root.platform.icon === modelData
@@ -500,12 +500,12 @@ ColumnLayout {
 
                         Label {
                             text: emulatorItem.index + 1
-                            color: Theme.settingsWindow.descriptionColor
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
                         }
                         Label {
                             text: emulatorItem.info ? emulatorItem.info.name : emulatorItem.modelData
-                            color: Theme.settingsWindow.inputText
+                            color: Theme.controls.inputText
                         }
                         Label {
                             Layout.fillWidth: true
@@ -513,9 +513,9 @@ ColumnLayout {
                                 : emulatorItem.info.detecting ? ""
                                 : !emulatorItem.info.found ? qsTr("not installed")
                                 : emulatorItem.index === 0 ? qsTr("default") : ""
-                            color: emulatorItem.info && emulatorItem.info.found ? Theme.settingsWindow.descriptionColor
+                            color: emulatorItem.info && emulatorItem.info.found ? Theme.controls.descriptionColor
                                                                                  : Theme.settingsWindow.installMissing
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                            font.pixelSize: Theme.controls.descriptionFontSize
                             elide: Text.ElideRight
                         }
                         ListButton {
@@ -548,8 +548,8 @@ ColumnLayout {
                     Label {
                         Layout.fillWidth: true
                         text: qsTr("None: this platform's games don't launch in an emulator.")
-                        color: Theme.settingsWindow.descriptionColor
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.descriptionColor
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         wrapMode: Text.WordWrap
                     }
                 }
@@ -576,9 +576,9 @@ ColumnLayout {
                         Label {
                             Layout.fillWidth: true
                             text: folderItem.modelData
-                            color: Theme.settingsWindow.inputText
+                            color: Theme.controls.inputText
                             font.family: Theme.font.monoFamily
-                            font.pixelSize: Theme.settingsWindow.pathFontSize
+                            font.pixelSize: Theme.controls.pathFontSize
                             elide: Text.ElideMiddle
                         }
                         ListButton {
@@ -596,8 +596,8 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: root.platform.emulators.length > 0 ? qsTr("None yet: add the folder this platform's ROMs are in.")
                                                                  : qsTr("None.")
-                        color: Theme.settingsWindow.descriptionColor
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.descriptionColor
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         wrapMode: Text.WordWrap
                     }
                 }
@@ -608,14 +608,14 @@ ColumnLayout {
             visible: root.error !== ""
             Layout.fillWidth: true
             text: root.error
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             SettingsCheckBox {
                 Layout.fillWidth: true

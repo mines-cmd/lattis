@@ -19,15 +19,15 @@ AbstractButton {
         Icon {
             anchors.verticalCenter: parent.verticalCenter
             path: listAction.iconPath
-            size: Theme.settingsWindow.iconSize
+            size: Theme.controls.iconSize
             color: listActionLabel.color
         }
         Label {
             id: listActionLabel
             anchors.verticalCenter: parent.verticalCenter
             text: listAction.text
-            color: listAction.hovered || listAction.visualFocus ? Theme.settingsWindow.labelColor
-                                                                : Theme.settingsWindow.descriptionColor
+            color: listAction.hovered || listAction.visualFocus ? Theme.controls.labelColor
+                                                                : Theme.controls.descriptionColor
 
             Behavior on color { enabled: Motion.fades; MotionColor {} }
         }

@@ -16,14 +16,14 @@ MotionPopup {
 
     padding: Theme.layout.spacing
     background: Rectangle {
-        radius: Theme.settingsWindow.inputRadius
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
+        radius: Theme.controls.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
     }
 
     contentItem: Grid {
-        columns: Theme.settingsWindow.paletteColumns
+        columns: Theme.colorPicker.paletteColumns
         spacing: Theme.layout.spacing / 2
 
         Repeater {
@@ -34,13 +34,13 @@ MotionPopup {
                 required property color modelData
                 required property int index
 
-                width: Theme.settingsWindow.swatchSize
-                height: Theme.settingsWindow.swatchSize
-                radius: Theme.settingsWindow.inputRadius
+                width: Theme.colorPicker.swatchSize
+                height: Theme.colorPicker.swatchSize
+                radius: Theme.controls.inputRadius
                 color: modelData
-                border.color: swatch.index === root.current || mouse.containsMouse ? Theme.settingsWindow.inputText
-                                                                                   : Theme.settingsWindow.inputBorder
-                border.width: Theme.settingsWindow.inputBorderWidth * 2
+                border.color: swatch.index === root.current || mouse.containsMouse ? Theme.controls.inputText
+                                                                                   : Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth * 2
 
                 MouseArea {
                     id: mouse

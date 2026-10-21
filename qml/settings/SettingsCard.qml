@@ -11,7 +11,7 @@ Surface {
     radius: Theme.settingsWindow.cardRadius
     fill: panel ? Theme.onboarding.panelBackground : Theme.settingsWindow.cardBackground
     fillEnd: panel ? Theme.onboarding.panelBackgroundEnd : Theme.settingsWindow.cardBackgroundEnd
-    direction: panel ? Theme.onboarding.gradientDirection : Theme.settingsWindow.gradientDirection
+    direction: panel ? Theme.onboarding.gradientDirection : Theme.controls.gradientDirection
     border.color: panel ? Theme.onboarding.panelBorder : Theme.settingsWindow.cardBorder
     border.width: panel ? 1 : Theme.settingsWindow.cardBorderWidth
 

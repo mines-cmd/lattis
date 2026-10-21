@@ -39,7 +39,7 @@ background = "#181825ca"
 hover_background = "#313244ca"
 hover_background_end = "#313244ca"
 
-[settings_window]
+[controls]
 scrollbar_handle_hover = "#6c7086"
 
 [stat_chip]

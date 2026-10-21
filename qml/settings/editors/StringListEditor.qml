@@ -46,7 +46,7 @@ ColumnLayout {
             Label {
                 Layout.fillWidth: true
                 text: modelData
-                color: Theme.settingsWindow.inputText
+                color: Theme.controls.inputText
             }
             IconButton {
                 implicitWidth: 22; implicitHeight: 22

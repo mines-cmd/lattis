@@ -78,8 +78,8 @@ Item {
 
             Label {
                 id: name
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
             }
             Label {
                 visible: field.marked
@@ -114,8 +114,8 @@ Item {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
@@ -148,8 +148,8 @@ Item {
                         Label {
                             Layout.fillWidth: true
                             text: qsTr("Import Steam games")
-                            color: Theme.settingsWindow.labelColor
-                            font.pixelSize: Theme.settingsWindow.labelFontSize
+                            color: Theme.controls.labelColor
+                            font.pixelSize: Theme.controls.labelFontSize
                         }
                         SettingsSwitch {
                             checked: root.steam.enabled
@@ -159,7 +159,7 @@ Item {
                     SettingsNote {
                         Layout.fillWidth: true
                         text: root.steam.status
-                        color: root.steam.problem ? Theme.settingsWindow.problemsText : Theme.settingsWindow.descriptionColor
+                        color: root.steam.problem ? Theme.controls.problemsText : Theme.controls.descriptionColor
                     }
 
                     Field {
@@ -172,8 +172,8 @@ Item {
                             path: root.steam.found ? root.steam.root : root.steam.path
                             onCopied: root.message(qsTr("Copied"))
                             missingText: root.steam.enabled ? qsTr("Not found") : qsTr("Not looked for")
-                            missingColor: root.steam.problem ? Theme.settingsWindow.problemsText
-                                                             : Theme.settingsWindow.descriptionColor
+                            missingColor: root.steam.problem ? Theme.controls.problemsText
+                                                             : Theme.controls.descriptionColor
 
                             SettingsButton {
                                 visible: root.steam.path !== ""
@@ -224,8 +224,8 @@ Item {
                                   : root.steam.shortcuts === 0 ? qsTr("Steam has no non-Steam games yet.")
                                   : qsTr("Steam has %n non-Steam game(s), %1 in the library.", "", root.steam.shortcuts)
                                         .arg(root.steam.shortcutsInLibrary)
-                            color: Theme.settingsWindow.labelColor
-                            font.pixelSize: Theme.settingsWindow.labelFontSize
+                            color: Theme.controls.labelColor
+                            font.pixelSize: Theme.controls.labelFontSize
                             wrapMode: Text.WordWrap
                         }
                         SettingsButton {
@@ -292,13 +292,13 @@ Item {
                                 Label {
                                     Layout.fillWidth: true
                                     text: modelData.title
-                                    color: Theme.settingsWindow.labelColor
-                                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                                    color: Theme.controls.labelColor
+                                    font.pixelSize: Theme.controls.labelFontSize
                                     font.bold: true
                                     elide: Text.ElideRight
                                 }
                                 SettingsButton {
-                                    implicitHeight: Theme.settingsWindow.footerButtonHeight
+                                    implicitHeight: Theme.controls.footerButtonHeight
                                     text: (modelData.adds ?? false) ? qsTr("Undo and remove the game") : qsTr("Undo")
                                     enabled: !GameRunner.closingSteam
                                     onClicked: error.text = Library.undoSteamEdits(modelData.id)
@@ -319,9 +319,9 @@ Item {
                                         Layout.fillWidth: true
                                         text: qsTr("%1  →  %2").arg(modelData.from !== "" ? modelData.from : qsTr("none"))
                                                                .arg(modelData.to !== "" ? modelData.to : qsTr("none"))
-                                        color: Theme.settingsWindow.inputText
+                                        color: Theme.controls.inputText
                                         font.family: Theme.font.monoFamily
-                                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                                        font.pixelSize: Theme.controls.descriptionFontSize
                                         wrapMode: Text.WrapAnywhere
                                     }
                                 }
@@ -353,7 +353,7 @@ Item {
                                   + (steamRunning ? qsTr("Steam is running") : qsTr("Steam is closed"))
                         }
                         SettingsButton {
-                            implicitHeight: Theme.settingsWindow.footerButtonHeight
+                            implicitHeight: Theme.controls.footerButtonHeight
                             text: GameRunner.closingSteam ? qsTr("Closing Steam") : qsTr("Close Steam and apply")
                             enabled: !GameRunner.closingSteam
                             onClicked: error.text = GameRunner.closeSteamAndApply()
@@ -426,8 +426,8 @@ Item {
                                 spacing: Theme.layout.spacing
                                 Label {
                                     text: modelData.name
-                                    color: Theme.settingsWindow.labelColor
-                                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                                    color: Theme.controls.labelColor
+                                    font.pixelSize: Theme.controls.labelFontSize
                                     font.bold: true
                                 }
                                 SettingsNote {
@@ -439,9 +439,9 @@ Item {
                             Label {
                                 Layout.fillWidth: true
                                 text: modelData.adds
-                                color: Theme.settingsWindow.inputText
+                                color: Theme.controls.inputText
                                 font.family: Theme.font.monoFamily
-                                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                                font.pixelSize: Theme.controls.descriptionFontSize
                                 wrapMode: Text.WrapAnywhere
                             }
                             SettingsNote {

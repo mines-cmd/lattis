@@ -390,7 +390,7 @@ Item {
                         id: tabButton
                         required property var modelData
                         readonly property bool current: root.kind === modelData.id
-                        implicitHeight: Theme.settingsWindow.buttonHeight
+                        implicitHeight: Theme.controls.buttonHeight
                         implicitWidth: tabRow.implicitWidth + 24
                         hoverEnabled: true
                         onClicked: {
@@ -405,9 +405,9 @@ Item {
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
 
                         background: Rectangle {
-                            radius: Theme.settingsWindow.inputRadius
-                            color: tabButton.current ? Theme.settingsWindow.buttonBackground
-                                 : tabButton.hovered ? Theme.settingsWindow.rowHover : "transparent"
+                            radius: Theme.controls.inputRadius
+                            color: tabButton.current ? Theme.controls.buttonBackground
+                                 : tabButton.hovered ? Theme.controls.hover : "transparent"
                         }
                         contentItem: Item {
                             RowLayout {
@@ -416,7 +416,7 @@ Item {
                                 spacing: 6
                                 Label {
                                     text: tabButton.modelData.name
-                                    color: Theme.settingsWindow.buttonText
+                                    color: Theme.controls.buttonText
                                     font.bold: tabButton.current
                                 }
                                 Rectangle {
@@ -435,9 +435,9 @@ Item {
                     id: searchField
                     visible: root.searching
                     Layout.preferredWidth: parent.width / 2
-                    implicitHeight: Theme.settingsWindow.buttonHeight
-                    leftPadding: Theme.settingsWindow.iconSize + 22
-                    rightPadding: Theme.settingsWindow.iconSize + 22
+                    implicitHeight: Theme.controls.buttonHeight
+                    leftPadding: Theme.controls.iconSize + 22
+                    rightPadding: Theme.controls.iconSize + 22
                     placeholderText: qsTr("Search SteamGridDB")
                     text: root.searchText
                     onTextEdited: {
@@ -455,16 +455,16 @@ Item {
                         anchors.leftMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         path: Icons.search
-                        size: Theme.settingsWindow.iconSize
-                        color: Theme.settingsWindow.iconColor
+                        size: Theme.controls.iconSize
+                        color: Theme.controls.iconColor
                     }
                     Icon {
                         anchors.right: parent.right
                         anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         path: Icons.close
-                        size: Theme.settingsWindow.iconSize
-                        color: searchCloseMouse.containsMouse ? Theme.settingsWindow.inputText : Theme.settingsWindow.iconColor
+                        size: Theme.controls.iconSize
+                        color: searchCloseMouse.containsMouse ? Theme.controls.inputText : Theme.controls.iconColor
 
                         MouseArea {
                             id: searchCloseMouse
@@ -545,7 +545,7 @@ Item {
                             topRightRadius: topLeftRadius
                             bottomLeftRadius: resultRow.index === root.searchResults.length - 1 && resultList.contentHeight >= resultList.height ? corner : 0
                             bottomRightRadius: bottomLeftRadius
-                            color: resultRow.highlighted ? Theme.settingsWindow.rowHover : "transparent"
+                            color: resultRow.highlighted ? Theme.controls.hover : "transparent"
                         }
                         Rectangle {
                             visible: resultRow.index < root.searchResults.length - 1
@@ -564,7 +564,7 @@ Item {
                             Label {
                                 Layout.fillWidth: true
                                 text: resultRow.modelData.name
-                                color: Theme.settingsWindow.buttonText
+                                color: Theme.controls.buttonText
                                 elide: Text.ElideRight
                             }
                             Rectangle {
@@ -590,8 +590,8 @@ Item {
                             }
                             Icon {
                                 path: Icons.chevronRight
-                                size: Theme.settingsWindow.iconSize
-                                color: Theme.settingsWindow.iconColor
+                                size: Theme.controls.iconSize
+                                color: Theme.controls.iconColor
                             }
                         }
                         MouseArea {
@@ -610,7 +610,7 @@ Item {
                     anchors.centerIn: parent
                     visible: waiting && root.searchText.trim() !== ""
                     path: Icons.loader
-                    size: Theme.settingsWindow.iconSize * 1.5
+                    size: Theme.controls.iconSize * 1.5
                     color: Theme.gameEditor.hintColor
                     RotationAnimation on rotation {
                         running: searchSpinner.visible
@@ -730,7 +730,7 @@ Item {
                                 anchors.centerIn: parent
                                 path: Icons.check
                                 size: 16
-                                color: Theme.settingsWindow.buttonPrimaryText
+                                color: Theme.controls.buttonPrimaryText
                             }
                         }
                     }

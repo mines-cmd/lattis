@@ -33,8 +33,8 @@ Item {
             Label {
                 id: name
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
                 wrapMode: Text.WordWrap
             }
             SettingsNote {
@@ -163,7 +163,7 @@ Item {
                         SettingsTextField {
                             id: sessionField
                             implicitWidth: 80
-                            implicitHeight: Theme.settingsWindow.inputHeight
+                            implicitHeight: Theme.controls.inputHeight
                             rightPadding: unit.width + 2 * Theme.layout.spacing
                             text: GameRunner.minSessionSeconds.toString()
                             horizontalAlignment: TextInput.AlignRight
@@ -177,7 +177,7 @@ Item {
                                 anchors.rightMargin: Theme.layout.spacing
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: qsTr("s")
-                                color: Theme.settingsWindow.descriptionColor
+                                color: Theme.controls.descriptionColor
                                 font.pixelSize: sessionField.font.pixelSize
                             }
                         }
@@ -197,8 +197,8 @@ Item {
                         spacing: Theme.layout.spacing / 2
                         Label {
                             text: qsTr("Data folder")
-                            color: Theme.settingsWindow.labelColor
-                            font.pixelSize: Theme.settingsWindow.labelFontSize
+                            color: Theme.controls.labelColor
+                            font.pixelSize: Theme.controls.labelFontSize
                         }
                         PathField {
                             Layout.fillWidth: true
@@ -233,7 +233,7 @@ Item {
                         Layout.fillWidth: true
                         logoHeight: Theme.about.pageLogoHeight
                         backgroundColor: Theme.settingsWindow.cardBackground
-                        labelColor: Theme.settingsWindow.labelColor
+                        labelColor: Theme.controls.labelColor
                         linkColor: Theme.palette.accent
                     }
                 }
@@ -246,8 +246,8 @@ Item {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
     }

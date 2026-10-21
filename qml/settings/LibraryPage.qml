@@ -103,13 +103,13 @@ Item {
         property string tip
         signal clicked()
 
-        implicitWidth: Theme.settingsWindow.swatchSize
-        implicitHeight: Theme.settingsWindow.swatchSize
-        radius: Theme.settingsWindow.inputRadius
+        implicitWidth: Theme.colorPicker.swatchSize
+        implicitHeight: Theme.colorPicker.swatchSize
+        radius: Theme.controls.inputRadius
         color: Theme.tags.palette.length > 0 ? Theme.tags.palette[colorIndex % Theme.tags.palette.length]
                                               : Theme.palette.surfaceRaised
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
 
         MouseArea {
             id: swatchMouse
@@ -132,10 +132,10 @@ Item {
     }
 
     component DialogBackground: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     component SectionHeader: Label {
@@ -171,8 +171,8 @@ Item {
     }
 
     component Muted: Label {
-        color: Theme.settingsWindow.descriptionColor
-        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+        color: Theme.controls.descriptionColor
+        font.pixelSize: Theme.controls.descriptionFontSize
         wrapMode: Text.WordWrap
     }
 
@@ -196,7 +196,7 @@ Item {
             Label {
                 Layout.fillWidth: true
                 text: qsTr("Delete the tag %1?").arg(deleteDialog.tag.name)
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
                 wrapMode: Text.WordWrap
             }
@@ -243,7 +243,7 @@ Item {
             Label {
                 Layout.fillWidth: true
                 text: qsTr("Move %1 to the trash?").arg(trashDialog.entry.places)
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
                 wrapMode: Text.WordWrap
             }
@@ -302,8 +302,8 @@ Item {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
@@ -359,8 +359,8 @@ Item {
                                     spacing: 0
                                     Label {
                                         text: backupRow.modelData.name
-                                        color: Theme.settingsWindow.labelColor
-                                        font.pixelSize: Theme.settingsWindow.labelFontSize
+                                        color: Theme.controls.labelColor
+                                        font.pixelSize: Theme.controls.labelFontSize
                                     }
                                     Muted {
                                         Layout.fillWidth: true
@@ -391,8 +391,8 @@ Item {
                             spacing: 0
                             Label {
                                 text: qsTr("Import")
-                                color: Theme.settingsWindow.labelColor
-                                font.pixelSize: Theme.settingsWindow.labelFontSize
+                                color: Theme.controls.labelColor
+                                font.pixelSize: Theme.controls.labelFontSize
                             }
                             Muted {
                                 Layout.fillWidth: true
@@ -428,8 +428,8 @@ Item {
                                     Label {
                                         Layout.fillWidth: true
                                         text: asideRow.modelData.title
-                                        color: Theme.settingsWindow.labelColor
-                                        font.pixelSize: Theme.settingsWindow.labelFontSize
+                                        color: Theme.controls.labelColor
+                                        font.pixelSize: Theme.controls.labelFontSize
                                         elide: Text.ElideMiddle
                                     }
                                     Muted {
@@ -498,7 +498,7 @@ Item {
                                 Label {
                                     Layout.fillWidth: true
                                     text: hiddenRow.modelData.title
-                                    color: Theme.settingsWindow.labelColor
+                                    color: Theme.controls.labelColor
                                     elide: Text.ElideRight
                                 }
                                 Muted { text: hiddenRow.modelData.platformName }
@@ -531,7 +531,7 @@ Item {
                     SettingsTextField {
                         id: newTagField
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Theme.settingsWindow.inputHeight
+                        Layout.preferredHeight: Theme.controls.inputHeight
                         placeholderText: qsTr("New tag")
                         onAccepted: root.addTag()
                     }
@@ -552,8 +552,8 @@ Item {
                     Layout.bottomMargin: Theme.layout.spacing
                     text: qsTr("There's already a tag called %1; tags are case-sensitive, so this adds another one.")
                               .arg(twin)
-                    color: Theme.settingsWindow.problemsText
-                    font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                    color: Theme.controls.problemsText
+                    font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
 
@@ -606,7 +606,7 @@ Item {
                                         visible: root.renaming !== tagRow.modelData.name
                                         Layout.fillWidth: true
                                         text: tagRow.modelData.name
-                                        color: Theme.settingsWindow.labelColor
+                                        color: Theme.controls.labelColor
                                         elide: Text.ElideRight
                                     }
                                     SettingsTextField {
@@ -631,14 +631,14 @@ Item {
                                                                            : qsTr("%1 games").arg(tagRow.modelData.games)
                                     }
                                     SettingsButton {
-                                        leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                                        leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                         rightPadding: leftPadding
                                         iconPath: Icons.edit
                                         tip: qsTr("Rename %1").arg(tagRow.modelData.name)
                                         onClicked: root.renaming = tagRow.modelData.name
                                     }
                                     SettingsButton {
-                                        leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                                        leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                         rightPadding: leftPadding
                                         iconPath: Icons.close
                                         tip: qsTr("Delete %1").arg(tagRow.modelData.name)
@@ -709,8 +709,8 @@ Item {
 
                                 Label {
                                     text: qsTr("Colors")
-                                    color: Theme.settingsWindow.labelColor
-                                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                                    color: Theme.controls.labelColor
+                                    font.pixelSize: Theme.controls.labelFontSize
                                 }
                                 Muted {
                                     Layout.fillWidth: true
@@ -720,7 +720,7 @@ Item {
                             }
                             SettingsButton {
                                 visible: root.paletteCustomized
-                                leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                                leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                 rightPadding: leftPadding
                                 iconPath: Icons.close
                                 tip: qsTr("Reset (remove from %1)").arg(Theme.activeFile("tags", "palette"))
@@ -768,7 +768,7 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.margins: Theme.settingsWindow.rowPadding
                                 text: problemRow.modelData
-                                color: Theme.settingsWindow.problemsText
+                                color: Theme.controls.problemsText
                                 wrapMode: Text.WordWrap
                                 textFormat: Text.PlainText
                             }

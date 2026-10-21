@@ -13,15 +13,15 @@ CheckBox {
 
     indicator: Rectangle {
         id: box
-        implicitWidth: Theme.settingsWindow.checkboxSize
-        implicitHeight: Theme.settingsWindow.checkboxSize
+        implicitWidth: Theme.controls.checkboxSize
+        implicitHeight: Theme.controls.checkboxSize
         x: root.leftPadding
         y: root.topPadding + (root.availableHeight - height) / 2
-        radius: Theme.settingsWindow.checkboxRadius
-        color: root.checked ? Theme.settingsWindow.checkboxOn
-             : root.hovered ? Theme.settingsWindow.buttonHoverBackground : Theme.settingsWindow.inputBackground
-        border.color: root.visualFocus ? Theme.settingsWindow.inputBorderFocus : Theme.settingsWindow.inputBorder
-        border.width: root.visualFocus || (!root.checked && (root.bordered || root.hovered)) ? Math.max(1, Theme.settingsWindow.inputBorderWidth) : 0
+        radius: Theme.controls.checkboxRadius
+        color: root.checked ? Theme.controls.checkboxOn
+             : root.hovered ? Theme.controls.buttonHoverBackground : Theme.controls.inputBackground
+        border.color: root.visualFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
+        border.width: root.visualFocus || (!root.checked && (root.bordered || root.hovered)) ? Math.max(1, Theme.controls.inputBorderWidth) : 0
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
         Behavior on border.color { enabled: Motion.fades; MotionColor {} }
@@ -38,7 +38,7 @@ CheckBox {
                 anchors.centerIn: parent
                 path: Icons.check
                 size: parent.width - 4
-                color: Theme.settingsWindow.checkboxMark
+                color: Theme.controls.checkboxMark
             }
         }
     }
@@ -46,8 +46,8 @@ CheckBox {
     contentItem: Label {
         leftPadding: root.indicator.width + root.spacing
         text: root.text
-        color: Theme.settingsWindow.labelColor
-        font.pixelSize: Theme.settingsWindow.labelFontSize
+        color: Theme.controls.labelColor
+        font.pixelSize: Theme.controls.labelFontSize
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }

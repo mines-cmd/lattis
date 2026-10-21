@@ -166,8 +166,8 @@ ColumnLayout {
                 Label {
                     Layout.fillWidth: true
                     text: qsTr("Look up new games")
-                    color: Theme.settingsWindow.labelColor
-                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
                 }
                 SettingsNote {
                     Layout.fillWidth: true
@@ -178,7 +178,7 @@ ColumnLayout {
                     id: scanError
                     Layout.fillWidth: true
                     visible: text !== ""
-                    color: Theme.settingsWindow.problemsText
+                    color: Theme.controls.problemsText
                 }
             }
             SettingsSwitch {

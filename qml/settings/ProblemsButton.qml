@@ -10,14 +10,14 @@ Rectangle {
     visible: problems.length > 0
     Layout.preferredWidth: problemsLabel.implicitWidth + 20
     Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-    radius: Theme.settingsWindow.inputRadius
-    color: Theme.settingsWindow.problemsBackground
+    radius: Theme.controls.inputRadius
+    color: Theme.controls.problemsBackground
 
     Label {
         id: problemsLabel
         anchors.centerIn: parent
         text: qsTr("%n problem(s)", "", root.problems.length)
-        color: Theme.settingsWindow.problemsText
+        color: Theme.controls.problemsText
     }
 
     MouseArea {
@@ -33,8 +33,8 @@ Rectangle {
         width: 420
         padding: 12
         background: Rectangle {
-            color: Theme.settingsWindow.problemsBackground
-            radius: Theme.settingsWindow.inputRadius
+            color: Theme.controls.problemsBackground
+            radius: Theme.controls.inputRadius
         }
         contentItem: ColumnLayout {
             spacing: 4
@@ -50,9 +50,9 @@ Rectangle {
                     Label {
                         Layout.fillWidth: true
                         text: row.modelData
-                        color: Theme.settingsWindow.problemsText
+                        color: Theme.controls.problemsText
                         wrapMode: Text.WordWrap
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        font.pixelSize: Theme.controls.descriptionFontSize
                     }
                     IconButton {
                         visible: row.file !== ""
@@ -61,7 +61,7 @@ Rectangle {
                         implicitWidth: 24
                         implicitHeight: 24
                         iconSize: 18
-                        iconColor: Theme.settingsWindow.problemsText
+                        iconColor: Theme.controls.problemsText
                         icon: Icons.openExternal
                         tip: qsTr("Open the file")
                         onClicked: GameRunner.openFile(row.file)

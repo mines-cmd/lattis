@@ -11,16 +11,16 @@ RadioButton {
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
     indicator: Rectangle {
-        implicitWidth: Theme.settingsWindow.checkboxSize
-        implicitHeight: Theme.settingsWindow.checkboxSize
+        implicitWidth: Theme.controls.checkboxSize
+        implicitHeight: Theme.controls.checkboxSize
         x: root.leftPadding
         y: root.topPadding + (root.availableHeight - height) / 2
         radius: width / 2
-        color: root.hovered && !root.checked ? Theme.settingsWindow.buttonHoverBackground
-                                             : Theme.settingsWindow.inputBackground
-        border.color: root.visualFocus ? Theme.settingsWindow.inputBorderFocus
-                    : root.checked ? Theme.settingsWindow.checkboxOn : Theme.settingsWindow.inputBorder
-        border.width: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+        color: root.hovered && !root.checked ? Theme.controls.buttonHoverBackground
+                                             : Theme.controls.inputBackground
+        border.color: root.visualFocus ? Theme.controls.inputBorderFocus
+                    : root.checked ? Theme.controls.checkboxOn : Theme.controls.inputBorder
+        border.width: Math.max(1, Theme.controls.inputBorderWidth)
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
         Behavior on border.color { enabled: Motion.fades; MotionColor {} }
@@ -38,7 +38,7 @@ RadioButton {
                 width: parent.width - 2 * inset
                 height: width
                 radius: width / 2
-                color: Theme.settingsWindow.checkboxOn
+                color: Theme.controls.checkboxOn
             }
         }
     }
@@ -46,8 +46,8 @@ RadioButton {
     contentItem: Label {
         leftPadding: root.indicator.width + root.spacing
         text: root.text
-        color: Theme.settingsWindow.labelColor
-        font.pixelSize: Theme.settingsWindow.labelFontSize
+        color: Theme.controls.labelColor
+        font.pixelSize: Theme.controls.labelFontSize
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }

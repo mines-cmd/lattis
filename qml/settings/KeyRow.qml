@@ -16,13 +16,13 @@ RowLayout {
     Label {
         id: name
         Layout.preferredWidth: Theme.settingsWindow.labelMinWidth
-        color: Theme.settingsWindow.labelColor
-        font.pixelSize: Theme.settingsWindow.labelFontSize
+        color: Theme.controls.labelColor
+        font.pixelSize: Theme.controls.labelFontSize
     }
     SettingsTextField {
         id: input
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.settingsWindow.inputHeight
+        Layout.preferredHeight: Theme.controls.inputHeight
         echoMode: root.secret && !show.checked ? TextInput.Password : TextInput.Normal
         onTextEdited: root.edited()
         onEditingFinished: root.finished()

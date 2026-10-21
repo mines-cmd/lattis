@@ -60,8 +60,8 @@ ColumnLayout {
             Label {
                 Layout.fillWidth: true
                 text: qsTr("Bringing your games in")
-                color: Theme.settingsWindow.labelColor
-                font.pixelSize: Theme.settingsWindow.labelFontSize
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
                 font.bold: true
             }
             Label {
@@ -73,7 +73,7 @@ ColumnLayout {
             Icon {
                 visible: !root.busy
                 path: Icons.check
-                size: Theme.settingsWindow.labelFontSize
+                size: Theme.controls.labelFontSize
                 color: Theme.onboarding.foundColor
             }
             Label {
@@ -135,7 +135,7 @@ ColumnLayout {
                         required property var modelData
                         width: (tiles.width - (tiles.columns - 1) * tiles.spacing) / tiles.columns
                         height: tile.implicitHeight + 2 * Theme.settingsWindow.rowPadding
-                        radius: Theme.settingsWindow.inputRadius
+                        radius: Theme.controls.inputRadius
                         fill: Theme.onboarding.tileBackground
                         fillEnd: Theme.onboarding.tileBackgroundEnd
                         direction: Theme.onboarding.gradientDirection
@@ -175,8 +175,8 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.bottomMargin: Theme.layout.spacing
             text: qsTr("Good to know")
-            color: Theme.settingsWindow.labelColor
-            font.pixelSize: Theme.settingsWindow.labelFontSize
+            color: Theme.controls.labelColor
+            font.pixelSize: Theme.controls.labelFontSize
             font.bold: true
         }
 
@@ -213,7 +213,7 @@ ColumnLayout {
                     Label {
                         Layout.fillWidth: true
                         text: tip.modelData.text
-                        color: Theme.settingsWindow.labelColor
+                        color: Theme.controls.labelColor
                         wrapMode: Text.Wrap
                     }
                     KeyChip {

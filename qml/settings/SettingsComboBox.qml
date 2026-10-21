@@ -4,16 +4,16 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: root
 
-    implicitHeight: Theme.settingsWindow.inputHeight
+    implicitHeight: Theme.controls.inputHeight
     leftPadding: 12
-    rightPadding: Theme.settingsWindow.iconSize + 20
+    rightPadding: Theme.controls.iconSize + 20
     hoverEnabled: true
 
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
     contentItem: Label {
         text: root.displayText
-        color: Theme.settingsWindow.inputText
+        color: Theme.controls.inputText
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
@@ -22,18 +22,18 @@ ComboBox {
         x: root.width - width - 10
         y: (root.height - height) / 2
         path: Icons.chevron
-        size: Theme.settingsWindow.iconSize
-        color: Theme.settingsWindow.iconColor
+        size: Theme.controls.iconSize
+        color: Theme.controls.iconColor
         rotation: dropdown.showing ? -90 : 90
 
         Behavior on rotation { enabled: Motion.on; MotionNumber {} }
     }
 
     background: Rectangle {
-        radius: Theme.settingsWindow.inputRadius
-        color: root.hovered ? Theme.settingsWindow.buttonHoverBackground : Theme.settingsWindow.inputBackground
-        border.color: root.visualFocus ? Theme.settingsWindow.inputBorderFocus : Theme.settingsWindow.inputBorder
-        border.width: root.visualFocus ? Theme.settingsWindow.inputBorderFocusWidth : Theme.settingsWindow.inputBorderWidth
+        radius: Theme.controls.inputRadius
+        color: root.hovered ? Theme.controls.buttonHoverBackground : Theme.controls.inputBackground
+        border.color: root.visualFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
+        border.width: root.visualFocus ? Theme.controls.inputBorderFocusWidth : Theme.controls.inputBorderWidth
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
         Behavior on border.color { enabled: Motion.fades; MotionColor {} }
@@ -45,21 +45,21 @@ ComboBox {
         required property int index
 
         width: ListView.view.width
-        height: Theme.settingsWindow.menuItemHeight
+        height: Theme.menu.itemHeight
         leftPadding: 10
         highlighted: root.highlightedIndex === index
         hoverEnabled: true
 
         contentItem: Label {
             text: root.textRole ? item.modelData[root.textRole] : item.modelData
-            color: Theme.settingsWindow.inputText
+            color: Theme.controls.inputText
             font.bold: root.currentIndex === item.index
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
         background: Rectangle {
-            radius: Theme.settingsWindow.menuItemRadius
-            color: item.highlighted ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+            radius: Theme.menu.itemRadius
+            color: item.highlighted ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
             Behavior on color { enabled: Motion.fades; MotionColor {} }
         }
@@ -102,10 +102,10 @@ ComboBox {
         }
 
         background: Rectangle {
-            radius: Theme.settingsWindow.inputRadius
-            color: Theme.settingsWindow.popupBackground
-            border.color: Theme.settingsWindow.inputBorder
-            border.width: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+            radius: Theme.controls.inputRadius
+            color: Theme.menu.popupBackground
+            border.color: Theme.controls.inputBorder
+            border.width: Math.max(1, Theme.controls.inputBorderWidth)
         }
     }
 }

@@ -117,10 +117,10 @@ Item {
     }
 
     component DialogBackground: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     MotionPopup {
@@ -155,7 +155,7 @@ Item {
         anchors.centerIn: parent
         modal: true
         Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.dialogPadding
+        padding: Theme.menu.dialogPadding
         width: 380
         background: DialogBackground {}
 
@@ -163,9 +163,9 @@ Item {
             width: parent.width
             spacing: 10
 
-            Label { text: qsTr("Add emulator"); color: Theme.settingsWindow.labelColor; font.bold: true }
+            Label { text: qsTr("Add emulator"); color: Theme.controls.labelColor; font.bold: true }
 
-            Label { text: qsTr("Start from"); color: Theme.settingsWindow.descriptionColor }
+            Label { text: qsTr("Start from"); color: Theme.controls.descriptionColor }
             SettingsComboBox {
                 id: startFrom
                 Layout.fillWidth: true
@@ -176,16 +176,16 @@ Item {
                 Layout.fillWidth: true
                 text: startFrom.currentIndex === 0 ? qsTr("A blank emulator has no platforms, ROM extensions or program yet; you fill them in next.")
                                                    : qsTr("Copies its platforms, ROM extensions and command, but not where it is installed or its saves, which a fork keeps elsewhere.")
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
-            Label { text: qsTr("Name"); color: Theme.settingsWindow.descriptionColor }
+            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
             SettingsTextField {
                 id: nameField
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 placeholderText: qsTr("e.g. Citra")
                 onAccepted: addDialog.add()
             }
@@ -196,9 +196,9 @@ Item {
                     : addDialog.id === "" ? qsTr("The id is made from the letters a-z and digits in the name; this one has none.")
                     : addDialog.taken ? qsTr("There's already an emulator with the id %1.").arg(addDialog.id)
                     : qsTr("Id: %1. It can't change later; the name can.").arg(addDialog.id)
-                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.settingsWindow.descriptionColor
-                                                                        : Theme.settingsWindow.problemsText
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
+                                                                        : Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
@@ -206,14 +206,14 @@ Item {
                 id: addError
                 visible: text !== ""
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.problemsText
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
                 SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() }
                 SettingsButton {
                     primary: true
@@ -264,7 +264,7 @@ Item {
 
             SettingsButton {
                 implicitHeight: Theme.settingsWindow.toolbarHeight
-                leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                 rightPadding: leftPadding
                 tip: qsTr("Open emulators.toml")
                 iconPath: Icons.openExternal
@@ -295,7 +295,7 @@ Item {
                     visible: root.shown.length === 0
                     Layout.fillWidth: true
                     text: qsTr("No emulators match \"%1\".").arg(search.text.trim())
-                    color: Theme.settingsWindow.descriptionColor
+                    color: Theme.controls.descriptionColor
                     wrapMode: Text.WordWrap
                 }
 
@@ -330,8 +330,8 @@ Item {
                     Label {
                         Layout.fillWidth: true
                         text: qsTr("Add an emulator Lattis doesn't know, or a fork of a built-in one. emulators.reference.toml, next to emulators.toml, shows every key with the built-in ones as examples.")
-                        color: Theme.settingsWindow.descriptionColor
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        color: Theme.controls.descriptionColor
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         wrapMode: Text.WordWrap
                     }
                     SettingsButton {

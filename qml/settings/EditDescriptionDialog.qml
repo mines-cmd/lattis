@@ -26,14 +26,14 @@ MotionPopup {
     anchors.centerIn: parent
     modal: true
     Overlay.modal: Scrim {}
-    padding: Theme.settingsWindow.dialogPadding
+    padding: Theme.menu.dialogPadding
     width: 340
 
     background: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     ColumnLayout {
@@ -43,7 +43,7 @@ MotionPopup {
         Label {
             Layout.fillWidth: true
             text: qsTr("Description of %1").arg(root.name)
-            color: Theme.settingsWindow.labelColor
+            color: Theme.controls.labelColor
             font.bold: true
             elide: Text.ElideRight
         }
@@ -51,19 +51,19 @@ MotionPopup {
         SettingsTextField {
             id: field
             Layout.fillWidth: true
-            implicitHeight: Theme.settingsWindow.inputHeight
+            implicitHeight: Theme.controls.inputHeight
             maximumLength: 48
             onAccepted: root.save()
         }
         Label {
             Layout.alignment: Qt.AlignRight
             text: field.length + "/48"
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
             SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
             SettingsButton {
                 primary: true

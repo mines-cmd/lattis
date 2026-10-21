@@ -29,7 +29,7 @@ Rectangle {
         anchors.centerIn: parent
         text: root.text
         color: root.conflict ? Theme.settingsWindow.keyChipConflict
-             : root.muted ? Theme.settingsWindow.descriptionColor
+             : root.muted ? Theme.controls.descriptionColor
              : Theme.settingsWindow.keyChipText
         font.pixelSize: Theme.settingsWindow.keyChipFontSize
 

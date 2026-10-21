@@ -6,7 +6,7 @@ Item {
     default property alias content: listRowContent.data
 
     Layout.fillWidth: true
-    implicitHeight: Math.max(Theme.settingsWindow.inputHeight, listRowContent.implicitHeight + 8)
+    implicitHeight: Math.max(Theme.controls.inputHeight, listRowContent.implicitHeight + 8)
 
     RowLayout {
         id: listRowContent
@@ -15,7 +15,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.leftMargin: 10
         anchors.rightMargin: 4
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
     }
     Rectangle {
         visible: !parent.last

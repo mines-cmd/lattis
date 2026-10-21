@@ -190,7 +190,7 @@ Item {
                             required property int index
                             width: ListView.view.width - Theme.layout.spacing
                             height: rowLayout.implicitHeight + Theme.layout.spacing
-                            radius: Theme.settingsWindow.inputRadius
+                            radius: Theme.controls.inputRadius
                             color: root.selected === index ? Theme.gameEditor.detailedSelected
                                  : rowMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
                             Behavior on color { enabled: Motion.fades; MotionColor {} }
@@ -205,7 +205,7 @@ Item {
                                 Rectangle {
                                     implicitHeight: Theme.gameEditor.detailedCoverHeight
                                     implicitWidth: implicitHeight * 3 / 4
-                                    radius: Theme.settingsWindow.inputRadius
+                                    radius: Theme.controls.inputRadius
                                     color: Theme.gameEditor.artPreviewBackground
                                     clip: true
                                     FadeImage {
@@ -260,7 +260,7 @@ Item {
                             Layout.alignment: Qt.AlignHCenter
                             visible: root.request !== 0
                             path: Icons.loader
-                            size: Theme.settingsWindow.iconSize
+                            size: Theme.controls.iconSize
                             color: Theme.gameEditor.hintColor
                             RotationAnimation on rotation {
                                 running: root.request !== 0
@@ -324,7 +324,7 @@ Item {
                             Layout.alignment: Qt.AlignHCenter
                             implicitHeight: Theme.gameEditor.detailedLargeCoverHeight
                             implicitWidth: implicitHeight * 3 / 4
-                            radius: Theme.settingsWindow.inputRadius
+                            radius: Theme.controls.inputRadius
                             color: Theme.gameEditor.artPreviewBackground
                             clip: true
                             FadeImage {

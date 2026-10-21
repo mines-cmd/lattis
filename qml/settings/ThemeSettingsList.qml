@@ -57,7 +57,7 @@ ListView {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         text: root.emptyText
-        color: Theme.settingsWindow.descriptionColor
+        color: Theme.controls.descriptionColor
     }
 
     onContentYChanged: updateCurrentSection()
@@ -86,8 +86,8 @@ ListView {
                 visible: model.sectionDoc !== ""
                 Layout.fillWidth: true
                 text: model.sectionDoc
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
         }

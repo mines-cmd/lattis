@@ -4,16 +4,16 @@ SettingsTextField {
     id: root
 
     implicitHeight: Theme.settingsWindow.toolbarHeight
-    leftPadding: Theme.settingsWindow.iconSize + 22
-    rightPadding: text !== "" ? Theme.settingsWindow.iconSize + 22 : 12
+    leftPadding: Theme.controls.iconSize + 22
+    rightPadding: text !== "" ? Theme.controls.iconSize + 22 : 12
 
     Icon {
         anchors.left: parent.left
         anchors.leftMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.search
-        size: Theme.settingsWindow.iconSize
-        color: Theme.settingsWindow.iconColor
+        size: Theme.controls.iconSize
+        color: Theme.controls.iconColor
     }
 
     Icon {
@@ -23,8 +23,8 @@ SettingsTextField {
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.close
-        size: Theme.settingsWindow.iconSize
-        color: clearMouse.containsMouse ? Theme.settingsWindow.inputText : Theme.settingsWindow.iconColor
+        size: Theme.controls.iconSize
+        color: clearMouse.containsMouse ? Theme.controls.inputText : Theme.controls.iconColor
 
         MouseArea {
             id: clearMouse

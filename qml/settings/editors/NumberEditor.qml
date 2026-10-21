@@ -15,7 +15,7 @@ RowLayout {
     readonly property bool isInt: type === "Int"
     readonly property real minimumWidth: 48 + spacing + field.Layout.preferredWidth
 
-    spacing: Theme.settingsWindow.controlSpacing
+    spacing: Theme.controls.controlSpacing
 
     function commit(v) {
         Theme.setValue(root.section, root.key, root.isInt ? Math.round(v) : v)

@@ -87,7 +87,7 @@ MotionPopup {
 
     component Hint: Label {
         Layout.fillWidth: true
-        leftPadding: Theme.settingsWindow.checkboxSize + Theme.layout.spacing
+        leftPadding: Theme.controls.checkboxSize + Theme.layout.spacing
         wrapMode: Text.WordWrap
         color: Theme.gameEditor.hintColor
         font.pixelSize: Theme.gameEditor.hintFontSize

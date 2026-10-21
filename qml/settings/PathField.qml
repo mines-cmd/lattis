@@ -8,8 +8,8 @@ RowLayout {
 
     property string path
     property string missingText
-    property color missingColor: Theme.settingsWindow.descriptionColor
-    property int fontSize: Theme.settingsWindow.pathFontSize
+    property color missingColor: Theme.controls.descriptionColor
+    property int fontSize: Theme.controls.pathFontSize
 
     spacing: Theme.layout.spacing
 
@@ -19,11 +19,11 @@ RowLayout {
         id: box
         visible: root.path !== ""
         Layout.fillWidth: true
-        implicitHeight: Theme.settingsWindow.inputHeight
-        radius: Theme.settingsWindow.inputRadius
-        color: Theme.settingsWindow.inputBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
+        implicitHeight: Theme.controls.inputHeight
+        radius: Theme.controls.inputRadius
+        color: Theme.controls.inputBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
 
         RowLayout {
             anchors.fill: parent
@@ -40,7 +40,7 @@ RowLayout {
                 readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
                                                    .toString().replace(/^file:\/\//, "")
                 text: root.path.startsWith(home + "/") ? "~" + root.path.slice(home.length) : root.path
-                color: Theme.settingsWindow.inputText
+                color: Theme.controls.inputText
                 font.family: Theme.font.monoFamily
                 font.pixelSize: root.fontSize
                 elide: Text.ElideMiddle
@@ -51,9 +51,9 @@ RowLayout {
                 ToolTip.text: root.path
             }
             Rectangle {
-                Layout.preferredWidth: Math.max(1, Theme.settingsWindow.inputBorderWidth)
+                Layout.preferredWidth: Math.max(1, Theme.controls.inputBorderWidth)
                 Layout.preferredHeight: box.height / 2
-                color: Theme.settingsWindow.inputBorder
+                color: Theme.controls.inputBorder
             }
             AbstractButton {
                 id: copyButton
@@ -86,9 +86,9 @@ RowLayout {
                     Icon {
                         anchors.centerIn: parent
                         path: Icons.copy
-                        size: Theme.settingsWindow.iconSize
-                        color: copyButton.hovered ? Theme.settingsWindow.inputText
-                                                  : Theme.settingsWindow.descriptionColor
+                        size: Theme.controls.iconSize
+                        color: copyButton.hovered ? Theme.controls.inputText
+                                                  : Theme.controls.descriptionColor
                         opacity: copyButton.copyShown ? 1 : 0
 
                         Behavior on color { enabled: Motion.fades; MotionColor {} }
@@ -96,7 +96,7 @@ RowLayout {
                     }
                     MarkPop {
                         anchors.centerIn: parent
-                        width: Theme.settingsWindow.iconSize
+                        width: Theme.controls.iconSize
                         height: width
                         shown: copyButton.markShown
                         speed: "normal"
@@ -107,8 +107,8 @@ RowLayout {
                         Icon {
                             anchors.fill: parent
                             path: Icons.check
-                            size: Theme.settingsWindow.iconSize
-                            color: Theme.settingsWindow.inputText
+                            size: Theme.controls.iconSize
+                            color: Theme.controls.inputText
                         }
                     }
                 }

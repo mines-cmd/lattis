@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 Slider {
     id: root
 
-    readonly property real handleSize: Theme.settingsWindow.sliderHandleSize
+    readonly property real handleSize: Theme.controls.sliderHandleSize
 
     implicitHeight: Math.max(handleSize + 8, 24)
     hoverEnabled: true
@@ -16,9 +16,9 @@ Slider {
         x: root.leftPadding
         y: root.topPadding + (root.availableHeight - height) / 2
         width: root.availableWidth
-        height: Theme.settingsWindow.sliderTrackHeight
+        height: Theme.controls.sliderTrackHeight
         radius: height / 2
-        color: Theme.settingsWindow.sliderTrack
+        color: Theme.controls.sliderTrack
 
         // From the handle's animated place rather than visualPosition, so the fill keeps up with the spring.
         Rectangle {
@@ -26,7 +26,7 @@ Slider {
             width: travel > 0 ? Math.max(0, Math.min(1, (root.handle.x - root.leftPadding) / travel)) * parent.width : 0
             height: parent.height
             radius: parent.radius
-            color: Theme.settingsWindow.sliderFill
+            color: Theme.controls.sliderFill
         }
     }
 
@@ -36,10 +36,10 @@ Slider {
         width: root.handleSize
         height: root.handleSize
         radius: width / 2
-        color: Theme.settingsWindow.sliderHandle
+        color: Theme.controls.sliderHandle
         scale: root.pressed ? 1.15 : root.hovered ? 1.08 : 1
 
-        Behavior on x { enabled: Motion.on; MotionSpring { damping: Theme.settingsWindow.sliderDamping } }
+        Behavior on x { enabled: Motion.on; MotionSpring { damping: Theme.controls.sliderDamping } }
         Behavior on scale { enabled: Motion.on; MotionNumber {} }
     }
 }

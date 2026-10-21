@@ -21,7 +21,7 @@ Rectangle {
     signal recordRequested()
     signal recordFinished()
 
-    color: hover.hovered ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+    color: hover.hovered ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
     Behavior on color { enabled: Motion.fades; MotionColor {} }
     radius: Theme.settingsWindow.rowRadius
@@ -60,7 +60,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: Theme.settingsWindow.rowPadding
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
 
         Item {
             width: Theme.settingsWindow.editorWidth
@@ -141,8 +141,8 @@ Rectangle {
         Label {
             Layout.fillWidth: true
             text: root.title
-            color: Theme.settingsWindow.labelColor
-            font.pixelSize: Theme.settingsWindow.labelFontSize
+            color: Theme.controls.labelColor
+            font.pixelSize: Theme.controls.labelFontSize
             elide: Text.ElideRight
 
             HoverHandler { id: titleHover }
@@ -170,8 +170,8 @@ Rectangle {
                 Layout.fillWidth: true
                 text: noteLabel.recordingNote ? qsTr("Press the new keys; Escape cancels")
                                               : qsTr("Another action uses the same keys")
-                color: noteLabel.recordingNote ? Theme.settingsWindow.descriptionColor : Theme.settingsWindow.keyChipConflict
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: noteLabel.recordingNote ? Theme.controls.descriptionColor : Theme.settingsWindow.keyChipConflict
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
         }

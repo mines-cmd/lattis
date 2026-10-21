@@ -190,10 +190,10 @@ ApplicationWindow {
         signal toggled()
         implicitWidth: Theme.gameEditor.checkSize
         implicitHeight: Theme.gameEditor.checkSize
-        radius: Theme.settingsWindow.inputRadius / 2
-        color: checked || partial ? Theme.gameEditor.checkOn : Theme.settingsWindow.inputBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: !checked && !partial && checkMouse.containsMouse ? Theme.settingsWindow.inputBorderWidth : 0
+        radius: Theme.controls.inputRadius / 2
+        color: checked || partial ? Theme.gameEditor.checkOn : Theme.controls.inputBackground
+        border.color: Theme.controls.inputBorder
+        border.width: !checked && !partial && checkMouse.containsMouse ? Theme.controls.inputBorderWidth : 0
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
 
@@ -258,7 +258,7 @@ ApplicationWindow {
         lookup: lookupModel
     }
 
-    readonly property int barButtonHeight: Theme.settingsWindow.buttonHeight
+    readonly property int barButtonHeight: Theme.controls.buttonHeight
     readonly property int detailIndent: Theme.gameEditor.bulkIconSize + Theme.gameEditor.bulkRowPadding
 
     function stateColor(state) {
@@ -296,7 +296,7 @@ ApplicationWindow {
 
         background: Rectangle {
             radius: Theme.radius.small
-            color: chip.hovered && chip.enabled ? Theme.settingsWindow.rowHover : "transparent"
+            color: chip.hovered && chip.enabled ? Theme.controls.hover : "transparent"
         }
     }
 
@@ -333,7 +333,7 @@ ApplicationWindow {
             Icon {
                 anchors.centerIn: parent
                 path: Icons.folderImageFill
-                size: Math.min(Theme.settingsWindow.iconSize * 1.5, parent.height * 0.6)
+                size: Math.min(Theme.controls.iconSize * 1.5, parent.height * 0.6)
                 color: Theme.gameEditor.artHoverIcon
             }
         }
@@ -355,7 +355,7 @@ ApplicationWindow {
         HoverHandler { cursorShape: artCheck.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor }
         background: Rectangle {
             radius: Theme.radius.tiny
-            color: artCheck.hovered && artCheck.enabled ? Theme.settingsWindow.rowHover : "transparent"
+            color: artCheck.hovered && artCheck.enabled ? Theme.controls.hover : "transparent"
         }
         contentItem: RowLayout {
             spacing: Theme.layout.spacing
@@ -887,7 +887,7 @@ ApplicationWindow {
                                         Layout.rightMargin: Theme.layout.spacing / 2
                                         Layout.bottomMargin: Theme.layout.spacing / 2
                                         hoverEnabled: true
-                                        topPadding: Theme.layout.spacing * 0.75 + Theme.settingsWindow.inputBorderWidth
+                                        topPadding: Theme.layout.spacing * 0.75 + Theme.controls.inputBorderWidth
                                         bottomPadding: topPadding
                                         leftPadding: Theme.layout.spacing
                                         rightPadding: Theme.layout.spacing
@@ -899,16 +899,16 @@ ApplicationWindow {
                                         Binding { target: tagsButton.contentItem; property: "scale"; value: tagsButton.dip }
 
                                         background: Rectangle {
-                                            radius: Theme.settingsWindow.inputRadius
-                                            color: tagsButton.hovered ? Theme.settingsWindow.buttonHoverBackground : Theme.settingsWindow.buttonBackground
-                                            border.color: Theme.settingsWindow.inputBorderFocus
-                                            border.width: tagsPopup.opened || tagsButton.visualFocus ? Theme.settingsWindow.inputBorderWidth : 0
+                                            radius: Theme.controls.inputRadius
+                                            color: tagsButton.hovered ? Theme.controls.buttonHoverBackground : Theme.controls.buttonBackground
+                                            border.color: Theme.controls.inputBorderFocus
+                                            border.width: tagsPopup.opened || tagsButton.visualFocus ? Theme.controls.inputBorderWidth : 0
                                         }
                                         contentItem: RowLayout {
                                             spacing: Theme.layout.spacing
                                             Icon {
                                                 path: Icons.tagLine
-                                                size: Theme.settingsWindow.iconSize
+                                                size: Theme.controls.iconSize
                                                 color: tagsButton.hovered ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor
                                             }
                                             Label {
@@ -941,7 +941,7 @@ ApplicationWindow {
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: 1
-                            color: Theme.settingsWindow.inputBorder
+                            color: Theme.controls.inputBorder
                         }
                         TextLink {
                             text: qsTr("Clear filters")
@@ -1007,7 +1007,7 @@ ApplicationWindow {
                             Rectangle {
                                 Layout.fillWidth: true
                                 implicitHeight: 1
-                                color: Theme.settingsWindow.inputBorder
+                                color: Theme.controls.inputBorder
                             }
                         }
 
@@ -1027,7 +1027,7 @@ ApplicationWindow {
                                 width: gameList.width - scrollGap
                                 implicitHeight: rowContent.implicitHeight + 2 * Theme.gameEditor.bulkRowPadding
                                 radius: Theme.settingsWindow.rowRadius
-                                color: rowHover.hovered ? Theme.settingsWindow.rowHover : "transparent"
+                                color: rowHover.hovered ? Theme.controls.hover : "transparent"
                                 HoverHandler { id: rowHover }
                                 TapHandler { onTapped: lookupModel.setChecked(gameRow.modelData.id, !gameRow.modelData.checked) }
 
@@ -1074,8 +1074,8 @@ ApplicationWindow {
                                                 implicitHeight: chipLabel.implicitHeight + Theme.layout.spacing
                                                 radius: Theme.radius.tiny
                                                 color: "transparent"
-                                                border.color: Theme.settingsWindow.inputBorder
-                                                border.width: Theme.settingsWindow.inputBorderWidth
+                                                border.color: Theme.controls.inputBorder
+                                                border.width: Theme.controls.inputBorderWidth
                                                 opacity: unwanted ? Theme.gameEditor.readOnlyOpacity : 1
                                                 Muted {
                                                     id: chipLabel
@@ -1111,7 +1111,7 @@ ApplicationWindow {
                     Layout.leftMargin: -Theme.settingsWindow.contentPadding
                     Layout.rightMargin: -Theme.settingsWindow.contentPadding
                     implicitHeight: 1
-                    color: Theme.settingsWindow.inputBorder
+                    color: Theme.controls.inputBorder
                 }
 
                 RowLayout {
@@ -1150,17 +1150,17 @@ ApplicationWindow {
                     Rectangle {
                         Layout.preferredWidth: 1
                         Layout.preferredHeight: Theme.settingsWindow.toolbarHeight / 2
-                        color: Theme.settingsWindow.inputBorder
+                        color: Theme.controls.inputBorder
                     }
                     SettingsButton {
                         visible: lookupModel.resultModel.count > 0
-                        implicitHeight: Theme.settingsWindow.buttonHeight
+                        implicitHeight: Theme.controls.buttonHeight
                         text: qsTr("Back to the results")
                         onClicked: root.reviewing = true
                     }
                     SettingsButton {
                         primary: true
-                        implicitHeight: Theme.settingsWindow.buttonHeight
+                        implicitHeight: Theme.controls.buttonHeight
                         text: qsTr("Look up %1").arg(lookupModel.checkedCount)
                         enabled: lookupModel.checkedCount > 0 && Metadata.hasIgdbKeys
                         onClicked: root.lookUp()
@@ -1538,7 +1538,7 @@ ApplicationWindow {
                                     radius: parent.radius
                                     bottomLeftRadius: parent.bottomLeftRadius
                                     bottomRightRadius: parent.bottomRightRadius
-                                    color: resultHover.hovered ? Theme.settingsWindow.rowHover : "transparent"
+                                    color: resultHover.hovered ? Theme.controls.hover : "transparent"
                                 }
 
                                 ColumnLayout {
@@ -1586,7 +1586,7 @@ ApplicationWindow {
                                             Layout.alignment: Qt.AlignVCenter
                                             padding: 0
                                             visible: result.r.state !== "running"
-                                            implicitWidth: Theme.settingsWindow.iconSize + Theme.layout.spacing * 2
+                                            implicitWidth: Theme.controls.iconSize + Theme.layout.spacing * 2
                                             implicitHeight: implicitWidth
                                             hoverEnabled: true
                                             onClicked: root.toggleCollapsed(result.r.id)
@@ -1598,13 +1598,13 @@ ApplicationWindow {
                                             ToolTip.text: result.open ? qsTr("Hide the details") : qsTr("Show the details")
                                             background: Rectangle {
                                                 radius: Theme.radius.small
-                                                color: chevron.hovered ? Theme.settingsWindow.rowHover : "transparent"
+                                                color: chevron.hovered ? Theme.controls.hover : "transparent"
                                             }
                                             contentItem: Item {
                                                 Icon {
                                                     anchors.centerIn: parent
                                                     path: Icons.chevronRight
-                                                    size: Theme.settingsWindow.iconSize
+                                                    size: Theme.controls.iconSize
                                                     color: Theme.gameEditor.hintColor
                                                     rotation: result.open ? 90 : 0
                                                     Behavior on rotation { enabled: Motion.on; MotionNumber {} }
@@ -1639,10 +1639,10 @@ ApplicationWindow {
                                                     required property int index
                                                     width: candidateRow.implicitWidth + 2 * Theme.layout.spacing
                                                     height: Theme.gameEditor.bulkThumbnailHeight + Theme.layout.spacing
-                                                    radius: Theme.settingsWindow.inputRadius
+                                                    radius: Theme.controls.inputRadius
                                                     color: candidateMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
-                                                    border.color: Theme.settingsWindow.inputBorder
-                                                    border.width: Theme.settingsWindow.inputBorderWidth
+                                                    border.color: Theme.controls.inputBorder
+                                                    border.width: Theme.controls.inputBorderWidth
                                                     RowLayout {
                                                         id: candidateRow
                                                         anchors.centerIn: parent
@@ -1764,7 +1764,7 @@ ApplicationWindow {
                     Layout.leftMargin: -Theme.settingsWindow.contentPadding
                     Layout.rightMargin: -Theme.settingsWindow.contentPadding
                     implicitHeight: 1
-                    color: Theme.settingsWindow.inputBorder
+                    color: Theme.controls.inputBorder
                 }
 
                 RowLayout {

@@ -170,10 +170,10 @@ Item {
     }
 
     component DialogBackground: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     MotionPopup {
@@ -204,7 +204,7 @@ Item {
         anchors.centerIn: parent
         modal: true
         Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.dialogPadding
+        padding: Theme.menu.dialogPadding
         width: 380
         background: DialogBackground {}
 
@@ -212,13 +212,13 @@ Item {
             width: parent.width
             spacing: 10
 
-            Label { text: qsTr("Add platform"); color: Theme.settingsWindow.labelColor; font.bold: true }
+            Label { text: qsTr("Add platform"); color: Theme.controls.labelColor; font.bold: true }
 
-            Label { text: qsTr("Name"); color: Theme.settingsWindow.descriptionColor }
+            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
             SettingsTextField {
                 id: nameField
                 Layout.fillWidth: true
-                implicitHeight: Theme.settingsWindow.inputHeight
+                implicitHeight: Theme.controls.inputHeight
                 placeholderText: qsTr("e.g. GameCube")
                 onAccepted: addDialog.add()
             }
@@ -232,9 +232,9 @@ Item {
                                                .arg(addDialog.id)
                                                .arg(addDialog.existing.games === 1 ? qsTr("1 game") : qsTr("%1 games").arg(addDialog.existing.games))
                     : qsTr("Id: %1. Games refer to their platform by id, so it can't change later; the name can.").arg(addDialog.id)
-                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.settingsWindow.descriptionColor
-                                                                        : Theme.settingsWindow.problemsText
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
+                                                                        : Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
@@ -242,14 +242,14 @@ Item {
                 id: addError
                 visible: text !== ""
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.problemsText
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
                 SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() }
                 SettingsButton {
                     primary: true
@@ -276,7 +276,7 @@ Item {
         anchors.centerIn: parent
         modal: true
         Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.dialogPadding
+        padding: Theme.menu.dialogPadding
         width: 380
         background: DialogBackground {}
 
@@ -286,7 +286,7 @@ Item {
 
             Label {
                 text: qsTr("Remove %1?").arg(removeDialog.platform.name)
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
             }
             Label {
@@ -296,8 +296,8 @@ Item {
                              .arg(removeDialog.platform.id)
                        : qsTr("It has no games."))
                       + (removeDialog.platform.romFolders.length > 0 ? " " + qsTr("Its ROM folders won't be scanned.") : "")
-                color: Theme.settingsWindow.descriptionColor
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
@@ -305,14 +305,14 @@ Item {
                 id: removeError
                 visible: text !== ""
                 Layout.fillWidth: true
-                color: Theme.settingsWindow.problemsText
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                color: Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
 
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                spacing: Theme.settingsWindow.controlSpacing
+                spacing: Theme.controls.controlSpacing
                 SettingsButton { text: qsTr("Cancel"); onClicked: removeDialog.close() }
                 SettingsButton {
                     danger: true
@@ -373,7 +373,7 @@ Item {
 
             SettingsButton {
                 implicitHeight: Theme.settingsWindow.toolbarHeight
-                leftPadding: (implicitHeight - Theme.settingsWindow.iconSize) / 2
+                leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                 rightPadding: leftPadding
                 tip: qsTr("Open platforms.toml")
                 iconPath: Icons.openExternal
@@ -393,8 +393,8 @@ Item {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
@@ -417,7 +417,7 @@ Item {
                     visible: root.platforms.length === 0
                     Layout.fillWidth: true
                     text: qsTr("No platforms yet. Add one, then give it its emulators and the folders its ROMs are in.")
-                    color: Theme.settingsWindow.descriptionColor
+                    color: Theme.controls.descriptionColor
                     wrapMode: Text.WordWrap
                 }
 
@@ -425,7 +425,7 @@ Item {
                     visible: root.platforms.length > 0 && root.shown.length === 0
                     Layout.fillWidth: true
                     text: qsTr("No platforms match \"%1\".").arg(search.text.trim())
-                    color: Theme.settingsWindow.descriptionColor
+                    color: Theme.controls.descriptionColor
                     wrapMode: Text.WordWrap
                 }
 

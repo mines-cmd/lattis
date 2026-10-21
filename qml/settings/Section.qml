@@ -29,10 +29,10 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: sectionRows.implicitHeight
-        radius: Theme.settingsWindow.inputRadius
-        color: Theme.settingsWindow.inputBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
+        radius: Theme.controls.inputRadius
+        color: Theme.controls.inputBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
 
         ColumnLayout {
             id: sectionRows
@@ -45,8 +45,8 @@ ColumnLayout {
         id: sectionNote
         visible: text !== ""
         Layout.fillWidth: true
-        color: Theme.settingsWindow.descriptionColor
-        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+        color: Theme.controls.descriptionColor
+        font.pixelSize: Theme.controls.descriptionFontSize
         wrapMode: Text.WordWrap
     }
 }

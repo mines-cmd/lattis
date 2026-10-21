@@ -108,8 +108,8 @@ Item {
     }
 
     component Muted: Label {
-        color: Theme.settingsWindow.descriptionColor
-        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+        color: Theme.controls.descriptionColor
+        font.pixelSize: Theme.controls.descriptionFontSize
         wrapMode: Text.WordWrap
     }
 
@@ -128,8 +128,8 @@ Item {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
-            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
         }
 
@@ -228,13 +228,13 @@ Item {
                                 Icon {
                                     visible: missing.missingCount === 0
                                     path: Icons.check
-                                    size: Theme.settingsWindow.iconSize
+                                    size: Theme.controls.iconSize
                                     color: Theme.settingsWindow.installFound
                                 }
                                 Label {
                                     visible: missing.missingCount > 0
                                     text: missing.missingCount
-                                    color: Theme.settingsWindow.labelColor
+                                    color: Theme.controls.labelColor
                                     font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
                                     font.bold: true
                                 }
@@ -242,8 +242,8 @@ Item {
                                     text: missing.missingCount === 0 ? qsTr("Every game has its info")
                                         : missing.missingCount === 1 ? qsTr("game needs info")
                                         : qsTr("games need info")
-                                    color: Theme.settingsWindow.labelColor
-                                    font.pixelSize: Theme.settingsWindow.labelFontSize
+                                    color: Theme.controls.labelColor
+                                    font.pixelSize: Theme.controls.labelFontSize
                                 }
                             }
                             Flow {
@@ -308,8 +308,8 @@ Item {
                             Label {
                                 Layout.fillWidth: true
                                 text: qsTr("Look up new games")
-                                color: Theme.settingsWindow.labelColor
-                                font.pixelSize: Theme.settingsWindow.labelFontSize
+                                color: Theme.controls.labelColor
+                                font.pixelSize: Theme.controls.labelFontSize
                             }
                             Muted {
                                 Layout.fillWidth: true
@@ -320,7 +320,7 @@ Item {
                                 id: scanError
                                 Layout.fillWidth: true
                                 visible: text !== ""
-                                color: Theme.settingsWindow.problemsText
+                                color: Theme.controls.problemsText
                             }
                         }
                         SettingsSwitch {

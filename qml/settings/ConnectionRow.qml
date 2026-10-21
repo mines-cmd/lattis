@@ -17,15 +17,15 @@ RowLayout {
     Label {
         Layout.preferredWidth: Theme.settingsWindow.labelMinWidth
         text: qsTr("Connection")
-        color: Theme.settingsWindow.labelColor
-        font.pixelSize: Theme.settingsWindow.labelFontSize
+        color: Theme.controls.labelColor
+        font.pixelSize: Theme.controls.labelFontSize
     }
     Icon {
         opacity: root.result === "" && !root.busy ? 1 : 0
         visible: opacity > 0
         Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
         path: Icons.check
-        size: Theme.settingsWindow.iconSize
+        size: Theme.controls.iconSize
         color: status.color
     }
     Label {
@@ -36,9 +36,9 @@ RowLayout {
             : root.result !== undefined ? root.result
             : root.ready ? qsTr("Not tested yet") : root.needsKeysText
         color: root.result === "" && !root.busy ? Theme.settingsWindow.installFound
-             : root.result !== undefined && !root.busy ? Theme.settingsWindow.problemsText
-             : Theme.settingsWindow.descriptionColor
-        font.pixelSize: Theme.settingsWindow.labelFontSize
+             : root.result !== undefined && !root.busy ? Theme.controls.problemsText
+             : Theme.controls.descriptionColor
+        font.pixelSize: Theme.controls.labelFontSize
         elide: Text.ElideRight
         Behavior on color { enabled: Motion.fades; MotionColor {} }
     }

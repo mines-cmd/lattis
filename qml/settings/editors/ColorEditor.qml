@@ -9,7 +9,7 @@ RowLayout {
     property var value
     property var raw
 
-    spacing: Theme.settingsWindow.controlSpacing
+    spacing: Theme.controls.controlSpacing
 
     function formatHex(c) {
         const toHex = n => Math.round(n * 255).toString(16).padStart(2, "0")
@@ -28,12 +28,12 @@ RowLayout {
     Item { Layout.fillWidth: true }
 
     Rectangle {
-        Layout.preferredWidth: Theme.settingsWindow.swatchSize
-        Layout.preferredHeight: Theme.settingsWindow.swatchSize
+        Layout.preferredWidth: Theme.colorPicker.swatchSize
+        Layout.preferredHeight: Theme.colorPicker.swatchSize
         radius: 4
         color: root.value ?? "transparent"
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth > 0 ? Theme.settingsWindow.inputBorderWidth : 1
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth > 0 ? Theme.controls.inputBorderWidth : 1
 
         MouseArea {
             anchors.fill: parent

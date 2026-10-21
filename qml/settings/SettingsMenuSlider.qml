@@ -22,9 +22,9 @@ MenuItem {
         pause.restart()
     }
 
-    implicitHeight: visible ? Theme.settingsWindow.menuItemHeight : 0
-    leftPadding: 10
-    rightPadding: 10
+    implicitHeight: visible ? Theme.menu.itemHeight : 0
+    leftPadding: Theme.menu.itemPadding
+    rightPadding: Theme.menu.itemPadding
     opacity: enabled ? 1 : 0.45
 
     // Like SettingsMenuItem: while another entry's submenu is open (Side), the pointer on its way there
@@ -78,14 +78,14 @@ MenuItem {
     indicator: null
     arrow: null
     contentItem: RowLayout {
-        spacing: 6
+        spacing: Theme.menu.itemSpacing
         Item {
             visible: item.menu?.checkColumn ?? false
             implicitWidth: 16
         }
         Label {
             text: item.text
-            color: Theme.settingsWindow.inputText
+            color: Theme.controls.inputText
             verticalAlignment: Text.AlignVCenter
             Layout.fillHeight: true
         }
@@ -107,7 +107,7 @@ MenuItem {
         }
         Label {
             text: item.format(item.value)
-            color: Theme.settingsWindow.menuKeysColor
+            color: Theme.menu.keysColor
             horizontalAlignment: Text.AlignRight
             verticalAlignment: Text.AlignVCenter
             Layout.preferredWidth: 40
@@ -115,8 +115,8 @@ MenuItem {
         }
     }
     background: Rectangle {
-        radius: Theme.settingsWindow.menuItemRadius
-        color: item.highlighted ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+        radius: Theme.menu.itemRadius
+        color: item.highlighted ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
     }

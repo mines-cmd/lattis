@@ -15,9 +15,9 @@ MenuItem {
     readonly property string effectiveIconPath: iconPath !== "" ? iconPath : (item.subMenu?.iconPath ?? "")
     readonly property bool iconColumnActive: item.menu?.iconColumn ?? false
 
-    implicitHeight: visible ? Theme.settingsWindow.menuItemHeight : 0
-    leftPadding: 10
-    rightPadding: 10
+    implicitHeight: visible ? Theme.menu.itemHeight : 0
+    leftPadding: Theme.menu.itemPadding
+    rightPadding: Theme.menu.itemPadding
     opacity: enabled ? 1 : 0.45
     // Qt closes an open submenu the moment the pointer touches another entry, so a diagonal path to
     // the submenu lost it. While another entry's submenu is open, this one takes hover only once the
@@ -72,7 +72,7 @@ MenuItem {
     indicator: null
     arrow: null
     contentItem: RowLayout {
-        spacing: item.iconColumnActive ? Theme.settingsWindow.menuIconSpacing : 6
+        spacing: item.iconColumnActive ? Theme.menu.iconSpacing : Theme.menu.itemSpacing
         Item {
             visible: !item.iconColumnActive && (item.checkable || (item.menu?.checkColumn ?? false))
             implicitWidth: 16
@@ -85,49 +85,49 @@ MenuItem {
                     anchors.centerIn: parent
                     path: Icons.check
                     size: 16
-                    color: Theme.settingsWindow.inputText
+                    color: Theme.controls.inputText
                 }
             }
         }
         Item {
             visible: item.iconColumnActive
-            implicitWidth: Theme.settingsWindow.menuIconSize
+            implicitWidth: Theme.menu.iconSize
             Layout.fillHeight: true
             Icon {
                 anchors.centerIn: parent
                 visible: item.effectiveIconPath !== ""
                 path: item.effectiveIconPath || Icons.check
-                size: Theme.settingsWindow.menuIconSize
-                color: item.danger ? Theme.settingsWindow.menuDangerText : Theme.settingsWindow.menuIconColor
+                size: Theme.menu.iconSize
+                color: item.danger ? Theme.menu.dangerText : Theme.menu.iconColor
             }
         }
         Label {
             Layout.fillWidth: true
             Layout.fillHeight: true
             text: item.text
-            color: item.danger ? Theme.settingsWindow.menuDangerText : Theme.settingsWindow.inputText
+            color: item.danger ? Theme.menu.dangerText : Theme.controls.inputText
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
         Label {
             visible: item.keys !== ""
-            Layout.leftMargin: 24
+            Layout.leftMargin: Theme.menu.keysSpacing
             Layout.fillHeight: true
             text: item.keys
-            color: Theme.settingsWindow.menuKeysColor
+            color: Theme.menu.keysColor
             verticalAlignment: Text.AlignVCenter
         }
         Icon {
             visible: item.subMenu !== null
-            Layout.leftMargin: 24
+            Layout.leftMargin: Theme.menu.keysSpacing
             path: Icons.chevronRight
             size: 16
-            color: Theme.settingsWindow.menuKeysColor
+            color: Theme.menu.keysColor
         }
     }
     background: Rectangle {
-        radius: Theme.settingsWindow.menuItemRadius
-        color: item.highlighted ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
+        radius: Theme.menu.itemRadius
+        color: item.highlighted ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
     }

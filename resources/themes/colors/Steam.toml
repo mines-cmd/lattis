@@ -33,7 +33,7 @@ install_background_end = "#235ecf"
 [list]
 background = "#24282f"
 
-[settings_window]
+[controls]
 scrollbar_handle = "#3d4450"
 scrollbar_handle_hover = "#48505e"
 scrollbar_track = "#2c313a"

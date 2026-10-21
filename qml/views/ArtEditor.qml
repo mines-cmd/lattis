@@ -150,7 +150,7 @@ Item {
                 Icon {
                     anchors.centerIn: parent
                     path: Icons.folderImageFill
-                    size: Theme.settingsWindow.iconSize * 1.5
+                    size: Theme.controls.iconSize * 1.5
                     color: Theme.gameEditor.artHoverIcon
                 }
             }
@@ -171,9 +171,9 @@ Item {
                 anchors.top: parent.top
                 anchors.right: parent.right
                 anchors.margins: Theme.layout.spacing / 2
-                implicitWidth: Theme.settingsWindow.iconSize + Theme.layout.spacing
+                implicitWidth: Theme.controls.iconSize + Theme.layout.spacing
                 implicitHeight: implicitWidth
-                iconSize: Theme.settingsWindow.iconSize
+                iconSize: Theme.controls.iconSize
                 radius: Theme.radius.tiny
                 fill: removeHover.hovered ? Theme.gameEditor.artRemoveHoverBackground : Qt.alpha(Theme.gameEditor.artRemoveHoverBackground, 0)
                 fillEnd: removeHover.hovered ? Theme.gameEditor.artRemoveHoverBackground : Qt.alpha(Theme.gameEditor.artRemoveHoverBackground, 0)

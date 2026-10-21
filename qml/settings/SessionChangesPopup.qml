@@ -13,7 +13,7 @@ MotionPopup {
     }
 
     width: 520
-    padding: Theme.settingsWindow.dialogPadding
+    padding: Theme.menu.dialogPadding
     // The button that opens it toggles it; a press on it must not close and reopen it.
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
@@ -23,22 +23,22 @@ MotionPopup {
     }
 
     dim: true
-    Overlay.modeless: Scrim { color: Theme.settingsWindow.popupScrim }
+    Overlay.modeless: Scrim { color: Theme.menu.popupScrim }
 
     background: PopoverBackground {}
 
     ColumnLayout {
         width: parent.width
-        spacing: Theme.settingsWindow.controlSpacing
+        spacing: Theme.controls.controlSpacing
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
 
             Label {
                 Layout.fillWidth: true
                 text: qsTr("Changed since Settings opened")
-                color: Theme.settingsWindow.labelColor
+                color: Theme.controls.labelColor
                 font.bold: true
             }
             SettingsButton {
@@ -65,7 +65,7 @@ MotionPopup {
                 width: changes.width
                 implicitHeight: changeRow.implicitHeight + Theme.settingsWindow.rowPadding * 2
                 radius: Theme.settingsWindow.rowRadius
-                color: changeHover.hovered ? Theme.settingsWindow.rowHover : "transparent"
+                color: changeHover.hovered ? Theme.controls.hover : "transparent"
 
                 HoverHandler { id: changeHover }
 
@@ -94,8 +94,8 @@ MotionPopup {
                             elide: Text.ElideRight
                             text: root.title(change.modelData.key)
                             color: nameHover.hovered ? Theme.settingsWindow.resetButtonHoverColor
-                                                     : Theme.settingsWindow.labelColor
-                            font.pixelSize: Theme.settingsWindow.labelFontSize
+                                                     : Theme.controls.labelColor
+                            font.pixelSize: Theme.controls.labelFontSize
                             font.underline: nameHover.hovered
 
                             HoverHandler { id: nameHover; cursorShape: Qt.PointingHandCursor }
@@ -111,8 +111,8 @@ MotionPopup {
                             elide: Text.ElideRight
                             text: root.title(change.modelData.section) + " · "
                                   + (change.modelData.half === "colors" ? qsTr("Colors") : qsTr("Style"))
-                            color: Theme.settingsWindow.descriptionColor
-                            font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
                         }
                     }
 
@@ -120,8 +120,8 @@ MotionPopup {
                         Layout.maximumWidth: 260
                         elide: Text.ElideMiddle
                         text: "%1  →  %2".arg(change.modelData.before).arg(change.modelData.after)
-                        color: Theme.settingsWindow.labelColor
-                        font.pixelSize: Theme.settingsWindow.labelFontSize
+                        color: Theme.controls.labelColor
+                        font.pixelSize: Theme.controls.labelFontSize
                     }
 
                     SettingsButton {

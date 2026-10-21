@@ -31,9 +31,9 @@ AbstractButton {
     background: Rectangle {
         radius: Theme.settingsWindow.rowRadius
         color: root.selected ? Theme.gameEditor.bulkSidebarSelected
-             : root.hovered || root.highlighted ? Theme.settingsWindow.rowHover : Qt.alpha(Theme.settingsWindow.rowHover, 0)
-        border.color: Theme.settingsWindow.inputBorderFocus
-        border.width: root.visualFocus ? Theme.settingsWindow.inputBorderWidth : 0
+             : root.hovered || root.highlighted ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
+        border.color: Theme.controls.inputBorderFocus
+        border.width: root.visualFocus ? Theme.controls.inputBorderWidth : 0
 
         Behavior on color { enabled: Motion.fades; MotionColor {} }
     }
@@ -48,11 +48,11 @@ AbstractButton {
             visible: root.showBox
             implicitWidth: Theme.gameEditor.checkSize
             implicitHeight: Theme.gameEditor.checkSize
-            radius: root.radio ? width / 2 : Theme.settingsWindow.inputRadius / 2
-            color: (root.checked || root.partial) && !root.radio ? Theme.gameEditor.checkOn : Theme.settingsWindow.inputBackground
-            border.color: root.checked || root.partial ? Theme.gameEditor.checkOn : Theme.settingsWindow.inputBorder
+            radius: root.radio ? width / 2 : Theme.controls.inputRadius / 2
+            color: (root.checked || root.partial) && !root.radio ? Theme.gameEditor.checkOn : Theme.controls.inputBackground
+            border.color: root.checked || root.partial ? Theme.gameEditor.checkOn : Theme.controls.inputBorder
             border.width: root.radio ? Theme.gameEditor.bulkRadioBorderWidth
-                         : root.hovered && !root.checked ? Theme.settingsWindow.inputBorderWidth : 0
+                         : root.hovered && !root.checked ? Theme.controls.inputBorderWidth : 0
 
             Behavior on color { enabled: Motion.fades; MotionColor {} }
             Behavior on border.color { enabled: Motion.fades; MotionColor {} }
@@ -114,7 +114,7 @@ AbstractButton {
             visible: root.swatch.a > 0
             implicitWidth: Theme.gameEditor.hintFontSize - 2
             implicitHeight: implicitWidth
-            radius: Theme.settingsWindow.inputRadius / 4
+            radius: Theme.controls.inputRadius / 4
             color: root.swatch
         }
         Label {

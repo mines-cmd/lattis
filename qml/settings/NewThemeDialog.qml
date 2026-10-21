@@ -20,14 +20,14 @@ MotionPopup {
     anchors.centerIn: parent
     modal: true
     Overlay.modal: Scrim {}
-    padding: Theme.settingsWindow.dialogPadding
+    padding: Theme.menu.dialogPadding
     width: 320
 
     background: Rectangle {
-        color: Theme.settingsWindow.popupBackground
-        border.color: Theme.settingsWindow.inputBorder
-        border.width: Theme.settingsWindow.inputBorderWidth
-        radius: Theme.settingsWindow.inputRadius
+        color: Theme.menu.popupBackground
+        border.color: Theme.controls.inputBorder
+        border.width: Theme.controls.inputBorderWidth
+        radius: Theme.controls.inputRadius
     }
 
     ColumnLayout {
@@ -36,15 +36,15 @@ MotionPopup {
 
         Label {
             text: root.isColors ? qsTr("New colors") : qsTr("New style")
-            color: Theme.settingsWindow.labelColor
+            color: Theme.controls.labelColor
             font.bold: true
         }
 
-        Label { text: qsTr("Name"); color: Theme.settingsWindow.descriptionColor }
+        Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
         SettingsTextField {
             id: nameField
             Layout.fillWidth: true
-            implicitHeight: Theme.settingsWindow.inputHeight
+            implicitHeight: Theme.controls.inputHeight
         }
         Label {
             readonly property string error: Theme.nameError(root.half, nameField.text)
@@ -52,29 +52,29 @@ MotionPopup {
             Layout.fillWidth: true
             text: error
             wrapMode: Text.WordWrap
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
 
         Label {
             visible: !root.isColors
             text: qsTr("Description (optional)")
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
         SettingsTextField {
             id: descriptionField
             visible: !root.isColors
             Layout.fillWidth: true
-            implicitHeight: Theme.settingsWindow.inputHeight
+            implicitHeight: Theme.controls.inputHeight
             maximumLength: 48
         }
         Label {
             visible: !root.isColors
             Layout.alignment: Qt.AlignRight
             text: descriptionField.length + "/48"
-            color: Theme.settingsWindow.descriptionColor
+            color: Theme.controls.descriptionColor
         }
 
-        Label { text: qsTr("Based on"); color: Theme.settingsWindow.descriptionColor }
+        Label { text: qsTr("Based on"); color: Theme.controls.descriptionColor }
         SettingsComboBox {
             id: basedCombo
             Layout.fillWidth: true
@@ -85,7 +85,7 @@ MotionPopup {
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
-            spacing: Theme.settingsWindow.controlSpacing
+            spacing: Theme.controls.controlSpacing
             SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
             SettingsButton {
                 primary: true

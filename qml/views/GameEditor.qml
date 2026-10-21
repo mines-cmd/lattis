@@ -784,21 +784,21 @@ Item {
                                         id: descriptionArea
                                         wrapMode: TextEdit.Wrap
                                         selectByMouse: true
-                                        color: Theme.settingsWindow.inputText
+                                        color: Theme.controls.inputText
                                         placeholderText: qsTr("A paragraph or two about the game")
-                                        placeholderTextColor: Theme.settingsWindow.placeholderColor
+                                        placeholderTextColor: Theme.controls.placeholderColor
                                         // Tab moves on, as in the other fields, instead of typing a tab.
                                         KeyNavigation.tab: yearField
                                         KeyNavigation.backtab: titleField
                                         HoverHandler { id: descriptionPointer }
                                         ContextMenu.menu: TextContextMenu { field: descriptionArea; pointer: descriptionPointer }
                                         background: Rectangle {
-                                            radius: Theme.settingsWindow.inputRadius
-                                            color: Theme.settingsWindow.inputBackground
-                                            border.color: descriptionArea.activeFocus ? Theme.settingsWindow.inputBorderFocus
-                                                                                      : Theme.settingsWindow.inputBorder
-                                            border.width: descriptionArea.activeFocus ? Theme.settingsWindow.inputBorderFocusWidth
-                                                                                      : Theme.settingsWindow.inputBorderWidth
+                                            radius: Theme.controls.inputRadius
+                                            color: Theme.controls.inputBackground
+                                            border.color: descriptionArea.activeFocus ? Theme.controls.inputBorderFocus
+                                                                                      : Theme.controls.inputBorder
+                                            border.width: descriptionArea.activeFocus ? Theme.controls.inputBorderFocusWidth
+                                                                                      : Theme.controls.inputBorderWidth
                                         }
                                     }
                                 }
@@ -954,20 +954,20 @@ Item {
                                     RowLayout {
                                         visible: !platformBox.visible
                                         Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.settingsWindow.inputHeight
+                                        Layout.minimumHeight: Theme.controls.inputHeight
                                         spacing: Theme.layout.spacing
 
                                         Icon {
                                             path: Icons.forPlatform(root.adding ? (root.platformChoices[platformBox.currentIndex]?.icon ?? "")
                                                                                 : (root.game.platformIcon ?? ""))
-                                            size: Theme.settingsWindow.iconSize
-                                            color: Theme.settingsWindow.inputText
+                                            size: Theme.controls.iconSize
+                                            color: Theme.controls.inputText
                                         }
                                         Label {
                                             Layout.fillWidth: true
                                             text: root.adding ? (root.platformChoices[platformBox.currentIndex]?.name ?? "")
                                                               : (root.game.platformName ?? "")
-                                            color: Theme.settingsWindow.inputText
+                                            color: Theme.controls.inputText
                                             font.pixelSize: Theme.gameEditor.platformFontSize
                                             elide: Text.ElideRight
                                         }
@@ -992,7 +992,7 @@ Item {
 
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.settingsWindow.inputHeight
+                                        Layout.minimumHeight: Theme.controls.inputHeight
                                         spacing: Theme.layout.spacing
 
                                         PathField {
@@ -1024,7 +1024,7 @@ Item {
                                         id: installField
                                         onCopied: root.message(qsTr("Copied"))
                                         Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.settingsWindow.inputHeight
+                                        Layout.minimumHeight: Theme.controls.inputHeight
                                         path: root.newInstallDir !== "" ? root.newInstallDir : (root.game.installPath ?? "")
                                         missingText: root.programGame ? qsTr("Not set") : qsTr("Not installed")
                                         missingColor: Theme.gameEditor.hintColor
@@ -1058,7 +1058,7 @@ Item {
                                 PathField {
                                     onCopied: root.message(qsTr("Copied"))
                                     Layout.fillWidth: true
-                                    Layout.minimumHeight: Theme.settingsWindow.inputHeight
+                                    Layout.minimumHeight: Theme.controls.inputHeight
                                     path: root.exeShown
                                     missingText: qsTr("Not set")
                                     missingColor: Theme.gameEditor.warningColor
@@ -1116,7 +1116,7 @@ Item {
                                 PathField {
                                     onCopied: root.message(qsTr("Copied"))
                                     Layout.fillWidth: true
-                                    Layout.minimumHeight: Theme.settingsWindow.inputHeight
+                                    Layout.minimumHeight: Theme.controls.inputHeight
                                     path: root.startDirShown
                                     fontSize: Theme.gameEditor.pathFontSize
 
@@ -1417,10 +1417,10 @@ Item {
                             Layout.alignment: Qt.AlignTop
                             implicitWidth: Theme.gameEditor.checkSize
                             implicitHeight: Theme.gameEditor.checkSize
-                            radius: Theme.settingsWindow.inputRadius / 2
-                            color: wipe.checked ? Theme.gameEditor.checkOn : Theme.settingsWindow.inputBackground
-                            border.color: wipe.checked ? Theme.gameEditor.checkOn : Theme.settingsWindow.inputBorder
-                            border.width: Theme.settingsWindow.inputBorderWidth
+                            radius: Theme.controls.inputRadius / 2
+                            color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBackground
+                            border.color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBorder
+                            border.width: Theme.controls.inputBorderWidth
                             Icon {
                                 anchors.centerIn: parent
                                 visible: wipe.checked

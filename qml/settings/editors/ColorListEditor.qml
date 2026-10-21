@@ -11,7 +11,7 @@ GridLayout {
 
     readonly property int cellWidth: Math.floor((width - columnSpacing * (columns - 1)) / columns)
 
-    columns: Math.max(1, Theme.settingsWindow.paletteColumns)
+    columns: Math.max(1, Theme.colorPicker.paletteColumns)
     columnSpacing: 6
     rowSpacing: 6
 
@@ -65,11 +65,11 @@ GridLayout {
             Rectangle {
                 id: swatch
                 Layout.fillWidth: true
-                Layout.preferredHeight: Theme.settingsWindow.swatchSize
-                radius: Theme.settingsWindow.inputRadius
+                Layout.preferredHeight: Theme.colorPicker.swatchSize
+                radius: Theme.controls.inputRadius
                 color: entry.modelData
-                border.color: Theme.settingsWindow.inputBorder
-                border.width: Theme.settingsWindow.inputBorderWidth > 0 ? Theme.settingsWindow.inputBorderWidth : 1
+                border.color: Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth > 0 ? Theme.controls.inputBorderWidth : 1
 
                 MouseArea {
                     id: swatchMouse
@@ -113,7 +113,7 @@ GridLayout {
                 leftPadding: 4
                 rightPadding: 4
                 horizontalAlignment: TextInput.AlignHCenter
-                font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                font.pixelSize: Theme.controls.descriptionFontSize
                 Component.onCompleted: text = root.formatHex(entry.modelData)
 
                 onEditingFinished: {
@@ -133,7 +133,7 @@ GridLayout {
     IconButton {
         id: addButton
         Layout.preferredWidth: root.cellWidth
-        Layout.preferredHeight: Theme.settingsWindow.swatchSize
+        Layout.preferredHeight: Theme.colorPicker.swatchSize
         Layout.alignment: Qt.AlignTop
         icon: Icons.add
         iconSize: 14

@@ -124,23 +124,23 @@ MotionPopup {
                         Label {
                             Layout.fillWidth: true
                             text: row.modelData.name
-                            color: Theme.settingsWindow.labelColor
-                            font.pixelSize: Theme.settingsWindow.labelFontSize
+                            color: Theme.controls.labelColor
+                            font.pixelSize: Theme.controls.labelFontSize
                             elide: Text.ElideRight
                         }
                         Label {
                             text: row.modelData.tool !== "" ? row.modelData.tool : qsTr("runs natively")
                             color: row.modelData.tool !== "" ? Theme.settingsWindow.markerColor
-                                                             : Theme.settingsWindow.descriptionColor
+                                                             : Theme.controls.descriptionColor
                             font.pixelSize: Theme.settingsWindow.markerFontSize
                         }
                     }
                     Label {
                         Layout.fillWidth: true
                         text: row.modelData.target
-                        color: Theme.settingsWindow.descriptionColor
+                        color: Theme.controls.descriptionColor
                         font.family: Theme.font.monoFamily
-                        font.pixelSize: Theme.settingsWindow.descriptionFontSize
+                        font.pixelSize: Theme.controls.descriptionFontSize
                         elide: Text.ElideMiddle
                     }
                 }
@@ -151,7 +151,7 @@ MotionPopup {
             id: error
             visible: text !== ""
             Layout.fillWidth: true
-            color: Theme.settingsWindow.problemsText
+            color: Theme.controls.problemsText
             wrapMode: Text.WordWrap
         }
 

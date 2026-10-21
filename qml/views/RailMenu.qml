@@ -21,20 +21,20 @@ SettingsMenu {
         property bool checked
         signal toggled()
 
-        implicitHeight: Theme.settingsWindow.menuItemHeight
+        implicitHeight: Theme.menu.itemHeight
         implicitWidth: content.implicitWidth + 20
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.settingsWindow.menuItemRadius
-            color: hover.hovered ? Theme.settingsWindow.rowHover : "transparent"
+            radius: Theme.menu.itemRadius
+            color: hover.hovered ? Theme.controls.hover : "transparent"
         }
         RowLayout {
             id: content
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            spacing: 6
+            anchors.leftMargin: Theme.menu.itemPadding
+            anchors.rightMargin: Theme.menu.itemPadding
+            spacing: Theme.menu.itemSpacing
 
             Item {
                 implicitWidth: 16
@@ -44,14 +44,14 @@ SettingsMenu {
                     visible: row.checked
                     path: Icons.check
                     size: 16
-                    color: Theme.settingsWindow.inputText
+                    color: Theme.controls.inputText
                 }
             }
             Label {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 text: row.text
-                color: Theme.settingsWindow.inputText
+                color: Theme.controls.inputText
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
             }
