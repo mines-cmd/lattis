@@ -126,7 +126,7 @@ MenuItem {
             Layout.fillWidth: true
             Layout.fillHeight: true
             text: item.text
-            color: item.danger ? Theme.menu.dangerText : Theme.controls.inputText
+            color: item.danger ? Theme.menu.dangerText : (item.menu?.textColor ?? Theme.controls.inputText)
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }

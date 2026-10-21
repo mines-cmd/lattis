@@ -251,6 +251,7 @@ constexpr Setting kSettings[] = {
     integer("menu", "keys_spacing", "24", 0, 100, "Space before an entry's keys and its submenu arrow"),
     integer("menu", "min_width", "160", 40, 600, "Narrowest a menu gets"),
     color("menu", "keys_color", "@text_muted", "Keys beside an entry in a menu (Ctrl+D)"),
+    color("menu", "row_menu_text", "@text_muted", "Entry text in a setting's ⋯ menu on the Customize page"),
     color("menu", "danger_text", "#e5534b", "A menu entry that removes something (Uninstall)"),
     boolean("menu", "icons", "true", "Show icons to the left of entries in the app and game menus"),
     integer("menu", "icon_size", "16", 8, 48, "Icon size in the menus"),

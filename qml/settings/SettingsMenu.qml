@@ -6,6 +6,7 @@ Menu {
     id: root
 
     property Item growFrom: null
+    property color textColor: Theme.controls.inputText
     readonly property bool grows: growFrom !== null
 
     // For a menu that opens beside what opened it, or at the cursor, rather than under a field:

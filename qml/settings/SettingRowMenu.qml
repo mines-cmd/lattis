@@ -5,6 +5,7 @@ SettingsMenu {
     id: root
 
     pops: true
+    textColor: Theme.menu.rowMenuText
 
     required property var row
     property var info: ({})
