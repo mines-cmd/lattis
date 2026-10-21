@@ -24,9 +24,7 @@ SettingsMenu {
         info = Theme.rowMenu(row.section, row.key)
         if (item) {
             popDirection = "below"
-            // Placed once, at its final x: opened at the button and moved after, it showed off to the right first,
-            // pushed in by the window edge, and slid left to the button.
-            popup(item, x - root.width, y + 2)
+            popup(item, x, y + 2)
         }
         // At the click, not the cursor: a reopening waits for the old menu's exit, and the pointer may have moved.
         else popup(row, x, y)
