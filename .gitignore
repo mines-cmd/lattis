@@ -12,3 +12,6 @@ tools/logo*/out/
 # Cache and state written next to the demo data dir by tools/screenshot.sh
 launcher-demo-cache/
 launcher-demo-state/
+
+# Local config and cache of the impeccable design skill
+.impeccable/
