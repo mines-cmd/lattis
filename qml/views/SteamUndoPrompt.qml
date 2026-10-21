@@ -39,7 +39,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: qsTr("Undo the changes waiting for Steam?")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             wrapMode: Text.WordWrap
         }
         Label {

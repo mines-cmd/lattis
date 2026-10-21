@@ -61,7 +61,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: qsTr("Add existing shortcuts")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
         Label {
             Layout.fillWidth: true

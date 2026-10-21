@@ -37,7 +37,7 @@ MotionPopup {
         Label {
             text: root.isColors ? qsTr("New colors") : qsTr("New style")
             color: Theme.controls.labelColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
 
         Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }

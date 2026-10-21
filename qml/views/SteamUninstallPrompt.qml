@@ -49,7 +49,7 @@ MotionPopup {
         Label {
             text: qsTr("Uninstall %1?").arg(root.game.title ?? "")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
         }

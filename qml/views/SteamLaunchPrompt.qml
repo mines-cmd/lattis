@@ -47,7 +47,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: qsTr("Restart Steam to launch %1 with its changes?").arg(root.game.title ?? "")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             wrapMode: Text.WordWrap
         }
         Label {

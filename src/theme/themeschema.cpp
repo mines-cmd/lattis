@@ -161,6 +161,8 @@ constexpr Setting kSettings[] = {
     integer("font", "heading_size", "15", 6, 72, "Headings: Description, Tags"),
     integer("font", "emphasis_weight", "600", 100, 900,
             "Weight of emphasised text: headings in dialogs, selected items, names in lists, bold-ish labels (400 = normal, 600 = semibold, 700 = bold)"),
+    integer("font", "strong_weight", "700", 100, 900,
+            "Weight of the strongest text: page and dialog titles, names, the game title (700 = bold, 900 = black)"),
     integer("font", "on_accent_weight", "@font.emphasis_weight", 100, 900,
             "Weight of text drawn on the accent (selected sort order, selected Settings category, main dialog button, current setup step): 400 = normal, 600 = semibold, 700 = bold"),
 

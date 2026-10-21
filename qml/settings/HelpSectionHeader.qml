@@ -18,7 +18,7 @@ ColumnLayout {
         Layout.fillWidth: true
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
     RowLayout {
         Layout.fillWidth: true

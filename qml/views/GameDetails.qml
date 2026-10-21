@@ -88,7 +88,7 @@ Item {
             visible: desc.visible
             text: qsTr("Description")
             color: Theme.details.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             font.pixelSize: Theme.details.headingFontSize
         }
         Label {
@@ -130,7 +130,7 @@ Item {
             Layout.topMargin: desc.visible ? 14 : 0
             text: qsTr("Tags")
             color: Theme.details.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             font.pixelSize: Theme.details.headingFontSize
         }
         // Another game's tags replace these at once: the switch has its own motion. A tag added to or

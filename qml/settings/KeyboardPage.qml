@@ -133,7 +133,7 @@ Item {
                     text: model.groupTitle
                     color: Theme.settingsWindow.sectionHeaderColor
                     font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                 }
 
                 Item {

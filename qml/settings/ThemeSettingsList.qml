@@ -94,7 +94,7 @@ ListView {
                 text: model.sectionTitle
                 color: Theme.settingsWindow.sectionHeaderColor
                 font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Label {
                 visible: model.sectionDoc !== ""

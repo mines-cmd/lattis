@@ -127,7 +127,7 @@ Item {
                 Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
                 text: qsTr("Look up %1 in IGDB").arg(root.gameTitle)
                 color: Theme.gameEditor.headingColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
                 font.pixelSize: Theme.gameEditor.headingFontSize
                 elide: Text.ElideRight
             }
@@ -222,7 +222,7 @@ Item {
                                         Layout.fillWidth: true
                                         text: row.modelData.name
                                         color: Theme.gameEditor.lookupText
-                                        font.bold: true
+                                        font.weight: Theme.font.strongWeight
                                         elide: Text.ElideRight
                                     }
                                     Label {
@@ -338,7 +338,7 @@ Item {
                             Layout.fillWidth: true
                             text: root.current?.name ?? ""
                             color: Theme.gameEditor.headingColor
-                            font.bold: true
+                            font.weight: Theme.font.strongWeight
                             wrapMode: Text.WordWrap
                         }
                         Label {

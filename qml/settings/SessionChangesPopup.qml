@@ -39,7 +39,7 @@ MotionPopup {
                 Layout.fillWidth: true
                 text: qsTr("Changed since Settings opened")
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             SettingsButton {
                 text: qsTr("Undo all")

@@ -124,7 +124,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: root.trashless !== "" ? qsTr("Delete it permanently?") : qsTr("Uninstall %1?").arg(root.game.title ?? "")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             wrapMode: Text.WordWrap
         }
 
@@ -241,7 +241,7 @@ MotionPopup {
                     Layout.alignment: Qt.AlignBaseline
                     text: qsTr("In the library")
                     color: Theme.gameEditor.headingColor
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                 }
                 Label {
                     Layout.fillWidth: true

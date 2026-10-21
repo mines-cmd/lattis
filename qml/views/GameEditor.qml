@@ -665,7 +665,7 @@ Item {
                     Layout.fillWidth: true
                     text: root.adding ? qsTr("Add a game") : qsTr("Properties")
                     color: Theme.gameEditor.headingColor
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                     font.pixelSize: Theme.gameEditor.headingFontSize
                     elide: Text.ElideRight
                 }
@@ -1391,7 +1391,7 @@ Item {
                 Label {
                     text: qsTr("Hide %1?").arg(root.game.title ?? "")
                     color: Theme.gameEditor.headingColor
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                 }
@@ -1692,7 +1692,7 @@ Item {
                 Layout.fillWidth: true
                 color: Theme.gameEditor.cardTitleColor
                 font.pixelSize: Theme.gameEditor.cardTitleFontSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Item {
                 id: actionsSlot

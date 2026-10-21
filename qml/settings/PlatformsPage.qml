@@ -212,7 +212,7 @@ Item {
             width: parent.width
             spacing: 10
 
-            Label { text: qsTr("Add platform"); color: Theme.controls.labelColor; font.bold: true }
+            Label { text: qsTr("Add platform"); color: Theme.controls.labelColor; font.weight: Theme.font.strongWeight }
 
             Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
             SettingsTextField {
@@ -287,7 +287,7 @@ Item {
             Label {
                 text: qsTr("Remove %1?").arg(removeDialog.platform.name)
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Label {
                 Layout.fillWidth: true

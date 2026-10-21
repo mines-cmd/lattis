@@ -363,7 +363,7 @@ Item {
                     text: (root.bulk ? qsTr("%1 of %2 · ").arg(root.stepIndex + 1).arg(root.steps.length) : "")
                           + (root.other ? qsTr("Art from %1") : qsTr("Art for %1")).arg(root.gameTitle)
                     color: Theme.gameEditor.headingColor
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                     font.pixelSize: Theme.gameEditor.headingFontSize
                     elide: Text.ElideRight
                 }
@@ -417,7 +417,7 @@ Item {
                                 Label {
                                     text: tabButton.modelData.name
                                     color: Theme.controls.buttonText
-                                    font.bold: tabButton.current
+                                    font.weight: tabButton.current ? Theme.font.strongWeight : Font.Normal
                                 }
                                 Rectangle {
                                     visible: root.picks[tabButton.modelData.id] !== undefined

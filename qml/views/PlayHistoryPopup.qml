@@ -272,7 +272,7 @@ MotionPopup {
             color: parent.primary ? Theme.playHistory.summaryPrimaryColor
                                   : Theme.playHistory.summaryValueColor
             font.pixelSize: Theme.playHistory.summaryValueSize
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
     }
 
@@ -300,7 +300,7 @@ MotionPopup {
                     text: root.gameTitle
                     color: Theme.gameEditor.headingColor
                     font.pixelSize: Theme.gameEditor.headingFontSize
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                     elide: Text.ElideRight
                 }
                 Label {

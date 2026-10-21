@@ -53,7 +53,7 @@ ComboBox {
         contentItem: Label {
             text: root.textRole ? item.modelData[root.textRole] : item.modelData
             color: Theme.controls.inputText
-            font.bold: root.currentIndex === item.index
+            font.weight: root.currentIndex === item.index ? Theme.font.strongWeight : Font.Normal
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }

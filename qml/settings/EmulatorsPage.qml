@@ -163,7 +163,7 @@ Item {
             width: parent.width
             spacing: 10
 
-            Label { text: qsTr("Add emulator"); color: Theme.controls.labelColor; font.bold: true }
+            Label { text: qsTr("Add emulator"); color: Theme.controls.labelColor; font.weight: Theme.font.strongWeight }
 
             Label { text: qsTr("Start from"); color: Theme.controls.descriptionColor }
             SettingsComboBox {
@@ -228,7 +228,7 @@ Item {
     component Heading: Label {
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
 
     ColumnLayout {

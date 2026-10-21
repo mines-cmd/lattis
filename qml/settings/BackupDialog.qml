@@ -113,7 +113,7 @@ MotionPopup {
     component Heading: Label {
         Layout.fillWidth: true
         color: Theme.gameEditor.labelColor
-        font.bold: true
+        font.weight: Theme.font.strongWeight
         wrapMode: Text.WordWrap
     }
     component Card: Surface {
@@ -175,7 +175,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: root.library ? qsTr("Back up library") : qsTr("Back up saves")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
 
         Flickable {

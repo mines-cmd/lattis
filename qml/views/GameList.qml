@@ -969,7 +969,7 @@ Rectangle {
                         Layout.fillWidth: true
                         text: Theme.list.headerUppercase ? row.title.toUpperCase() : row.title
                         color: row.headerColor
-                        font.bold: true
+                        font.weight: Theme.font.strongWeight
                         font.pixelSize: Theme.list.headerFontSize
                         font.letterSpacing: Theme.list.headerUppercase ? 0.8 : 0
                     }

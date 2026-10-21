@@ -120,7 +120,7 @@ ColumnLayout {
                     text: root.steam.users[0]?.name ?? ""
                     color: Theme.controls.labelColor
                     font.pixelSize: Theme.controls.labelFontSize
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                 }
                 SettingsButton {
                     visible: !root.steam.found && !root.looking && root.steam.path !== ""
@@ -384,7 +384,7 @@ ColumnLayout {
                     text: qsTr("+%1").arg(covers.rest)
                     color: Theme.onboarding.steamMoreColor
                     font.pixelSize: Theme.onboarding.steamMoreFontSize
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                 }
             }
         }

@@ -86,7 +86,7 @@ MotionPopup {
         property string title
         text: Theme.filters.headingUppercase ? title.toUpperCase() : title
         color: Theme.filters.headingColor
-        font.bold: true
+        font.weight: Theme.font.strongWeight
         font.pixelSize: Theme.filters.headingFontSize
         font.letterSpacing: Theme.filters.headingUppercase ? 0.8 : 0
     }

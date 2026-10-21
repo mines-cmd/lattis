@@ -183,7 +183,7 @@ Rectangle {
                             Label {
                                 text: candidate.modelData.name
                                 color: Theme.gameEditor.lookupText
-                                font.bold: true
+                                font.weight: Theme.font.strongWeight
                                 Layout.maximumWidth: Theme.gameEditor.width / 4
                                 elide: Text.ElideRight
                             }

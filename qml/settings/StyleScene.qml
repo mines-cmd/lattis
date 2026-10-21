@@ -72,7 +72,7 @@ Rectangle {
             text: root.preview.launchLabel ?? ""
             color: root.preview.onAccent ?? "white"
             font.pixelSize: Theme.settingsWindow.themePopupDescriptionFontSize
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             elide: Text.ElideRight
         }
     }

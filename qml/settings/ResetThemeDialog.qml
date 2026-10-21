@@ -38,7 +38,7 @@ MotionPopup {
         Label {
             text: qsTr("Reset %1 to built-in?").arg(root.name)
             color: Theme.controls.labelColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
         Label {
             Layout.fillWidth: true

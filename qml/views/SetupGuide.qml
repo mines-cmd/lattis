@@ -347,7 +347,7 @@ FocusScope {
                                 Label {
                                     text: step.modelData.name
                                     font.pixelSize: Theme.onboarding.stepLabelFontSize
-                                    font.bold: step.isCurrent
+                                    font.weight: step.isCurrent ? Theme.font.strongWeight : Font.Normal
                                     color: step.isCurrent ? Theme.onboarding.stepCurrentLabelColor : Theme.onboarding.stepLabelColor
                                     Behavior on color { enabled: Motion.fades && root.ready; MotionColor { speed: "normal" } }
                                 }
@@ -504,7 +504,7 @@ FocusScope {
                                                     text: header.title
                                                     color: Theme.onboarding.titleColor
                                                     font.pixelSize: Theme.onboarding.titleSize
-                                                    font.bold: true
+                                                    font.weight: Theme.font.strongWeight
                                                     wrapMode: Text.Wrap
                                                 }
                                                 Label {

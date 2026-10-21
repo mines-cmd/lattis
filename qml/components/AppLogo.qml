@@ -44,7 +44,7 @@ Item {
             anchors.centerIn: parent
             text: Theme.rail.logoText
             color: Theme.rail.logoTextColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             font.pixelSize: parent.height * 0.38
         }
     }

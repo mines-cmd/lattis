@@ -107,7 +107,7 @@ ColumnLayout {
                         text: entry.modelData.name
                         color: Theme.controls.labelColor
                         font.pixelSize: Theme.controls.labelFontSize
-                        font.bold: true
+                        font.weight: Theme.font.strongWeight
                     }
                     Rectangle {
                         readonly property color tint: entry.platformInstalled ? Theme.settingsWindow.installFound

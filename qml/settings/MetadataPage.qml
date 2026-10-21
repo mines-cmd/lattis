@@ -236,7 +236,7 @@ Item {
                                     text: missing.missingCount
                                     color: Theme.controls.labelColor
                                     font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-                                    font.bold: true
+                                    font.weight: Theme.font.strongWeight
                                 }
                                 Label {
                                     text: missing.missingCount === 0 ? qsTr("Every game has its info")

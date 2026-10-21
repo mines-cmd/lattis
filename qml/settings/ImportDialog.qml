@@ -101,7 +101,7 @@ MotionPopup {
     component Heading: Label {
         Layout.fillWidth: true
         color: Theme.gameEditor.labelColor
-        font.bold: true
+        font.weight: Theme.font.strongWeight
         wrapMode: Text.WordWrap
     }
     component Card: Surface {
@@ -214,7 +214,7 @@ MotionPopup {
             readonly property string kind: root.done !== "" ? root.done : (root.plan.kind ?? "")
             text: kind === "library" ? qsTr("Import library") : kind === "saves" ? qsTr("Import saves") : qsTr("Import")
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
 
         Flickable {

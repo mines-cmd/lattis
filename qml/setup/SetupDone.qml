@@ -62,7 +62,7 @@ ColumnLayout {
                 text: qsTr("Bringing your games in")
                 color: Theme.controls.labelColor
                 font.pixelSize: Theme.controls.labelFontSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Label {
                 visible: root.busy
@@ -152,7 +152,7 @@ ColumnLayout {
                                 text: modelData.count
                                 color: Theme.palette.text
                                 font.pixelSize: Theme.onboarding.tileCountSize
-                                font.bold: true
+                                font.weight: Theme.font.strongWeight
                             }
                             Label {
                                 Layout.fillWidth: true
@@ -177,7 +177,7 @@ ColumnLayout {
             text: qsTr("Good to know")
             color: Theme.controls.labelColor
             font.pixelSize: Theme.controls.labelFontSize
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
 
         Repeater {

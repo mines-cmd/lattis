@@ -562,7 +562,7 @@ ColumnLayout {
                 Label {
                     text: qsTr("Remove %1?").arg(root.emulator.name)
                     color: Theme.controls.labelColor
-                    font.bold: true
+                    font.weight: Theme.font.strongWeight
                 }
                 Label {
                     Layout.fillWidth: true

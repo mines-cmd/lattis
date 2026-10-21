@@ -25,7 +25,7 @@ Item {
             text: root.title.charAt(0)
             color: Theme.list.iconPlaceholderText
             font.pixelSize: root.size * 0.6
-            font.bold: true
+            font.weight: Theme.font.strongWeight
         }
     }
 

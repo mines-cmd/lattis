@@ -53,7 +53,7 @@ Item {
         Layout.bottomMargin: Theme.layout.spacing
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
 
     component Divider: Rectangle {
@@ -294,7 +294,7 @@ Item {
                                     text: modelData.title
                                     color: Theme.controls.labelColor
                                     font.pixelSize: Theme.controls.labelFontSize
-                                    font.bold: true
+                                    font.weight: Theme.font.strongWeight
                                     elide: Text.ElideRight
                                 }
                                 SettingsButton {
@@ -428,7 +428,7 @@ Item {
                                     text: modelData.name
                                     color: Theme.controls.labelColor
                                     font.pixelSize: Theme.controls.labelFontSize
-                                    font.bold: true
+                                    font.weight: Theme.font.strongWeight
                                 }
                                 SettingsNote {
                                     text: modelData.builtIn ? qsTr("built in, [steam.presets.%1]").arg(modelData.id)

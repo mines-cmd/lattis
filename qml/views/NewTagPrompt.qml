@@ -50,7 +50,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: qsTr("New tag for %1 games").arg(root.ids.length)
             color: Theme.gameEditor.headingColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             wrapMode: Text.WordWrap
         }
         SettingsTextField {

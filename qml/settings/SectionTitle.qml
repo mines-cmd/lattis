@@ -3,5 +3,5 @@ import QtQuick.Controls.Basic
 
 Label {
     color: Theme.controls.labelColor
-    font.bold: true
+    font.weight: Theme.font.strongWeight
 }

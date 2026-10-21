@@ -85,7 +85,7 @@ Item {
                 text: choice.text
                 color: Theme.palette.text
                 font.pixelSize: Theme.onboarding.choiceTitleSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
                 wrapMode: Text.Wrap
             }
             Label {
@@ -265,7 +265,7 @@ Item {
             text: qsTr("How do you want to start?")
             color: Theme.onboarding.titleColor
             font.pixelSize: Theme.onboarding.welcomeHeadingSize
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             wrapMode: Text.Wrap
         }
 

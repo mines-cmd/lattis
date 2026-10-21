@@ -50,7 +50,7 @@ Item {
         Layout.bottomMargin: Theme.layout.spacing
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
 
     ColumnLayout {

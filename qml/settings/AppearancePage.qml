@@ -56,7 +56,7 @@ Item {
         Layout.bottomMargin: Theme.layout.spacing
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
 
     component ThemeCard: AbstractButton {
@@ -312,7 +312,7 @@ Item {
             Label {
                 text: qsTr("Save as theme")
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Label {
                 Layout.fillWidth: true
@@ -374,7 +374,7 @@ Item {
             Label {
                 text: qsTr("Replace %1?").arg(saveName.text)
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Label {
                 Layout.fillWidth: true

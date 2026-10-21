@@ -68,7 +68,7 @@ MotionPopup {
         width: parent.width
         spacing: 12
 
-        Label { text: qsTr("Find ROM folders"); color: Theme.controls.labelColor; font.bold: true }
+        Label { text: qsTr("Find ROM folders"); color: Theme.controls.labelColor; font.weight: Theme.font.strongWeight }
         Label {
             Layout.fillWidth: true
             text: qsTr("Pick the folder that holds one folder per platform. Its folders are matched to platforms by name.")
@@ -112,7 +112,7 @@ MotionPopup {
                 text: qsTr("Matched")
                 color: Theme.controls.descriptionColor
                 font.pixelSize: Theme.controls.descriptionFontSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Rectangle {
                 Layout.fillWidth: true
@@ -181,7 +181,7 @@ MotionPopup {
                 text: qsTr("Not matched")
                 color: Theme.controls.descriptionColor
                 font.pixelSize: Theme.controls.descriptionFontSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Flow {
                 Layout.fillWidth: true

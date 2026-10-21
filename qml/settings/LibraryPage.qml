@@ -143,7 +143,7 @@ Item {
         Layout.bottomMargin: Theme.layout.spacing
         color: Theme.settingsWindow.sectionHeaderColor
         font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
-        font.bold: true
+        font.weight: Theme.font.strongWeight
     }
 
     component Card: Rectangle {
@@ -197,7 +197,7 @@ Item {
                 Layout.fillWidth: true
                 text: qsTr("Delete the tag %1?").arg(deleteDialog.tag.name)
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
                 wrapMode: Text.WordWrap
             }
             Muted {
@@ -244,7 +244,7 @@ Item {
                 Layout.fillWidth: true
                 text: qsTr("Move %1 to the trash?").arg(trashDialog.entry.places)
                 color: Theme.controls.labelColor
-                font.bold: true
+                font.weight: Theme.font.strongWeight
                 wrapMode: Text.WordWrap
             }
             Muted {

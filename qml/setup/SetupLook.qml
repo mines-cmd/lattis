@@ -225,7 +225,7 @@ ColumnLayout {
                         text: card.modelData
                         color: Theme.palette.text
                         font.pixelSize: Theme.onboarding.themeNameSize
-                        font.bold: true
+                        font.weight: Theme.font.strongWeight
                         elide: Text.ElideRight
                     }
                     Label {
@@ -289,7 +289,7 @@ ColumnLayout {
                 text: qsTr("Style")
                 color: Theme.palette.text
                 font.pixelSize: Theme.onboarding.themeNameSize
-                font.bold: true
+                font.weight: Theme.font.strongWeight
             }
             Flow {
                 Layout.fillWidth: true
@@ -334,7 +334,7 @@ ColumnLayout {
                         contentItem: Label {
                             text: styleButton.text
                             color: Theme.palette.text
-                            font.bold: styleButton.active
+                            font.weight: styleButton.active ? Theme.font.strongWeight : Font.Normal
                             horizontalAlignment: Text.AlignHCenter
                         }
                     }

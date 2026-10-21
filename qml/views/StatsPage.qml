@@ -1456,7 +1456,7 @@ FocusScope {
                                 text: root.tileValue(tile.modelData.kind, tile.amount)
                                 color: tile.modelData.color
                                 font.pixelSize: Theme.stats.tileValueSize
-                                font.weight: Font.Bold
+                                font.weight: Theme.font.strongWeight
 
                                 Behavior on color { enabled: Motion.fades; MotionColor { speed: "normal" } }
                             }

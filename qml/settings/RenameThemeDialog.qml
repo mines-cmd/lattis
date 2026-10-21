@@ -66,7 +66,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: qsTr("Rename %1").arg(root.name)
             color: Theme.controls.labelColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             elide: Text.ElideRight
         }
 

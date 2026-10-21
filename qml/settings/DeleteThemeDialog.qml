@@ -68,7 +68,7 @@ MotionPopup {
             Layout.fillWidth: true
             text: root.permanent ? qsTr("Delete %1 for good?").arg(root.name) : qsTr("Delete %1?").arg(root.name)
             color: Theme.controls.labelColor
-            font.bold: true
+            font.weight: Theme.font.strongWeight
             elide: Text.ElideRight
         }
         Label {
