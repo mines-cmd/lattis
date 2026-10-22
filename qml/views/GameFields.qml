@@ -18,9 +18,10 @@ QtObject {
         // numbers when this binding runs for the new game.
         const played = read.id === (game.id ?? "") ? read : {}
         return {
-            play_time: { label: qsTr("Play time"), value: game.playTimeText ?? "", icon: Icons.clock, history: true,
-                         tip: qsTr("Show play history") },
-            last_played: { label: qsTr("Last played"), value: game.lastPlayedText ?? "", icon: "" },
+            play_time: { label: qsTr("Play time"), value: game.id ? game.playTimeText || qsTr("None") : "",
+                         icon: Icons.clock, history: true, tip: qsTr("Show play history") },
+            last_played: { label: qsTr("Last played"), value: game.id ? game.lastPlayedText || qsTr("Never") : "",
+                           icon: "" },
             release_date: { label: qsTr("Release date"), value: game.year ?? "", icon: "" },
             platform: { label: qsTr("Platform"), value: game.platformName ?? "", icon: Icons.forPlatform(game.platformIcon ?? ""),
                         valueIcon: true, filterPlatform: game.platform ?? "",

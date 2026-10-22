@@ -29,7 +29,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 
 - **The rail**, on the left: the logo, **All games**, one button per platform that has games, then **+** (add a game) and the settings button at the bottom.
 - **The game list**: the search box and the filter button above your games, grouped by platform.
-- **The game's page**: its art, the **Launch** button, play time and last played (once you've played it), buttons to favorite it, open its emulator or Steam page, open its folder, and open its **Properties**; then its description, tags and an info panel (click its **Platform** to show only that platform's games).
+- **The game's page**: its art, the **Launch** button, play time and last played ("None" and "Never" until you've played it), buttons to favorite it, open its emulator or Steam page, open its folder, and open its **Properties**; then its description, tags and an info panel (click its **Platform** to show only that platform's games).
 
 Two menus hold most of what isn't on screen:
 
