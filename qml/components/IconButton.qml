@@ -61,13 +61,13 @@ Surface {
 
     Rectangle {
         visible: root.badge
-        width: 9
-        height: 9
+        width: Theme.iconButton.badgeSize
+        height: Theme.iconButton.badgeSize
         radius: height / 2
         color: root.badgeColor
-        border.color: Theme.palette.background
-        border.width: 2
-        anchors { top: parent.top; right: parent.right; margins: 6 }
+        border.color: Theme.iconButton.badgeBorder
+        border.width: Theme.iconButton.badgeBorderWidth
+        anchors { top: parent.top; right: parent.right; margins: Theme.iconButton.badgeMargin }
     }
 
     MouseArea {

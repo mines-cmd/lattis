@@ -236,10 +236,12 @@ void ThemeTest::changedOnlyFiltersToCustomizedSettings()
     QVERIFY(model->rowCount() > 100);
 
     colorsModel->setFilterText(QStringLiteral("icon_button.badge"));
-    QCOMPARE(colorsModel->rowCount(), 1);
+    QCOMPARE(colorsModel->rowCount(), 2);
     QCOMPARE(colorsModel->data(colorsModel->index(0), ThemeSettingsModel::KeyRole).toString(), QStringLiteral("badge"));
+    QCOMPARE(colorsModel->data(colorsModel->index(1), ThemeSettingsModel::KeyRole).toString(),
+             QStringLiteral("badge_border"));
     colorsModel->setFilterText(QStringLiteral("icon button badge"));
-    QCOMPARE(colorsModel->rowCount(), 1);
+    QCOMPARE(colorsModel->rowCount(), 2);
     colorsModel->setFilterText({});
 }
 
