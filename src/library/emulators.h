@@ -47,6 +47,9 @@ struct EmulatorDef
     QString flatpak;
     QStringList executables;
     QString appimage;
+    QString release;
+    QString releaseAsset;
+    QString releaseInside;
     QString path;
     QStringList command;
     QStringList args;

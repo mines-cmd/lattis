@@ -1,5 +1,6 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/installer.h"
 #include "core/apppaths.h"
 #include "core/gamepagemigration.h"
 #include "core/general.h"
@@ -167,6 +168,8 @@ int main(int argc, char *argv[])
                             qCritical().noquote() << "can't start the app again after the import:" << error;
                         QCoreApplication::quit();
                     }});
+    Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
+                      [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&thumbnails);

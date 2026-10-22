@@ -8,6 +8,8 @@ flatpak = "org.duckstation.DuckStation"
 executables = ["duckstation-qt"]
 # Releases are DuckStation-x64.AppImage (and -SSE2, -arm64 variants).
 appimage = "DuckStation*.AppImage"
+release = "github:stenzek/duckstation"
+release_asset = "DuckStation-x64.AppImage"
 # -batch quits when the game stops; -- ends the options, whatever the file is called.
 command = ["{exe}", "{args}", "-batch", "--", "{rom}"]
 # Not bin (it comes with a cue, listed once) nor m3u (its discs are listed already).

@@ -7,6 +7,8 @@ flatpak = "org.azahar_emu.Azahar"
 executables = ["azahar", "azahar-qt"]
 # Releases ship azahar.AppImage and azahar-wayland.AppImage.
 appimage = "azahar*.AppImage"
+release = "github:azahar-emu/azahar"
+release_asset = "azahar.AppImage"
 command = ["{exe}", "{args}", "{rom}"]
 # Not cia: those are installed into the emulator (azahar -i), not booted.
 extensions = ["3ds", "cci", "cxi", "3dsx", "app", "elf"]

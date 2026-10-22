@@ -146,7 +146,7 @@ void LibraryEmulatorsTest::addCopiedEmulator()
     const QByteArray written = readFile(file);
     QVERIFY(written.contains("id = \"citra\"\nname = \"Citra\"\nplatforms = [\"3ds\"]\n"));
     QVERIFY(written.contains("extensions = [\"3ds\", \"cci\", \"cxi\", \"3dsx\", \"app\", \"elf\"]"));
-    for (const char *left : {"flatpak", "executables", "appimage", "saves", "keys"})
+    for (const char *left : {"flatpak", "executables", "appimage", "release", "release_asset", "release_inside", "saves", "keys"})
         QVERIFY2(!written.contains(QByteArray("\n") + left + " ="), left);
 
     // Last, so the built-in is still tried first.

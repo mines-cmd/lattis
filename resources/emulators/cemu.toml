@@ -7,6 +7,8 @@ flatpak = "info.cemu.Cemu"
 executables = ["cemu", "Cemu"]
 # Releases are Cemu-*-x86_64.AppImage.
 appimage = "Cemu*.AppImage"
+release = "github:cemu-project/Cemu"
+release_asset = "Cemu-*-x86_64.AppImage"
 command = ["{exe}", "{args}", "-g", "{rom}"]
 # Disc images and .wua archives. Unpacked games (a folder with code/*.rpx) aren't found:
 # their program's name varies, so boot them from Cemu.

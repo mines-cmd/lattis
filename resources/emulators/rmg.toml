@@ -8,6 +8,8 @@ executables = ["RMG"]
 # Releases are RMG-Portable-Linux64-v*.AppImage; Gear Lever renames them to
 # rosalies_mupen_gui.appimage.
 appimage = "RMG*.AppImage;rosalie*.AppImage"
+release = "github:Rosalie241/RMG"
+release_asset = "RMG-Portable-Linux64-*.AppImage"
 # Quits RMG when the game stops.
 command = ["{exe}", "{args}", "--quit-after-emulation", "{rom}"]
 extensions = ["z64", "n64", "v64"]

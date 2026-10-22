@@ -5,7 +5,7 @@ find_package(Qt6 REQUIRED COMPONENTS Test Qml Gui Concurrent Network)
 
 # Every source folder, as the app has them; no two headers share a name.
 set(TEST_INCLUDES ../src/core ../src/input ../src/launch ../src/library ../src/metadata ../src/steam ../src/theme
-    ../src/backup)
+    ../src/backup ../src/install)
 
 # A test <name> from <name>.cpp and SOURCES, linked to Qt Test and LIBS. PRESETS embeds the default
 # platforms.toml and the emulator presets under the app's resource path; OFFSCREEN runs it without a
@@ -53,6 +53,7 @@ set(STEAM_SOURCES
 set(LIBRARY_FILE_SOURCES
     ../src/library/libraryfiles.h ../src/library/libraryfiles.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
+    ../src/install/releasesource.h ../src/install/releasesource.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
@@ -256,6 +257,15 @@ lattis_test(metadata_test
             ${CORE_SOURCES}
     LIBS Qt6::Qml Qt6::Gui Qt6::Network tomlplusplus::tomlplusplus
     DEFINES "METADATA_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/metadata\"")
+
+# Installing emulators
+lattis_test(install_test
+    SOURCES fakehttpserver.h
+            ../src/install/appimageinstall.h ../src/install/appimageinstall.cpp
+            ../src/install/installrecord.h ../src/install/installrecord.cpp
+            ../src/install/installer.h ../src/install/installer.cpp
+            ${LIBRARY_FILE_SOURCES}
+    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
 
 # Backups
 lattis_test(archive_test

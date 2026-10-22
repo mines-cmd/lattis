@@ -7,6 +7,8 @@ flatpak = "net.rpcs3.RPCS3"
 executables = ["rpcs3"]
 # Releases are rpcs3-v*_linux64.AppImage.
 appimage = "rpcs3*.AppImage"
+release = "github:RPCS3/rpcs3-binaries-linux"
+release_asset = "rpcs3-*_linux64.AppImage"
 # Runs the game without RPCS3's window, and quits with it.
 command = ["{exe}", "{args}", "--no-gui", "{rom}"]
 # Disc games are folders: <game>/PS3_GAME/USRDIR/EBOOT.BIN. Games installed from PSN

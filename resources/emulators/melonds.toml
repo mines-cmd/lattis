@@ -7,6 +7,9 @@ flatpak = "net.kuribo64.melonDS"
 executables = ["melonDS"]
 # Releases are a zip holding the AppImage.
 appimage = "melonDS*.AppImage"
+release = "github:melonDS-emu/melonDS"
+release_asset = "melonDS-*-appimage-x86_64.zip"
+release_inside = "*.AppImage"
 command = ["{exe}", "{args}", "{rom}"]
 extensions = ["nds", "dsi", "srl"]
 # Saves and save states are written next to the ROM unless its settings choose a folder

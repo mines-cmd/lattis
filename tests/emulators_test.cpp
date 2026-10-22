@@ -1,4 +1,5 @@
 #include "emulators.h"
+#include "releasesource.h"
 
 #include <QDir>
 #include <QFile>
@@ -112,6 +113,12 @@ void EmulatorsTest::presetsAreValid()
         QVERIFY(d.preset);
         QVERIFY(d.userKeys.isEmpty());
         QVERIFY2(!d.platforms.isEmpty() && !d.flatpak.isEmpty() && !d.appimage.isEmpty(), qPrintable(d.id));
+        // Dolphin publishes no AppImage; every other preset downloads from its project's releases.
+        QCOMPARE(d.release.isEmpty(), d.id == QStringLiteral("dolphin"));
+        QCOMPARE(d.releaseAsset.isEmpty(), d.release.isEmpty());
+        QCOMPARE(d.releaseInside.isEmpty(), !d.releaseAsset.endsWith(QStringLiteral(".zip")));
+        if (!d.release.isEmpty())
+            QVERIFY2(ReleaseSources::parse(d.release).has_value(), qPrintable(d.id));
         QVERIFY2(d.command.contains("{exe}") && d.command.contains("{args}") && d.command.contains("{rom}"),
                  qPrintable(d.id));
         QVERIFY2(!d.extensions.isEmpty() || !d.files.isEmpty(), qPrintable(d.id));
@@ -208,6 +215,16 @@ void EmulatorsTest::validation_data()
     QTest::newRow("save extension dot") << QByteArray("saves_beside_rom = [\"sav\", \"sav.bak\"]")
                                         << "saves_beside_rom are extensions without dots";
     QTest::newRow("relative path") << QByteArray("path = \"bin/ryujinx\"") << "path must be absolute";
+    QTest::newRow("release scheme") << QByteArray("release = \"mgba-emu/mgba\"")
+                                    << "release starts with github: or gitlab:";
+    QTest::newRow("release github") << QByteArray("release = \"github:mgba-emu\"")
+                                    << "release is \"github:<owner>/<repo>\"";
+    QTest::newRow("release gitlab") << QByteArray("release = \"gitlab:git.example.org/project\"")
+                                    << "release is \"gitlab:<host>/<group>/<project>\"";
+    QTest::newRow("release asset folder") << QByteArray("release_asset = \"dist/app.AppImage\"")
+                                          << "release_asset is a file name pattern, without folders";
+    QTest::newRow("release inside folder") << QByteArray("release_inside = \"bin/*.AppImage\"")
+                                           << "release_inside is a file name pattern, without folders";
     QTest::newRow("appimage folder") << QByteArray("appimage = \"~/Apps/r.AppImage\"") << "appimage is a file name pattern for ~/Applications and ~/AppImages, without folders";
 }
 

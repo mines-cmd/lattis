@@ -7,6 +7,8 @@ flatpak = "io.mgba.mGBA"
 executables = ["mgba-qt", "mgba"]
 # Releases are mGBA-*-appimage-x64.appimage.
 appimage = "mGBA*.AppImage"
+release = "github:mgba-emu/mgba"
+release_asset = "mGBA-*-appimage-x64.appimage"
 command = ["{exe}", "{args}", "{rom}"]
 # mGBA also runs Game Boy (Color) games (gb, gbc): add a platform for them if you like.
 extensions = ["gba"]

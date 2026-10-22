@@ -7,6 +7,9 @@ flatpak = "net.shadps4.shadPS4"
 executables = ["shadps4"]
 # The emulator and its Qt launcher both take -g <game>.
 appimage = "shadps4*.AppImage"
+release = "github:shadps4-emu/shadPS4"
+release_asset = "shadps4-linux-sdl-*.zip"
+release_inside = "*.AppImage"
 command = ["{exe}", "{args}", "-g", "{rom}"]
 # Games are folders with an eboot.bin at the top (dumps named like CUSA00900).
 files = ["eboot.bin"]

@@ -2,6 +2,7 @@
 #include "tomlsection.h"
 #include "gamefile.h"
 #include "gameid.h"
+#include "releasesource.h"
 #include "suggestion.h"
 
 #include <QCollator>
@@ -27,6 +28,11 @@ constexpr Field kFields[] = {
     {"executables", StringList, "Program names to look for on PATH"},
     {"appimage", String, "File name pattern for an AppImage in ~/Applications or ~/AppImages, e.g. "
                          "\"ryujinx*.AppImage\" (case doesn't matter); several separated by ;"},
+    {"release", String, "Where Install gets the AppImage: \"github:<owner>/<repo>\" or "
+                        "\"gitlab:<host>/<group>/<project>\", the project's latest release"},
+    {"release_asset", String, "File name pattern of the release's download (case doesn't matter); several "
+                              "separated by ;, in order of preference"},
+    {"release_inside", String, "When the download is a zip or tarball: the pattern of the AppImage inside it"},
     {"path", String, "Your install: an absolute path or ~/…; skips detection"},
     {"command", StringList, "The program's arguments, not a shell line: {exe} is the program (or flatpak run "
                             "<app id>), {args} the args list, {rom} the absolute ROM path. \"Open emulator\" leaves out {rom} and the "
@@ -176,6 +182,13 @@ QVariant readValue(const toml::node &node, const Field &field, const QString &di
         if (key == QLatin1String("appimage") && value.contains(u'/'))
             return fail(QStringLiteral("appimage is a file name pattern for ~/Applications and ~/AppImages, without folders; "
                                        "use path for an AppImage elsewhere"));
+        if (key == QLatin1String("release") && !value.isEmpty()) {
+            QString problem;
+            if (!ReleaseSources::parse(value, &problem))
+                return fail(problem);
+        }
+        if ((key == QLatin1String("release_asset") || key == QLatin1String("release_inside")) && value.contains(u'/'))
+            return fail(QStringLiteral("%1 is a file name pattern, without folders").arg(key));
         if (key == QLatin1String("portable") && !relativeInside(value))
             return fail(QStringLiteral("portable is a file or folder next to the program, like \"portable.txt\""));
         return value;
@@ -328,6 +341,9 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.flatpak = v.value(QStringLiteral("flatpak")).toString();
     def.executables = v.value(QStringLiteral("executables")).toStringList();
     def.appimage = v.value(QStringLiteral("appimage")).toString();
+    def.release = v.value(QStringLiteral("release")).toString();
+    def.releaseAsset = v.value(QStringLiteral("release_asset")).toString();
+    def.releaseInside = v.value(QStringLiteral("release_inside")).toString();
     def.path = v.value(QStringLiteral("path")).toString();
     def.command = v.value(QStringLiteral("command")).toStringList();
     def.args = v.value(QStringLiteral("args")).toStringList();
@@ -387,6 +403,9 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("flatpak")) return def.flatpak.isEmpty() ? QString() : tomlString(def.flatpak);
     if (key == QLatin1String("executables")) return def.executables.isEmpty() ? QString() : list(def.executables);
     if (key == QLatin1String("appimage")) return def.appimage.isEmpty() ? QString() : tomlString(def.appimage);
+    if (key == QLatin1String("release")) return def.release.isEmpty() ? QString() : tomlString(def.release);
+    if (key == QLatin1String("release_asset")) return def.releaseAsset.isEmpty() ? QString() : tomlString(def.releaseAsset);
+    if (key == QLatin1String("release_inside")) return def.releaseInside.isEmpty() ? QString() : tomlString(def.releaseInside);
     if (key == QLatin1String("path")) return def.path.isEmpty() ? QString() : tomlString(def.path);
     if (key == QLatin1String("command")) return list(def.command);
     if (key == QLatin1String("args")) return list(def.args);

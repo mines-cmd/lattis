@@ -1,0 +1,101 @@
+#pragma once
+
+#include "appimageinstall.h"
+#include "emulators.h"
+#include "installrecord.h"
+
+#include <QHash>
+#include <QObject>
+#include <QPointer>
+#include <QTimer>
+#include <QVariantMap>
+#include <QtQmlIntegration>
+
+#include <functional>
+
+class QJSEngine;
+class QNetworkAccessManager;
+class QNetworkReply;
+class QQmlEngine;
+
+// See docs/code/install.md.
+class Installer : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
+
+    Q_PROPERTY(QVariantMap emulators READ emulators NOTIFY emulatorsChanged)
+
+public:
+    struct Setup
+    {
+        QString stateDir;
+        QString cacheDir;
+        std::function<QList<EmulatorDef>()> emulators;
+        std::function<InstallLocations()> locations;
+        // Asks the library to look for installed emulators again.
+        std::function<void()> redetect;
+    };
+    // Called once at startup; nothing is made until QML uses it.
+    static void setup(const Setup &setup) { s_setup = setup; }
+    static Installer *instance();
+    static Installer *create(QQmlEngine *, QJSEngine *) { return instance(); }
+
+    explicit Installer(const Setup &setup, QObject *parent = nullptr);
+    ~Installer() override;
+
+    QVariantMap emulators() const { return m_emulators; }
+
+    Q_INVOKABLE void install(const QString &id, const QString &route = QStringLiteral("appimage"));
+    Q_INVOKABLE void cancel(const QString &id);
+    Q_INVOKABLE void refresh();
+
+    void setFixturesDir(const QString &dir) { m_fixturesDir = dir; }
+    void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
+    // 0: the canned download arrives at once.
+    void setFixtureTick(int ms) { m_fixtureTickMs = ms; }
+
+signals:
+    void emulatorsChanged();
+
+private:
+    enum class State { Idle, Checking, Downloading, Extracting, Installing, Failed };
+
+    struct Job
+    {
+        quint64 serial = 0;
+        State state = State::Idle;
+        double progress = -1;
+        QString error;
+        QPointer<QNetworkReply> reply;
+        QPointer<AppImageDownload> download;
+        QString emulatorName;
+        Release release;
+        ReleaseAsset asset;
+        QString folder;
+    };
+
+    QNetworkAccessManager *network();
+    void begin(const EmulatorDef &emulator);
+    void gotRelease(const EmulatorDef &emulator, quint64 serial, const QByteArray &json, const QString &networkError);
+    void download(const EmulatorDef &emulator);
+    void downloadFinished(const QString &id, const AppImageDownload::Result &result);
+    void fail(const QString &id, const QString &error);
+    void changed();
+    void useFixtureAsset(ReleaseAsset *asset) const;
+    void rebuild();
+    static QString stateName(State state);
+
+    static Setup s_setup;
+    Setup m_setup;
+    QString m_fixturesDir;
+    int m_fixtureDelayMs = 400;
+    int m_fixtureTickMs = 60;
+    QNetworkAccessManager *m_network = nullptr;
+    QHash<QString, Job> m_jobs;
+    InstallRecords::Records m_records;
+    QVariantMap m_emulators;
+    QTimer m_changed;
+    quint64 m_serial = 0;
+};

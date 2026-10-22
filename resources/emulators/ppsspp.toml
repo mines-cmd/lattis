@@ -7,6 +7,8 @@ flatpak = "org.ppsspp.PPSSPP"
 executables = ["PPSSPPSDL", "ppsspp", "PPSSPPQt"]
 # Releases are PPSSPP-v*-anylinux-x86_64.AppImage.
 appimage = "PPSSPP*.AppImage"
+release = "github:hrydgard/ppsspp"
+release_asset = "PPSSPP-*-anylinux-x86_64.AppImage"
 command = ["{exe}", "{args}", "{rom}"]
 extensions = ["iso", "cso", "chd", "pbp", "elf"]
 # Its memory stick is ~/.config/ppsspp, unless memstick_dir.txt points elsewhere; Linux

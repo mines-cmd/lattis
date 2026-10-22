@@ -279,6 +279,10 @@ qt_add_qml_module(lattis
         src/library/libraryundo.h src/library/libraryundo.cpp
         src/library/libraryversion.h src/library/libraryversion.cpp
         src/library/emulators.h src/library/emulators.cpp
+        src/install/releasesource.h src/install/releasesource.cpp
+        src/install/appimageinstall.h src/install/appimageinstall.cpp
+        src/install/installrecord.h src/install/installrecord.cpp
+        src/install/installer.h src/install/installer.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp
@@ -363,7 +367,7 @@ qt_add_shaders(lattis "shaders"
 
 # The subfolders are listed too: Qt's generated type registration includes QML_ELEMENT
 # headers by file name only.
-target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup)
+target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup src/install)
 # Shown in About.
 target_compile_definitions(lattis PRIVATE LATTIS_VERSION="${PROJECT_VERSION}")
 

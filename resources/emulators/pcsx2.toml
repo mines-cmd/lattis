@@ -7,6 +7,8 @@ flatpak = "net.pcsx2.PCSX2"
 executables = ["pcsx2-qt"]
 # Releases are pcsx2-v*-linux-appimage-x64-Qt.AppImage.
 appimage = "pcsx2*.AppImage"
+release = "github:PCSX2/pcsx2"
+release_asset = "pcsx2-*-linux-appimage-x64-Qt.AppImage"
 # -batch quits when the game stops; -- ends the options, whatever the file is called.
 command = ["{exe}", "{args}", "-batch", "--", "{rom}"]
 # Not bin (it usually comes with a cue PCSX2 doesn't boot).

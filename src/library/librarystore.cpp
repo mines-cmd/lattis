@@ -1433,8 +1433,9 @@ QString LibraryStore::addEmulator(const QString &id, const QString &name, const 
             return tr("There's no built-in emulator with the id %1").arg(startFrom);
         // Not the install (the copy would find the original's), nor saves and keys (the original's folders).
         static const QStringList left{QStringLiteral("name"), QStringLiteral("flatpak"), QStringLiteral("executables"),
-                                      QStringLiteral("appimage"), QStringLiteral("path"), QStringLiteral("saves"),
-                                      QStringLiteral("keys")};
+                                      QStringLiteral("appimage"), QStringLiteral("release"),
+                                      QStringLiteral("release_asset"), QStringLiteral("release_inside"),
+                                      QStringLiteral("path"), QStringLiteral("saves"), QStringLiteral("keys")};
         for (const EmulatorFields::Field &f : EmulatorFields::all()) {
             const QString key = QLatin1String(f.key);
             if (left.contains(key) || !from->values.contains(key))
