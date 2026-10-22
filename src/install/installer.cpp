@@ -126,8 +126,12 @@ void Installer::rebuild()
         QStringList routes;
         if (appImage)
             routes.append(QStringLiteral("appimage"));
-        if (flatpak && !m_flatpakProgram.isEmpty())
-            routes.append(QStringLiteral("flatpak"));
+        if (flatpak && !m_flatpakProgram.isEmpty()) {
+            if (def.releaseUnofficial.isEmpty())
+                routes.append(QStringLiteral("flatpak"));
+            else
+                routes.prepend(QStringLiteral("flatpak"));
+        }
         QString source;
         QString project;
         if (const auto parsed = ReleaseSources::parse(def.release)) {
@@ -157,6 +161,7 @@ void Installer::rebuild()
                                {QStringLiteral("upToDate"), byApp && record.route == QLatin1String("appimage")
                                                                 && updateVersion.isEmpty() && m_upToDate.contains(def.id)},
                                {QStringLiteral("project"), project},
+                               {QStringLiteral("unofficial"), appImage && !def.releaseUnofficial.isEmpty()},
                                {QStringLiteral("size"), job.state == State::Downloading ? double(job.asset.size) : 0.0},
                                // The AppImage's rename into place is too short and too final to stop.
                                {QStringLiteral("canCancel"), job.state != State::Installing || !job.flatpak.isNull()},

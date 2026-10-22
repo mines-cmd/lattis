@@ -32,6 +32,8 @@ constexpr Field kFields[] = {
                         "\"gitlab:<host>/<group>/<project>\", the project's latest release"},
     {"release_asset", String, "File name pattern of the release's download (case doesn't matter); several "
                               "separated by ;, in order of preference"},
+    {"release_unofficial", String, "Set (to whose builds they are) when the release isn't the project's own: Install tags "
+                                   "the AppImage Unofficial and recommends the Flatpak instead"},
     {"release_inside", String, "When the download is a zip or tarball: the pattern of the AppImage inside it"},
     {"path", String, "Your install: an absolute path or ~/…; skips detection"},
     {"command", StringList, "The program's arguments, not a shell line: {exe} is the program (or flatpak run "
@@ -343,6 +345,7 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.appimage = v.value(QStringLiteral("appimage")).toString();
     def.release = v.value(QStringLiteral("release")).toString();
     def.releaseAsset = v.value(QStringLiteral("release_asset")).toString();
+    def.releaseUnofficial = v.value(QStringLiteral("release_unofficial")).toString();
     def.releaseInside = v.value(QStringLiteral("release_inside")).toString();
     def.path = v.value(QStringLiteral("path")).toString();
     def.command = v.value(QStringLiteral("command")).toStringList();
@@ -405,6 +408,8 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("appimage")) return def.appimage.isEmpty() ? QString() : tomlString(def.appimage);
     if (key == QLatin1String("release")) return def.release.isEmpty() ? QString() : tomlString(def.release);
     if (key == QLatin1String("release_asset")) return def.releaseAsset.isEmpty() ? QString() : tomlString(def.releaseAsset);
+    if (key == QLatin1String("release_unofficial"))
+        return def.releaseUnofficial.isEmpty() ? QString() : tomlString(def.releaseUnofficial);
     if (key == QLatin1String("release_inside")) return def.releaseInside.isEmpty() ? QString() : tomlString(def.releaseInside);
     if (key == QLatin1String("path")) return def.path.isEmpty() ? QString() : tomlString(def.path);
     if (key == QLatin1String("command")) return list(def.command);

@@ -49,6 +49,7 @@ struct EmulatorDef
     QString appimage;
     QString release;
     QString releaseAsset;
+    QString releaseUnofficial;
     QString releaseInside;
     QString path;
     QStringList command;

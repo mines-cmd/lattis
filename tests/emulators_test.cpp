@@ -113,8 +113,9 @@ void EmulatorsTest::presetsAreValid()
         QVERIFY(d.preset);
         QVERIFY(d.userKeys.isEmpty());
         QVERIFY2(!d.platforms.isEmpty() && !d.flatpak.isEmpty() && !d.appimage.isEmpty(), qPrintable(d.id));
-        // Dolphin publishes no AppImage; every other preset downloads from its project's releases.
-        QCOMPARE(d.release.isEmpty(), d.id == QStringLiteral("dolphin"));
+        QVERIFY2(!d.release.isEmpty(), qPrintable(d.id));
+        // Dolphin's only AppImage is a community build; every other preset is the project's own.
+        QCOMPARE(d.releaseUnofficial.isEmpty(), d.id != QStringLiteral("dolphin"));
         QCOMPARE(d.releaseAsset.isEmpty(), d.release.isEmpty());
         QCOMPARE(d.releaseInside.isEmpty(), !d.releaseAsset.endsWith(QStringLiteral(".zip")));
         if (!d.release.isEmpty())

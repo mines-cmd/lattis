@@ -866,7 +866,7 @@ void InstallTest::installerFailsClearly()
     QCOMPARE(h.redetected, 0);
     QVERIFY(!QFileInfo::exists(InstallRecords::path(h.state)));
 
-    // Dolphin has no AppImage.
+    // No canned release answer for Dolphin's community builds.
     installer.install("dolphin");
     QTRY_COMPARE_WITH_TIMEOUT(installer.emulators().value("dolphin").toMap().value("state").toString(),
                               QStringLiteral("failed"), 5000);

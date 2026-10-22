@@ -1378,6 +1378,8 @@ constexpr Setting kSettings[] = {
     integer("settings_window", "install_tile_radius", "@controls.input_radius", 0, 50,
             "Corner radius of the boxes at the top of an emulator's card (install routes, progress, error, source)"),
     integer("settings_window", "install_tile_padding", "12", 0, 50, "Space inside those boxes"),
+    color("settings_window", "install_tile_button_background", "@controls.button_hover_background",
+          "Fill of the secondary install button inside those boxes, so it stands out from the box"),
     real("settings_window", "install_error_fill_opacity", "0.1", 0, 1, "Opacity of the error color behind a failed install's message"),
     integer("settings_window", "install_mini_progress_width", "72", 20, 300,
             "Width of the small progress bar that replaces an emulator's tag while it installs"),

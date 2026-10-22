@@ -5,8 +5,11 @@ name = "Dolphin"
 platforms = ["gamecube", "wii"]
 flatpak = "org.DolphinEmu.dolphin-emu"
 executables = ["dolphin-emu"]
-# No official AppImage; community builds are named like Dolphin_Emulator-*.AppImage.
+# No official AppImage; pkgforge-dev's community builds are named like Dolphin_Emulator-*.AppImage.
 appimage = "dolphin*.AppImage"
+release = "github:pkgforge-dev/Dolphin-emu-AppImage"
+release_asset = "Dolphin_Emulator-*-anylinux-x86_64.AppImage"
+release_unofficial = "pkgforge-dev"
 # -e boots the game; -b (batch) quits Dolphin when the game stops.
 command = ["{exe}", "{args}", "-b", "-e", "{rom}"]
 # Not bin or json (also used for other things), nor nfs (Wii U virtual console).

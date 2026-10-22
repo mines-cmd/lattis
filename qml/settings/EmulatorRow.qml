@@ -48,12 +48,12 @@ ColumnLayout {
         const other = installInfo.route === "flatpak" ? "appimage" : "flatpak"
         return installInfo.routes.includes(other) ? other : ""
     }
-    // The route and version of Lattis's own install, for the subtitle.
+    // Says who installed it and which version, for the subtitle; the badge shows the route.
     readonly property string sourceSummary: {
         if (!byApp || !emulator.found)
             return ""
-        const route = installInfo.route === "flatpak" ? qsTr("Flatpak") : qsTr("AppImage")
-        return installInfo.version !== "" ? route + " " + installInfo.version : route
+        const label = qsTr("Installed by Lattis")
+        return installInfo.version !== "" ? label + " · " + installInfo.version : label
     }
     // What replaces the tag while a job runs: a short word beside the small bar.
     readonly property string miniLabel: {
@@ -73,7 +73,7 @@ ColumnLayout {
             return qsTr("Install failed")
         if (hasUpdate)
             return qsTr("Update %1").arg(installInfo.updateVersion)
-        return byApp && emulator.found ? qsTr("Installed") : kindLabel
+        return kindLabel
     }
     readonly property color badgeColor: {
         if (installFailed)

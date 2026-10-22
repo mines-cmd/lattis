@@ -20,8 +20,10 @@ ColumnLayout {
         return route === "flatpak" ? qsTr("From Flathub") : qsTr("From GitHub, %1").arg(info?.project ?? "")
     }
     function routeMeaning(route) {
-        return route === "flatpak" ? qsTr("Sandboxed. Updated by your system.")
-                                   : qsTr("One file in ~/Applications. Lattis checks it for updates.")
+        if (route === "flatpak")
+            return qsTr("Sandboxed. Updated by your system.")
+        return info?.unofficial ? qsTr("Third-party build. Lattis checks it for updates.")
+                                : qsTr("One file in ~/Applications. Lattis checks it for updates.")
     }
 
     readonly property string jobTitle: {
@@ -187,6 +189,23 @@ ColumnLayout {
                                 font.weight: Theme.font.strongWeight
                             }
                             Rectangle {
+                                visible: tile.modelData === "appimage" && (head.info?.unofficial ?? false)
+                                implicitWidth: unofficialLabel.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
+                                implicitHeight: unofficialLabel.implicitHeight + 2
+                                radius: Theme.settingsWindow.sourceTagRadius
+                                color: "transparent"
+                                border.color: Theme.controls.descriptionColor
+                                border.width: Theme.settingsWindow.sourceTagBorderWidth
+
+                                Label {
+                                    id: unofficialLabel
+                                    anchors.centerIn: parent
+                                    text: qsTr("Unofficial")
+                                    color: Theme.controls.descriptionColor
+                                    font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+                                }
+                            }
+                            Rectangle {
                                 visible: tile.index === 0 && head.routes.length > 1
                                 implicitWidth: recommended.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
                                 implicitHeight: recommended.implicitHeight + 2
@@ -220,6 +239,7 @@ ColumnLayout {
                         SettingsButton {
                             Layout.topMargin: 4
                             primary: tile.index === 0
+                            fillOverride: tile.index === 0 ? "transparent" : Theme.settingsWindow.installTileButtonBackground
                             text: qsTr("Install %1").arg(head.routeName(tile.modelData))
                             onClicked: Installer.install(row.emulator.id, tile.modelData)
                         }

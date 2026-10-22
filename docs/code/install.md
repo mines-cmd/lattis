@@ -18,13 +18,14 @@ The install code puts an emulator on the computer from inside the app, as the up
 
 ## Where a download comes from
 
-Three emulator keys (see [library](library.md#emulators)) name it:
+Four emulator keys (see [library](library.md#emulators)) name it:
 
 - `release`: `github:<owner>/<repo>` or `gitlab:<host>/<group>/<project>`.
 - `release_asset`: the file's name pattern in the latest release (case-insensitive, `;` separates patterns in order of preference).
 - `release_inside`: for a zip or tarball, the pattern of the AppImage inside it.
+- `release_unofficial`: set (to whose builds they are) when the release isn't the emulator's own project. The `Installer` row then has `unofficial`, and lists the Flatpak route first, so the card tags the AppImage "Unofficial" and recommends the Flatpak.
 
-An emulator with `release` and `release_asset` can be installed as an AppImage. Every built-in emulator has them except Dolphin, which publishes no AppImage. A value that doesn't parse is a warning when the file is read and the key is ignored. An emulator with a `flatpak` id can be installed as a Flatpak.
+An emulator with `release` and `release_asset` can be installed as an AppImage. Every built-in emulator has them; Dolphin's are `pkgforge-dev`'s community builds, so it sets `release_unofficial`. A value that doesn't parse is a warning when the file is read and the key is ignored. An emulator with a `flatpak` id can be installed as a Flatpak.
 
 ## Releases
 

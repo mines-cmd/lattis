@@ -1435,6 +1435,7 @@ QString LibraryStore::addEmulator(const QString &id, const QString &name, const 
         static const QStringList left{QStringLiteral("name"), QStringLiteral("flatpak"), QStringLiteral("executables"),
                                       QStringLiteral("appimage"), QStringLiteral("release"),
                                       QStringLiteral("release_asset"), QStringLiteral("release_inside"),
+                                      QStringLiteral("release_unofficial"),
                                       QStringLiteral("path"), QStringLiteral("saves"), QStringLiteral("keys")};
         for (const EmulatorFields::Field &f : EmulatorFields::all()) {
             const QString key = QLatin1String(f.key);
