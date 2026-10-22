@@ -145,7 +145,7 @@ Signals: `activeColorsChanged`, `activeStyleChanged`, `activeThemeChanged`, `ava
 
 | Property / method | What it returns |
 |---|---|
-| `filterText` | Current search text |
+| `filterText` | Current search text: matched against the section and key (also as `section.key`), the description and, for a color, its value |
 | `changedOnly` | When true, only settings the active theme sets |
 | `show` | `"all"`, `"colors"` or `"style"`; only `customizeSchema` narrows by it |
 | `sharedOnly` | When true, only the settings of shared sections |

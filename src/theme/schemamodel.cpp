@@ -535,7 +535,8 @@ bool ThemeSettingsModel::passes(int setting, bool withSlot) const
     if (!m_filterText.isEmpty()) {
         const QString section = toQString(s.section);
         const QString key = toQString(s.key);
-        QString haystack = section + u' ' + key + u' ' + toQString(s.doc);
+        // The dotted name too, as the theme files and the docs write it (icon_button.badge).
+        QString haystack = section + u'.' + key + u' ' + section + u' ' + key + u' ' + toQString(s.doc);
         if (s.type == Type::Color) {
             const QVariant raw = m_theme->rawValue(section, key);
             if (raw.typeId() == QMetaType::QString)
