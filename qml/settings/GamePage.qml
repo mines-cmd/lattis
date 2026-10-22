@@ -50,7 +50,7 @@ Item {
     readonly property var fieldEntries: ({
         play_time: { name: qsTr("Play time"), icon: Icons.timeLine,
                      hint: hint("play_time", qsTr("The time played in all"), qsTr("click opens play history")) },
-        last_played: { name: qsTr("Last played"), icon: Icons.calendarCheckLine,
+        last_played: { name: qsTr("Last played"), icon: Icons.history,
                        hint: hint("last_played", qsTr("The day of the last session")) },
         recent_play_time: { name: qsTr("Recent play time"), icon: Icons.timerLine,
                             hint: [valueOf("recent_play_time"), qsTr("%1, set below").arg(fields.periodLabels[General.recentPeriod])]
@@ -59,16 +59,16 @@ Item {
                         hint: hint("times_played", qsTr("The number of sessions")) },
         first_played: { name: qsTr("First played"), icon: Icons.signpostLine,
                         hint: hint("first_played", qsTr("The day of the earliest session the launcher knows of")) },
-        release_date: { name: qsTr("Release date"), icon: Icons.calendarCheckLine,
+        release_date: { name: qsTr("Release date"), icon: Icons.calendarEventLine,
                         hint: hint("release_date", qsTr("The year it came out")) },
         platform: { name: qsTr("Platform"), icon: Icons.gamepadLine,
                     hint: hint("platform", qsTr("The platform it's on"), qsTr("click shows only that platform")) },
-        status: { name: qsTr("Status"), icon: Icons.informationLine,
+        status: { name: qsTr("Status"), icon: Icons.flagLine,
                   hint: hint("status", qsTr("Playing, finished, and so on")) },
-        install_size: { name: qsTr("Install size"), icon: Icons.archiveLine,
+        install_size: { name: qsTr("Install size"), icon: Icons.hardDrive2Line,
                         hint: hint("install_size", qsTr("The space it takes on disk")) },
         rating: { name: qsTr("Rating"), icon: Icons.starLine, hint: hint("rating", qsTr("Out of 5")) },
-        date_added: { name: qsTr("Date added"), icon: Icons.add,
+        date_added: { name: qsTr("Date added"), icon: Icons.calendarCheckLine,
                       hint: hint("date_added", qsTr("The day it joined the library")) }
     })
 
