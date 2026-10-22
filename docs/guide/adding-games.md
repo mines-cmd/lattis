@@ -22,6 +22,7 @@ The gear button on a game's page (Alt+Return), or **Properties** in its right-cl
 - **Details:** the status (Backlog, Playing, Finished, Completed, Dropped), and play time and last played for games whose play time Lattis records.
 - **Tags:** see [Tags](#tags) below.
 - **How it runs:** for a ROM game, its ROM, its emulator and its launch arguments; for Steam, Windows and Linux games, their install folder, program and launch options.
+- **Save folder:** the folder **Open save folder** opens. Lattis looks for it: the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`). When it found one, the field shows it and says so. The pencil sets another (a game that keeps its saves in its own folder, say), and × goes back to looking. A Linux game has none until you set one.
 - **Images:** the hero (the wide image at the top of the page), the cover, the logo and the icon, each with **Choose** and a remove button. **Browse SteamGridDB** picks them from SteamGridDB.
 
 **Save** (or Enter in a one-line field) writes what you changed. **Cancel** or Escape throws everything away, art included.

@@ -137,6 +137,10 @@ The `LATTIS_STATS=<yyyy-mm>` hook opens it on a month, `<yyyy>` on a year, or `n
 
 The `pick` object (from `Library.inspectRom()`) drives the "+" flow: it names the platforms the file matches, whether it's a Windows or Linux program, and what the title is. On Save, only the keys that changed from the game's current values are written in one call to `Library.saveGame()`. Cancel and Escape discard everything, including art downloads and tag changes.
 
+Every game has a **Save folder** field under its ROM or program. It shows the game's own `save_folder` (`saveFolder` in `gameForEditing()`), or else the folder `GameRunner.foundSaveFolder()` finds, with a note saying it was found; the pencil picks one and ✕ goes back to looking. Save writes `save_folder` (or removes it).
+
+The form makes room for its scroll bar while the bar shows, and keeps that room (`form.scrollRoom`) until the editor opens another game: content that only overflows at the narrower width would otherwise hide the bar, widen, fit and show it again without end, which hangs the window.
+
 The editor tracks `steamPending` (edits waiting for Steam to close) and `steamEdited` (edits changed but not yet saved). When saving would queue changes for Steam, it says so and lets the user save first to avoid a second visit.
 
 The lookup, art browser, and detailed lookup live in the editor's own sub-views (`LookupRow`, `ArtBrowser`, `DetailedLookup`), created on first use. Nothing is saved until the editor's own Save.

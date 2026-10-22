@@ -39,7 +39,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | Key | Meaning |
 |---|---|
 | `chips` | The chips beside Launch, in order: `play_time`, `last_played`, `release_date`, `platform`, `status`, `install_size`, `rating`, `times_played`, `first_played`, `recent_play_time`, `date_added`, and the Steam chips `steam_waiting` and `steam_update`. Default `play_time last_played steam_waiting steam_update` |
-| `buttons` | The icon buttons at the right of the action row, in order: `favorite`, `open_platform`, `folder`, `settings`, `save_folder`, `menu`. Default `favorite open_platform folder settings` |
+| `buttons` | The icon buttons at the right of the action row, in order: `favorite`, `open_platform`, `folder`, `settings`, `save_folder`, `menu`. `open_platform` is left out for Linux games, and `save_folder` for a game with no save folder (`GameRunner.saveFolder()`, looked up only for the shown game and only while the button is in the list). Default `favorite open_platform folder settings` |
 | `info_rows` | The info panel's rows, in order; the same fields as the chips without the Steam chips. Default `release_date rating status install_size platform`. `[]` hides the panel |
 | `chips_order`, `buttons_order`, `info_rows_order` | Every choice of that list in the order the settings page shows them, hidden ones included, so a hidden entry keeps its place. Only written when it differs from the shown ones followed by the rest; the shown ones' order in the list above wins |
 | `recent_period` | The period of `recent_play_time`: `week`, `two_weeks` (default), `month`, `year` |

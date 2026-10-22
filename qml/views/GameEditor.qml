@@ -56,6 +56,11 @@ Item {
     property string newStartDir: ""
     property bool startDirCleared: false
     property string newInstallDir: ""
+    property string newSaveFolder: ""
+    property bool saveFolderCleared: false
+    readonly property string saveFolderShown: saveFolderCleared ? "" : newSaveFolder !== "" ? newSaveFolder
+                                                                    : (game.saveFolder ?? "")
+    property string foundSaveFolder: ""
     readonly property string exeShown: newExe !== "" ? newExe : (game.exePath || game.exe || "")
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")
     property bool shortcutQueued: false
@@ -153,6 +158,10 @@ Item {
         newStartDir = ""
         startDirCleared = false
         newInstallDir = ""
+        newSaveFolder = ""
+        saveFolderCleared = false
+        form.scrollRoom = false
+        foundSaveFolder = g.id !== undefined && !adding ? GameRunner.foundSaveFolder(g.id) : ""
         titleField.text = g.title
         descriptionArea.text = g.description
         yearField.text = g.year > 0 ? String(g.year) : ""
@@ -498,6 +507,8 @@ Item {
             if (newInstallDir !== "")
                 out.install_dir = newInstallDir
         }
+        if (!adding && saveFolderShown !== (game.saveFolder ?? ""))
+            out.save_folder = saveFolderShown !== "" ? saveFolderShown : null
         return out
     }
 
@@ -736,7 +747,15 @@ Item {
 
                     readonly property bool twoColumns: width >= Theme.gameEditor.twoColumnsMinWidth
 
-                    width: scroll.availableWidth - (scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
+                    // Kept once the scroll bar has shown: content that only overflows at the narrower
+                    // width would otherwise hide the bar, widen, fit, and show it again, without end.
+                    property bool scrollRoom: false
+                    Connections {
+                        target: scrollBar
+                        function onVisibleChanged() { if (scrollBar.visible) form.scrollRoom = true }
+                    }
+
+                    width: scroll.availableWidth - (scrollRoom || scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
                     columns: twoColumns ? 2 : 1
                     columnSpacing: Theme.gameEditor.columnSpacing
                     rowSpacing: Theme.gameEditor.rowSpacing
@@ -1133,6 +1152,42 @@ Item {
                                             root.startDirCleared = true
                                         }
                                     }
+                                }
+                            }
+                            Field {
+                                visible: !root.adding
+                                label: qsTr("Save folder")
+                                help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
+                                           + "the ROM for an emulator that saves there, the emulator's save folder, or the "
+                                           + "game's Proton prefix.")
+
+                                PathField {
+                                    onCopied: root.message(qsTr("Copied"))
+                                    Layout.fillWidth: true
+                                    Layout.minimumHeight: Theme.controls.inputHeight
+                                    path: root.saveFolderShown !== "" ? root.saveFolderShown : root.foundSaveFolder
+                                    missingText: qsTr("None found")
+                                    missingColor: Theme.gameEditor.hintColor
+                                    fontSize: Theme.gameEditor.pathFontSize
+
+                                    SettingsButton {
+                                        iconPath: Icons.edit
+                                        tip: qsTr("Choose the save folder")
+                                        onClicked: folderPicker.pickFor("saves")
+                                    }
+                                    SettingsButton {
+                                        visible: root.saveFolderShown !== ""
+                                        iconPath: Icons.close
+                                        tip: qsTr("Look for the save folder")
+                                        onClicked: {
+                                            root.newSaveFolder = ""
+                                            root.saveFolderCleared = true
+                                        }
+                                    }
+                                }
+                                Hint {
+                                    open: root.saveFolderShown === "" && root.foundSaveFolder !== ""
+                                    text: qsTr("Found for you. Choose another folder to open that one instead.")
                                 }
                             }
                             Hint {
@@ -1545,10 +1600,14 @@ Item {
         active: false
         sourceComponent: RomFolderDialog {
             title: folderPicker.target === "install" ? qsTr("The install folder of %1").arg(root.game.title ?? "")
-                                                     : qsTr("The folder %1 starts in").arg(root.game.title ?? "")
+                 : folderPicker.target === "saves" ? qsTr("The save folder of %1").arg(root.game.title ?? "")
+                 : qsTr("The folder %1 starts in").arg(root.game.title ?? "")
             onPicked: path => {
                 if (folderPicker.target === "install") {
                     root.newInstallDir = path
+                } else if (folderPicker.target === "saves") {
+                    root.newSaveFolder = path
+                    root.saveFolderCleared = false
                 } else {
                     root.newStartDir = path
                     root.startDirCleared = false

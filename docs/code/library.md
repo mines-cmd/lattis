@@ -177,7 +177,7 @@ Launching picks the game's pinned emulator if it's installed, else the first ins
 These three kinds of game share a lot of the library's code. Their file formats and the sync are covered in [steam.md](steam.md); here is how the library uses them.
 
 - **Steam games** come from the Steam import during each scan. New ones are added to `steam.toml` (with ids like `steam-<appid>`), and Steam's art is copied into `art/<id>/` unless the game file's `skip_steam_art` lists that kind. A Steam game is installed only when Steam says so. Its play time and last played are Steam's and read-only. A Steam game with an update has `steamUpdate` (`SteamUpdate`), `updateBytes` and `updatePercent` (`-1` unknown), set from its manifest; for a game whose update has started, `Library` overlays what `SteamDownloads` finds (running or paused, the percentage), see [steam.md](steam.md#updates). The selected game's map has `steamUpdate` (`"none"`, `"waiting"`, `"downloading"`, `"paused"`), `steamUpdateText` (the chip's value: "Waiting · 1.2 GB", "Downloading · 45%", "Paused · 45%") and `steamUpdatePercent`; `launchTip` says what the Launch button does in each state. The list model has an `updating` role.
-- **Proton games** are Windows programs run through a non-Steam shortcut in Steam. Each has a game file with its `exe`, `install_dir` and `shortcut` app ID. "+" with an `.exe` creates one and queues its shortcut to be added to Steam. "Add existing shortcuts" brings in Steam's own shortcuts as Proton games. Play time comes from Steam's shortcut.
+- **Proton games** are Windows programs run through a non-Steam shortcut in Steam. Each has a game file with its `exe`, `install_dir` and `shortcut` app ID; `protonPrefix(shortcut)` is its prefix in the first Steam library's `compatdata`, or empty. "+" with an `.exe` creates one and queues its shortcut to be added to Steam. "Add existing shortcuts" brings in Steam's own shortcuts as Proton games. Play time comes from Steam's shortcut.
 - **Linux games** are native programs (an ELF, an AppImage or a script) the launcher runs directly. Each has a game file with its `exe`, and its play time is recorded like a ROM game's. Whether a file is a Linux program is decided by its content, not its name (`linuxProgramKind()`): an ELF for this computer's processor, an AppImage (marked in its ELF header), or a script starting with `#!`. A PS3 ELF, say, is not one. A program picked that isn't executable yet is made executable.
 
 For Proton and Linux games, the **install folder** is the program's folder, climbing out of generic ones like `bin`, `Binaries/Win64` or `x86_64` (never up to the home folder or `/`): `Game/Binaries/Win64/Game.exe` → `Game`. An AppImage is the whole game and often sits in a folder of other AppImages, so its files are the AppImage alone. Each scan stats the programs, and adds up an install folder's size once, while the folder stays the same.
@@ -424,6 +424,7 @@ romWritten      `rom` as written
 removeDeletes   wiping it deletes its file
 igdb, steamgriddb   the matched ids: 0 = not there, -1 = not looked up
 steamAppId      Steam games, else 0
+saveFolder      the file's `save_folder` as written, or ""; Save writes one in the home folder with ~
 Steam and Proton games:
   launchOptions, proton, pendingSteamEdits, installPath
   protonTools   [{name, displayName}]

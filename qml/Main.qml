@@ -439,6 +439,7 @@ ApplicationWindow {
         case "launch":
         case "open_platform":
         case "open_folder":
+        case "open_save_folder":
         case "game_settings":
         case "play_history":
         case "uninstall_game":
@@ -507,6 +508,7 @@ ApplicationWindow {
         case "toggle_favorite": details.activate("favorite", game); break
         case "open_platform": details.activate("open_platform", game); break
         case "open_folder": details.activate("folder", game); break
+        case "open_save_folder": details.activate("save_folder", game); break
         case "game_settings": editGame(game.id); break
         case "hide_game": hideGame(game); break
         case "play_history": openPlayHistory(game); break

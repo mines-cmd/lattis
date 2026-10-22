@@ -256,6 +256,7 @@ public:
     const QList<EmulatorDef> &emulators() const { return m_emulators; }
     const QList<Game> &allGames() const { return m_games; }
     const QHash<QString, EmulatorInstall> &installs() const { return m_store.snapshot().installs; }
+    QString protonPrefix(quint32 appId) const;
 
 signals:
     void platformFilterChanged();
@@ -311,7 +312,6 @@ private:
     QVariantMap inspectLinuxProgram(const QString &path, LinuxProgramKind kind) const;
     QString linuxProgramProblem(const QString &path) const;
     QVariantList linuxPresets() const;
-    QString protonPrefix(quint32 appId) const;
     Uninstall::Places uninstallPlaces(const QString &id) const;
     bool updatePlatforms();
     void filtersEdited();

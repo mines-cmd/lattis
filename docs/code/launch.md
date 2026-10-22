@@ -87,6 +87,10 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `restartSteamAndLaunch(gameId)` | `string` | Close Steam, apply queued edits, launch; toast or `""` |
 | `openEmulator(gameId)` | `string` | Open the emulator without the game (or Steam's game page) |
 | `openFolder(gameId)` | `string` | Open the game's folder in the file manager |
+| `saveFolder(gameId)` | `string` | The game's save folder, or `""`: the first that exists of its own `save_folder`, then `foundSaveFolder()`'s rules |
+| `foundSaveFolder(gameId)` | `string` | The save folder looked for, ignoring `save_folder`: for a ROM game, the ROM's folder if its emulator (the one it would launch with, else its first) has `saves_beside_rom`, then the first existing entry of the emulator's `saves` for the install found; for a Proton game, its prefix's `pfx/drive_c/users/steamuser` (`Library::protonPrefix()`); for a Steam game, `compatdata/<appid>/pfx/drive_c/users/steamuser` in the first Steam library that has it. Linux games have none |
+| `openSaveFolder(gameId)` | `string` | Open `saveFolder()` in the file manager; toast or `""` |
+| `shownPath(path)` | `string` | The path with `~` for the home folder, as written to the game files |
 | `openDataFolder()` | `string` | Open the data dir in the file manager |
 | `openFile(path)` | `string` | Open a file in its default app; a terminal editor gets a terminal window. The path on failure |
 | `uninstall(gameId)` | `string` | Uninstall a Steam game through Steam |

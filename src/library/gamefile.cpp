@@ -48,6 +48,7 @@ constexpr Field kFields[] = {
     {"exe", String, 0, 0, "", "Proton and Linux games: the program to run (`~` for the home folder); a Proton game's is kept in step with the shortcut's target"},
     {"start_dir", String, 0, 0, "", "Proton and Linux games: the folder it starts in (Steam's Start in); the exe's folder when not set"},
     {"install_dir", String, 0, 0, "", "Proton and Linux games: the game's folder, which Open folder opens and Uninstall can delete"},
+    {"save_folder", String, 0, 0, "", "The folder Open save folder opens (`~` for the home folder); when not set, or not found, it's looked for: the ROM's folder for an emulator that saves next to it, the emulator's save folder, or the Proton prefix's user folder"},
     {"shortcut", Integer, 1, 4294967295.0, "", "Proton games: the Steam shortcut's app ID; it names the prefix and the grid art. Don't change it by hand"},
     {"installed", Bool, 0, 0, "true", "Proton and Linux games: false after Uninstall removed its files (or a Proton game's shortcut) and kept it in the library, until it's located again"},
 };
@@ -362,6 +363,8 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.startDir = value.toString();
     else if (key == QLatin1String("install_dir"))
         game.installDir = value.toString();
+    else if (key == QLatin1String("save_folder"))
+        game.saveFolder = value.toString();
     else if (key == QLatin1String("shortcut"))
         game.shortcut = value.toLongLong();
     else if (key == QLatin1String("installed"))

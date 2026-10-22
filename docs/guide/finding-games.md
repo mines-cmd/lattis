@@ -55,4 +55,4 @@ The selection's menu has:
 - **Emulator**: when they're all ROM games on one platform, pins an emulator for all of them, or **Platform default** to clear the pin. With mixed platforms the entry is greyed out and says why.
 - **Hide** or **Unhide**: Hide when any is visible, Unhide when all are hidden.
 
-Each change is one step with **Undo** in the message that follows ("4 games hidden"). The menu leaves out what is about one game: Launch, Open in Steam, Open game folder, Play history, Properties and Uninstall.
+Each change is one step with **Undo** in the message that follows ("4 games hidden"). The menu leaves out what is about one game: Launch, Open in Steam, Open game folder, Open save folder, Play history, Properties and Uninstall.

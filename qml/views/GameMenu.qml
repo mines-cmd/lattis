@@ -228,6 +228,12 @@ SettingsMenu {
         text: qsTr("Open game folder")
     }
     Entry {
+        actionName: "open_save_folder"
+        iconPath: Icons.saveLine
+        visible: !root.multi && GameRunner.saveFolder(root.game.id ?? "") !== ""
+        text: qsTr("Open save folder")
+    }
+    Entry {
         actionName: "play_history"
         iconPath: Icons.history
         visible: !root.multi

@@ -355,6 +355,10 @@ Item {
         onTriggered: root.heroGame = root.game
     }
 
+    // Only for the shown game: it looks at the disk, so it isn't in gameAt() for every row.
+    readonly property string saveFolder: General.gamePageButtons.includes("save_folder") && game.id !== undefined
+                                         ? GameRunner.saveFolder(game.id) : ""
+
     readonly property var actions: ({
         favorite: {
             icon: Icons.star,
@@ -373,6 +377,13 @@ Item {
             icon: Icons.folder,
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Open game folder"), Actions.keys.open_folder),
+            badge: false
+        },
+        save_folder: {
+            icon: Icons.saveFill,
+            color: Theme.iconButton.icon,
+            tip: Actions.tip(qsTr("Open save folder: %1").arg(GameRunner.shownPath(saveFolder)),
+                             Actions.keys.open_save_folder),
             badge: false
         },
         settings: {
@@ -412,6 +423,8 @@ Item {
         }
         if (button === "folder")
             text = GameRunner.openFolder(g.id)
+        if (button === "save_folder")
+            text = GameRunner.openSaveFolder(g.id)
         if (text !== "")
             message(text)
     }
@@ -821,7 +834,9 @@ Item {
                     spacing: Theme.details.buttonSpacing
 
                     Repeater {
-                        model: General.gamePageButtons.filter(b => root.actions[b] !== undefined && (b !== "open_platform" || root.game.platform !== "linux"))
+                        model: General.gamePageButtons.filter(b => root.actions[b] !== undefined
+                                                              && (b !== "open_platform" || root.game.platform !== "linux")
+                                                              && (b !== "save_folder" || root.saveFolder !== ""))
 
                         IconButton {
                             required property string modelData

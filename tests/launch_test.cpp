@@ -168,6 +168,7 @@ private slots:
     void closeSteamAndApply();
     void launchWithQueuedEdits();
     void openEmulatorAndFolder();
+    void saveFolder();
     void protonGames();
     void protonGameRunning();
     void locateProgram();
@@ -863,6 +864,59 @@ void LaunchTest::openEmulatorAndFolder()
              QStringLiteral("Mario Tennis Aces's ROM isn't in the ROM folders"));
     QCOMPARE(m_runner->openFolder(QStringLiteral("proton-diablo-iv")),
              QStringLiteral("Diablo IV's program isn't found; locate it to play it"));
+}
+
+void LaunchTest::saveFolder()
+{
+    const QString home = m_dir->filePath(QStringLiteral("home"));
+    const QString steamapps = m_data + QStringLiteral("/steam/steamapps");
+    const QString user = QStringLiteral("/pfx/drive_c/users/steamuser");
+    const QString ryubingSaves = home + QStringLiteral("/.config/Ryujinx/bis/user/save");
+    const QString ffxivSaves = steamapps + QStringLiteral("/compatdata/2458135266") + user;
+    const QString hadesSaves = steamapps + QStringLiteral("/compatdata/1145360") + user;
+    for (const QString &folder : {ryubingSaves, ffxivSaves, hadesSaves, home + QStringLiteral("/Saves/Kart")})
+        QVERIFY(QDir().mkpath(folder));
+    writeFile(m_data + "/library/games/switch-mario-kart-8-deluxe.toml",
+              readFile(m_data + "/library/games/switch-mario-kart-8-deluxe.toml") + "save_folder = \"~/Saves/Kart\"\n");
+    writeFile(m_data + "/library/games/switch-pikmin-4.toml",
+              readFile(m_data + "/library/games/switch-pikmin-4.toml") + "save_folder = \"~/Saves/Gone\"\n");
+    openLibrary();
+    m_library->setInstalledOnly(false);
+
+    // The game's own folder, with ~ for the home folder.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), home + QStringLiteral("/Saves/Kart"));
+    QCOMPARE(m_runner->foundSaveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), ryubingSaves);
+    // One that isn't there is passed over; the emulator's save folder for its install is next.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-pikmin-4")), ryubingSaves);
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-metroid-dread")), ryubingSaves);
+    // A Proton game's prefix, and a Steam game's in compatdata; none for a Steam game without one.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("proton-final-fantasy-xiv-online")), ffxivSaves);
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("steam-1145360")), hadesSaves);
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("steam-730")), QString());
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("proton-diablo-iv")), QString());
+    // A native Linux game has none of its own.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("linux-supertuxkart")), QString());
+    QCOMPARE(m_runner->openSaveFolder(QStringLiteral("linux-supertuxkart")),
+             QStringLiteral("SuperTuxKart's save folder isn't found; set it in its properties"));
+    QCOMPARE(m_runner->shownPath(ryubingSaves), QStringLiteral("~/.config/Ryujinx/bis/user/save"));
+
+    // An emulator that saves next to the ROM: the ROM's folder comes before its save folder.
+    writeFile(m_data + "/library/emulators.toml",
+              "[[emulator]]\nid = \"ryubing\"\npath = \"" + QFile::encodeName(fakeDir()) + "/emulator.sh\"\n"
+              "saves_beside_rom = [\"sav\"]\n");
+    m_runner.reset();
+    m_library.reset();
+    openLibrary();
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-metroid-dread")), m_data + QStringLiteral("/roms/switch"));
+    // Not when the ROM isn't found.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-tennis-aces")), ryubingSaves);
+    // A game's own folder still comes first.
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), home + QStringLiteral("/Saves/Kart"));
+
+    // Properties writes a folder in the home folder with ~.
+    QCOMPARE(m_library->saveGame(QStringLiteral("switch-pikmin-4"), {{"save_folder", home + "/Saves/Kart"}}), QString());
+    QVERIFY(readFile(m_data + "/library/games/switch-pikmin-4.toml").contains("save_folder = \"~/Saves/Kart\""));
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-pikmin-4")), home + QStringLiteral("/Saves/Kart"));
 }
 
 void LaunchTest::protonGames()

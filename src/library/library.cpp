@@ -2523,6 +2523,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("exePath"), g->exe},
         {QStringLiteral("startDir"), file.startDir},
         {QStringLiteral("installDir"), file.installDir},
+        {QStringLiteral("saveFolder"), file.saveFolder},
         {QStringLiteral("uninstalled"), g->uninstalled},
         {QStringLiteral("gameNotFound"), runsProgram(g->platform) && !g->installed && !g->uninstalled},
         {QStringLiteral("rom"), g->rom},
@@ -2783,6 +2784,10 @@ QVariantMap Library::addGame(const QString &file, const QString &platform, const
 QString Library::saveGame(const QString &id, const QVariantMap &values)
 {
     QList<std::pair<QString, QVariant>> pairs = gameValues(values);
+    for (auto &[key, value] : pairs) {
+        if (key == QLatin1String("save_folder") && !value.toString().isEmpty())
+            value = m_store.writtenPath(value.toString());
+    }
     const auto rom = std::find_if(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("rom"); });
     const auto exe = std::find_if(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("exe"); });
     const bool newRom = rom != pairs.cend() && rom->second.isValid();

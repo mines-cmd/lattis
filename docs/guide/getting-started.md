@@ -34,7 +34,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 Two menus hold most of what isn't on screen:
 
 - **The app menu**: click or right-click the logo, or press F10. Add game, play statistics and Settings, in the rail's order (so they stay reachable when you hide their rail buttons), theme, colors and style, fullscreen, hide the rail, backups, scanning ROM folders, looking up missing info, the setup guide, keyboard shortcuts, About and Quit.
-- **A game's menu**: right-click a game in the list, or press the Menu key. Launch, favorite, open its folder, Properties, Hide, and Uninstall where it applies.
+- **A game's menu**: right-click a game in the list, or press the Menu key. Launch, favorite, open its folder or its save folder, Properties, Hide, and Uninstall where it applies.
 
 Press F1 at any time for the list of keyboard shortcuts.
 

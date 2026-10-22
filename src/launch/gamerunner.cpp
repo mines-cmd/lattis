@@ -771,6 +771,82 @@ QString GameRunner::openFolder(const QString &gameId)
     return {};
 }
 
+QString GameRunner::saveFolder(const QString &gameId) const
+{
+    return findSaveFolder(gameId, true);
+}
+
+QString GameRunner::foundSaveFolder(const QString &gameId) const
+{
+    return findSaveFolder(gameId, false);
+}
+
+QString GameRunner::findSaveFolder(const QString &gameId, bool ownFirst) const
+{
+    const Game *game = m_library->game(gameId);
+    if (!game)
+        return {};
+    const LibraryStore &store = m_library->store();
+    const QString home = store.installLocations().home;
+    const auto isDir = [](const QString &path) { return !path.isEmpty() && QFileInfo(path).isDir(); };
+
+    if (ownFirst) {
+        const QString own = store.snapshot().content.games.value(gameId).saveFolder;
+        if (const QString path = own.isEmpty() ? QString() : resolveRomFolder(own, m_dataDir, home); isDir(path))
+            return path;
+    }
+    if (game->rom) {
+        QString emulatorId;
+        chooseEmulator(gameId, &emulatorId);
+        const EmulatorDef *emulator =
+            Emulators::find(m_library->emulators(), emulatorId.isEmpty() ? missingEmulator(gameId) : emulatorId);
+        if (!emulator)
+            return {};
+        if (!emulator->savesBesideRom.isEmpty() && game->installed) {
+            if (const QString folder = QFileInfo(game->romPath).absolutePath(); isDir(folder))
+                return folder;
+        }
+        const EmulatorInstall install = m_library->installs().value(emulator->id);
+        if (!install.found())
+            return {};
+        for (const QString &path : Emulators::installPaths(emulator->saves, install, home)) {
+            if (isDir(path))
+                return path;
+        }
+        return {};
+    }
+    const QString user = QStringLiteral("/pfx/drive_c/users/steamuser");
+    if (game->platform == kProtonPlatform) {
+        const QString prefix = m_library->protonPrefix(game->shortcut);
+        return prefix.isEmpty() || !isDir(prefix + user) ? QString() : prefix + user;
+    }
+    if (const int appId = GameId::steamAppId(game->id); game->platform == kSteamPlatform && appId > 0) {
+        for (const QString &steamapps : store.snapshot().steam.libraries) {
+            if (const QString path = steamapps + QStringLiteral("/compatdata/%1").arg(appId) + user; isDir(path))
+                return path;
+        }
+    }
+    return {};
+}
+
+QString GameRunner::openSaveFolder(const QString &gameId)
+{
+    const Game *game = m_library->game(gameId);
+    if (!game)
+        return {};
+    const QString folder = saveFolder(gameId);
+    if (folder.isEmpty())
+        return tr("%1's save folder isn't found; set it in its properties").arg(game->title);
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder)))
+        return tr("Could not open %1").arg(folder);
+    return {};
+}
+
+QString GameRunner::shownPath(const QString &path) const
+{
+    return m_library->store().writtenPath(path);
+}
+
 QString GameRunner::openDataFolder()
 {
     if (!QDesktopServices::openUrl(QUrl::fromLocalFile(m_dataDir)))

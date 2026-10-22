@@ -65,6 +65,7 @@ struct GameFile
     QString exe;
     QString startDir;
     QString installDir;
+    QString saveFolder;
     qint64 shortcut = 0;
     bool installed = true;
 

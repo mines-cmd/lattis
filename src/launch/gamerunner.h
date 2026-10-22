@@ -48,6 +48,10 @@ public:
     Q_INVOKABLE QString restartSteamAndLaunch(const QString &gameId);
     Q_INVOKABLE QString openEmulator(const QString &gameId);
     Q_INVOKABLE QString openFolder(const QString &gameId);
+    Q_INVOKABLE QString saveFolder(const QString &gameId) const;
+    Q_INVOKABLE QString foundSaveFolder(const QString &gameId) const;
+    Q_INVOKABLE QString openSaveFolder(const QString &gameId);
+    Q_INVOKABLE QString shownPath(const QString &path) const;
     Q_INVOKABLE QString openDataFolder();
     Q_INVOKABLE QString openFile(const QString &path);
     Q_INVOKABLE QString problemFile(const QString &message) const;
@@ -102,6 +106,7 @@ private:
     };
 
     QString chooseEmulator(const QString &gameId, QString *emulatorId) const;
+    QString findSaveFolder(const QString &gameId, bool ownFirst) const;
     QString launchProgram(const Game &game);
     QString startSession(const QString &gameId, const QString &name, const LaunchCommand &command,
                          const QString &workingDir, bool followSession);
