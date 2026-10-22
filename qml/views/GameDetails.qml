@@ -381,7 +381,7 @@ Item {
             badge: false
         },
         save_folder: {
-            icon: Icons.saveFill,
+            icon: Icons.save2Fill,
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Open save folder: %1").arg(GameRunner.shownPath(saveFolder)),
                              Actions.keys.open_save_folder),

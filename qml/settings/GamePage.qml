@@ -87,7 +87,7 @@ Item {
         open_platform: { name: qsTr("Open in Steam or the emulator"), icon: Icons.openExternal,
                          hint: qsTr("Hidden for Linux games") },
         folder: { name: qsTr("Open folder"), icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
-        save_folder: { name: qsTr("Save folder"), icon: Icons.saveFill, hint: qsTr("Hidden when the game has none") },
+        save_folder: { name: qsTr("Save folder"), icon: Icons.save2Fill, hint: qsTr("Hidden when the game has none") },
         settings: { name: qsTr("Properties"), icon: Icons.gear, hint: qsTr("Edit the game") },
         menu: { name: qsTr("Menu"), icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }
     })
