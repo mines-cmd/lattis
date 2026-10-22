@@ -202,6 +202,7 @@ Item {
                     place: "chips"
                     entries: root.chipEntries
                     query: root.query
+                    flickable: flick
                     onFailed: text => root.report(text)
                 }
 
@@ -212,6 +213,7 @@ Item {
                     place: "buttons"
                     entries: root.buttonEntries
                     query: root.query
+                    flickable: flick
                     onFailed: text => root.report(text)
                 }
 
@@ -225,6 +227,7 @@ Item {
                     place: "info_rows"
                     entries: root.fieldEntries
                     query: root.query
+                    flickable: flick
                     onFailed: text => root.report(text)
                 }
 

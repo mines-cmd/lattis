@@ -45,7 +45,7 @@ Open Settings with the button at the bottom of the rail, or Ctrl+,. Its pages:
 | Page | What's on it |
 |---|---|
 | General | Start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, the setup guide, About |
-| Game page | What the game's page shows and in what order: the chips beside Launch, the buttons, the info panel rows, how play time is written ("206,7 hours" or "206h 42m"), the period Recent play time counts, and whether the description and tags show |
+| Game page | What the game's page shows and in what order: the chips beside Launch, the buttons, the info panel rows (drag a row by its dots to move it; holding it near the top or bottom of the page scrolls it), how play time is written ("206,7 hours" or "206h 42m"), the period Recent play time counts, and whether the description and tags show |
 | Appearance | The theme in use: pick one, or mix colors and a style, and save the pair as a theme |
 | Customize | Every color and style setting, by part of the window, with the colors and style in use |
 | Library | Backups, hidden games, tags and their colors, and problems found in your library |

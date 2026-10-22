@@ -7,7 +7,7 @@ Emulated games come from **ROM folders**: folders you point Lattis at, one or mo
 A platform (Switch, 3DS, GameCube…) is a button in the rail and a group in the game list. Settings → Platforms lists them in rail order.
 
 - **Add platform**, give it a name, then add its emulators and its ROM folders.
-- **Drag a platform by the dots at its left end**, or type a place in the box (marked #), to change its place in the rail. The move can be undone from the message that follows. Ctrl+2, Ctrl+3… jump to the platforms in that order.
+- **Drag a platform by the dots at its left end**, or type a place in the box (marked #), to change its place in the rail; holding it near the top or bottom of the list scrolls it. The move can be undone from the message that follows. Ctrl+2, Ctrl+3… jump to the platforms in that order.
 - A platform shows in the rail once it has games. Open a platform and turn off **Show in the rail**, or right-click its button in the rail and choose **Hide from the rail**, to hide its button (`in_rail = false` in `platforms.toml`); its games still show in All games, and Ctrl+2, Ctrl+3… skip it.
 - Behind each platform's name is an id made from it (`switch`, `3ds`). Games refer to their platform by this id, so it can't change once games use it; the name can.
 - **Remove platform** keeps its games in the library, with their favorites and play time. Add a platform with the same id to show them again.

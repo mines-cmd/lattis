@@ -347,6 +347,7 @@ Item {
                         repeater: entryRepeater
                         ids: root.shown.map(p => p.id)
                         count: root.defined.length
+                        flickable: flick
                         settleTime: 800
                         onDropped: (id, from, to) => root.dropPlatform(id, from, to)
                     }

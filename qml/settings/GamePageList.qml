@@ -11,6 +11,7 @@ Rectangle {
     // name → { name, icon, hint }
     required property var entries
     property string query: ""
+    property Flickable flickable: null
 
     signal failed(string text)
 
@@ -54,6 +55,7 @@ Rectangle {
         column: column
         repeater: rows
         ids: root.order
+        flickable: root.flickable
         // The row settles first and the order is written after, as writing reloads the list at once.
         onDropped: drag.settle()
         onSettled: (id, from, to) => {
