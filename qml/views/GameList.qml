@@ -634,16 +634,7 @@ Rectangle {
                     onClicked: root.openFilters()
                     onRemoved: root.activeFilters.find(f => f.key === model.key)?.off()
 
-                    onLeavingChanged: {
-                        if (!leaving)
-                            return
-                        if (Motion.on && root.ready)
-                            leaveAnimation.start()
-                        else
-                            opacity = 0
-                    }
-
-                    PopLeave { id: leaveAnimation; target: chip }
+                    PopLeave { target: chip; leaving: chip.leaving; animated: Motion.on && root.ready }
                 }
             }
         }

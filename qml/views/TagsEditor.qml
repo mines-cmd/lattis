@@ -176,15 +176,7 @@ ColumnLayout {
                 raiseBy: Theme.gameEditor.tagHoverLift
                 pressed: chipMouse.pressed && !chip.removeHovered
 
-                onLeavingChanged: {
-                    if (!leaving)
-                        return
-                    if (Motion.on)
-                        leaveAnimation.start()
-                    else
-                        opacity = 0
-                }
-                PopLeave { id: leaveAnimation; target: chip }
+                PopLeave { target: chip; leaving: chip.leaving }
 
                 MouseArea {
                     id: chipMouse

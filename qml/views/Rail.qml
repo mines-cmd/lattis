@@ -557,16 +557,7 @@ Item {
                         enabled: !model.leaving
                         opacity: (dragged && !root.dragSettling) || lifted ? Theme.rail.dragOpacity : 1
                         readonly property bool leaving: model.leaving
-                        onLeavingChanged: {
-                            if (!leaving)
-                                return
-                            if (Motion.on && root.ready)
-                                leaveAnimation.start()
-                            else
-                                opacity = 0
-                        }
-
-                        PopLeave { id: leaveAnimation; target: button; scaleProperty: "popScale" }
+                        PopLeave { target: button; scaleProperty: "popScale"; leaving: button.leaving; animated: Motion.on && root.ready }
                         following: dragged && !root.dragSettling
                         offsetY: !dragged ? root.shiftOf(index)
                                  : root.dragSettling ? (root.dragTo - root.dragFrom) * root.dragStep : root.dragDy

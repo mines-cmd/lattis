@@ -180,15 +180,7 @@ Item {
                     raiseBy: Theme.details.tagHoverLift
                     pressed: tagMouse.pressed
 
-                    onLeavingChanged: {
-                        if (!leaving)
-                            return
-                        if (Motion.on)
-                            leaveAnimation.start()
-                        else
-                            opacity = 0
-                    }
-                    PopLeave { id: leaveAnimation; target: chip }
+                    PopLeave { target: chip; leaving: chip.leaving }
 
                     MouseArea {
                         id: tagMouse
@@ -777,15 +769,7 @@ Item {
                                            : name === "steam_update" ? steamUpdateChip
                                            : fieldChip
 
-                            onLeavingChanged: {
-                                if (!leaving)
-                                    return
-                                if (Motion.on)
-                                    leaveAnimation.start()
-                                else
-                                    opacity = 0
-                            }
-                            PopLeave { id: leaveAnimation; target: chip }
+                            PopLeave { target: chip; leaving: chip.leaving }
 
                             // Not the Flow's add transition: a chip's width settles a moment after the Flow
                             // first places it, and placing it again cut that transition off, leaving it unseen.
