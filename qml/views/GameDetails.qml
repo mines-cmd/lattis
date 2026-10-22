@@ -47,6 +47,7 @@ Item {
     signal addRequested()
     signal steamUndoRequested()
     signal historyRequested()
+    signal menuRequested(Item button)
 
     function logoForScreenshot(mode) {
         if (mode === "adjust")
@@ -393,8 +394,22 @@ Item {
                                                                : qsTr("Properties"),
                              Actions.keys.game_settings),
             badge: game.pendingSteamEdits ?? false
+        },
+        menu: {
+            icon: Icons.more,
+            color: Theme.iconButton.icon,
+            tip: Actions.tip(qsTr("Game menu"), Actions.keys.game_menu),
+            badge: false
         }
     })
+
+    function openMenu() {
+        for (let i = 0; i < buttonRepeater.count; ++i) {
+            const button = buttonRepeater.itemAt(i)
+            if (button.modelData === "menu")
+                menuRequested(button)
+        }
+    }
 
     function activate(button, other) {
         const g = other ?? game
@@ -834,6 +849,7 @@ Item {
                     spacing: Theme.details.buttonSpacing
 
                     Repeater {
+                        id: buttonRepeater
                         model: General.gamePageButtons.filter(b => root.actions[b] !== undefined
                                                               && (b !== "open_platform" || root.game.platform !== "linux")
                                                               && (b !== "save_folder" || root.saveFolder !== ""))
@@ -845,7 +861,7 @@ Item {
                             tip: root.actions[modelData].tip
                             badge: root.actions[modelData].badge
                             busy: modelData === "open_platform" && root.openingId !== "" && root.openingId === root.game.id
-                            onClicked: root.activate(modelData)
+                            onClicked: modelData === "menu" ? root.menuRequested(this) : root.activate(modelData)
                         }
                     }
                 }

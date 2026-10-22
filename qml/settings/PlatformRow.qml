@@ -18,11 +18,10 @@ ColumnLayout {
     property string error: ""
 
     readonly property bool editable: platform.defined
-    readonly property Item handle: handleMouse
+    readonly property Item handle: grip.area
 
     property bool draggable: true
 
-    // Pointer positions are in the handle's coordinates; the page maps them (the row moves while dragged).
     signal dragStarted(var handle, real x, real y)
     signal dragMoved(var handle, real x, real y)
     signal dragEnded(bool dropped)
@@ -100,64 +99,15 @@ ColumnLayout {
             anchors.margins: Theme.settingsWindow.rowPadding
             spacing: 10
 
-            Item {
-                id: handle
+            DragGrip {
+                id: grip
                 opacity: root.editable ? (root.draggable ? 1 : 0.4) : 0
-                Layout.preferredWidth: Theme.controls.iconSize
-                Layout.preferredHeight: Theme.controls.iconSize
-
-                Icon {
-                    anchors.centerIn: parent
-                    path: Icons.grip
-                    size: Theme.controls.iconSize
-                    color: handleMouse.containsMouse || handleMouse.pressed ? Theme.controls.labelColor
-                                                                              : Theme.controls.iconColor
-                }
-
-                MouseArea {
-                    id: handleMouse
-                    property real pressX
-                    property real pressY
-                    property bool dragging: false
-
-                    anchors.fill: parent
-                    anchors.margins: -8
-                    enabled: root.editable && root.draggable
-                    // The page's Flickable would take a vertical drag for a scroll.
-                    preventStealing: true
-                    hoverEnabled: true
-                    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-
-                    onPressed: m => { pressX = m.x; pressY = m.y }
-                    onPositionChanged: m => {
-                        if (!pressed)
-                            return
-                        if (!dragging) {
-                            if (Math.hypot(m.x - pressX, m.y - pressY) <= Qt.styleHints.startDragDistance)
-                                return
-                            dragging = true
-                            root.dragStarted(handleMouse, pressX, pressY)
-                        }
-                        root.dragMoved(handleMouse, m.x, m.y)
-                    }
-                    onReleased: {
-                        const was = dragging
-                        dragging = false
-                        if (was)
-                            root.dragEnded(true)
-                    }
-                    onCanceled: {
-                        const was = dragging
-                        dragging = false
-                        if (was)
-                            root.dragEnded(false)
-                    }
-
-                    ToolTip.visible: containsMouse && !dragging && root.editable
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: root.draggable ? qsTr("Drag to change its place in the rail")
-                                                 : qsTr("Clear the search to drag platforms")
-                }
+                draggable: root.editable && root.draggable
+                tip: !root.editable ? "" : root.draggable ? qsTr("Drag to change its place in the rail")
+                                                          : qsTr("Clear the search to drag platforms")
+                onDragStarted: (handle, x, y) => root.dragStarted(handle, x, y)
+                onDragMoved: (handle, x, y) => root.dragMoved(handle, x, y)
+                onDragEnded: dropped => root.dragEnded(dropped)
             }
 
             Icon {

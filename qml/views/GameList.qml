@@ -267,23 +267,32 @@ Rectangle {
     property int menuRow: -1
     property Item hoveredRow: null
 
-    function openMenu(row, x, y) {
+    function prepareMenu(row) {
         const game = Library.gameAt(row)
         if (game.id === undefined)
-            return
+            return null
         gameMenu.active = true
         gameMenu.item.game = game
         gameMenu.item.games = selection[game.id] === true
             ? Object.keys(selection).map(id => Library.gameAt(Library.rowOfGame(id))) : []
         menuRow = row
-        const menu = gameMenu.item
+        return gameMenu.item
+    }
+
+    function openMenu(row, x, y) {
+        const menu = prepareMenu(row)
+        if (menu === null)
+            return
         let below
         if (x === undefined) {
             list.positionViewAtIndex(row, ListView.Contain)
             const item = list.itemAtIndex(row)
             if (item === null)
                 return
-            gameMenu.underRow = item
+            gameMenu.under = item
+            gameMenu.underTop = 0
+            gameMenu.underBottom = item.height
+            gameMenu.underRight = NaN
             below = item.height
             menu.popup(item, 8, below)
         } else {
@@ -295,9 +304,28 @@ Rectangle {
         menu.popDirection = Qt.binding(() => menu.y < below ? "up" : "down")
     }
 
+    // Right-aligned under the item, as a menu dropping from a button at the end of a row.
+    function openMenuBelow(row, item) {
+        const menu = prepareMenu(row)
+        if (menu === null)
+            return
+        // Placed in the parent's coordinates: a button is still shrunk by its press when its click
+        // opens the menu, which would shift a menu placed in its own.
+        gameMenu.under = item.parent
+        gameMenu.underTop = item.y
+        gameMenu.underBottom = item.y + item.height
+        gameMenu.underRight = item.x + item.width
+        menu.popup(item.parent, item.x + item.width - menu.width, item.y + item.height)
+        menu.popDirection = Qt.binding(() => menu.y < gameMenu.underBottom ? "above" : "below")
+    }
+
     Loader {
         id: gameMenu
-        property Item underRow: null
+        // What placeMenu() keeps the menu next to: between underTop and underBottom in its coordinates.
+        property Item under: null
+        property real underTop: 0
+        property real underBottom: 0
+        property real underRight: NaN  // NaN: the menu stays at the x it was opened at
         active: false
         source: "GameMenu.qml"
     }
@@ -313,18 +341,23 @@ Rectangle {
         function onNewTagRequested(ids) { root.askNewTag(ids) }
         function onOpened() { root.placeMenu() }
         function onHeightChanged() { root.placeMenu() }
+        function onWidthChanged() { root.placeMenu() }
         function onClosed() {
             root.menuRow = -1
-            gameMenu.underRow = null
+            gameMenu.under = null
         }
     }
-    // Above the row when there's no room below, so it doesn't cover it. The menu's height is
-    // only known once it's shown.
+    // Above the row (or button) when there's no room below, so it doesn't cover it. The menu's
+    // size is only known once it's shown.
     function placeMenu() {
         const menu = gameMenu.item
-        const row = gameMenu.underRow
-        if (menu.visible && row !== null)
-            menu.y = row.mapToItem(null, 0, row.height).y + menu.height > root.Window.height ? -menu.height : row.height
+        const under = gameMenu.under
+        if (!menu.visible || under === null)
+            return
+        menu.y = under.mapToItem(null, 0, gameMenu.underBottom).y + menu.height > root.Window.height
+            ? gameMenu.underTop - menu.height : gameMenu.underBottom
+        if (!isNaN(gameMenu.underRight))
+            menu.x = gameMenu.underRight - menu.width
     }
 
     function pageSize() {

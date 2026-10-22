@@ -278,10 +278,10 @@ void General::load()
     m_settings = parsed.value;
     const auto page = parseGamePageSettings(bytes, QStringLiteral("settings.toml"));
     const GamePageSettings prevPage = m_gamePage;
+    const QStringList prevPageProblems = m_gamePageProblems;
     m_gamePage = page.value;
-    m_problems = parsed.warnings;
-    if (page.ok)
-        m_problems += page.warnings;
+    m_gamePageProblems = page.ok ? page.warnings : QStringList();
+    m_problems = parsed.warnings + m_gamePageProblems;
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
@@ -295,7 +295,7 @@ void General::load()
     prevWindow.railButtonOrder = m_settings.railButtonOrder;
     if (m_settings != prevWindow || m_problems != prevProblems)
         emit settingsChanged();
-    if (m_gamePage != prevPage)
+    if (m_gamePage != prevPage || m_gamePageProblems != prevPageProblems)
         emit gamePageChanged();
     if (m_settings.systemLocale != prev.systemLocale)
         emit systemLocaleChanged();

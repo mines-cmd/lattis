@@ -178,6 +178,10 @@ qt_add_qml_module(lattis
         qml/views/RailButton.qml
         # Settings window
         qml/settings/GeneralPage.qml
+        qml/settings/GamePage.qml
+        qml/settings/GamePageList.qml
+        qml/settings/DragGrip.qml
+        qml/settings/DragReorder.qml
         qml/settings/SettingsWindow.qml
         qml/settings/AppearancePage.qml
         qml/settings/DeleteThemeDialog.qml

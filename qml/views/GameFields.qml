@@ -45,7 +45,7 @@ QtObject {
     // The history file is read only while a field needs it, and again only when the game's play changed:
     // the game map is replaced on every change to the game (a download's progress among them).
     readonly property var historyFields: ["times_played", "first_played", "recent_play_time"]
-    readonly property bool needsHistory: General.gamePageChips.concat(General.gamePageInfoRows)
+    property bool needsHistory: General.gamePageChips.concat(General.gamePageInfoRows)
         .some(name => historyFields.includes(name))
     readonly property string playedKey: needsHistory
         ? [game.id ?? "", game.playTimeText ?? "", game.lastPlayedText ?? ""].join("\n") : ""

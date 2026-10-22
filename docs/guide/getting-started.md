@@ -34,7 +34,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 Two menus hold most of what isn't on screen:
 
 - **The app menu**: click or right-click the logo, or press F10. Add game, play statistics and Settings, in the rail's order (so they stay reachable when you hide their rail buttons), theme, colors and style, fullscreen, hide the rail, backups, scanning ROM folders, looking up missing info, the setup guide, keyboard shortcuts, About and Quit.
-- **A game's menu**: right-click a game in the list, or press the Menu key. Launch, favorite, open its folder or its save folder, Properties, Hide, and Uninstall where it applies.
+- **A game's menu**: right-click a game in the list, press the Menu key, or click ⋯ on its page (add that button in `[game_page] buttons` as `menu`). Launch, favorite, open its folder or its save folder, Properties, Hide, and Uninstall where it applies.
 
 Press F1 at any time for the list of keyboard shortcuts.
 
@@ -45,6 +45,7 @@ Open Settings with the button at the bottom of the rail, or Ctrl+,. Its pages:
 | Page | What's on it |
 |---|---|
 | General | Start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, the setup guide, About |
+| Game page | What the game's page shows and in what order: the chips beside Launch, the buttons, the info panel rows, the period Recent play time counts, and whether the description and tags show |
 | Appearance | The theme in use: pick one, or mix colors and a style, and save the pair as a theme |
 | Customize | Every color and style setting, by part of the window, with the colors and style in use |
 | Library | Backups, hidden games, tags and their colors, and problems found in your library |

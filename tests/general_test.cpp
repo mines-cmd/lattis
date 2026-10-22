@@ -534,12 +534,24 @@ void GeneralTest::gamePageSettersWrite()
 
     // A hand edit shows on reload, and a mistake in it is a problem.
     QVERIFY(settings.open(QIODevice::WriteOnly | QIODevice::Truncate));
-    settings.write("[game_page]\nchips = [\"nope\"]\n");
+    settings.write("[general]\nstart_fullscreen = 1\n[game_page]\nchips = [\"nope\"]\n");
     settings.close();
+    QSignalSpy pageChanged(&general, &General::gamePageChanged);
     general.reload();
     QVERIFY(general.gamePageChips().isEmpty());
-    QCOMPARE(general.problems().size(), 1);
-    QVERIFY(general.problems().first().startsWith(QStringLiteral("settings.toml:2: unknown name \"nope\"")));
+    QCOMPARE(general.problems().size(), 2);
+    QVERIFY(general.problems().last().startsWith(QStringLiteral("settings.toml:4: unknown name \"nope\"")));
+    // The Game page's own, without [general]'s.
+    QCOMPARE(general.gamePageProblems(), QStringList{general.problems().last()});
+
+    // Fixing the mistake without changing what's shown still tells the page its problems are gone.
+    QVERIFY(settings.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    settings.write("[game_page]\nchips = []\n");
+    settings.close();
+    pageChanged.clear();
+    general.reload();
+    QVERIFY(general.gamePageProblems().isEmpty());
+    QCOMPARE(pageChanged.count(), 1);
 }
 
 void GeneralTest::gamePageMigration()

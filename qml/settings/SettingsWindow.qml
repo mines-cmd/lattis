@@ -51,6 +51,7 @@ ApplicationWindow {
 
     readonly property var categories: [
         { key: "general", name: qsTr("General"), icon: Icons.gear, enabled: true, page: general },
+        { key: "game_page", name: qsTr("Game page"), icon: Icons.layoutMasonryLine, enabled: true, page: gamePage },
         { key: "library", name: qsTr("Library"), icon: Icons.folder, enabled: true, page: library },
         { key: "steam", name: qsTr("Steam"), icon: Icons.steam, enabled: true, page: steam },
         { key: "platforms", name: qsTr("Platforms"), icon: Icons.computer, enabled: true,
@@ -65,6 +66,8 @@ ApplicationWindow {
           sections: Actions.model.sections, page: keyboard },
     ]
     property int currentCategory: categories.findIndex(c => c.enabled)
+    // The main window's selected game, for the Game page's examples.
+    property var game: ({})
     // Switching to a category without sections skips the animation, so the links closing above don't slide it.
     property bool animateLinks: false
     readonly property var currentPage: categories[currentCategory].page?.item ?? null
@@ -673,6 +676,11 @@ ApplicationWindow {
                 }
 
                 PageLoader {
+                    id: gamePage
+                    source: "GamePage.qml"
+                }
+
+                PageLoader {
                     id: appearance
                     source: "AppearancePage.qml"
                     Connections {
@@ -759,8 +767,9 @@ ApplicationWindow {
         }
     }
 
+    // On the Game page `id` is <place>.<name>.
     function dragPlatformForScreenshot(id, offset) {
-        platforms.item?.dragForScreenshot(id, offset)
+        (currentPage === gamePage.item ? gamePage.item : platforms.item)?.dragForScreenshot(id, offset)
     }
 
     function showMessage(text, link) { settingsToast.show(text, link) }

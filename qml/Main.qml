@@ -285,7 +285,10 @@ ApplicationWindow {
 
     function gameMenuForScreenshot(spec) {
         const [id, submenu] = spec.split("/")
-        gameList.openMenu(Library.rowOfGame(id))
+        if (id === "page")
+            details.openMenu()
+        else
+            gameList.openMenu(Library.rowOfGame(id))
         if (submenu !== undefined)
             gameList.openMenuSubmenu(submenu)
     }
@@ -386,6 +389,7 @@ ApplicationWindow {
     function openSettings() {
         if (settingsWindow === null) {
             settingsWindow = createWindow("settings/SettingsWindow.qml")
+            settingsWindow.game = Qt.binding(() => gameList.currentGame)
             settingsWindow.lookUpMissing.connect(() => openBulkLookup(settingsWindow))
             settingsWindow.suggestTagsFromIgdb.connect(() => openBulkLookup(settingsWindow, true))
             settingsWindow.runSetupGuide.connect(() => {
@@ -754,6 +758,7 @@ ApplicationWindow {
             onAddRequested: window.addGame()
             onSteamUndoRequested: window.askSteamUndo()
             onHistoryRequested: window.openPlayHistory(game)
+            onMenuRequested: button => gameList.openMenuBelow(Library.rowOfGame(game.id), button)
         }
     }
 

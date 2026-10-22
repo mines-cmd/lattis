@@ -47,126 +47,29 @@ Item {
 
     onPlatformsChanged: Qt.callLater(() => { movedId = "" })
 
-    // A row dragged by its handle. dragFrom and dragTo are its place among the defined platforms before
-    // and after, and the move is written when it's dropped. Only without a search, when the rows shown
-    // are all of them (the defined ones first, as in the file).
-    property string dragId: ""
-    property int dragFrom: -1
-    property int dragTo: -1
-    property real dragPressY: 0
-    property real dragDy: 0
-    property bool dragSettling: false
-    // The order when the drag began: once the list reloads in the new order the drag is over, so the rebuilt
-    // rows start in place instead of animating from where the drag had put them.
-    property string dragOrder: ""
-    readonly property bool dragging: dragId !== "" && shown.map(p => p.id).join(",") === dragOrder
-
-    function entryAt(i) {
-        return entryRepeater.itemAt(i)
-    }
-
-    function shiftOf(index) {
-        if (!dragging || index === dragFrom)
-            return 0
-        const height = entryAt(dragFrom).height
-        if (dragTo > dragFrom && index > dragFrom && index <= dragTo)
-            return -height
-        if (dragTo < dragFrom && index >= dragTo && index < dragFrom)
-            return height
-        return 0
-    }
-
-    function settledOffset() {
-        let offset = 0
-        if (dragTo > dragFrom) {
-            for (let i = dragFrom + 1; i <= dragTo; ++i)
-                offset += entryAt(i).height
-        } else {
-            for (let i = dragTo; i < dragFrom; ++i)
-                offset -= entryAt(i).height
-        }
-        return offset
-    }
-
-    function startDrag(handle, index, x, y) {
-        dragId = shown[index].id
-        dragOrder = shown.map(p => p.id).join(",")
-        dragFrom = index
-        dragTo = index
-        dragPressY = handle.mapToItem(cardColumn, x, y).y
-        dragDy = 0
-        dragSettling = false
-    }
-
-    function moveDrag(handle, x, y) {
-        if (!dragging || dragSettling)
-            return
-        const row = entryAt(dragFrom)
-        const first = entryAt(0)
-        const last = entryAt(defined.length - 1)
-        const dy = handle.mapToItem(cardColumn, x, y).y - dragPressY
-        dragDy = Math.max(first.y - row.y, Math.min(last.y + last.height - row.y - row.height, dy))
-        const center = row.y + row.height / 2 + dragDy
-        let to = 0
-        for (let i = 0; i < defined.length; ++i) {
-            if (i !== dragFrom && entryAt(i).y + entryAt(i).height / 2 < center)
-                ++to
-        }
-        dragTo = to
-    }
-
-    function endDrag(dropped) {
-        if (!dragging || dragSettling)
-            return
-        if (!dropped || dragTo === dragFrom) {
-            resetDrag()
-            return
-        }
-        const others = defined.filter((p, i) => i !== dragFrom)
-        const failed = Window.window.change(() => Library.movePlatformBefore(dragId, others[dragTo]?.id ?? ""))
+    // A row dragged by its handle: only the defined platforms, and only without a search, when the rows
+    // shown are all of them (the defined ones first, as in the file). The move is written on the drop, and
+    // the drag ends when the list reloads in the new order.
+    function dropPlatform(id, from, to) {
+        const others = defined.filter((p, i) => i !== from)
+        const failed = Window.window.change(() => Library.movePlatformBefore(id, others[to]?.id ?? ""))
         if (failed !== "") {
-            resetDrag()
+            drag.reset()
             error.text = failed
             return
         }
-        dragSettling = true
-        settleTimer.restart()
-    }
-
-    function resetDrag() {
-        settleTimer.stop()
-        dragId = ""
-        dragFrom = -1
-        dragTo = -1
-        dragDy = 0
-        dragSettling = false
+        drag.settle()
     }
 
     function dragForScreenshot(id, offset) {
         const from = defined.findIndex(p => p.id === id)
-        if (from < 0)
-            return
-        const handle = entryAt(from).handle
-        startDrag(handle, from, 0, 0)
-        dragPressY = handle.mapToItem(cardColumn, 0, 0).y
-        moveDrag(handle, 0, offset)
-    }
-
-    Shortcut {
-        sequence: "Escape"
-        enabled: root.dragging && !root.dragSettling
-        onActivated: root.resetDrag()
+        if (from >= 0)
+            drag.dragForScreenshot(from, offset)
     }
 
     Connections {
         target: Library
-        function onPlatformSettingsChanged() { root.resetDrag() }
-    }
-
-    Timer {
-        id: settleTimer
-        interval: 800
-        onTriggered: root.resetDrag()
+        function onPlatformSettingsChanged() { drag.reset() }
     }
 
     component DialogBackground: Rectangle {
@@ -438,17 +341,14 @@ Item {
                     border.color: Theme.settingsWindow.cardBorder
                     border.width: Theme.settingsWindow.cardBorderWidth
 
-                    Rectangle {
-                        visible: root.dragging
-                        x: cardColumn.x
-                        y: cardColumn.y + (root.dragging ? (root.dragTo > root.dragFrom
-                                                            ? root.entryAt(root.dragTo).y + root.entryAt(root.dragTo).height
-                                                            : root.entryAt(root.dragTo).y) : 0) - height / 2
-                        width: cardColumn.width
-                        height: Theme.settingsWindow.dropIndicatorWidth
-                        radius: height / 2
-                        color: Theme.settingsWindow.dropIndicator
-                        z: 2
+                    DragReorder {
+                        id: drag
+                        column: cardColumn
+                        repeater: entryRepeater
+                        ids: root.shown.map(p => p.id)
+                        count: root.defined.length
+                        settleTime: 800
+                        onDropped: (id, from, to) => root.dropPlatform(id, from, to)
                     }
 
                     ColumnLayout {
@@ -465,7 +365,6 @@ Item {
                                 id: entry
                                 required property var modelData
                                 required property int index
-                                readonly property bool dragged: root.dragging && root.dragId === modelData.id
                                 // Not at creation: a reloaded list's new rows first see the drag's offsets and drop them in the same event.
                                 property bool ready: false
                                 Component.onCompleted: Qt.callLater(() => { ready = true })
@@ -473,13 +372,12 @@ Item {
 
                                 Layout.fillWidth: true
                                 spacing: 0
-                                opacity: dragged && !root.dragSettling ? Theme.settingsWindow.dragOpacity : 1
-                                z: dragged ? 1 : 0
+                                opacity: drag.follows(index) ? Theme.settingsWindow.dragOpacity : 1
+                                z: drag.isDragged(index) ? 1 : 0
                                 transform: Translate {
-                                    y: entry.dragged ? (root.dragSettling ? root.settledOffset() : root.dragDy)
-                                                     : root.shiftOf(entry.index)
+                                    y: drag.offsetOf(entry.index)
                                     Behavior on y {
-                                        enabled: Motion.on && entry.ready && !(entry.dragged && !root.dragSettling)
+                                        enabled: Motion.on && entry.ready && !drag.follows(entry.index)
                                         MotionNumber {}
                                     }
                                 }
@@ -497,9 +395,9 @@ Item {
                                     id: row
                                     Layout.fillWidth: true
                                     draggable: root.query === ""
-                                    onDragStarted: (handle, x, y) => root.startDrag(handle, entry.index, x, y)
-                                    onDragMoved: (handle, x, y) => root.moveDrag(handle, x, y)
-                                    onDragEnded: dropped => root.endDrag(dropped)
+                                    onDragStarted: (handle, x, y) => drag.start(handle, entry.index, x, y)
+                                    onDragMoved: (handle, x, y) => drag.move(handle, x, y)
+                                    onDragEnded: dropped => drag.end(dropped)
                                     platform: entry.modelData
                                     expanded: root.expandedId === entry.modelData.id
                                     firstInCard: entry.index === 0

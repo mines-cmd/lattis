@@ -17,14 +17,14 @@ Menu {
     property string popDirection: "right"
     property real slide: 0
     readonly property real slideX: popDirection === "right" ? slide : 0
-    readonly property real slideY: popDirection === "down" || popDirection === "below" ? slide : popDirection === "up" ? -slide : 0
+    readonly property real slideY: popDirection === "down" || popDirection === "below" ? slide : popDirection === "up" || popDirection === "above" ? -slide : 0
     property real pop: 1
     scale: pop
 
     clip: !grows
     property real reveal: 1
     height: grows ? implicitHeight : implicitHeight * reveal
-    transformOrigin: !pops ? Popup.Center : popDirection === "up" ? Popup.BottomLeft : popDirection === "below" ? Popup.TopRight : Popup.TopLeft
+    transformOrigin: !pops ? Popup.Center : popDirection === "up" ? Popup.BottomLeft : popDirection === "above" ? Popup.BottomRight : popDirection === "below" ? Popup.TopRight : Popup.TopLeft
     readonly property Transition dropEnter: DropdownEnter {}
     readonly property Transition dropExit: DropdownExit {}
     readonly property Transition popEnter: MenuPopEnter {}

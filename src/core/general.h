@@ -33,6 +33,7 @@ class General : public QObject
     Q_PROPERTY(QString recentPeriod READ recentPeriod NOTIFY gamePageChanged)
     Q_PROPERTY(bool showDescription READ showDescription NOTIFY gamePageChanged)
     Q_PROPERTY(bool showTags READ showTags NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
     Q_PROPERTY(bool startAtLoginOurs READ startAtLoginOurs NOTIFY loginChanged)
@@ -60,6 +61,7 @@ public:
     QString recentPeriod() const { return m_gamePage.recentPeriod; }
     bool showDescription() const { return m_gamePage.showDescription; }
     bool showTags() const { return m_gamePage.showTags; }
+    QStringList gamePageProblems() const { return m_gamePageProblems; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
     bool startAtLoginOurs() const { return m_loginOurs; }
@@ -108,6 +110,7 @@ private:
     bool m_startedFullscreen = false;
     GeneralSettings m_settings;
     GamePageSettings m_gamePage;
+    QStringList m_gamePageProblems;
     QStringList m_problems;
     bool m_loginExists = false;
     bool m_loginOurs = false;
