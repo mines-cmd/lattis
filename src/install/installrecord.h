@@ -17,6 +17,8 @@ struct InstallRecord
     QString assetId;
     QString assetDate;
     QString installed;
+    QString desktop;
+    QString icon;
 
     bool operator==(const InstallRecord &) const = default;
 };

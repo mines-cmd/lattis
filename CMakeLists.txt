@@ -284,6 +284,7 @@ qt_add_qml_module(lattis
         src/library/emulators.h src/library/emulators.cpp
         src/install/releasesource.h src/install/releasesource.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
+        src/install/desktopentry.h src/install/desktopentry.cpp
         src/install/installrecord.h src/install/installrecord.cpp
         src/install/flatpakinstall.h src/install/flatpakinstall.cpp
         src/install/installer.h src/install/installer.cpp

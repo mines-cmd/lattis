@@ -262,6 +262,7 @@ lattis_test(metadata_test
 lattis_test(install_test
     SOURCES fakehttpserver.h
             ../src/install/appimageinstall.h ../src/install/appimageinstall.cpp
+            ../src/install/desktopentry.h ../src/install/desktopentry.cpp
             ../src/install/installrecord.h ../src/install/installrecord.cpp
             ../src/install/flatpakinstall.h ../src/install/flatpakinstall.cpp
             ../src/install/installer.h ../src/install/installer.cpp

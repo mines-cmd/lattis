@@ -1,4 +1,5 @@
 #include "appimageinstall.h"
+#include "desktopentry.h"
 #include "fakehttpserver.h"
 #include "flatpakinstall.h"
 #include "installer.h"
@@ -110,6 +111,7 @@ private slots:
     void extractRefuses();
     void extractNoMatch();
 
+    void desktopRewrite();
     void downloadInstalls();
     void downloadChecksum();
     void downloadCutShort();
@@ -394,6 +396,20 @@ ReleaseAsset assetFor(const FakeHttpServer &server, const QString &path, const Q
         asset.sha256 = sha(bytes);
     return asset;
 }
+}
+
+void InstallTest::desktopRewrite()
+{
+    const QByteArray source = "[Desktop Entry]\nName=mGBA\nExec=mgba-qt %f\nTryExec=mgba-qt\nIcon=mgba\nX-AppImage-Version=1\n"
+                              "\n[Desktop Action new]\nName=New\nExec=\"mgba-qt\" --new\n";
+    const QByteArray out = DesktopEntry::rewrite(source, "/home/u/My Apps/mGBA.AppImage", "/home/u/.local/share/icons/lattis/mgba.png");
+    QCOMPARE(out,
+             QByteArray("[Desktop Entry]\nName=mGBA\nExec=\"/home/u/My Apps/mGBA.AppImage\" %f\n"
+                        "Icon=/home/u/.local/share/icons/lattis/mgba.png\n"
+                        "\n[Desktop Action new]\nName=New\nExec=\"/home/u/My Apps/mGBA.AppImage\" --new\n"));
+
+    const QByteArray noIcon = DesktopEntry::rewrite("[Desktop Entry]\nName=A\nExec=a\n", "/a.AppImage", "/i.png");
+    QCOMPARE(noIcon, QByteArray("[Desktop Entry]\nIcon=/i.png\nName=A\nExec=\"/a.AppImage\"\n"));
 }
 
 void InstallTest::downloadInstalls()

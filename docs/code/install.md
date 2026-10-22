@@ -53,6 +53,10 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 
 `AppImageInstall::targetFolder(applicationsDirs, home)` is the first of `~/Applications` and `~/AppImages` that exists, else `~/Applications`. Both are already searched by detection, so nothing is written to `emulators.toml`. An update goes to the folder the old file is in.
 
+## The menu entry
+
+After an AppImage is in place, `DesktopEntry::make(id, appImage, dataDir)` (`desktopentry.*`) gives it a menu entry, as Gear Lever does: it runs `<appimage> --appimage-extract` (20 s limit, without Lattis's own AppImage variables) for the AppImage's `.desktop` file and its icon, copies the icon to `<data dir>/icons/lattis/<id>.<ext>`, and writes `<data dir>/applications/lattis-<id>.desktop` with `rewrite()`: every `Exec` runs the AppImage (keeping its arguments), `TryExec` and `X-AppImage-*` lines are dropped, and `Icon` is the copied file. `<data dir>` is the `data` XDG folder (`~/.local/share`). It is not made in fixture mode. A failure is only a warning: the install still succeeds. An update rewrites the entry; an uninstall deletes it and the icon.
+
 ## Flatpak
 
 `flatpakinstall.*`:
@@ -71,7 +75,7 @@ Without a terminal `flatpak install` prints no percentages, so a Flatpak job has
 
 ## The install record
 
-`~/.local/state/lattis/installs.toml` (`installrecord.*`) says what Lattis installed on this computer, one table per emulator id: `route` (`appimage` or `flatpak`), `file` (the AppImage, or the Flatpak id), `tag`, `sha256`, `asset_id`, `asset_date` and `installed` (the date). A Flatpak record has only `route`, `file` and `installed`. It is in the state dir, not the data dir, because it describes this machine: a backup doesn't carry it.
+`~/.local/state/lattis/installs.toml` (`installrecord.*`) says what Lattis installed on this computer, one table per emulator id: `route` (`appimage` or `flatpak`), `file` (the AppImage, or the Flatpak id), `tag`, `sha256`, `asset_id`, `asset_date`, `installed` (the date), `desktop` and `icon` (the menu entry and its icon, when made). A Flatpak record has only `route`, `file` and `installed`. It is in the state dir, not the data dir, because it describes this machine: a backup doesn't carry it.
 
 `InstallRecords::stillThere(record, userFlatpaks)` is what "installed by Lattis" means: the record exists and its AppImage is still a file (or its Flatpak is still in the user installation). A file Gear Lever moved stops counting, and the emulator shows only as found. An unreadable file is a warning and counts as empty; entries without a `route` and a `file` are skipped.
 
@@ -119,7 +123,7 @@ A release counts as newer when the matching asset's sha256 differs from the reco
 
 ## Uninstall
 
-`uninstall(id)` works only on what Lattis installed (the record, still there): "<emulator> wasn't installed by Lattis…" otherwise. An AppImage goes to the trash; a Flatpak is removed with `flatpak uninstall` (state `removing`) and keeps its data. The record is deleted and the library detects again. Refused with "Close <game> first" while a game runs in that emulator.
+`uninstall(id)` works only on what Lattis installed (the record, still there): "<emulator> wasn't installed by Lattis…" otherwise. An AppImage goes to the trash, with its menu entry; a Flatpak is removed with `flatpak uninstall` (state `removing`) and keeps its data. The record is deleted and the library detects again. Refused with "Close <game> first" while a game runs in that emulator.
 
 ## Testing hooks
 
@@ -137,6 +141,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 |---|---|
 | `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
+| `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`: the AppImage's menu entry |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
 | `installer.*` | The `Installer` singleton |

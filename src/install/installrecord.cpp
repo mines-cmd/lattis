@@ -45,6 +45,8 @@ Parsed<Records> parse(const QByteArray &bytes)
         r.assetId = text(*table, "asset_id");
         r.assetDate = text(*table, "asset_date");
         r.installed = text(*table, "installed");
+        r.desktop = text(*table, "desktop");
+        r.icon = text(*table, "icon");
         if (r.route.isEmpty() || r.file.isEmpty())
             continue;
         out.value.insert(toQString(key.str()), r);
@@ -83,6 +85,8 @@ bool write(const QString &path, const Records &records, QString *error)
         put("asset_id", r.assetId);
         put("asset_date", r.assetDate);
         put("installed", r.installed);
+        put("desktop", r.desktop);
+        put("icon", r.icon);
         root.insert(it.key().toStdString(), std::move(values));
     }
     std::ostringstream out;

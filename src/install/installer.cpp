@@ -1,5 +1,7 @@
 #include "installer.h"
 
+#include "desktopentry.h"
+
 #include <QCoreApplication>
 #include <QDate>
 #include <QDateTime>
@@ -505,6 +507,19 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
     record.assetDate = it->asset.date;
     record.installed = QDate::currentDate().toString(Qt::ISODate);
     m_jobs.erase(it);
+
+    QString menuProblem;
+    const DesktopEntry::Made menu =
+        DesktopEntry::make(id, result.path,
+                           m_fixturesDir.isEmpty() ? m_setup.locations().xdgDirs.value(QStringLiteral("data")) : QString(),
+                           &menuProblem);
+    if (!menuProblem.isEmpty())
+        qCWarning(lcInstall).noquote() << "no menu entry for" << result.path << menuProblem;
+    record.desktop = menu.desktop;
+    record.icon = menu.icon;
+    if (const auto previous = m_records.constFind(id); previous != m_records.cend() && previous->icon != record.icon
+                                                      && !previous->icon.isEmpty())
+        QFile::remove(previous->icon);
     saveRecord(id, &record);
     m_upToDate.insert(id);
 
@@ -530,6 +545,7 @@ void Installer::removeAppImage(const EmulatorDef &emulator, const InstallRecord 
         fail(emulator.id, tr("Couldn't move %1 to the trash: %2").arg(QFileInfo(record.file).fileName(), problem));
         return;
     }
+    DesktopEntry::remove({record.desktop, record.icon});
     m_jobs.remove(emulator.id);
     m_updates.remove(emulator.id);
     m_upToDate.remove(emulator.id);
