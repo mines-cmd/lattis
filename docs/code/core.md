@@ -34,6 +34,21 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 
 **General settings.** `General` is a QML singleton that reads `[general]` from `settings.toml` once at startup. It exposes `startFullscreen` (applied at the next start), `downloadBarCollapsed` (whether the user hid the download bar; applied at once), `railHidden` (whether the rail is hidden; applied at once, set by `setRailHidden()` from the `toggle_rail` action), the autostart entry state, and the data directory. `setStartFullscreen()`, `setDownloadBarCollapsed()` and `setStartAtLogin()` write back through `TomlPatch` and `Autostart`. The settings page calls `reload()` when it becomes visible to refresh the displayed state.
 
+**Game page settings.** What the game's page shows is the user's choice, not the style's, so it lives in `[game_page]` in `settings.toml`, read by `parseGamePageSettings()` (in `gamepagesettings.*`, shaped like `parseGeneralSettings()`) whenever `General` loads. The keys:
+
+| Key | Meaning |
+|---|---|
+| `chips` | The chips beside Launch, in order: `play_time`, `last_played`, `release_date`, `platform`, `status`, `install_size`, `rating`, `times_played`, `first_played`, `recent_play_time`, `date_added`, and the Steam chips `steam_waiting` and `steam_update`. Default `play_time last_played steam_waiting steam_update` |
+| `buttons` | The icon buttons at the right of the action row, in order: `favorite`, `open_platform`, `folder`, `settings`, `save_folder`, `menu`. Default `favorite open_platform folder settings` |
+| `info_rows` | The info panel's rows, in order; the same fields as the chips without the Steam chips. Default `release_date rating status install_size platform`. `[]` hides the panel |
+| `chips_order`, `buttons_order`, `info_rows_order` | Every choice of that list in the order the settings page shows them, hidden ones included, so a hidden entry keeps its place. Only written when it differs from the shown ones followed by the rest; the shown ones' order in the list above wins |
+| `recent_period` | The period of `recent_play_time`: `week`, `two_weeks` (default), `month`, `year` |
+| `show_description`, `show_tags` | Both default to true |
+
+A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The three lists are `GamePage::chips`, `buttons` and `infoRows` (the names `"chips"`, `"buttons"` and `"info_rows"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
+
+The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
+
 **Window sizes.** `WindowState` is a QML singleton that persists each window's size and maximized state across starts in `~/.local/state/lattis/windows-<key>.toml`. QML reads the saved sizes in its property initializers — before the first frame — so the window opens at the right size immediately rather than snapping after paint. `track()` wires up the change signals and saves on quit. The Settings window ignores its saved size when `settings_window.remember_size` is off and opens at `settings_window.width` and `height` instead (applied on slider release, to the open window too, via `applyFixedSize()`); the schema flag `onRelease` marks settings whose slider applies on release.
 
 `canMinimize` is false on tiling compositors (Hyprland, sway, niri, river) that do nothing useful when a window is minimized, so the window-controls component omits the minimize button on those desktops. `fillsScreen()` guards the maximized check: tiling compositors mark floating windows maximized to suppress client-side decorations, so a window only counts as maximized if it also fills its screen.
@@ -134,6 +149,8 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `railHidden` | The rail is hidden (`rail_hidden`; the app menu's Hide rail / Show rail, action `toggle_rail`); applied at once, with its own signal, `railHiddenChanged`, for the same reason |
 | `railHiddenButtons` | The rail's bottom buttons turned off in its menu, by action name (`add_game`, `play_statistics`, `open_settings`; `rail_hidden_buttons`). `setRailButtonShown(name, shown)` writes it, removing the key when none is hidden; its own signal, `railHiddenButtonsChanged`, for the same reason |
 | `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes all three names and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
+| `gamePageChips`, `gamePageButtons`, `gamePageInfoRows` | The game page's shown chips, buttons and info rows, in order (`[game_page]`, above) |
+| `recentPeriod`, `showDescription`, `showTags` | The rest of `[game_page]` |
 | `startAtLogin` | An autostart entry exists and is enabled |
 | `startAtLoginOurs` | That entry was written by Lattis |
 | `problems` | Parse warnings from `[general]` |
@@ -146,6 +163,10 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `setDownloadBarCollapsed(bool)` | Error string, or `""` |
 | `setReduceMotion(bool)` | Error string, or `""` |
 | `setRailHidden(bool)` | Error string, or `""` |
+| `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"` or `"info_rows"` in the order the settings page shows them |
+| `setGamePageShown(place, name, shown)` | Error string, or `""`; the entry keeps its place when hidden |
+| `setGamePageOrder(place, order)` | Error string, or `""`; `order` has every choice. Writes the list and, when it differs from the default arrangement, `<place>_order`; a default leaves no key |
+| `setRecentPeriod(period)`, `setShowDescription(bool)`, `setShowTags(bool)` | Error string, or `""`; a default removes the key |
 | `setStartAtLogin(bool)` | Error string, or `""` |
 | `reload()` | — re-reads settings and autostart |
 

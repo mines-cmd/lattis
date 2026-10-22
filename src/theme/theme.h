@@ -62,6 +62,8 @@ public:
     QString activeColors() const { return m_activeColors; }
     QString activeStyle() const { return m_activeStyle; }
     QString activeTheme() const { return m_activeTheme; }
+    // The details.* keys that moved to [game_page] (see GamePageMigration), as the active style sets them.
+    QVariantMap legacyGamePage() const { return m_legacyGamePage; }
     QStringList availableColors() const;
     QStringList availableStyles() const;
     QStringList availableThemes() const;
@@ -216,6 +218,8 @@ private:
     bool m_loaded = false;
     bool m_savingOwnChange = false;
     bool m_quiet = false;
+    bool m_collectLegacy = false;
+    QVariantMap m_legacyGamePage;
 
     QString m_activeColors;
     QString m_activeStyle;

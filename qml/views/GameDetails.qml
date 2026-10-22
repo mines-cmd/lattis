@@ -95,7 +95,7 @@ Item {
             id: desc
             opacity: contentOpacity
             transform: Translate { y: contentShift }
-            visible: Theme.details.showDescription && text.trim() !== ""
+            visible: General.showDescription && text.trim() !== ""
             Layout.fillWidth: true
             text: game.description ?? ""
             color: Theme.details.descriptionColor
@@ -126,7 +126,7 @@ Item {
             id: tagsTitle
             opacity: tagsOpacity
             transform: Translate { y: tagsShift }
-            visible: Theme.details.showTags && tags.count > 0
+            visible: General.showTags && tags.count > 0
             Layout.topMargin: desc.visible ? 14 : 0
             text: qsTr("Tags")
             color: Theme.details.headingColor
@@ -151,7 +151,7 @@ Item {
             // On the Flow, not the chips: the add transition takes over a chip's opacity.
             opacity: chipsHidden ? 0 : tagsOpacity
             transform: Translate { y: tagsShift }
-            visible: Theme.details.showTags
+            visible: General.showTags
             Layout.fillWidth: true
             spacing: Theme.tags.spacing
 
@@ -236,10 +236,10 @@ Item {
     readonly property bool tagsStay: textPending && textColumn.tagsHeading.visible && showsTags(game)
 
     function showsDescription(g): bool {
-        return Theme.details.showDescription && (g.description ?? "").trim() !== ""
+        return General.showDescription && (g.description ?? "").trim() !== ""
     }
     function showsTags(g): bool {
-        return Theme.details.showTags && (g.tags ?? []).length > 0
+        return General.showTags && (g.tags ?? []).length > 0
     }
 
     onGameChanged: {
@@ -424,6 +424,7 @@ Item {
             message(text)
     }
 
+    readonly property var shownChips: General.gamePageChips.filter(name => stats[name] !== undefined)
     readonly property var stats: ({
         play_time: { icon: Icons.clock, label: qsTr("Play time"), value: game.playTimeText ?? "" },
         last_played: { icon: "", label: qsTr("Last played"), value: game.lastPlayedText ?? "" }
@@ -670,7 +671,7 @@ Item {
                         return w + Math.max(0, n - 1) * spacing
                     }
 
-                    visible: Theme.details.stats.length > 0 || steamPending.visible || steamUpdate.visible
+                    visible: root.shownChips.length > 0 || steamPending.visible || steamUpdate.visible
                     Layout.row: !actionRow.oneLine ? (actionRow.buttonsBeside ? 1 : 2) : 0
                     Layout.column: !actionRow.oneLine ? 0 : 1
                     Layout.columnSpan: !actionRow.oneLine && actionRow.buttonsBeside ? 3 : 1
@@ -681,7 +682,7 @@ Item {
 
                     Repeater {
                         id: stats
-                        model: Theme.details.stats
+                        model: root.shownChips
 
                         StatChip {
                             required property string modelData
@@ -774,7 +775,7 @@ Item {
                     spacing: Theme.details.buttonSpacing
 
                     Repeater {
-                        model: Theme.details.actionButtons.filter(b => b !== "open_platform" || root.game.platform !== "linux")
+                        model: General.gamePageButtons.filter(b => root.actions[b] !== undefined && (b !== "open_platform" || root.game.platform !== "linux"))
 
                         IconButton {
                             required property string modelData

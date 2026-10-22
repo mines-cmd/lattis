@@ -48,6 +48,7 @@ private slots:
     void builtInsResolveWithoutProblems();
     void builtInStylesDifferWhereDecided();
     void eachHalfLoadsItsOwnSettings();
+    void legacyGamePageKeysAreCollected();
     void wrongHalfIsReportedAndIgnored();
     void firstEditOfABuiltInWritesItsLayer();
     void userFileLayersOnBuiltInOfTheSameName();
@@ -619,6 +620,33 @@ void ThemeTest::eachHalfLoadsItsOwnSettings()
     QCOMPARE(theme.sourceLabel("radius", "medium"), QStringLiteral("default"));
     QCOMPARE(theme.activeFile("palette", "accent"), QStringLiteral("Dusk.toml"));
     QCOMPARE(theme.activeFile("radius", "large"), QStringLiteral("Boxy.toml"));
+}
+
+// The details keys that became [game_page] settings are collected from the active style and what it
+// extends (the child wins), and still reported as unknown.
+void ThemeTest::legacyGamePageKeysAreCollected()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Ember\"\nstyle = \"Boxy\"\n");
+    write(dataDir + "/themes/styles/Parent.toml",
+          "[details]\nstats = [\"play_time\"]\nshow_tags = false\nshow_description = true\n");
+    write(dataDir + "/themes/styles/Boxy.toml",
+          "extends = \"Parent\"\n[details]\nstats = [\"last_played\", \"play_time\"]\nspacing = 10\n");
+
+    Theme theme(dataDir);
+    const QVariantMap legacy = theme.legacyGamePage();
+    QCOMPARE(legacy.size(), 3);
+    QCOMPARE(legacy.value("stats").toStringList(), (QStringList{"last_played", "play_time"}));
+    QCOMPARE(legacy.value("show_tags").toBool(), false);
+    QCOMPARE(legacy.value("show_description").toBool(), true);
+    QVERIFY(theme.problems().join('\n').contains(QStringLiteral("unknown setting details.stats")));
+
+    // A style that sets none gives nothing.
+    write(dataDir + "/themes/styles/Boxy.toml", "[details]\nspacing = 10\n");
+    Theme plain(dataDir);
+    QVERIFY(plain.legacyGamePage().isEmpty());
 }
 
 // A radius in a colors file (or a color in a style file) is reported, with the folder it
@@ -1431,8 +1459,8 @@ void ThemeTest::schemaModelRows()
     QCOMPARE(direction.data(ThemeSettingsModel::ChoicesRole).toStringList(),
              (QStringList{"down", "up", "right", "left"}));
     QCOMPARE(direction.data(ThemeSettingsModel::DefaultRole).toString(), QStringLiteral("\"down\""));
-    QCOMPARE(rowOf("details", "stats").data(ThemeSettingsModel::DefaultRole).toString(),
-             QStringLiteral("[\"play_time\", \"last_played\"]"));
+    QCOMPARE(rowOf("window_controls", "buttons").data(ThemeSettingsModel::DefaultRole).toString(),
+             QStringLiteral("[\"minimize\", \"maximize\", \"close\"]"));
     QCOMPARE(rowOf("hero", "radius").data(ThemeSettingsModel::DefaultRole).toString(), QStringLiteral("@radius.large"));
 
     // Set in the active style, then inherited by a theme that extends it.

@@ -104,6 +104,8 @@ lattis_test(tomlpatch_test
 lattis_test(general_test OFFSCREEN
     SOURCES ../src/core/general.h ../src/core/general.cpp ../src/core/dateformat.h ../src/core/dateformat.cpp
             ../src/core/generalsettings.h ../src/core/generalsettings.cpp
+            ../src/core/gamepagesettings.h ../src/core/gamepagesettings.cpp
+            ../src/core/gamepagemigration.h ../src/core/gamepagemigration.cpp
             ../src/core/autostart.h ../src/core/autostart.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp ${CORE_SOURCES}
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
@@ -124,6 +126,7 @@ lattis_test(theme_test OFFSCREEN
     SOURCES ../src/theme/theme.h ../src/theme/theme.cpp
             ../src/theme/themeschema.h ../src/theme/themeschema.cpp
             ../src/theme/schemamodel.h ../src/theme/schemamodel.cpp
+            ../src/core/gamepagemigration.h ../src/core/gamepagemigration.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp ${CORE_SOURCES}
             ../src/library/uninstall.h ../src/library/uninstall.cpp
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)

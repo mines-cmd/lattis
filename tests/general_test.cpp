@@ -1,9 +1,12 @@
 #include "autostart.h"
 #include "general.h"
+#include "gamepagemigration.h"
+#include "gamepagesettings.h"
 #include "generalsettings.h"
 #include "tomlpatch.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -25,6 +28,11 @@ private slots:
     void reduceMotionSetting();
     void railHiddenButtonsSetting();
     void railButtonOrderSetting();
+    void gamePageDefaults();
+    void gamePageParser();
+    void gamePageOrderKeepsNewNames();
+    void gamePageSettersWrite();
+    void gamePageMigration();
     void startAtLogin();
     void staleAutostartRewritten();
 
@@ -368,6 +376,233 @@ void GeneralTest::railButtonOrderSetting()
     QCOMPARE(general.railButtonOrder(), railButtons());
     QVERIFY(settings.open(QIODevice::ReadOnly));
     QVERIFY(!settings.readAll().contains("rail_button_order"));
+}
+
+
+void GeneralTest::gamePageDefaults()
+{
+    const auto empty = parseGamePageSettings({}, QStringLiteral("settings.toml"));
+    QVERIFY(empty.ok);
+    QCOMPARE(empty.value, GamePageSettings());
+    QCOMPARE(empty.value.chips,
+             (QStringList{"play_time", "last_played", "steam_waiting", "steam_update"}));
+    QCOMPARE(empty.value.buttons, (QStringList{"favorite", "open_platform", "folder", "settings"}));
+    QCOMPARE(empty.value.infoRows,
+             (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
+    QCOMPARE(empty.value.recentPeriod, QStringLiteral("two_weeks"));
+    QVERIFY(empty.value.showDescription);
+    QVERIFY(empty.value.showTags);
+
+    const auto other = parseGamePageSettings("[general]\nreduce_motion = true\n", QStringLiteral("settings.toml"));
+    QCOMPARE(other.value, GamePageSettings());
+    QVERIFY(other.warnings.isEmpty());
+
+    QVERIFY(!parseGamePageSettings("[game_page\n", QStringLiteral("settings.toml")).ok);
+}
+
+void GeneralTest::gamePageParser()
+{
+    const auto r = parseGamePageSettings("[game_page]\nchips = [\"rating\", \"play_time\", \"rating\"]\n"
+                                         "buttons = []\ninfo_rows = [\"times_played\", \"date_added\"]\n"
+                                         "recent_period = \"month\"\nshow_description = false\nshow_tags = false\n",
+                                         QStringLiteral("settings.toml"));
+    QVERIFY(r.warnings.isEmpty());
+    QCOMPARE(r.value.chips, (QStringList{"rating", "play_time"}));
+    QVERIFY(r.value.buttons.isEmpty());
+    QCOMPARE(r.value.infoRows, (QStringList{"times_played", "date_added"}));
+    QCOMPARE(r.value.recentPeriod, QStringLiteral("month"));
+    QVERIFY(!r.value.showDescription);
+    QVERIFY(!r.value.showTags);
+
+    const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
+                                           "info_rows = [\"steam_update\"]\nrecent_period = \"day\"\n"
+                                           "show_tags = 1\nchip = []\n",
+                                           QStringLiteral("settings.toml"));
+    QCOMPARE(bad.warnings.size(), 7);
+    // The keys are read in alphabetical order, so look for each message.
+    const QString all = bad.warnings.join(u'\n');
+    QVERIFY(all.contains(QStringLiteral("unknown name \"play_tim\" in chips")));
+    QVERIFY(all.contains(QStringLiteral("did you mean \"play_time\"")));
+    QVERIFY(all.contains(QStringLiteral("unknown name \"menu\" in chips")));
+    QVERIFY(all.contains(QStringLiteral("buttons must be a list")));
+    QVERIFY(all.contains(QStringLiteral("unknown name \"steam_update\" in info_rows")));
+    QVERIFY(all.contains(QStringLiteral("recent_period must be")));
+    QVERIFY(all.contains(QStringLiteral("show_tags must be true or false")));
+    QVERIFY(all.contains(QStringLiteral("unknown key chip")));
+    // What isn't valid leaves the default.
+    QCOMPARE(bad.value.buttons, GamePageSettings().buttons);
+    QCOMPARE(bad.value.recentPeriod, QStringLiteral("two_weeks"));
+    QVERIFY(bad.value.showTags);
+}
+
+void GeneralTest::gamePageOrderKeepsNewNames()
+{
+    GamePageSettings s;
+    s.buttons = {"settings", "favorite"};
+    // Without an order, the shown ones come first, in their listed order, then the rest as the catalog has them.
+    QCOMPARE(gamePageOrder(s, GamePage::buttons),
+             (QStringList{"settings", "favorite", "open_platform", "folder", "save_folder", "menu"}));
+
+    // Hidden ones keep their slots; the shown ones' listed order wins over the order's.
+    s.buttonsOrder = {"folder", "favorite", "menu", "settings"};
+    QCOMPARE(gamePageOrder(s, GamePage::buttons),
+             (QStringList{"folder", "settings", "menu", "favorite", "open_platform", "save_folder"}));
+
+    // A name a later version adds follows the listed ones.
+    s.infoRows = {"rating"};
+    s.infoRowsOrder = {"status", "rating"};
+    const QStringList rows = gamePageOrder(s, GamePage::infoRows);
+    QCOMPARE(rows.first(), QStringLiteral("status"));
+    QCOMPARE(rows.size(), gamePageChoices(GamePage::infoRows).size());
+    QCOMPARE(rows.at(1), QStringLiteral("rating"));
+
+    // Chips offer the Steam chips; the info panel doesn't.
+    QVERIFY(gamePageChoices(GamePage::chips).contains(QStringLiteral("steam_waiting")));
+    QVERIFY(!gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
+}
+
+void GeneralTest::gamePageSettersWrite()
+{
+    QTemporaryDir data;
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("# mine\n[general]\nstart_fullscreen = true\n");
+    settings.close();
+    General general(data.path());
+    QSignalSpy page(&general, &General::gamePageChanged);
+    QSignalSpy window(&general, &General::settingsChanged);
+    const auto fileText = [&] {
+        QFile f(settings.fileName());
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+
+    QCOMPARE(general.gamePageButtons(), GamePageSettings::defaultButtons());
+    QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("menu"), true), QString());
+    QCOMPARE(general.gamePageButtons(), (QStringList{"favorite", "open_platform", "folder", "settings", "menu"}));
+    QCOMPARE(page.size(), 1);
+    QCOMPARE(window.size(), 0);
+    QVERIFY(fileText().contains("buttons = [\"favorite\", \"open_platform\", \"folder\", \"settings\", \"menu\"]"));
+    QVERIFY(fileText().contains("# mine"));
+    QVERIFY(fileText().contains("start_fullscreen = true"));
+
+    // Hiding one keeps its slot, so it comes back where it was.
+    QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("folder"), false), QString());
+    QCOMPARE(general.gamePageButtons(), (QStringList{"favorite", "open_platform", "settings", "menu"}));
+    QCOMPARE(general.gamePageOrder(GamePage::buttons).indexOf(QStringLiteral("folder")), 2);
+    QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("folder"), true), QString());
+    QCOMPARE(general.gamePageButtons(), (QStringList{"favorite", "open_platform", "folder", "settings", "menu"}));
+
+    // A new order is written whole, and the shown ones follow it.
+    QCOMPARE(general.setGamePageOrder(GamePage::buttons,
+                                      {"menu", "settings", "save_folder", "folder", "open_platform", "favorite"}),
+             QString());
+    QCOMPARE(general.gamePageButtons(), (QStringList{"menu", "settings", "folder", "open_platform", "favorite"}));
+    QCOMPARE(general.gamePageOrder(GamePage::buttons),
+             (QStringList{"menu", "settings", "save_folder", "folder", "open_platform", "favorite"}));
+    QVERIFY(fileText().contains("buttons_order"));
+    // Not every name, or one that isn't a choice, changes nothing.
+    QCOMPARE(general.setGamePageOrder(GamePage::buttons, {"menu"}), QString());
+    QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("nope"), true), QString());
+    QCOMPARE(general.setGamePageShown(QStringLiteral("elsewhere"), QStringLiteral("menu"), true), QString());
+    QCOMPARE(general.gamePageButtons().first(), QStringLiteral("menu"));
+
+    // Back to the defaults leaves no keys.
+    QCOMPARE(general.setGamePageOrder(GamePage::buttons, {"favorite", "open_platform", "folder", "settings", "save_folder", "menu"}),
+             QString());
+    QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("menu"), false), QString());
+    QCOMPARE(general.gamePageButtons(), GamePageSettings::defaultButtons());
+    QVERIFY(!fileText().contains("buttons"));
+
+    QCOMPARE(general.setRecentPeriod(QStringLiteral("year")), QString());
+    QCOMPARE(general.recentPeriod(), QStringLiteral("year"));
+    QVERIFY(fileText().contains("recent_period = \"year\""));
+    QCOMPARE(general.setRecentPeriod(QStringLiteral("fortnight")), QString());
+    QCOMPARE(general.recentPeriod(), QStringLiteral("year"));
+    QCOMPARE(general.setRecentPeriod(QStringLiteral("two_weeks")), QString());
+    QVERIFY(!fileText().contains("recent_period"));
+
+    QCOMPARE(general.setShowTags(false), QString());
+    QVERIFY(!general.showTags());
+    QVERIFY(general.showDescription());
+    QVERIFY(fileText().contains("show_tags = false"));
+    QCOMPARE(general.setShowDescription(false), QString());
+    QVERIFY(!general.showDescription());
+    QCOMPARE(general.setShowTags(true), QString());
+    QCOMPARE(general.setShowDescription(true), QString());
+    QVERIFY(!fileText().contains("show_"));
+    QVERIFY(general.problems().isEmpty());
+
+    // A hand edit shows on reload, and a mistake in it is a problem.
+    QVERIFY(settings.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    settings.write("[game_page]\nchips = [\"nope\"]\n");
+    settings.close();
+    general.reload();
+    QVERIFY(general.gamePageChips().isEmpty());
+    QCOMPARE(general.problems().size(), 1);
+    QVERIFY(general.problems().first().startsWith(QStringLiteral("settings.toml:2: unknown name \"nope\"")));
+}
+
+void GeneralTest::gamePageMigration()
+{
+    QTemporaryDir dir;
+    const QString settings = dir.filePath(QStringLiteral("settings.toml"));
+    const QString marker = dir.filePath(QStringLiteral("state/game-page-migrated"));
+    const auto write = [&](const QByteArray &text) {
+        QFile f(settings);
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(text);
+    };
+    const auto parsed = [&] {
+        QFile f(settings);
+        return f.open(QIODevice::ReadOnly) ? parseGamePageSettings(f.readAll(), QStringLiteral("settings.toml"))
+                                           : Parsed<GamePageSettings>();
+    };
+
+    // What the style set is copied; what [game_page] already has is not.
+    write("# mine\n[appearance]\nstyle = \"Mine\"\n\n[game_page]\nshow_tags = true\n");
+    QVariantMap legacy;
+    legacy.insert(QStringLiteral("stats"), QVariantList{QStringLiteral("last_played"), QStringLiteral("rating")});
+    legacy.insert(QStringLiteral("action_buttons"), QVariantList{QStringLiteral("menu")});
+    legacy.insert(QStringLiteral("show_tags"), false);
+    legacy.insert(QStringLiteral("show_description"), false);
+    QString error;
+    QVERIFY(GamePageMigration::run(settings, marker, legacy, &error));
+    QVERIFY(error.isEmpty());
+    QVERIFY(QFileInfo::exists(marker));
+    auto r = parsed();
+    QVERIFY(r.warnings.isEmpty());
+    QCOMPARE(r.value.chips, (QStringList{"last_played", "rating"}));
+    QCOMPARE(r.value.buttons, QStringList{"menu"});
+    QCOMPARE(r.value.infoRows, GamePageSettings::defaultInfoRows());
+    QVERIFY(r.value.showTags);
+    QVERIFY(!r.value.showDescription);
+    QFile f(settings);
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    QVERIFY(f.readAll().startsWith("# mine"));
+    f.close();
+
+    // Done once: a theme that sets them later is not copied.
+    write("[appearance]\nstyle = \"Mine\"\n");
+    QVERIFY(!GamePageMigration::run(settings, marker, legacy, &error));
+    QCOMPARE(parsed().value, GamePageSettings());
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    QVERIFY(!f.readAll().contains("game_page"));
+    f.close();
+
+    // A style that sets none changes nothing, and still counts as done.
+    QVERIFY(QFile::remove(marker));
+    QVERIFY(GamePageMigration::run(settings, marker, {}, &error));
+    QVERIFY(QFileInfo::exists(marker));
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    QVERIFY(!f.readAll().contains("game_page"));
+    f.close();
+
+    // A list in the info panel's own order.
+    QVERIFY(QFile::remove(marker));
+    QVariantMap rows;
+    rows.insert(QStringLiteral("info_rows"), QVariantList{QStringLiteral("status"), QStringLiteral("platform")});
+    QVERIFY(GamePageMigration::run(settings, marker, rows, &error));
+    QCOMPARE(parsed().value.infoRows, (QStringList{"status", "platform"}));
 }
 
 void GeneralTest::startAtLogin()

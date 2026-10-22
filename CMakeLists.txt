@@ -248,6 +248,8 @@ qt_add_qml_module(lattis
         src/core/dateformat.h src/core/dateformat.cpp
         src/core/autostart.h src/core/autostart.cpp
         src/core/general.h src/core/general.cpp
+        src/core/gamepagemigration.h src/core/gamepagemigration.cpp
+        src/core/gamepagesettings.h src/core/gamepagesettings.cpp
         src/core/generalsettings.h src/core/generalsettings.cpp
         src/core/oldname.h src/core/oldname.cpp
         src/core/restart.h src/core/restart.cpp

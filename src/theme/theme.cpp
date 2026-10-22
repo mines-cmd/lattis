@@ -1,4 +1,5 @@
 #include "theme.h"
+#include "gamepagemigration.h"
 #include "tomlsection.h"
 #include "schemamodel.h"
 #include "suggestion.h"
@@ -722,6 +723,9 @@ bool Theme::applyHalfFile(Half half, const QString &name, bool builtInOnly, QHas
             if (base.endsWith(QLatin1String("_fallback")))
                 base.chop(9);
             if (!keys.contains(base)) {
+                if (m_collectLegacy && half == Half::Style && section == QLatin1String("details")
+                    && GamePageMigration::legacyKeys().contains(keyName))
+                    m_legacyGamePage.insert(keyName, nodeToVariant(node));
                 if (section != QLatin1String("palette")) {
                     warn(QStringLiteral("%1: unknown setting %2.%3%4").arg(line, section, keyName, suggestion(keyName, keys)));
                     continue;
@@ -762,8 +766,11 @@ void Theme::reload()
     QHash<QString, Entry> merged;
     QStringList colorsChain;
     QStringList styleChain;
+    m_legacyGamePage.clear();
+    m_collectLegacy = true;
     const bool colorsOk = applyHalfFile(Half::Colors, loadedColors, false, merged, colorsChain);
     const bool styleOk = applyHalfFile(Half::Style, loadedStyle, false, merged, styleChain);
+    m_collectLegacy = false;
     if (!(colorsOk && styleOk) && m_loaded) {
         emit problemsChanged();
         return; // keep the current theme while a file is being edited

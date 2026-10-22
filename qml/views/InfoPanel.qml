@@ -15,7 +15,7 @@ Surface {
         install_size: { label: qsTr("Install size"), value: game.sizeText ?? "" },
         rating: { label: qsTr("Rating"), value: (game.rating ?? -1) >= 0 ? game.rating.toFixed(1) : "", stars: game.rating ?? -1 }
     })
-    readonly property var rows: Theme.details.infoRows.map(name => available[name]).filter(r => r.value !== "")
+    readonly property var rows: General.gamePageInfoRows.filter(name => available[name] !== undefined).map(name => available[name]).filter(r => r.value !== "")
 
     implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.padding
     radius: Theme.infoPanel.radius

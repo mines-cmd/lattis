@@ -1,6 +1,7 @@
 #include "dateformat.h"
 #include "backup/backups.h"
 #include "core/apppaths.h"
+#include "core/gamepagemigration.h"
 #include "core/general.h"
 #include "core/oldname.h"
 #include "core/restart.h"
@@ -104,6 +105,13 @@ int main(int argc, char *argv[])
     // All are exposed to QML as singletons (see their create()); they must outlive the engine.
     // Theme first: it creates settings.toml, which Actions and General read too.
     Theme theme(dataDir);
+    {
+        QString migrationError;
+        const QString marker = AppPaths::stateDir() + QStringLiteral("/game-page-migrated-") + AppPaths::dataDirKey(dataDir);
+        GamePageMigration::run(dataDir + QStringLiteral("/settings.toml"), marker, theme.legacyGamePage(), &migrationError);
+        if (!migrationError.isEmpty())
+            qWarning().noquote() << "can't move the game page settings out of the style:" << migrationError;
+    }
     General general(dataDir);
     if (!general.systemLocale())
         QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));

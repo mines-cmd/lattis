@@ -122,6 +122,116 @@ QString General::setRailButtonOrder(const QStringList &order)
     return error;
 }
 
+QStringList General::gamePageOrder(const QString &place) const
+{
+    if (isGamePagePlace(place))
+        return ::gamePageOrder(m_gamePage, place);
+    return {};
+}
+
+QString General::writeGamePage(const QString &place, const QStringList &order, const QStringList &shown)
+{
+    const QStringList &choices = gamePageChoices(place);
+    QStringList list;
+    for (const QString &name : order)
+        if (shown.contains(name))
+            list.append(name);
+    QStringList canonical = list;
+    for (const QString &name : choices)
+        if (!canonical.contains(name))
+            canonical.append(name);
+
+    const GamePageSettings defaults;
+    const QStringList &defaultList = place == GamePage::chips    ? defaults.chips
+                                     : place == GamePage::buttons ? defaults.buttons
+                                                                  : defaults.infoRows;
+    const auto quoted = [](const QStringList &names) {
+        QStringList out;
+        for (const QString &name : names)
+            out.append(u'"' + name + u'"');
+        return u'[' + out.join(QLatin1String(", ")) + u']';
+    };
+    QString error;
+    const auto write = [&](const QString &key, const QStringList &names, bool isDefault) {
+        if (!error.isEmpty())
+            return;
+        if (isDefault)
+            TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
+        else
+            TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, quoted(names), &error);
+    };
+    write(place, list, list == defaultList);
+    write(place + QStringLiteral("_order"), order, order == canonical);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGamePageShown(const QString &place, const QString &name, bool shown)
+{
+    if (!isGamePagePlace(place) || !gamePageChoices(place).contains(name))
+        return {};
+    QStringList now;
+    const QStringList order = ::gamePageOrder(m_gamePage, place);
+    for (const QString &entry : order) {
+        const bool on = entry == name ? shown : gamePageShown(m_gamePage, place).contains(entry);
+        if (on)
+            now.append(entry);
+    }
+    return writeGamePage(place, order, now);
+}
+
+QString General::setGamePageOrder(const QString &place, const QStringList &order)
+{
+    if (!isGamePagePlace(place))
+        return {};
+    QStringList sorted = order;
+    QStringList known = gamePageChoices(place);
+    sorted.sort();
+    known.sort();
+    if (sorted != known)
+        return {};
+    const QStringList &shown = gamePageShown(m_gamePage, place);
+    return writeGamePage(place, order, shown);
+}
+
+QString General::setRecentPeriod(const QString &period)
+{
+    if (!recentPeriods().contains(period))
+        return {};
+    QString error;
+    if (period == GamePageSettings{}.recentPeriod)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("recent_period"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("recent_period"),
+                                  u'"' + period + u'"', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGamePageFlag(const QString &key, bool value)
+{
+    QString error;
+    if (value)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, QStringLiteral("false"), &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setShowDescription(bool value)
+{
+    return setGamePageFlag(QStringLiteral("show_description"), value);
+}
+
+QString General::setShowTags(bool value)
+{
+    return setGamePageFlag(QStringLiteral("show_tags"), value);
+}
+
 QString General::setStartAtLogin(bool on)
 {
     const QString folder = Autostart::autostartFolder();
@@ -166,7 +276,12 @@ void General::load()
     const GeneralSettings prev = m_settings;
     const QStringList prevProblems = m_problems;
     m_settings = parsed.value;
+    const auto page = parseGamePageSettings(bytes, QStringLiteral("settings.toml"));
+    const GamePageSettings prevPage = m_gamePage;
+    m_gamePage = page.value;
     m_problems = parsed.warnings;
+    if (page.ok)
+        m_problems += page.warnings;
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
@@ -180,6 +295,8 @@ void General::load()
     prevWindow.railButtonOrder = m_settings.railButtonOrder;
     if (m_settings != prevWindow || m_problems != prevProblems)
         emit settingsChanged();
+    if (m_gamePage != prevPage)
+        emit gamePageChanged();
     if (m_settings.systemLocale != prev.systemLocale)
         emit systemLocaleChanged();
     if (m_settings.reduceMotion != prev.reduceMotion)

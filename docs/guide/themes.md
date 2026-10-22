@@ -1,6 +1,6 @@
 # Themes
 
-Almost everything you see in Lattis comes from its look: colors, fonts, sizes, corner roundness, and which buttons, stats and info rows show and in what order. Changes apply the moment you make them.
+Almost everything you see in Lattis comes from its look: colors, fonts, sizes, corner roundness, and how the game page is laid out. Changes apply the moment you make them.
 
 The look has two halves you can pick separately:
 
