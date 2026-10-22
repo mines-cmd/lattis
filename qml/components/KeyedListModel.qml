@@ -11,6 +11,7 @@ ListModel {
     // applying it alone would make the old entries again only for the new ones to animate in.
     property var scope
     property var syncedScope
+    property bool rescoping: false
 
     property bool leaving: false
     // Briefly true after the order changed and every entry was made again, so the delegates can
@@ -49,7 +50,14 @@ ListModel {
         const stayingNext = items.map(item => item.key).filter(key => present.has(key))
         // Another scope with the same entries keeps them: there is nothing to make again.
         const same = count === items.length && items.every((item, i) => get(i).key === item.key && !get(i).leaving)
-        const rescoped = scope !== syncedScope && !same
+        // A source set again in the same pass as a new scope is still the switch: the first one can be
+        // built from bindings not yet updated (the game page's Steam chip of the previous game), and
+        // animating the correction showed that entry leaving.
+        if (scope !== syncedScope) {
+            rescoping = true
+            Qt.callLater(() => { rescoping = false })
+        }
+        const rescoped = rescoping && !same
         syncedScope = scope
         if (rescoped || stayingNow.length !== stayingNext.length || stayingNow.some((key, i) => key !== stayingNext[i])) {
             // Before the append, which makes the delegates: one that plays its own entrance checks it then.
