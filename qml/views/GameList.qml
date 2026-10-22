@@ -283,6 +283,7 @@ Rectangle {
         const menu = prepareMenu(row)
         if (menu === null)
             return
+        gameMenu.button = null
         let below
         if (x === undefined) {
             list.positionViewAtIndex(row, ListView.Contain)
@@ -306,9 +307,19 @@ Rectangle {
 
     // Right-aligned under the item, as a menu dropping from a button at the end of a row.
     function openMenuBelow(row, item) {
+        // The press on the button closes the menu as a press outside it, before the click that would open it again.
+        if (gameMenu.closedBy === item && Date.now() - gameMenu.closedAt < 1000) {
+            gameMenu.closedBy = null
+            return
+        }
+        if (gameMenu.item?.opened && gameMenu.button === item) {
+            gameMenu.item.close()
+            return
+        }
         const menu = prepareMenu(row)
         if (menu === null)
             return
+        gameMenu.button = item
         // Placed in the parent's coordinates: a button is still shrunk by its press when its click
         // opens the menu, which would shift a menu placed in its own.
         gameMenu.under = item.parent
@@ -326,6 +337,10 @@ Rectangle {
         property real underTop: 0
         property real underBottom: 0
         property real underRight: NaN  // NaN: the menu stays at the x it was opened at
+        // The button it dropped from, and the button whose press closed it, when.
+        property Item button: null
+        property Item closedBy: null
+        property real closedAt: 0
         active: false
         source: "GameMenu.qml"
     }
@@ -342,9 +357,14 @@ Rectangle {
         function onOpened() { root.placeMenu() }
         function onHeightChanged() { root.placeMenu() }
         function onWidthChanged() { root.placeMenu() }
+        function onAboutToHide() {
+            gameMenu.closedBy = gameMenu.button?.hovered ? gameMenu.button : null
+            gameMenu.closedAt = Date.now()
+        }
         function onClosed() {
             root.menuRow = -1
             gameMenu.under = null
+            gameMenu.button = null
         }
     }
     // Above the row (or button) when there's no room below, so it doesn't cover it. The menu's
