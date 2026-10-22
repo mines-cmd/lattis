@@ -254,6 +254,7 @@ constexpr Setting kSettings[] = {
     color("menu", "row_menu_text", "@text_muted", "Entry text in a setting's ⋯ menu on the Customize page"),
     color("menu", "danger_text", "#e5534b", "A menu entry that removes something (Uninstall)"),
     boolean("menu", "icons", "true", "Show icons to the left of entries in the app and game menus"),
+    integer("menu", "button_gap", "4", 0, 50, "Space between a button and the menu that drops from it (the game page's ⋯)"),
     integer("menu", "icon_size", "16", 8, 48, "Icon size in the menus"),
     color("menu", "icon_color", "@text_muted", "Icon color in the menus"),
     integer("menu", "icon_spacing", "8", 0, 40, "Space between the icon and the entry text in the menus"),

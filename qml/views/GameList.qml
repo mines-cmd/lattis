@@ -323,10 +323,10 @@ Rectangle {
         // Placed in the parent's coordinates: a button is still shrunk by its press when its click
         // opens the menu, which would shift a menu placed in its own.
         gameMenu.under = item.parent
-        gameMenu.underTop = item.y
-        gameMenu.underBottom = item.y + item.height
+        gameMenu.underTop = item.y - Theme.menu.buttonGap
+        gameMenu.underBottom = item.y + item.height + Theme.menu.buttonGap
         gameMenu.underRight = item.x + item.width
-        menu.popup(item.parent, item.x + item.width - menu.width, item.y + item.height)
+        menu.popup(item.parent, item.x + item.width - menu.width, gameMenu.underBottom)
         menu.popDirection = Qt.binding(() => menu.y < gameMenu.underBottom ? "above" : "below")
     }
 
