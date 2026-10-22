@@ -34,6 +34,9 @@ Item {
     }
 
     readonly property var periods: ["week", "two_weeks", "month", "year"]
+    readonly property var playTimeFormats: ["hours", "hours_minutes"]
+    // The selected game's play time when it has one, so the choices show its own numbers.
+    readonly property int formatExample: (root.game.playMinutes ?? 0) > 0 ? root.game.playMinutes : 863
 
     function valueOf(name) {
         const field = fields.all[name]
@@ -225,12 +228,25 @@ Item {
                     onFailed: text => root.report(text)
                 }
 
-                readonly property bool periodShown: root.matches(qsTr("Recent play time"), qsTr("Period"))
-                SectionHeader { visible: content.periodShown; text: qsTr("Recent play time") }
+                readonly property bool formatShown: root.matches(qsTr("Play time"), qsTr("Format"))
+                readonly property bool periodShown: root.matches(qsTr("Play time"), qsTr("Recent play time period"))
+                SectionHeader { visible: content.formatShown || content.periodShown; text: qsTr("Play time") }
                 SettingsCard {
-                    visible: content.periodShown
+                    visible: content.formatShown || content.periodShown
+                    spacing: Theme.layout.spacing * 2
                     LabeledRow {
-                        label: qsTr("Period")
+                        visible: content.formatShown
+                        label: qsTr("Format")
+                        note: qsTr("How the Play time and Recent play time chips and rows write it.")
+                        SettingsComboBox {
+                            model: root.playTimeFormats.map(f => Library.playTime(root.formatExample, f))
+                            currentIndex: root.playTimeFormats.indexOf(General.playTimeFormat)
+                            onActivated: root.report(General.setPlayTimeFormat(root.playTimeFormats[currentIndex]))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.periodShown
+                        label: qsTr("Recent play time period")
                         note: qsTr("The time the Recent play time chip and row count. Weeks start on your locale's first day.")
                         SettingsComboBox {
                             model: root.periods.map(p => fields.periodLabels[p])
@@ -268,7 +284,8 @@ Item {
                 }
 
                 Label {
-                    visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.periodShown
+                    visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
+                             && !content.periodShown
                              && !content.descriptionShown && !content.tagsShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())

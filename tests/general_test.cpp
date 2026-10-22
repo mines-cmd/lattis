@@ -390,6 +390,7 @@ void GeneralTest::gamePageDefaults()
     QCOMPARE(empty.value.infoRows,
              (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
     QCOMPARE(empty.value.recentPeriod, QStringLiteral("two_weeks"));
+    QCOMPARE(empty.value.playTimeFormat, QStringLiteral("hours"));
     QVERIFY(empty.value.showDescription);
     QVERIFY(empty.value.showTags);
 
@@ -404,21 +405,24 @@ void GeneralTest::gamePageParser()
 {
     const auto r = parseGamePageSettings("[game_page]\nchips = [\"rating\", \"play_time\", \"rating\"]\n"
                                          "buttons = []\ninfo_rows = [\"times_played\", \"date_added\"]\n"
-                                         "recent_period = \"month\"\nshow_description = false\nshow_tags = false\n",
+                                         "recent_period = \"month\"\nplay_time_format = \"hours_minutes\"\n"
+                                         "show_description = false\nshow_tags = false\n",
                                          QStringLiteral("settings.toml"));
     QVERIFY(r.warnings.isEmpty());
     QCOMPARE(r.value.chips, (QStringList{"rating", "play_time"}));
     QVERIFY(r.value.buttons.isEmpty());
     QCOMPARE(r.value.infoRows, (QStringList{"times_played", "date_added"}));
     QCOMPARE(r.value.recentPeriod, QStringLiteral("month"));
+    QCOMPARE(r.value.playTimeFormat, QStringLiteral("hours_minutes"));
     QVERIFY(!r.value.showDescription);
     QVERIFY(!r.value.showTags);
 
     const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
                                            "info_rows = [\"steam_update\"]\nrecent_period = \"day\"\n"
+                                           "play_time_format = \"clock\"\n"
                                            "show_tags = 1\nchip = []\n",
                                            QStringLiteral("settings.toml"));
-    QCOMPARE(bad.warnings.size(), 7);
+    QCOMPARE(bad.warnings.size(), 8);
     // The keys are read in alphabetical order, so look for each message.
     const QString all = bad.warnings.join(u'\n');
     QVERIFY(all.contains(QStringLiteral("unknown name \"play_tim\" in chips")));
@@ -427,11 +431,13 @@ void GeneralTest::gamePageParser()
     QVERIFY(all.contains(QStringLiteral("buttons must be a list")));
     QVERIFY(all.contains(QStringLiteral("unknown name \"steam_update\" in info_rows")));
     QVERIFY(all.contains(QStringLiteral("recent_period must be")));
+    QVERIFY(all.contains(QStringLiteral("play_time_format must be \"hours\", \"hours_minutes\"")));
     QVERIFY(all.contains(QStringLiteral("show_tags must be true or false")));
     QVERIFY(all.contains(QStringLiteral("unknown key chip")));
     // What isn't valid leaves the default.
     QCOMPARE(bad.value.buttons, GamePageSettings().buttons);
     QCOMPARE(bad.value.recentPeriod, QStringLiteral("two_weeks"));
+    QCOMPARE(bad.value.playTimeFormat, QStringLiteral("hours"));
     QVERIFY(bad.value.showTags);
 }
 
@@ -520,6 +526,14 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.recentPeriod(), QStringLiteral("year"));
     QCOMPARE(general.setRecentPeriod(QStringLiteral("two_weeks")), QString());
     QVERIFY(!fileText().contains("recent_period"));
+
+    QCOMPARE(general.setPlayTimeFormat(QStringLiteral("hours_minutes")), QString());
+    QCOMPARE(general.playTimeFormat(), QStringLiteral("hours_minutes"));
+    QVERIFY(fileText().contains("play_time_format = \"hours_minutes\""));
+    QCOMPARE(general.setPlayTimeFormat(QStringLiteral("clock")), QString());
+    QCOMPARE(general.playTimeFormat(), QStringLiteral("hours_minutes"));
+    QCOMPARE(general.setPlayTimeFormat(QStringLiteral("hours")), QString());
+    QVERIFY(!fileText().contains("play_time_format"));
 
     QCOMPARE(general.setShowTags(false), QString());
     QVERIFY(!general.showTags());

@@ -16,6 +16,7 @@ struct GamePageSettings
     QStringList buttonsOrder;
     QStringList infoRowsOrder;
     QString recentPeriod = QStringLiteral("two_weeks");
+    QString playTimeFormat = QStringLiteral("hours");
     bool showDescription = true;
     bool showTags = true;
 
@@ -35,6 +36,7 @@ inline const QString infoRows = QStringLiteral("info_rows");
 
 const QStringList &gamePageChoices(const QString &place);
 const QStringList &recentPeriods();
+const QStringList &playTimeFormats();
 bool isGamePagePlace(const QString &place);
 const QStringList &gamePageShown(const GamePageSettings &settings, const QString &place);
 

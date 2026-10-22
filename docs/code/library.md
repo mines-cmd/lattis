@@ -373,6 +373,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `uninstallChoices(id)` | The uninstall dialog (below) |
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
+| `playTime(minutes, format)` | Play time as text in a `[game_page] play_time_format`: `hours` ("206.7 hours") or `hours_minutes` ("206h 42m", "45m"); `""` for none |
 | `monthStats(year, month)` | Starts the month's statistics on a worker thread; `monthStatsReady(year, month, stats)` has the map (below) |
 | `yearStats(year)` | The same for a calendar year; `yearStatsReady(year, stats)` has the map (below) |
 | `deleteSession(id, end)` | Deletes the session ending at `end` (ISO text); returns `{error, session}`, and `session` goes back to `restoreSession()` for the Undo |
@@ -529,7 +530,7 @@ sessions        newest first: [{end, endMs, startMs, minutes, merged}]
 problems        warnings from reading the file
 ```
 
-`pageHistory(id)`, the numbers behind the game page's `times_played`, `first_played` and `recent_play_time` fields, as text (`""` for none). It reads the history file on the spot when the file is 24 KB or smaller (about 450 sessions, which parse in about 1 ms; the demo's longest histories take about 0.2 ms) and returns `{pending: true}` for a longer one, which it reads on a worker thread (2000 sessions take about 4.5 ms) and delivers through `pageHistoryReady(id, played)`. It uses `QTimeZone::LocalTime`: the first `systemTimeZone()` loads the zone database, about 3 ms on the main thread. The numbers are `PlayHistory::pageStats()`'s, a pure function counting days as above:
+`pageHistory(id)`, the numbers behind the game page's `times_played`, `first_played` and `recent_play_time` fields: `timesPlayed` and `firstPlayed` as text (`""` for none), and `recent`, the minutes played in each period (`week`, `two_weeks`, `month`, `year`), which the page writes with `playTime()` in the chosen format. It reads the history file on the spot when the file is 24 KB or smaller (about 450 sessions, which parse in about 1 ms; the demo's longest histories take about 0.2 ms) and returns `{pending: true}` for a longer one, which it reads on a worker thread (2000 sessions take about 4.5 ms) and delivers through `pageHistoryReady(id, played)`. It uses `QTimeZone::LocalTime`: the first `systemTimeZone()` loads the zone database, about 3 ms on the main thread. The numbers are `PlayHistory::pageStats()`'s, a pure function counting days as above:
 
 ```
 timesPlayed     how many entries the history has; a merged Steam entry counts once

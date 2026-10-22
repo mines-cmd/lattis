@@ -92,6 +92,12 @@ const QStringList &recentPeriods()
     return periods;
 }
 
+const QStringList &playTimeFormats()
+{
+    static const QStringList formats = {QStringLiteral("hours"), QStringLiteral("hours_minutes")};
+    return formats;
+}
+
 QStringList gamePageOrder(const GamePageSettings &settings, const QString &place)
 {
     const QStringList &shown = gamePageShown(settings, place);
@@ -121,7 +127,7 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
                                QStringLiteral("info_rows"),   QStringLiteral("chips_order"),
                                QStringLiteral("buttons_order"), QStringLiteral("info_rows_order"),
                                QStringLiteral("recent_period"), QStringLiteral("show_description"),
-                               QStringLiteral("show_tags")};
+                               QStringLiteral("show_tags"),   QStringLiteral("play_time_format")};
     const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
@@ -133,13 +139,14 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             const QString &place = places.at(at % 3);
             readNames(node, key, place, section, at < 3 ? shownOf(out.value, place) : orderOf(out.value, place),
                       out.warnings);
-        } else if (at == 6) {
+        } else if (at == 6 || at == 9) {
+            const QStringList &choices = at == 6 ? recentPeriods() : playTimeFormats();
             const auto *text = node.as_string();
-            if (text && recentPeriods().contains(toQString(text->get())))
-                out.value.recentPeriod = toQString(text->get());
+            if (text && choices.contains(toQString(text->get())))
+                (at == 6 ? out.value.recentPeriod : out.value.playTimeFormat) = toQString(text->get());
             else
-                out.warnings.append(QStringLiteral("%1: recent_period must be \"%2\"")
-                                        .arg(section.where(node), recentPeriods().join(QStringLiteral("\", \""))));
+                out.warnings.append(QStringLiteral("%1: %2 must be \"%3\"")
+                                        .arg(section.where(node), key, choices.join(QStringLiteral("\", \""))));
         } else if (const auto *b = node.as_boolean()) {
             (at == 7 ? out.value.showDescription : out.value.showTags) = b->get();
         } else {

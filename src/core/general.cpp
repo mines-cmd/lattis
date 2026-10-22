@@ -195,19 +195,30 @@ QString General::setGamePageOrder(const QString &place, const QStringList &order
     return writeGamePage(place, order, shown);
 }
 
+QString General::setGamePageChoice(const QString &key, const QString &value, const QString &defaultValue)
+{
+    QString error;
+    if (value == defaultValue)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, u'"' + value + u'"', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setRecentPeriod(const QString &period)
 {
     if (!recentPeriods().contains(period))
         return {};
-    QString error;
-    if (period == GamePageSettings{}.recentPeriod)
-        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("recent_period"), &error);
-    else
-        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("recent_period"),
-                                  u'"' + period + u'"', &error);
-    if (error.isEmpty())
-        load();
-    return error;
+    return setGamePageChoice(QStringLiteral("recent_period"), period, GamePageSettings{}.recentPeriod);
+}
+
+QString General::setPlayTimeFormat(const QString &format)
+{
+    if (!playTimeFormats().contains(format))
+        return {};
+    return setGamePageChoice(QStringLiteral("play_time_format"), format, GamePageSettings{}.playTimeFormat);
 }
 
 QString General::setGamePageFlag(const QString &key, bool value)

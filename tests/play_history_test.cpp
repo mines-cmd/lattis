@@ -975,12 +975,18 @@ void PlayHistoryTest::pageHistoryFromTheLibrary()
     QCOMPARE(played.value("firstPlayed").toString(), DateFormat::shortDate(now.addSecs(-90 * 60).date()));
     const QVariantMap recent = played.value("recent").toMap();
     QCOMPARE(recent.keys(), (QStringList{"month", "two_weeks", "week", "year"}));
-    QVERIFY(!recent.value("two_weeks").toString().isEmpty());
+    QCOMPARE(recent.value("two_weeks").toInt(), 90);
 
     const QVariantMap never = library->pageHistory(QStringLiteral("switch-pikmin-4"));
     QCOMPARE(never.value("timesPlayed").toString(), QString());
     QCOMPARE(never.value("firstPlayed").toString(), QString());
-    QCOMPARE(never.value("recent").toMap().value("year").toString(), QString());
+    QCOMPARE(never.value("recent").toMap().value("year").toInt(), 0);
+
+    QCOMPARE(library->playTime(863, QStringLiteral("hours_minutes")), QStringLiteral("14h 23m"));
+    QCOMPARE(library->playTime(840, QStringLiteral("hours_minutes")), QStringLiteral("14h"));
+    QCOMPARE(library->playTime(45, QStringLiteral("hours_minutes")), QStringLiteral("45m"));
+    QCOMPARE(library->playTime(0, QStringLiteral("hours_minutes")), QString());
+    QCOMPARE(library->playTime(863, QStringLiteral("hours")), QLocale().toString(14.4, 'f', 1) + QStringLiteral(" hours"));
 }
 
 QTEST_GUILESS_MAIN(PlayHistoryTest)

@@ -156,6 +156,7 @@ public:
     Q_INVOKABLE void monthStats(int year, int month);
     Q_INVOKABLE void yearStats(int year);
     Q_INVOKABLE QString shortPlayTime(int minutes) const;
+    Q_INVOKABLE QString playTime(int minutes, const QString &format) const;
     Q_INVOKABLE QVariantMap deleteSession(const QString &id, const QString &end);
     Q_INVOKABLE QString restoreSession(const QString &id, const QVariantMap &session);
 

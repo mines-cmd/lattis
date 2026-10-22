@@ -38,6 +38,19 @@ QString playTimeText(int minutes)
     return Library::tr("%1 hours").arg(QLocale().toString(minutes / 60.0, 'f', 1));
 }
 
+QString hoursMinutesText(int minutes)
+{
+    if (minutes <= 0)
+        return {};
+    const int hours = minutes / 60;
+    const int rest = minutes % 60;
+    if (hours == 0)
+        return Library::tr("%1m").arg(rest);
+    if (rest == 0)
+        return Library::tr("%1h").arg(QLocale().toString(hours));
+    return Library::tr("%1h %2m").arg(QLocale().toString(hours)).arg(rest);
+}
+
 // -1 when Steam gave no size, or while nothing is downloading.
 int updatePercent(const Game &g)
 {
@@ -1634,10 +1647,10 @@ QVariantMap pageHistoryMap(const PlayHistory::PageStats &s)
     return {{QStringLiteral("timesPlayed"), s.sessions > 0 ? QLocale().toString(s.sessions) : QString()},
             {QStringLiteral("firstPlayed"),
              s.first.isValid() ? DateFormat::shortDate(s.first.toLocalTime().date()) : QString()},
-            {QStringLiteral("recent"), QVariantMap{{QStringLiteral("week"), playTimeText(s.week)},
-                                                   {QStringLiteral("two_weeks"), playTimeText(s.twoWeeks)},
-                                                   {QStringLiteral("month"), playTimeText(s.month)},
-                                                   {QStringLiteral("year"), playTimeText(s.year)}}}};
+            {QStringLiteral("recent"), QVariantMap{{QStringLiteral("week"), s.week},
+                                                   {QStringLiteral("two_weeks"), s.twoWeeks},
+                                                   {QStringLiteral("month"), s.month},
+                                                   {QStringLiteral("year"), s.year}}}};
 }
 }
 
@@ -1663,6 +1676,11 @@ QVariantMap Library::pageHistory(const QString &id)
 QString Library::shortPlayTime(int minutes) const
 {
     return shortPlayTimeText(minutes);
+}
+
+QString Library::playTime(int minutes, const QString &format) const
+{
+    return format == QLatin1String("hours_minutes") ? hoursMinutesText(minutes) : playTimeText(minutes);
 }
 
 struct Library::StatsInput
@@ -2060,6 +2078,7 @@ QVariantMap Library::gameAt(int row) const
         {QStringLiteral("sizeText"),
          g.sizeBytes > 0 ? QLocale().formattedDataSize(g.sizeBytes, 1, QLocale::DataSizeTraditionalFormat)
                          : QString()},
+        {QStringLiteral("playMinutes"), g.playMinutes},
         {QStringLiteral("playTimeText"), playTimeText(g.playMinutes)},
         {QStringLiteral("lastPlayedText"), lastPlayedText(g.lastPlayed)},
         {QStringLiteral("addedText"), g.added.isValid() ? DateFormat::shortDate(g.added) : QString()},

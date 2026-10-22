@@ -43,6 +43,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | `info_rows` | The info panel's rows, in order; the same fields as the chips without the Steam chips. Default `release_date rating status install_size platform`. `[]` hides the panel |
 | `chips_order`, `buttons_order`, `info_rows_order` | Every choice of that list in the order the settings page shows them, hidden ones included, so a hidden entry keeps its place. Only written when it differs from the shown ones followed by the rest; the shown ones' order in the list above wins |
 | `recent_period` | The period of `recent_play_time`: `week`, `two_weeks` (default), `month`, `year` |
+| `play_time_format` | How the `play_time` and `recent_play_time` fields write it: `hours` (default, "206.7 hours") or `hours_minutes` ("206h 42m") |
 | `show_description`, `show_tags` | Both default to true |
 
 A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The three lists are `GamePage::chips`, `buttons` and `infoRows` (the names `"chips"`, `"buttons"` and `"info_rows"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
@@ -150,7 +151,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `railHiddenButtons` | The rail's bottom buttons turned off in its menu, by action name (`add_game`, `play_statistics`, `open_settings`; `rail_hidden_buttons`). `setRailButtonShown(name, shown)` writes it, removing the key when none is hidden; its own signal, `railHiddenButtonsChanged`, for the same reason |
 | `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes all three names and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
 | `gamePageChips`, `gamePageButtons`, `gamePageInfoRows` | The game page's shown chips, buttons and info rows, in order (`[game_page]`, above) |
-| `recentPeriod`, `showDescription`, `showTags` | The rest of `[game_page]` |
+| `recentPeriod`, `playTimeFormat`, `showDescription`, `showTags` | The rest of `[game_page]` |
 | `startAtLogin` | An autostart entry exists and is enabled |
 | `startAtLoginOurs` | That entry was written by Lattis |
 | `problems` | Parse warnings from `[general]` and `[game_page]` |
@@ -167,7 +168,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"` or `"info_rows"` in the order the settings page shows them |
 | `setGamePageShown(place, name, shown)` | Error string, or `""`; the entry keeps its place when hidden |
 | `setGamePageOrder(place, order)` | Error string, or `""`; `order` has every choice. Writes the list and, when it differs from the default arrangement, `<place>_order`; a default leaves no key |
-| `setRecentPeriod(period)`, `setShowDescription(bool)`, `setShowTags(bool)` | Error string, or `""`; a default removes the key |
+| `setRecentPeriod(period)`, `setPlayTimeFormat(format)`, `setShowDescription(bool)`, `setShowTags(bool)` | Error string, or `""`; a default removes the key |
 | `setStartAtLogin(bool)` | Error string, or `""` |
 | `reload()` | — re-reads settings and autostart |
 

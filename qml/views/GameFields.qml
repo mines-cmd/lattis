@@ -18,7 +18,7 @@ QtObject {
         // numbers when this binding runs for the new game.
         const played = read.id === (game.id ?? "") ? read : {}
         return {
-            play_time: { label: qsTr("Play time"), value: game.id ? game.playTimeText || qsTr("None") : "",
+            play_time: { label: qsTr("Play time"), value: game.id ? playTime(game.playMinutes) || qsTr("None") : "",
                          icon: Icons.clock, history: true, tip: qsTr("Show play history") },
             last_played: { label: qsTr("Last played"), value: game.id ? game.lastPlayedText || qsTr("Never") : "",
                            icon: Icons.historyFill },
@@ -32,10 +32,14 @@ QtObject {
                       stars: game.rating ?? -1 },
             times_played: { label: qsTr("Times played"), value: played.timesPlayed ?? "", icon: Icons.loopRightFill },
             first_played: { label: qsTr("First played"), value: played.firstPlayed ?? "", icon: Icons.signpostFill },
-            recent_play_time: { label: periodLabels[General.recentPeriod] ?? "", value: (played.recent ?? {})[General.recentPeriod] ?? "",
+            recent_play_time: { label: periodLabels[General.recentPeriod] ?? "", value: playTime((played.recent ?? {})[General.recentPeriod]),
                                 icon: Icons.clock },
             date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckFill }
         }
+    }
+
+    function playTime(minutes) {
+        return Library.playTime(minutes ?? 0, General.playTimeFormat)
     }
 
     // The names of `names` this game has a value for, in their order.
