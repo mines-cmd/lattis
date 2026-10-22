@@ -48,6 +48,7 @@ Item {
     signal steamUndoRequested()
     signal historyRequested()
     signal menuRequested(Item button)
+    signal customizeRequested()
 
     function logoForScreenshot(mode) {
         if (mode === "adjust")
@@ -402,6 +403,36 @@ Item {
             badge: false
         }
     })
+
+    // The right-click menu of one place on the page (chips, buttons or info_rows), made on first use.
+    Loader {
+        id: pageMenu
+        active: false
+        source: "GamePageMenu.qml"
+    }
+    Connections {
+        target: pageMenu.item
+        function onCustomizeRequested() { root.customizeRequested() }
+        function onMessage(text) { root.message(text) }
+    }
+    function openPageMenu(place, item, point) {
+        pageMenu.active = true
+        pageMenu.item.place = place
+        pageMenu.item.popup(item, point.x, point.y)
+    }
+
+    function pageMenuForScreenshot(place, submenu) {
+        const target = place === "chips" ? statsFlow : place === "buttons" ? buttons : info
+        openPageMenu(place, target, Qt.point(target.width / 2, target.height / 2))
+        if (submenu !== undefined) {
+            const menu = pageMenu.item
+            for (let i = 0; i < menu.count; ++i) {
+                const item = menu.itemAt(i)
+                if (item.subMenu)
+                    item.subMenu.popup(item, item.width, 0)
+            }
+        }
+    }
 
     function openMenu() {
         for (let i = 0; i < buttonRepeater.count; ++i) {
@@ -778,6 +809,11 @@ Item {
                     Layout.minimumWidth: !actionRow.oneLine ? 0 : lineWidth
                     spacing: Theme.details.actionSpacing
 
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => root.openPageMenu("chips", statsFlow, point.position)
+                    }
+
                     move: Transition {
                         enabled: Motion.on && !chipModel.rebuilt
                         MotionNumber { properties: "x,y"; speed: "normal" }
@@ -839,6 +875,12 @@ Item {
                     Layout.row: 0
                     Layout.column: 2
                     Layout.fillWidth: actionRow.oneLine || !actionRow.launchShrinks
+                    Layout.fillHeight: true
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => root.openPageMenu("chips", parent, point.position)
+                    }
                 }
 
                 RowLayout {
@@ -847,6 +889,11 @@ Item {
                     Layout.column: actionRow.oneLine ? 3 : actionRow.buttonsBeside ? 1 : 0
                     Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
                     spacing: Theme.details.buttonSpacing
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => root.openPageMenu("buttons", buttons, point.position)
+                    }
 
                     Repeater {
                         id: buttonRepeater
@@ -944,6 +991,11 @@ Item {
                     Layout.alignment: Qt.AlignTop
                     fields: gameFields
                     onHistoryRequested: root.historyRequested()
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => root.openPageMenu("info_rows", info, point.position)
+                    }
                 }
             }
         }

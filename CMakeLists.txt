@@ -166,6 +166,8 @@ qt_add_qml_module(lattis
         qml/views/AppMenu.qml
         qml/views/PlatformMenu.qml
         qml/views/RailMenu.qml
+        qml/views/GamePageMenu.qml
+        qml/views/GamePageNames.qml
         qml/views/FilterPanel.qml
         qml/views/Hero.qml
         qml/views/InfoPanel.qml

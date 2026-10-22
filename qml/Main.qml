@@ -293,6 +293,11 @@ ApplicationWindow {
             gameList.openMenuSubmenu(submenu)
     }
 
+    function gamePageMenuForScreenshot(spec) {
+        const [place, submenu] = spec.split("/")
+        details.pageMenuForScreenshot(place, submenu)
+    }
+
     function selectGamesForScreenshot(ids) {
         gameList.selectGames(ids.split(","))
     }
@@ -759,6 +764,7 @@ ApplicationWindow {
             onSteamUndoRequested: window.askSteamUndo()
             onHistoryRequested: window.openPlayHistory(game)
             onMenuRequested: button => gameList.openMenuBelow(Library.rowOfGame(game.id), button)
+            onCustomizeRequested: window.openSettingsAt("game_page")
         }
     }
 

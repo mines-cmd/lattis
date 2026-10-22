@@ -50,47 +50,59 @@ Item {
         return note !== undefined ? shown + " · " + note : shown
     }
 
-    readonly property var fieldEntries: ({
-        play_time: { name: qsTr("Play time"), icon: Icons.timeLine,
+    readonly property var fieldDefs: ({
+        play_time: { icon: Icons.timeLine,
                      hint: hint("play_time", qsTr("The time played in all"), qsTr("click opens play history")) },
-        last_played: { name: qsTr("Last played"), icon: Icons.history,
+        last_played: { icon: Icons.history,
                        hint: hint("last_played", qsTr("The day of the last session")) },
-        recent_play_time: { name: qsTr("Recent play time"), icon: Icons.timerLine,
+        recent_play_time: { icon: Icons.timerLine,
                             hint: [valueOf("recent_play_time"), qsTr("%1, set below").arg(fields.periodLabels[General.recentPeriod])]
                                   .filter(t => t !== "").join(" · ") },
-        times_played: { name: qsTr("Times played"), icon: Icons.loopRightLine,
+        times_played: { icon: Icons.loopRightLine,
                         hint: hint("times_played", qsTr("The number of sessions")) },
-        first_played: { name: qsTr("First played"), icon: Icons.signpostLine,
+        first_played: { icon: Icons.signpostLine,
                         hint: hint("first_played", qsTr("The day of the earliest session the launcher knows of")) },
-        release_date: { name: qsTr("Release date"), icon: Icons.calendarEventLine,
+        release_date: { icon: Icons.calendarEventLine,
                         hint: hint("release_date", qsTr("The year it came out")) },
-        platform: { name: qsTr("Platform"), icon: Icons.gamepadLine,
+        platform: { icon: Icons.gamepadLine,
                     hint: hint("platform", qsTr("The platform it's on"), qsTr("click shows only that platform")) },
-        status: { name: qsTr("Status"), icon: Icons.flagLine,
+        status: { icon: Icons.flagLine,
                   hint: hint("status", qsTr("Playing, finished, and so on")) },
-        install_size: { name: qsTr("Install size"), icon: Icons.hardDrive2Line,
+        install_size: { icon: Icons.hardDrive2Line,
                         hint: hint("install_size", qsTr("The space it takes on disk")) },
-        rating: { name: qsTr("Rating"), icon: Icons.starLine, hint: hint("rating", qsTr("Out of 5")) },
-        date_added: { name: qsTr("Date added"), icon: Icons.calendarCheckLine,
+        rating: { icon: Icons.starLine, hint: hint("rating", qsTr("Out of 5")) },
+        date_added: { icon: Icons.calendarCheckLine,
                       hint: hint("date_added", qsTr("The day it joined the library")) }
     })
 
-    readonly property var chipEntries: Object.assign({
-        steam_waiting: { name: qsTr("Steam changes waiting"), icon: Icons.info,
+    readonly property var chipDefs: Object.assign({
+        steam_waiting: { icon: Icons.info,
                          hint: qsTr("Only while the game's edits wait for Steam to close, with Close Steam and apply, and Undo. Hidden, they still show on Properties and the Launch button.") },
-        steam_update: { name: qsTr("Steam update"), icon: Icons.download2Line,
+        steam_update: { icon: Icons.download2Line,
                         hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") }
-    }, fieldEntries)
+    }, fieldDefs)
 
-    readonly property var buttonEntries: ({
-        favorite: { name: qsTr("Favorite"), icon: Icons.star, hint: qsTr("Add to or remove from favorites") },
-        open_platform: { name: qsTr("Open in Steam or the emulator"), icon: Icons.openExternal,
+    readonly property var buttonDefs: ({
+        favorite: { icon: Icons.star, hint: qsTr("Add to or remove from favorites") },
+        open_platform: { icon: Icons.openExternal,
                          hint: qsTr("Hidden for Linux games") },
-        folder: { name: qsTr("Open folder"), icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
-        save_folder: { name: qsTr("Save folder"), icon: Icons.save2Fill, hint: qsTr("Hidden when the game has none") },
-        settings: { name: qsTr("Properties"), icon: Icons.gear, hint: qsTr("Edit the game") },
-        menu: { name: qsTr("Menu"), icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }
+        folder: { icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
+        save_folder: { icon: Icons.save2Fill, hint: qsTr("Hidden when the game has none") },
+        settings: { icon: Icons.gear, hint: qsTr("Edit the game") },
+        menu: { icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }
     })
+
+    GamePageNames { id: names }
+
+    function named(defs, labels) {
+        const out = {}
+        for (const key of Object.keys(defs))
+            out[key] = Object.assign({ name: labels[key] }, defs[key])
+        return out
+    }
+    readonly property var fieldEntries: named(fieldDefs, names.fields)
+    readonly property var chipEntries: named(chipDefs, names.chips)
+    readonly property var buttonEntries: named(buttonDefs, names.buttons)
 
     readonly property string query: search.text.trim().toLowerCase()
     function matches(...texts) {
