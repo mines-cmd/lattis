@@ -411,6 +411,32 @@ QVariantMap summary(const File &file, int total, const QDate &today, Qt::DayOfWe
             {QStringLiteral("sessions"), sessions}};
 }
 
+PageStats pageStats(const File &file, const QDate &today, Qt::DayOfWeek firstDay, const QTimeZone &zone)
+{
+    PageStats out;
+    out.sessions = int(file.sessions.size());
+    const QDate thisWeek = weekStart(today, firstDay);
+    const QDate twoWeeks = today.addDays(-13);
+    for (const Session &s : file.sessions) {
+        const QDateTime start = s.merged ? s.end : s.start();
+        if (!out.first.isValid() || start < out.first)
+            out.first = start;
+        const QDate day = dayOf(s, zone);
+        if (day > today)
+            continue;
+        if (day >= thisWeek)
+            out.week += s.minutes;
+        if (day >= twoWeeks)
+            out.twoWeeks += s.minutes;
+        if (day.year() == today.year()) {
+            out.year += s.minutes;
+            if (day.month() == today.month())
+                out.month += s.minutes;
+        }
+    }
+    return out;
+}
+
 void load(const QString &dataDir, QList<StatsGame> *games)
 {
     for (StatsGame &game : *games) {

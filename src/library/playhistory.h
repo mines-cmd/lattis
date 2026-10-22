@@ -70,6 +70,18 @@ SteamDiff diffSteam(const QMap<QString, int> &seen, const QList<SteamPlayed> &cu
 
 QVariantMap summary(const File &file, int total, const QDate &today, Qt::DayOfWeek firstDay, const QTimeZone &zone);
 
+struct PageStats
+{
+    int sessions = 0;
+    QDateTime first; // invalid without history
+    int week = 0;
+    int twoWeeks = 0;
+    int month = 0;
+    int year = 0;
+};
+
+PageStats pageStats(const File &file, const QDate &today, Qt::DayOfWeek firstDay, const QTimeZone &zone);
+
 // The day (in `zone`) a session counts toward: the one it started on, or for a merged entry, whose
 // start means nothing, the one it ended on.
 QDate dayOf(const Session &session, const QTimeZone &zone);

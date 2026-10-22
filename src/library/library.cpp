@@ -1617,6 +1617,49 @@ QVariantMap Library::historyFor(const QString &id) const
     return out;
 }
 
+namespace {
+// About 1 ms of parsing (some 450 sessions); a longer history is read on a worker thread.
+constexpr qint64 kPageHistorySyncBytes = 24 * 1024;
+
+PlayHistory::PageStats readPageStats(const QString &dataDir, const QString &id, const QDate &today,
+                                     Qt::DayOfWeek firstDay)
+{
+    // LocalTime, not systemTimeZone(): the first systemTimeZone() loads the zone database, about 3 ms.
+    return PlayHistory::pageStats(PlayHistory::read(dataDir, id).value, today, firstDay,
+                                  QTimeZone(QTimeZone::LocalTime));
+}
+
+QVariantMap pageHistoryMap(const PlayHistory::PageStats &s)
+{
+    return {{QStringLiteral("timesPlayed"), s.sessions > 0 ? QLocale().toString(s.sessions) : QString()},
+            {QStringLiteral("firstPlayed"),
+             s.first.isValid() ? DateFormat::shortDate(s.first.toLocalTime().date()) : QString()},
+            {QStringLiteral("recent"), QVariantMap{{QStringLiteral("week"), playTimeText(s.week)},
+                                                   {QStringLiteral("two_weeks"), playTimeText(s.twoWeeks)},
+                                                   {QStringLiteral("month"), playTimeText(s.month)},
+                                                   {QStringLiteral("year"), playTimeText(s.year)}}}};
+}
+}
+
+QVariantMap Library::pageHistory(const QString &id)
+{
+    if (id.isEmpty())
+        return {};
+    const QString dataDir = m_store.dataDir();
+    const QDate today = QDate::currentDate();
+    const Qt::DayOfWeek firstDay = QLocale().firstDayOfWeek();
+    if (QFileInfo(PlayHistory::path(dataDir, id)).size() <= kPageHistorySyncBytes)
+        return pageHistoryMap(readPageStats(dataDir, id, today, firstDay));
+
+    auto *watcher = new QFutureWatcher<PlayHistory::PageStats>(this);
+    connect(watcher, &QFutureWatcher<PlayHistory::PageStats>::finished, this, [this, watcher, id] {
+        emit pageHistoryReady(id, pageHistoryMap(watcher->result()));
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run(readPageStats, dataDir, id, today, firstDay));
+    return {{QStringLiteral("pending"), true}};
+}
+
 QString Library::shortPlayTime(int minutes) const
 {
     return shortPlayTimeText(minutes);
@@ -2019,6 +2062,7 @@ QVariantMap Library::gameAt(int row) const
                          : QString()},
         {QStringLiteral("playTimeText"), playTimeText(g.playMinutes)},
         {QStringLiteral("lastPlayedText"), lastPlayedText(g.lastPlayed)},
+        {QStringLiteral("addedText"), g.added.isValid() ? DateFormat::shortDate(g.added) : QString()},
         {QStringLiteral("rating"), g.rating},
         {QStringLiteral("statusText"), g.status.isEmpty() ? QString() : statusName(g.status)},
         {QStringLiteral("logoScale"), g.logoScale},

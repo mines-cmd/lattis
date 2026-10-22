@@ -349,7 +349,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `nextGroupRow(from, step)` | The first game of the next group, or the start of this group and then the previous one |
 | `collapseGroupAt(row)` | Collapses the game's group; returns the row to select next, or −1 if none is left |
 | `expandGroupNear(row)` | Expands the nearest collapsed group below (else above); returns its first game's row |
-| `rowOfGame(id)`, `gameIdAt(row)`, `gameAt(row)` | `gameAt()`'s `heroUrl` is the display copy when there is one and `heroArt` the original art |
+| `rowOfGame(id)`, `gameIdAt(row)`, `gameAt(row)` | `gameAt()`'s `heroUrl` is the display copy when there is one and `heroArt` the original art; `addedText` is the date added (`Game::added`) in the short date format |
 | `copyHeroesNear(row)` | The game on `row` is the one whose neighbors get their hero copies first; the game list calls it when the selection changes |
 | `clearFilters()` | Every filter back to its default; the search, platform and sort stay |
 
@@ -372,6 +372,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `unhideGame(id)` | |
 | `uninstallChoices(id)` | The uninstall dialog (below) |
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
+| `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
 | `monthStats(year, month)` | Starts the month's statistics on a worker thread; `monthStatsReady(year, month, stats)` has the map (below) |
 | `yearStats(year)` | The same for a calendar year; `yearStatsReady(year, stats)` has the map (below) |
 | `deleteSession(id, end)` | Deletes the session ending at `end` (ISO text); returns `{error, session}`, and `session` goes back to `restoreSession()` for the Undo |
@@ -525,6 +526,15 @@ week, month     minutes in this week and this month
 count           how many sessions
 sessions        newest first: [{end, endMs, startMs, minutes, merged}]
 problems        warnings from reading the file
+```
+
+`pageHistory(id)`, the numbers behind the game page's `times_played`, `first_played` and `recent_play_time` fields, as text (`""` for none). It reads the history file on the spot when the file is 24 KB or smaller (about 450 sessions, which parse in about 1 ms; the demo's longest histories take about 0.2 ms) and returns `{pending: true}` for a longer one, which it reads on a worker thread (2000 sessions take about 4.5 ms) and delivers through `pageHistoryReady(id, played)`. It uses `QTimeZone::LocalTime`: the first `systemTimeZone()` loads the zone database, about 3 ms on the main thread. The numbers are `PlayHistory::pageStats()`'s, a pure function counting days as above:
+
+```
+timesPlayed     how many entries the history has; a merged Steam entry counts once
+firstPlayed     the earliest session's start (a merged entry's end), in the short date format
+recent          play time per period: week (from the locale's first day of the week), two_weeks
+                (today and the 13 days before), month and year (the calendar month and year)
 ```
 
 `monthStatsReady`'s map. Games carry `id, minutes, title, platform, iconUrl, hue`, platforms `id, minutes, name, icon`:

@@ -1,4 +1,5 @@
 #include "librarytestbase.h"
+#include "dateformat.h"
 
 namespace {
 
@@ -73,6 +74,10 @@ private slots:
     void steamPlayBecomesSessions();
     void steamUsersDontMix();
     void statsOnAWorkerThread();
+    void pageStatsPerPeriod();
+    void pageStatsWeekFollowsTheFirstDay();
+    void pageStatsWithoutHistory();
+    void pageHistoryFromTheLibrary();
 
 private:
     QString historyFile(const QString &id) const { return PlayHistory::path(m_data, id); }
@@ -902,6 +907,80 @@ void PlayHistoryTest::statsOnAWorkerThread()
     library->monthStats(now.date().year(), now.date().month());
     QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 2, 5000);
     QCOMPARE(ready.at(1).at(2).toMap().value("minutes").toInt(), 120);
+}
+
+namespace {
+// Today is Wednesday 21 October 2026: a Monday-first week starts on the 19th, a Sunday-first one on the
+// 18th, and the last two weeks on the 8th.
+const QDate kPageToday(2026, 10, 21);
+
+PlayHistory::File pageFile()
+{
+    PlayHistory::File file;
+    file.sessions = {{at(2025, 12, 31, 20, 0), 60, false},
+                     {at(2026, 9, 30, 22, 0), 30, false},
+                     {at(2026, 10, 7, 12, 0), 20, false},
+                     {at(2026, 10, 8, 12, 0), 10, false},
+                     // Started at 23:00 on Sunday the 18th.
+                     {at(2026, 10, 19, 1, 0), 120, false},
+                     {at(2026, 10, 20, 12, 0), 500, true}};
+    return file;
+}
+}
+
+void PlayHistoryTest::pageStatsPerPeriod()
+{
+    const PlayHistory::PageStats s = PlayHistory::pageStats(pageFile(), kPageToday, Qt::Monday, kPlus2);
+    // The merged entry may be several sessions, but it's one entry.
+    QCOMPARE(s.sessions, 6);
+    QCOMPARE(s.first, at(2025, 12, 31, 19, 0));
+    QCOMPARE(s.week, 500);
+    QCOMPARE(s.twoWeeks, 10 + 120 + 500);
+    QCOMPARE(s.month, 20 + 10 + 120 + 500);
+    QCOMPARE(s.year, 30 + 20 + 10 + 120 + 500);
+
+    // A merged entry's start means nothing, so the first time played is its end.
+    PlayHistory::File merged;
+    merged.sessions = {{at(2026, 10, 20, 12, 0), 500, true}};
+    QCOMPARE(PlayHistory::pageStats(merged, kPageToday, Qt::Monday, kPlus2).first, at(2026, 10, 20, 12, 0));
+}
+
+void PlayHistoryTest::pageStatsWeekFollowsTheFirstDay()
+{
+    // The overnight session counts on the Sunday it started: in a Sunday-first week, not a Monday-first one.
+    QCOMPARE(PlayHistory::pageStats(pageFile(), kPageToday, Qt::Monday, kPlus2).week, 500);
+    QCOMPARE(PlayHistory::pageStats(pageFile(), kPageToday, Qt::Sunday, kPlus2).week, 120 + 500);
+    // Ten hours further east it started on Monday the 19th.
+    QCOMPARE(PlayHistory::pageStats(pageFile(), kPageToday, Qt::Monday, QTimeZone::fromSecondsAheadOfUtc(10 * 3600)).week,
+             120 + 500);
+}
+
+void PlayHistoryTest::pageStatsWithoutHistory()
+{
+    const PlayHistory::PageStats s = PlayHistory::pageStats({}, kPageToday, Qt::Monday, kPlus2);
+    QCOMPARE(s.sessions, 0);
+    QVERIFY(!s.first.isValid());
+    QCOMPARE(s.week + s.twoWeeks + s.month + s.year, 0);
+}
+
+void PlayHistoryTest::pageHistoryFromTheLibrary()
+{
+    auto library = openLibrary();
+    const QString rom = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QDateTime now = QDateTime::currentDateTime();
+    QCOMPARE(library->recordPlaySession(rom, 90, now), QString());
+
+    const QVariantMap played = library->pageHistory(rom);
+    QCOMPARE(played.value("timesPlayed").toString(), QStringLiteral("1"));
+    QCOMPARE(played.value("firstPlayed").toString(), DateFormat::shortDate(now.addSecs(-90 * 60).date()));
+    const QVariantMap recent = played.value("recent").toMap();
+    QCOMPARE(recent.keys(), (QStringList{"month", "two_weeks", "week", "year"}));
+    QVERIFY(!recent.value("two_weeks").toString().isEmpty());
+
+    const QVariantMap never = library->pageHistory(QStringLiteral("switch-pikmin-4"));
+    QCOMPARE(never.value("timesPlayed").toString(), QString());
+    QCOMPARE(never.value("firstPlayed").toString(), QString());
+    QCOMPARE(never.value("recent").toMap().value("year").toString(), QString());
 }
 
 QTEST_GUILESS_MAIN(PlayHistoryTest)
