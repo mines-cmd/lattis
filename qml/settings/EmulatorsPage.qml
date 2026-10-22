@@ -17,6 +17,13 @@ Item {
     readonly property var problems: Library.problems.filter(p => p.includes("emulators.toml"))
     property string expandedId: ""
 
+    function lookAtInstalls() {
+        Installer.refresh()
+        Installer.checkUpdates()
+    }
+    Component.onCompleted: lookAtInstalls()
+    onVisibleChanged: if (visible) lookAtInstalls()
+
     readonly property string currentSection: ""
     function jumpTo(section) {}
     function jumpBy(step) {}

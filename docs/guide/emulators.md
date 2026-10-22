@@ -22,6 +22,21 @@ Lattis knows twelve emulators out of the box, among them Ryubing (Switch), Azaha
 
 **Arguments** added on an emulator's row go to every game it runs, like `--fullscreen`. A single game can have its own arguments too, in its Properties.
 
+### Installing an emulator
+
+A built-in emulator that isn't found has an **Install** button on its row. A click installs the AppImage the project publishes on its release page, into `~/Applications` (or `~/AppImages` if that's the one you have). The arrow beside it offers the Flathub Flatpak instead. Dolphin publishes no AppImage, so its button installs the Flatpak.
+
+- **AppImage** (recommended): the project's newest build, checked against the checksum the release page gives. It can read your ROM folders wherever they are.
+- **Flatpak**: updated by your system (its software centre, or `flatpak update`), installed for your user only. A Flatpak may need access to ROM folders outside your home; Lattis warns you when it can't read one.
+
+While it installs, the row shows each step and a progress bar, and **Cancel** stops it and deletes what was downloaded. You can close Settings meanwhile: the install carries on. If it fails, the reason takes the place of the platforms, with **Try again**.
+
+An emulator Lattis installed shows where it came from and its version. When the Emulators page opens, Lattis checks whether a newer release is out (at most once an hour per emulator); **Update** then downloads it and moves the old AppImage to the trash once the new one is in place. **Check for updates**, in the expanded row, looks again right away. Flatpaks aren't checked: your system updates them.
+
+**Uninstall**, also in the expanded row, moves an AppImage to the trash or removes a Flatpak. Your saves and keys stay. Close a game running in that emulator before updating or uninstalling it. Emulators you installed yourself have no Uninstall; remove them the way you installed them.
+
+If the `flatpak` command isn't on your system, only the AppImage is offered.
+
 ### A platform's emulators
 
 On Settings → Platforms, **Add emulator** gives a platform an emulator. A platform can have several, in order of preference: a game launches in the first one that's installed. So you can list an AppImage first and a Flatpak second, and the Flatpak is used only when the AppImage is gone. One emulator can serve several platforms (Dolphin runs both GameCube and Wii).

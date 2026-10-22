@@ -114,6 +114,7 @@ qt_add_qml_module(lattis
         qml/components/TextLink.qml
         qml/components/TagChip.qml
         qml/components/FilterChip.qml
+        qml/components/InstallProgress.qml
         qml/components/KeyedListModel.qml
         qml/components/TagPalettePopup.qml
         qml/components/Toast.qml
@@ -208,6 +209,8 @@ qt_add_qml_module(lattis
         qml/settings/SteamAccountBox.qml
         qml/settings/BackupDialog.qml
         qml/settings/ImportDialog.qml
+        qml/settings/InstallButton.qml
+        qml/settings/EmulatorInstallTop.qml
         qml/settings/KeyRow.qml
         qml/settings/ConnectionRow.qml
         qml/settings/HelpSectionHeader.qml
@@ -282,6 +285,7 @@ qt_add_qml_module(lattis
         src/install/releasesource.h src/install/releasesource.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
         src/install/installrecord.h src/install/installrecord.cpp
+        src/install/flatpakinstall.h src/install/flatpakinstall.cpp
         src/install/installer.h src/install/installer.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp

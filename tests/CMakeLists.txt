@@ -263,6 +263,7 @@ lattis_test(install_test
     SOURCES fakehttpserver.h
             ../src/install/appimageinstall.h ../src/install/appimageinstall.cpp
             ../src/install/installrecord.h ../src/install/installrecord.cpp
+            ../src/install/flatpakinstall.h ../src/install/flatpakinstall.cpp
             ../src/install/installer.h ../src/install/installer.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)

@@ -1,5 +1,6 @@
 #include "appimageinstall.h"
 #include "fakehttpserver.h"
+#include "flatpakinstall.h"
 #include "installer.h"
 #include "installrecord.h"
 #include "releasesource.h"
@@ -86,7 +87,11 @@ class InstallTest : public QObject
     Q_OBJECT
 
 private slots:
-    void initTestCase() { qRegisterMetaType<AppImageDownload::Result>(); }
+    void initTestCase()
+    {
+        qRegisterMetaType<AppImageDownload::Result>();
+        qRegisterMetaType<FlatpakJob::Result>();
+    }
 
     void sourceParses_data();
     void sourceParses();
@@ -122,6 +127,22 @@ private slots:
     void installerInstalls();
     void installerFailsClearly();
     void installerCancels();
+
+    void flatpakHelpers();
+    void flatpakJob();
+    void flatpakJobCancels();
+    void installerFlatpak();
+    void installerFlatpakFails();
+    void installerNoFlatpak();
+
+    void replacingKeepsTheOldUntilTheNewIsIn();
+    void installerChecksUpdates();
+    void installerChecksByFileForARollingTag();
+    void installerUsesTheReleaseCache();
+    void installerUpdates();
+    void installerUpdatesInPlace();
+    void installerUninstalls();
+    void installerRefusesWhileRunning();
 };
 
 void InstallTest::sourceParses_data()
@@ -617,7 +638,12 @@ struct InstallerHome
     QString state = root.filePath("state");
     QString cache = root.filePath("cache");
     QString fixtures = root.filePath("fixtures");
+    QString trashDir = root.filePath("trash");
+    QString appDir = home + "/.local/share/flatpak/app";
     int redetected = 0;
+    QString running;
+    QStringList trashed;
+    QList<QStringList> folderWhenTrashed;
     QList<EmulatorDef> defs;
 
     InstallerHome()
@@ -625,6 +651,7 @@ struct InstallerHome
         EmulatorDef mgba;
         mgba.id = "mgba";
         mgba.name = "mGBA";
+        mgba.flatpak = "io.mgba.mGBA";
         mgba.release = "github:mgba-emu/mgba";
         mgba.releaseAsset = "mGBA-*-appimage-x64.appimage";
         mgba.preset = true;
@@ -632,8 +659,46 @@ struct InstallerHome
         dolphin.id = "dolphin";
         dolphin.name = "Dolphin";
         dolphin.preset = true;
-        defs = {mgba, dolphin};
+        EmulatorDef duck;
+        duck.id = "duckstation";
+        duck.name = "DuckStation";
+        duck.release = "github:stenzek/duckstation";
+        duck.releaseAsset = "DuckStation-x64.AppImage";
+        duck.preset = true;
+        defs = {mgba, dolphin, duck};
         QDir().mkpath(fixtures);
+
+        // install makes the app's folder, uninstall removes it; a "slow" file makes install wait; a "fail" file fails it.
+        const QString script = root.filePath("flatpak.sh");
+        write(script,
+                      QByteArray("#!/bin/sh\necho \"$@\" >> '") + root.filePath("flatpak.log").toUtf8() + "'\n"
+                      "case \"$1\" in\n"
+                      "install)\n"
+                      "  if [ -e '" + root.filePath("flatpak.fail").toUtf8() + "' ]; then echo 'error: Nothing matches' >&2; exit 1; fi\n"
+                      "  if [ -e '" + root.filePath("flatpak.slow").toUtf8() + "' ]; then exec sleep 30; fi\n"
+                      "  mkdir -p '" + appDir.toUtf8() + "'/\"$6\"/current;;\n"
+                      "uninstall) rm -rf '" + appDir.toUtf8() + "'/\"$5\";;\n"
+                      "esac\n");
+        QFile::setPermissions(script, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        qputenv("LATTIS_FLATPAK", script.toUtf8());
+    }
+
+    ~InstallerHome() { qunsetenv("LATTIS_FLATPAK"); }
+
+    QStringList flatpakLog() const
+    {
+        QFile file(root.filePath("flatpak.log"));
+        if (!file.open(QIODevice::ReadOnly))
+            return {};
+        return QString::fromUtf8(file.readAll()).split(u'\n', Qt::SkipEmptyParts);
+    }
+
+    void flag(const char *name, bool on)
+    {
+        if (on)
+            QVERIFY(write(root.filePath(name), "x"));
+        else
+            QFile::remove(root.filePath(name));
     }
 
     Installer::Setup setup()
@@ -643,24 +708,46 @@ struct InstallerHome
                     InstallLocations where;
                     where.home = home;
                     where.applicationsDirs = {home + "/Applications", home + "/AppImages"};
-                    where.flatpakDirs = {home + "/.local/share/flatpak/app"};
+                    where.flatpakDirs = {appDir};
                     return where;
                 },
-                [this] { ++redetected; }};
+                [this] { ++redetected; }, {},
+                [this](const QString &path, QString *) {
+                    trashed.append(QFileInfo(path).fileName());
+                    folderWhenTrashed.append(names(home + "/Applications"));
+                    QDir().mkpath(trashDir);
+                    return QFile::rename(path, trashDir + "/" + QFileInfo(path).fileName());
+                },
+                [this](const QString &) { return running; }};
     }
 
-    void release(const QByteArray &asset, bool withDigest = true)
+    void release(const QByteArray &asset, bool withDigest = true, const QString &tag = "0.10.5",
+                 const QString &name = "mGBA-0.10.5-appimage-x64.appimage", int id = 12,
+                 const QString &date = "2026-09-01T10:02:00Z")
     {
-        QJsonObject a{{"id", 12},
-                      {"name", "mGBA-0.10.5-appimage-x64.appimage"},
-                      {"browser_download_url", "https://github.com/mgba-emu/mgba/releases/download/0.10.5/x"},
+        QJsonObject a{{"id", id},
+                      {"name", name},
+                      {"browser_download_url", "https://github.com/mgba-emu/mgba/releases/download/x/" + name},
                       {"size", asset.size()},
-                      {"updated_at", "2026-09-01T10:02:00Z"}};
+                      {"updated_at", date}};
         if (withDigest)
             a.insert("digest", "sha256:" + sha(asset));
-        const QJsonObject root{{"tag_name", "0.10.5"}, {"assets", QJsonArray{a}}};
+        const QJsonObject root{{"tag_name", tag}, {"assets", QJsonArray{a}}};
         QVERIFY(write(fixtures + "/github-mgba-emu-mgba.json", QJsonDocument(root).toJson()));
-        QVERIFY(write(fixtures + "/mGBA-0.10.5-appimage-x64.appimage", asset));
+        QVERIFY(write(fixtures + "/" + name, asset));
+    }
+
+    void duckRelease(const QByteArray &asset, int id)
+    {
+        const QJsonObject a{{"id", id},
+                            {"name", "DuckStation-x64.AppImage"},
+                            {"browser_download_url", "https://github.com/stenzek/duckstation/releases/download/latest/x"},
+                            {"size", asset.size()},
+                            {"digest", "sha256:" + sha(asset)},
+                            {"updated_at", "2026-10-01T10:00:00Z"}};
+        const QJsonObject root{{"tag_name", "latest"}, {"assets", QJsonArray{a}}};
+        QVERIFY(write(fixtures + "/github-stenzek-duckstation.json", QJsonDocument(root).toJson()));
+        QVERIFY(write(fixtures + "/DuckStation-x64.AppImage", asset));
     }
 };
 }
@@ -677,7 +764,7 @@ void InstallTest::installerInstalls()
 
     QVariantMap row = installer.emulators().value("mgba").toMap();
     QCOMPARE(row.value("state").toString(), QStringLiteral("idle"));
-    QCOMPARE(row.value("routes").toStringList(), QStringList{"appimage"});
+    QCOMPARE(row.value("routes").toStringList(), (QStringList{"appimage", "flatpak"}));
     QCOMPARE(row.value("source").toString(), QStringLiteral("GitHub"));
     QVERIFY(!row.value("installedByApp").toBool());
     QVERIFY2(!installer.emulators().contains("dolphin"), "an emulator with no route and no record has no row");
@@ -730,6 +817,19 @@ void InstallTest::installerFailsClearly()
     QTRY_COMPARE_WITH_TIMEOUT(state().value("state").toString(), QStringLiteral("failed"), 5000);
     QVERIFY(!state().value("error").toString().isEmpty());
 
+    // Trying again runs the same install, which works once the release is there.
+    h.release("the real file");
+    QVERIFY(write(h.fixtures + "/mGBA-0.10.5-appimage-x64.appimage", "the real file"));
+    installer.retry("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(state().value("installedByApp").toBool(), 5000);
+    QCOMPARE(h.redetected, 1);
+    installer.uninstall("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(!state().value("installedByApp").toBool(), 5000);
+    h.redetected = 0;
+    QFile::remove(InstallRecords::path(h.state));
+    QFile::remove(h.fixtures + "/github-mgba-emu-mgba.json");
+    QFile::remove(h.fixtures + "/mGBA-0.10.5-appimage-x64.appimage");
+
     // A release with no matching file.
     QVERIFY(write(h.fixtures + "/github-mgba-emu-mgba.json", json("{'tag_name': '1', 'assets': []}")));
     installer.install("mgba");
@@ -743,7 +843,7 @@ void InstallTest::installerFailsClearly()
     QVERIFY(!QFileInfo::exists(h.home + "/Applications") || names(h.home + "/Applications").isEmpty());
 
     // A route that isn't there, and one nobody asked for.
-    installer.install("mgba", "flatpak");
+    installer.install("mgba", "tarball");
     QCOMPARE(state().value("state").toString(), QStringLiteral("failed"));
     installer.install("nothing");
     QVERIFY(!installer.emulators().contains("nothing"));
@@ -790,6 +890,452 @@ void InstallTest::installerCancels()
     installer.setFixtureTick(0);
     installer.install("mgba");
     QTRY_VERIFY_WITH_TIMEOUT(installer.emulators().value("mgba").toMap().value("installedByApp").toBool(), 5000);
+}
+
+void InstallTest::flatpakHelpers()
+{
+    QVERIFY(FlatpakInstall::validId("io.mgba.mGBA"));
+    QVERIFY(FlatpakInstall::validId("org.DolphinEmu.dolphin-emu"));
+    QVERIFY(!FlatpakInstall::validId(""));
+    QVERIFY(!FlatpakInstall::validId("-rf"));
+    QVERIFY(!FlatpakInstall::validId("a b"));
+    QVERIFY(!FlatpakInstall::validId("a/b"));
+
+    const auto steps = FlatpakInstall::installSteps("io.mgba.mGBA");
+    QCOMPARE(steps.size(), 2);
+    QCOMPARE(steps.at(0), (QStringList{"remote-add", "--user", "--if-not-exists", "flathub",
+                                       "https://dl.flathub.org/repo/flathub.flatpakrepo"}));
+    QCOMPARE(steps.at(1), (QStringList{"install", "--user", "--noninteractive", "-y", "flathub", "io.mgba.mGBA"}));
+    QCOMPARE(FlatpakInstall::uninstallStep("io.mgba.mGBA"),
+             (QStringList{"uninstall", "--user", "--noninteractive", "-y", "io.mgba.mGBA"}));
+
+    QCOMPARE(FlatpakInstall::failureText("warning\nerror: no match\n\n", "out", 1), QStringLiteral("error: no match"));
+    QCOMPARE(FlatpakInstall::failureText("", "Installing x\n", 1), QStringLiteral("Installing x"));
+    QVERIFY(FlatpakInstall::failureText("", "", 3).contains(QStringLiteral("code 3")));
+
+    qputenv("LATTIS_FLATPAK", "/somewhere/fake-flatpak");
+    QCOMPARE(FlatpakInstall::program(), QStringLiteral("/somewhere/fake-flatpak"));
+    qunsetenv("LATTIS_FLATPAK");
+}
+
+void InstallTest::flatpakJob()
+{
+    QTemporaryDir dir;
+    const QString script = dir.filePath("flatpak.sh");
+    const QString log = dir.filePath("log");
+    QVERIFY(write(script, "#!/bin/sh\necho \"$@\" >> '" + log.toUtf8() + "'\n"
+                          "if [ \"$1\" = install ]; then echo 'Installing...'; echo 'error: boom' >&2; exit 1; fi\n"));
+    QFile::setPermissions(script, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+
+    {
+        FlatpakJob job(script, FlatpakInstall::installSteps("io.mgba.mGBA"), {});
+        QSignalSpy done(&job, &FlatpakJob::finished);
+        job.start();
+        if (done.isEmpty())
+            done.wait(5000);
+        QVERIFY(!done.isEmpty());
+        const auto result = done.first().first().value<FlatpakJob::Result>();
+        QVERIFY(!result.ok);
+        QVERIFY(!result.cancelled);
+        QCOMPARE(result.error, QStringLiteral("error: boom"));
+    }
+    QFile file(log);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QCOMPARE(file.readAll().split('\n').size(), 3); // both steps ran, in order
+
+    {
+        FlatpakJob job(script, {FlatpakInstall::uninstallStep("io.mgba.mGBA")}, {});
+        QSignalSpy done(&job, &FlatpakJob::finished);
+        job.start();
+        if (done.isEmpty())
+            done.wait(5000);
+        QVERIFY(!done.isEmpty());
+        QVERIFY(done.first().first().value<FlatpakJob::Result>().ok);
+    }
+    {
+        FlatpakJob job(dir.filePath("missing"), {FlatpakInstall::uninstallStep("x")}, {});
+        QSignalSpy done(&job, &FlatpakJob::finished);
+        job.start();
+        if (done.isEmpty())
+            done.wait(5000);
+        QVERIFY(!done.isEmpty());
+        const auto result = done.first().first().value<FlatpakJob::Result>();
+        QVERIFY(!result.ok);
+        QVERIFY2(result.error.contains(QStringLiteral("Couldn't run flatpak")), qPrintable(result.error));
+    }
+}
+
+void InstallTest::flatpakJobCancels()
+{
+    QTemporaryDir dir;
+    const QString script = dir.filePath("slow.sh");
+    QVERIFY(write(script, "#!/bin/sh\nexec sleep 30\n"));
+    QFile::setPermissions(script, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    FlatpakJob job(script, FlatpakInstall::installSteps("io.mgba.mGBA"), {});
+    QSignalSpy done(&job, &FlatpakJob::finished);
+    job.start();
+    QTest::qWait(150);
+    job.cancel();
+    if (done.isEmpty())
+        done.wait(5000);
+    QVERIFY(!done.isEmpty());
+    QVERIFY(done.first().first().value<FlatpakJob::Result>().cancelled);
+    QCOMPARE(done.size(), 1);
+}
+
+void InstallTest::installerFlatpak()
+{
+    InstallerHome h;
+    Installer installer(h.setup());
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    QVERIFY(!row().value("noFlatpak").toBool());
+
+    installer.install("mgba", "flatpak");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("installing"));
+    QCOMPARE(row().value("progress").toDouble(), -1.0);
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+    QCOMPARE(row().value("route").toString(), QStringLiteral("flatpak"));
+    QCOMPARE(row().value("file").toString(), QStringLiteral("io.mgba.mGBA"));
+    QCOMPARE(h.redetected, 1);
+    QCOMPARE(h.flatpakLog(), (QStringList{"remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo",
+                                          "install --user --noninteractive -y flathub io.mgba.mGBA"}));
+    const auto records = InstallRecords::read(InstallRecords::path(h.state)).value;
+    QCOMPARE(records.value("mgba").route, QStringLiteral("flatpak"));
+    QCOMPARE(records.value("mgba").file, QStringLiteral("io.mgba.mGBA"));
+
+    installer.uninstall("mgba");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("removing"));
+    QTRY_VERIFY_WITH_TIMEOUT(!row().value("installedByApp").toBool(), 10000);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+    QCOMPARE(h.flatpakLog().last(), QStringLiteral("uninstall --user --noninteractive -y io.mgba.mGBA"));
+    QVERIFY(InstallRecords::read(InstallRecords::path(h.state)).value.isEmpty());
+    QVERIFY(!QFileInfo::exists(h.appDir + "/io.mgba.mGBA"));
+    QCOMPARE(h.redetected, 2);
+    QVERIFY(h.trashed.isEmpty());
+}
+
+void InstallTest::installerFlatpakFails()
+{
+    InstallerHome h;
+    Installer installer(h.setup());
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+
+    h.flag("flatpak.fail", true);
+    installer.install("mgba", "flatpak");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 10000);
+    QCOMPARE(row().value("error").toString(), QStringLiteral("error: Nothing matches"));
+    QVERIFY(!QFileInfo::exists(InstallRecords::path(h.state)));
+    QCOMPARE(h.redetected, 0);
+
+    h.flag("flatpak.fail", false);
+    h.flag("flatpak.slow", true);
+    installer.install("mgba", "flatpak");
+    QTest::qWait(300);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("installing"));
+    installer.cancel("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("idle"), 10000);
+    QVERIFY(!row().value("installedByApp").toBool());
+    QVERIFY(!QFileInfo::exists(InstallRecords::path(h.state)));
+    QCOMPARE(h.redetected, 0);
+}
+
+void InstallTest::installerNoFlatpak()
+{
+    InstallerHome h;
+    qunsetenv("LATTIS_FLATPAK");
+    QTemporaryDir empty;
+    const QByteArray path = qgetenv("PATH");
+    qputenv("PATH", empty.path().toUtf8());
+    Installer installer(h.setup());
+    const QVariantMap row = installer.emulators().value("mgba").toMap();
+    QVERIFY(row.value("noFlatpak").toBool());
+    QCOMPARE(row.value("routes").toStringList(), QStringList{"appimage"});
+    installer.install("mgba", "flatpak");
+    const QVariantMap failed = installer.emulators().value("mgba").toMap();
+    qputenv("PATH", path);
+    QCOMPARE(failed.value("state").toString(), QStringLiteral("failed"));
+    QVERIFY2(failed.value("error").toString().contains(QStringLiteral("isn't installed")),
+             qPrintable(failed.value("error").toString()));
+}
+
+void InstallTest::replacingKeepsTheOldUntilTheNewIsIn()
+{
+    FakeHttpServer server;
+    server.on("/d/Emu.AppImage", {200, "new"});
+    QTemporaryDir home;
+    const QString folder = home.filePath("Applications");
+    QVERIFY(write(folder + "/Emu.AppImage", "old"));
+    QNetworkAccessManager network;
+    AppImageDownload download(&network, assetFor(server, "/d/Emu.AppImage", "new"), {}, folder);
+    download.setRelaxed(true);
+    download.setReplace(true);
+    const auto result = runDownload(download);
+    QVERIFY2(result.ok, qPrintable(result.error));
+    QCOMPARE(result.path, folder + "/Emu.AppImage");
+    QCOMPARE(result.replaced, folder + "/.Emu.AppImage.replaced/Emu.AppImage");
+    QFile now(result.path);
+    QVERIFY(now.open(QIODevice::ReadOnly));
+    QCOMPARE(now.readAll(), QByteArray("new"));
+    QFile old(result.replaced);
+    QVERIFY(old.open(QIODevice::ReadOnly));
+    QCOMPARE(old.readAll(), QByteArray("old"));
+
+    // A failed download leaves the old one where it was.
+    FakeHttpServer broken;
+    broken.on("/d/Emu.AppImage", {404, "no"});
+    AppImageDownload failing(&network, assetFor(broken, "/d/Emu.AppImage", "new"), {}, folder);
+    failing.setRelaxed(true);
+    failing.setReplace(true);
+    QVERIFY(!runDownload(failing).ok);
+    QFile kept(folder + "/Emu.AppImage");
+    QVERIFY(kept.open(QIODevice::ReadOnly));
+    QCOMPARE(kept.readAll(), QByteArray("new"));
+}
+
+void InstallTest::installerChecksUpdates()
+{
+    InstallerHome h;
+    h.release("the first build");
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+
+    // The same release: nothing newer.
+    installer.checkUpdates("mgba");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("checking"));
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("idle"), 5000);
+    QCOMPARE(row().value("updateVersion").toString(), QString());
+    QVERIFY(row().value("upToDate").toBool());
+    QCOMPARE(row().value("project").toString(), QStringLiteral("mgba-emu/mgba"));
+
+    // A new build with a different checksum.
+    h.release("the second build", true, "0.10.6", "mGBA-0.10.6-appimage-x64.appimage", 13, "2026-10-01T10:00:00Z");
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("0.10.6"), 5000);
+    QVERIFY(!row().value("upToDate").toBool());
+    QCOMPARE(row().value("version").toString(), QStringLiteral("0.10.5"));
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+
+    // A quiet look at a release it can't read says nothing.
+    QFile::remove(h.fixtures + "/github-mgba-emu-mgba.json");
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("idle"), 5000);
+    QCOMPARE(row().value("error").toString(), QString());
+    // Asked for, the same failure is shown.
+    installer.checkUpdates("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 5000);
+    QVERIFY(!row().value("error").toString().isEmpty());
+    QVERIFY(row().value("installedByApp").toBool());
+
+    // Only what Lattis installed is looked at.
+    installer.cancel("mgba");
+    installer.checkUpdates("dolphin");
+    QVERIFY(!installer.emulators().contains("dolphin"));
+}
+
+void InstallTest::installerChecksByFileForARollingTag()
+{
+    InstallerHome h;
+    h.duckRelease("build one", 1);
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("duckstation").toMap(); };
+    installer.install("duckstation");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+    QCOMPARE(row().value("version").toString(), QStringLiteral("latest"));
+
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("idle"), 5000);
+    QCOMPARE(row().value("updateVersion").toString(), QString());
+
+    // The tag is the same; the file isn't.
+    h.duckRelease("build two", 2);
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("latest"), 5000);
+
+    // With no checksum, the asset's id and date decide (mGBA's release lists none).
+    InstallerHome g;
+    g.release("one", false);
+    Installer plain(g.setup());
+    plain.setFixturesDir(g.fixtures);
+    plain.setFixtureDelay(0);
+    plain.setFixtureTick(0);
+    const auto mgba = [&] { return plain.emulators().value("mgba").toMap(); };
+    plain.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(mgba().value("installedByApp").toBool(), 10000);
+    plain.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(mgba().value("state").toString(), QStringLiteral("idle"), 5000);
+    QCOMPARE(mgba().value("updateVersion").toString(), QString());
+    g.release("two", false, "0.10.5", "mGBA-0.10.5-appimage-x64.appimage", 12, "2026-09-02T10:00:00Z");
+    plain.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(mgba().value("updateVersion").toString(), QStringLiteral("0.10.5"), 5000);
+}
+
+void InstallTest::installerUsesTheReleaseCache()
+{
+    InstallerHome h;
+    h.release("the first build");
+    {
+        Installer first(h.setup());
+        first.setFixturesDir(h.fixtures);
+        first.setFixtureDelay(0);
+        first.setFixtureTick(0);
+        first.install("mgba");
+        QTRY_VERIFY_WITH_TIMEOUT(first.emulators().value("mgba").toMap().value("installedByApp").toBool(), 10000);
+    }
+
+    // An answer less than an hour old is used without asking the network (which this test must not reach).
+    const QByteArray cached = json("{'tag_name': '0.11.0', 'published_at': '2026-10-20T10:00:00Z', 'assets': [\n"
+                                   "  {'id': 99, 'name': 'mGBA-0.11.0-appimage-x64.appimage', 'size': 5,\n"
+                                   "   'browser_download_url': 'https://github.com/mgba-emu/mgba/releases/download/0.11.0/x',\n"
+                                   "   'digest': 'sha256:ffff', 'updated_at': '2026-10-20T10:00:00Z'}]}");
+    QVERIFY(write(h.cache + "/releases/github-mgba-emu-mgba.json", cached));
+    Installer installer(h.setup());
+    installer.checkUpdates("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(installer.emulators().value("mgba").toMap().value("updateVersion").toString(),
+                              QStringLiteral("0.11.0"), 5000);
+}
+
+void InstallTest::installerUpdates()
+{
+    InstallerHome h;
+    h.release("the first build");
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+
+    h.release("the second build", true, "0.10.6", "mGBA-0.10.6-appimage-x64.appimage", 13, "2026-10-01T10:00:00Z");
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("0.10.6"), 5000);
+
+    installer.update("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("version").toString(), QStringLiteral("0.10.6"), 10000);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+    QCOMPARE(row().value("updateVersion").toString(), QString());
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.6-appimage-x64.appimage"});
+    QCOMPARE(h.trashed, QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+    // The new file was already in the folder when the old one went.
+    QVERIFY(h.folderWhenTrashed.first().contains("mGBA-0.10.6-appimage-x64.appimage"));
+    QCOMPARE(names(h.trashDir), QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+    const auto record = InstallRecords::read(InstallRecords::path(h.state)).value.value("mgba");
+    QCOMPARE(record.file, h.home + "/Applications/mGBA-0.10.6-appimage-x64.appimage");
+    QCOMPARE(record.assetId, QStringLiteral("13"));
+    QCOMPARE(h.redetected, 2);
+
+    // A failing update changes nothing.
+    h.release("the third build", true, "0.10.7", "mGBA-0.10.7-appimage-x64.appimage", 14, "2026-10-02T10:00:00Z");
+    QVERIFY(write(h.fixtures + "/mGBA-0.10.7-appimage-x64.appimage", "thE thiRd buiLd"));
+    installer.update("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 5000);
+    QVERIFY(row().value("error").toString().contains("checksum"));
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.6-appimage-x64.appimage"});
+    QCOMPARE(h.trashed.size(), 1);
+    QCOMPARE(row().value("version").toString(), QStringLiteral("0.10.6"));
+}
+
+void InstallTest::installerUpdatesInPlace()
+{
+    InstallerHome h;
+    h.duckRelease("build one", 1);
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("duckstation").toMap(); };
+    installer.install("duckstation");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+
+    // The new file has the old one's name.
+    h.duckRelease("build two", 2);
+    installer.checkUpdates("duckstation");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("latest"), 5000);
+    installer.update("duckstation");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QString(), 10000);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+
+    const QString file = h.home + "/Applications/DuckStation-x64.AppImage";
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"DuckStation-x64.AppImage"});
+    QFile now(file);
+    QVERIFY(now.open(QIODevice::ReadOnly));
+    QCOMPARE(now.readAll(), QByteArray("build two"));
+    QCOMPARE(h.trashed, QStringList{"DuckStation-x64.AppImage"});
+    QVERIFY(h.folderWhenTrashed.first().contains("DuckStation-x64.AppImage"));
+    QFile old(h.trashDir + "/DuckStation-x64.AppImage");
+    QVERIFY(old.open(QIODevice::ReadOnly));
+    QCOMPARE(old.readAll(), QByteArray("build one"));
+    QCOMPARE(InstallRecords::read(InstallRecords::path(h.state)).value.value("duckstation").assetId, QStringLiteral("2"));
+}
+
+void InstallTest::installerUninstalls()
+{
+    InstallerHome h;
+    h.release("the build");
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+
+    // Not installed by the app: refused, and nothing is touched.
+    QVERIFY(write(h.home + "/Applications/mGBA-mine.appimage", "mine"));
+    installer.uninstall("mgba");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("failed"));
+    QVERIFY(row().value("error").toString().contains(QStringLiteral("wasn't installed by Lattis")));
+    QVERIFY(h.trashed.isEmpty());
+    installer.cancel("mgba");
+
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+    installer.uninstall("mgba");
+    QVERIFY(!row().value("installedByApp").toBool());
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+    QCOMPARE(h.trashed, QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-mine.appimage"});
+    QVERIFY(InstallRecords::read(InstallRecords::path(h.state)).value.isEmpty());
+    QCOMPARE(h.redetected, 2);
+}
+
+void InstallTest::installerRefusesWhileRunning()
+{
+    InstallerHome h;
+    h.release("the build");
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+
+    h.running = "Mario Tennis Aces";
+    installer.uninstall("mgba");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("failed"));
+    QCOMPARE(row().value("error").toString(), QStringLiteral("Close Mario Tennis Aces first"));
+    installer.cancel("mgba");
+
+    h.release("newer", true, "0.10.6", "mGBA-0.10.6-appimage-x64.appimage", 13, "2026-10-01T10:00:00Z");
+    installer.update("mgba");
+    QCOMPARE(row().value("error").toString(), QStringLiteral("Close Mario Tennis Aces first"));
+    QVERIFY(row().value("installedByApp").toBool());
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+    QVERIFY(h.trashed.isEmpty());
+    installer.cancel("mgba");
+
+    // Installing never conflicts, and a closed game lifts the refusal.
+    h.running.clear();
+    installer.uninstall("mgba");
+    QVERIFY(!row().value("installedByApp").toBool());
 }
 
 QTEST_GUILESS_MAIN(InstallTest)

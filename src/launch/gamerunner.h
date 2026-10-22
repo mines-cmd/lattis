@@ -68,6 +68,14 @@ public:
     Q_INVOKABLE QString setLaunchValue(const QString &key, const QString &value);
 
     QStringList running() const { return m_sessions.keys() + m_steamSessions.keys(); }
+    QString runningIn(const QString &emulatorName) const
+    {
+        for (auto it = m_sessions.cbegin(); it != m_sessions.cend(); ++it) {
+            if (it->emulatorName == emulatorName)
+                return it.key();
+        }
+        return {};
+    }
     bool minimizeWhileRunning() const
     {
         return m_settings.whileRunning == LaunchSettings::WhileRunning::Minimize;

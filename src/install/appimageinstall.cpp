@@ -279,10 +279,21 @@ void AppImageDownload::install(const QString &partial, const QString &name)
     m_stage = Stage::Installing;
     emit stageChanged();
     const QString target = QDir(m_folder).filePath(name);
+    QString aside;
     if (QFileInfo::exists(target)) {
-        QFile::remove(partial);
-        fail(tr("%1 is already in %2").arg(name, m_folder));
-        return;
+        if (!m_replace) {
+            QFile::remove(partial);
+            fail(tr("%1 is already in %2").arg(name, m_folder));
+            return;
+        }
+        const QString asideFolder = QDir(m_folder).filePath(QStringLiteral(".%1.replaced").arg(name));
+        aside = QDir(asideFolder).filePath(name);
+        if (!QDir().mkpath(asideFolder) || (QFileInfo::exists(aside) && !QFile::remove(aside))
+            || !QFile::rename(target, aside)) {
+            QFile::remove(partial);
+            fail(tr("Couldn't move the old %1 aside").arg(name));
+            return;
+        }
     }
     QFile file(partial);
     if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner
@@ -291,10 +302,14 @@ void AppImageDownload::install(const QString &partial, const QString &name)
         || !file.rename(target)) {
         const QString error = file.errorString();
         QFile::remove(partial);
+        if (!aside.isEmpty()) {
+            QFile::rename(aside, target);
+            QDir().rmdir(QFileInfo(aside).absolutePath());
+        }
         fail(tr("Couldn't put %1 in place: %2").arg(name, error));
         return;
     }
-    end({true, false, target, {}, QString::fromLatin1(m_hash.result().toHex())});
+    end({true, false, target, {}, QString::fromLatin1(m_hash.result().toHex()), aside});
 }
 
 void AppImageDownload::fail(const QString &error)

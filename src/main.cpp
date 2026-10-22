@@ -10,8 +10,10 @@
 #include "core/windowstate.h"
 #include "input/actions.h"
 #include "launch/gamerunner.h"
+#include "launch/launchcommand.h"
 #include "library/artimage.h"
 #include "library/library.h"
+#include "library/uninstall.h"
 #include "metadata/bulklookup.h"
 #include "metadata/scanlookup.h"
 #include "metadata/thumbnailcache.h"
@@ -26,6 +28,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QTimer>
 
@@ -169,7 +172,14 @@ int main(int argc, char *argv[])
                         QCoreApplication::quit();
                     }});
     Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
-                      [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); }});
+                      [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); },
+                      [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); },
+                      [](const QString &path, QString *error) { return Uninstall::systemTrash(path, error); },
+                      [&library, &runner](const QString &emulatorName) {
+                          const QString id = runner.runningIn(emulatorName);
+                          const Game *game = id.isEmpty() ? nullptr : library.game(id);
+                          return game ? game->title : id;
+                      }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&thumbnails);
@@ -247,6 +257,15 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window, spec] {
                     logHook("dragPlatformForScreenshot", spec);
                     QMetaObject::invokeMethod(window, "dragPlatformForScreenshot", Q_ARG(QVariant, spec));
+                });
+            }
+            if (const QString spec = qEnvironmentVariable("LATTIS_INSTALL"); !spec.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [spec] {
+                    logHook("install", spec);
+                    for (const QString &one : spec.split(u',', Qt::SkipEmptyParts)) {
+                        const QStringList parts = one.split(u'/');
+                        Installer::instance()->install(parts.first(), parts.value(1, QStringLiteral("appimage")));
+                    }
                 });
             }
             if (qEnvironmentVariableIntValue("LATTIS_STEAM_UNDO") == 1) {

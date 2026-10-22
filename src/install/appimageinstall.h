@@ -43,6 +43,8 @@ public:
         QString path;
         QString error;
         QString sha256;
+        // The file that had the target's name, moved aside to be trashed; empty when nothing was replaced.
+        QString replaced;
     };
 
     AppImageDownload(QNetworkAccessManager *network, const ReleaseAsset &asset, const QString &inside,
@@ -51,6 +53,8 @@ public:
 
     // http: and file: URLs are allowed too (tests and the install fixtures).
     void setRelaxed(bool relaxed) { m_relaxed = relaxed; }
+    // An update: a file with the target's name is moved aside instead of refusing the install.
+    void setReplace(bool replace) { m_replace = replace; }
     // Reads this many bytes every tick instead of all that has arrived (so a screenshot can catch the progress).
     void setPace(qint64 bytes, int tickMs);
 
@@ -78,6 +82,7 @@ private:
     QString m_inside;
     QString m_folder;
     bool m_relaxed = false;
+    bool m_replace = false;
     qint64 m_paceBytes = 0;
     QTimer m_paceTimer;
 

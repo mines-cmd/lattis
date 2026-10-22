@@ -34,6 +34,53 @@ ColumnLayout {
         return emulator.detecting ? qsTr("Looking…") : qsTr("Not found")
     }
 
+    // The emulator's Installer row: null for one that can't be installed from here.
+    readonly property var installInfo: Installer.emulators[emulator.id] ?? null
+    readonly property string installState: installInfo?.state ?? "idle"
+    readonly property bool installing: installState !== "idle" && installState !== "failed"
+    readonly property bool installFailed: installState === "failed"
+    readonly property bool byApp: installInfo?.installedByApp ?? false
+    readonly property bool canInstall: !emulator.found && !emulator.detecting && (installInfo?.routes.length ?? 0) > 0
+    readonly property bool hasUpdate: byApp && (installInfo?.updateVersion ?? "") !== ""
+    readonly property string otherRoute: {
+        if (!byApp)
+            return ""
+        const other = installInfo.route === "flatpak" ? "appimage" : "flatpak"
+        return installInfo.routes.includes(other) ? other : ""
+    }
+    // The route and version of Lattis's own install, for the subtitle.
+    readonly property string sourceSummary: {
+        if (!byApp || !emulator.found)
+            return ""
+        const route = installInfo.route === "flatpak" ? qsTr("Flatpak") : qsTr("AppImage")
+        return installInfo.version !== "" ? route + " " + installInfo.version : route
+    }
+    // What replaces the tag while a job runs: a short word beside the small bar.
+    readonly property string miniLabel: {
+        switch (installState) {
+        case "checking": return qsTr("Checking")
+        case "downloading":
+            return installInfo.size > 0 && installInfo.progress >= 0 ? qsTr("%1 %").arg(Math.round(installInfo.progress * 100))
+                                                                      : qsTr("Downloading")
+        case "extracting": return qsTr("Unpacking")
+        case "installing": return qsTr("Installing")
+        case "removing": return qsTr("Uninstalling")
+        }
+        return ""
+    }
+    readonly property string badgeText: {
+        if (installFailed)
+            return qsTr("Install failed")
+        if (hasUpdate)
+            return qsTr("Update %1").arg(installInfo.updateVersion)
+        return byApp && emulator.found ? qsTr("Installed") : kindLabel
+    }
+    readonly property color badgeColor: {
+        if (installFailed)
+            return Theme.settingsWindow.installError
+        return emulator.found ? Theme.settingsWindow.installFound : Theme.settingsWindow.installNotFound
+    }
+
     signal toggleRequested()
     signal openFileRequested()
 
@@ -97,41 +144,53 @@ ColumnLayout {
                     ToolTip.text: qsTr("Platforms and games refer to it as “%1”").arg(root.emulator.id)
                 }
                 Label {
+                    id: subtitle
+                    readonly property string platforms: root.emulator.platforms.length > 0 ? root.emulator.platforms.join(", ")
+                                                                                           : qsTr("No platforms")
                     Layout.fillWidth: true
-                    text: root.emulator.platforms.length > 0 ? root.emulator.platforms.join(", ")
-                                                             : qsTr("No platforms")
+                    text: root.sourceSummary !== "" ? platforms + " · " + root.sourceSummary : platforms
                     color: Theme.controls.descriptionColor
                     font.pixelSize: Theme.controls.descriptionFontSize
                     elide: Text.ElideRight
+
+                    HoverHandler { id: subtitleHover }
+                    ToolTip.visible: subtitleHover.hovered && subtitle.truncated
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: subtitle.text
                 }
             }
 
-            Label {
-                Layout.maximumWidth: Theme.settingsWindow.editorWidth
-                visible: root.emulator.found
-                text: root.emulator.install
-                color: Theme.controls.descriptionColor
-                font.pixelSize: Theme.controls.descriptionFontSize
-                elide: Text.ElideMiddle
-            }
-
             Rectangle {
-                readonly property color tint: root.emulator.found ? Theme.settingsWindow.installFound
-                                                                  : Theme.settingsWindow.installMissing
-
+                visible: !root.installing
                 implicitWidth: kindText.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
                 implicitHeight: kindText.implicitHeight + 2
                 radius: Theme.settingsWindow.sourceTagRadius
-                color: Qt.alpha(tint, Theme.settingsWindow.sourceTagFillOpacity)
-                border.color: tint
+                color: Qt.alpha(root.badgeColor, Theme.settingsWindow.sourceTagFillOpacity)
+                border.color: root.badgeColor
                 border.width: Theme.settingsWindow.sourceTagBorderWidth
                 opacity: root.emulator.detecting ? 0.6 : 1
 
                 Label {
                     id: kindText
                     anchors.centerIn: parent
-                    text: root.kindLabel
-                    color: parent.tint
+                    text: root.badgeText
+                    color: root.badgeColor
+                    font.pixelSize: Theme.settingsWindow.sourceTagFontSize
+                }
+            }
+
+            RowLayout {
+                visible: root.installing
+                spacing: 8
+
+                InstallProgress {
+                    Layout.preferredWidth: Theme.settingsWindow.installMiniProgressWidth
+                    Layout.alignment: Qt.AlignVCenter
+                    progress: root.installState === "downloading" ? root.installInfo.progress : -1
+                }
+                Label {
+                    text: root.miniLabel
+                    color: Theme.controls.descriptionColor
                     font.pixelSize: Theme.settingsWindow.sourceTagFontSize
                 }
             }
@@ -147,6 +206,12 @@ ColumnLayout {
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
         spacing: Theme.settingsWindow.rowPadding * 1.5
+
+        EmulatorInstallTop {
+            visible: !root.own && (root.installing || root.installFailed || root.canInstall || root.byApp)
+            Layout.fillWidth: true
+            row: root
+        }
 
         ColumnLayout {
             visible: root.own
@@ -304,7 +369,7 @@ ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
-            SectionTitle { text: qsTr("Program") }
+            SectionTitle { text: root.canInstall && !root.installing ? qsTr("Already have it somewhere else?") : qsTr("Program") }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Theme.controls.controlSpacing
@@ -314,13 +379,59 @@ ColumnLayout {
                     Layout.fillWidth: true
                     implicitHeight: Theme.controls.inputHeight
                     text: root.emulator.path
-                    placeholderText: root.emulator.found ? qsTr("Found automatically")
+                    placeholderText: root.emulator.found && root.emulator.install !== "" ? root.emulator.install
+                                   : root.emulator.found ? qsTr("Found automatically")
                                                          : qsTr("Not found; choose the program")
+                    rightPadding: copyPath.visible ? copyPath.width : leftPadding
                     onEditingFinished: if (text !== root.emulator.path) root.save("path", text)
                     // A new value from the file: show it unless it's being typed over.
                     Connections {
                         target: root
                         function onEmulatorChanged() { if (!pathField.activeFocus) pathField.text = root.emulator.path }
+                    }
+
+                    AbstractButton {
+                        id: copyPath
+                        readonly property string value: pathField.text !== "" ? pathField.text
+                                                        : root.emulator.found ? root.emulator.install : ""
+                        property bool copied: false
+
+                        visible: value !== ""
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: height
+                        hoverEnabled: true
+                        focusPolicy: Qt.NoFocus
+                        background: Rectangle {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.max(1, Theme.controls.inputBorderWidth)
+                            height: parent.height / 2
+                            color: Theme.controls.inputBorder
+                        }
+                        contentItem: Item {
+                            Icon {
+                                anchors.centerIn: parent
+                                path: copyPath.copied ? Icons.check : Icons.copy
+                                size: Theme.controls.iconSize
+                                color: copyPath.hovered ? Theme.controls.inputText : Theme.controls.descriptionColor
+                            }
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.delay: Theme.tooltip.delay
+                        ToolTip.text: copied ? qsTr("Copied") : qsTr("Copy the full path")
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                        TextEdit { id: clipboard; visible: false }
+                        Timer { id: copiedReset; interval: 1500; onTriggered: copyPath.copied = false }
+                        onClicked: {
+                            clipboard.text = value
+                            clipboard.selectAll()
+                            clipboard.copy()
+                            copied = true
+                            copiedReset.restart()
+                        }
                     }
                 }
                 SettingsButton {
@@ -415,6 +526,7 @@ ColumnLayout {
             }
 
             ColumnLayout {
+                visible: root.own || root.emulator.found
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 Layout.alignment: Qt.AlignTop
@@ -462,6 +574,7 @@ ColumnLayout {
         }
 
         ColumnLayout {
+            visible: root.own || root.emulator.found
             Layout.fillWidth: true
             spacing: 6
 
@@ -499,6 +612,44 @@ ColumnLayout {
             color: Theme.controls.problemsText
             font.pixelSize: Theme.controls.descriptionFontSize
             wrapMode: Text.WordWrap
+        }
+
+        ColumnLayout {
+            visible: root.byApp
+            Layout.fillWidth: true
+            spacing: Theme.settingsWindow.rowPadding
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: Math.max(1, Theme.controls.inputBorderWidth)
+                color: Theme.controls.inputBorder
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.controls.controlSpacing
+
+                SettingsButton {
+                    visible: root.otherRoute !== ""
+                    flat: true
+                    enabled: !root.installing
+                    text: root.otherRoute === "flatpak" ? qsTr("Install the Flatpak instead") : qsTr("Install the AppImage instead")
+                    tip: root.otherRoute === "flatpak" ? qsTr("Flatpak from Flathub, updated by your system")
+                                                       : qsTr("AppImage from %1, the newest build").arg(root.installInfo?.source ?? "")
+                    onClicked: Installer.install(root.emulator.id, root.otherRoute)
+                }
+                Item { Layout.fillWidth: true }
+                Label {
+                    text: qsTr("Your saves and keys stay.")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                }
+                SettingsButton {
+                    danger: true
+                    enabled: !root.installing
+                    text: qsTr("Uninstall")
+                    onClicked: uninstallDialog.active = true
+                }
+            }
         }
 
         Label {
@@ -594,6 +745,65 @@ ColumnLayout {
                             popup.error = Library.removeEmulator(root.emulator.id)
                             if (popup.error === "")
                                 popup.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Loader {
+        id: uninstallDialog
+        active: false
+        sourceComponent: MotionPopup {
+            id: confirm
+
+            readonly property bool flatpak: root.installInfo?.route === "flatpak"
+
+            Component.onCompleted: open()
+            onClosed: uninstallDialog.active = false
+
+            parent: Overlay.overlay
+            anchors.centerIn: parent
+            modal: true
+            Overlay.modal: Scrim {}
+            padding: Theme.menu.dialogPadding
+            width: 380
+            background: Rectangle {
+                color: Theme.menu.popupBackground
+                border.color: Theme.controls.inputBorder
+                border.width: Theme.controls.inputBorderWidth
+                radius: Theme.controls.inputRadius
+            }
+
+            ColumnLayout {
+                width: parent.width
+                spacing: 10
+
+                Label {
+                    text: qsTr("Uninstall %1?").arg(root.emulator.name)
+                    color: Theme.controls.labelColor
+                    font.weight: Theme.font.strongWeight
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: (confirm.flatpak ? qsTr("The Flatpak %1 is removed from your user installation.").arg(root.installInfo?.file ?? "")
+                                           : qsTr("%1 goes to the trash.").arg((root.installInfo?.file ?? "").split("/").pop()))
+                          + " " + qsTr("Your saves and keys stay, so installing it again picks up where you left off.")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignRight
+                    spacing: Theme.controls.controlSpacing
+                    SettingsButton { text: qsTr("Cancel"); onClicked: confirm.close() }
+                    SettingsButton {
+                        danger: true
+                        text: qsTr("Uninstall")
+                        onClicked: {
+                            Installer.uninstall(root.emulator.id)
+                            confirm.close()
                         }
                     }
                 }

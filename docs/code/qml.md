@@ -249,6 +249,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `components/ArtPlaceholder.qml` | Hue gradient for a game without hero art |
 | `components/Args.js` | Split/join program argument strings |
 | `components/FilterChip.qml` | Active-filter chip under the search box |
+| `components/InstallProgress.qml` | An emulator install's progress bar: filled to `progress`, or a part sliding across while it is unknown (-1); a faint full bar without motion |
 | `components/FadeImage.qml` | An Image that fades in after an asynchronous load |
 | `components/GameIcon.qml` | Small icon: art or colored letter tile |
 | `components/KeyedListModel.qml` | A list model for animated JS arrays: only inserts and removes, matched by key |
@@ -344,7 +345,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/BackupDialog.qml` | "Back up library" / "Back up saves" dialog |
 | `settings/ConnectionRow.qml` | A connected-service row in settings |
 | `settings/editors/` | Theme setting editors: Bool, Color, ColorList, ColorPicker, Enum, Number, String, StringList |
-| `settings/EmulatorRow.qml` | One emulator row in the Emulators page: a preset edits its program and arguments; a user emulator also its name, platforms, Flatpak, ROM extensions and command, and has Remove with its confirmation |
+| `settings/EmulatorRow.qml` | One emulator row in the Emulators page: a preset edits its program and arguments; a user emulator also its name, platforms, Flatpak, ROM extensions and command, and has Remove with its confirmation. Its `Installer` row adds Install, the job's step and progress with Cancel or Try again in place of the badge, Update, and (for what Lattis installed) Check for updates, the other route and Uninstall with its confirmation |
 | `settings/EmulatorsPage.qml` | Emulators settings page: "Built in" and "Yours" cards, and the Add emulator dialog (start from blank or a preset, name, id preview) |
 | `settings/GeneralPage.qml` | General settings page |
 | `settings/GamePage.qml` | Game page settings: chips, buttons, info panel, play time format and recent period, description and tags |
@@ -353,6 +354,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/DragReorder.qml` | A drag that reorders a card's rows: offsets, drop line, settling |
 | `settings/HelpSectionHeader.qml` | Section header with a help link |
 | `settings/ImportDialog.qml` | Import: file picker, backup plan, progress, restart |
+| `settings/InstallButton.qml` | Install for an emulator that can be installed from Lattis: a click takes the first route, the arrow (with two routes) opens a menu naming each by its source |
 | `settings/KeyboardPage.qml` | Keyboard shortcuts, generated from ActionSchema |
 | `settings/KeyChip.qml` | Single key chip in the Keyboard page |
 | `settings/KeyRow.qml` | One key in a shortcut's key list |
