@@ -24,16 +24,16 @@ Lattis knows twelve emulators out of the box, among them Ryubing (Switch), Azaha
 
 ### Installing an emulator
 
-A built-in emulator that isn't found has an **Install** button on its row. A click installs the AppImage the project publishes on its release page, into `~/Applications` (or `~/AppImages` if that's the one you have). The arrow beside it offers the Flathub Flatpak instead. Dolphin publishes no AppImage, so its button installs the Flatpak.
+A built-in emulator that isn't found says "Not found" on its row, which is normal on a fresh system. Open the row to install it: the card offers one tile for each way to install it, with **Install AppImage** and **Install Flatpak** buttons. The AppImage is the project's build from its release page, put in `~/Applications` (or `~/AppImages` if that's the one you have). Dolphin publishes no AppImage, so it offers only the Flatpak, and without Flatpak on your system only the AppImage is offered. If you already have the emulator somewhere else, choose its program under "Already have it somewhere else?".
 
 - **AppImage** (recommended): the project's newest build, checked against the checksum the release page gives. It can read your ROM folders wherever they are.
 - **Flatpak**: updated by your system (its software centre, or `flatpak update`), installed for your user only. A Flatpak may need access to ROM folders outside your home; Lattis warns you when it can't read one.
 
-While it installs, the row shows each step and a progress bar, and **Cancel** stops it and deletes what was downloaded. You can close Settings meanwhile: the install carries on. If it fails, the reason takes the place of the platforms, with **Try again**.
+While it installs, the row shows a small progress bar and the step, and the open card shows the step in full with a bigger bar and **Cancel**, which stops it and deletes what was downloaded. You can close Settings meanwhile: the install carries on. If it fails, the row says "Install failed" and the card shows the reason with **Try again** and **Dismiss**; the install tiles stay below it, so you can try the other route.
 
-An emulator Lattis installed shows where it came from and its version. When the Emulators page opens, Lattis checks whether a newer release is out (at most once an hour per emulator); **Update** then downloads it and moves the old AppImage to the trash once the new one is in place. **Check for updates**, in the expanded row, looks again right away. Flatpaks aren't checked: your system updates them.
+An emulator Lattis installed shows its route and version in the row, and its card says where it came from and when. When the Emulators page opens, Lattis checks whether a newer release is out (at most once an hour per emulator); the row then reads "Update" with the version, and **Update to** that version, in the card, downloads it and moves the old AppImage to the trash once the new one is in place. **Check for updates**, also in the card, looks again right away. Flatpaks aren't checked: your system updates them. **Install the Flatpak instead** (or the AppImage) at the bottom of the card switches route.
 
-**Uninstall**, also in the expanded row, moves an AppImage to the trash or removes a Flatpak. Your saves and keys stay. Close a game running in that emulator before updating or uninstalling it. Emulators you installed yourself have no Uninstall; remove them the way you installed them.
+**Uninstall**, at the bottom of the card, moves an AppImage to the trash or removes a Flatpak. Your saves and keys stay. Close a game running in that emulator before updating or uninstalling it. Emulators you installed yourself have no Uninstall; remove them the way you installed them.
 
 If the `flatpak` command isn't on your system, only the AppImage is offered.
 

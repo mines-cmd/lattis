@@ -345,7 +345,8 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/BackupDialog.qml` | "Back up library" / "Back up saves" dialog |
 | `settings/ConnectionRow.qml` | A connected-service row in settings |
 | `settings/editors/` | Theme setting editors: Bool, Color, ColorList, ColorPicker, Enum, Number, String, StringList |
-| `settings/EmulatorRow.qml` | One emulator row in the Emulators page: a preset edits its program and arguments; a user emulator also its name, platforms, Flatpak, ROM extensions and command, and has Remove with its confirmation. Its `Installer` row adds Install, the job's step and progress with Cancel or Try again in place of the badge, Update, and (for what Lattis installed) Check for updates, the other route and Uninstall with its confirmation |
+| `settings/EmulatorRow.qml` | One emulator row in the Emulators page: a preset edits its program and arguments; a user emulator also its name, platforms, Flatpak, ROM extensions and command, and has Remove with its confirmation. Its `Installer` row shows in the collapsed row only: a neutral "Not found", an "Update X" or "Install failed" badge, or a small `InstallProgress` with a short label while a job runs (the platforms subtitle gains the route and version of Lattis's own install). The Program field shows the found path as its placeholder, with a copy button. The card's install parts are `EmulatorInstallTop` above and, for what Lattis installed, a footer with the other route and Uninstall (with its confirmation) |
+| `settings/EmulatorInstallTop.qml` | The top of a preset emulator's card, from its `Installer` row: a progress box with Cancel while a job runs, an error box with Try again and Dismiss, one tile per install route (AppImage first, "Recommended" when there are two) with its Install button, and for what Lattis installed a source box with Update to X or Check for updates. Its theme keys are `settings_window.install_tile_*`, `install_error_fill_opacity` and `install_not_found` |
 | `settings/EmulatorsPage.qml` | Emulators settings page: "Built in" and "Yours" cards, and the Add emulator dialog (start from blank or a preset, name, id preview) |
 | `settings/GeneralPage.qml` | General settings page |
 | `settings/GamePage.qml` | Game page settings: chips, buttons, info panel, play time format and recent period, description and tags |
@@ -354,7 +355,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/DragReorder.qml` | A drag that reorders a card's rows: offsets, drop line, settling |
 | `settings/HelpSectionHeader.qml` | Section header with a help link |
 | `settings/ImportDialog.qml` | Import: file picker, backup plan, progress, restart |
-| `settings/InstallButton.qml` | Install for an emulator that can be installed from Lattis: a click takes the first route, the arrow (with two routes) opens a menu naming each by its source |
+| `settings/InstallButton.qml` | Install for an emulator that can be installed from Lattis: a click takes the first route, the arrow (with two routes) opens a menu naming each by its source. Not used on the Emulators page, whose card has a tile per route; the setup guide and the game page use it |
 | `settings/KeyboardPage.qml` | Keyboard shortcuts, generated from ActionSchema |
 | `settings/KeyChip.qml` | Single key chip in the Keyboard page |
 | `settings/KeyRow.qml` | One key in a shortcut's key list |

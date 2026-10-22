@@ -89,6 +89,7 @@ Each emulator has at most one job; several emulators can have one at once. A job
 state           "idle", "checking", "downloading", "extracting", "installing", "removing" or "failed"
 progress        0 to 1 while downloading, -1 when unknown
 error           the message of a failure
+jobRoute        "appimage" or "flatpak" while a job exists (for its step text), else ""
 routes          ["appimage", "flatpak"]: those on offer, AppImage first; flatpak only when the program exists
 noFlatpak       the emulator has a Flatpak id but flatpak isn't installed
 source          where the AppImage comes from: "GitHub" or a server name
