@@ -156,6 +156,26 @@ Rectangle {
                         }
                     }
 
+                    IconButton {
+                        readonly property bool iconShown: !General.chipsWithoutIcon.includes(entry.modelData)
+                        visible: root.place === "chips"
+                        Layout.preferredWidth: Theme.settingsWindow.smallButtonSize
+                        Layout.preferredHeight: Theme.settingsWindow.smallButtonSize
+                        Layout.alignment: Qt.AlignVCenter
+                        plain: true
+                        hoverTint: Theme.search.hoverTint
+                        iconSize: Theme.settingsWindow.smallIconSize
+                        icon: iconShown ? Icons.eyeLine : Icons.eyeCloseLine
+                        iconColor: Theme.settingsWindow.resetButtonColor
+                        tip: iconShown ? qsTr("Icon shown on the chip: click to hide it")
+                                       : qsTr("Icon hidden on the chip: click to show it")
+                        onClicked: {
+                            const err = General.setChipIconShown(entry.modelData, !iconShown)
+                            if (err !== "")
+                                root.failed(err)
+                        }
+                    }
+
                     SettingsSwitch {
                         checked: entry.on
                         onToggled: {

@@ -15,6 +15,7 @@ struct GamePageSettings
     QStringList chipsOrder;   // of every chip, as written: see gamePageOrder()
     QStringList buttonsOrder;
     QStringList infoRowsOrder;
+    QStringList chipsWithoutIcon;
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
     bool showDescription = true;

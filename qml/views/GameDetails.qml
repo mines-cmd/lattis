@@ -478,7 +478,7 @@ Item {
             readonly property bool mine: root.game.pendingSteamEdits ?? false
 
             attention: true
-            icon: Icons.info
+            icon: General.chipsWithoutIcon.includes("steam_waiting") ? "" : Icons.info
             label: qsTr("Steam")
             value: (root.game.shortcutQueued ?? false) ? qsTr("Added when it closes")
                  : mine ? qsTr("Changes wait for it to close")
@@ -531,7 +531,7 @@ Item {
             attention: true
             attentionColor: launchButton.updateAction ? Theme.launchButton.updateBackground
                                                       : Theme.launchButton.updatingBackground
-            icon: Icons.download2Line
+            icon: General.chipsWithoutIcon.includes("steam_update") ? "" : Icons.download2Line
             label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
             value: root.game.steamUpdateText ?? ""
         }
@@ -816,7 +816,7 @@ Item {
                                 StatChip {
                                     readonly property var field: gameFields.all[chip.name]
                                     readonly property bool opensHistory: field.history ?? false
-                                    icon: field.icon
+                                    icon: General.chipsWithoutIcon.includes(chip.name) ? "" : field.icon
                                     label: field.label
                                     value: field.value
                                     clickable: !chip.leaving && (opensHistory || (field.filterPlatform ?? "") !== "")

@@ -344,7 +344,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/EmulatorsPage.qml` | Emulators settings page: "Built in" and "Yours" cards, and the Add emulator dialog (start from blank or a preset, name, id preview) |
 | `settings/GeneralPage.qml` | General settings page |
 | `settings/GamePage.qml` | Game page settings: chips, buttons, info panel, play time format and recent period, description and tags |
-| `settings/GamePageList.qml` | One of the Game page's lists: every choice of a place with a grip and a switch |
+| `settings/GamePageList.qml` | One of the Game page's lists: every choice of a place with a grip and a switch, and on the chips list an eye that hides or shows the chip's icon (`chips_without_icon`) |
 | `settings/DragGrip.qml` | The handle a settings row is dragged by |
 | `settings/DragReorder.qml` | A drag that reorders a card's rows: offsets, drop line, settling |
 | `settings/HelpSectionHeader.qml` | Section header with a help link |

@@ -127,7 +127,8 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
                                QStringLiteral("info_rows"),   QStringLiteral("chips_order"),
                                QStringLiteral("buttons_order"), QStringLiteral("info_rows_order"),
                                QStringLiteral("recent_period"), QStringLiteral("show_description"),
-                               QStringLiteral("show_tags"),   QStringLiteral("play_time_format")};
+                               QStringLiteral("show_tags"),   QStringLiteral("play_time_format"),
+                               QStringLiteral("chips_without_icon")};
     const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
@@ -139,6 +140,8 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             const QString &place = places.at(at % 3);
             readNames(node, key, place, section, at < 3 ? shownOf(out.value, place) : orderOf(out.value, place),
                       out.warnings);
+        } else if (at == 10) {
+            readNames(node, key, GamePage::chips, section, out.value.chipsWithoutIcon, out.warnings);
         } else if (at == 6 || at == 9) {
             const QStringList &choices = at == 6 ? recentPeriods() : playTimeFormats();
             const auto *text = node.as_string();

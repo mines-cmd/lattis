@@ -406,7 +406,8 @@ void GeneralTest::gamePageParser()
     const auto r = parseGamePageSettings("[game_page]\nchips = [\"rating\", \"play_time\", \"rating\"]\n"
                                          "buttons = []\ninfo_rows = [\"times_played\", \"date_added\"]\n"
                                          "recent_period = \"month\"\nplay_time_format = \"hours_minutes\"\n"
-                                         "show_description = false\nshow_tags = false\n",
+                                         "show_description = false\nshow_tags = false\n"
+                                         "chips_without_icon = [\"steam_update\", \"rating\"]\n",
                                          QStringLiteral("settings.toml"));
     QVERIFY(r.warnings.isEmpty());
     QCOMPARE(r.value.chips, (QStringList{"rating", "play_time"}));
@@ -416,13 +417,14 @@ void GeneralTest::gamePageParser()
     QCOMPARE(r.value.playTimeFormat, QStringLiteral("hours_minutes"));
     QVERIFY(!r.value.showDescription);
     QVERIFY(!r.value.showTags);
+    QCOMPARE(r.value.chipsWithoutIcon, (QStringList{"steam_update", "rating"}));
 
     const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
                                            "info_rows = [\"steam_update\"]\nrecent_period = \"day\"\n"
                                            "play_time_format = \"clock\"\n"
-                                           "show_tags = 1\nchip = []\n",
+                                           "show_tags = 1\nchip = []\nchips_without_icon = [\"favorite\"]\n",
                                            QStringLiteral("settings.toml"));
-    QCOMPARE(bad.warnings.size(), 8);
+    QCOMPARE(bad.warnings.size(), 9);
     // The keys are read in alphabetical order, so look for each message.
     const QString all = bad.warnings.join(u'\n');
     QVERIFY(all.contains(QStringLiteral("unknown name \"play_tim\" in chips")));
@@ -434,6 +436,7 @@ void GeneralTest::gamePageParser()
     QVERIFY(all.contains(QStringLiteral("play_time_format must be \"hours\", \"hours_minutes\"")));
     QVERIFY(all.contains(QStringLiteral("show_tags must be true or false")));
     QVERIFY(all.contains(QStringLiteral("unknown key chip")));
+    QVERIFY(all.contains(QStringLiteral("unknown name \"favorite\" in chips_without_icon")));
     // What isn't valid leaves the default.
     QCOMPARE(bad.value.buttons, GamePageSettings().buttons);
     QCOMPARE(bad.value.recentPeriod, QStringLiteral("two_weeks"));
@@ -544,6 +547,17 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.setShowTags(true), QString());
     QCOMPARE(general.setShowDescription(true), QString());
     QVERIFY(!fileText().contains("show_"));
+
+    QCOMPARE(general.setChipIconShown(QStringLiteral("status"), false), QString());
+    QCOMPARE(general.setChipIconShown(QStringLiteral("play_time"), false), QString());
+    QCOMPARE(general.chipsWithoutIcon(), (QStringList{"play_time", "status"}));
+    QVERIFY(fileText().contains("chips_without_icon = [\"play_time\", \"status\"]"));
+    QCOMPARE(general.setChipIconShown(QStringLiteral("menu"), false), QString());
+    QCOMPARE(general.chipsWithoutIcon(), (QStringList{"play_time", "status"}));
+    QCOMPARE(general.setChipIconShown(QStringLiteral("status"), true), QString());
+    QCOMPARE(general.setChipIconShown(QStringLiteral("play_time"), true), QString());
+    QVERIFY(general.chipsWithoutIcon().isEmpty());
+    QVERIFY(!fileText().contains("chips_without_icon"));
     QVERIFY(general.problems().isEmpty());
 
     // A hand edit shows on reload, and a mistake in it is a problem.

@@ -195,7 +195,7 @@ Item {
                 SectionHeader { visible: chips.visible; text: qsTr("Chips") }
                 SectionNote {
                     visible: chips.visible
-                    text: qsTr("Beside the Launch button. A chip with nothing to show for the game is left out.")
+                    text: qsTr("Beside the Launch button. A chip with nothing to show for the game is left out. The eye hides or shows a chip's icon.")
                 }
                 GamePageList {
                     id: chips

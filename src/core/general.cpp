@@ -243,6 +243,26 @@ QString General::setShowTags(bool value)
     return setGamePageFlag(QStringLiteral("show_tags"), value);
 }
 
+QString General::setChipIconShown(const QString &name, bool shown)
+{
+    if (!gamePageChoices(GamePage::chips).contains(name))
+        return {};
+    QStringList without;
+    for (const QString &chip : gamePageChoices(GamePage::chips))
+        if (chip == name ? !shown : m_gamePage.chipsWithoutIcon.contains(chip))
+            without.append(u'"' + chip + u'"');
+    QString error;
+    if (without.isEmpty())
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("chips_without_icon"),
+                                     &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("chips_without_icon"),
+                                  u'[' + without.join(QLatin1String(", ")) + u']', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setStartAtLogin(bool on)
 {
     const QString folder = Autostart::autostartFolder();

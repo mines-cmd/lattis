@@ -34,6 +34,7 @@ class General : public QObject
     Q_PROPERTY(QString playTimeFormat READ playTimeFormat NOTIFY gamePageChanged)
     Q_PROPERTY(bool showDescription READ showDescription NOTIFY gamePageChanged)
     Q_PROPERTY(bool showTags READ showTags NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
@@ -63,6 +64,7 @@ public:
     QString playTimeFormat() const { return m_gamePage.playTimeFormat; }
     bool showDescription() const { return m_gamePage.showDescription; }
     bool showTags() const { return m_gamePage.showTags; }
+    QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
@@ -85,6 +87,7 @@ public:
     Q_INVOKABLE QString setPlayTimeFormat(const QString &format);
     Q_INVOKABLE QString setShowDescription(bool value);
     Q_INVOKABLE QString setShowTags(bool value);
+    Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
     void refreshAutostart();
