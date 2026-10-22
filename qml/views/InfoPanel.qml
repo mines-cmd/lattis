@@ -6,16 +6,10 @@ import QtQuick.Layouts
 Surface {
     id: root
 
-    property var game: ({})
+    required property GameFields fields
+    readonly property var rows: fields.shown(General.gamePageInfoRows).map(name => fields.all[name])
 
-    readonly property var available: ({
-        release_date: { label: qsTr("Release date"), value: game.year ?? "" },
-        platform: { label: qsTr("Platform"), value: game.platformName ?? "", icon: Icons.forPlatform(game.platformIcon ?? ""), filterPlatform: game.platform ?? "" },
-        status: { label: qsTr("Status"), value: game.statusText ?? "" },
-        install_size: { label: qsTr("Install size"), value: game.sizeText ?? "" },
-        rating: { label: qsTr("Rating"), value: (game.rating ?? -1) >= 0 ? game.rating.toFixed(1) : "", stars: game.rating ?? -1 }
-    })
-    readonly property var rows: General.gamePageInfoRows.filter(name => available[name] !== undefined).map(name => available[name]).filter(r => r.value !== "")
+    signal historyRequested()
 
     implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.padding
     radius: Theme.infoPanel.radius
@@ -39,9 +33,9 @@ Surface {
                 required property var modelData
                 required property int index
 
-                readonly property bool clickable: (modelData.filterPlatform ?? "") !== ""
+                readonly property bool clickable: (modelData.filterPlatform ?? "") !== "" || (modelData.history ?? false)
                 readonly property color valueColor: !clickable ? Theme.infoPanel.valueColor
-                    : platformClick.containsMouse ? Theme.infoPanel.valueHoverColor
+                    : rowClick.containsMouse ? Theme.infoPanel.valueHoverColor
                     : Theme.infoPanel.valueColor
 
                 Layout.fillWidth: true
@@ -61,12 +55,12 @@ Surface {
                     RowLayout {
                         spacing: Theme.infoPanel.labelSpacing
                         transformOrigin: Item.Right
-                        scale: infoRow.clickable && platformClick.pressed ? Theme.motion.pressScale : 1
+                        scale: infoRow.clickable && rowClick.pressed ? Theme.motion.pressScale : 1
                         Behavior on scale { enabled: Motion.on; MotionNumber {} }
 
                         Icon {
-                            visible: infoRow.modelData.icon !== undefined
-                            path: infoRow.modelData.icon ?? ""
+                            visible: infoRow.modelData.valueIcon ?? false
+                            path: infoRow.modelData.icon
                             size: Theme.infoPanel.iconSize
                             color: infoRow.valueColor
                             Behavior on color { enabled: Motion.fades; MotionColor {} }
@@ -96,19 +90,24 @@ Surface {
                 }
 
                 MouseArea {
-                    id: platformClick
+                    id: rowClick
                     anchors.fill: parent
                     enabled: infoRow.clickable
                     cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                     hoverEnabled: true
-                    onClicked: Library.platformFilter = infoRow.modelData.filterPlatform
+                    onClicked: {
+                        if (infoRow.modelData.history ?? false)
+                            root.historyRequested()
+                        else
+                            Library.platformFilter = infoRow.modelData.filterPlatform
+                    }
 
                     ToolTip {
                         id: tip
-                        visible: platformClick.enabled && platformClick.containsMouse
+                        visible: rowClick.enabled && rowClick.containsMouse
                         delay: Theme.tooltip.delay
-                        text: qsTr("Show only %1 games").arg(infoRow.modelData.value)
-                        x: platformClick.width - width - Theme.infoPanel.rowPadding / 2
+                        text: infoRow.modelData.tip ?? ""
+                        x: rowClick.width - width - Theme.infoPanel.rowPadding / 2
                         y: -height
                     }
                 }

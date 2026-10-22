@@ -13,6 +13,8 @@ Surface {
     property var attentionColor: undefined
     property bool clickable: false
     property string tip
+    // A rating shown as stars in the tooltip instead of tip; -1 for none.
+    property real tipStars: -1
     readonly property bool lit: clickable && mouse.containsMouse
     default property alias extras: row.data
 
@@ -42,6 +44,35 @@ Surface {
         ToolTip.visible: root.tip !== "" && containsMouse
         ToolTip.delay: Theme.tooltip.delay
         ToolTip.text: root.tip
+    }
+
+    HoverHandler {
+        id: hover
+        enabled: root.tipStars >= 0
+    }
+    // Its own tooltip: the shared one shows text only.
+    Loader {
+        active: root.tipStars >= 0
+        sourceComponent: ToolTip {
+            parent: root
+            visible: hover.hovered
+            delay: Theme.tooltip.delay
+            enter: Transition { MotionNumber { property: "opacity"; from: 0; to: 1; fade: true } }
+            exit: Transition { MotionNumber { property: "opacity"; to: 0; fade: true } }
+            background: Rectangle {
+                radius: Theme.radius.tiny
+                color: Theme.tooltip.background
+                border.color: Theme.tooltip.border
+                border.width: Theme.tooltip.borderWidth
+            }
+            contentItem: Stars {
+                value: root.tipStars
+                starSize: Theme.statChip.starSize
+                spacing: Theme.infoPanel.starSpacing
+                color: Theme.infoPanel.star
+                emptyColor: Theme.infoPanel.starEmpty
+            }
+        }
     }
 
     RowLayout {

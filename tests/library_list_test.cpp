@@ -577,7 +577,7 @@ void LibraryListTest::showHiddenGames()
     QVERIFY(game.value("hidden").toBool());
     QCOMPARE(game.value("title").toString(), QStringLiteral("Counter-Strike 2"));
     QCOMPARE(game.value("year").toString(), QStringLiteral("2023"));
-    QVERIFY(game.value("playTimeText").toString() != Library::tr("Never played"));
+    QVERIFY(!game.value("playTimeText").toString().isEmpty());
     QVERIFY(!library->gameForEditing(cs2).isEmpty());
 
     // Unhidden from the list, it stays where it is, no longer dimmed.

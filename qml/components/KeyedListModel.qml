@@ -47,13 +47,16 @@ ListModel {
                 stayingNow.push(key)
         }
         const stayingNext = items.map(item => item.key).filter(key => present.has(key))
-        const rescoped = scope !== syncedScope
+        // Another scope with the same entries keeps them: there is nothing to make again.
+        const same = count === items.length && items.every((item, i) => get(i).key === item.key && !get(i).leaving)
+        const rescoped = scope !== syncedScope && !same
         syncedScope = scope
         if (rescoped || stayingNow.length !== stayingNext.length || stayingNow.some((key, i) => key !== stayingNext[i])) {
-            clear()
-            append(items.map(item => Object.assign({ leaving: false }, item)))
+            // Before the append, which makes the delegates: one that plays its own entrance checks it then.
             rebuilt = true
             rebuiltTimer.restart()
+            clear()
+            append(items.map(item => Object.assign({ leaving: false }, item)))
             leaving = false
             return
         }

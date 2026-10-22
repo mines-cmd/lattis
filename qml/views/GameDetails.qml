@@ -424,11 +424,98 @@ Item {
             message(text)
     }
 
-    readonly property var shownChips: General.gamePageChips.filter(name => stats[name] !== undefined)
-    readonly property var stats: ({
-        play_time: { icon: Icons.clock, label: qsTr("Play time"), value: game.playTimeText ?? "" },
-        last_played: { icon: "", label: qsTr("Last played"), value: game.lastPlayedText ?? "" }
-    })
+    GameFields {
+        id: gameFields
+        game: root.game
+    }
+
+    readonly property bool steamWaitingShown: !Library.readOnly && Library.steamWaiting.length > 0
+        && ((root.game.installed ?? true) || (root.game.steamUpdate ?? "none") === "none")
+    readonly property bool steamUpdateShown: (root.game.steamUpdate ?? "none") !== "none"
+    readonly property var shownChips: General.gamePageChips.filter(name =>
+        name === "steam_waiting" ? steamWaitingShown
+        : name === "steam_update" ? steamUpdateShown
+        : gameFields.shown([name]).length > 0)
+
+    // Another game's chips replace these at once: the switch has its own motion. A chip turned on or off,
+    // or a Steam chip coming or going on this game, pops in or out.
+    KeyedListModel {
+        id: chipModel
+        leaveSpeed: "fast"
+    }
+    function showChips() {
+        chipModel.scope = game.id
+        chipModel.source = shownChips.map(name => ({ key: name }))
+    }
+    onShownChipsChanged: showChips()
+    Component.onCompleted: showChips()
+
+    Component {
+        id: steamWaitingChip
+
+        StatChip {
+            readonly property int waiting: Library.steamWaiting.length
+            readonly property bool mine: root.game.pendingSteamEdits ?? false
+
+            attention: true
+            icon: Icons.info
+            label: qsTr("Steam")
+            value: (root.game.shortcutQueued ?? false) ? qsTr("Added when it closes")
+                 : mine ? qsTr("Changes wait for it to close")
+                 : waiting === 1 ? qsTr("1 game's changes waiting")
+                 : qsTr("%1 games' changes waiting").arg(waiting)
+            ToolTip.visible: chipHover.hovered && !mine
+            ToolTip.text: qsTr("Waiting for Steam to close: %1").arg(Library.steamWaiting.map(w => w.title).join(", "))
+            ToolTip.delay: 500
+
+            HoverHandler { id: chipHover }
+
+            SettingsButton {
+                id: pendingButton
+                implicitHeight: Theme.statChip.buttonHeight
+                flat: true
+                leftPadding: text === "" ? 0 : 14
+                rightPadding: leftPadding
+                implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
+                text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
+                iconPath: GameRunner.closingSteam ? "" : Icons.chevron
+                iconRotation: pendingMenu.showing ? -90 : 90
+                enabled: !GameRunner.closingSteam
+                tip: qsTr("Apply the changes now, or undo them")
+                onClicked: pendingMenu.popup(pendingButton, 0, pendingButton.height)
+
+                SettingsMenu {
+                    id: pendingMenu
+
+                    Action {
+                        text: qsTr("Apply")
+                        onTriggered: {
+                            const e = GameRunner.closeSteamAndApply()
+                            if (e !== "")
+                                root.message(e)
+                        }
+                    }
+                    Action {
+                        text: qsTr("Undo")
+                        onTriggered: root.steamUndoRequested()
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: steamUpdateChip
+
+        StatChip {
+            attention: true
+            attentionColor: launchButton.updateAction ? Theme.launchButton.updateBackground
+                                                      : Theme.launchButton.updatingBackground
+            icon: Icons.download2Line
+            label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
+            value: root.game.steamUpdateText ?? ""
+        }
+    }
 
     ColumnLayout {
         anchors.centerIn: parent
@@ -657,21 +744,12 @@ Item {
                     // follows the width it was last given).
                     readonly property real lineWidth: {
                         let w = 0
-                        let n = 0
-                        for (let i = 0; i < stats.count; ++i, ++n)
-                            w += stats.itemAt(i)?.implicitWidth ?? 0
-                        if (steamUpdate.visible) {
-                            w += steamUpdate.implicitWidth
-                            ++n
-                        }
-                        if (steamPending.visible) {
-                            w += steamPending.implicitWidth
-                            ++n
-                        }
-                        return w + Math.max(0, n - 1) * spacing
+                        for (let i = 0; i < chips.count; ++i)
+                            w += chips.itemAt(i)?.implicitWidth ?? 0
+                        return w + Math.max(0, chips.count - 1) * spacing
                     }
 
-                    visible: root.shownChips.length > 0 || steamPending.visible || steamUpdate.visible
+                    visible: chipModel.count > 0
                     Layout.row: !actionRow.oneLine ? (actionRow.buttonsBeside ? 1 : 2) : 0
                     Layout.column: !actionRow.oneLine ? 0 : 1
                     Layout.columnSpan: !actionRow.oneLine && actionRow.buttonsBeside ? 3 : 1
@@ -680,83 +758,67 @@ Item {
                     Layout.minimumWidth: !actionRow.oneLine ? 0 : lineWidth
                     spacing: Theme.details.actionSpacing
 
-                    Repeater {
-                        id: stats
-                        model: root.shownChips
-
-                        StatChip {
-                            required property string modelData
-                            icon: root.stats[modelData].icon
-                            label: root.stats[modelData].label
-                            value: root.stats[modelData].value
-                            clickable: modelData === "play_time"
-                            tip: clickable ? qsTr("Show play history") : ""
-                            onClicked: root.historyRequested()
-                        }
+                    move: Transition {
+                        enabled: Motion.on && !chipModel.rebuilt
+                        MotionNumber { properties: "x,y"; speed: "normal" }
                     }
 
-                    StatChip {
-                        id: steamPending
-                        readonly property int waiting: Library.steamWaiting.length
-                        readonly property bool mine: root.game.pendingSteamEdits ?? false
-                        readonly property bool installing: !(root.game.installed ?? true) && (root.game.steamUpdate ?? "none") !== "none"
+                    Repeater {
+                        id: chips
+                        model: chipModel
 
-                        visible: !Library.readOnly && waiting > 0 && !installing
-                        attention: true
-                        icon: Icons.info
-                        label: qsTr("Steam")
-                        value: (root.game.shortcutQueued ?? false) ? qsTr("Added when it closes")
-                             : mine ? qsTr("Changes wait for it to close")
-                             : waiting === 1 ? qsTr("1 game's changes waiting")
-                             : qsTr("%1 games' changes waiting").arg(waiting)
-                        ToolTip.visible: chipHover.hovered && !mine
-                        ToolTip.text: qsTr("Waiting for Steam to close: %1").arg(Library.steamWaiting.map(w => w.title).join(", "))
-                        ToolTip.delay: 500
+                        Loader {
+                            id: chip
+                            required property var model
+                            readonly property string name: model.key
+                            readonly property bool leaving: model.leaving
 
-                        HoverHandler { id: chipHover }
+                            sourceComponent: name === "steam_waiting" ? steamWaitingChip
+                                           : name === "steam_update" ? steamUpdateChip
+                                           : fieldChip
 
-                        SettingsButton {
-                            id: pendingButton
-                            implicitHeight: Theme.statChip.buttonHeight
-                            flat: true
-                            leftPadding: text === "" ? 0 : 14
-                            rightPadding: leftPadding
-                            implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
-                            text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
-                            iconPath: GameRunner.closingSteam ? "" : Icons.chevron
-                            iconRotation: pendingMenu.showing ? -90 : 90
-                            enabled: !GameRunner.closingSteam
-                            tip: qsTr("Apply the changes now, or undo them")
-                            onClicked: pendingMenu.popup(pendingButton, 0, pendingButton.height)
+                            onLeavingChanged: {
+                                if (!leaving)
+                                    return
+                                if (Motion.on)
+                                    leaveAnimation.start()
+                                else
+                                    opacity = 0
+                            }
+                            PopLeave { id: leaveAnimation; target: chip }
 
-                            SettingsMenu {
-                                id: pendingMenu
+                            // Not the Flow's add transition: a chip's width settles a moment after the Flow
+                            // first places it, and placing it again cut that transition off, leaving it unseen.
+                            Component.onCompleted: {
+                                if (Motion.on && !chipModel.rebuilt)
+                                    enterAnimation.start()
+                            }
+                            ParallelAnimation {
+                                id: enterAnimation
+                                MotionNumber { target: chip; property: "opacity"; from: 0; to: 1 }
+                                MotionPop { target: chip; property: "scale"; from: Theme.motion.chipScale; to: 1; speed: "normal" }
+                            }
 
-                                Action {
-                                    text: qsTr("Apply")
-                                    onTriggered: {
-                                        const e = GameRunner.closeSteamAndApply()
-                                        if (e !== "")
-                                            root.message(e)
+                            Component {
+                                id: fieldChip
+                                StatChip {
+                                    readonly property var field: gameFields.all[chip.name]
+                                    readonly property bool opensHistory: field.history ?? false
+                                    icon: field.icon
+                                    label: field.label
+                                    value: field.value
+                                    clickable: !chip.leaving && (opensHistory || (field.filterPlatform ?? "") !== "")
+                                    tip: clickable ? field.tip ?? "" : ""
+                                    tipStars: field.stars ?? -1
+                                    onClicked: {
+                                        if (opensHistory)
+                                            root.historyRequested()
+                                        else
+                                            Library.platformFilter = field.filterPlatform
                                     }
-                                }
-                                Action {
-                                    text: qsTr("Undo")
-                                    onTriggered: root.steamUndoRequested()
                                 }
                             }
                         }
-                    }
-
-                    StatChip {
-                        id: steamUpdate
-                        visible: (root.game.steamUpdate ?? "none") !== "none"
-                        attention: true
-                        attentionColor: launchButton.updateAction ? Theme.launchButton.updateBackground
-                                                                  : Theme.launchButton.updatingBackground
-                        icon: Icons.download2Line
-                        label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
-                        value: root.game.steamUpdateText ?? ""
                     }
                 }
 
@@ -865,7 +927,8 @@ Item {
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width
                     Layout.alignment: Qt.AlignTop
-                    game: root.game
+                    fields: gameFields
+                    onHistoryRequested: root.historyRequested()
                 }
             }
         }

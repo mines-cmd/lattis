@@ -75,9 +75,9 @@ constexpr Section kSections[] = {
     {"details", "A game's page: margins, and which stats, buttons and info are shown and in what order."},
     {"hero", "The large banner image at the top of a game's page, with its logo or title."},
     {"launch_button", "The big Launch button on a game's page."},
-    {"stat_chip", "The small boxes next to the Launch button showing play time and when you last played."},
+    {"stat_chip", "The small boxes next to the Launch button showing facts about the game, such as play time."},
     {"icon_button", "Square buttons with an icon, like Favorite and Open folder next to the Launch button."},
-    {"info_panel", "The box beside (or, when compact, below) a game's description with its release date, "
+    {"info_panel", "The box beside (or, when compact, below) a game's description with facts about it, such as its release date, "
                    "platform, status, size and rating."},
     {"tags", "The colored labels on a game's page. Their colors are set in Settings > Library."},
     {"tooltip", "The hints that appear when you hover over a button."},
@@ -628,6 +628,7 @@ constexpr Setting kSettings[] = {
     integer("stat_chip", "padding", "14", 0, 100, "Horizontal padding"),
     integer("stat_chip", "radius", "@radius.medium", 0, 150, "Corner radius"),
     integer("stat_chip", "icon_size", "22", 8, 100, "Icon size"),
+    integer("stat_chip", "star_size", "@info_panel.star_size", 8, 64, "Size of the stars in the rating chip's tooltip"),
     color("stat_chip", "background", "#10101000", "Background"),
     color("stat_chip", "background_end", "@stat_chip.background", "Gradient end; stat chip background = flat"),
     choice("stat_chip", "gradient_direction", "@layout.gradient_direction", "down up right left", "Gradient direction for stat chips"),

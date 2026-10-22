@@ -32,7 +32,7 @@ qreal hueOf(const QString &text)
 QString playTimeText(int minutes)
 {
     if (minutes <= 0)
-        return Library::tr("Never played");
+        return {};
     if (minutes < 60)
         return Library::tr("%n minute(s)", nullptr, minutes);
     return Library::tr("%1 hours").arg(QLocale().toString(minutes / 60.0, 'f', 1));
@@ -87,7 +87,7 @@ QString shortPlayTimeText(int minutes)
 QString lastPlayedText(const QDateTime &time)
 {
     if (!time.isValid())
-        return Library::tr("Never");
+        return {};
     // In this machine's time zone, whatever offset the time was saved with.
     const QDate date = time.toLocalTime().date();
     const qint64 days = date.daysTo(QDate::currentDate());
