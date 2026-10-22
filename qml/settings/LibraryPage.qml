@@ -66,7 +66,7 @@ Item {
     Loader {
         id: importDialog
         active: false
-        sourceComponent: ImportDialog {}
+        sourceComponent: ImportDialog { hostWindow: importDialog.Window.window }
     }
 
     function reveal(item) {

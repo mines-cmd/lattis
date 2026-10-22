@@ -12,6 +12,7 @@ MotionPopup {
     readonly property var parts: plan.parts ?? []
     readonly property bool busy: Backups.importing
     property string done: ""
+    property Window hostWindow: null
     readonly property string blocked: (GameRunner.running, Backups.gamesRunning())
 
     function pick() {
@@ -78,6 +79,7 @@ MotionPopup {
 
     FileDialog {
         id: fileDialog
+        parentWindow: root.hostWindow
         title: qsTr("Import")
         fileMode: FileDialog.OpenFile
         nameFilters: [qsTr("Backups (*.tar.zst)"), qsTr("All files (*)")]

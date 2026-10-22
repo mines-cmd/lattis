@@ -27,7 +27,7 @@ Item {
     Loader {
         id: importDialog
         active: false
-        sourceComponent: ImportDialog {}
+        sourceComponent: ImportDialog { hostWindow: importDialog.Window.window }
     }
 
     component Choice: AbstractButton {
