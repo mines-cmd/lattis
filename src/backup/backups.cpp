@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QJSEngine>
 #include <QLocale>
+#include <QRegularExpression>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
@@ -582,6 +583,34 @@ QString placesText(const QStringList &paths)
     return Backups::tr("%1 and %2").arg(f, g);
 }
 
+struct Arg {
+    QString text;
+    bool chip = false;
+};
+
+// Fills a translated pattern's %1, %2… and keeps the pieces apart, so the bar can draw the
+// chip arguments (file names) as chips.
+void appendParts(QVariantList &parts, QString &text, const QString &pattern, const QList<Arg> &args)
+{
+    const auto add = [&](const QString &piece, bool chip) {
+        if (piece.isEmpty())
+            return;
+        text += piece;
+        parts.append(QVariantMap{{QStringLiteral("text"), piece}, {QStringLiteral("chip"), chip}});
+    };
+    static const QRegularExpression marker(QStringLiteral("%(\\d)"));
+    qsizetype from = 0;
+    for (auto it = marker.globalMatch(pattern); it.hasNext();) {
+        const QRegularExpressionMatch match = it.next();
+        add(pattern.mid(from, match.capturedStart() - from), false);
+        const qsizetype n = match.captured(1).toInt() - 1;
+        if (n >= 0 && n < args.size())
+            add(args[n].text, args[n].chip);
+        from = match.capturedEnd();
+    }
+    add(pattern.mid(from), false);
+}
+
 QUrl folderOf(const QString &path)
 {
     const QFileInfo info(path);
@@ -596,18 +625,24 @@ QVariantMap Backups::notice() const
         return {};
     const MovedAside::Import &import = m_imports[index];
     const QString file = QFileInfo(import.archive).fileName();
-    QString text = import.kind == Backup::kLibrary ? tr("Restored the library from %1.").arg(file)
-                                                   : tr("Restored saves from %1.").arg(file);
+    QString text;
+    QVariantList parts;
+    appendParts(parts, text, import.kind == Backup::kLibrary ? tr("Restored the library from %1.")
+                                                             : tr("Restored saves from %1."),
+                {{file, true}});
+    appendParts(parts, text, QStringLiteral(" "), {});
     const qint64 bytes = m_importBytes.value(index, -1);
     const QString size = bytes < 0 ? QString() : QStringLiteral(" (%1)").arg(sizeText(bytes));
     if (import.paths.isEmpty())
-        text += u' ' + tr("Nothing was there before it.");
+        appendParts(parts, text, tr("Nothing was there before it."), {});
     else if (import.paths.size() == 1)
-        text += u' ' + tr("What you had is in %1%2.").arg(QFileInfo(import.paths.first()).fileName(), size);
+        appendParts(parts, text, tr("What you had is in %1%2."),
+                    {{QFileInfo(import.paths.first()).fileName(), true}, {size}});
     else
-        text += u' ' + tr("What you had is moved aside: %1%2.").arg(placesText(import.paths), size);
+        appendParts(parts, text, tr("What you had is moved aside: %1%2."), {{placesText(import.paths)}, {size}});
     return {
         {QStringLiteral("text"), text},
+        {QStringLiteral("parts"), parts},
         {QStringLiteral("folder"), import.paths.isEmpty() ? QUrl() : folderOf(import.paths.first())},
         {QStringLiteral("canDelete"), !import.paths.isEmpty()},
         {QStringLiteral("places"), import.paths.isEmpty() ? QString() : placesText(import.paths)},

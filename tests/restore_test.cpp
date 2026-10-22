@@ -958,6 +958,16 @@ void RestoreTest::libraryImportRestarts()
                  QStringLiteral("Restored the library from %1. What you had is in data%2")
                      .arg(QFileInfo(archive).fileName(), aside)),
              qPrintable(notice.value(QStringLiteral("text")).toString()));
+    QString joined;
+    QStringList chips;
+    for (const QVariant &part : notice.value(QStringLiteral("parts")).toList()) {
+        const QVariantMap map = part.toMap();
+        joined += map.value(QStringLiteral("text")).toString();
+        if (map.value(QStringLiteral("chip")).toBool())
+            chips.append(map.value(QStringLiteral("text")).toString());
+    }
+    QCOMPARE(joined, notice.value(QStringLiteral("text")).toString());
+    QCOMPARE(chips, (QStringList{QFileInfo(archive).fileName(), QStringLiteral("data") + aside}));
     QCOMPARE(notice.value(QStringLiteral("folder")).toUrl(), QUrl::fromLocalFile(m_data + aside));
     QCOMPARE(restarted.movedAside().size(), 1);
     QCOMPARE(readFile(m_data + aside + QStringLiteral("/settings.toml")), "# changed\n");

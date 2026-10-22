@@ -26,24 +26,31 @@ Item {
         opacity: root.progress
         enabled: root.showing
         text: root.notice.text ?? ""
+        parts: root.notice.parts ?? []
 
         SettingsButton {
             visible: root.notice.folder?.toString() !== ""
-            Layout.fillHeight: true
+            Layout.preferredHeight: Theme.notice.buttonHeight
             text: qsTr("Show")
-            iconPath: Icons.folder
+            flat: true
+            textColor: Theme.notice.actionText
+            font.weight: Theme.font.emphasisWeight
             onClicked: Qt.openUrlExternally(root.notice.folder)
         }
         SettingsButton {
             visible: root.notice.canDelete === true
-            Layout.fillHeight: true
+            Layout.preferredHeight: Theme.notice.buttonHeight
             text: qsTr("Delete")
-            danger: true
+            flat: true
+            textColor: Theme.notice.dangerText
+            font.weight: Theme.font.emphasisWeight
             onClicked: confirm.open()
         }
         IconButton {
-            Layout.fillHeight: true
-            Layout.preferredWidth: height
+            Layout.preferredWidth: Theme.notice.buttonHeight
+            Layout.preferredHeight: Theme.notice.buttonHeight
+            plain: true
+            iconSize: Theme.notice.closeIconSize
             icon: Icons.close
             tip: qsTr("Hide this")
             onClicked: Backups.dismissNotice()

@@ -11,9 +11,11 @@ Item {
     property bool allCollapsed: false
     property real dragReserve: 0
     property real toolbarLeft: -1
+    readonly property real noticeX: Theme.details.marginLeft + Theme.details.padding
     readonly property real noticeWidth: {
-        const full = width - Theme.details.marginLeft - marginRight
-        return toolbarLeft < 0 ? full : Math.max(0, Math.min(full, toolbarLeft - Theme.layout.spacing - Theme.details.marginLeft))
+        const right = Math.min(width - marginRight - Theme.details.padding, width - dragReserve,
+                               toolbarLeft < 0 ? Infinity : toolbarLeft - Theme.layout.spacing)
+        return Math.max(0, right - noticeX)
     }
 
     // The hero follows the selection after a short delay, so holding an arrow key in the
@@ -640,7 +642,7 @@ Item {
         visible: Library.readOnly
         opacity: visible ? 1 : 0
         z: 1
-        x: Theme.details.marginLeft
+        x: root.noticeX
         y: Theme.layout.margin
         width: root.noticeWidth
         height: Theme.layout.toolbarHeight
@@ -655,7 +657,7 @@ Item {
         id: importNotice
         active: root.startedUp
         z: 1
-        x: Theme.details.marginLeft
+        x: root.noticeX
         y: Theme.layout.margin + (Library.readOnly ? Theme.layout.toolbarHeight + Theme.layout.spacing : 0)
         width: root.noticeWidth
         height: Theme.layout.toolbarHeight
