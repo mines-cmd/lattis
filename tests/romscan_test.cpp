@@ -15,6 +15,8 @@ class RomScanTest : public QObject
 private slots:
     void parse_data();
     void parse();
+    void parseOnPlatform_data();
+    void parseOnPlatform();
     void fixCase_data();
     void fixCase();
     void kindOf_data();
@@ -27,6 +29,7 @@ private slots:
     void indexFixesCaseOfNewEntries();
     void indexMatchesRenamesByTitleId();
     void indexMatchesRenamesByTitle();
+    void indexMatchesRenamesWithOldTitle();
     void indexMatchesRenamesBySize();
     void indexUpdatesSizes();
     void scanFolders();
@@ -52,11 +55,11 @@ void RomScanTest::parse_data()
     QTest::newRow("update") << "Mario Kart 8 Deluxe [0100152000022800][v196608].nsp"
                             << "Mario Kart 8 Deluxe" << "0100152000022800" << Kind::Update;
     QTest::newRow("dlc") << "Mario Kart 8 Deluxe - Booster Course Pass [0100152000023001][v0].nsp"
-                         << "Mario Kart 8 Deluxe - Booster Course Pass" << "0100152000023001" << Kind::Dlc;
+                         << "Mario Kart 8 Deluxe: Booster Course Pass" << "0100152000023001" << Kind::Dlc;
     QTest::newRow("colon and size") << "The Legend of Zelda: Tears of the Kingdom [0100F2C0115B6000][v0] (15.96 GB).nsp"
                                     << "The Legend of Zelda: Tears of the Kingdom" << "0100F2C0115B6000" << Kind::Game;
     QTest::newRow("dash for colon") << "The Legend of Zelda - Tears of the Kingdom [0100F2C0115B6000][USA].xci"
-                                    << "The Legend of Zelda - Tears of the Kingdom" << "0100F2C0115B6000" << Kind::Game;
+                                    << "The Legend of Zelda: Tears of the Kingdom" << "0100F2C0115B6000" << Kind::Game;
     QTest::newRow("lowercase hex") << "Kirby and the Forgotten Land [01004d300c5ae000][v0].nsp"
                                    << "Kirby and the Forgotten Land" << "01004D300C5AE000" << Kind::Game;
     QTest::newRow("underscores") << "Animal_Crossing_New_Horizons_[01006F8002326000][v0].nsp"
@@ -93,15 +96,33 @@ void RomScanTest::parse_data()
     QTest::newRow("regions and languages") << "Pokémon Ultra Sun (USA) (En,Ja,Fr,De,Es,It) (Rev 1).3ds"
                                            << "Pokémon Ultra Sun" << "" << Kind::Game;
     QTest::newRow("no-intro dash") << "Kirby - Planet Robobot (Europe) (En,Fr,De,Es,It,Nl).3ds"
-                                   << "Kirby - Planet Robobot" << "" << Kind::Game;
+                                   << "Kirby: Planet Robobot" << "" << Kind::Game;
     QTest::newRow("3ds title id is a game") << "Pokemon Y [0004000000055E00].cci"
                                             << "Pokemon Y" << "0004000000055E00" << Kind::Game;
     QTest::newRow("decomposed accent") << QString::fromUtf8("Pokémon X (USA).3ds")
                                        << "Pokémon X" << "" << Kind::Game;
-    QTest::newRow("dump tag") << "Kid Icarus - Uprising -decrypted.3ds" << "Kid Icarus - Uprising" << ""
+    QTest::newRow("dump tag") << "Kid Icarus - Uprising -decrypted.3ds" << "Kid Icarus: Uprising" << ""
                               << Kind::Game;
-    QTest::newRow("spaced dump tag") << "Kid Icarus - Uprising - Decrypted (USA).cia" << "Kid Icarus - Uprising"
+    QTest::newRow("spaced dump tag") << "Kid Icarus - Uprising - Decrypted (USA).cia" << "Kid Icarus: Uprising"
                                      << "" << Kind::Game;
+    QTest::newRow("language tags") << "Luigi's Mansion Multi5 Decrypted.3ds" << "Luigi's Mansion" << ""
+                                   << Kind::Game;
+    QTest::newRow("language list") << "Fantasy Life En,Fr,De.3ds" << "Fantasy Life" << "" << Kind::Game;
+    QTest::newRow("language plus list") << "Fantasy Life EN+FR.3ds" << "Fantasy Life" << "" << Kind::Game;
+    QTest::newRow("region words") << "Fantasy Life USA.3ds" << "Fantasy Life" << "" << Kind::Game;
+    QTest::newRow("single language code kept") << "Pac-Man Go.3ds" << "Pac-Man Go" << "" << Kind::Game;
+    QTest::newRow("multi word mid-title") << "Multi5 Heroes.3ds" << "Multi5 Heroes" << "" << Kind::Game;
+    QTest::newRow("article last") << "Legend of Zelda, The - Tri Force Heroes (USA).3ds"
+                                  << "The Legend of Zelda: Tri Force Heroes" << "" << Kind::Game;
+    QTest::newRow("article last at the end") << "Legend of Zelda - TriForce Heroes, The Multi5 Decrypted.3ds"
+                                             << "The Legend of Zelda: TriForce Heroes" << "" << Kind::Game;
+    QTest::newRow("article a") << "Hat in Time, A.nsp" << "A Hat in Time" << "" << Kind::Game;
+    QTest::newRow("comma that isn't an article") << "Hello, Kitty.3ds" << "Hello, Kitty" << "" << Kind::Game;
+    QTest::newRow("only the first dash") << "Mario & Luigi - Superstar Saga - Bowser's Minions.3ds"
+                                         << "Mario & Luigi: Superstar Saga - Bowser's Minions" << "" << Kind::Game;
+    QTest::newRow("dash without spaces") << "Spider-Man.3ds" << "Spider-Man" << "" << Kind::Game;
+    QTest::newRow("release number without a platform") << "0699 - Professor Layton.3ds"
+                                                       << "0699: Professor Layton" << "" << Kind::Game;
     QTest::newRow("dump tag word mid-title") << "Decrypted Secrets.3ds" << "Decrypted Secrets" << ""
                                              << Kind::Game;
     QTest::newRow("unbalanced group") << "Some Game (USA.3ds" << "Some Game (USA" << "" << Kind::Game;
@@ -120,6 +141,33 @@ void RomScanTest::parse()
     QCOMPARE(info.title, title);
     QCOMPARE(info.titleId, titleId);
     QCOMPARE(info.kind, kind);
+}
+
+void RomScanTest::parseOnPlatform_data()
+{
+    QTest::addColumn<QString>("platform");
+    QTest::addColumn<QString>("fileName");
+    QTest::addColumn<QString>("title");
+
+    QTest::newRow("3ds release number")
+        << "3ds" << "0699 - Professor Layton vs Phoenix Wright - Ace attorney.3ds"
+        << "Professor Layton vs Phoenix Wright: Ace attorney";
+    QTest::newRow("ds release number") << "nds" << "0123 - Pokemon Black.nds" << "Pokemon Black";
+    QTest::newRow("3ds triforce") << "3ds" << "Legend of Zelda - TriForce Heroes, The Multi5 Decrypted.3ds"
+                                  << "The Legend of Zelda: TriForce Heroes";
+    QTest::newRow("number above the sets' range") << "3ds" << "4096 - Some Game.3ds" << "4096: Some Game";
+    QTest::newRow("number is the title") << "3ds" << "1942.3ds" << "1942";
+    QTest::newRow("three digits") << "3ds" << "007 - Nightfire.3ds" << "007: Nightfire";
+    QTest::newRow("other platform keeps it") << "switch" << "2064 - Read Only Memories.nsp"
+                                             << "2064: Read Only Memories";
+}
+
+void RomScanTest::parseOnPlatform()
+{
+    QFETCH(QString, platform);
+    QFETCH(QString, fileName);
+    QFETCH(QString, title);
+    QCOMPARE(RomName::parse(fileName, platform).title, title);
 }
 
 void RomScanTest::fixCase_data()
@@ -339,6 +387,21 @@ void RomScanTest::indexMatchesRenamesByTitle()
     QCOMPARE(folder.entries.first().path, QStringLiteral("Bloodborne [CUSA00900]/eboot.bin"));
 }
 
+void RomScanTest::indexMatchesRenamesWithOldTitle()
+{
+    // Scanned before the cleanup rules: the entry keeps its old title, but a renamed file is
+    // matched on what its path cleans to, so it is still the same game.
+    const QList<RomEntry> index = {entry("0699 - Professor Layton.3ds", "3ds-0699-professor-layton",
+                                         "0699 - Professor Layton", {}, 100)};
+    QSet<QString> taken = {"3ds-0699-professor-layton"};
+    const RomIndexUpdate u = updateRomIndex("3ds", index, {"Layton/0699 - Professor Layton (USA).3ds"}, &taken, {},
+                                            {{"Layton/0699 - Professor Layton (USA).3ds", 200}});
+    QCOMPARE(u.renamed, 1);
+    QCOMPARE(u.added, 0);
+    QCOMPARE(u.entries.first().id, QStringLiteral("3ds-0699-professor-layton"));
+    QCOMPARE(u.entries.first().title, QStringLiteral("0699 - Professor Layton"));
+}
+
 void RomScanTest::indexMatchesRenamesBySize()
 {
     const QList<RomEntry> index = {
@@ -453,8 +516,8 @@ void RomScanTest::inspectPick_data()
                             << "Mario Kart 8 Deluxe"
                             << "This is an update for Mario Kart 8 Deluxe; install it in the emulator";
     QTest::newRow("dlc") << "/dl/Mario Kart 8 Deluxe - Booster Course Pass [0100152000023001][v0].nsp"
-                         << QStringList{"switch"} << "Mario Kart 8 Deluxe - Booster Course Pass"
-                         << "This is DLC for Mario Kart 8 Deluxe - Booster Course Pass; install it in the emulator";
+                         << QStringList{"switch"} << "Mario Kart 8 Deluxe: Booster Course Pass"
+                         << "This is DLC for Mario Kart 8 Deluxe: Booster Course Pass; install it in the emulator";
     // Folder games: named after the folder above the dump's layout and serials.
     QTest::newRow("ps4") << "/games/BLOODBORNE/CUSA00900/eboot.bin" << QStringList{"ps3", "ps4"} << "Bloodborne"
                          << "";

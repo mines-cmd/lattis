@@ -18,14 +18,15 @@ struct Info
     bool operator==(const Info &) const = default;
 };
 
-Info parse(const QString &fileName);
+// The platform id is optional: a few rules (leading release numbers) apply only to some platforms.
+Info parse(const QString &fileName, const QString &platform = {});
 
 QString titleId(const QString &fileName);
 
 Kind kindOf(const QString &titleId);
 
-QString cleanTitle(const QString &fileName);
-QString cleanName(const QString &name);
+QString cleanTitle(const QString &fileName, const QString &platform = {});
+QString cleanName(const QString &name, const QString &platform = {});
 
 QString fixCase(const QString &title);
 

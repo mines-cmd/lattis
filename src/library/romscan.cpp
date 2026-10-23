@@ -41,6 +41,25 @@ bool isBareTitleId(QStringView word)
     return isHexWord(word) && word.startsWith(u"01");
 }
 
+bool isReleaseNumber(QStringView word)
+{
+    return word.size() == 4 && std::all_of(word.begin(), word.end(), [](QChar c) { return c.isDigit(); })
+        && word.toInt() < 4000;
+}
+
+bool isTrailingTag(const QString &word)
+{
+    static const QStringList kWords = {QStringLiteral("decrypted"), QStringLiteral("encrypted"),
+                                       QStringLiteral("trimmed"),   QStringLiteral("usa"),
+                                       QStringLiteral("eur"),       QStringLiteral("jpn"),
+                                       QStringLiteral("pal"),       QStringLiteral("ntsc"),
+                                       QStringLiteral("cia"),       QStringLiteral("3ds")};
+    static const QRegularExpression kMulti(QStringLiteral("^multi([2-9]|1[0-3])$"));
+    static const QRegularExpression kLanguages(QStringLiteral("^[a-z]{2}([,+][a-z]{2})+$"));
+    const QString tag = QString(word).remove(u'-').toLower();
+    return kWords.contains(tag) || kMulti.match(tag).hasMatch() || kLanguages.match(tag).hasMatch();
+}
+
 QList<QStringView> words(QStringView text)
 {
     static const QString kSeparators = QStringLiteral("._-[](){}");
@@ -85,12 +104,12 @@ Kind kindOf(const QString &titleId)
     return Kind::Dlc;
 }
 
-QString cleanTitle(const QString &fileName)
+QString cleanTitle(const QString &fileName, const QString &platform)
 {
-    return cleanName(withoutExtension(fileName));
+    return cleanName(withoutExtension(fileName), platform);
 }
 
-QString cleanName(const QString &name)
+QString cleanName(const QString &name, const QString &platform)
 {
     const QString base = name.normalized(QString::NormalizationForm_C);
 
@@ -125,11 +144,16 @@ QString cleanName(const QString &name)
             continue;
         kept.append(word);
     }
-    // Dump-state tags that tools append bare (`Uprising -decrypted`). Only at the end, so a
-    // title word like "Decrypted" earlier in the name stays.
-    static const QStringList kDumpTags = {QStringLiteral("decrypted"), QStringLiteral("encrypted"),
-                                          QStringLiteral("trimmed")};
-    while (kept.size() > 1 && kDumpTags.contains(kept.last().remove(u'-').toLower()))
+    // 3DS and DS scene sets number their releases (`0699 - Professor Layton…`). Other
+    // platforms have real titles of that shape (`2064 - Read Only Memories`).
+    if ((platform == QLatin1String("3ds") || platform == QLatin1String("nds")) && kept.size() > 2
+        && kept.at(1) == QLatin1String("-") && isReleaseNumber(kept.at(0))) {
+        kept.removeFirst();
+        kept.removeFirst();
+    }
+    // Tags that tools append bare (`Uprising -decrypted`, `Heroes, The Multi5`). Only at the
+    // end, so a title word like "Decrypted" earlier in the name stays.
+    while (kept.size() > 1 && isTrailingTag(kept.last()))
         kept.removeLast();
     out = kept.join(u' ');
     qsizetype start = 0;
@@ -139,7 +163,17 @@ QString cleanName(const QString &name)
     while (end > start && isDangling(out.at(end - 1)))
         --end;
     out = out.mid(start, end - start);
-    return out.isEmpty() ? base.trimmed() : out;
+    if (out.isEmpty())
+        return base.trimmed();
+
+    // No-Intro files the article last (`Legend of Zelda, The - Tri Force Heroes`).
+    static const QRegularExpression kArticle(QStringLiteral("^(.+?),\\s+(The|An|A)(\\s+-\\s+.*|\\s*)$"));
+    if (const QRegularExpressionMatch m = kArticle.match(out); m.hasMatch())
+        out = m.captured(2) + u' ' + m.captured(1) + m.captured(3);
+    // Stores write a subtitle after a colon. Only the first separator: later ones may be part of the name.
+    if (const qsizetype dash = out.indexOf(QLatin1String(" - ")); dash > 0)
+        out.replace(dash, 3, QLatin1String(": "));
+    return out;
 }
 
 namespace {
@@ -191,10 +225,10 @@ QString fixCase(const QString &title)
     return out;
 }
 
-Info parse(const QString &fileName)
+Info parse(const QString &fileName, const QString &platform)
 {
     Info info;
-    info.title = fixCase(cleanTitle(fileName));
+    info.title = fixCase(cleanTitle(fileName, platform));
     info.titleId = titleId(fileName);
     info.kind = kindOf(info.titleId);
     return info;
@@ -250,10 +284,10 @@ bool isFolderGame(const QString &path, const QSet<QString> &folderGameFiles)
     return path.contains(u'/') && folderGameFiles.contains(QFileInfo(path).fileName().toLower());
 }
 
-RomName::Info infoOf(const QString &path, const QSet<QString> &folderGameFiles)
+RomName::Info infoOf(const QString &path, const QSet<QString> &folderGameFiles, const QString &platform)
 {
     return isFolderGame(path, folderGameFiles) ? RomName::parseFolder(path.section(u'/', 0, 0))
-                                               : RomName::parse(QFileInfo(path).fileName());
+                                               : RomName::parse(QFileInfo(path).fileName(), platform);
 }
 }
 
@@ -306,7 +340,7 @@ RomPick inspectRomPick(const QString &path, const QList<Platform> &platforms, co
         return out;
     }
 
-    out.info = RomName::parse(file.fileName());
+    out.info = RomName::parse(file.fileName(), out.platforms.size() == 1 ? out.platforms.first() : QString());
     if (out.info.kind == RomName::Kind::Update)
         out.problem = QStringLiteral("This is an update for %1; install it in the emulator").arg(out.info.title);
     else if (out.info.kind == RomName::Kind::Dlc)
@@ -352,7 +386,7 @@ RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &in
     QList<NewFile> newFiles;
     for (const QString &path : found) {
         if (!indexed.contains(path))
-            newFiles.append({path, infoOf(path, folderGameFiles), sizes.value(path)});
+            newFiles.append({path, infoOf(path, folderGameFiles, platform), sizes.value(path)});
     }
     std::sort(newFiles.begin(), newFiles.end(), [](const NewFile &a, const NewFile &b) { return a.path < b.path; });
     newFiles.removeIf([&](const NewFile &f) {
@@ -412,7 +446,7 @@ RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &in
             takeOver(entries.first(), file);
         }
     };
-    matchBy([&](const QString &path, qint64) { return infoOf(path, folderGameFiles).title.toCaseFolded(); });
+    matchBy([&](const QString &path, qint64) { return infoOf(path, folderGameFiles, platform).title.toCaseFolded(); });
     matchBy([](const QString &path, qint64 size) {
         return size > 0 ? QStringLiteral("%1 %2").arg(size).arg(QFileInfo(path).suffix().toLower()) : QString();
     });
