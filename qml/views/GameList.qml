@@ -1050,31 +1050,39 @@ Rectangle {
                             title: row.title
                             hue: row.hue
                         }
-                        Label {
-                            id: titleLabel
+                        RowLayout {
                             Layout.fillWidth: true
-                            text: row.title
-                            elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
-                                 : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
-                            color: Theme.list.runningTitle && row.running ? Theme.list.runningColor
-                                 : Theme.list.showUpdateIcon && row.updating ? Theme.list.updateIconColor : Theme.list.text
-                            font.bold: row.current && Theme.list.selectedBold
-
-                            ToolTip.visible: truncated && mouse.containsMouse
-                            ToolTip.delay: Theme.tooltip.delay
-                            ToolTip.text: row.title
+                            spacing: 6
+                            Layout.preferredWidth: 0
+                            Label {
+                                id: titleLabel
+                                Layout.maximumWidth: Math.max(0, parent.width - (runningLabel.visible ? runningLabel.implicitWidth + parent.spacing : 0))
+                                text: row.title
+                                elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
+                                     : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
+                                color: Theme.list.runningTitle && row.running ? Theme.list.runningColor
+                                     : Theme.list.showUpdateIcon && row.updating ? Theme.list.updateIconColor : Theme.list.text
+                                font.bold: row.current && Theme.list.selectedBold
+    
+                                ToolTip.visible: truncated && mouse.containsMouse
+                                ToolTip.delay: Theme.tooltip.delay
+                                ToolTip.text: row.title
+                            }
+                            Label {
+                                id: runningLabel
+                                visible: row.running && Theme.list.runningLabel !== ""
+                                text: "· " + Theme.list.runningLabel
+                                color: Theme.list.runningColor
+                                font.bold: row.current && Theme.list.selectedBold
+                                Layout.minimumWidth: implicitWidth
+                            }
+                            Item { Layout.fillWidth: true }
                         }
                         Icon {
                             visible: Theme.list.showUpdateIcon && row.updating
                             path: Icons.arrowDown
                             size: Theme.list.sortValueFontSize + 2
                             color: Theme.list.updateIconColor
-                        }
-                        Label {
-                            visible: row.running && Theme.list.runningLabel !== ""
-                            text: Theme.list.runningLabel
-                            color: Theme.list.runningColor
-                            font.pixelSize: Theme.list.sortValueFontSize
                         }
                         Icon {
                             visible: row.hidden
