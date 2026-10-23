@@ -15,5 +15,6 @@ background_end = "#49b018"
 background = "#050a05"
 
 [list]
+running_color = "#78b922"
 row_hover = "#9baec42a"
 row_selected = "#97a8bc4b"

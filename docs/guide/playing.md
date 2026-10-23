@@ -14,6 +14,8 @@ When a game won't start, its emulator's or program's output is in `~/.cache/latt
 
 ## While a game runs
 
+The game's row in the list shows a green "Running" label. Its text and color are `running_label` and `running_color` in `[list]`; an empty label hides it. The game's title takes the same color; turn `running_title` off to keep it as it is.
+
 The Launch button says "Close" ("X STOP" in the Steam style), and launching again does nothing. Click it and it asks first, then ends the game at once. Prefer closing the game itself, since stopping an emulator this way loses unsaved progress.
 
 On Settings → General, **While a game runs** chooses whether the launcher stays open or minimizes and comes back when the game ends. Some desktops (Hyprland, sway) can't minimize, so it stays open there.

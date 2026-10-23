@@ -31,6 +31,7 @@ install_background = "#3a9bed"
 install_background_end = "#235ecf"
 
 [list]
+running_color = "#4fc82f"
 background = "#24282f"
 
 [controls]

@@ -981,6 +981,7 @@ Rectangle {
                     }
                 }
 
+                readonly property bool running: !isHeader && GameRunner.running.includes(gameId)
                 readonly property bool current: ListView.isCurrentItem
                 readonly property bool selected: !isHeader && root.selection[gameId] === true
                 readonly property int headerGap: isHeader && index > 0 ? Theme.list.groupGap : 0
@@ -1055,7 +1056,8 @@ Rectangle {
                             text: row.title
                             elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
                                  : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
-                            color: Theme.list.showUpdateIcon && row.updating ? Theme.list.updateIconColor : Theme.list.text
+                            color: Theme.list.runningTitle && row.running ? Theme.list.runningColor
+                                 : Theme.list.showUpdateIcon && row.updating ? Theme.list.updateIconColor : Theme.list.text
                             font.bold: row.current && Theme.list.selectedBold
 
                             ToolTip.visible: truncated && mouse.containsMouse
@@ -1067,6 +1069,12 @@ Rectangle {
                             path: Icons.arrowDown
                             size: Theme.list.sortValueFontSize + 2
                             color: Theme.list.updateIconColor
+                        }
+                        Label {
+                            visible: row.running && Theme.list.runningLabel !== ""
+                            text: Theme.list.runningLabel
+                            color: Theme.list.runningColor
+                            font.pixelSize: Theme.list.sortValueFontSize
                         }
                         Icon {
                             visible: row.hidden
