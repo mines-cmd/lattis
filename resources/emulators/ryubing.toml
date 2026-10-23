@@ -7,9 +7,7 @@ flatpak = "io.github.ryubing.Ryujinx"
 executables = ["Ryujinx", "ryujinx"]
 # Release AppImages are named like ryujinx-1.3.3-x64.AppImage.
 appimage = "ryujinx*.AppImage"
-# Not checked against the project's releases (its server was unreachable, 2026-10-22).
-release = "gitlab:git.ryujinx.app/ryubing/ryujinx"
-release_asset = "ryujinx-*-x64.AppImage"
+# No release source: its GitLab (git.ryujinx.app) was taken down, 2026-10. Install offers the Flatpak only.
 command = ["{exe}", "{args}", "{rom}"]
 extensions = ["nsp", "xci", "nro", "nso", "nca"]
 # Its data is in ~/.config/Ryujinx, or in a `portable` folder next to the program (the

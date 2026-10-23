@@ -251,7 +251,7 @@ ColumnLayout {
             readonly property bool noFlatpak: head.info?.noFlatpak ?? false
             visible: row.emulator.preset && (noFlatpak || !head.routes.includes("appimage"))
             Layout.fillWidth: true
-            text: noFlatpak ? qsTr("Flatpak isn't installed on this system") : qsTr("No official AppImage")
+            text: noFlatpak ? qsTr("Flatpak isn't installed on this system") : qsTr("No AppImage to install from here")
             color: Theme.controls.descriptionColor
             font.pixelSize: Theme.controls.descriptionFontSize
         }

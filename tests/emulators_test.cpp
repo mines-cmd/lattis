@@ -113,7 +113,8 @@ void EmulatorsTest::presetsAreValid()
         QVERIFY(d.preset);
         QVERIFY(d.userKeys.isEmpty());
         QVERIFY2(!d.platforms.isEmpty() && !d.flatpak.isEmpty() && !d.appimage.isEmpty(), qPrintable(d.id));
-        QVERIFY2(!d.release.isEmpty(), qPrintable(d.id));
+        // Ryubing's release server was taken down: Flatpak only.
+        QVERIFY2(d.release.isEmpty() == (d.id == QStringLiteral("ryubing")), qPrintable(d.id));
         // Dolphin's only AppImage is a community build; every other preset is the project's own.
         QCOMPARE(d.releaseUnofficial.isEmpty(), d.id != QStringLiteral("dolphin"));
         QCOMPARE(d.releaseAsset.isEmpty(), d.release.isEmpty());
