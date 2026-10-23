@@ -37,7 +37,7 @@ An emulator Lattis installed shows its route and version in the row, and its car
 
 If the `flatpak` command isn't on your system, only the AppImage is offered.
 
-The setup guide's Emulators step offers the same install. A platform whose emulator is missing says "Needs <emulator>"; click it to open the same tiles, progress and error boxes as here. You can go on to the next step while an install runs.
+The setup guide's Emulators step offers the same install. Its **Install an emulator** list has a row for each platform whose emulator is missing, tagged **Install**; open it for the same tiles, progress and error boxes as here, and for **Already have it somewhere else?** to choose the program yourself. Once the emulator is found, the platform moves up to **Ready**, where you add its ROM folders. You can go on to the next step while an install runs.
 
 ### A platform's emulators
 
@@ -94,7 +94,7 @@ On Settings → Platforms, **Add folder** under a platform adds a ROM folder. It
 
 ### Finding all your folders at once
 
-If your ROMs are sorted into one folder per platform, the setup guide's **Find from one folder** matches the subfolders to platforms by name (`switch`, `3ds`, `gamecube`, `ps2`…) and adds them all. It lists the folders it couldn't match, to add by hand.
+If your ROMs are sorted into one folder per platform, the setup guide's **Find from one folder**, beside its Ready heading, matches the subfolders to platforms by name (`switch`, `3ds`, `gamecube`, `ps2`…) and adds them all. It lists the folders it couldn't match, to add by hand.
 
 ## Removing a game
 
