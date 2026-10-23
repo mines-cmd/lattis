@@ -40,7 +40,7 @@ A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't
 
 `GameRunner` has two separate session maps: `m_sessions` for ROM and Linux games (each holds a `DetachedProcess`), and `m_steamSessions` for Steam and Proton games (each holds a `SteamSession`). The union of their keys is `running()`, the QML property.
 
-`forceClose()` kills with SIGKILL, so the usual exit handling follows: a ROM or Linux game's session is recorded as any other. `DetachedProcess::killSession()` kills every process in the session (it was created with `setsid`); `killTree()` kills a process and its descendants, for Steam games, where the launch process is Steam's, not the game's own session.
+`forceClose()` kills with SIGKILL, so the usual exit handling follows: a ROM or Linux game's session is recorded as any other. `DetachedProcess::killSession()` kills every process in the session (it was created with `setsid`); `killTree()` kills a process and its descendants, for Steam games, where the launch process is Steam's, not the game's own session. A Steam game whose process hasn't appeared yet has nothing to kill, so `forceClose()` drops its session instead: Steam may never start it (a game borrowed by a family member opens its store page instead), and the button would otherwise stay on Close for the whole `kSteamStartSeconds`.
 
 When a non-Steam session ends, the runner measures its length. Sessions shorter than `minSessionSeconds` (default 30, configurable in `[launch]`) are too short to count — a crash on startup shouldn't affect play time or last-played date. Longer sessions add their minutes to the game file's `play_minutes` and update `last_played`. `Library::recordPlaySession()` also appends the session to the game's play history (`library/history/<id>.toml`), in the same call, so the history holds exactly the sessions that count. Steam and Proton games record nothing here: their history is made from Steam's play time totals (see [library.md](library.md#play-history)).
 
@@ -94,7 +94,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `openDataFolder()` | `string` | Open the data dir in the file manager |
 | `openFile(path)` | `string` | Open a file in its default app; a terminal editor gets a terminal window. The path on failure |
 | `uninstall(gameId)` | `string` | Uninstall a Steam game through Steam |
-| `forceClose(gameId)` | `string` | End a running game with SIGKILL: its whole session (ROM and Linux games), or the process tree under Steam's launch process (Steam and Proton games). Returns a message if a Steam game has no process yet |
+| `forceClose(gameId)` | `string` | End a running game with SIGKILL: its whole session (ROM and Linux games), or the process tree under Steam's launch process (Steam and Proton games). A Steam game with no process yet stops being waited for; `""` or a toast |
 | `uninstallProton(gameId, files, prefix, shortcut, action, permanent)` | `map` | Uninstall a Proton or Linux game; `{error}` or `{trashless}` |
 | `missingEmulator(gameId)` | `string` | Emulator ID to install for a ROM game with none installed, or `""` |
 | `closeSteamAndApply()` | `string` | Close Steam, apply queued edits, restart it; toast or `""` |

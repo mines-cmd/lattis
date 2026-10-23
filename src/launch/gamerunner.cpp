@@ -631,8 +631,18 @@ QString GameRunner::forceClose(const QString &gameId)
     }
     if (const auto session = m_steamSessions.constFind(gameId); session != m_steamSessions.constEnd()) {
         const qint64 pid = SteamLocate::gamePid(session->steam.reaperId);
-        if (pid <= 0)
-            return tr("The game hasn't started yet");
+        // Steam may never start it (borrowed by a family member, an update, a dialog), so
+        // closing a game that hasn't appeared stops waiting for it instead.
+        if (pid <= 0) {
+            qCInfo(lcLaunch).noquote() << QStringLiteral("stopped waiting for %1").arg(gameId);
+            if (session->seen) {
+                endSteamSession(gameId);
+            } else {
+                m_steamSessions.remove(gameId);
+                emit runningChanged();
+            }
+            return {};
+        }
         qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1 (pid %2)").arg(gameId).arg(pid);
         DetachedProcess::killTree(pid);
     }
