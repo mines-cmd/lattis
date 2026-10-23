@@ -2988,6 +2988,64 @@ QString Library::removeGame(const QString &id, bool wipe)
     return done({});
 }
 
+bool Library::readsNames(const QString &platform) const
+{
+    return RomInfoReader::readsPlatform(platform);
+}
+
+void Library::updateRomNames(const QString &platformId)
+{
+    if (m_updatingNames)
+        return;
+    const auto platform = std::find_if(m_allPlatforms.cbegin(), m_allPlatforms.cend(),
+                                       [&](const Platform &p) { return p.id == platformId; });
+    if (platform == m_allPlatforms.cend())
+        return;
+
+    const LibrarySnapshot &snapshot = m_store.snapshot();
+    // A title in a game file is the user's own: only the scanner's index titles are touched.
+    QSet<QString> edited;
+    for (auto it = snapshot.content.games.cbegin(); it != snapshot.content.games.cend(); ++it) {
+        if (!it->title.isEmpty())
+            edited.insert(it.key());
+    }
+    const QList<RomNameJob> jobs = romNameJobs(*platform, m_emulators, snapshot.content.roms.value(platformId),
+                                               snapshot.romFiles.value(platformId), edited);
+    if (jobs.isEmpty()) {
+        emit undoOffered(0, tr("No games to read names from"));
+        return;
+    }
+
+    m_updatingNames = true;
+    emit updatingNamesChanged();
+    auto *watcher = new QFutureWatcher<QList<RomNameRead>>(this);
+    connect(watcher, &QFutureWatcher<QList<RomNameRead>>::finished, this, [this, watcher, platformId] {
+        const QList<RomNameRead> reads = watcher->result();
+        watcher->deleteLater();
+        m_updatingNames = false;
+        emit updatingNamesChanged();
+
+        const RomNamesUpdate update = applyRomNames(m_store.snapshot().content.roms.value(platformId), reads);
+        if (update.renamed == 0) {
+            // The titles were right already; the entries are now known to come from the files.
+            if (update.changed)
+                m_store.setRomEntries(platformId, update.entries);
+            emit undoOffered(0, tr("No names changed"));
+            return;
+        }
+        m_undo.start();
+        m_undo.keepCopy(QStringLiteral("library/roms/%1.toml").arg(platformId));
+        if (const QString error = m_store.setRomEntries(platformId, update.entries); !error.isEmpty()) {
+            m_undo.discard();
+            emit undoOffered(0, error);
+            return;
+        }
+        commitUndo(update.renamed == 1 ? tr("1 game renamed from its file")
+                                       : tr("%1 games renamed from their files").arg(update.renamed));
+    });
+    watcher->setFuture(QtConcurrent::run(readRomNames, platformId, jobs));
+}
+
 QString Library::unhideGame(const QString &id)
 {
     return m_store.setGameValues(id, {{QStringLiteral("hidden"), false}});

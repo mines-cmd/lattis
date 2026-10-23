@@ -58,6 +58,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(QVariantList emulators READ emulatorList NOTIFY emulatorsChanged)
     Q_PROPERTY(QVariantList platformSettings READ platformSettings NOTIFY platformSettingsChanged)
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
+    Q_PROPERTY(bool updatingNames READ updatingNames NOTIFY updatingNamesChanged)
     Q_PROPERTY(QVariantList tags READ tags NOTIFY tagsChanged)
     Q_PROPERTY(QStringList missingDefaultTags READ missingDefaultTags NOTIFY tagsChanged)
     Q_PROPERTY(QVariantList hiddenGames READ hiddenGames NOTIFY hiddenGamesChanged)
@@ -193,6 +194,10 @@ public:
 
     Q_INVOKABLE void scanNow() { m_store.scanRoms(); }
 
+    bool updatingNames() const { return m_updatingNames; }
+    Q_INVOKABLE bool readsNames(const QString &platform) const;
+    Q_INVOKABLE void updateRomNames(const QString &platform);
+
     Q_INVOKABLE void copyHeroesNear(int row);
 
     QVariantMap steam() const;
@@ -274,6 +279,7 @@ signals:
     void emulatorsChanged();
     void platformSettingsChanged();
     void scanningChanged();
+    void updatingNamesChanged();
     void setupPendingChanged();
     void tagsChanged();
     void hiddenGamesChanged();
@@ -410,6 +416,7 @@ private:
     QString m_heroCopyId;
     QString m_heroCopyStem;
     QString m_heroFocus;
+    bool m_updatingNames = false;
     bool m_heroCopiesStarted = false;
     bool m_heroFailureLogged = false;
 };

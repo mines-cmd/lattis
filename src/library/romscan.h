@@ -1,11 +1,12 @@
 #pragma once
 
 #include "libraryfiles.h"
+#include "rominfo.h"
 
 #include <QSet>
 #include <QString>
 
-// See docs/code/library.md. Only file names are used; ROM contents are never read.
+// See docs/code/library.md. Titles come from file names; the scan also reads small headers of new files (rominfo.h).
 namespace RomName {
 enum class Kind { Game, Update, Dlc };
 
@@ -54,11 +55,43 @@ struct RomIndexUpdate
     int updates = 0;
     int dlc = 0;
     int dropped = 0;
+    int named = 0;
 };
 
 RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &index, const QStringList &found,
                               QSet<QString> *taken, const QSet<QString> &folderGameFiles = {},
-                              const QHash<QString, qint64> &sizes = {});
+                              const QHash<QString, qint64> &sizes = {},
+                              const QHash<QString, RomInfo> &fromFiles = {});
+
+// The "Update names from the files" action: which games to read, what they said, what changes.
+struct RomNameJob
+{
+    QString path;
+    QString source;
+    bool folder = false;
+};
+
+struct RomNameRead
+{
+    QString path;
+    RomInfo info;
+};
+
+struct RomNamesUpdate
+{
+    QList<RomEntry> entries;
+    int renamed = 0;
+    bool changed = false;
+};
+
+QList<RomNameJob> romNameJobs(const Platform &platform, const QList<EmulatorDef> &emulators,
+                              const QList<RomEntry> &index, const QHash<QString, QString> &files,
+                              const QSet<QString> &editedIds);
+
+// Opens files: keep it off the main thread.
+QList<RomNameRead> readRomNames(const QString &platform, const QList<RomNameJob> &jobs);
+
+RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRead> &reads);
 
 struct RomScanResult
 {

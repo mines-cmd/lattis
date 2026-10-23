@@ -1,3 +1,4 @@
+#include "rombytes.h"
 #include "romscan.h"
 
 #include <QDir>
@@ -34,6 +35,9 @@ private slots:
     void indexUpdatesSizes();
     void scanFolders();
     void scanFolderGames();
+    void indexNamesNewFilesFromTheirContents();
+    void updateNamesReadsOnlyTheScannersTitles();
+    void scanNamesNewGamesFromFilesOnce();
     void scanRecordsSizes();
     void scanSkipsClaimedFiles();
     void inspectPick_data();
@@ -234,6 +238,14 @@ RomEntry entry(const QString &path, const QString &id, const QString &title, con
     return {path, id, title, titleId, size};
 }
 
+// What a scan writes for a file it named from the file name.
+RomEntry named(const QString &path, const QString &id, const QString &title, const QString &titleId = {})
+{
+    RomEntry e = entry(path, id, title, titleId);
+    e.titleSource = QStringLiteral("filename");
+    return e;
+}
+
 // A file of `size` bytes.
 bool touch(const QString &path, qint64 size = 0)
 {
@@ -270,10 +282,10 @@ void RomScanTest::indexAddsNewFiles()
     QCOMPARE(u.addedIds, (QStringList{"switch-tetris-2", "switch-metroid-dread", "switch-tetris-3"}));
     // Sorted by path, so ids are handed out the same way every time.
     QCOMPARE(u.entries,
-             (QList<RomEntry>{entry("Homebrew/Tetris.nro", "switch-tetris-2", "Tetris"),
-                              entry("Metroid Dread [010093801237C000][v0].nsp", "switch-metroid-dread", "Metroid Dread",
+             (QList<RomEntry>{named("Homebrew/Tetris.nro", "switch-tetris-2", "Tetris"),
+                              named("Metroid Dread [010093801237C000][v0].nsp", "switch-metroid-dread", "Metroid Dread",
                                     "010093801237C000"),
-                              entry("Tetris.nro", "switch-tetris-3", "Tetris")}));
+                              named("Tetris.nro", "switch-tetris-3", "Tetris")}));
     QVERIFY(taken.contains("switch-tetris-3"));
 }
 
@@ -320,7 +332,7 @@ void RomScanTest::indexFixesCaseOfNewEntries()
     const RomIndexUpdate u =
         updateRomIndex("switch", index, {"METROID DREAD.nsp", "SUPER.MARIO.ODYSSEY.nsp"}, &taken);
     QCOMPARE(u.entries, (QList<RomEntry>{entry("METROID DREAD.nsp", "switch-metroid-dread", "METROID DREAD"),
-                                         entry("SUPER.MARIO.ODYSSEY.nsp", "switch-super-mario-odyssey",
+                                         named("SUPER.MARIO.ODYSSEY.nsp", "switch-super-mario-odyssey",
                                                "Super Mario Odyssey")}));
 
     // Folder games too.
@@ -495,7 +507,7 @@ void RomScanTest::scanSkipsClaimedFiles()
     const RomScanResult r = scanRomFolders({switchPlatform({"roms/switch"})}, presets(), {}, {}, data,
                                            dir.filePath("home"), {data + "/roms/switch/Celeste.nsp"});
     QCOMPARE(r.files.value("switch").keys(), QStringList{"Tetris.nro"});
-    QCOMPARE(r.indexes.value("switch"), (QList<RomEntry>{entry("Tetris.nro", "switch-tetris", "Tetris")}));
+    QCOMPARE(r.indexes.value("switch"), (QList<RomEntry>{named("Tetris.nro", "switch-tetris", "Tetris")}));
 }
 
 void RomScanTest::inspectPick_data()
@@ -569,6 +581,103 @@ void RomScanTest::scanFolderGames()
     QCOMPARE(written.at(0).title, QStringLiteral("Demon's Souls"));
     QCOMPARE(written.at(0).id, QStringLiteral("ps3-demon-s-souls"));
     QCOMPARE(written.at(1).title, QStringLiteral("God of War III"));
+}
+
+void RomScanTest::indexNamesNewFilesFromTheirContents()
+{
+    QSet<QString> taken;
+    const QHash<QString, RomInfo> inside = {
+        {"0699 - Professor Layton.3ds", {"PROFESSOR LAYTON VS. PHOENIX WRIGHT: ACE ATTORNEY", "0004000000123400"}}};
+    const RomIndexUpdate u = updateRomIndex("3ds", {}, {"0699 - Professor Layton.3ds", "Other.3ds"}, &taken, {}, {}, inside);
+    QCOMPARE(u.added, 2);
+    QCOMPARE(u.named, 1);
+    QCOMPARE(u.entries.at(0).path, QStringLiteral("0699 - Professor Layton.3ds"));
+    QCOMPARE(u.entries.at(0).title, QStringLiteral("Professor Layton Vs. Phoenix Wright: Ace Attorney"));
+    QCOMPARE(u.entries.at(0).titleId, QStringLiteral("0004000000123400"));
+    QCOMPARE(u.entries.at(0).titleSource, QStringLiteral("file"));
+    QCOMPARE(u.entries.at(1).title, QStringLiteral("Other"));
+    QCOMPARE(u.entries.at(1).titleSource, QStringLiteral("filename"));
+
+    // The file name's own title ID wins, and a renamed file still finds its entry by title.
+    const QList<RomEntry> index = {entry("Old name.3ds", "3ds-game", "Game", "0004000000AAAAAA")};
+    const RomIndexUpdate renamed = updateRomIndex("3ds", index, {"New name.3ds"}, &taken, {}, {},
+                                                  {{"New name.3ds", {"Game", "0004000000AAAAAA"}}});
+    QCOMPARE(renamed.renamed, 1);
+    QCOMPARE(renamed.added, 0);
+    QCOMPARE(renamed.entries.first().id, QStringLiteral("3ds-game"));
+}
+
+void RomScanTest::updateNamesReadsOnlyTheScannersTitles()
+{
+    QTemporaryDir dir;
+    const auto writePbp = [&](const QString &name, const QByteArray &title) {
+        QFile f(dir.filePath(name));
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(RomBytes::pbp(RomBytes::sfo(title, "ULUS10336")));
+    };
+    writePbp("old.pbp", "Real Name");
+    writePbp("edited.pbp", "Edited Real");
+    writePbp("done.pbp", "Done Real");
+    writePbp("same.pbp", "Same");
+    QVERIFY(touch(dir.filePath("gone.pbp")));
+
+    RomEntry done = entry("done.pbp", "psp-done", "Done", {}, 0);
+    done.titleSource = QStringLiteral("file");
+    const QList<RomEntry> index = {entry("old.pbp", "psp-old", "old"), entry("edited.pbp", "psp-edited", "edited"),
+                                   done, entry("same.pbp", "psp-same", "Same"),
+                                   entry("missing.pbp", "psp-missing", "missing"), entry("notrom.txt", "psp-txt", "txt")};
+    const QHash<QString, QString> files = {{"old.pbp", dir.path()},  {"edited.pbp", dir.path()},
+                                           {"done.pbp", dir.path()}, {"same.pbp", dir.path()},
+                                           {"notrom.txt", dir.path()}};
+    const Platform psp = {"psp", "PSP", {}, {"ppsspp"}, {dir.path()}, 3};
+
+    const QList<RomNameJob> jobs = romNameJobs(psp, presets(), index, files, {"psp-edited"});
+    QStringList paths;
+    for (const RomNameJob &job : jobs)
+        paths.append(job.path);
+    QCOMPARE(paths, (QStringList{"old.pbp", "same.pbp"}));
+
+    const RomNamesUpdate update = applyRomNames(index, readRomNames("psp", jobs));
+    QCOMPARE(update.renamed, 1);
+    QVERIFY(update.changed);
+    QCOMPARE(update.entries.at(0).title, QStringLiteral("Real Name"));
+    QCOMPARE(update.entries.at(0).titleSource, QStringLiteral("file"));
+    QCOMPARE(update.entries.at(0).titleId, QStringLiteral("ULUS10336"));
+    QCOMPARE(update.entries.at(1), index.at(1));
+    QCOMPARE(update.entries.at(3).title, QStringLiteral("Same"));
+    QCOMPARE(update.entries.at(3).titleSource, QStringLiteral("file"));
+
+    // Nothing left to read the second time.
+    QVERIFY(romNameJobs(psp, presets(), update.entries, files, {"psp-edited"}).size() == 0);
+}
+
+void RomScanTest::scanNamesNewGamesFromFilesOnce()
+{
+    QTemporaryDir dir;
+    const QString data = dir.filePath("data");
+    const QString file = data + "/roms/psp/Some Game.pbp";
+    const auto writePbp = [&](const QByteArray &title) {
+        QDir().mkpath(QFileInfo(file).absolutePath());
+        QFile f(file);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(RomBytes::pbp(RomBytes::sfo(title, "ULUS10336")));
+    };
+    writePbp("Crisis Core");
+
+    const Platform psp = {"psp", "PSP", {}, {"ppsspp"}, {"roms/psp"}, 3};
+    RomScanResult r = scanRomFolders({psp}, presets(), {}, {}, data, dir.filePath("home"));
+    QCOMPARE(r.indexes.value("psp").size(), 1);
+    QCOMPARE(r.indexes.value("psp").first().title, QStringLiteral("Crisis Core"));
+    QCOMPARE(r.indexes.value("psp").first().titleId, QStringLiteral("ULUS10336"));
+    QCOMPARE(r.indexes.value("psp").first().titleSource, QStringLiteral("file"));
+    QVERIFY(anyContains(r.log, "psp: named 1 new game from their files"));
+
+    // A file already in the index is never opened again, even when its contents change.
+    writePbp("Other Title");
+    const QMap<QString, QList<RomEntry>> index = {{"psp", r.indexes.value("psp")}};
+    r = scanRomFolders({psp}, presets(), index, {}, data, dir.filePath("home"));
+    QVERIFY(!r.indexes.contains("psp"));
+    QVERIFY(!anyContains(r.log, "from their files"));
 }
 
 void RomScanTest::scanRecordsSizes()

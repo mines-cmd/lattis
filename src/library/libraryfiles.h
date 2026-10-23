@@ -36,6 +36,8 @@ struct RomEntry
     QString titleId;
     // 0 = unknown. Kept while the file is gone, so a renamed file can be recognized by it.
     qint64 size = 0;
+    // Where the title came from: "file" (the ROM says so), "filename"; empty in an index from before this existed.
+    QString titleSource;
 
     bool operator==(const RomEntry &) const = default;
 };

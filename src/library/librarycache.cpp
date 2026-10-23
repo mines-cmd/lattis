@@ -77,7 +77,7 @@ static QDataStream &operator>>(QDataStream &s, IndexEntry &e)
 
 static QDataStream &operator<<(QDataStream &s, const RomEntry &e)
 {
-    return s << e.path << e.id << e.title << e.titleId << e.size;
+    return s << e.path << e.id << e.title << e.titleId << e.size << e.titleSource;
 }
 
 static QDataStream &operator<<(QDataStream &s, const RomFile &f)
@@ -92,7 +92,7 @@ static QDataStream &operator>>(QDataStream &s, RomFile &f)
 
 static QDataStream &operator>>(QDataStream &s, RomEntry &e)
 {
-    return s >> e.path >> e.id >> e.title >> e.titleId >> e.size;
+    return s >> e.path >> e.id >> e.title >> e.titleId >> e.size >> e.titleSource;
 }
 
 static QDataStream &operator<<(QDataStream &s, const EmulatorEntry &e)

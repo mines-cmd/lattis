@@ -155,6 +155,7 @@ public:
     bool inIndex(const QString &id) const;
     QString gameWithRom(const QString &romPath) const;
     QString relocateRom(const QString &id, const QString &romPath);
+    QString setRomEntries(const QString &platform, const QList<RomEntry> &entries);
     void reloadFiles(const QStringList &relatives);
     QString removeGameFile(const QString &id, bool withArt);
     QString removeProtonGame(const QString &id, bool fromSteam = true);

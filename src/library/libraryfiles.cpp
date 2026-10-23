@@ -345,7 +345,7 @@ Parsed<QList<RomEntry>> parseRomIndex(const QByteArray &bytes, const QString &di
     out.ok = true;
 
     const QStringList known = {QStringLiteral("id"), QStringLiteral("title"), QStringLiteral("title_id"),
-                               QStringLiteral("size")};
+                               QStringLiteral("title_source"), QStringLiteral("size")};
     QSet<QString> ids;
     for (auto &&[k, node] : root) {
         const QString key = toQString(k.str());
@@ -382,6 +382,8 @@ Parsed<QList<RomEntry>> parseRomIndex(const QByteArray &bytes, const QString &di
                     entry.id = toQString(s->get());
                 } else if (field == QLatin1String("title")) {
                     entry.title = toQString(s->get());
+                } else if (field == QLatin1String("title_source")) {
+                    entry.titleSource = toQString(s->get());
                 } else {
                     entry.titleId = toQString(s->get()).toUpper();
                 }
@@ -417,6 +419,8 @@ QString formatRomIndex(const QString &platformName, QList<RomEntry> entries)
         out += QStringLiteral("%1 = { id = %2, title = %3").arg(tomlString(e.path), tomlString(e.id), tomlString(e.title));
         if (!e.titleId.isEmpty())
             out += QStringLiteral(", title_id = %1").arg(tomlString(e.titleId));
+        if (!e.titleSource.isEmpty())
+            out += QStringLiteral(", title_source = %1").arg(tomlString(e.titleSource));
         if (e.size > 0)
             out += QStringLiteral(", size = %1").arg(e.size);
         out += QStringLiteral(" }\n");

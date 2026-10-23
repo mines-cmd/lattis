@@ -1,4 +1,5 @@
 #include "librarytestbase.h"
+#include "rombytes.h"
 
 // The library tests on the ROM folder scan.
 class LibraryRomTest : public LibraryTestBase
@@ -14,6 +15,7 @@ private slots:
     void locateRomMergesTheDuplicate();
     void locateRomOutsideRomFolders();
     void favoriteOnRomOnlyGameCreatesFile();
+    void updateNamesRenamesFromFilesAndUndoes();
 };
 
 void LibraryRomTest::romScanAddsNewRoms()
@@ -24,7 +26,7 @@ void LibraryRomTest::romScanAddsNewRoms()
 
     // The unindexed ROM is added; the update and the DLC aren't; everything else stays.
     const QByteArray after = readFile(romIndexPath("switch"));
-    QVERIFY(after.contains("\n\"Homebrew/Tetris.nro\" = { id = \"switch-tetris\", title = \"Tetris\" }\n"));
+    QVERIFY(after.contains("\n\"Homebrew/Tetris.nro\" = { id = \"switch-tetris\", title = \"Tetris\", title_source = \"filename\" }\n"));
     QVERIFY(!after.contains("22800"));
     QVERIFY(!after.contains("Booster"));
     for (const QByteArray &line : before.split('\n')) {
@@ -220,6 +222,45 @@ void LibraryRomTest::favoriteOnRomOnlyGameCreatesFile()
     const QVariantMap tetris = library->gameAt(library->rowOfGame(QStringLiteral("switch-tetris")));
     QVERIFY(tetris.value("favorite").toBool());
     QCOMPARE(tetris.value("title").toString(), QStringLiteral("Tetris"));
+}
+
+void LibraryRomTest::updateNamesRenamesFromFilesAndUndoes()
+{
+    // An index entry from before the scan read names, for a file that has one; no game file of its own.
+    const QString id = QStringLiteral("3ds-layton");
+    writeFile(m_data + QStringLiteral("/roms/3ds/Layton.3ds"),
+              RomBytes::ncsd(RomBytes::ncch(
+                  RomBytes::smdh(QStringLiteral("Professor Layton vs. Phoenix Wright\nAce Attorney")), 0x0004000000118D00)));
+    writeFile(romIndexPath("3ds"), readFile(romIndexPath("3ds")) + "\"Layton.3ds\" = { id = \"3ds-layton\", title = \"layton\" }\n");
+    auto library = openLibrary();
+    const QByteArray before = readFile(romIndexPath("3ds"));
+    QCOMPARE(library->gameAt(library->rowOfGame(id)).value("title").toString(), QStringLiteral("layton"));
+    QVERIFY(library->readsNames(QStringLiteral("3ds")));
+    QVERIFY(!library->readsNames(QStringLiteral("switch")));
+
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    library->updateRomNames(QStringLiteral("3ds"));
+    QVERIFY(library->updatingNames());
+    QTRY_COMPARE(offered.count(), 1);
+    QVERIFY(!library->updatingNames());
+    QCOMPARE(offered.last().at(1).toString(), QStringLiteral("1 game renamed from its file"));
+    QVERIFY(offered.last().at(0).value<quint64>() != 0);
+    const QString title = QStringLiteral("Professor Layton vs. Phoenix Wright: Ace Attorney");
+    QCOMPARE(library->gameAt(library->rowOfGame(id)).value("title").toString(), title);
+    QVERIFY(readFile(romIndexPath("3ds"))
+                .contains("title = \"" + title.toUtf8() + "\", title_id = \"0004000000118D00\", title_source = \"file\""));
+
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    QCOMPARE(readFile(romIndexPath("3ds")), before);
+    QTRY_COMPARE(library->gameAt(library->rowOfGame(id)).value("title").toString(), QStringLiteral("layton"));
+
+    // A title in the game file is the user's: it is never read over.
+    QCOMPARE(library->saveGame(id, {{"title", "My name"}}), QString());
+    offered.clear();
+    library->updateRomNames(QStringLiteral("3ds"));
+    QTRY_COMPARE(offered.count(), 1);
+    QCOMPARE(offered.last().at(1).toString(), QStringLiteral("No games to read names from"));
+    QCOMPARE(library->gameAt(library->rowOfGame(id)).value("title").toString(), QStringLiteral("My name"));
 }
 
 QTEST_GUILESS_MAIN(LibraryRomTest)

@@ -508,10 +508,22 @@ ColumnLayout {
 
             Section {
                 title: qsTr("ROM folders")
-                actions: ListAction {
-                    text: qsTr("Add folder")
-                    tip: qsTr("Its games are found now and at every start, subfolders included")
-                    onClicked: folderDialog.active = true
+                actions: Row {
+                    spacing: Theme.controls.controlSpacing
+
+                    ListAction {
+                        visible: Library.readsNames(root.platform.id) && root.platform.romFolders.length > 0
+                        enabled: !Library.updatingNames
+                        text: qsTr("Update names")
+                        iconPath: Icons.fileSearchLine
+                        tip: qsTr("Read the games' real names from their files, for games not named that way yet. Games you renamed keep their names.")
+                        onClicked: Library.updateRomNames(root.platform.id)
+                    }
+                    ListAction {
+                        text: qsTr("Add folder")
+                        tip: qsTr("Its games are found now and at every start, subfolders included")
+                        onClicked: folderDialog.active = true
+                    }
                 }
 
                 Repeater {

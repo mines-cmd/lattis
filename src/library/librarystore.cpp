@@ -1741,6 +1741,20 @@ QString LibraryStore::gameWithRom(const QString &romPath) const
     return {};
 }
 
+QString LibraryStore::setRomEntries(const QString &platform, const QList<RomEntry> &entries)
+{
+    if (m_versionStatus.readOnly)
+        return tr("Not saved: %1").arg(m_versionStatus.reason);
+    const QString relative = kRomsPrefix + platform + QStringLiteral(".toml");
+    if (!m_snapshot.files.value(relative).ok)
+        return tr("%1 has an error, so the change wasn't saved").arg(relative);
+    if (const QString problem = writeRomIndex(platform, entries); !problem.isEmpty())
+        return problem;
+    m_snapshot.content.roms.insert(platform, entries);
+    changedHere();
+    return {};
+}
+
 QString LibraryStore::relocateRom(const QString &id, const QString &romPath)
 {
     if (m_versionStatus.readOnly)

@@ -700,7 +700,7 @@ void LibraryFormatTest::romIndex()
 {
     const QByteArray toml = R"(# Switch ROMs
 [games]
-"Mario Kart 8 Deluxe [0100152000022000][v0].xci" = { id = "switch-mario-kart-8-deluxe", title = "Mario Kart 8 Deluxe", title_id = "0100152000022000", size = 7340032000 }
+"Mario Kart 8 Deluxe [0100152000022000][v0].xci" = { id = "switch-mario-kart-8-deluxe", title = "Mario Kart 8 Deluxe", title_id = "0100152000022000", title_source = "file", size = 7340032000 }
 "Homebrew/Tetris.nro" = { id = "switch-tetris" }
 )";
     const auto r = parseRomIndex(toml, "library/roms/switch.toml");
@@ -710,7 +710,7 @@ void LibraryFormatTest::romIndex()
     QCOMPARE(r.value,
              (QList<RomEntry>{{"Homebrew/Tetris.nro", "switch-tetris", "", ""},
                               {"Mario Kart 8 Deluxe [0100152000022000][v0].xci", "switch-mario-kart-8-deluxe",
-                               "Mario Kart 8 Deluxe", "0100152000022000", 7340032000}}));
+                               "Mario Kart 8 Deluxe", "0100152000022000", 7340032000, "file"}}));
 
     // What the scan writes reads back the same.
     const auto again = parseRomIndex(formatRomIndex("Switch", r.value).toUtf8(), "again");

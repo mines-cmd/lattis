@@ -55,6 +55,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
+    ../src/library/rominfo.h ../src/library/rominfo.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
     ${STEAM_SOURCES}
@@ -170,6 +171,7 @@ lattis_test(herocache_test SOURCES ../src/library/herocache.h ../src/library/her
     ../src/library/artimage.h ../src/library/artimage.cpp LIBS Qt6::Gui)
 lattis_test(gameid_test SOURCES ../src/library/gameid.h ../src/library/gameid.cpp)
 lattis_test(romfoldermatch_test SOURCES ../src/library/romfoldermatch.h ../src/library/romfoldermatch.cpp)
+lattis_test(rominfo_test SOURCES ../src/library/rominfo.h ../src/library/rominfo.cpp)
 lattis_test(romscan_test PRESETS
     SOURCES ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus)
