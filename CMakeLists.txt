@@ -202,6 +202,7 @@ qt_add_qml_module(lattis
         qml/settings/KeyChip.qml
         qml/settings/EmulatorsPage.qml
         qml/settings/EmulatorRow.qml
+        qml/settings/EmulatorProgramField.qml
         qml/settings/ProgramDialog.qml
         qml/settings/LibraryPage.qml
         qml/settings/MetadataPage.qml
