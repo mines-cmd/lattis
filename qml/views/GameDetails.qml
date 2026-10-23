@@ -639,6 +639,7 @@ Item {
     }
 
     NoticeBar {
+        id: readOnlyNotice
         visible: Library.readOnly
         opacity: visible ? 1 : 0
         z: 1
@@ -1214,8 +1215,8 @@ Item {
         function onExpand() { General.setDownloadBarCollapsed(false) }
     }
 
-    // Drag-to-move zone: the strip above the hero. A plain Item (not MouseArea) so clicks
-    // still reach the NoticeBar below; the DragHandler only grabs when a drag starts.
+    // Drag-to-move zone: the strip above the hero. Off over a notice bar: taking over from
+    // anything, it took the press from the bar's buttons and cancelled their clicks.
     Item {
         z: 2
         y: 0
@@ -1224,6 +1225,7 @@ Item {
 
         DragHandler {
             target: null
+            enabled: !readOnlyNotice.hovered && !(importNotice.item?.hovered ?? false)
             grabPermissions: PointerHandler.CanTakeOverFromAnything
             onActiveChanged: if (active) root.Window.window.startSystemMove()
         }

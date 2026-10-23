@@ -8,6 +8,7 @@ Surface {
 
     property string text
     property var parts: []
+    readonly property alias hovered: hover.hovered
     default property alias actions: actionRow.data
 
     radius: Theme.notice.radius

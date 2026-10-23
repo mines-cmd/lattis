@@ -9,6 +9,7 @@ Item {
 
     readonly property var current: Backups.notice
     readonly property bool showing: current.text !== undefined
+    readonly property bool hovered: bar.hovered
     property var notice: ({})
     onCurrentChanged: if (current.text !== undefined) notice = current
     Component.onCompleted: if (current.text !== undefined) notice = current
@@ -20,6 +21,7 @@ Item {
     clip: progress < 1
 
     NoticeBar {
+        id: bar
         width: root.width
         height: root.height
         y: -height * (1 - root.progress)
