@@ -966,6 +966,29 @@ void MetadataTest::clientLookupWideSearch()
     QVERIFY(requests.at(0).body.contains("limit 10;"));
     QVERIFY(requests.at(1).body.contains("limit 50;"));
     QVERIFY(requests.at(1).body.contains("Tri Force Heroes"));
+
+    // Detailed lookup already searches wide: one request, still ranked by name.
+    const QVariantMap detailed =
+        result(client, client.lookup(QStringLiteral("The Legend of Zelda: TriForce Heroes"), {37, 137}, 0, 0, 50));
+    QCOMPARE(detailed.value("candidates").toList().first().toMap().value("igdb").toInt(), 12);
+    QCOMPARE(detailed.value("match").toInt(), 0);
+    QCOMPARE(server.requestsTo("/v4/games").size(), 3);
+
+    // Nothing for the whole title, as a search or a wildcard: the split title finds it.
+    FakeHttpServer missing;
+    missing.on("/oauth2/token", {200, kToken1});
+    missing.on("/v4/games", {200, "[]"});
+    missing.on("/v4/games", {200, "[]"});
+    missing.on("/v4/games", {200, games({{12, "The Legend of Zelda: Tri Force Heroes"}})});
+    MetadataClient missingClient(data.path(), cache.path(), endpoints(missing));
+    missingClient.http()->setCredentials(kKeys);
+    missingClient.http()->setIgdbInterval(0);
+    const QVariantMap split =
+        result(missingClient, missingClient.lookup(QStringLiteral("The Legend of Zelda: TriForce Heroes"), {37, 137}));
+    QCOMPARE(split.value("match").toInt(), 0);
+    const auto missRequests = missing.requestsTo("/v4/games");
+    QCOMPARE(missRequests.size(), 3);
+    QVERIFY(missRequests.at(2).body.contains("search \"The Legend of Zelda: Tri Force Heroes\""));
 }
 
 void MetadataTest::clientLookupIds()

@@ -41,9 +41,9 @@ A **clear match** is an unambiguous result. Both services share `NameMatch::clea
 
 Tuned on `tests/namematch_test.cpp`: a one-letter typo (`Mario Tennis Ace` for `Aces`) matches, a missing word (`Mario Tennis`, `Persona 4` for `Persona 4 Golden`) doesn't.
 
-IGDB ranks a search loosely: the right game can be past the first five (`TriForce Heroes` finds `Tri Force Heroes` only far down). When the first search has results but no clear match, `lookupQuery` searches again, 50 results, with camel-case words split (`NameMatch::splitCamelCase`), merges them into the first results ranked by `NameMatch::similarity` to the title (the pick list shows the first five), and matches the lot. One extra request per lookup that has no clear match.
+IGDB ranks a search loosely: the right game can be past the first five (`TriForce Heroes` finds `Tri Force Heroes` only far down). When the first search has results but no clear match, `lookupQuery` searches again, 50 results, with camel-case words split (`NameMatch::splitCamelCase`), merges them into the first results, and matches the lot. One extra request per lookup that has no clear match. Every name search's results (Detailed lookup's included) are ranked by `NameMatch::similarity` to the title before they're returned, so the pick lists show the closest names first.
 
-When IGDB finds nothing for the whole title, even as a wildcard, `MetadataClient::lookupQuery` searches once more for the part before the first `:` and matches those results against the whole title.
+When IGDB finds nothing for the whole title, even as a wildcard, `MetadataClient::lookupQuery` searches the title with camel-case words split (when that changes it; IGDB finds nothing for `The Legend of Zelda: TriForce Heroes` but finds `… Tri Force Heroes`), then the part before the first `:`, 50 results wide (`The Legend of Zelda` ranks the game 12th), and matches those results against the whole title.
 
 Without a clear match, the results are offered as a **pick list** for the user to choose from.
 

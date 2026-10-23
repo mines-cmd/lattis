@@ -130,6 +130,23 @@ QString MetadataClient::imageUrl(const QUrl &url, const QString &kind)
 
 namespace {
 constexpr int kWideSearch = 50;
+
+QList<IgdbGame> rankedByName(const QList<IgdbGame> &games, const QString &title)
+{
+    const QString key = NameMatch::compactKey(title);
+    QList<std::pair<double, IgdbGame>> scored;
+    for (const IgdbGame &g : games) {
+        double best = NameMatch::similarity(key, NameMatch::compactKey(g.name));
+        for (const QString &n : g.alternativeNames)
+            best = std::max(best, NameMatch::similarity(key, NameMatch::compactKey(n)));
+        scored.append({best, g});
+    }
+    std::stable_sort(scored.begin(), scored.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    QList<IgdbGame> out;
+    for (const auto &[score, g] : std::as_const(scored))
+        out.append(g);
+    return out;
+}
 }
 
 int MetadataClient::lookup(const QString &title, const QVariantList &igdbPlatforms, int igdbId, qint64 steamAppId,
@@ -151,7 +168,7 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
     const QString spaced = NameMatch::splitCamelCase(title);
     const QString searched = stage == 2 ? mainTitle : stage == 3 ? spaced : title;
     const QByteArray query =
-        igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(searched, platforms, stage == 3 ? std::max(limit, kWideSearch) : limit, stage == 1);
+        igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(searched, platforms, stage >= 2 ? std::max(limit, kWideSearch) : limit, stage == 1);
     m_http.igdb(QStringLiteral("games"), query, context,
                 [this, request, context, title, mainTitle, spaced, platforms, igdbId, steamAppId, limit, stage,
                  earlier](const MetadataReply &reply) {
@@ -173,27 +190,24 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
                             if (std::none_of(merged.cbegin(), merged.cend(), [&](const IgdbGame &e) { return e.id == g.id; }))
                                 merged.append(g);
                         }
-                        // The pick list shows the first five: the closest names go there.
-                        const QString key = NameMatch::compactKey(title);
-                        const auto closeness = [&](const IgdbGame &g) {
-                            double best = NameMatch::similarity(key, NameMatch::compactKey(g.name));
-                            for (const QString &n : g.alternativeNames)
-                                best = std::max(best, NameMatch::similarity(key, NameMatch::compactKey(n)));
-                            return best;
-                        };
-                        std::stable_sort(merged.begin(), merged.end(), [&](const IgdbGame &a, const IgdbGame &b) {
-                            return closeness(a) > closeness(b);
-                        });
                         qCDebug(lcMetadata).noquote() << "searched" << spaced << "as well:" << games.size()
                                                      << "results," << merged.size() << "in all";
                         games = merged;
                     }
                     // The subtitle may be spelled differently from IGDB's; the main title still finds the game.
-                    if (games.isEmpty() && igdbId <= 0 && stage < 2) {
-                        const int next = stage == 0 ? 1 : (mainTitle.isEmpty() ? 3 : 2);
-                        if (next < 3)
+                    // IGDB finds nothing for "… TriForce Heroes", and the main title alone ranks the game past
+                    // the first ten: the split title comes first, and the main title is searched wide.
+                    if (games.isEmpty() && igdbId <= 0) {
+                        int next = stage == 0 ? 1 : stage == 1 ? (spaced != title ? 3 : 2) : stage == 3 ? 2 : -1;
+                        if (next == 2 && mainTitle.isEmpty())
+                            next = -1;
+                        if (next >= 0)
                             return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, next);
                     }
+                    // IGDB puts loose matches first ("The Legend of Zelda" before "… Tri Force Heroes"), and the
+                    // pick lists show the top of the list: the closest names go there.
+                    if (igdbId <= 0)
+                        games = rankedByName(games, title);
                     QVariantList candidates;
                     for (const IgdbGame &g : games)
                         candidates.append(candidate(g));
