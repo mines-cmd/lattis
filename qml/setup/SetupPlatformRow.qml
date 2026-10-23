@@ -56,6 +56,8 @@ ColumnLayout {
             case "path": return qsTr("Your path")
             }
         }
+        if (offerInstall)
+            return qsTr("Install")
         if (installFailed)
             return qsTr("Install failed")
         if (awaitingDetection)
@@ -63,6 +65,7 @@ ColumnLayout {
         return detecting ? qsTr("Looking…") : qsTr("Not found")
     }
     readonly property color badgeColor: found ? Theme.settingsWindow.installFound
+                                      : offerInstall ? Theme.settingsWindow.installOffer
                                       : installFailed ? Theme.settingsWindow.installError
                                       : hasRoutes || awaitingDetection || detecting ? Theme.settingsWindow.installNotFound
                                       : Theme.settingsWindow.installMissing
@@ -141,7 +144,7 @@ ColumnLayout {
             }
 
             Rectangle {
-                visible: !root.installing && !root.offerInstall
+                visible: !root.installing
                 implicitWidth: badgeLabel.implicitWidth + Theme.settingsWindow.sourceTagPadding * 2
                 implicitHeight: badgeLabel.implicitHeight + 2
                 radius: Theme.settingsWindow.sourceTagRadius
@@ -157,14 +160,6 @@ ColumnLayout {
                     color: root.badgeColor
                     font.pixelSize: Theme.settingsWindow.sourceTagFontSize
                 }
-            }
-            // Opens the row: the route is chosen in its tiles.
-            SettingsButton {
-                visible: root.offerInstall
-                text: qsTr("Install")
-                iconPath: Icons.download
-                tip: qsTr("Install %1").arg(root.named?.name ?? "")
-                onClicked: root.toggleRequested()
             }
             InstallStatus {
                 visible: root.installing

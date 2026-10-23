@@ -70,54 +70,40 @@ Item {
             message(qsTr("Could not open — path: %1").arg(err))
     }
 
-    component Card: Rectangle {
+    component Card: RowCard {
         id: card
 
         property var emulators: []
 
-        Layout.fillWidth: true
-        implicitHeight: cardColumn.implicitHeight + Theme.settingsWindow.cardPadding * 2
-        radius: Theme.settingsWindow.cardRadius
-        color: Theme.settingsWindow.cardBackground
-        border.color: Theme.settingsWindow.cardBorder
-        border.width: Theme.settingsWindow.cardBorderWidth
+        Repeater {
+            model: card.emulators
 
-        ColumnLayout {
-            id: cardColumn
-            anchors.fill: parent
-            anchors.margins: Theme.settingsWindow.cardPadding
-            spacing: 0
+            ColumnLayout {
+                id: entry
+                required property var modelData
+                required property int index
 
-            Repeater {
-                model: card.emulators
+                Layout.fillWidth: true
+                spacing: 0
 
-                ColumnLayout {
-                    id: entry
-                    required property var modelData
-                    required property int index
-
+                Rectangle {
+                    visible: Theme.settingsWindow.rowDividers && entry.index > 0
                     Layout.fillWidth: true
-                    spacing: 0
+                    Layout.leftMargin: Theme.settingsWindow.rowPadding
+                    Layout.rightMargin: Theme.settingsWindow.rowPadding
+                    implicitHeight: 1
+                    color: Theme.settingsWindow.rowDivider
+                }
 
-                    Rectangle {
-                        visible: Theme.settingsWindow.rowDividers && entry.index > 0
-                        Layout.fillWidth: true
-                        Layout.leftMargin: Theme.settingsWindow.rowPadding
-                        Layout.rightMargin: Theme.settingsWindow.rowPadding
-                        implicitHeight: 1
-                        color: Theme.settingsWindow.rowDivider
-                    }
-
-                    EmulatorRow {
-                        Layout.fillWidth: true
-                        emulator: entry.modelData
-                        expanded: root.expandedId === entry.modelData.id
-                        firstInCard: entry.index === 0
-                        lastInCard: entry.index === card.emulators.length - 1
-                        onToggleRequested: root.expandedId = expanded ? "" : entry.modelData.id
-                        onExpandedChanged: if (expanded) root.showRow(this)
-                        onOpenFileRequested: root.openFile()
-                    }
+                EmulatorRow {
+                    Layout.fillWidth: true
+                    emulator: entry.modelData
+                    expanded: root.expandedId === entry.modelData.id
+                    firstInCard: entry.index === 0
+                    lastInCard: entry.index === card.emulators.length - 1
+                    onToggleRequested: root.expandedId = expanded ? "" : entry.modelData.id
+                    onExpandedChanged: if (expanded) root.showRow(this)
+                    onOpenFileRequested: root.openFile()
                 }
             }
         }

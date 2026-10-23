@@ -1375,6 +1375,8 @@ constexpr Setting kSettings[] = {
           "Tag on the Emulators page for an emulator that isn't installed (\"Not found\")"),
     color("settings_window", "install_not_found", "@text_muted",
           "Tag on the Emulators page for an emulator that isn't installed (\"Not found\"), which is normal"),
+    color("settings_window", "install_offer", "@accent",
+          "Tag in the setup guide for a platform whose emulator can be installed (\"Install\")"),
     integer("settings_window", "install_tile_radius", "@controls.input_radius", 0, 50,
             "Corner radius of the boxes at the top of an emulator's card (install routes, progress, error, source)"),
     integer("settings_window", "install_tile_padding", "12", 0, 50, "Space inside those boxes"),

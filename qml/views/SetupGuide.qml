@@ -20,7 +20,7 @@ FocusScope {
         { name: qsTr("Steam"), title: qsTr("Steam"),
           description: qsTr("Installed Steam games show up in the library by themselves and launch through Steam.") },
         { name: qsTr("Emulators"), title: qsTr("Emulators and ROM folders"),
-          description: qsTr("Add the folders where your ROMs are. Each platform's folders are scanned for new games at every start.") },
+          description: qsTr("Install the emulators you need, then add the folders where your ROMs are. Each platform's folders are scanned for new games at every start.") },
         { name: qsTr("Game info"), title: qsTr("Game info"),
           description: qsTr("With these free API keys, new games come in with a description, year, rating and art. "
                             + "Only titles are sent. Optional: without keys, games come in with their names, and "

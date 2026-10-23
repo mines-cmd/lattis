@@ -7,52 +7,20 @@ ColumnLayout {
     id: root
 
     required property var guide
-    // With nothing installed the short list would be empty, and every platform's Install is what's useful.
-    property bool showAll: installed.length === 0
 
     // Only platforms with an emulator: a ROM folder is only useful once one can launch it.
     readonly property var withEmulator: Library.platformSettings.filter(p => p.emulators.length > 0)
-    readonly property var installed: withEmulator.filter(p => root.emulatorFound(p))
-    readonly property var notInstalled: withEmulator.filter(p => !root.emulatorFound(p))
-    // Platforms whose emulator was installed from this step keep their place when it's found, instead of jumping up.
-    property var startedHere: ({})
-    readonly property var shown: root.showAll
-        ? withEmulator.filter(p => root.emulatorFound(p) && !root.startedHere[p.id])
-              .concat(withEmulator.filter(p => !root.emulatorFound(p) || root.startedHere[p.id]))
-        : installed
-    readonly property bool canInstallAny: notInstalled.some(p => root.installId(p) !== "")
+    readonly property var ready: withEmulator.filter(p => root.emulatorFound(p))
+    readonly property var toInstall: withEmulator.filter(p => !root.emulatorFound(p))
+    // Kept here because the rows are rebuilt when the lists change.
+    property string expandedId: ""
 
-    spacing: Theme.onboarding.spacing
+    spacing: 0
 
     Component.onCompleted: Installer.refresh()
 
-    readonly property Component headerAction: SettingsButton {
-        text: qsTr("Find from one folder")
-        tip: qsTr("Match a folder's subfolders to platforms by name")
-        iconPath: Icons.folder
-        onClicked: findDialog.active = true
-    }
-
-    // The emulator to install for a platform: one with a job already, else the first that can be installed.
-    function installId(p) {
-        return p.emulators.find(id => (Installer.emulators[id]?.state ?? "idle") !== "idle")
-            ?? p.emulators.find(id => (Installer.emulators[id]?.routes.length ?? 0) > 0)
-            ?? ""
-    }
-    // Platform ids whose install card is open; kept here because the rows are rebuilt when the list changes.
-    property var expandedIds: ({})
     function toggle(platformId) {
-        const next = Object.assign({}, root.expandedIds)
-        next[platformId] = !next[platformId]
-        root.expandedIds = next
-    }
-    function markStarted(platformId) {
-        if (root.startedHere[platformId])
-            return
-        const next = Object.assign({}, root.startedHere)
-        next[platformId] = true
-        root.startedHere = next
-        root.showAll = true
+        root.expandedId = root.expandedId === platformId ? "" : platformId
     }
     function emulatorFound(p) {
         return p.emulators.some(id => { const e = Library.emulators.find(e => e.id === id); return e && e.found })
@@ -73,17 +41,24 @@ ColumnLayout {
         findDialog.active = true
     }
     function expandForScreenshot(platformId) {
-        root.showAll = true
         root.toggle(platformId)
     }
 
-    SettingsCard {
+    component Heading: Label {
+        color: Theme.settingsWindow.sectionHeaderColor
+        font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize
+        font.weight: Theme.font.strongWeight
+    }
+
+    component PlatformCard: RowCard {
+        id: card
+
+        property var platforms: []
+
         panel: true
-        visible: root.shown.length > 0
-        spacing: 0
 
         Repeater {
-            model: root.shown
+            model: card.platforms
 
             ColumnLayout {
                 id: entry
@@ -105,37 +80,57 @@ ColumnLayout {
                 SetupPlatformRow {
                     Layout.fillWidth: true
                     platform: entry.modelData
-                    expanded: root.expandedIds[entry.modelData.id] ?? false
+                    expanded: root.expandedId === entry.modelData.id
                     firstInCard: entry.index === 0
-                    lastInCard: entry.index === root.shown.length - 1
+                    lastInCard: entry.index === card.platforms.length - 1
                     onToggleRequested: root.toggle(entry.modelData.id)
-                    onInstallingChanged: if (installing) root.markStarted(entry.modelData.id)
                 }
             }
         }
     }
 
     RowLayout {
-        visible: root.notInstalled.length > 0
+        visible: root.ready.length > 0
         Layout.fillWidth: true
+        Layout.bottomMargin: 10
         spacing: 10
 
-        Label {
+        Heading {
             Layout.fillWidth: true
-            text: root.showAll
-                  ? qsTr("Platforms without an installed emulator are shown too.")
-                  : (root.notInstalled.length === 1
-                     ? qsTr("1 more platform has no emulator installed here (%1).").arg(root.notInstalled[0].name)
-                     : qsTr("%1 more platforms have no emulator installed here (%2).")
-                           .arg(root.notInstalled.length).arg(root.notInstalled.map(p => p.name).join(", ")))
-                    + (root.canInstallAny ? " " + qsTr("Show them to install an emulator from here.") : "")
-            color: Theme.onboarding.descriptionColor
-            wrapMode: Text.WordWrap
+            text: qsTr("Ready")
         }
-        SettingsButton {
-            text: root.showAll ? qsTr("Show installed only") : qsTr("Show all platforms")
-            onClicked: root.showAll = !root.showAll
+        ListAction {
+            text: qsTr("Find from one folder")
+            tip: qsTr("Match a folder's subfolders to platforms by name")
+            iconPath: Icons.folder
+            onClicked: findDialog.active = true
         }
+    }
+
+    PlatformCard {
+        visible: root.ready.length > 0
+        platforms: root.ready
+    }
+
+    Heading {
+        visible: root.toInstall.length > 0
+        Layout.topMargin: root.ready.length > 0 ? Theme.settingsWindow.sectionSpacing : 0
+        Layout.bottomMargin: 4
+        text: qsTr("Install an emulator")
+    }
+    Label {
+        visible: root.toInstall.length > 0
+        Layout.fillWidth: true
+        Layout.bottomMargin: 10
+        text: qsTr("Lattis downloads these for you, as an AppImage or from Flathub. Installs carry on while you go to the next step.")
+        color: Theme.onboarding.descriptionColor
+        font.pixelSize: Theme.controls.descriptionFontSize
+        wrapMode: Text.WordWrap
+    }
+
+    PlatformCard {
+        visible: root.toInstall.length > 0
+        platforms: root.toInstall
     }
 
     Item { Layout.fillHeight: true }
