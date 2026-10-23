@@ -86,7 +86,7 @@ extensions = ["3ds", "cci", "cxi", "3dsx"]
 On Settings → Platforms, **Add folder** under a platform adds a ROM folder. Its games, subfolders included, are found right away and at every start. **Scan now** (or "Scan ROM folders now" in the app menu) looks again whenever you've added files.
 
 - Only file names and sizes are read, never the games themselves, so scanning is quick even for large folders and network drives.
-- **Titles come from the file names**, cleaned up: `Mario Kart 8 Deluxe [0100152000022000][v0].nsp` becomes "Mario Kart 8 Deluxe", and `MONSTER HUNTER RISE` becomes "Monster Hunter Rise". Fix a title in the game's Properties, or look the game up (see [Game info and art](game-info.md)).
+- **Titles come from the file names**, cleaned up: `Mario Kart 8 Deluxe [0100152000022000][v0].nsp` becomes "Mario Kart 8 Deluxe", and `MONSTER HUNTER RISE` becomes "Monster Hunter Rise". A trailing `-decrypted`, `-encrypted` or `-trimmed` is dropped too. Fix a title in the game's Properties, or look the game up (see [Game info and art](game-info.md)).
 - **Switch updates and DLC aren't games**, and neither are PS4 update folders; they're skipped. Install them in the emulator.
 - **Renamed or moved files keep their game**, with its favorites, tags and play time, when Lattis can tell it's the same file. When it can't, the file shows up as a new game; open the old game's Properties and use **Locate** to point it at the file, which merges the two.
 - **A missing file** leaves its game in the library, dimmed, with "ROM not found" in place of Launch. Put the file back and the game is as it was. An unplugged drive works the same way.

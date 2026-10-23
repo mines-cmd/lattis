@@ -125,6 +125,12 @@ QString cleanName(const QString &name)
             continue;
         kept.append(word);
     }
+    // Dump-state tags that tools append bare (`Uprising -decrypted`). Only at the end, so a
+    // title word like "Decrypted" earlier in the name stays.
+    static const QStringList kDumpTags = {QStringLiteral("decrypted"), QStringLiteral("encrypted"),
+                                          QStringLiteral("trimmed")};
+    while (kept.size() > 1 && kDumpTags.contains(kept.last().remove(u'-').toLower()))
+        kept.removeLast();
     out = kept.join(u' ');
     qsizetype start = 0;
     qsizetype end = out.size();

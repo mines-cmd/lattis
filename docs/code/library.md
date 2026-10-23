@@ -137,7 +137,7 @@ When the games are reloaded from disk but the rows stay the same (a description 
 
 The ROM scan (`romscan.*`) walks each platform's ROM folders, recursively. It skips hidden files and doesn't enter symlinked folders. It picks up files with one of the platform's emulators' `extensions`, or named one of their `files` (like `eboot.bin` for PS4). Only names and sizes are read, never ROM contents: one stat per file.
 
-**Titles** come from the file name (`RomName`). The extension, bracketed groups (`[0100152000022000]`, `(USA)`, `{…}`) and underscores go, so `Mario Kart 8 Deluxe [0100152000022000][v0].nsp` becomes `Mario Kart 8 Deluxe`. Scene-style names with dots for spaces are handled too. A title in all capitals or all lowercase gets each word capitalized, keeping Roman numerals up to XXXIX in capitals; a mixed-case title is left as it is.
+**Titles** come from the file name (`RomName`). The extension, bracketed groups (`[0100152000022000]`, `(USA)`, `{…}`) and underscores go, as does a trailing `decrypted`, `encrypted` or `trimmed` tag, so `Mario Kart 8 Deluxe [0100152000022000][v0].nsp` becomes `Mario Kart 8 Deluxe`. Scene-style names with dots for spaces are handled too. A title in all capitals or all lowercase gets each word capitalized, keeping Roman numerals up to XXXIX in capitals; a mixed-case title is left as it is.
 
 **Switch title IDs** tell games from updates and DLC: one ending in `000` is a base game, `800` its update, anything else DLC. Updates and DLC are counted and skipped, not added as games.
 

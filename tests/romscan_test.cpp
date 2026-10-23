@@ -98,6 +98,12 @@ void RomScanTest::parse_data()
                                             << "Pokemon Y" << "0004000000055E00" << Kind::Game;
     QTest::newRow("decomposed accent") << QString::fromUtf8("Pokémon X (USA).3ds")
                                        << "Pokémon X" << "" << Kind::Game;
+    QTest::newRow("dump tag") << "Kid Icarus - Uprising -decrypted.3ds" << "Kid Icarus - Uprising" << ""
+                              << Kind::Game;
+    QTest::newRow("spaced dump tag") << "Kid Icarus - Uprising - Decrypted (USA).cia" << "Kid Icarus - Uprising"
+                                     << "" << Kind::Game;
+    QTest::newRow("dump tag word mid-title") << "Decrypted Secrets.3ds" << "Decrypted Secrets" << ""
+                                             << Kind::Game;
     QTest::newRow("unbalanced group") << "Some Game (USA.3ds" << "Some Game (USA" << "" << Kind::Game;
     QTest::newRow("dots in name") << "Ys VIII. Lacrimosa of Dana.xci" << "Ys VIII. Lacrimosa of Dana" << ""
                                   << Kind::Game;
