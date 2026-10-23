@@ -5,7 +5,6 @@ Rectangle {
     id: track
 
     property real progress: -1
-    property color fillColor: Theme.settingsWindow.installProgressFill
     readonly property bool unknown: progress < 0
 
     implicitHeight: Theme.settingsWindow.installProgressHeight
@@ -17,7 +16,7 @@ Rectangle {
         id: fill
         height: parent.height
         radius: parent.radius
-        color: track.fillColor
+        color: Theme.settingsWindow.installProgressFill
         width: track.unknown ? track.width / 3 : track.width * Math.min(1, track.progress)
         // Without motion the unknown part can't slide, so it fills the bar faintly instead.
         opacity: track.unknown && !Motion.on ? 0.5 : 1

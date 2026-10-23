@@ -283,6 +283,10 @@ ApplicationWindow {
         editorLoader.item?.uninstall()
     }
 
+    function installDialogForScreenshot() {
+        details.openInstallDialog()
+    }
+
     function logoForScreenshot(mode) {
         details.logoForScreenshot(mode)
     }

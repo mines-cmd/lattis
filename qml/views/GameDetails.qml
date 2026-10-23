@@ -40,12 +40,12 @@ Item {
     property string descriptionExpandedFor: ""
     readonly property bool onSteam: game.platform === "steam" || game.platform === "proton"
 
-    // A ROM game none of whose emulators is found: Launch installs the first one, if it can be.
+    // An emulated game none of whose emulators is found: Launch installs the first one, if it can be.
     // The Installer is only touched then, so it isn't made for a page that doesn't need it.
     readonly property string missingEmulator: {
         void game.launchTip
         void Library.emulators
-        return hasGame && game.rom && game.installed ? GameRunner.missingEmulator(game.id) : ""
+        return hasGame && game.installed ? GameRunner.missingEmulator(game.id) : ""
     }
     readonly property var emulatorRow: missingEmulator !== "" ? Installer.emulators[missingEmulator] : undefined
     readonly property bool emulatorInstallable: (emulatorRow?.routes?.length ?? 0) > 0
@@ -63,9 +63,26 @@ Item {
     }
     // Tells of a failure that happened here, not one left over from before this game was shown.
     property bool emulatorWasBusy: false
+    function openInstallDialog() {
+        if (emulatorName === "")
+            return
+        installDialog.active = true
+        installDialog.item.openFor(missingEmulator)
+    }
+
+    Loader {
+        id: installDialog
+        active: false
+        source: "EmulatorInstallDialog.qml"
+    }
+    Connections {
+        target: installDialog.item
+        function onError(text) { root.message(text) }
+    }
+
     onEmulatorStepChanged: {
         const busy = emulatorStep !== ""
-        if (emulatorWasBusy && !busy && emulatorState === "failed")
+        if (emulatorWasBusy && !busy && emulatorState === "failed" && !(installDialog.item?.dialog.visible ?? false))
             emulatorMessage(emulatorRow.error, game.id)
         emulatorWasBusy = busy
     }
@@ -819,11 +836,14 @@ Item {
                     running: GameRunner.running.includes(root.game.id ?? "")
                     emulatorName: root.emulatorName
                     emulatorStep: root.emulatorStep
-                    emulatorProgress: root.emulatorRow?.progress ?? -1
                     tip: root.emulatorName !== "" ? qsTr("Install %1; Lattis finds it afterwards").arg(root.emulatorName)
                        : (root.game.launchTip ?? "") !== "" ? Actions.tip(root.game.launchTip, Actions.keys.launch) : ""
-                    onClicked: root.emulatorName !== "" ? Installer.install(root.missingEmulator, root.emulatorRow.routes[0])
-                                                        : root.launchRequested()
+                    onClicked: {
+                        if (root.emulatorName === "")
+                            root.launchRequested()
+                        else
+                            root.openInstallDialog()
+                    }
                     onStopRequested: root.stopRequested()
                 }
 

@@ -886,6 +886,7 @@ constexpr Setting kSettings[] = {
 
     heading("game_editor", "Dialog"),
     integer("game_editor", "width", "1200", 400, 2000, "Dialog width, at most the window's"),
+    integer("game_editor", "install_width", "720", 400, 2000, "Width of the dialog that installs a game's emulator, at most the window's"),
     real("game_editor", "max_height", "0.95", 0.3, 1, "Tallest the dialog gets, as a share of the window's height; "
          "taller forms scroll"),
     integer("game_editor", "padding", "24", 0, 100, "Space between the dialog's edge and its content"),

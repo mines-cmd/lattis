@@ -17,7 +17,6 @@ Surface {
     property string emulatorName
     // What the emulator's install is doing ("45 %", "Unpacking"); empty when it isn't running.
     property string emulatorStep
-    property real emulatorProgress: -1
 
     readonly property bool emulatorBusy: installed && emulatorName !== "" && emulatorStep !== ""
     readonly property bool emulatorInstall: installed && emulatorName !== "" && emulatorStep === ""
@@ -101,24 +100,12 @@ Surface {
         }
     }
 
-    InstallProgress {
-        visible: root.emulatorBusy
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: root.radius
-        anchors.rightMargin: root.radius
-        anchors.bottomMargin: root.radius / 2
-        progress: root.emulatorProgress
-        fillColor: label.color
-    }
-
     MouseArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: root.launchable || root.running ? Qt.PointingHandCursor : Qt.ArrowCursor
-        onClicked: if (root.running) root.stopRequested(); else if (root.launchable) root.clicked()
+        onClicked: if (root.running) root.stopRequested(); else if (root.launchable || root.emulatorBusy) root.clicked()
     }
 
     ToolTip.visible: root.tip !== "" && root.launchable && mouse.containsMouse

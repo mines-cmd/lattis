@@ -131,6 +131,7 @@ qt_add_qml_module(lattis
         qml/views/DownloadBar.qml
         qml/views/DownloadPill.qml
         qml/views/GameEditor.qml
+        qml/views/EmulatorInstallDialog.qml
         qml/views/SetupGuide.qml
         qml/setup/SetupBackdrop.qml
         qml/setup/SetupCoverWall.qml

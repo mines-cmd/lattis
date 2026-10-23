@@ -332,6 +332,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "logoForScreenshot", Q_ARG(QVariant, mode));
                 });
             }
+            if (qEnvironmentVariableIntValue("LATTIS_INSTALL_DIALOG") == 1) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
+                    logHook("installDialogForScreenshot");
+                    QMetaObject::invokeMethod(window, "installDialogForScreenshot");
+                });
+            }
             if (const QString id = qEnvironmentVariable("LATTIS_GAME_MENU"); !id.isEmpty()) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window, id] {
                     logHook("gameMenuForScreenshot", id);

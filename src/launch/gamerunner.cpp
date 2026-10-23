@@ -560,7 +560,8 @@ QString GameRunner::chooseEmulator(const QString &gameId, QString *emulatorId) c
 QString GameRunner::missingEmulator(const QString &gameId) const
 {
     const Game *game = m_library->game(gameId);
-    if (!game || !game->rom)
+    if (!game || game->platform == kSteamPlatform || game->platform == kProtonPlatform
+        || game->platform == kLinuxPlatform)
         return {};
     QString chosen;
     chooseEmulator(gameId, &chosen);
