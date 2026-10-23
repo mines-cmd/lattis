@@ -37,6 +37,8 @@ An emulator Lattis installed shows its route and version in the row, and its car
 
 If the `flatpak` command isn't on your system, only the AppImage is offered.
 
+The setup guide's Emulators step offers the same install. A platform whose emulator is missing says "Needs <emulator>"; click it to open the same tiles, progress and error boxes as here. You can go on to the next step while an install runs.
+
 ### A platform's emulators
 
 On Settings → Platforms, **Add emulator** gives a platform an emulator. A platform can have several, in order of preference: a game launches in the first one that's installed. So you can list an AppImage first and a Flatpak second, and the Flatpak is used only when the AppImage is gone. One emulator can serve several platforms (Dolphin runs both GameCube and Wii).

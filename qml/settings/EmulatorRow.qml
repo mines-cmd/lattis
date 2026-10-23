@@ -55,19 +55,6 @@ ColumnLayout {
         const label = qsTr("Installed by Lattis")
         return installInfo.version !== "" ? label + " · " + installInfo.version : label
     }
-    // What replaces the tag while a job runs: a short word beside the small bar.
-    readonly property string miniLabel: {
-        switch (installState) {
-        case "checking": return qsTr("Checking")
-        case "downloading":
-            return installInfo.size > 0 && installInfo.progress >= 0 ? qsTr("%1 %").arg(Math.round(installInfo.progress * 100))
-                                                                      : qsTr("Downloading")
-        case "extracting": return qsTr("Unpacking")
-        case "installing": return qsTr("Installing")
-        case "removing": return qsTr("Uninstalling")
-        }
-        return ""
-    }
     readonly property string badgeText: {
         if (installFailed)
             return qsTr("Install failed")
@@ -179,20 +166,9 @@ ColumnLayout {
                 }
             }
 
-            RowLayout {
+            InstallStatus {
                 visible: root.installing
-                spacing: 8
-
-                InstallProgress {
-                    Layout.preferredWidth: Theme.settingsWindow.installMiniProgressWidth
-                    Layout.alignment: Qt.AlignVCenter
-                    progress: root.installState === "downloading" ? root.installInfo.progress : -1
-                }
-                Label {
-                    text: root.miniLabel
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.settingsWindow.sourceTagFontSize
-                }
+                info: root.installInfo
             }
         }
     }

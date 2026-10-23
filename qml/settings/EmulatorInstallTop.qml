@@ -17,7 +17,7 @@ ColumnLayout {
         return route === "flatpak" ? qsTr("Flatpak") : qsTr("AppImage")
     }
     function routeOrigin(route) {
-        return route === "flatpak" ? qsTr("From Flathub") : qsTr("From GitHub, %1").arg(info?.project ?? "")
+        return route === "flatpak" ? qsTr("From Flathub") : qsTr("From %1, %2").arg(info?.source ?? "").arg(info?.project ?? "")
     }
     function routeMeaning(route) {
         if (route === "flatpak")

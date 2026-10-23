@@ -115,6 +115,7 @@ qt_add_qml_module(lattis
         qml/components/TagChip.qml
         qml/components/FilterChip.qml
         qml/components/InstallProgress.qml
+        qml/components/InstallStatus.qml
         qml/components/KeyedListModel.qml
         qml/components/TagPalettePopup.qml
         qml/components/Toast.qml
