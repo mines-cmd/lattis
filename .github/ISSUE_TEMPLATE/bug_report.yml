@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in Lattis doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please search the open issues first to see if it is already known.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Settings → Platforms
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lattis version
+      description: Shown in the About dialog (logo menu → About).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you run it
+      options:
+        - AppImage
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and desktop
+      description: Distribution, desktop environment or compositor, X11 or Wayland, and the GPU if it looks graphics-related.
+      placeholder: Fedora 44, KDE Plasma, Wayland, AMD
+  - type: textarea
+    id: output
+    attributes:
+      label: Terminal output
+      description: Anything Lattis printed when started from a terminal. Remove anything private.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, a theme or settings file that matters, which emulator or platform is involved.

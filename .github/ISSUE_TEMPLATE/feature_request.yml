@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something Lattis should do or do differently
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please search the open issues first; add a 👍 to an existing request instead of opening a duplicate.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Lattis makes hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: How you imagine it working. Sketches and screenshots of other launchers are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use now, or other ways it could work.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: The platforms or emulators involved, links, related issues.
