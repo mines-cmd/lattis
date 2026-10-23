@@ -309,6 +309,7 @@ qt_add_qml_module(lattis
         src/metadata/credentials.h src/metadata/credentials.cpp
         src/metadata/metadatahttp.h src/metadata/metadatahttp.cpp
         src/metadata/igdb.h src/metadata/igdb.cpp
+        src/metadata/namematch.h src/metadata/namematch.cpp
         src/metadata/steamgriddb.h src/metadata/steamgriddb.cpp
         src/metadata/metadataclient.h src/metadata/metadataclient.cpp
         src/metadata/thumbnailcache.h

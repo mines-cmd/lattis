@@ -63,6 +63,7 @@ set(LIBRARY_SOURCES
     ../src/library/library.h ../src/library/library.cpp
     ../src/steam/steamdownloads.h ../src/steam/steamdownloads.cpp
     ../src/metadata/igdb.h ../src/metadata/igdb.cpp
+    ../src/metadata/namematch.h ../src/metadata/namematch.cpp
     ../src/library/uninstall.h ../src/library/uninstall.cpp
     ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
     ../src/library/librarystore.h ../src/library/librarystore.cpp
@@ -237,11 +238,15 @@ lattis_test(steampresets_test
     LIBS tomlplusplus::tomlplusplus)
 
 # Metadata
+lattis_test(namematch_test
+    SOURCES ../src/metadata/namematch.h ../src/metadata/namematch.cpp
+            ../src/library/searchtext.h ../src/library/searchtext.cpp)
 lattis_test(metadata_test
     SOURCES fakehttpserver.h
             ../src/metadata/credentials.h ../src/metadata/credentials.cpp
             ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
             ../src/metadata/igdb.h ../src/metadata/igdb.cpp
+            ../src/metadata/namematch.h ../src/metadata/namematch.cpp
             ../src/metadata/steamgriddb.h ../src/metadata/steamgriddb.cpp
             ../src/metadata/metadataclient.h ../src/metadata/metadataclient.cpp
             ../src/metadata/idlistmodel.h ../src/metadata/idlistmodel.cpp

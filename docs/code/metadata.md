@@ -33,7 +33,17 @@ Neither service is touched before a lookup is actually started. `MetadataClient`
 
 The search for a game title sends an Apicalypse query to IGDB's `/games` endpoint. The query filters by platform when the library knows IGDB platform IDs for it (`Library::igdbPlatformIds()`). Editions, DLC, bundles, mods, episodes, seasons, packs and updates are excluded. Quotes and backslashes are stripped from the title before searching, since Apicalypse strings have no reliable escapes.
 
-A **clear match** is an unambiguous result. For IGDB (`Igdb::clearMatch`): the only game in the results whose name or alternative name folds to the same text as the title; or, for a Steam game, the only one that lists the game's Steam app ID. For SteamGridDB (`SteamGridDb::clearMatch`): the only game whose name folds to the same text, with sequel numbers treated interchangeably as digits or Roman numerals; when several fold to the same text, the one released in the right year.
+A **clear match** is an unambiguous result. Both services share `NameMatch::clearMatch` (`namematch.*`, pure functions). It compares names by a **compact key**: folded (`SearchText::fold`), without a leading `the`, `a` or `an`, `and` dropped (so `&` and `and` agree), `versus` as `vs`, Roman numerals II to XX as digits (a lone `X` and `I` stay letters: `Mega Man X`, `Pokémon X`), and then every space and punctuation mark removed, so `TriForce` = `Tri Force` and `Spider-Man` = `Spiderman`. In order:
+
+1. For IGDB (`Igdb::clearMatch`) a Steam game's app ID: the only game that lists it.
+2. The only game with a name or alternative name whose compact key equals the title's. When several do, SteamGridDB's tie-break picks the one released in the right year; IGDB has none (the search is already limited to the game's platforms).
+3. Otherwise the best game by similarity (Sørensen–Dice on the compact keys' character pairs), when it scores at least `kMinScore` (0.92) and leads the next game by at least `kMinGap` (0.08). Only names with the same sequel numbers in the same order are compared, so `Persona 4` never nearly matches `Persona 5`.
+
+Tuned on `tests/namematch_test.cpp`: a one-letter typo (`Mario Tennis Ace` for `Aces`) matches, a missing word (`Mario Tennis`, `Persona 4` for `Persona 4 Golden`) doesn't.
+
+IGDB ranks a search loosely: the right game can be past the first five (`TriForce Heroes` finds `Tri Force Heroes` only far down). When the first search has results but no clear match, `lookupQuery` searches again, 50 results, with camel-case words split (`NameMatch::splitCamelCase`), merges them into the first results ranked by `NameMatch::similarity` to the title (the pick list shows the first five), and matches the lot. One extra request per lookup that has no clear match.
+
+When IGDB finds nothing for the whole title, even as a wildcard, `MetadataClient::lookupQuery` searches once more for the part before the first `:` and matches those results against the whole title.
 
 Without a clear match, the results are offered as a **pick list** for the user to choose from.
 
@@ -93,6 +103,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `bulklookup.*` | `BulkLookup`: "Look up missing info"; the game list, lookup queue, apply |
 | `scanlookup.*` | `ScanLookup`: automatic lookup of newly discovered games |
 | `igdb.*` | IGDB search and fetch queries, parsing, platform list, clear-match |
+| `namematch.*` | The name comparison both clear-matches share: the compact key, similarity, the rule |
 | `steamgriddb.*` | SteamGridDB request paths, parsing, art filtering, clear-match |
 | `credentials.*` | `credentials.toml`: parsing and writing API keys |
 | `metadatasettings.*` | `[metadata]` in `settings.toml` |

@@ -1,5 +1,5 @@
 #include "steamgriddb.h"
-#include "searchtext.h"
+#include "namematch.h"
 
 #include <QDateTime>
 #include <QHash>
@@ -44,16 +44,6 @@ int sequelNumber(const QString &word)
     return roman >= 2 ? roman : 0;
 }
 
-// Folded, with sequel numbers as digits: "Mortal Shell II" and "Mortal Shell 2" are the same.
-QString foldedTitle(const QString &title)
-{
-    QStringList words = SearchText::fold(title).split(u' ', Qt::SkipEmptyParts);
-    for (QString &word : words) {
-        if (const int n = sequelNumber(word))
-            word = QString::number(n);
-    }
-    return words.join(u' ');
-}
 }
 
 namespace SteamGridDb {
@@ -121,17 +111,15 @@ QList<SgdbGame> parseGames(const QJsonDocument &json, QString *error)
 
 int clearMatch(const QList<SgdbGame> &games, const QString &title, int year)
 {
-    const QString folded = foldedTitle(title);
-    if (folded.isEmpty())
-        return -1;
-    QList<int> same;
-    for (qsizetype i = 0; i < games.size(); ++i) {
-        if (foldedTitle(games.at(i).name) == folded)
-            same.append(int(i));
-    }
-    if (same.size() > 1 && year > 0)
-        same.removeIf([&](int i) { return games.at(i).year != year; });
-    return same.size() == 1 ? same.first() : -1;
+    QList<QStringList> names;
+    for (const SgdbGame &g : games)
+        names.append({g.name});
+    return NameMatch::clearMatch(names, title, [&](const QList<int> &same) {
+        QList<int> inYear = same;
+        if (year > 0)
+            inYear.removeIf([&](int i) { return games.at(i).year != year; });
+        return inYear.size() == 1 ? inYear.first() : -1;
+    });
 }
 
 std::pair<QString, QUrlQuery> artRequest(int gameId, const QString &kind, const QString &style, int page)

@@ -27,7 +27,7 @@ Turn this off with **Look up new games** on Settings → Metadata. Games you add
 
 In a game's Properties, or the + dialog, click **Look up in IGDB** beside the title. It searches for the title as it's typed, on the game's platform, so fix a poor title first.
 
-- **A clear match** fills in the fields you haven't touched, each marked "from IGDB". The row under the heading names the game it found, with **Not this game?**, **Detailed lookup**, **Choose art** and **Undo lookup**.
+- **A clear match** is the one game whose name is the same as the title once spacing, punctuation, a leading "The", "&" or "and", "vs" or "versus" and Roman or ordinary sequel numbers are ignored (so "TriForce Heroes" finds "Tri Force Heroes" and "Final Fantasy 12" finds "XII"), or a single game that is nearly the same, such as a one-letter typo. Sequel numbers have to agree: "Persona 4" never matches "Persona 5". If IGDB knows nothing under the whole title, the part before the first colon is searched too. A clear match fills in the fields you haven't touched, each marked "from IGDB". The row under the heading names the game it found, with **Not this game?**, **Detailed lookup**, **Choose art** and **Undo lookup**.
 - **Several possible matches**: pick the right one from up to five, or **None of these**, or **Not on IGDB** (so bulk lookups skip it from then on).
 - **Fields that already had something** are left alone and listed ("Description differs from what you have"), with **Replace these too**.
 - **Tags that fit** are added, each with a dot until you keep or remove it.

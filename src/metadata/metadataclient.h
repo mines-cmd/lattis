@@ -59,8 +59,9 @@ signals:
 private:
     // A context for one request: deleting it (cancel) drops the result.
     QObject *start(int *request);
+    // stage: 0 searches the title, 1 matches it as a wildcard, 2 searches the part before its first colon, 3 searches the title with camel-case words split (adding to `earlier`).
     void lookupQuery(int request, QObject *context, const QString &title, const QList<int> &platforms, int igdbId,
-                     qint64 steamAppId, int limit, bool wildcard);
+                     qint64 steamAppId, int limit, int stage, const QList<IgdbGame> &earlier = {});
     void finish(int request, QVariantMap result);
     QString imageUrl(const QUrl &url, const QString &kind);
     QVariantMap candidate(const IgdbGame &game);

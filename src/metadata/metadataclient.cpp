@@ -1,6 +1,7 @@
 #include "metadataclient.h"
 #include "apppaths.h"
 #include "igdb.h"
+#include "namematch.h"
 #include "steamgriddb.h"
 
 #include <QCryptographicHash>
@@ -127,6 +128,10 @@ QString MetadataClient::imageUrl(const QUrl &url, const QString &kind)
     return (m_http.usesFixtures() ? m_http.placeholder(url, kind) : url).toString();
 }
 
+namespace {
+constexpr int kWideSearch = 50;
+}
+
 int MetadataClient::lookup(const QString &title, const QVariantList &igdbPlatforms, int igdbId, qint64 steamAppId,
                            int limit)
 {
@@ -135,25 +140,60 @@ int MetadataClient::lookup(const QString &title, const QVariantList &igdbPlatfor
     QList<int> platforms;
     for (const QVariant &p : igdbPlatforms)
         platforms.append(p.toInt());
-    lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, false);
+    lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, 0);
     return request;
 }
 
 void MetadataClient::lookupQuery(int request, QObject *context, const QString &title, const QList<int> &platforms,
-                                 int igdbId, qint64 steamAppId, int limit, bool wildcard)
+                                 int igdbId, qint64 steamAppId, int limit, int stage, const QList<IgdbGame> &earlier)
 {
+    const QString mainTitle = title.left(std::max<qsizetype>(title.indexOf(u':'), 0)).trimmed();
+    const QString spaced = NameMatch::splitCamelCase(title);
+    const QString searched = stage == 2 ? mainTitle : stage == 3 ? spaced : title;
     const QByteArray query =
-        igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(title, platforms, limit, wildcard);
+        igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(searched, platforms, stage == 3 ? std::max(limit, kWideSearch) : limit, stage == 1);
     m_http.igdb(QStringLiteral("games"), query, context,
-                [this, request, context, title, platforms, igdbId, steamAppId, limit, wildcard](const MetadataReply &reply) {
+                [this, request, context, title, mainTitle, spaced, platforms, igdbId, steamAppId, limit, stage,
+                 earlier](const MetadataReply &reply) {
                     if (!reply.ok())
                         return finish(request, failure(reply.error));
                     QString error;
-                    const QList<IgdbGame> games = Igdb::parseGames(reply.json, platforms, &error);
+                    QList<IgdbGame> games = Igdb::parseGames(reply.json, platforms, &error);
                     if (!error.isEmpty())
                         return finish(request, failure(error));
-                    if (games.isEmpty() && igdbId <= 0 && !wildcard)
-                        return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, true);
+                    // IGDB ranks a search loosely (a "TriForce" title doesn't rank "Tri Force Heroes" in the
+                    // first five): search wider, with camel-case words split, and rank what comes back
+                    // by how close the names are.
+                    if (stage == 0 && igdbId <= 0 && !games.isEmpty() && limit < kWideSearch
+                        && Igdb::clearMatch(games, title, steamAppId) < 0)
+                        return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, 3, games);
+                    if (stage == 3) {
+                        QList<IgdbGame> merged = earlier;
+                        for (const IgdbGame &g : std::as_const(games)) {
+                            if (std::none_of(merged.cbegin(), merged.cend(), [&](const IgdbGame &e) { return e.id == g.id; }))
+                                merged.append(g);
+                        }
+                        // The pick list shows the first five: the closest names go there.
+                        const QString key = NameMatch::compactKey(title);
+                        const auto closeness = [&](const IgdbGame &g) {
+                            double best = NameMatch::similarity(key, NameMatch::compactKey(g.name));
+                            for (const QString &n : g.alternativeNames)
+                                best = std::max(best, NameMatch::similarity(key, NameMatch::compactKey(n)));
+                            return best;
+                        };
+                        std::stable_sort(merged.begin(), merged.end(), [&](const IgdbGame &a, const IgdbGame &b) {
+                            return closeness(a) > closeness(b);
+                        });
+                        qCDebug(lcMetadata).noquote() << "searched" << spaced << "as well:" << games.size()
+                                                     << "results," << merged.size() << "in all";
+                        games = merged;
+                    }
+                    // The subtitle may be spelled differently from IGDB's; the main title still finds the game.
+                    if (games.isEmpty() && igdbId <= 0 && stage < 2) {
+                        const int next = stage == 0 ? 1 : (mainTitle.isEmpty() ? 3 : 2);
+                        if (next < 3)
+                            return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, next);
+                    }
                     QVariantList candidates;
                     for (const IgdbGame &g : games)
                         candidates.append(candidate(g));

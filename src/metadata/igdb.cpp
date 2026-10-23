@@ -1,5 +1,5 @@
 #include "igdb.h"
-#include "searchtext.h"
+#include "namematch.h"
 
 #include <QDateTime>
 #include <QJsonArray>
@@ -230,7 +230,6 @@ QList<IgdbGame> parseGames(const QJsonDocument &json, const QList<int> &platform
 
 int clearMatch(const QList<IgdbGame> &games, const QString &title, qint64 steamAppId)
 {
-    const auto only = [](const QList<int> &indexes) { return indexes.size() == 1 ? indexes.first() : -1; };
     // A Steam game's app id is surer than its title, which can differ ("… Intergrade").
     QList<int> steam;
     for (qsizetype i = 0; steamAppId > 0 && i < games.size(); ++i) {
@@ -240,19 +239,10 @@ int clearMatch(const QList<IgdbGame> &games, const QString &title, qint64 steamA
     if (steam.size() == 1)
         return steam.first();
 
-    const QString folded = SearchText::fold(title);
-    if (folded.isEmpty())
-        return -1;
-    QList<int> same;
-    for (qsizetype i = 0; i < games.size(); ++i) {
-        const IgdbGame &g = games.at(i);
-        bool matches = SearchText::fold(g.name) == folded;
-        for (qsizetype a = 0; !matches && a < g.alternativeNames.size(); ++a)
-            matches = SearchText::fold(g.alternativeNames.at(a)) == folded;
-        if (matches)
-            same.append(int(i));
-    }
-    return only(same);
+    QList<QStringList> names;
+    for (const IgdbGame &g : games)
+        names.append(QStringList{g.name} + g.alternativeNames);
+    return NameMatch::clearMatch(names, title);
 }
 
 QStringList fittingTags(const QStringList &facets, const QList<std::pair<QString, QStringList>> &tags,

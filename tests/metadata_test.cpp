@@ -84,6 +84,7 @@ private slots:
     void downloadsConvertIcons();
 
     void clientLookup();
+    void clientLookupWideSearch();
     void clientLookupIds();
     void clientLookupIdsBatches();
     void clientArt();
@@ -676,7 +677,8 @@ void MetadataTest::sgdbSearch()
     QCOMPARE(mario.first(), (SgdbGame{5254520, "Mario Tennis Aces", 2018}));
     QCOMPARE(SteamGridDb::clearMatch(mario, QStringLiteral("Mario Tennis Aces"), 2018), 0);
     QCOMPARE(SteamGridDb::clearMatch(mario, QStringLiteral("Mario Tennis Aces"), 0), 0);
-    QCOMPARE(SteamGridDb::clearMatch(mario, QStringLiteral("Mario Tennis Ace"), 2018), -1);
+    QCOMPARE(SteamGridDb::clearMatch(mario, QStringLiteral("Mario Tennis Ace"), 2018), 0); // one letter off
+    QCOMPARE(SteamGridDb::clearMatch(mario, QStringLiteral("Mario Golf"), 2018), -1);
 
     const QList<SgdbGame> steam = SteamGridDb::parseGames(fixture("sgdb-steam-1145360"));
     QCOMPARE(steam, (QList<SgdbGame>{{4997889, "Hades", 2019}}));
@@ -892,6 +894,12 @@ void MetadataTest::clientLookup()
     QCOMPARE(hades.value("igdb").toInt(), 113112);
     QVERIFY(hades.value("facets").toStringList().contains(QStringLiteral("keyword:roguelike")));
 
+    // Nothing for the whole title: the part before the colon is searched, and the results are
+    // still matched against the whole title.
+    r = result(client, client.lookup(QStringLiteral("Mario Tennis Aces: Misspelt Subtitle"), {130}));
+    QCOMPARE(r.value("candidates").toList().first().toMap().value("igdb").toInt(), 81145);
+    QCOMPARE(r.value("match").toInt(), -1);
+
     // A remembered id goes straight to the game.
     r = result(client, client.lookup(QStringLiteral("Whatever the title says"), {130}, 81145));
     QCOMPARE(r.value("match").toInt(), 0);
@@ -917,6 +925,47 @@ void MetadataTest::clientLookup()
     QVERIFY(tp.value("coverLarge").toString() != tp.value("cover").toString());
 
     QVERIFY(!client.http()->hasNetworkManager());
+}
+
+void MetadataTest::clientLookupWideSearch()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    const auto games = [](const QList<std::pair<int, QString>> &list) {
+        QJsonArray array;
+        for (const auto &[id, name] : list)
+            array.append(QJsonObject{{"id", id}, {"name", name}});
+        return QJsonDocument(array).toJson();
+    };
+    // IGDB's first five for a "TriForce" title, then the wider search where the game is 12th; the default lookup asks for 10.
+    QList<std::pair<int, QString>> wide;
+    for (int n = 1; n <= 11; ++n)
+        wide.append({n, QStringLiteral("The Legend of Zelda: Other %1").arg(n)});
+    wide.append({12, QStringLiteral("The Legend of Zelda: Tri Force Heroes")});
+    server.on("/v4/games", {200, games({{101, "The Legend of Zelda"}, {102, "The Legend of Zelda: Oracle of Ages"},
+                                        {103, "The Legend of Zelda: Oracle of Seasons"},
+                                        {104, "The Legend of Zelda: A Link Between Worlds"},
+                                        {105, "The Legend of Zelda: Link's Awakening DX"}})});
+    server.on("/v4/games", {200, games(wide)});
+    MetadataClient client(data.path(), cache.path(), endpoints(server));
+    client.http()->setCredentials(kKeys);
+    client.http()->setIgdbInterval(0);
+
+    const QVariantMap r =
+        result(client, client.lookup(QStringLiteral("The Legend of Zelda: TriForce Heroes"), {37, 137}));
+    QCOMPARE(r.value("error").toString(), QString());
+    const QVariantList candidates = r.value("candidates").toList();
+    QVERIFY(r.value("match").toInt() >= 0);
+    QCOMPARE(candidates.at(r.value("match").toInt()).toMap().value("igdb").toInt(), 12);
+    QCOMPARE(candidates.first().toMap().value("igdb").toInt(), 12); // the pick list's first five
+
+    const auto requests = server.requestsTo("/v4/games");
+    QCOMPARE(requests.size(), 2);
+    QVERIFY(requests.at(0).body.contains("limit 10;"));
+    QVERIFY(requests.at(1).body.contains("limit 50;"));
+    QVERIFY(requests.at(1).body.contains("Tri Force Heroes"));
 }
 
 void MetadataTest::clientLookupIds()
@@ -1801,9 +1850,10 @@ void MetadataTest::bulkFetchedAheadBatches()
     QTRY_VERIFY_WITH_TIMEOUT(!bulk.running(), 30000);
     QCOMPARE(bulk.done(), 1003);
 
-    // Three requests fetch the 1001, the two others are searched: kept to the rate limit.
+    // Three requests fetch the 1001, the two others are searched, and each search with results but
+    // no clear match is repeated wider: kept to the rate limit.
     const auto requests = server.requestsTo("/v4/games");
-    QCOMPARE(requests.size(), 5);
+    QCOMPARE(requests.size(), 7);
     int byId = 0;
     for (const auto &r : requests)
         byId += r.body.startsWith("where id = (") ? 1 : 0;
