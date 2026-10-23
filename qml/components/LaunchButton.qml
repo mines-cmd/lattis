@@ -13,19 +13,26 @@ Surface {
     property bool running: false
     property string tip
     property string updateState: "none"
+    // Set when the game's emulator isn't found but can be installed: the button installs it.
+    property string emulatorName
+    // What the emulator's install is doing ("45 %", "Unpacking"); empty when it isn't running.
+    property string emulatorStep
+    property real emulatorProgress: -1
 
-    readonly property bool installing: !installed && installable
-    readonly property bool launchable: (installed || installable || locatable) && !running
+    readonly property bool emulatorBusy: installed && emulatorName !== "" && emulatorStep !== ""
+    readonly property bool emulatorInstall: installed && emulatorName !== "" && emulatorStep === ""
+    readonly property bool installing: (!installed && installable) || emulatorInstall
+    readonly property bool launchable: (installed || installable || locatable) && !running && !emulatorBusy
     readonly property bool updateAction: installed && !running && updateState === "waiting"
-    readonly property bool updateBusy: (installed || installable) && !running && !updateAction
-                                       && (updateState === "downloading" || updateState === "paused")
+    readonly property bool updateBusy: emulatorBusy || ((installed || installable) && !running && !updateAction
+                                       && (updateState === "downloading" || updateState === "paused"))
 
     readonly property bool stopping: running && mouse.containsMouse
 
     signal clicked()
     signal stopRequested()
 
-    implicitWidth: Theme.launchButton.width
+    implicitWidth: emulatorName !== "" ? Math.max(Theme.launchButton.width, label.implicitWidth + 32) : Theme.launchButton.width
     implicitHeight: Theme.launchButton.height
     radius: Theme.launchButton.radius
     fill: {
@@ -62,6 +69,8 @@ Surface {
         elide: Text.ElideRight
         text: root.stopping && Theme.launchButton.stopLabel !== "" ? Theme.launchButton.stopLabel : root.running ? Theme.launchButton.runningLabel
             : root.updateAction ? Theme.launchButton.updateLabel
+            : root.emulatorBusy ? root.emulatorStep
+            : root.emulatorInstall ? qsTr("%1 %2").arg(Theme.launchButton.installLabel).arg(root.emulatorName)
             : root.updateBusy ? (root.updateState === "paused" ? Theme.launchButton.pausedLabel
                                  : root.installed ? Theme.launchButton.updatingLabel : Theme.launchButton.installingLabel)
             : root.installed ? Theme.launchButton.label
@@ -71,6 +80,7 @@ Surface {
         color: root.running ? Theme.launchButton.runningText
              : root.updateAction ? Theme.launchButton.updateText
              : root.updateBusy ? Theme.launchButton.updatingText
+             : root.emulatorInstall ? Theme.launchButton.installText
              : root.installed ? Theme.launchButton.text
              : root.installing ? Theme.launchButton.installText : Theme.launchButton.uninstalledText
         font.pixelSize: root.installed || root.installing || root.running ? Theme.launchButton.fontSize
@@ -89,6 +99,18 @@ Surface {
             shadowHorizontalOffset: 0
             shadowVerticalOffset: Theme.launchButton.hoverTextShadowOffset
         }
+    }
+
+    InstallProgress {
+        visible: root.emulatorBusy
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: root.radius
+        anchors.rightMargin: root.radius
+        anchors.bottomMargin: root.radius / 2
+        progress: root.emulatorProgress
+        fillColor: label.color
     }
 
     MouseArea {

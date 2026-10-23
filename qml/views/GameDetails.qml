@@ -40,6 +40,36 @@ Item {
     property string descriptionExpandedFor: ""
     readonly property bool onSteam: game.platform === "steam" || game.platform === "proton"
 
+    // A ROM game none of whose emulators is found: Launch installs the first one, if it can be.
+    // The Installer is only touched then, so it isn't made for a page that doesn't need it.
+    readonly property string missingEmulator: {
+        void game.launchTip
+        void Library.emulators
+        return hasGame && game.rom && game.installed ? GameRunner.missingEmulator(game.id) : ""
+    }
+    readonly property var emulatorRow: missingEmulator !== "" ? Installer.emulators[missingEmulator] : undefined
+    readonly property bool emulatorInstallable: (emulatorRow?.routes?.length ?? 0) > 0
+    readonly property string emulatorName: emulatorInstallable
+        ? (Library.emulators.find(e => e.id === missingEmulator)?.name ?? "") : ""
+    readonly property string emulatorState: emulatorRow?.state ?? "idle"
+    readonly property string emulatorStep: {
+        switch (emulatorState) {
+        case "checking": return qsTr("Checking")
+        case "downloading": return emulatorRow.progress >= 0 ? qsTr("%1 %").arg(Math.round(emulatorRow.progress * 100)) : qsTr("Downloading")
+        case "extracting": return qsTr("Unpacking")
+        case "installing": return qsTr("Installing")
+        default: return ""
+        }
+    }
+    // Tells of a failure that happened here, not one left over from before this game was shown.
+    property bool emulatorWasBusy: false
+    onEmulatorStepChanged: {
+        const busy = emulatorStep !== ""
+        if (emulatorWasBusy && !busy && emulatorState === "failed")
+            emulatorMessage(emulatorRow.error, game.id)
+        emulatorWasBusy = busy
+    }
+
     signal launchRequested()
     signal stopRequested()
     signal message(string text)
@@ -787,8 +817,13 @@ Item {
                     installable: root.game.platform === "steam"
                     locatable: root.game.platform === "proton" || root.game.platform === "linux"
                     running: GameRunner.running.includes(root.game.id ?? "")
-                    tip: (root.game.launchTip ?? "") !== "" ? Actions.tip(root.game.launchTip, Actions.keys.launch) : ""
-                    onClicked: root.launchRequested()
+                    emulatorName: root.emulatorName
+                    emulatorStep: root.emulatorStep
+                    emulatorProgress: root.emulatorRow?.progress ?? -1
+                    tip: root.emulatorName !== "" ? qsTr("Install %1; Lattis finds it afterwards").arg(root.emulatorName)
+                       : (root.game.launchTip ?? "") !== "" ? Actions.tip(root.game.launchTip, Actions.keys.launch) : ""
+                    onClicked: root.emulatorName !== "" ? Installer.install(root.missingEmulator, root.emulatorRow.routes[0])
+                                                        : root.launchRequested()
                     onStopRequested: root.stopRequested()
                 }
 
