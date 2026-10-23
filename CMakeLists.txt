@@ -137,6 +137,7 @@ qt_add_qml_module(lattis
         qml/setup/SetupWelcome.qml
         qml/setup/SetupSteam.qml
         qml/setup/SetupEmulators.qml
+        qml/setup/SetupPlatformRow.qml
         qml/setup/SetupMetadata.qml
         qml/setup/SetupLook.qml
         qml/setup/SetupDone.qml

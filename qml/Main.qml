@@ -222,6 +222,10 @@ ApplicationWindow {
         setupGuide.item?.page?.openFindDialogForScreenshot?.(path)
     }
 
+    function expandSetupRowForScreenshot(platformId) {
+        setupGuide.item?.page?.expandForScreenshot?.(platformId)
+    }
+
     function testMetadataKeyForScreenshot() {
         setupGuide.item?.page?.testForScreenshot?.()
     }
