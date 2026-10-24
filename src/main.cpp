@@ -67,6 +67,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < argc; ++i)
         arguments.append(QString::fromLocal8Bit(argv[i]));
 
+    // An AppImage can't carry the desktop's own Qt theme (KDE's), and Qt picks the portal theme
+    // only inside Flatpak or Snap, so its file dialogs would be Qt's own unthemed ones.
+    // The portal opens the desktop's own file picker on KDE, GNOME and the rest.
+    if (qEnvironmentVariableIsSet("APPIMAGE") && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME"))
+        qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("lattis"));
     app.setApplicationDisplayName(QStringLiteral("Lattis"));

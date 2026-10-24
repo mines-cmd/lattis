@@ -48,9 +48,11 @@ qt_plugins=$("$QMAKE" -query QT_INSTALL_PLUGINS)
 qt_qml=$("$QMAKE" -query QT_INSTALL_QML)
 qt_version=$("$QMAKE" -query QT_VERSION)
 cp -r "$qt_plugins/wayland-graphics-integration-client" "$appdir/usr/plugins/"
-# The GTK platform theme (QT_QPA_PLATFORMTHEME=gtk3) gives the native GTK file chooser, styled
-# by the user's GTK theme; without it Qt falls back to its own unthemed dialog. The GTK stack
-# it links to comes from the system, with the pixbuf loaders, schemas and modules that match it.
+# Lattis picks the portal theme (libqxdgdesktopportal, bundled by the Qt plugin) when run as an
+# AppImage, for the desktop's own file picker. The GTK theme is for users who set
+# QT_QPA_PLATFORMTHEME=gtk3 themselves; without it that setting would fall back to Qt's own
+# unthemed dialog. The GTK stack it links to comes from the system, with the pixbuf loaders,
+# schemas and modules that match it.
 cp "$qt_plugins/platformthemes/libqgtk3.so" "$appdir/usr/plugins/platformthemes/"
 deploy() {
     "$linuxdeploy" --appdir "$appdir" "$@" --exclude-library 'libwayland-*' \
