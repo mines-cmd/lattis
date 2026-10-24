@@ -56,12 +56,15 @@ set(LIBRARY_FILE_SOURCES
     ../src/install/releasesource.h ../src/install/releasesource.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
     ../src/library/rominfo.h ../src/library/rominfo.cpp
+    ../src/library/romdb.h ../src/library/romdb.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
     ${STEAM_SOURCES}
 )
 set(LIBRARY_SOURCES
     ../src/library/library.h ../src/library/library.cpp
+    ../src/library/romdbfetch.h ../src/library/romdbfetch.cpp
+    ../src/metadata/metadatasettings.h ../src/metadata/metadatasettings.cpp
     ../src/steam/steamdownloads.h ../src/steam/steamdownloads.cpp
     ../src/metadata/igdb.h ../src/metadata/igdb.cpp
     ../src/metadata/namematch.h ../src/metadata/namematch.cpp
@@ -93,7 +96,7 @@ set(BACKUP_SOURCES
     ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
     ${LIBRARY_FILE_SOURCES}
 )
-set(LIBRARY_LIBS Qt6::Qml Qt6::Gui Qt6::Concurrent tomlplusplus::tomlplusplus)
+set(LIBRARY_LIBS Qt6::Qml Qt6::Gui Qt6::Concurrent Qt6::Network tomlplusplus::tomlplusplus)
 set(STEAM_DATA "STEAM_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/steam\"")
 set(DEMO_DATA "DEMO_DATA_DIR=\"${CMAKE_SOURCE_DIR}/tools/demo-data\"")
 set(DOCS "DOCS_DIR=\"${CMAKE_SOURCE_DIR}/docs\"")
@@ -172,6 +175,13 @@ lattis_test(herocache_test SOURCES ../src/library/herocache.h ../src/library/her
 lattis_test(gameid_test SOURCES ../src/library/gameid.h ../src/library/gameid.cpp)
 lattis_test(romfoldermatch_test SOURCES ../src/library/romfoldermatch.h ../src/library/romfoldermatch.cpp)
 lattis_test(rominfo_test SOURCES ../src/library/rominfo.h ../src/library/rominfo.cpp)
+lattis_test(romdb_test
+    SOURCES ${LIBRARY_FILE_SOURCES}
+    LIBS tomlplusplus::tomlplusplus)
+find_program(PYTHON3 python3)
+if(PYTHON3)
+    add_test(NAME romdb_tool_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/../tools/romdb.py --test)
+endif()
 lattis_test(romscan_test PRESETS
     SOURCES ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus)

@@ -7,6 +7,12 @@ struct RomInfo
 {
     QString title;
     QString titleId;
+    // What a name database is searched by: the product or game code, the disc's serial, a file checksum.
+    QString serial;
+    QString crc32;
+    // A name the file carries that a database's should replace (a GameCube disc's internal name).
+    QString fallbackTitle;
+    bool fromDatabase = false;
 
     bool operator==(const RomInfo &) const = default;
 };

@@ -30,6 +30,7 @@ struct ScanOptions
     bool setup = false;
     bool steamHistory = false;
     bool steamStartup = false; // no scan has diffed it in this run: changes may span several sessions
+    QString cacheDir;
 };
 
 struct ScanResult
@@ -242,6 +243,7 @@ private:
     QStringList m_protonAdded;
     bool m_steamHistoryStarted = false;
     QString m_cachePath;
+    QString m_cacheDir;
     LibraryVersion::Status m_versionStatus;
     LibrarySnapshot m_snapshot;
     bool m_loading = false;

@@ -2,6 +2,8 @@
 #include "apppaths.h"
 #include "artimage.h"
 #include "gameid.h"
+#include "metadatasettings.h"
+#include "romdbfetch.h"
 #include "romscan.h"
 #include "steamart.h"
 #include "vdf.h"
@@ -498,6 +500,15 @@ void diffSteamPlay(const LibrarySnapshot &s, ScanResult &out, const QString &dat
 }
 }
 
+// Name databases are downloaded only with the lookup of new games on: it is the same consent.
+static RomDbOptions romDbOptions(const QString &dataDir, const QString &cacheDir)
+{
+    QFile file(dataDir + QStringLiteral("/settings.toml"));
+    const QByteArray bytes = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    const bool consent = parseMetadataSettings(bytes, QStringLiteral("settings.toml")).value.lookUpNewGames;
+    return RomDbFetch::options(cacheDir, consent);
+}
+
 ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, const ScanOptions &options)
 {
     QElapsedTimer timer;
@@ -561,7 +572,7 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         if (romsDue) {
             RomScanResult roms = scanRomFolders(s.content.platforms, out.emulators, s.content.roms,
                                                 takenIds(s.content), dataDir, options.installs.home,
-                                                claimedRoms(s.romGameFiles));
+                                                claimedRoms(s.romGameFiles), romDbOptions(dataDir, options.cacheDir));
             for (auto it = roms.indexes.cbegin(); it != roms.indexes.cend(); ++it) {
                 s.content.roms.insert(it.key(), it.value());
                 const QString path = kRomsPrefix + it.key() + QStringLiteral(".toml");
@@ -631,6 +642,7 @@ LibraryStore::LibraryStore(const QString &dataDir, const QString &cacheDir, NewL
     : QObject(parent)
     , m_dataDir(QDir(dataDir).absolutePath())
     , m_cachePath(LibraryCache::pathFor(cacheDir, dataDir))
+    , m_cacheDir(cacheDir)
     , m_versionStatus(LibraryVersion::prepare(m_dataDir, LibraryVersion::kCurrent, LibraryVersion::upgrades(),
                                               newLibrary == NewLibrary::WithSetup))
     , m_setupPending(m_versionStatus.setupPending)
@@ -720,6 +732,7 @@ void LibraryStore::refresh()
     options.setup = m_setupPending;
     options.roms = !m_setupPending && std::exchange(m_scanRoms, false);
     options.presets = Emulators::presets();
+    options.cacheDir = m_cacheDir;
     options.installs = m_installLocations;
     options.steam = m_steamLocations;
     options.copySteamArt = !m_versionStatus.readOnly;

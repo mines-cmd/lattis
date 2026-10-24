@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libraryfiles.h"
+#include "romdb.h"
 #include "rominfo.h"
 
 #include <QSet>
@@ -56,6 +57,7 @@ struct RomIndexUpdate
     int dlc = 0;
     int dropped = 0;
     int named = 0;
+    int namedFromDatabase = 0;
 };
 
 RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &index, const QStringList &found,
@@ -89,7 +91,8 @@ QList<RomNameJob> romNameJobs(const Platform &platform, const QList<EmulatorDef>
                               const QSet<QString> &editedIds);
 
 // Opens files: keep it off the main thread.
-QList<RomNameRead> readRomNames(const QString &platform, const QList<RomNameJob> &jobs);
+QList<RomNameRead> readRomNames(const QString &platform, const QList<RomNameJob> &jobs,
+                                const RomDbOptions &romDb = {});
 
 RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRead> &reads);
 
@@ -108,4 +111,5 @@ qint64 folderSize(const QString &folder);
 
 RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<EmulatorDef> &emulators,
                              const QMap<QString, QList<RomEntry>> &indexes, QSet<QString> taken,
-                             const QString &dataDir, const QString &home, const QSet<QString> &claimed = {});
+                             const QString &dataDir, const QString &home, const QSet<QString> &claimed = {},
+                             const RomDbOptions &romDb = {});

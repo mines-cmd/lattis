@@ -382,7 +382,7 @@ RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &in
         RomName::Info info;
         qint64 size = 0;
         bool matched = false;
-        bool fromFile = false;
+        QString source;
     };
     QList<NewFile> newFiles;
     for (const QString &path : found) {
@@ -393,7 +393,9 @@ RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &in
             file.info.title = RomName::fixCase(inside.title);
             if (file.info.titleId.isEmpty())
                 file.info.titleId = inside.titleId;
-            file.fromFile = true;
+            file.source = inside.fromDatabase ? QStringLiteral("database") : QStringLiteral("file");
+        } else if (file.info.titleId.isEmpty()) {
+            file.info.titleId = inside.titleId;
         }
         newFiles.append(file);
     }
@@ -467,9 +469,10 @@ RomIndexUpdate updateRomIndex(const QString &platform, const QList<RomEntry> &in
         entry.path = file.path;
         entry.title = file.info.title;
         entry.titleId = file.info.titleId;
-        entry.titleSource = file.fromFile ? QStringLiteral("file") : QStringLiteral("filename");
+        entry.titleSource = file.source.isEmpty() ? QStringLiteral("filename") : file.source;
         entry.size = file.size;
-        out.named += file.fromFile ? 1 : 0;
+        out.named += file.source == QLatin1String("file") ? 1 : 0;
+        out.namedFromDatabase += file.source == QLatin1String("database") ? 1 : 0;
         entry.id = GameId::forTitle(platform, file.info.title, *taken);
         taken->insert(entry.id);
         out.entries.append(entry);
@@ -492,7 +495,8 @@ QList<RomNameJob> romNameJobs(const Platform &platform, const QList<EmulatorDef>
     QList<RomNameJob> out;
     for (const RomEntry &e : index) {
         const QString folder = files.value(e.path);
-        if (e.titleSource == QLatin1String("file") || editedIds.contains(e.id) || folder.isEmpty()
+        if (e.titleSource == QLatin1String("file") || e.titleSource == QLatin1String("database")
+            || editedIds.contains(e.id) || folder.isEmpty()
             || isFolderUpdate(e.path, names))
             continue;
         if (isFolderGame(e.path, names))
@@ -503,12 +507,25 @@ QList<RomNameJob> romNameJobs(const Platform &platform, const QList<EmulatorDef>
     return out;
 }
 
-QList<RomNameRead> readRomNames(const QString &platform, const QList<RomNameJob> &jobs)
+// What a new or listed file says about itself, with the name database's answer where the file has no name.
+// Updates and DLC are never looked up: a database lists base games.
+static RomInfo readRom(RomDb &db, const QString &platform, const QString &source, bool folder)
 {
+    RomInfo info = folder ? RomInfoReader::readFolder(source, platform) : RomInfoReader::read(source, platform);
+    if (info.title.isEmpty() && !folder) {
+        const RomName::Info named = RomName::parse(QFileInfo(source).fileName(), platform);
+        if (named.kind == RomName::Kind::Game)
+            db.name(platform, named.titleId, &info);
+    }
+    return info;
+}
+
+QList<RomNameRead> readRomNames(const QString &platform, const QList<RomNameJob> &jobs, const RomDbOptions &romDb)
+{
+    RomDb db(romDb);
     QList<RomNameRead> out;
     for (const RomNameJob &job : jobs) {
-        const RomInfo info = job.folder ? RomInfoReader::readFolder(job.source, platform)
-                                        : RomInfoReader::read(job.source, platform);
+        const RomInfo info = readRom(db, platform, job.source, job.folder);
         if (!info.title.isEmpty())
             out.append({job.path, info});
     }
@@ -524,14 +541,14 @@ RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRe
     out.entries = index;
     for (RomEntry &e : out.entries) {
         const auto read = byPath.constFind(e.path);
-        if (read == byPath.cend() || e.titleSource == QLatin1String("file"))
+        if (read == byPath.cend() || e.titleSource == QLatin1String("file") || e.titleSource == QLatin1String("database"))
             continue;
         const QString title = RomName::fixCase(read->title);
         if (title != e.title) {
             e.title = title;
             ++out.renamed;
         }
-        e.titleSource = QStringLiteral("file");
+        e.titleSource = read->fromDatabase ? QStringLiteral("database") : QStringLiteral("file");
         if (e.titleId.isEmpty())
             e.titleId = read->titleId;
         out.changed = true;
@@ -541,9 +558,11 @@ RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRe
 
 RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<EmulatorDef> &emulators,
                              const QMap<QString, QList<RomEntry>> &indexes, QSet<QString> taken,
-                             const QString &dataDir, const QString &home, const QSet<QString> &claimed)
+                             const QString &dataDir, const QString &home, const QSet<QString> &claimed,
+                             const RomDbOptions &romDbOptions)
 {
     RomScanResult out;
+    RomDb romDb(romDbOptions);
     for (const Platform &platform : platforms) {
         if (platform.romFolders.isEmpty())
             continue;
@@ -625,10 +644,11 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
             if (indexed.contains(path) || isFolderUpdate(path, names))
                 continue;
             const QString folder = files.value(path);
-            const RomInfo inside = isFolderGame(path, names)
-                ? RomInfoReader::readFolder(folder + u'/' + path.section(u'/', 0, 0), platform.id)
-                : RomInfoReader::read(folder + u'/' + path, platform.id);
-            if (!inside.title.isEmpty())
+            const bool isFolder = isFolderGame(path, names);
+            const RomInfo inside = readRom(romDb, platform.id,
+                                           isFolder ? folder + u'/' + path.section(u'/', 0, 0) : folder + u'/' + path,
+                                           isFolder);
+            if (!inside.title.isEmpty() || !inside.titleId.isEmpty())
                 fromFiles.insert(path, inside);
         }
 
@@ -655,6 +675,9 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
         if (update.named > 0)
             out.log.append(QStringLiteral("%1: named %2 from their files")
                                .arg(platform.id, plural(update.named, "new game", "new games")));
+        if (update.namedFromDatabase > 0)
+            out.log.append(QStringLiteral("%1: named %2 from a name database")
+                               .arg(platform.id, plural(update.namedFromDatabase, "new game", "new games")));
     }
     return out;
 }

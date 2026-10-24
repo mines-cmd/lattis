@@ -1,4 +1,5 @@
 #include "library.h"
+#include "romdbfetch.h"
 #include "dateformat.h"
 #include "gameid.h"
 #include "igdb.h"
@@ -3043,7 +3044,8 @@ void Library::updateRomNames(const QString &platformId)
         commitUndo(update.renamed == 1 ? tr("1 game renamed from its file")
                                        : tr("%1 games renamed from their files").arg(update.renamed));
     });
-    watcher->setFuture(QtConcurrent::run(readRomNames, platformId, jobs));
+    // The button is the user's own request, so it may download a platform's name database.
+    watcher->setFuture(QtConcurrent::run(readRomNames, platformId, jobs, RomDbFetch::options(m_cacheDir, true)));
 }
 
 QString Library::unhideGame(const QString &id)

@@ -38,6 +38,8 @@ private slots:
     void indexNamesNewFilesFromTheirContents();
     void updateNamesReadsOnlyTheScannersTitles();
     void scanNamesNewGamesFromFilesOnce();
+    void scanNamesNewGamesFromADatabase();
+    void updateNamesUsesTheDatabase();
     void scanRecordsSizes();
     void scanSkipsClaimedFiles();
     void inspectPick_data();
@@ -678,6 +680,85 @@ void RomScanTest::scanNamesNewGamesFromFilesOnce()
     r = scanRomFolders({psp}, presets(), index, {}, data, dir.filePath("home"));
     QVERIFY(!r.indexes.contains("psp"));
     QVERIFY(!anyContains(r.log, "from their files"));
+}
+
+namespace {
+QString crc32Of(const QByteArray &data)
+{
+    quint32 crc = 0xFFFFFFFFu;
+    for (const char byte : data) {
+        crc ^= quint8(byte);
+        for (int k = 0; k < 8; ++k)
+            crc = (crc & 1) ? 0xEDB88320u ^ (crc >> 1) : crc >> 1;
+    }
+    return QStringLiteral("%1").arg(~crc, 8, 16, QLatin1Char('0')).toUpper();
+}
+
+bool writeBytes(const QString &path, const QByteArray &bytes)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile f(path);
+    return f.open(QIODevice::WriteOnly) && f.write(bytes) == bytes.size();
+}
+}
+
+void RomScanTest::scanNamesNewGamesFromADatabase()
+{
+    QTemporaryDir dir;
+    const QString data = dir.filePath("data");
+    const QByteArray gba = QByteArray("a gba rom's bytes");
+    QVERIFY(writeBytes(data + "/roms/gba/emerald_usa.gba", gba));
+    QVERIFY(writeBytes(data + "/roms/gba/unknown.gba", "other bytes"));
+    // A Switch file whose name has no title ID: the ticket inside has it.
+    QVERIFY(writeBytes(data + "/roms/switch/mkdeluxe.nsp", RomBytes::nsp({"0100152000022000" "0000000000000001.tik"})));
+    QVERIFY(writeBytes(data + "/roms/switch/Tetris.nsp", "no header"));
+    QVERIFY(writeBytes(dir.filePath("db/gba.tsv"), (crc32Of(gba) + "\tPokemon - Emerald Version (USA, Europe)\n").toUtf8()));
+    QVERIFY(writeBytes(dir.filePath("db/switch.tsv"), "0100152000022000\tMario Kart 8 Deluxe\n"));
+
+    int downloads = 0;
+    RomDbOptions options{dir.filePath("db"), [&](const QString &, const QString &) {
+                             ++downloads;
+                             return false;
+                         }};
+    const Platform gbaP = {"gba", "GBA", {}, {"mgba"}, {"roms/gba"}, 3};
+    const RomScanResult r = scanRomFolders({gbaP, switchPlatform({"roms/switch"})}, presets(), {}, {}, data,
+                                           dir.filePath("home"), {}, options);
+    QCOMPARE(downloads, 0);
+
+    const QList<RomEntry> gbaIndex = r.indexes.value("gba");
+    QCOMPARE(gbaIndex.size(), 2);
+    QCOMPARE(gbaIndex.at(0).title, QStringLiteral("Pokemon: Emerald Version"));
+    QCOMPARE(gbaIndex.at(0).titleSource, QStringLiteral("database"));
+    QCOMPARE(gbaIndex.at(1).title, QStringLiteral("Unknown"));
+    QCOMPARE(gbaIndex.at(1).titleSource, QStringLiteral("filename"));
+
+    const QList<RomEntry> switchIndex = r.indexes.value("switch");
+    QCOMPARE(switchIndex.at(0).path, QStringLiteral("Tetris.nsp"));
+    QCOMPARE(switchIndex.at(0).titleSource, QStringLiteral("filename"));
+    QCOMPARE(switchIndex.at(1).title, QStringLiteral("Mario Kart 8 Deluxe"));
+    QCOMPARE(switchIndex.at(1).titleSource, QStringLiteral("database"));
+    QCOMPARE(switchIndex.at(1).titleId, QStringLiteral("0100152000022000"));
+    QVERIFY(anyContains(r.log, "gba: named 1 new game from a name database"));
+    QVERIFY(!anyContains(r.log, "from their files"));
+}
+
+void RomScanTest::updateNamesUsesTheDatabase()
+{
+    QTemporaryDir dir;
+    const QByteArray gba = QByteArray("a gba rom's bytes");
+    QVERIFY(writeBytes(dir.filePath("emerald.gba"), gba));
+    QVERIFY(writeBytes(dir.filePath("db/gba.tsv"), (crc32Of(gba) + "\tPokemon - Emerald Version (USA, Europe)\n").toUtf8()));
+
+    const QList<RomEntry> index = {entry("emerald.gba", "gba-emerald", "emerald")};
+    const Platform gbaP = {"gba", "GBA", {}, {"mgba"}, {dir.path()}, 3};
+    const QList<RomNameJob> jobs = romNameJobs(gbaP, presets(), index, {{"emerald.gba", dir.path()}}, {});
+    QCOMPARE(jobs.size(), 1);
+
+    const RomNamesUpdate update = applyRomNames(index, readRomNames("gba", jobs, {dir.filePath("db"), {}}));
+    QCOMPARE(update.renamed, 1);
+    QCOMPARE(update.entries.first().title, QStringLiteral("Pokemon: Emerald Version"));
+    QCOMPARE(update.entries.first().titleSource, QStringLiteral("database"));
+    QVERIFY(romNameJobs(gbaP, presets(), update.entries, {{"emerald.gba", dir.path()}}, {}).isEmpty());
 }
 
 void RomScanTest::scanRecordsSizes()

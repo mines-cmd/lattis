@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QList>
 #include <QString>
 
 // Header bytes of the formats rominfo.cpp reads, for tests.
@@ -161,5 +162,47 @@ inline QByteArray pbp(const QByteArray &param)
     put(d, 8, 0x28, 4);
     put(d, 12, 0x28 + param.size(), 4);
     return d + param;
+}
+
+// An ISO 9660 image with one file in its root: volume descriptor at sector 16, root at 17, the file at 18.
+// `sector` and `header` give a raw .bin's layout (2352 and 16 or 24).
+inline QByteArray isoWithFile(const QByteArray &name, const QByteArray &content, qsizetype sector = 2048,
+                              qsizetype header = 0)
+{
+    QByteArray d;
+    const auto at = [&](qsizetype n) { return n * sector + header; };
+    put(d, at(16), 1, 1);
+    putText(d, at(16) + 1, "CD001");
+    putText(d, at(16) + 156, isoRecord(QByteArray(1, '\0'), 17, 2048, true));
+    putText(d, at(17), isoRecord(name, 18, content.size(), false));
+    putText(d, at(18), content);
+    return d;
+}
+
+inline QByteArray discHeader(const QByteArray &id, const QByteArray &name, bool wii)
+{
+    QByteArray d(0x100, '\0');
+    putText(d, 0, id);
+    putText(d, 0x20, name);
+    putText(d, wii ? 0x18 : 0x1C, wii ? QByteArray("\x5D\x1C\x9E\xA3", 4) : QByteArray("\xC2\x33\x9F\x3D", 4));
+    return d;
+}
+
+// A PFS0 header with these file names (no file contents).
+inline QByteArray nsp(const QList<QByteArray> &names)
+{
+    QByteArray strings;
+    QByteArray entries;
+    for (const QByteArray &name : names) {
+        QByteArray entry(24, '\0');
+        put(entry, 16, strings.size(), 4);
+        entries += entry;
+        strings += name + QByteArray(1, '\0');
+    }
+    QByteArray d(16, '\0');
+    putText(d, 0, "PFS0");
+    put(d, 4, names.size(), 4);
+    put(d, 8, strings.size(), 4);
+    return d + entries + strings;
 }
 }

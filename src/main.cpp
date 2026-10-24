@@ -13,6 +13,7 @@
 #include "launch/launchcommand.h"
 #include "library/artimage.h"
 #include "library/library.h"
+#include "library/romdbfetch.h"
 #include "library/uninstall.h"
 #include "metadata/bulklookup.h"
 #include "metadata/scanlookup.h"
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
         QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
     DateFormat::setSystemLocale(general.systemLocale());
     Actions actions(dataDir);
+    RomDbFetch::setEnabled(true);
     Library library(dataDir, AppPaths::cacheDir(), NewLibrary::WithSetup);
     library.store().setStateDir(AppPaths::stateDir());
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));

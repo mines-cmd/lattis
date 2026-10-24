@@ -236,7 +236,7 @@ void LibraryRomTest::updateNamesRenamesFromFilesAndUndoes()
     const QByteArray before = readFile(romIndexPath("3ds"));
     QCOMPARE(library->gameAt(library->rowOfGame(id)).value("title").toString(), QStringLiteral("layton"));
     QVERIFY(library->readsNames(QStringLiteral("3ds")));
-    QVERIFY(!library->readsNames(QStringLiteral("switch")));
+    QVERIFY(!library->readsNames(QStringLiteral("wiiu")));
 
     QSignalSpy offered(library.get(), &Library::undoOffered);
     library->updateRomNames(QStringLiteral("3ds"));

@@ -297,6 +297,8 @@ qt_add_qml_module(lattis
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp
         src/library/rominfo.h src/library/rominfo.cpp
+        src/library/romdb.h src/library/romdb.cpp
+        src/library/romdbfetch.h src/library/romdbfetch.cpp
         src/library/searchtext.h src/library/searchtext.cpp
         src/library/listsettings.h src/library/listsettings.cpp
         src/library/library.h src/library/library.cpp
