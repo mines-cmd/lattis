@@ -17,8 +17,21 @@ ApplicationWindow {
     Component.onCompleted: {
         WindowState.track(this, "bulk_lookup")
     }
-    color: Theme.settingsWindow.background
+    // Transparent so the background's rounded corners show: only some compositors (Hyprland)
+    // round frameless windows themselves, KWin doesn't.
+    color: "transparent"
+    background: Rectangle {
+        radius: root.cornerRadius
+        color: Theme.settingsWindow.background
+    }
     flags: Qt.Window | Qt.FramelessWindowHint
+    // A tiling compositor calls a floating window maximized, so being maximized isn't enough.
+    readonly property bool framed: visibility !== Window.FullScreen
+                                   && !(visibility === Window.Maximized && width > 0 && height > 0
+                                        && WindowState.fillsScreen(root))
+    readonly property int cornerRadius: !framed ? 0
+        : Theme.settingsWindow.windowBorderFollowCompositor && WindowState.compositorRounding() >= 0
+          ? WindowState.compositorRounding() : Theme.gameEditor.bulkWindowBorderRadius
 
     font.pixelSize: Theme.font.size
     font.family: Theme.font.family !== "" ? Theme.font.family : Qt.application.font.family
@@ -1982,18 +1995,14 @@ ApplicationWindow {
         anchors.rightMargin: Theme.settingsWindow.contentPadding
     }
 
-    // An outline around the window, over the content; none while it fills the screen. A tiling
-    // compositor calls a floating window maximized, so being maximized isn't enough.
+    // An outline around the window, over the content; none while it fills the screen.
     Rectangle {
         anchors.fill: parent
-        visible: border.width > 0 && root.visibility !== Window.FullScreen
-                 && !(root.visibility === Window.Maximized && root.width > 0 && root.height > 0
-                      && WindowState.fillsScreen(root))
+        visible: border.width > 0 && root.framed
         color: "transparent"
         border.color: Theme.gameEditor.bulkWindowBorder
         border.width: Theme.gameEditor.bulkWindowBorderWidth
-        radius: Theme.settingsWindow.windowBorderFollowCompositor && WindowState.compositorRounding() >= 0
-                ? WindowState.compositorRounding() : Theme.gameEditor.bulkWindowBorderRadius
+        radius: root.cornerRadius
     }
 
     WindowFrame {}

@@ -39,8 +39,17 @@ ApplicationWindow {
     }
     onVisibleChanged: if (visible) Theme.beginEditSession()
     title: qsTr("Settings")
-    color: Theme.settingsWindow.background
+    // Transparent so the background's rounded corners show: only some compositors (Hyprland)
+    // round frameless windows themselves, KWin doesn't.
+    color: "transparent"
     flags: Qt.Window | Qt.FramelessWindowHint
+    // A tiling compositor calls a floating window maximized, so being maximized isn't enough.
+    readonly property bool framed: visibility !== Window.FullScreen
+                                   && !(visibility === Window.Maximized && width > 0 && height > 0
+                                        && WindowState.fillsScreen(root))
+    readonly property int cornerRadius: !framed ? 0
+        : Theme.settingsWindow.windowBorderFollowCompositor && WindowState.compositorRounding() >= 0
+          ? WindowState.compositorRounding() : Theme.settingsWindow.windowBorderRadius
 
     font.pixelSize: Theme.font.size
     font.family: Theme.font.family !== "" ? Theme.font.family : Qt.application.font.family
@@ -227,6 +236,7 @@ ApplicationWindow {
 
     Surface {
         anchors.fill: parent
+        radius: root.cornerRadius
         fill: Theme.settingsWindow.background
         fillEnd: Theme.settingsWindow.backgroundEnd
         direction: Theme.controls.gradientDirection
@@ -789,18 +799,14 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
     }
 
-    // An outline around the window, over the content; none while it fills the screen. A tiling
-    // compositor calls a floating window maximized, so being maximized isn't enough.
+    // An outline around the window, over the content; none while it fills the screen.
     Rectangle {
         anchors.fill: parent
-        visible: border.width > 0 && root.visibility !== Window.FullScreen
-                 && !(root.visibility === Window.Maximized && root.width > 0 && root.height > 0
-                      && WindowState.fillsScreen(root))
+        visible: border.width > 0 && root.framed
         color: "transparent"
         border.color: Theme.settingsWindow.windowBorder
         border.width: Theme.settingsWindow.windowBorderWidth
-        radius: Theme.settingsWindow.windowBorderFollowCompositor && WindowState.compositorRounding() >= 0
-                ? WindowState.compositorRounding() : Theme.settingsWindow.windowBorderRadius
+        radius: root.cornerRadius
     }
 
     WindowFrame {}
