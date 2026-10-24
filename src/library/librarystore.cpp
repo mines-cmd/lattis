@@ -564,7 +564,7 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     const bool emulatorsChanged = (touched(kPlatforms) && !samePlatformsBesidesOrder(previous.content.platforms, s.content.platforms))
         || touched(kEmulators);
     const bool romsDue = !options.setup && (options.roms || !previous.romsScanned || emulatorsChanged);
-    if (romsDue || (options.setup && (!previous.installsDetected || emulatorsChanged))) {
+    if (romsDue || (options.setup && (options.redetect || !previous.installsDetected || emulatorsChanged))) {
         QElapsedTimer romTimer;
         romTimer.start();
         QStringList ignored;
@@ -730,7 +730,8 @@ void LibraryStore::refresh()
     m_scanGeneration = m_generation;
     ScanOptions options;
     options.setup = m_setupPending;
-    options.roms = !m_setupPending && std::exchange(m_scanRoms, false);
+    options.redetect = std::exchange(m_scanRoms, false);
+    options.roms = !m_setupPending && options.redetect;
     options.presets = Emulators::presets();
     options.cacheDir = m_cacheDir;
     options.installs = m_installLocations;
@@ -801,7 +802,7 @@ void LibraryStore::onScanFinished()
     if (m_scanGeneration != m_generation) {
         // Something changed here while the scan ran; its result is out of date.
         m_scanAgain = true;
-        m_scanRoms = m_scanRoms || result.romsScanned;
+        m_scanRoms = m_scanRoms || result.installsDetected;
         // Except for the grid files it wrote or deleted, which the record must know about.
         if (result.steamRecord && result.steamRecord->grid != result.steamRecordBefore.grid
             && !m_versionStatus.readOnly) {

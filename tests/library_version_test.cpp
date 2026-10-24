@@ -181,6 +181,7 @@ void LibraryVersionTest::setupHoldsGamesBack()
     const QString data = m_dir->filePath(QStringLiteral("new"));
     const QString roms = m_installs.home + QStringLiteral("/roms/switch");
     writeFile(roms + QStringLiteral("/Pikmin 4 [0100B7C00933A000].nsp"), "rom");
+    m_installs.applicationsDirs = {m_installs.home + QStringLiteral("/Applications")};
     const auto open = [&] {
         auto library = std::make_unique<Library>(data, m_cache, NewLibrary::WithSetup);
         library->store().setInstallLocations(m_installs);
@@ -245,6 +246,20 @@ void LibraryVersionTest::setupHoldsGamesBack()
     library->scanNow();
     scan(*library);
     QTRY_VERIFY_WITH_TIMEOUT(!library->store().scanning(), 5000);
+    QCOMPARE(library->gameCount(), 0);
+    QVERIFY(!QFileInfo::exists(data + QStringLiteral("/library/roms/switch.toml")));
+
+    // An emulator installed from the setup (which asks for a scan when done) is found, still
+    // without scanning the ROMs.
+    const QString appImage = m_installs.applicationsDirs.first() + QStringLiteral("/DuckStation-x64.AppImage");
+    writeFile(appImage, "#!/bin/sh\n");
+    QFile::setPermissions(appImage, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+    QVERIFY(!library->store().snapshot().installs.value(QStringLiteral("duckstation")).found());
+    library->scanNow();
+    scan(*library);
+    QTRY_VERIFY_WITH_TIMEOUT(!library->store().scanning(), 5000);
+    QVERIFY(library->store().snapshot().installs.value(QStringLiteral("duckstation")).found());
+    QVERIFY(!library->store().snapshot().romsScanned);
     QCOMPARE(library->gameCount(), 0);
     QVERIFY(!QFileInfo::exists(data + QStringLiteral("/library/roms/switch.toml")));
     QCOMPARE(added.size(), 0);

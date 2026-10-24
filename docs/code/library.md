@@ -293,7 +293,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 
 `library/library.toml` holds the library's format version and its id. `LibraryVersion::prepare()` runs before anything reads the library:
 
-- A library without `library.toml` (a new data dir, or one made by hand) gets one, at the current version. A new library also gets the default tags, and in the app `setup = "pending"`, which holds back the ROM scan and the Steam import until the first-start setup ends (`finishSetup()`).
+- A library without `library.toml` (a new data dir, or one made by hand) gets one, at the current version. A new library also gets the default tags, and in the app `setup = "pending"`, which holds back the ROM scan and the Steam import until the first-start setup ends (`finishSetup()`). Emulators are still looked for, at the start and on `scanNow()`, so the guide sees what is installed.
 - An older library is copied to `library/backup-v<old>/` and upgraded one version at a time. If a step fails, it stops there and the library opens read-only. There are no upgrades yet (`upgrades()`).
 - A newer library, such as a backup from a newer version, opens read-only, since saving could damage a format this copy doesn't understand.
 - A library without an id gets one. The id tells this library from an earlier one at the same path, which the Steam sync record relies on.
@@ -422,7 +422,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `addEmulator(name, startFrom, id)`, `removeEmulator(id)`, `emulatorIdFor(name)` | `startFrom` is a preset's id, or empty for a blank emulator; removing takes it off every platform |
 | `pinnedGames(emulatorId)` | How many games are pinned to it, for the remove confirmation |
 | `emulatorsFile()`, `platformsFile()` | The file's path, created if missing so it can be opened |
-| `scanNow()` | Scans the ROM folders and looks for emulators again |
+| `scanNow()` | Scans the ROM folders and looks for emulators again; during the first-start setup it only looks for emulators (the guide calls it after an install) |
 | `addTag`, `addDefaultTags`, `setTagColor`, `renameTag`, `removeTag` | |
 | `nextTagColor(paletteSize)` | The first palette color no tag uses |
 | `igdbTags(facets, has)` | The tags that fit a game with these IGDB genres, themes and keywords |

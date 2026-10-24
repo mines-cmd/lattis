@@ -28,6 +28,7 @@ struct ScanOptions
     QString steamSyncRecord;
     QString libraryId;
     bool setup = false;
+    bool redetect = false; // the emulators even during the setup, when roms is off
     bool steamHistory = false;
     bool steamStartup = false; // no scan has diffed it in this run: changes may span several sessions
     QString cacheDir;
