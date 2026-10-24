@@ -29,6 +29,7 @@ class RomInfoTest : public QObject
 private slots:
     void reads();
     void threeDsNamesAreRead();
+    void bareNcchNamedThreeDs();
     void encryptedThreeDsKeepsItsTitleId();
     void smdhLanguages();
     void ciaCxiAnd3dsx();
@@ -59,15 +60,28 @@ void RomInfoTest::reads()
 void RomInfoTest::threeDsNamesAreRead()
 {
     const QByteArray layton =
-        ncsd(ncch(smdh(QStringLiteral("Professor Layton vs. Phoenix Wright\nAce Attorney")), 0x0004000000123400));
+        ncsd(ncch(smdh(QStringLiteral("Professor Layton vs\nPhoenix Wright: Ace Attorney")), 0x0004000000123400));
     const RomInfo info = read(write(QStringLiteral("0699 - Professor Layton.3ds"), layton), QStringLiteral("3ds"));
-    QCOMPARE(info.title, QStringLiteral("Professor Layton vs. Phoenix Wright: Ace Attorney"));
+    QCOMPARE(info.title, QStringLiteral("Professor Layton vs Phoenix Wright: Ace Attorney"));
     QCOMPARE(info.titleId, QStringLiteral("0004000000123400"));
 
-    // A line that already ends in a colon needs no second one.
-    const QByteArray zelda = ncsd(ncch(smdh(QStringLiteral("The Legend of Zelda:\nTri Force Heroes")), 0x0004000000164800));
-    QCOMPARE(read(write(QStringLiteral("zelda.cci"), zelda), QStringLiteral("3ds")).title,
-             QStringLiteral("The Legend of Zelda: Tri Force Heroes"));
+    const auto titleOf = [&](const QString &longTitle) {
+        return read(write(QStringLiteral("a.3ds"), ncsd(ncch(smdh(longTitle), 1))), QStringLiteral("3ds")).title;
+    };
+    QCOMPARE(titleOf(QStringLiteral("The Legend of Zelda\nTri Force Heroes")), QStringLiteral("The Legend of Zelda: Tri Force Heroes"));
+    QCOMPARE(titleOf(QStringLiteral("The Legend of Zelda:\nTri Force Heroes")), QStringLiteral("The Legend of Zelda: Tri Force Heroes"));
+    QCOMPARE(titleOf(QStringLiteral("Professor Layton\nand the Azran Legacy")), QStringLiteral("Professor Layton and the Azran Legacy"));
+    QCOMPARE(titleOf(QStringLiteral("Mario & Luigi: Paper\nJam")), QStringLiteral("Mario & Luigi: Paper Jam"));
+    QCOMPARE(titleOf(QStringLiteral("Legend of\nLegacy")), QStringLiteral("Legend of Legacy"));
+    QCOMPARE(titleOf(QStringLiteral("Bravely Default\nFlying Fairy")), QStringLiteral("Bravely Default: Flying Fairy"));
+}
+
+void RomInfoTest::bareNcchNamedThreeDs()
+{
+    const QByteArray bare = ncch(smdh(QStringLiteral("Phoenix Wright: Ace Attorney\nSpirit of Justice")), 0x0004000000123500);
+    const RomInfo info = read(write(QStringLiteral("Spirit of Justice decrypted.3ds"), bare), QStringLiteral("3ds"));
+    QCOMPARE(info.title, QStringLiteral("Phoenix Wright: Ace Attorney Spirit of Justice"));
+    QCOMPARE(info.titleId, QStringLiteral("0004000000123500"));
 }
 
 void RomInfoTest::encryptedThreeDsKeepsItsTitleId()
@@ -108,7 +122,7 @@ void RomInfoTest::dsBanners()
     };
     QCOMPARE(titleOf(nds(QStringLiteral("Mario Kart DS\nNintendo"))), QStringLiteral("Mario Kart DS"));
     QCOMPARE(titleOf(nds(QStringLiteral("Professor Layton\nand the Curious Village\nLEVEL-5"))),
-             QStringLiteral("Professor Layton: and the Curious Village"));
+             QStringLiteral("Professor Layton and the Curious Village"));
     QCOMPARE(titleOf(nds(QStringLiteral("Only Japanese"), 0x240)), QStringLiteral("Only Japanese"));
     QCOMPARE(titleOf(nds({})), QString());
 }

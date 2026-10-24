@@ -495,9 +495,8 @@ QList<RomNameJob> romNameJobs(const Platform &platform, const QList<EmulatorDef>
     QList<RomNameJob> out;
     for (const RomEntry &e : index) {
         const QString folder = files.value(e.path);
-        if (e.titleSource == QLatin1String("file") || e.titleSource == QLatin1String("database")
-            || editedIds.contains(e.id) || folder.isEmpty()
-            || isFolderUpdate(e.path, names))
+        // Titles already read from a file or a database are read again: a later reader can name them better.
+        if (editedIds.contains(e.id) || folder.isEmpty() || isFolderUpdate(e.path, names))
             continue;
         if (isFolderGame(e.path, names))
             out.append({e.path, folder + u'/' + e.path.section(u'/', 0, 0), true});
@@ -541,8 +540,9 @@ RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRe
     out.entries = index;
     for (RomEntry &e : out.entries) {
         const auto read = byPath.constFind(e.path);
-        if (read == byPath.cend() || e.titleSource == QLatin1String("file") || e.titleSource == QLatin1String("database"))
+        if (read == byPath.cend())
             continue;
+        const RomEntry before = e;
         const QString title = RomName::fixCase(read->title);
         if (title != e.title) {
             e.title = title;
@@ -551,7 +551,7 @@ RomNamesUpdate applyRomNames(const QList<RomEntry> &index, const QList<RomNameRe
         e.titleSource = read->fromDatabase ? QStringLiteral("database") : QStringLiteral("file");
         if (e.titleId.isEmpty())
             e.titleId = read->titleId;
-        out.changed = true;
+        out.changed = out.changed || e != before;
     }
     return out;
 }

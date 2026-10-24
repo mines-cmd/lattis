@@ -92,8 +92,18 @@ QString utf16(const QByteArray &d, qsizetype at, qsizetype bytes)
     return out;
 }
 
-// Lines become one title: `Professor Layton vs. Phoenix Wright` and `Ace Attorney` read as
-// "…Wright: Ace Attorney", but `The Legend of Zelda:` and `Tri Force Heroes` need no second colon.
+// A break is sometimes a title and subtitle (`The Legend of Zelda` / `Tri Force Heroes`) and
+// sometimes only wrapping (`Professor Layton vs` / `Phoenix Wright: Ace Attorney`,
+// `Professor Layton` / `and the Azran Legacy`), as the real 3DS and DS headers have it.
+bool wrapsOnto(const QString &before, const QString &after)
+{
+    static const QRegularExpression kLinkingEnd(
+        QStringLiteral("(?:^|\\s)(?:vs\\.?|and|&|\\+|of|the|a|an|to|in|on|for|with|from|at|by)$"),
+        QRegularExpression::CaseInsensitiveOption);
+    return before.contains(u':') || after.contains(u':') || after.front().isLower()
+        || kLinkingEnd.match(before).hasMatch();
+}
+
 QString joinLines(const QStringList &lines)
 {
     QString out;
@@ -102,7 +112,7 @@ QString joinLines(const QStringList &lines)
         if (line.isEmpty())
             continue;
         if (!out.isEmpty())
-            out += out.endsWith(u':') ? QStringLiteral(" ") : QStringLiteral(": ");
+            out += wrapsOnto(out, line) ? QStringLiteral(" ") : QStringLiteral(": ");
         out += line;
     }
     return out;
@@ -624,7 +634,8 @@ RomInfo read(const QString &path, const QString &platform)
             out = readCia(r);
         else if (extension == QLatin1String("3dsx"))
             out = read3dsx(r);
-        else if (extension == QLatin1String("cxi"))
+        // Some dumps named .3ds are a bare NCCH, the game's partition without the cartridge header.
+        else if (extension == QLatin1String("cxi") || r.read(0x100, 4) == "NCCH")
             out = readNcch(r, 0);
         else
             out = readNcsd(r);

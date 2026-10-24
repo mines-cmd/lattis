@@ -637,20 +637,26 @@ void RomScanTest::updateNamesReadsOnlyTheScannersTitles()
     QStringList paths;
     for (const RomNameJob &job : jobs)
         paths.append(job.path);
-    QCOMPARE(paths, (QStringList{"old.pbp", "same.pbp"}));
+    QCOMPARE(paths, (QStringList{"old.pbp", "done.pbp", "same.pbp"}));
 
     const RomNamesUpdate update = applyRomNames(index, readRomNames("psp", jobs));
-    QCOMPARE(update.renamed, 1);
+    QCOMPARE(update.renamed, 2);
     QVERIFY(update.changed);
     QCOMPARE(update.entries.at(0).title, QStringLiteral("Real Name"));
     QCOMPARE(update.entries.at(0).titleSource, QStringLiteral("file"));
     QCOMPARE(update.entries.at(0).titleId, QStringLiteral("ULUS10336"));
     QCOMPARE(update.entries.at(1), index.at(1));
+    // Read from its file before, by an older reader: the file's name now wins again.
+    QCOMPARE(update.entries.at(2).title, QStringLiteral("Done Real"));
     QCOMPARE(update.entries.at(3).title, QStringLiteral("Same"));
     QCOMPARE(update.entries.at(3).titleSource, QStringLiteral("file"));
 
-    // Nothing left to read the second time.
-    QVERIFY(romNameJobs(psp, presets(), update.entries, files, {"psp-edited"}).size() == 0);
+    // The second time the same files are read, and nothing changes.
+    const QList<RomNameJob> again = romNameJobs(psp, presets(), update.entries, files, {"psp-edited"});
+    QCOMPARE(again.size(), 3);
+    const RomNamesUpdate second = applyRomNames(update.entries, readRomNames("psp", again));
+    QCOMPARE(second.renamed, 0);
+    QVERIFY(!second.changed);
 }
 
 void RomScanTest::scanNamesNewGamesFromFilesOnce()
@@ -758,7 +764,8 @@ void RomScanTest::updateNamesUsesTheDatabase()
     QCOMPARE(update.renamed, 1);
     QCOMPARE(update.entries.first().title, QStringLiteral("Pokemon: Emerald Version"));
     QCOMPARE(update.entries.first().titleSource, QStringLiteral("database"));
-    QVERIFY(romNameJobs(gbaP, presets(), update.entries, {{"emerald.gba", dir.path()}}, {}).isEmpty());
+    const QList<RomNameJob> again = romNameJobs(gbaP, presets(), update.entries, {{"emerald.gba", dir.path()}}, {});
+    QVERIFY(!applyRomNames(update.entries, readRomNames("gba", again, {dir.filePath("db"), {}})).changed);
 }
 
 void RomScanTest::scanRecordsSizes()
