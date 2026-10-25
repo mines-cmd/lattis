@@ -1068,13 +1068,21 @@ Rectangle {
                                 ToolTip.delay: Theme.tooltip.delay
                                 ToolTip.text: row.title
                             }
-                            Label {
+                            RowLayout {
                                 id: runningLabel
                                 visible: row.running && Theme.list.runningLabel !== ""
-                                text: "· " + Theme.list.runningLabel
-                                color: Theme.list.runningColor
-                                font.bold: row.current && Theme.list.selectedBold
+                                spacing: parent.spacing
                                 Layout.minimumWidth: implicitWidth
+                                Label {
+                                    text: "·"
+                                    color: Theme.list.runningColor
+                                    font.bold: row.current && Theme.list.selectedBold
+                                }
+                                Label {
+                                    text: Theme.list.runningLabel
+                                    color: Theme.list.runningColor
+                                    font.bold: row.current && Theme.list.selectedBold
+                                }
                             }
                             Item { Layout.fillWidth: true }
                         }
