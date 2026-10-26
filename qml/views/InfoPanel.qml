@@ -11,7 +11,7 @@ Surface {
 
     signal historyRequested()
 
-    implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.padding
+    implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.verticalPadding
     radius: Theme.infoPanel.radius
     fill: Theme.infoPanel.background
     fillEnd: Theme.infoPanel.backgroundEnd
@@ -21,7 +21,8 @@ Surface {
 
     ColumnLayout {
         id: column
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Theme.infoPanel.padding }
+        anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: Theme.infoPanel.verticalPadding
+                  leftMargin: Theme.infoPanel.padding; rightMargin: Theme.infoPanel.padding }
         spacing: 0
 
         Repeater {
@@ -114,7 +115,7 @@ Surface {
 
                 Rectangle {
                     visible: Theme.infoPanel.showDividers && infoRow.index < root.rows.length - 1
-                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 10; rightMargin: 10 }
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: Theme.infoPanel.rowPadding; rightMargin: Theme.infoPanel.rowPadding }
                     height: Theme.infoPanel.dividerWidth
                     color: Theme.infoPanel.divider
                 }

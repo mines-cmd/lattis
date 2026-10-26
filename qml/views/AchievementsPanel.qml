@@ -80,7 +80,8 @@ Surface {
 
     ColumnLayout {
         id: column
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Theme.achievements.padding }
+        anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: Theme.achievements.padding
+                  leftMargin: Theme.achievements.sidePadding; rightMargin: Theme.achievements.sidePadding }
         spacing: Theme.layout.spacing * 2
 
         RowLayout {
@@ -90,7 +91,7 @@ Surface {
                 Layout.fillWidth: true
                 text: qsTr("Achievements")
                 color: Theme.achievements.titleColor
-                font.weight: Theme.font.strongWeight
+                font.weight: Theme.achievements.titleWeight
             }
             Label {
                 text: qsTr("%1 / %2").arg(root.unlocked).arg(root.items.length)
@@ -145,12 +146,21 @@ Surface {
                     // failed one is tried again.
                     property int tries: 0
                     property bool counted: false
-                    readonly property bool settled: status === Image.Ready || (status === Image.Error && tries >= 5)
+                    readonly property bool concealed: (modelData?.hidden ?? false) && !modelData.unlocked
+                    readonly property bool settled: concealed || status === Image.Ready || (status === Image.Error && tries >= 5)
                     // Latched: a source that follows settledCount would loop through its own status.
                     property bool started: false
                     failedIcon: Icons.medal
-                    iconWhenEmpty: true
-                    source: started ? (modelData?.icon ?? "") : ""
+                    iconWhenEmpty: !concealed
+                    source: started && !concealed ? (modelData?.icon ?? "") : ""
+
+                    Label {
+                        visible: tile.concealed
+                        anchors.centerIn: parent
+                        text: "?"
+                        color: Theme.achievements.countColor
+                        font.pixelSize: parent.height * 0.5
+                    }
                     Connections {
                         target: root
                         function onSettledCountChanged() { tile.start() }

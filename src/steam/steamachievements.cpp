@@ -131,6 +131,8 @@ QList<Achievement> readAchievements(const SteamInstall &install, qint64 appId, c
             return a.achievement.unlocked;
         if (a.achievement.unlocked && a.achievement.unlockTime != b.achievement.unlockTime)
             return a.achievement.unlockTime > b.achievement.unlockTime;
+        if (!a.achievement.unlocked && a.achievement.hidden != b.achievement.hidden)
+            return b.achievement.hidden;
         return a.order < b.order;
     });
     QList<Achievement> out;

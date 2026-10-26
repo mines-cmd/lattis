@@ -61,8 +61,8 @@ private slots:
 void SteamAchievementsTest::unlockedFirstNewestFirst()
 {
     const auto list = SteamAchievements::readAchievements(fakeInstall(), 9001, u"english"_s);
-    // LONG_WALK (second stat) was unlocked after FIRST_STEP; the locked ones follow in schema order.
-    QCOMPARE(names(list), QStringList({"LONG_WALK", "FIRST_STEP", "SECRET_ROOM", "FINALE"}));
+    // LONG_WALK (second stat) was unlocked after FIRST_STEP; the locked ones follow, hidden SECRET_ROOM last.
+    QCOMPARE(names(list), QStringList({"LONG_WALK", "FIRST_STEP", "FINALE", "SECRET_ROOM"}));
     QVERIFY(list[0].unlocked);
     QVERIFY(list[1].unlocked);
     QVERIFY(!list[2].unlocked);
@@ -90,8 +90,8 @@ void SteamAchievementsTest::hiddenFlag()
 {
     const auto list = SteamAchievements::readAchievements(fakeInstall(), 9001, u"english"_s);
     QVERIFY(!list[1].hidden);
-    QVERIFY(list[2].hidden);
-    QCOMPARE(list[2].apiName, u"SECRET_ROOM"_s);
+    QVERIFY(list[3].hidden);
+    QCOMPARE(list[3].apiName, u"SECRET_ROOM"_s);
 }
 
 void SteamAchievementsTest::descriptionAndIcons()
@@ -101,7 +101,7 @@ void SteamAchievementsTest::descriptionAndIcons()
     // Colored when unlocked, gray when locked.
     QCOMPARE(list[1].iconUrl,
              u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/9001/firststep.jpg"_s);
-    QCOMPARE(list[2].iconUrl,
+    QCOMPARE(list[3].iconUrl,
              u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/9001/secretroom_gray.jpg"_s);
 }
 
@@ -112,9 +112,9 @@ void SteamAchievementsTest::languageFallsBack()
     // No Spanish: English where there is some, whatever text exists where there isn't.
     const auto spanish = SteamAchievements::readAchievements(fakeInstall(), 9001, u"spanish"_s);
     QCOMPARE(spanish[1].name, u"First Step"_s);
-    QCOMPARE(spanish[3].apiName, u"FINALE"_s);
-    QCOMPARE(spanish[3].name, u"Finale"_s);
-    QCOMPARE(spanish[3].description, u"Termine le jeu."_s);
+    QCOMPARE(spanish[2].apiName, u"FINALE"_s);
+    QCOMPARE(spanish[2].name, u"Finale"_s);
+    QCOMPARE(spanish[2].description, u"Termine le jeu."_s);
 }
 
 void SteamAchievementsTest::noProgressFileMeansAllLocked()
@@ -147,7 +147,7 @@ void SteamAchievementsTest::otherUsersProgressIsNotUsed()
     QCOMPARE(list.size(), 4);
     for (const SteamAchievements::Achievement &a : list)
         QVERIFY(!a.unlocked);
-    QCOMPARE(names(list), QStringList({"FIRST_STEP", "SECRET_ROOM", "LONG_WALK", "FINALE"}));
+    QCOMPARE(names(list), QStringList({"FIRST_STEP", "LONG_WALK", "FINALE", "SECRET_ROOM"}));
 }
 
 void SteamAchievementsTest::steamLanguageNative()
