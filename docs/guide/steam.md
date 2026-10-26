@@ -33,10 +33,12 @@ Lattis only knows what Steam has written down. It doesn't check online, so a pat
 
 The labels and colors are theme settings: the `update_*`, `updating_*`, `installing_label` and `paused_label` settings of `[launch_button]`, and `update_icon_color` in `[list]`.
 
-## Clips
+## Clips and screenshots
 
-A Steam game's page shows your own Steam clips (Steam's Game Recording) in a **Media** row under the description and tags: newest first, each with its length. Click a clip to watch it in Lattis, or right-click it for **Show in folder**. Lattis only reads Steam's files; it never changes them. Screenshots aren't shown yet.
+A Steam game's page shows your own Steam clips (Steam's Game Recording) and screenshots in a **Media** row under the description and tags, mixed together, newest first. A clip has a play button and its length. Click one to open it in Lattis, or right-click it for **Show in folder**. Lattis only reads Steam's files; it never changes them.
 
+- **Stepping through:** the ‹ and › buttons at the viewer's sides, or Page Up and Page Down, go to the previous or next item in the row. On a screenshot, Left and Right do the same.
+- **Screenshots:** only Steam's own copies, the ones Steam's screenshot manager shows. To leave them out, turn off **Screenshots in Media** on Settings → Game page.
 - **In the viewer:** the controls sit under the video. Space plays and pauses, Left and Right skip 5 seconds, Up and Down change the volume (remembered), M mutes, F goes fullscreen, Esc closes (or leaves the fullscreen the viewer turned on), and a click outside the video closes it.
 - **ffmpeg:** Steam saves clips in pieces that need joining before they play, and Lattis uses `ffmpeg` for that. If it's on your system, Lattis uses it. If not, the Media row offers **Install ffmpeg**, which downloads it (the size is shown; from github.com/BtbN/FFmpeg-Builds) only when you click. The **ffmpeg** section on Settings → Steam appears once Lattis installed it, with **Remove** to delete that copy.
 - **Clips that moved:** if you changed where Steam saves recordings, clips in both the old and the new folder show.

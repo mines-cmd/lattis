@@ -34,7 +34,7 @@ QtObject {
     readonly property var sections: ({
         description: qsTr("Description"),
         tags: qsTr("Tags"),
-        clips: qsTr("Steam clips")
+        clips: qsTr("Steam media")
     })
 
     function forPlace(place) {

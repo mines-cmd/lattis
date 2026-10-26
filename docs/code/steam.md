@@ -12,7 +12,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [The launch options sync](#the-launch-options-sync)
 - [Art in Steam's grid](#art-in-steams-grid)
 - [Launch option presets](#launch-option-presets)
-- [Clips](#clips)
+- [Clips and screenshots](#clips-and-screenshots)
 - [Files](#files)
 - [Reference](#reference)
 
@@ -122,13 +122,15 @@ A preset is a named combination of environment variable assignments (before `%co
 
 New Steam and Proton games start with `SteamSettings::defaultPresets` applied via `SteamSync::withDefaults()`, which takes the current launch options in Steam and turns on any missing defaults. Linux games skip the Proton-only presets.
 
-## Clips
+## Clips and screenshots
 
 A Steam game's page shows the user's own Steam clips (Game Recording), read from Steam's files and never changed. `SteamMedia::listClips(install, appId)` looks in `userdata/<user>/gamerecordings/clips/` for folders named `clip_<appId>_<yyyyMMdd_HHmmss>`, and also in the folder `BackgroundRecordPath` names in `localconfig.vdf` (`GameRecording`) when Settings → Game Recording moved the recordings; clips made before the move stay in userdata, so both are read. A clip is kept only when it has a `video/bg_*` folder with a `session.mpd` whose `mediaPresentationDuration` is positive and an `init-stream0.m4s` with chunks. Anything else (a half-written or broken clip) is skipped. The list is newest first, each with its `thumbnail.jpg` (if any), video folder, length and time.
 
 **Why the manifest isn't played.** The clip is DASH: `init-stream0.m4s` and `chunk-stream0-*.m4s` for video, `stream1` for audio. Handing `session.mpd` to Qt or ffmpeg reads only the first ~3 s. `remuxClip(clip, ffmpeg, outPath)` instead joins each stream's init and chunks in name order into a temporary file and runs `ffmpeg -c copy` over the two (no re-encoding, about a second for a long clip), writing an MP4 the player can seek in. It returns an error text, empty on success, and kills ffmpeg after 60 s. It runs on a worker thread through `Library::prepareClip(token, videoDir, ffmpeg)` into `<cacheDir>/clips/`, where one clip exists at a time (the folder is emptied before each run, so a crash leaves nothing stale), and `clipPrepared(token, path, error)` answers; the token lets the viewer ignore an answer for a clip it has already left. `Library::discardClip(path)` deletes the temp file, only inside that folder.
 
-`Library::media(gameId)` lists a Steam game's clips on a worker thread and answers with `mediaReady(id, clips)`; any other game gets an empty list. ffmpeg comes from `FfmpegTool` (see [install](install.md#ffmpeg)). Qt Multimedia is not linked: `MediaViewer.qml` imports it, so it loads with the viewer on the first clip.
+**Screenshots.** `SteamMedia::listScreenshots(install, appId)` lists the `.jpg` and `.png` files in `userdata/<user>/760/remote/<appId>/screenshots/` (not its `thumbnails/` folder: Steam's are 200×112, too small for a tile, so the row decodes the full file at the tile's size). The time comes from the name (`yyyyMMddHHmmss_N.jpg`), else the file's modified time; newest first.
+
+`Library::media(gameId)` lists a Steam game's clips and screenshots on a worker thread and answers with `mediaReady(id, items)`, one list newest first, each item with a `kind` (`clip` or `screenshot`); any other game gets an empty list. ffmpeg comes from `FfmpegTool` (see [install](install.md#ffmpeg)). Qt Multimedia is not linked: `MediaViewer.qml` imports it, so it loads with the viewer on the first clip.
 
 ## Files
 
@@ -143,7 +145,7 @@ A Steam game's page shows the user's own Steam clips (Game Recording), read from
 | `steamscan.*` | `SteamStamp`, `SteamApp`, `SteamAppConfig`, `CompatTool`, `SteamState`; `SteamScan::scan()`, `isBlocked()`, `valveToolName()` |
 | `steamupdate.h` | `SteamUpdate` (`None`, `Waiting`, `Downloading`, `Paused`) |
 | `steamdownloads.*` | `SteamDownloads`: `setApps()`, `progress()`, `changed()`; `parseLog()`, `directorySize()` |
-| `steammedia.*` | `SteamMedia::Clip`; `listClips()`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
+| `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
 | `steamsync.*` | `SteamSync::Record`, `Result`, `Edit`, `ShortcutEdit`; `sync()`, `apply()`, `compare()`, `withDefaults()`, `readRecord()`, `writeRecord()` |
 
 ## Reference

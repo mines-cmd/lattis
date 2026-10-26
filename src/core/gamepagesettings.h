@@ -21,6 +21,7 @@ struct GamePageSettings
     QStringList collapsedSections;
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
+    bool showScreenshots = true;
 
     bool operator==(const GamePageSettings &) const = default;
 

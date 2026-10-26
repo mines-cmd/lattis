@@ -156,7 +156,29 @@ QList<Clip> listClips(const SteamInstall &install, qint64 appId)
     return out;
 }
 
-QString remuxClip(const Clip &clip, const QString &ffmpeg, const QString &outPath)
+QList<Screenshot> listScreenshots(const SteamInstall &install, qint64 appId)
+{
+    const QString user = install.userDataDir();
+    if (user.isEmpty() || appId <= 0)
+        return {};
+    const QDir dir(u"%1/760/remote/%2/screenshots"_s.arg(user).arg(appId));
+    QList<Screenshot> out;
+    for (const QFileInfo &file : dir.entryInfoList({u"*.jpg"_s, u"*.png"_s}, QDir::Files)) {
+        Screenshot shot;
+        shot.id = file.fileName();
+        shot.path = file.filePath();
+        shot.time = QDateTime::fromString(file.completeBaseName().section(u'_', 0, 0), u"yyyyMMddHHmmss"_s);
+        if (!shot.time.isValid())
+            shot.time = file.lastModified();
+        out.append(shot);
+    }
+    std::sort(out.begin(), out.end(), [](const Screenshot &a, const Screenshot &b) {
+        return a.time != b.time ? a.time > b.time : a.id > b.id;
+    });
+    return out;
+}
+
+QString remuxClip(const Clip &clip,const QString &ffmpeg, const QString &outPath)
 {
     if (ffmpeg.isEmpty())
         return QObject::tr("ffmpeg isn't installed");

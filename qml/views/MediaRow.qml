@@ -8,24 +8,26 @@ ColumnLayout {
     id: root
 
     property var game: ({})
-    property var clips: []
+    property var items: []
+    readonly property var shown: General.showScreenshots ? items : items.filter(i => i.kind === "clip")
+    readonly property bool hasClips: shown.some(i => i.kind === "clip")
     property bool installDismissed: false
     readonly property bool installing: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"
     property bool active: true
     readonly property bool wanted: active && General.showClips && (game.platform ?? "") === "steam" && (game.id ?? "") !== ""
 
-    signal clipRequested(var clip)
+    signal mediaRequested(var item, var list)
     signal menuRequested(var clip, Item tile, point position)
     signal failed(string text)
 
-    visible: wanted && clips.length > 0
+    visible: wanted && shown.length > 0
     spacing: 10
 
     function reload() {
         if (wanted)
             Library.media(game.id)
         else
-            clips = []
+            items = []
     }
 
     onGameChanged: reload()
@@ -36,7 +38,7 @@ ColumnLayout {
         target: Library
         function onMediaReady(id, list) {
             if (id === root.game.id)
-                root.clips = root.wanted ? list : []
+                root.items = root.wanted ? list : []
         }
     }
 
@@ -48,7 +50,7 @@ ColumnLayout {
     }
 
     FfmpegPrompt {
-        visible: !heading.collapsed && !FfmpegTool.available && (!root.installDismissed || root.installing)
+        visible: !heading.collapsed && root.hasClips && !FfmpegTool.available && (!root.installDismissed || root.installing)
         Layout.fillWidth: true
         onNotNow: root.installDismissed = true
     }
@@ -136,12 +138,13 @@ ColumnLayout {
             spacing: Theme.media.thumbGap
 
             Repeater {
-                model: root.clips
+                model: root.shown
 
                 ArtThumb {
                     id: tile
                     required property var modelData
                     readonly property bool hovered: area.containsMouse
+                    readonly property bool isClip: modelData.kind === "clip"
 
                     aspect: 16 / 9
                     cornerRadius: Theme.media.thumbRadius
@@ -153,7 +156,7 @@ ColumnLayout {
                         readonly property bool fromTop: Theme.media.thumbScrimStyle === "top"
                         anchors.fill: parent
                         radius: parent.radius
-                        visible: Theme.media.thumbScrim.a > 0
+                        visible: tile.isClip && Theme.media.thumbScrim.a > 0
                         color: Theme.media.thumbScrimStyle === "full" ? Theme.media.thumbScrim : "transparent"
                         gradient: Theme.media.thumbScrimStyle === "full" ? null : scrimGradient
                         Gradient {
@@ -177,6 +180,7 @@ ColumnLayout {
                         border.width: Theme.layout.borderWidth
                     }
                     Rectangle {
+                        visible: tile.isClip
                         anchors.centerIn: parent
                         width: Theme.media.playSize
                         height: width
@@ -191,6 +195,7 @@ ColumnLayout {
                         }
                     }
                     Rectangle {
+                        visible: tile.isClip
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.margins: Theme.layout.spacing
@@ -218,7 +223,7 @@ ColumnLayout {
                             if (mouse.button === Qt.RightButton)
                                 root.menuRequested(tile.modelData, tile, Qt.point(mouse.x, mouse.y))
                             else
-                                root.clipRequested(tile.modelData)
+                                root.mediaRequested(tile.modelData, root.shown)
                         }
                         ToolTip.visible: containsMouse
                         ToolTip.delay: Theme.tooltip.delay

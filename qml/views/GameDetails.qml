@@ -138,7 +138,7 @@ Item {
         property real spacing: 10
 
         signal moreClicked()
-        signal clipRequested(var clip)
+        signal mediaRequested(var item, var list)
         signal clipMenuRequested(var clip, Item tile, point position)
 
         columns: 1
@@ -297,7 +297,7 @@ Item {
             opacity: contentOpacity
             game: block.game
             onFailed: text => block.failed(text)
-            onClipRequested: clip => block.clipRequested(clip)
+            onMediaRequested: (item, list) => block.mediaRequested(item, list)
             onMenuRequested: (clip, tile, position) => block.clipMenuRequested(clip, tile, position)
         }
         Item {
@@ -533,7 +533,7 @@ Item {
         clipMenu.item.popup(item, point.x, point.y)
     }
 
-    // Qt Multimedia loads with the viewer, when the first clip is opened.
+    // Qt Multimedia loads with the viewer, when the first clip or screenshot is opened.
     Loader {
         id: mediaViewer
         active: false
@@ -543,19 +543,21 @@ Item {
         target: mediaViewer.item
         function onMessage(text) { root.message(text) }
     }
-    function playClip(clip) {
+    function showMedia(item, list) {
         mediaViewer.active = true
-        mediaViewer.item.show(clip)
+        mediaViewer.item.show(item, list)
     }
 
+    // "screenshot" opens the first screenshot, "menu" the first clip's menu, anything else plays the first clip.
     function clipForScreenshot(spec) {
-        const clip = textColumn.mediaRow.clips[0]
-        if (clip === undefined)
+        const list = textColumn.mediaRow.shown
+        const item = list.find(i => i.kind === (spec === "screenshot" ? "screenshot" : "clip"))
+        if (item === undefined)
             return
         if (spec === "menu")
-            openClipMenu(clip, textColumn.mediaRow, Qt.point(100, textColumn.mediaRow.height - 40))
+            openClipMenu(item, textColumn.mediaRow, Qt.point(100, textColumn.mediaRow.height - 40))
         else
-            playClip(clip)
+            showMedia(item, list)
     }
 
     function openPageMenu(place, item, point) {
@@ -1099,7 +1101,7 @@ Item {
                     cut: needsCut
                     expanded: root.descriptionExpandedFor === (root.textGame.id ?? "")
                     onMoreClicked: root.descriptionExpandedFor = expanded ? "" : root.textGame.id
-                    onClipRequested: clip => root.playClip(clip)
+                    onMediaRequested: (item, list) => root.showMedia(item, list)
                     onClipMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
                     onFailed: text => root.message(text)
 

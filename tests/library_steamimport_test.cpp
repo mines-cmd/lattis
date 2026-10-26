@@ -424,11 +424,20 @@ void LibrarySteamImportTest::mediaListsTheGamesClips()
     library->media(QStringLiteral("steam-8000"));
     QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 1, 5000);
     QCOMPARE(ready.last().at(0).toString(), QStringLiteral("steam-8000"));
-    const QVariantList clips = ready.last().at(1).toList();
-    QCOMPARE(clips.size(), 2);
-    QCOMPARE(clips[0].toMap().value("id").toString(), QStringLiteral("clip_8000_20260301_120000"));
-    QCOMPARE(clips[0].toMap().value("length").toString(), QStringLiteral("0:04"));
-    QVERIFY(clips[0].toMap().value("thumbnail").toString().startsWith(QStringLiteral("file://")));
+    const QVariantList items = ready.last().at(1).toList();
+    QStringList order;
+    for (const QVariant &item : items)
+        order.append(item.toMap().value("id").toString());
+    // Clips and screenshots in one timeline, newest first.
+    QCOMPARE(order, QStringList({"20260310083000_1.jpg", "clip_8000_20260301_120000", "20260220100000_1.jpg",
+                                 "clip_8000_20260215_090000"}));
+    const QVariantMap clip = items[1].toMap();
+    QCOMPARE(clip.value("kind").toString(), QStringLiteral("clip"));
+    QCOMPARE(clip.value("length").toString(), QStringLiteral("0:04"));
+    QVERIFY(clip.value("thumbnail").toString().startsWith(QStringLiteral("file://")));
+    const QVariantMap shot = items[0].toMap();
+    QCOMPARE(shot.value("kind").toString(), QStringLiteral("screenshot"));
+    QVERIFY(shot.value("image").toString().endsWith(QStringLiteral("/screenshots/20260310083000_1.jpg")));
 
     library->media(QStringLiteral("steam-2231450"));
     QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 2, 5000);

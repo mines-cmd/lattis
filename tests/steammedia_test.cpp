@@ -39,6 +39,8 @@ private slots:
     void movedRecordingFolder();
     void remuxMakesOneFile();
     void remuxWithoutFfmpeg();
+    void screenshotsNewestFirst();
+    void screenshotsOfNoOne();
 };
 
 void SteamMediaTest::durations_data()
@@ -165,6 +167,23 @@ void SteamMediaTest::remuxWithoutFfmpeg()
     QVERIFY(!SteamMedia::remuxClip(clip, {}, dir.filePath(u"clip.mp4"_s)).isEmpty());
     QVERIFY(!SteamMedia::remuxClip(clip, dir.filePath(u"missing"_s), dir.filePath(u"clip.mp4"_s)).isEmpty());
     QVERIFY(QDir(dir.path()).entryList(QDir::Files).isEmpty());
+}
+
+void SteamMediaTest::screenshotsNewestFirst()
+{
+    const QList<SteamMedia::Screenshot> shots = SteamMedia::listScreenshots(fakeInstall(), 8000);
+    QCOMPARE(shots.size(), 2); // not notes.txt, nor the thumbnails folder
+    QCOMPARE(shots[0].id, u"20260310083000_1.jpg"_s);
+    QCOMPARE(shots[1].id, u"20260220100000_1.jpg"_s);
+    QCOMPARE(shots[0].time, QDateTime(QDate(2026, 3, 10), QTime(8, 30)));
+    QVERIFY(QFile::exists(shots[0].path));
+}
+
+void SteamMediaTest::screenshotsOfNoOne()
+{
+    QVERIFY(SteamMedia::listScreenshots(fakeInstall(u"39734274"_s), 8000).isEmpty());
+    QVERIFY(SteamMedia::listScreenshots(fakeInstall(), 1493710).isEmpty());
+    QVERIFY(SteamMedia::listScreenshots({}, 8000).isEmpty());
 }
 
 QTEST_MAIN(SteamMediaTest)

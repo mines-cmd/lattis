@@ -243,6 +243,19 @@ QString General::setPlayTimeFormat(const QString &format)
     return setGamePageChoice(QStringLiteral("play_time_format"), format, GamePageSettings{}.playTimeFormat);
 }
 
+QString General::setShowScreenshots(bool on)
+{
+    QString error;
+    if (on)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("show_screenshots"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("show_screenshots"),
+                                  QStringLiteral("false"), &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setGamePageFlag(const QString &key, const QString &place, const QStringList &current,
                                  const QString &name, bool on)
 {

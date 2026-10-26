@@ -95,7 +95,7 @@ Item {
     readonly property var sectionDefs: ({
         description: { icon: Icons.fileTextLine, hint: qsTr("The game's text, with Show more when it's cut") },
         tags: { icon: Icons.tagLine, hint: qsTr("Click one to show only the games with it") },
-        clips: { icon: Icons.playLargeLine, hint: qsTr("Your Steam clips of a Steam game, as the Media row") }
+        clips: { icon: Icons.playLargeLine, hint: qsTr("Your Steam clips and screenshots of a Steam game, as the Media row") }
     })
 
     GamePageNames { id: names }
@@ -278,7 +278,7 @@ Item {
                     }
                 }
 
-                SectionHeader { visible: sections.visible; text: qsTr("Description, tags and clips") }
+                SectionHeader { visible: sections.visible; text: qsTr("Description, tags and media") }
                 SectionNote {
                     visible: sections.visible
                     text: qsTr("Under the action row, in this order. One with nothing to show for the game is left out.")
@@ -291,10 +291,22 @@ Item {
                     flickable: flick
                     onFailed: text => root.report(text)
                 }
+                SettingsCard {
+                    id: screenshots
+                    visible: root.matches(qsTr("Screenshots in Media"))
+                    LabeledRow {
+                        label: qsTr("Screenshots in Media")
+                        note: qsTr("Your Steam screenshots of the game, among its clips, newest first.")
+                        SettingsSwitch {
+                            checked: General.showScreenshots
+                            onToggled: root.report(General.setShowScreenshots(checked))
+                        }
+                    }
+                }
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
-                             && !content.periodShown && !sections.visible
+                             && !content.periodShown && !sections.visible && !screenshots.visible
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

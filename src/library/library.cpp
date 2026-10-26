@@ -1685,11 +1685,16 @@ void Library::media(const QString &id)
         QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
         return;
     }
-    auto *watcher = new QFutureWatcher<QList<SteamMedia::Clip>>(this);
-    connect(watcher, &QFutureWatcher<QList<SteamMedia::Clip>>::finished, this, [this, watcher, id] {
-        QVariantList clips;
-        for (const SteamMedia::Clip &c : watcher->result()) {
-            clips.append(QVariantMap{{QStringLiteral("id"), c.id},
+    auto *watcher = new QFutureWatcher<QVariantList>(this);
+    connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
+        emit mediaReady(id, watcher->result());
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run([install, appId] {
+        QVariantList items;
+        for (const SteamMedia::Clip &c : SteamMedia::listClips(install, appId)) {
+            items.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("clip")},
+                                     {QStringLiteral("id"), c.id},
                                      {QStringLiteral("folder"), c.folder},
                                      {QStringLiteral("videoDir"), c.videoDir},
                                      {QStringLiteral("thumbnail"),
@@ -1698,10 +1703,21 @@ void Library::media(const QString &id)
                                      {QStringLiteral("length"), SteamMedia::lengthText(c.durationMs)},
                                      {QStringLiteral("time"), c.time}});
         }
-        emit mediaReady(id, clips);
-        watcher->deleteLater();
-    });
-    watcher->setFuture(QtConcurrent::run(SteamMedia::listClips, install, appId));
+        for (const SteamMedia::Screenshot &s : SteamMedia::listScreenshots(install, appId)) {
+            const QString url = QUrl::fromLocalFile(s.path).toString();
+            items.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("screenshot")},
+                                     {QStringLiteral("id"), s.id},
+                                     {QStringLiteral("folder"), QFileInfo(s.path).absolutePath()},
+                                     {QStringLiteral("thumbnail"), url},
+                                     {QStringLiteral("image"), url},
+                                     {QStringLiteral("time"), s.time}});
+        }
+        std::stable_sort(items.begin(), items.end(), [](const QVariant &a, const QVariant &b) {
+            return a.toMap().value(QStringLiteral("time")).toDateTime()
+                   > b.toMap().value(QStringLiteral("time")).toDateTime();
+        });
+        return items;
+    }));
 }
 
 void Library::prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg)

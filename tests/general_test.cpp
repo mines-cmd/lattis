@@ -578,6 +578,14 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.setPlayTimeFormat(QStringLiteral("hours")), QString());
     QVERIFY(!fileText().contains("play_time_format"));
 
+    QVERIFY(general.showScreenshots());
+    QCOMPARE(general.setShowScreenshots(false), QString());
+    QVERIFY(!general.showScreenshots());
+    QVERIFY(fileText().contains("show_screenshots = false"));
+    QCOMPARE(general.setShowScreenshots(true), QString());
+    QVERIFY(general.showScreenshots());
+    QVERIFY(!fileText().contains("show_screenshots"));
+
     const QString sections = QStringLiteral("sections");
     QCOMPARE(general.setGamePageShown(sections, QStringLiteral("tags"), false), QString());
     QVERIFY(!general.showTags());

@@ -8,6 +8,19 @@ MotionPopup {
     id: root
 
     property var current: ({})
+    property var list: []
+    readonly property int index: list.findIndex(i => i.id === current.id)
+    readonly property bool isClip: current.kind === "clip"
+    readonly property rect picture: isClip ? (pictureKnown || lastPicture.width <= 0 ? video.contentRect : lastPicture)
+                                           : Qt.rect((shot.width - shot.paintedWidth) / 2, (shot.height - shot.paintedHeight) / 2,
+                                                     shot.paintedWidth, shot.paintedHeight)
+    // Until the first frame is drawn contentRect is the whole item, even after hasVideo turns true.
+    // A picture exactly the item's shape is trusted once playback has moved on a little.
+    readonly property bool pictureKnown: file !== "" && player.hasVideo
+                                         && (video.contentRect.width < video.width - 0.5
+                                             || video.contentRect.height < video.height - 0.5
+                                             || player.position > 200)
+    property rect lastPicture: Qt.rect(0, 0, 0, 0)
     property string token: ""
     property string file: ""
     property string error: ""
@@ -24,17 +37,27 @@ MotionPopup {
 
     signal message(string text)
 
-    function show(c) {
-        current = c
+    function show(item, items) {
+        list = items
+        current = item
         error = ""
         volume = General.clipVolume
         open()
         prepare()
     }
 
+    function step(by) {
+        const next = list[index + by]
+        if (next === undefined)
+            return
+        current = next
+        error = ""
+        prepare()
+    }
+
     function prepare() {
         discard()
-        if (!FfmpegTool.available || current.videoDir === undefined)
+        if (!isClip || !FfmpegTool.available)
             return
         token = current.id + "-" + Date.now()
         Library.prepareClip(token, current.videoDir, FfmpegTool.path)
@@ -165,7 +188,7 @@ MotionPopup {
     Connections {
         target: FfmpegTool
         function onChanged() {
-            if (root.opened && FfmpegTool.available && root.token === "" && root.error === "")
+            if (root.opened && root.isClip && FfmpegTool.available && root.token === "" && root.error === "")
                 root.prepare()
         }
     }
@@ -268,9 +291,13 @@ MotionPopup {
         id: scope
         focus: true
 
-        Keys.onSpacePressed: root.toggle()
-        Keys.onLeftPressed: root.seekBy(-5000)
-        Keys.onRightPressed: root.seekBy(5000)
+        Keys.onSpacePressed: {
+            if (root.isClip)
+                root.toggle()
+        }
+        // On a clip the arrows seek, so Page Up and Page Down step there.
+        Keys.onLeftPressed: root.isClip ? root.seekBy(-5000) : root.step(-1)
+        Keys.onRightPressed: root.isClip ? root.seekBy(5000) : root.step(1)
         Keys.onUpPressed: root.setVolume((root.muted ? 0 : root.volume) + 0.05)
         Keys.onDownPressed: root.setVolume((root.muted ? 0 : root.volume) - 0.05)
         Keys.onEscapePressed: root.leave()
@@ -279,6 +306,10 @@ MotionPopup {
                 root.toggleMute()
             else if (event.key === Qt.Key_F)
                 root.toggleFullscreen()
+            else if (event.key === Qt.Key_PageUp)
+                root.step(-1)
+            else if (event.key === Qt.Key_PageDown)
+                root.step(1)
             else
                 return
             event.accepted = true
@@ -313,6 +344,10 @@ MotionPopup {
                     anchors.fill: parent
                     fillMode: VideoOutput.PreserveAspectFit
                     visible: root.file !== ""
+                    onContentRectChanged: {
+                        if (root.pictureKnown && contentRect.width > 0)
+                            root.lastPicture = contentRect
+                    }
                 }
                 MouseArea {
                     x: video.contentRect.x
@@ -333,8 +368,52 @@ MotionPopup {
                     }
                 }
 
+                Image {
+                    id: shot
+                    anchors.fill: parent
+                    visible: !root.isClip
+                    source: root.isClip ? "" : root.current.image
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory.
+                    sourceSize.width: width
+                    sourceSize.height: height
+                }
+                MouseArea {
+                    x: root.picture.x
+                    y: root.picture.y
+                    width: root.picture.width
+                    height: root.picture.height
+                    enabled: !root.isClip
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton)
+                            clipMenu.popup(this, mouse.x, mouse.y)
+                    }
+                    onDoubleClicked: mouse => {
+                        if (mouse.button === Qt.LeftButton)
+                            root.toggleFullscreen()
+                    }
+                }
+
+                Icon {
+                    id: spinner
+                    anchors.centerIn: parent
+                    visible: root.isClip && (root.preparing || (root.file !== "" && !root.pictureKnown))
+                    path: Icons.loader
+                    size: Theme.media.viewerPlaySize
+                    color: Theme.media.viewerControlColor
+                    RotationAnimation on rotation {
+                        running: spinner.visible
+                        from: 0
+                        to: 360
+                        duration: Theme.iconButton.spinDuration
+                        loops: Animation.Infinite
+                    }
+                }
+
                 Surface {
-                    visible: root.file === ""
+                    visible: root.isClip ? root.file === "" && (root.needsFfmpeg || root.error !== "") : shot.status === Image.Error
                     anchors.centerIn: parent
                     width: Math.min(parent.width, Theme.gameEditor.confirmWidth)
                     height: message.implicitHeight + 2 * Theme.gameEditor.padding
@@ -352,17 +431,18 @@ MotionPopup {
                         width: parent.width - 2 * Theme.gameEditor.padding
 
                         FfmpegPrompt {
-                            visible: root.needsFfmpeg
+                            visible: root.isClip && root.needsFfmpeg
                             Layout.fillWidth: true
                             textColor: Theme.gameEditor.labelColor
                             showNotNow: false
                         }
                         Label {
-                            visible: !root.needsFfmpeg
+                            visible: !root.isClip || !root.needsFfmpeg
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
                             color: Theme.gameEditor.labelColor
-                            text: root.error !== "" ? root.error : qsTr("Preparing the clip")
+                            text: !root.isClip ? qsTr("Couldn't open the screenshot")
+                                               : root.error
                         }
                     }
                 }
@@ -370,9 +450,15 @@ MotionPopup {
 
             // As wide as the picture, not the window, so the controls line up under it.
             ColumnLayout {
-                visible: root.file !== ""
+                // Kept in the layout while the next clip loads, so the picture's area doesn't change size.
+                // Until its first frame the picture has no size, so the last clip's stands in.
+                readonly property bool sized: root.pictureKnown || root.lastPicture.width > 0
+                visible: root.isClip
+                opacity: root.error === "" && !root.needsFfmpeg && sized ? 1 : 0
+                enabled: root.file !== ""
                 Layout.fillWidth: true
-                Layout.maximumWidth: video.contentRect.width > 0 ? video.contentRect.width : Number.POSITIVE_INFINITY
+                Layout.maximumWidth: root.pictureKnown ? video.contentRect.width
+                                     : root.lastPicture.width > 0 ? root.lastPicture.width : Number.POSITIVE_INFINITY
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 0
 
@@ -477,10 +563,30 @@ MotionPopup {
             }
         }
 
-        // Beside the picture's top right corner, in the room a 16:9 clip leaves at the sides.
+        // Centred on the window, not the picture: its area grows while a clip prepares and on a screenshot,
+        // which have no controls under them.
         ViewerButton {
-            readonly property real pictureRight: column.x + videoArea.x + video.contentRect.x + video.contentRect.width
-            readonly property real pictureTop: column.y + videoArea.y + video.contentRect.y
+            visible: root.index > 0
+            x: Math.max(0, (column.x - width) / 2)
+            y: (parent.height - height) / 2
+            icon: Icons.chevronLeft
+            tip: root.isClip ? qsTr("Previous (Page Up)") : qsTr("Previous (Left)")
+            onClicked: root.step(-1)
+        }
+        ViewerButton {
+            visible: root.index >= 0 && root.index < root.list.length - 1
+            x: parent.width - width - Math.max(0, (column.x - width) / 2)
+            y: (parent.height - height) / 2
+            icon: Icons.chevronRight
+            tip: root.isClip ? qsTr("Next (Page Down)") : qsTr("Next (Right)")
+            onClicked: root.step(1)
+        }
+
+        // Beside the picture's top right corner, in the room a 16:9 picture leaves at the sides.
+        ViewerButton {
+            readonly property real pictureRight: column.x + videoArea.x + root.picture.x + root.picture.width
+            readonly property real pictureTop: column.y + videoArea.y + root.picture.y
+            visible: !root.isClip || root.pictureKnown || root.file === "" && !root.preparing
             x: Math.min(parent.width - width - Theme.media.viewerCloseGap, pictureRight + Theme.media.viewerCloseGap)
             y: pictureTop + Theme.media.viewerCloseTopGap
             icon: Icons.close

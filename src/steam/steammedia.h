@@ -18,7 +18,15 @@ struct Clip
     QDateTime time;
 };
 
+struct Screenshot
+{
+    QString id;   // the file's name
+    QString path;
+    QDateTime time;
+};
+
 QList<Clip> listClips(const SteamInstall &install, qint64 appId);
+QList<Screenshot> listScreenshots(const SteamInstall &install, qint64 appId);
 
 qint64 parseDurationMs(const QString &isoDuration);
 QString lengthText(qint64 durationMs);

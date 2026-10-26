@@ -85,7 +85,7 @@ constexpr Section kSections[] = {
     {"notice", "The bar above a game's page that explains a lasting state, like a library that opens "
                "read-only."},
     {"download_bar", "The bar along the bottom of a game's page while Steam downloads a game."},
-    {"media", "The row of Steam clips on a Steam game's page, and the viewer that plays them."},
+    {"media", "The row of Steam clips and screenshots on a Steam game's page, and the viewer that shows them."},
     {"window_controls", "The minimize, maximize and close buttons at the top right of each window, and the "
                         "edges you drag to resize it."},
     {"toolbar", "The row of view buttons above the details, centered on the window; empty by default (stats is on the rail)."},
@@ -798,14 +798,14 @@ constexpr Setting kSettings[] = {
     integer("download_bar", "pill_icon_size", "16", 0, 64, "The download icon in the pill; 0 hides it"),
 
     heading("media", "Row"),
-    integer("media", "thumb_height", "126", 40, 600, "Height of a clip's thumbnail; its width follows at 16:9"),
+    integer("media", "thumb_height", "126", 40, 600, "Height of a thumbnail; its width follows at 16:9"),
     integer("media", "thumb_gap", "12", 0, 100, "Space between thumbnails"),
     integer("media", "scrollbar_gap", "8", 0, 100, "Space between the thumbnails and the scroll bar under them"),
     integer("media", "edge_fade", "0", 0, 400,
             "Width of the fade at an edge the row can still scroll past; 0 = no fade"),
     integer("media", "thumb_radius", "@radius.medium", 0, 100, "Thumbnail corner radius"),
     color("media", "thumb_border_color", "#f0f6fc00", "Thumbnail outline"),
-    color("media", "thumb_scrim", "#000000aa", "Darkens each thumbnail so the play button and length stay readable; transparent = none"),
+    color("media", "thumb_scrim", "#000000aa", "Darkens each clip's thumbnail so the play button and length stay readable; transparent = none"),
     choice("media", "thumb_scrim_style", "bottom", "full bottom top",
            "Where the scrim is: over the whole thumbnail, or a gradient fading in from the bottom or the top edge"),
     integer("media", "scrollbar_height", "8", 2, 40, "Thickness of the scroll bar under the thumbnails"),
