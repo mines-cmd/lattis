@@ -1,5 +1,7 @@
 #include "steammedia.h"
 
+#include "vdf.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -78,6 +80,44 @@ QString videoDirOf(const QString &clipFolder)
     }
     return {};
 }
+
+// Settings → Game Recording can move the recordings folder; clips made before the move stay in userdata.
+QStringList recordingRoots(const QString &userDir)
+{
+    QStringList roots = {userDir + u"/gamerecordings"_s};
+    QFile file(userDir + u"/config/localconfig.vdf"_s);
+    if (!file.open(QIODevice::ReadOnly))
+        return roots;
+    const Vdf::Document doc = Vdf::parse(file.readAll());
+    const Vdf::Node *recording = doc.root.find({u"UserLocalConfigStore"_s, u"GameRecording"_s});
+    const QString moved = recording ? recording->valueOf(u"BackgroundRecordPath") : QString();
+    if (!moved.isEmpty() && QFileInfo(moved).canonicalFilePath() != QFileInfo(roots.first()).canonicalFilePath())
+        roots.append(moved);
+    return roots;
+}
+
+void appendClips(const QDir &clips, const QString &prefix, QList<Clip> &out)
+{
+    for (const QString &name : clips.entryList({prefix + u'*'}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+        Clip clip;
+        clip.id = name;
+        clip.folder = clips.filePath(name);
+        clip.videoDir = videoDirOf(clip.folder);
+        if (clip.videoDir.isEmpty())
+            continue;
+        QFile manifest(clip.videoDir + u"/session.mpd"_s);
+        if (!manifest.open(QIODevice::ReadOnly))
+            continue;
+        clip.durationMs = parseDurationMs(manifestAttribute(manifest.readAll(), "mediaPresentationDuration"));
+        if (clip.durationMs <= 0 || streamsIn(clip.videoDir).videoInit.isEmpty())
+            continue;
+        const QString thumbnail = clip.folder + u"/thumbnail.jpg"_s;
+        if (QFileInfo::exists(thumbnail))
+            clip.thumbnail = thumbnail;
+        clip.time = QDateTime::fromString(name.mid(prefix.size()), u"yyyyMMdd_HHmmss"_s);
+        out.append(clip);
+    }
+}
 }
 
 qint64 parseDurationMs(const QString &isoDuration)
@@ -106,28 +146,10 @@ QList<Clip> listClips(const SteamInstall &install, qint64 appId)
     const QString user = install.userDataDir();
     if (user.isEmpty() || appId <= 0)
         return {};
-    const QDir clips(user + u"/gamerecordings/clips"_s);
     const QString prefix = u"clip_%1_"_s.arg(appId);
     QList<Clip> out;
-    for (const QString &name : clips.entryList({prefix + u'*'}, QDir::Dirs | QDir::NoDotAndDotDot)) {
-        Clip clip;
-        clip.id = name;
-        clip.folder = clips.filePath(name);
-        clip.videoDir = videoDirOf(clip.folder);
-        if (clip.videoDir.isEmpty())
-            continue;
-        QFile manifest(clip.videoDir + u"/session.mpd"_s);
-        if (!manifest.open(QIODevice::ReadOnly))
-            continue;
-        clip.durationMs = parseDurationMs(manifestAttribute(manifest.readAll(), "mediaPresentationDuration"));
-        if (clip.durationMs <= 0 || streamsIn(clip.videoDir).videoInit.isEmpty())
-            continue;
-        const QString thumbnail = clip.folder + u"/thumbnail.jpg"_s;
-        if (QFileInfo::exists(thumbnail))
-            clip.thumbnail = thumbnail;
-        clip.time = QDateTime::fromString(name.mid(prefix.size()), u"yyyyMMdd_HHmmss"_s);
-        out.append(clip);
-    }
+    for (const QString &root : recordingRoots(user))
+        appendClips(QDir(root + u"/clips"_s), prefix, out);
     std::sort(out.begin(), out.end(), [](const Clip &a, const Clip &b) {
         return a.time != b.time ? a.time > b.time : a.id > b.id;
     });

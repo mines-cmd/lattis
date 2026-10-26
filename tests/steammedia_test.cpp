@@ -36,6 +36,7 @@ private slots:
     void otherUsersClipsAreNotShown();
     void gameWithoutClips();
     void noSteamUser();
+    void movedRecordingFolder();
     void remuxMakesOneFile();
     void remuxWithoutFfmpeg();
 };
@@ -109,6 +110,28 @@ void SteamMediaTest::noSteamUser()
     SteamInstall noUser = fakeInstall();
     noUser.userId.clear();
     QVERIFY(SteamMedia::listClips(noUser, 8000).isEmpty());
+}
+
+void SteamMediaTest::movedRecordingFolder()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const QString fixture = kFakeSteam + u"/userdata/39734273/gamerecordings"_s;
+    const QString config = root.path() + u"/userdata/1/config"_s;
+    QVERIFY(QDir().mkpath(config));
+    QFile vdf(config + u"/localconfig.vdf"_s);
+    QVERIFY(vdf.open(QIODevice::WriteOnly));
+    vdf.write("\"UserLocalConfigStore\"\n{\n\t\"GameRecording\"\n\t{\n\t\t\"BackgroundRecordPath\"\t\t\""
+              + fixture.toUtf8() + "\"\n\t}\n}\n");
+    vdf.close();
+
+    SteamInstall install = fakeInstall(u"1"_s);
+    install.root = root.path();
+    QCOMPARE(SteamMedia::listClips(install, 8000).size(), 2);
+
+    // The setting can name the default folder itself; its clips are listed once.
+    QVERIFY(QFile::link(fixture, root.path() + u"/userdata/1/gamerecordings"_s));
+    QCOMPARE(SteamMedia::listClips(install, 8000).size(), 2);
 }
 
 void SteamMediaTest::remuxMakesOneFile()
