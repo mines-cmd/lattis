@@ -44,7 +44,7 @@ A Steam game's page shows your own Steam clips (Steam's Game Recording) and scre
 - **ffmpeg:** Steam saves clips in pieces that need joining before they play, and Lattis uses `ffmpeg` for that. If it's on your system, Lattis uses it. If not, the Media row offers **Install ffmpeg**, which downloads it (the size is shown; from github.com/BtbN/FFmpeg-Builds) only when you click. The **ffmpeg** section on Settings → Steam appears once Lattis installed it, with **Remove** to delete that copy.
 - **Clips that moved:** if you changed where Steam saves recordings, clips in both the old and the new folder show.
 - **Hiding it:** click the **Media** heading to fold the row. To remove it from every game's page, or move it, use Settings → Game page.
-- **Looks:** the row and viewer follow the theme's `[media]` settings.
+- **Looks:** the Media heading shows how many items there are, the row sits on one card the items scroll inside, each item has a drop shadow, and the row and viewer follow the theme's `[media]` settings.
 
 ## Launching and play time
 

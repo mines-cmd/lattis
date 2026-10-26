@@ -7,6 +7,7 @@ Item {
     id: root
 
     property alias text: label.text
+    property string count
     // A name from `[game_page] sections`; the state is saved in `collapsed_sections`.
     property string section
     readonly property bool collapsed: General.collapsedSections.includes(section)
@@ -24,6 +25,13 @@ Item {
         Label {
             id: label
             color: Theme.details.headingColor
+            font.weight: Theme.font.strongWeight
+            font.pixelSize: Theme.details.headingFontSize
+        }
+        Label {
+            visible: root.count !== ""
+            text: root.count
+            color: Theme.details.countColor
             font.weight: Theme.font.strongWeight
             font.pixelSize: Theme.details.headingFontSize
         }
