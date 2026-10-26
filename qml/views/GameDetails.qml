@@ -1115,7 +1115,7 @@ Item {
                                 others += item.implicitHeight + item.Layout.topMargin + spacing
                         }
                         return flick.height - content.y - Theme.details.marginBottom - body.y - others
-                            - (root.compact && info.visible ? body.rowSpacing + info.implicitHeight : 0)
+                            - (root.compact && side.visible ? body.rowSpacing + side.implicitHeight : 0)
                     }
                     readonly property real lineHeightPx: fullText.lineCount > 0 ? fullText.contentHeight / fullText.lineCount : 1
                     readonly property int fittingLines: Math.max(Theme.details.descriptionMinLines,
@@ -1145,20 +1145,32 @@ Item {
                         }
                     }
                 }
-                InfoPanel {
-                    id: info
+                ColumnLayout {
+                    id: side
                     Layout.row: root.compact ? 1 : 0
                     Layout.column: root.compact ? 0 : 1
-                    visible: rows.length > 0
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width
                     Layout.alignment: Qt.AlignTop
-                    fields: gameFields
-                    onHistoryRequested: root.historyRequested()
+                    visible: info.rows.length > 0 || achievements.shown
+                    spacing: Theme.achievements.gap
 
-                    TapHandler {
-                        acceptedButtons: Qt.RightButton
-                        onTapped: point => root.openPageMenu("info_rows", info, point.position)
+                    InfoPanel {
+                        id: info
+                        visible: rows.length > 0
+                        Layout.fillWidth: true
+                        fields: gameFields
+                        onHistoryRequested: root.historyRequested()
+
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: point => root.openPageMenu("info_rows", info, point.position)
+                        }
+                    }
+                    AchievementsPanel {
+                        id: achievements
+                        Layout.fillWidth: true
+                        game: root.game
                     }
                 }
             }

@@ -143,7 +143,7 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     const qsizetype listKeys = known.size();
     known += {QStringLiteral("recent_period"), QStringLiteral("play_time_format"),
               QStringLiteral("chips_without_icon"), QStringLiteral("collapsed_sections"),
-              QStringLiteral("show_screenshots"), QStringLiteral("show_video")};
+              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("show_achievements")};
     // Before `sections`, each of them had a switch; a false one still hides it when `sections` isn't set.
     const QStringList flags = {QStringLiteral("show_description"), QStringLiteral("show_tags"),
                                QStringLiteral("show_clips")};
@@ -167,9 +167,12 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             readNames(node, key, GamePage::chips, section, out.value.chipsWithoutIcon, out.warnings);
         } else if (key == QLatin1String("collapsed_sections")) {
             readNames(node, key, GamePage::sections, section, out.value.collapsedSections, out.warnings);
-        } else if (key == QLatin1String("show_screenshots") || key == QLatin1String("show_video")) {
+        } else if (key == QLatin1String("show_screenshots") || key == QLatin1String("show_video")
+                   || key == QLatin1String("show_achievements")) {
             if (const auto *b = node.as_boolean())
-                (key == QLatin1String("show_video") ? out.value.showVideo : out.value.showScreenshots) = b->get();
+                (key == QLatin1String("show_video")          ? out.value.showVideo
+                 : key == QLatin1String("show_achievements") ? out.value.showAchievements
+                                                             : out.value.showScreenshots) = b->get();
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
         } else if (flags.contains(key)) {

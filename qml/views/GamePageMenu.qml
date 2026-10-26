@@ -107,6 +107,14 @@ SettingsMenu {
                 root.removeItem(object)
         }
     }
+    SettingsMenuSeparator { visible: root.place === "info_rows" }
+    SettingsMenuItem {
+        want: root.place === "info_rows"
+        text: qsTr("Achievements")
+        checked: General.showAchievements
+        keepOpen: true
+        onActivated: root.report(General.setShowAchievements(!General.showAchievements))
+    }
     SettingsMenuSeparator {}
     SettingsMenuItem {
         text: qsTr("Customize game page")

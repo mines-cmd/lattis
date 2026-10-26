@@ -23,6 +23,7 @@ struct GamePageSettings
     QString playTimeFormat = QStringLiteral("hours");
     bool showScreenshots = true;
     bool showVideo = true;
+    bool showAchievements = true;
 
     bool operator==(const GamePageSettings &) const = default;
 

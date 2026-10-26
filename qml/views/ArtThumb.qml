@@ -7,6 +7,9 @@ Rectangle {
     property real aspect: 2 / 3
     property real cornerRadius: Theme.radius.tiny
     property int fillMode: Image.PreserveAspectCrop
+    property string failedIcon: Icons.image
+    property bool iconWhenEmpty: false
+    readonly property alias status: thumbImage.status
     implicitHeight: Theme.gameEditor.bulkThumbnailHeight
     implicitWidth: implicitHeight * aspect
     radius: cornerRadius
@@ -37,8 +40,8 @@ Rectangle {
     }
     Icon {
         anchors.centerIn: parent
-        visible: thumb.source !== "" && thumbImage.status === Image.Error
-        path: Icons.image
+        visible: thumb.source !== "" ? thumbImage.status === Image.Error : thumb.iconWhenEmpty
+        path: thumb.failedIcon
         size: Math.min(Theme.controls.iconSize * 1.5, Math.min(thumb.width, thumb.height) / 2)
         color: Theme.gameEditor.hintColor
         opacity: Theme.gameEditor.placeholderIconOpacity

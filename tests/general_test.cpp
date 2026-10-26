@@ -586,6 +586,14 @@ void GeneralTest::gamePageSettersWrite()
     QVERIFY(general.showScreenshots());
     QVERIFY(!fileText().contains("show_screenshots"));
 
+    QVERIFY(general.showAchievements());
+    QCOMPARE(general.setShowAchievements(false), QString());
+    QVERIFY(!general.showAchievements());
+    QVERIFY(fileText().contains("show_achievements = false"));
+    QCOMPARE(general.setShowAchievements(true), QString());
+    QVERIFY(general.showAchievements());
+    QVERIFY(!fileText().contains("show_achievements"));
+
     QVERIFY(general.showVideo());
     QCOMPARE(general.setShowVideo(false), QString());
     QVERIFY(!general.showVideo());

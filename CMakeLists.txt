@@ -180,6 +180,8 @@ qt_add_qml_module(lattis
         qml/views/FilterPanel.qml
         qml/views/Hero.qml
         qml/views/InfoPanel.qml
+        qml/views/AchievementsPanel.qml
+        qml/views/AchievementsViewer.qml
         qml/views/GameFields.qml
         qml/views/RatingEditor.qml
         qml/views/DateEditor.qml

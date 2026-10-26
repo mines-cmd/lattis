@@ -293,12 +293,13 @@ Item {
                 }
                 readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
                 readonly property bool videoShown: root.matches(qsTr("Show video"))
+                readonly property bool achievementsShown: root.matches(qsTr("Show achievements"))
                 Item {
-                    visible: sections.visible && (content.screenshotsShown || content.videoShown)
+                    visible: sections.visible && (content.screenshotsShown || content.videoShown || content.achievementsShown)
                     Layout.preferredHeight: Theme.settingsWindow.sectionSpacing / 2
                 }
                 SettingsCard {
-                    visible: content.screenshotsShown || content.videoShown
+                    visible: content.screenshotsShown || content.videoShown || content.achievementsShown
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         visible: content.screenshotsShown
@@ -318,11 +319,20 @@ Item {
                             onToggled: root.report(General.setShowVideo(checked))
                         }
                     }
+                    LabeledRow {
+                        visible: content.achievementsShown
+                        label: qsTr("Show achievements")
+                        note: qsTr("A Steam game's achievements, in a panel below the info panel.")
+                        SettingsSwitch {
+                            checked: General.showAchievements
+                            onToggled: root.report(General.setShowAchievements(checked))
+                        }
+                    }
                 }
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
-                             && !content.periodShown && !sections.visible && !content.screenshotsShown && !content.videoShown
+                             && !content.periodShown && !sections.visible && !content.screenshotsShown && !content.videoShown && !content.achievementsShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

@@ -253,6 +253,11 @@ QString General::setShowVideo(bool on)
     return setMediaFlag(QStringLiteral("show_video"), on);
 }
 
+QString General::setShowAchievements(bool on)
+{
+    return setMediaFlag(QStringLiteral("show_achievements"), on);
+}
+
 QString General::setMediaFlag(const QString &key, bool on)
 {
     QString error;
