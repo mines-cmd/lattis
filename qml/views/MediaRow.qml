@@ -116,6 +116,19 @@ ColumnLayout {
         ScrollBar.horizontal: ScrollBar {
             id: scrollBar
             policy: flick.contentWidth > flick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            padding: 0
+            hoverEnabled: true
+            background: Rectangle {
+                implicitHeight: Theme.media.scrollbarHeight
+                radius: height / 2
+                color: Theme.media.scrollbarTrack
+            }
+            contentItem: Rectangle {
+                implicitHeight: Theme.media.scrollbarHeight
+                radius: height / 2
+                color: scrollBar.pressed || scrollBar.hovered ? Theme.media.scrollbarHandleHover : Theme.media.scrollbarHandle
+                Behavior on color { enabled: Motion.fades; MotionColor {} }
+            }
         }
 
         Row {
@@ -136,6 +149,20 @@ ColumnLayout {
                     source: modelData.thumbnail
 
                     Rectangle {
+                        id: scrim
+                        readonly property bool fromTop: Theme.media.thumbScrimStyle === "top"
+                        anchors.fill: parent
+                        radius: parent.radius
+                        visible: Theme.media.thumbScrim.a > 0
+                        color: Theme.media.thumbScrimStyle === "full" ? Theme.media.thumbScrim : "transparent"
+                        gradient: Theme.media.thumbScrimStyle === "full" ? null : scrimGradient
+                        Gradient {
+                            id: scrimGradient
+                            GradientStop { position: 0; color: scrim.fromTop ? Theme.media.thumbScrim : Qt.rgba(0, 0, 0, 0) }
+                            GradientStop { position: 1; color: scrim.fromTop ? Qt.rgba(0, 0, 0, 0) : Theme.media.thumbScrim }
+                        }
+                    }
+                    Rectangle {
                         anchors.fill: parent
                         radius: parent.radius
                         color: Theme.palette.hoverOverlay
@@ -154,7 +181,7 @@ ColumnLayout {
                         width: Theme.media.playSize
                         height: width
                         radius: width / 2
-                        color: Theme.media.badgeBackground
+                        color: Theme.media.playBackground
 
                         Icon {
                             anchors.centerIn: parent

@@ -425,6 +425,13 @@ MotionPopup {
                                 onWheel: event => root.setVolume((root.muted ? 0 : root.volume) + (event.angleDelta.y > 0 ? 0.05 : -0.05))
                             }
                         }
+                        Label {
+                            Layout.preferredWidth: percentMetrics.width
+                            horizontalAlignment: Text.AlignRight
+                            text: Math.round((root.muted ? 0 : root.volume) * 100) + "%"
+                            color: Theme.media.viewerTimeColor
+                            TextMetrics { id: percentMetrics; font: parent.font; text: "100%" }
+                        }
                     }
 
                     Row {
@@ -470,15 +477,12 @@ MotionPopup {
             }
         }
 
-        // Beside the picture's top right corner, in the room a 16:9 clip leaves at the sides, and
-        // kept below the window's own buttons, which the scrim dims but doesn't hide.
+        // Beside the picture's top right corner, in the room a 16:9 clip leaves at the sides.
         ViewerButton {
             readonly property real pictureRight: column.x + videoArea.x + video.contentRect.x + video.contentRect.width
             readonly property real pictureTop: column.y + videoArea.y + video.contentRect.y
-            readonly property real belowWindowButtons: root.fullscreen ? 0
-                : Theme.windowControls.margin + Theme.windowControls.size + Theme.media.viewerCloseGap
             x: Math.min(parent.width - width - Theme.media.viewerCloseGap, pictureRight + Theme.media.viewerCloseGap)
-            y: Math.max(pictureTop, belowWindowButtons)
+            y: pictureTop + Theme.media.viewerCloseTopGap
             icon: Icons.close
             iconColor: Theme.media.viewerCloseColor
             tip: qsTr("Close (Esc)")
