@@ -1093,10 +1093,18 @@ Item {
                     onClipRequested: clip => root.playClip(clip)
                     onMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
                 }
+                // Takes the info panel's extra height, which would otherwise open a gap above the media row.
+                Item {
+                    visible: !root.compact
+                    Layout.row: 2
+                    Layout.column: 0
+                    Layout.fillHeight: true
+                }
                 InfoPanel {
                     id: info
-                    Layout.row: 0
-                    Layout.column: 1
+                    Layout.row: root.compact ? 1 : 0
+                    Layout.column: root.compact ? 0 : 1
+                    Layout.rowSpan: root.compact ? 1 : 3
                     visible: rows.length > 0
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width

@@ -796,6 +796,7 @@ constexpr Setting kSettings[] = {
     heading("media", "Row"),
     integer("media", "thumb_height", "126", 40, 600, "Height of a clip's thumbnail; its width follows at 16:9"),
     integer("media", "thumb_gap", "12", 0, 100, "Space between thumbnails"),
+    integer("media", "scrollbar_gap", "8", 0, 100, "Space between the thumbnails and the scroll bar under them"),
     integer("media", "thumb_radius", "@radius.medium", 0, 100, "Thumbnail corner radius"),
     color("media", "thumb_border_color", "@border", "Thumbnail outline"),
     color("media", "badge_background", "#000000b3", "Behind a clip's length on its thumbnail"),

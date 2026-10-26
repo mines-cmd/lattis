@@ -53,7 +53,8 @@ ColumnLayout {
     Flickable {
         id: flick
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.media.thumbHeight + scrollBar.height
+        Layout.preferredHeight: Theme.media.thumbHeight
+                                + (scrollBar.policy === ScrollBar.AlwaysOn ? Theme.media.scrollbarGap + scrollBar.height : 0)
         contentWidth: tiles.width
         contentHeight: Theme.media.thumbHeight
         clip: true
