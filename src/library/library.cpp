@@ -8,6 +8,7 @@
 #include "romscan.h"
 #include "searchtext.h"
 #include "steamart.h"
+#include "steammedia.h"
 #include "tomlpatch.h"
 
 #include <QDir>
@@ -1672,6 +1673,32 @@ QVariantMap Library::pageHistory(const QString &id)
     });
     watcher->setFuture(QtConcurrent::run(readPageStats, dataDir, id, today, firstDay));
     return {{QStringLiteral("pending"), true}};
+}
+
+void Library::media(const QString &id)
+{
+    const qint64 appId = GameId::steamAppId(id);
+    const SteamInstall install = m_store.snapshot().steam.install;
+    if (appId <= 0 || install.userDataDir().isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
+        return;
+    }
+    auto *watcher = new QFutureWatcher<QList<SteamMedia::Clip>>(this);
+    connect(watcher, &QFutureWatcher<QList<SteamMedia::Clip>>::finished, this, [this, watcher, id] {
+        QVariantList clips;
+        for (const SteamMedia::Clip &c : watcher->result()) {
+            clips.append(QVariantMap{{QStringLiteral("id"), c.id},
+                                     {QStringLiteral("folder"), c.folder},
+                                     {QStringLiteral("thumbnail"),
+                                      c.thumbnail.isEmpty() ? QString() : QUrl::fromLocalFile(c.thumbnail).toString()},
+                                     {QStringLiteral("durationMs"), c.durationMs},
+                                     {QStringLiteral("length"), SteamMedia::lengthText(c.durationMs)},
+                                     {QStringLiteral("time"), c.time}});
+        }
+        emit mediaReady(id, clips);
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run(SteamMedia::listClips, install, appId));
 }
 
 QString Library::shortPlayTime(int minutes) const

@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
 RUN python3 -m venv /opt/aqt \
     && /opt/aqt/bin/pip install --no-cache-dir aqtinstall==$AQT_VERSION \
     && /opt/aqt/bin/aqt install-qt -O /opt/qt linux desktop $QT_VERSION linux_gcc_64 \
-        -m qtimageformats qtshadertools qttasktree \
+        -m qtimageformats qtmultimedia qtshadertools qttasktree \
     && rm -rf /root/.cache aqtinstall.log
 
 # The aqt install carries no licence texts, so the AppImage gets them from here: Qt's are the

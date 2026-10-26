@@ -16,6 +16,7 @@ private slots:
     void steamSettingsPage();
     void oversizedArtIsShrunk();
     void steamDownloadsFollowTheLog();
+    void mediaListsTheGamesClips();
 };
 
 void LibrarySteamImportTest::steamImportAddsGames()
@@ -412,6 +413,31 @@ void LibrarySteamImportTest::steamDownloadsFollowTheLog()
     // Nothing started: nothing kept.
     downloads.setApps({}, {});
     QVERIFY(downloads.progress().isEmpty());
+}
+
+void LibrarySteamImportTest::mediaListsTheGamesClips()
+{
+    installFakeSteam();
+    auto library = openLibrary();
+    QSignalSpy ready(library.get(), &Library::mediaReady);
+
+    library->media(QStringLiteral("steam-8000"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 1, 5000);
+    QCOMPARE(ready.last().at(0).toString(), QStringLiteral("steam-8000"));
+    const QVariantList clips = ready.last().at(1).toList();
+    QCOMPARE(clips.size(), 2);
+    QCOMPARE(clips[0].toMap().value("id").toString(), QStringLiteral("clip_8000_20260301_120000"));
+    QCOMPARE(clips[0].toMap().value("length").toString(), QStringLiteral("0:04"));
+    QVERIFY(clips[0].toMap().value("thumbnail").toString().startsWith(QStringLiteral("file://")));
+
+    library->media(QStringLiteral("steam-2231450"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 2, 5000);
+    QVERIFY(ready.last().at(1).toList().isEmpty());
+
+    // Not a Steam game: none, and no lookup.
+    library->media(QStringLiteral("switch-mario-tennis-aces"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 3, 5000);
+    QVERIFY(ready.last().at(1).toList().isEmpty());
 }
 
 QTEST_GUILESS_MAIN(LibrarySteamImportTest)

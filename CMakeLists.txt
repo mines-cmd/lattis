@@ -329,6 +329,7 @@ qt_add_qml_module(lattis
         src/steam/steamshortcuts.h src/steam/steamshortcuts.cpp
         src/steam/steamsync.h src/steam/steamsync.cpp
         src/steam/steamart.h src/steam/steamart.cpp
+        src/steam/steammedia.h src/steam/steammedia.cpp
         src/theme/theme.h src/theme/theme.cpp
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp

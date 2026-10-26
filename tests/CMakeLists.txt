@@ -85,6 +85,7 @@ set(LIBRARY_SOURCES
     ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
     ../src/steam/steamsync.h ../src/steam/steamsync.cpp
     ../src/steam/steamart.h ../src/steam/steamart.cpp
+    ../src/steam/steammedia.h ../src/steam/steammedia.cpp
     ${LIBRARY_FILE_SOURCES}
 )
 set(BACKUP_SOURCES
@@ -198,6 +199,7 @@ lattis_test(librarycache_test OFFSCREEN
             ../src/core/apppaths.h ../src/core/apppaths.cpp
             ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp
+            ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus)
 # The whole library, compiled once for the tests below that use it.
@@ -235,8 +237,14 @@ lattis_test(vdf_test
 lattis_test(steam_test OFFSCREEN
     SOURCES ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp
+            ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${STEAM_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus
+    DEFINES ${STEAM_DATA})
+lattis_test(steammedia_test
+    SOURCES ../src/steam/steammedia.h ../src/steam/steammedia.cpp
+            ${STEAM_SOURCES}
+    LIBS tomlplusplus::tomlplusplus
     DEFINES ${STEAM_DATA})
 lattis_test(shortcuts_test
     SOURCES binaryvdfbuilder.h

@@ -154,6 +154,7 @@ public:
 
     Q_INVOKABLE QVariantMap historyFor(const QString &id) const;
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
+    Q_INVOKABLE void media(const QString &id);
     Q_INVOKABLE void monthStats(int year, int month);
     Q_INVOKABLE void yearStats(int year);
     Q_INVOKABLE QString shortPlayTime(int minutes) const;
@@ -292,6 +293,7 @@ signals:
     void monthStatsReady(int year, int month, const QVariantMap &stats);
     void yearStatsReady(int year, const QVariantMap &stats);
     void pageHistoryReady(const QString &id, const QVariantMap &played);
+    void mediaReady(const QString &id, const QVariantList &clips);
     void historyChanged(const QStringList &ids);
     // A change the user can undo; token 0 means it can't be, and `text` says so.
     void undoOffered(quint64 token, const QString &text);
