@@ -204,6 +204,34 @@ Item {
                     }
                 }
 
+                SectionHeader { visible: FfmpegTool.ownCopy; text: qsTr("ffmpeg") }
+                SettingsNote {
+                    visible: FfmpegTool.ownCopy
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Theme.layout.spacing
+                    text: qsTr("Installed by Lattis, to play your Steam clips. Removing it frees the space; "
+                               + "playing a clip offers to install it again.")
+                }
+                SettingsCard {
+                    visible: FfmpegTool.ownCopy
+
+                    PathField {
+                        Layout.fillWidth: true
+                        path: FfmpegTool.path
+                        onCopied: root.message(qsTr("Copied"))
+
+                        SettingsButton {
+                            text: qsTr("Remove")
+                            danger: true
+                            tip: qsTr("Delete the copy of ffmpeg Lattis installed")
+                            onClicked: {
+                                FfmpegTool.remove()
+                                error.text = FfmpegTool.state === "failed" ? FfmpegTool.error : ""
+                            }
+                        }
+                    }
+                }
+
                 SectionHeader { text: qsTr("Non-Steam games") }
                 SettingsNote {
                     Layout.fillWidth: true

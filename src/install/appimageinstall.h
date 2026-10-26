@@ -55,6 +55,8 @@ public:
     void setRelaxed(bool relaxed) { m_relaxed = relaxed; }
     // An update: a file with the target's name is moved aside instead of refusing the install.
     void setReplace(bool replace) { m_replace = replace; }
+    // Ends after the checks with the downloaded file itself (Result::path, still the partial file), for the caller to unpack.
+    void setDownloadOnly(bool only) { m_downloadOnly = only; }
     // Reads this many bytes every tick instead of all that has arrived (so a screenshot can catch the progress).
     void setPace(qint64 bytes, int tickMs);
 
@@ -83,6 +85,7 @@ private:
     QString m_folder;
     bool m_relaxed = false;
     bool m_replace = false;
+    bool m_downloadOnly = false;
     qint64 m_paceBytes = 0;
     QTimer m_paceTimer;
 

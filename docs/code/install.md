@@ -12,6 +12,7 @@ The install code puts an emulator on the computer from inside the app, as the up
 - [The Installer](#the-installer)
 - [Updates](#updates)
 - [Uninstall](#uninstall)
+- [ffmpeg](#ffmpeg)
 - [Testing hooks](#testing-hooks)
 - [Files](#files)
 - [QML reference](#qml-reference)
@@ -49,6 +50,8 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 3. A zip or tarball is unpacked on a worker thread by `AppImageInstall::extractOne()`: one entry, the first regular file whose name matches `release_inside`, written to `.<name>.partial`. An entry whose path is absolute or holds `..` makes the whole archive refused; a matching entry that is a link is refused; nothing larger than 2 GiB is written. The archive's partial file is then deleted.
 4. The AppImage is made executable (0755) and renamed to its upstream name. A file with that name already in the folder fails the install, unless `setReplace(true)` (an update): then the old file is first moved to `.<name>.replaced/<name>` beside it, the new one renamed in, and `Result::replaced` names the moved file for the caller to trash. If the new file can't be put in place, the old one is moved back.
 5. A failure or `cancel()` deletes every partial file. Destroying the object does too.
+
+`setDownloadOnly(true)` ends after step 2 with `Result::path` the partial file itself, for the caller to unpack (ffmpeg's archive; see [ffmpeg](#ffmpeg)).
 
 `setPace(bytes, tickMs)` reads that many bytes per tick instead of everything that has arrived, so a screenshot can catch the progress.
 
@@ -126,6 +129,19 @@ A release counts as newer when the matching asset's sha256 differs from the reco
 
 `uninstall(id)` works only on what Lattis installed (the record, still there): "<emulator> wasn't installed by Lattis…" otherwise. An AppImage goes to the trash, with its menu entry; a Flatpak is removed with `flatpak uninstall` (state `removing`) and keeps its data. The record is deleted and the library detects again. Refused with "Close <game> first" while a game runs in that emulator.
 
+## ffmpeg
+
+`FfmpegTool` (`ffmpegtool.*`) is the QML singleton that finds, downloads and removes the `ffmpeg` Steam clips are remuxed with (see [steam](steam.md)). It reuses the release parsing and `AppImageDownload` above; it is created on first use, and nothing reaches the network until `install()` runs (only the Install ffmpeg button calls it).
+
+- **`path()`**: Lattis's own copy (`<toolsDir>/ffmpeg/bin/ffmpeg`, see `AppPaths::toolsDir()`), else `ffmpeg` on `PATH`, else empty. `FfmpegTool::resolve(toolsDir)` is the same lookup without the object. `refresh()` looks again (the Settings page and the viewer call it when shown).
+- **The download**: the `latest` release of `github:BtbN/FFmpeg-Builds`, asset `ffmpeg-master-latest-linux64-lgpl-shared.tar.xz` (`…linuxarm64…` on arm64; `FfmpegInstall::assetName(cpu)`, empty for any other CPU). The versioned names in the same release aren't matched. A release that lists no sha256 for it is refused, as the result is run. The size (about 67 MB) is `size` once the release is known.
+- **`install()`**: Checking (the release), Downloading (`AppImageDownload::setDownloadOnly(true)`: https only, size and sha256 checked, the archive left as the partial file), Installing: the archive is unpacked on a worker thread into `<toolsDir>/.ffmpeg.partial/` by `FfmpegInstall::extract()`, which keeps only `bin/ffmpeg`, `lib/*.so.*` (with their version links, which may only point at a file in the same folder; ffmpeg finds them through its RPATH `$ORIGIN/../lib`) and `LICENSE.txt`, and refuses paths leading outside the folder, other links and anything over 1 GiB. Then `ffmpeg -version` is run once from the partial folder (10 s limit, the program environment), and only if it starts and answers `ffmpeg version …` does the folder replace `<toolsDir>/ffmpeg`. A copy that won't start (a missing system library) fails with its first stderr line and leaves the old copy alone.
+- **State** (`state`): `idle`, `checking`, `downloading`, `installing` or `failed` (`error` says why, in one line; `install()` clears it). `progress` is 0 to 1 while downloading, -1 otherwise. `available`, `ownCopy` (Lattis installed the copy in use) and `path` are updated when a job ends.
+- **`cancel()`** stops any step and deletes the partial archive and folder; it also clears a failure. Quitting cancels. **`remove()`** deletes the own copy (refused while a job runs); a failure to delete is a `failed` state.
+- **No update check**: the tag never changes and a working copy is kept until the user removes it.
+
+Test hooks (set before `install()`): `setReleaseUrl()` answers the release from another address, `setAssetName()` picks another asset, `setRelaxed(true)` allows `http:` and `file:` downloads.
+
 ## Testing hooks
 
 `LATTIS_INSTALL_FIXTURES=<dir>` makes the Installer read the release from `<dir>/<release value with ":" and "/" as "-">.json` (`github-mgba-emu-mgba.json`) after a short delay, and download the asset from `<dir>/<asset name>` as a `file:` URL. With no such file it makes a script that sleeps (2 MB, no checksum) under the cache dir. The download is paced (40 steps of 60 ms), so the progress shows. Fixtures skip the release cache.
@@ -146,6 +162,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
 | `installer.*` | The `Installer` singleton |
+| `ffmpegtool.*` | The `FfmpegTool` singleton; `FfmpegInstall::assetName()` and `extract()` |
 
 ## QML reference
 
@@ -158,4 +175,16 @@ Installer.checkUpdates(id)    no id: every installed AppImage, quietly
 Installer.retry(id)           runs a failed job again
 Installer.cancel(id)          also clears a failure
 Installer.refresh()
+
+FfmpegTool.state              "idle", "checking", "downloading", "installing" or "failed"
+FfmpegTool.progress           0 to 1 while downloading, -1 otherwise
+FfmpegTool.error              the message of a failure
+FfmpegTool.path               the ffmpeg to run, "" when there is none
+FfmpegTool.available          path is not empty
+FfmpegTool.ownCopy            the copy in use is the one Lattis installed
+FfmpegTool.size               the download's size in bytes once known, else 0
+FfmpegTool.install()
+FfmpegTool.cancel()           also clears a failure
+FfmpegTool.remove()
+FfmpegTool.refresh()
 ```

@@ -249,6 +249,10 @@ void AppImageDownload::downloaded()
         fail(tr("The download doesn't match the checksum the release lists for it, so it was deleted"));
         return;
     }
+    if (m_downloadOnly) {
+        end({true, false, partialPath(m_asset.name), {}, sha});
+        return;
+    }
     if (AppImageInstall::isArchive(m_asset.name)) {
         m_stage = Stage::Extracting;
         emit stageChanged();

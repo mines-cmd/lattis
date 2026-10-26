@@ -291,6 +291,7 @@ lattis_test(install_test
             ../src/install/installrecord.h ../src/install/installrecord.cpp
             ../src/install/flatpakinstall.h ../src/install/flatpakinstall.cpp
             ../src/install/installer.h ../src/install/installer.cpp
+            ../src/install/ffmpegtool.h ../src/install/ffmpegtool.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
 

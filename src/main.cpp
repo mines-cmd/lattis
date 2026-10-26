@@ -1,5 +1,6 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/ffmpegtool.h"
 #include "install/installer.h"
 #include "core/apppaths.h"
 #include "core/gamepagemigration.h"
@@ -188,6 +189,8 @@ int main(int argc, char *argv[])
                           const Game *game = id.isEmpty() ? nullptr : library.game(id);
                           return game ? game->title : id;
                       }});
+    FfmpegTool::setup({AppPaths::toolsDir(),
+                       [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&thumbnails);

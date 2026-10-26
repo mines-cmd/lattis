@@ -126,6 +126,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `dataDir()` | `~/.local/share/lattis`, or `$LATTIS_DATA` |
 | `cacheDir()` | `~/.cache/lattis` |
 | `stateDir()` | `~/.local/state/lattis` |
+| `toolsDir()` | `<stateDir>/tools`: programs Lattis downloaded for itself (ffmpeg). Outside the data dir, so backups and exports don't carry it |
 | `dataDirKey(dataDir)` | First 12 hex digits of SHA-1 of the absolute path |
 
 ### Autostart

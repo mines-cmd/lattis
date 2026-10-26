@@ -1,6 +1,7 @@
 #include "appimageinstall.h"
 #include "desktopentry.h"
 #include "fakehttpserver.h"
+#include "ffmpegtool.h"
 #include "flatpakinstall.h"
 #include "installer.h"
 #include "installrecord.h"
@@ -145,6 +146,16 @@ private slots:
     void installerUpdatesInPlace();
     void installerUninstalls();
     void installerRefusesWhileRunning();
+
+    void ffmpegAssetNames();
+    void ffmpegInstalls();
+    void ffmpegRefusesWrongChecksum();
+    void ffmpegRefusesBadReleases();
+    void ffmpegRefusesBadArchives();
+    void ffmpegKeepsTheOldCopyWhenTheNewOneWontStart();
+    void ffmpegCancelLeavesNothing();
+    void ffmpegRemoves();
+    void ffmpegPrefersTheOwnCopy();
 };
 
 void InstallTest::sourceParses_data()
@@ -1352,6 +1363,341 @@ void InstallTest::installerRefusesWhileRunning()
     h.running.clear();
     installer.uninstall("mgba");
     QVERIFY(!row().value("installedByApp").toBool());
+}
+
+
+namespace {
+struct TarEntry
+{
+    QString name;
+    QByteArray data;
+    QString link;
+};
+
+QByteArray makeTarXz(const QList<TarEntry> &entries)
+{
+    QTemporaryDir dir;
+    const QString path = dir.filePath("ff.tar.xz");
+    struct archive *a = archive_write_new();
+    archive_write_set_format_pax_restricted(a);
+    archive_write_add_filter_xz(a);
+    archive_write_open_filename(a, QFile::encodeName(path).constData());
+    for (const TarEntry &e : entries) {
+        struct archive_entry *entry = archive_entry_new();
+        archive_entry_set_pathname(entry, e.name.toUtf8().constData());
+        archive_entry_set_perm(entry, 0755);
+        if (!e.link.isEmpty()) {
+            archive_entry_set_filetype(entry, AE_IFLNK);
+            archive_entry_set_symlink(entry, e.link.toUtf8().constData());
+        } else {
+            archive_entry_set_filetype(entry, AE_IFREG);
+            archive_entry_set_size(entry, e.data.size());
+        }
+        archive_write_header(a, entry);
+        if (e.link.isEmpty())
+            archive_write_data(a, e.data.constData(), size_t(e.data.size()));
+        archive_entry_free(entry);
+    }
+    archive_write_close(a);
+    archive_write_free(a);
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+const QString kFfmpegAsset = QStringLiteral("ffmpeg-master-latest-linux64-lgpl-shared.tar.xz");
+const QByteArray kGoodFfmpeg = "#!/bin/sh\necho 'ffmpeg version test'\n";
+
+QList<TarEntry> ffmpegArchive(const QByteArray &program = kGoodFfmpeg)
+{
+    const QString top = QStringLiteral("ffmpeg-master-latest-linux64-lgpl-shared/");
+    return {{top + "bin/ffmpeg", program, {}},
+            {top + "bin/ffplay", "not kept", {}},
+            {top + "lib/libavutil.so.61.20.100", "lib", {}},
+            {top + "lib/libavutil.so.61", {}, "libavutil.so.61.20.100"},
+            {top + "lib/libavutil.so", {}, "libavutil.so.61"},
+            {top + "include/ffmpeg.h", "not kept", {}},
+            {top + "LICENSE.txt", "LGPL", {}}};
+}
+
+struct FfmpegHome
+{
+    FakeHttpServer server;
+    QTemporaryDir dir;
+    QString tools = dir.filePath("state/tools");
+
+    // The release lists the archive with `listedSha` (the archive's own when empty).
+    void release(const QByteArray &archive, const QString &listedSha = {}, const QString &asset = kFfmpegAsset)
+    {
+        QJsonObject item{{"id", 1},
+                         {"name", asset},
+                         {"browser_download_url", server.url("/d/ff.tar.xz").toString()},
+                         {"size", archive.size()},
+                         {"digest", "sha256:" + (listedSha.isEmpty() ? sha(archive) : listedSha)},
+                         {"updated_at", "2026-10-26T00:00:00Z"}};
+        const QJsonObject release{{"tag_name", "latest"}, {"published_at", "2026-10-26T00:00:00Z"},
+                                  {"assets", QJsonArray{item}}};
+        server.clear("/release");
+        server.on("/release", {200, QJsonDocument(release).toJson()});
+        server.clear("/d/ff.tar.xz");
+        server.on("/d/ff.tar.xz", {200, archive});
+    }
+
+    void setUp(FfmpegTool &tool)
+    {
+        tool.setReleaseUrl(server.url("/release"));
+        tool.setRelaxed(true);
+    }
+};
+
+struct PathOverride
+{
+    explicit PathOverride(const QByteArray &path) : saved(qgetenv("PATH")) { qputenv("PATH", path); }
+    ~PathOverride() { qputenv("PATH", saved); }
+    QByteArray saved;
+};
+
+bool busy(const FfmpegTool &tool)
+{
+    return tool.state() == QLatin1String("checking") || tool.state() == QLatin1String("downloading")
+           || tool.state() == QLatin1String("installing");
+}
+}
+
+void InstallTest::ffmpegAssetNames()
+{
+    QCOMPARE(FfmpegInstall::assetName("x86_64"), QStringLiteral("ffmpeg-master-latest-linux64-lgpl-shared.tar.xz"));
+    QCOMPARE(FfmpegInstall::assetName("arm64"), QStringLiteral("ffmpeg-master-latest-linuxarm64-lgpl-shared.tar.xz"));
+    QCOMPARE(FfmpegInstall::assetName("aarch64"), FfmpegInstall::assetName("arm64"));
+    QVERIFY(FfmpegInstall::assetName("riscv64").isEmpty());
+}
+
+void InstallTest::ffmpegInstalls()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    h.release(makeTarXz(ffmpegArchive()));
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+    QVERIFY(!tool.available());
+    QVERIFY(!tool.ownCopy());
+
+    QStringList states;
+    QObject::connect(&tool, &FfmpegTool::changed, [&] {
+        if (states.isEmpty() || states.last() != tool.state())
+            states.append(tool.state());
+    });
+    tool.install();
+    QCOMPARE(tool.state(), QStringLiteral("checking"));
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+
+    QVERIFY2(tool.error().isEmpty(), qPrintable(tool.error()));
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QStringList expected{"checking", "downloading", "installing", "idle"};
+    QCOMPARE(states, expected);
+    QVERIFY(tool.ownCopy());
+    QCOMPARE(tool.path(), h.tools + "/ffmpeg/bin/ffmpeg");
+    QVERIFY(QFileInfo(tool.path()).isExecutable());
+    QCOMPARE(names(h.tools), QStringList{"ffmpeg"});
+    QCOMPARE(names(h.tools + "/ffmpeg"), (QStringList{"LICENSE.txt", "bin", "lib"}));
+    QCOMPARE(names(h.tools + "/ffmpeg/bin"), QStringList{"ffmpeg"});
+    QCOMPARE(names(h.tools + "/ffmpeg/lib"), (QStringList{"libavutil.so.61", "libavutil.so.61.20.100"}));
+    QVERIFY(QFileInfo(h.tools + "/ffmpeg/lib/libavutil.so.61").isSymLink());
+    QCOMPARE(QFileInfo(h.tools + "/ffmpeg/lib/libavutil.so.61").symLinkTarget(),
+             h.tools + "/ffmpeg/lib/libavutil.so.61.20.100");
+}
+
+void InstallTest::ffmpegRefusesWrongChecksum()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    h.release(makeTarXz(ffmpegArchive()), QString(64, 'a'));
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("checksum")), qPrintable(tool.error()));
+    QVERIFY(!tool.available());
+    QVERIFY(names(h.tools).isEmpty());
+
+    // The button comes back: a second try with the right checksum works.
+    h.release(makeTarXz(ffmpegArchive()));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(tool.available());
+    QVERIFY(tool.error().isEmpty());
+}
+
+void InstallTest::ffmpegRefusesBadReleases()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+
+    // No answer at all.
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+
+    // The release has no asset for this CPU.
+    h.release(makeTarXz(ffmpegArchive()), {}, "ffmpeg-n9.0-latest-linux64-lgpl-shared-9.0.tar.xz");
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(kFfmpegAsset), qPrintable(tool.error()));
+
+    // No checksum listed: a program isn't run on trust.
+    QJsonObject item{{"id", 1}, {"name", kFfmpegAsset}, {"browser_download_url", h.server.url("/d/ff.tar.xz").toString()},
+                     {"size", 10}, {"digest", QJsonValue::Null}};
+    h.server.clear("/release");
+    h.server.on("/release", {200, QJsonDocument(QJsonObject{{"tag_name", "latest"}, {"assets", QJsonArray{item}}}).toJson()});
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("checksum")), qPrintable(tool.error()));
+    QVERIFY(names(h.tools).isEmpty());
+}
+
+void InstallTest::ffmpegRefusesBadArchives()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+
+    h.release(makeTarXz({{"top/../../evil", "x", {}}}));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("outside")), qPrintable(tool.error()));
+    QVERIFY(names(h.tools).isEmpty());
+
+    // A link out of the library folder.
+    h.release(makeTarXz({{"top/bin/ffmpeg", kGoodFfmpeg, {}}, {"top/lib/libx.so.1", {}, "/etc/passwd"}}));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("link")), qPrintable(tool.error()));
+    QVERIFY(names(h.tools).isEmpty());
+
+    // No program in it.
+    h.release(makeTarXz({{"top/LICENSE.txt", "LGPL", {}}}));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("bin/ffmpeg")), qPrintable(tool.error()));
+    QVERIFY(names(h.tools).isEmpty());
+}
+
+void InstallTest::ffmpegKeepsTheOldCopyWhenTheNewOneWontStart()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    h.release(makeTarXz(ffmpegArchive()));
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QVERIFY(tool.ownCopy());
+
+    h.release(makeTarXz(ffmpegArchive("#!/bin/sh\necho 'no such library' >&2\nexit 127\n")));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    QVERIFY2(tool.error().contains(QStringLiteral("doesn't start")), qPrintable(tool.error()));
+    QVERIFY2(tool.error().contains(QStringLiteral("no such library")), qPrintable(tool.error()));
+    QVERIFY(tool.ownCopy());
+    QFile program(tool.path());
+    QVERIFY(program.open(QIODevice::ReadOnly));
+    QCOMPARE(program.readAll(), kGoodFfmpeg);
+    QCOMPARE(names(h.tools), QStringList{"ffmpeg"});
+}
+
+void InstallTest::ffmpegCancelLeavesNothing()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    const QByteArray archive = makeTarXz(ffmpegArchive());
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+
+    // While the release is being asked for.
+    h.release(archive);
+    h.server.clear("/release");
+    h.server.on("/release", {200, "{}", 5000});
+    tool.install();
+    QCOMPARE(tool.state(), QStringLiteral("checking"));
+    tool.cancel();
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(tool.error().isEmpty());
+
+    // While the archive is downloading.
+    h.release(archive);
+    h.server.clear("/d/ff.tar.xz");
+    h.server.on("/d/ff.tar.xz", {200, archive, 5000});
+    tool.install();
+    QTRY_COMPARE_WITH_TIMEOUT(tool.state(), QStringLiteral("downloading"), 10000);
+    QTRY_VERIFY_WITH_TIMEOUT(!names(h.tools).isEmpty(), 5000);
+    tool.cancel();
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(names(h.tools).isEmpty());
+    QVERIFY(!tool.available());
+
+    // A failure is cleared by cancel() too.
+    h.release(archive, QString(64, 'b'));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("failed"));
+    tool.cancel();
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(tool.error().isEmpty());
+}
+
+void InstallTest::ffmpegRemoves()
+{
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    h.release(makeTarXz(ffmpegArchive()));
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QVERIFY(tool.ownCopy());
+
+    tool.remove();
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(!tool.ownCopy());
+    QVERIFY(!tool.available());
+    QVERIFY(!QFileInfo::exists(h.tools + "/ffmpeg"));
+}
+
+void InstallTest::ffmpegPrefersTheOwnCopy()
+{
+    FfmpegHome h;
+    const QString bin = h.dir.filePath("bin");
+    QVERIFY(write(bin + "/ffmpeg", kGoodFfmpeg));
+    QVERIFY(QFile::setPermissions(bin + "/ffmpeg", QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    PathOverride path(bin.toUtf8());
+
+    QCOMPARE(FfmpegTool::resolve(h.tools), bin + "/ffmpeg");
+    FfmpegTool tool({h.tools, {}});
+    QVERIFY(tool.available());
+    QVERIFY(!tool.ownCopy());
+    QCOMPARE(tool.path(), bin + "/ffmpeg");
+
+    h.release(makeTarXz(ffmpegArchive()));
+    h.setUp(tool);
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QVERIFY(tool.ownCopy());
+    QCOMPARE(tool.path(), h.tools + "/ffmpeg/bin/ffmpeg");
+    QCOMPARE(FfmpegTool::resolve(h.tools), h.tools + "/ffmpeg/bin/ffmpeg");
+
+    tool.remove();
+    QCOMPARE(tool.path(), bin + "/ffmpeg");
 }
 
 QTEST_GUILESS_MAIN(InstallTest)

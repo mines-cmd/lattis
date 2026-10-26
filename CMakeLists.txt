@@ -293,6 +293,7 @@ qt_add_qml_module(lattis
         src/install/installrecord.h src/install/installrecord.cpp
         src/install/flatpakinstall.h src/install/flatpakinstall.cpp
         src/install/installer.h src/install/installer.cpp
+        src/install/ffmpegtool.h src/install/ffmpegtool.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp

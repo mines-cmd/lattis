@@ -7,5 +7,6 @@ namespace AppPaths {
 QString dataDir();
 QString cacheDir();
 QString stateDir();
+QString toolsDir();
 QString dataDirKey(const QString &dataDir);
 }

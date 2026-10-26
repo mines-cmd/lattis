@@ -23,6 +23,11 @@ QString stateDir()
     return QStandardPaths::writableLocation(QStandardPaths::StateLocation);
 }
 
+QString toolsDir()
+{
+    return stateDir() + QStringLiteral("/tools");
+}
+
 QString dataDirKey(const QString &dataDir)
 {
     const QByteArray path = QDir(dataDir).absolutePath().toUtf8();
