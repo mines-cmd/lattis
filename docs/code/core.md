@@ -48,7 +48,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | `show_description`, `show_tags`, `show_clips` | Older switches, still read: when `sections` isn't set, a `false` one leaves that section out. Writing `sections` removes them |
 | `chips_without_icon` | Chips drawn without their icon (any chip name), in the chips' catalog order; empty or absent: every chip has its icon. `General.setChipIconShown(name, shown)` writes it. The theme's `stat_chip.show_icons` still hides them all |
 | `collapsed_sections` | Sections folded under their heading (`description`, `tags`, `clips`), in their catalog order; empty or absent: none. Clicking a heading on the game page writes it through `General.setSectionCollapsed(name, collapsed)` |
-| `show_screenshots` | Whether the Media row shows the game's Steam screenshots beside its clips; default `true`, written only as `false`. `General.setShowScreenshots(on)` writes it |
+| `show_screenshots`, `show_video` | Whether the Media row shows the game's Steam screenshots and its clips; default `true`, written only as `false`. `General.setShowScreenshots(on)` and `General.setShowVideo(on)` write them |
 
 A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The four lists are `GamePage::chips`, `buttons`, `infoRows` and `sections` (the names `"chips"`, `"buttons"`, `"info_rows"` and `"sections"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
 
@@ -157,7 +157,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes all three names and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
 | `clipVolume` | The clip viewer's volume, 0 to 1 (`clip_volume`, default 1). `setClipVolume(value)` rounds to hundredths and removes the key at 1; its own signal, `clipVolumeChanged` |
 | `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections` | The game page's shown chips, buttons, info rows and sections, in order (`[game_page]`, above) |
-| `recentPeriod`, `playTimeFormat`, `showScreenshots` | The rest of `[game_page]`; `showDescription`, `showTags` and `showClips` say whether `sections` has each one |
+| `recentPeriod`, `playTimeFormat`, `showScreenshots`, `showVideo` | The rest of `[game_page]`; `showDescription`, `showTags` and `showClips` say whether `sections` has each one |
 | `startAtLogin` | An autostart entry exists and is enabled |
 | `startAtLoginOurs` | That entry was written by Lattis |
 | `problems` | Parse warnings from `[general]` and `[game_page]` |

@@ -22,6 +22,7 @@ struct GamePageSettings
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
     bool showScreenshots = true;
+    bool showVideo = true;
 
     bool operator==(const GamePageSettings &) const = default;
 

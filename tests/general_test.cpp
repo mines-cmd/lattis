@@ -586,6 +586,14 @@ void GeneralTest::gamePageSettersWrite()
     QVERIFY(general.showScreenshots());
     QVERIFY(!fileText().contains("show_screenshots"));
 
+    QVERIFY(general.showVideo());
+    QCOMPARE(general.setShowVideo(false), QString());
+    QVERIFY(!general.showVideo());
+    QVERIFY(fileText().contains("show_video = false"));
+    QCOMPARE(general.setShowVideo(true), QString());
+    QVERIFY(general.showVideo());
+    QVERIFY(!fileText().contains("show_video"));
+
     const QString sections = QStringLiteral("sections");
     QCOMPARE(general.setGamePageShown(sections, QStringLiteral("tags"), false), QString());
     QVERIFY(!general.showTags());

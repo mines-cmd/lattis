@@ -291,22 +291,38 @@ Item {
                     flickable: flick
                     onFailed: text => root.report(text)
                 }
+                readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
+                readonly property bool videoShown: root.matches(qsTr("Show video"))
+                Item {
+                    visible: sections.visible && (content.screenshotsShown || content.videoShown)
+                    Layout.preferredHeight: Theme.settingsWindow.sectionSpacing / 2
+                }
                 SettingsCard {
-                    id: screenshots
-                    visible: root.matches(qsTr("Screenshots in Media"))
+                    visible: content.screenshotsShown || content.videoShown
+                    spacing: Theme.layout.spacing * 2
                     LabeledRow {
-                        label: qsTr("Screenshots in Media")
-                        note: qsTr("Your Steam screenshots of the game, among its clips, newest first.")
+                        visible: content.screenshotsShown
+                        label: qsTr("Show screenshots")
+                        note: qsTr("Your Steam screenshots of the game, in the Media row.")
                         SettingsSwitch {
                             checked: General.showScreenshots
                             onToggled: root.report(General.setShowScreenshots(checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.videoShown
+                        label: qsTr("Show video")
+                        note: qsTr("Your Steam clips of the game, in the Media row.")
+                        SettingsSwitch {
+                            checked: General.showVideo
+                            onToggled: root.report(General.setShowVideo(checked))
                         }
                     }
                 }
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
-                             && !content.periodShown && !sections.visible && !screenshots.visible
+                             && !content.periodShown && !sections.visible && !content.screenshotsShown && !content.videoShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

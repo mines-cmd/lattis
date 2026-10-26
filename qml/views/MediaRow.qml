@@ -9,7 +9,7 @@ ColumnLayout {
 
     property var game: ({})
     property var items: []
-    readonly property var shown: General.showScreenshots ? items : items.filter(i => i.kind === "clip")
+    readonly property var shown: items.filter(i => i.kind === "clip" ? General.showVideo : General.showScreenshots)
     readonly property bool hasClips: shown.some(i => i.kind === "clip")
     property bool installDismissed: false
     readonly property bool installing: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"

@@ -38,6 +38,7 @@ class General : public QObject
     Q_PROPERTY(bool showTags READ showTags NOTIFY gamePageChanged)
     Q_PROPERTY(bool showClips READ showClips NOTIFY gamePageChanged)
     Q_PROPERTY(bool showScreenshots READ showScreenshots NOTIFY gamePageChanged)
+    Q_PROPERTY(bool showVideo READ showVideo NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList collapsedSections READ collapsedSections NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
@@ -73,6 +74,7 @@ public:
     bool showTags() const { return m_gamePage.sections.contains(QLatin1String("tags")); }
     bool showClips() const { return m_gamePage.sections.contains(QLatin1String("clips")); }
     bool showScreenshots() const { return m_gamePage.showScreenshots; }
+    bool showVideo() const { return m_gamePage.showVideo; }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList collapsedSections() const { return m_gamePage.collapsedSections; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
@@ -97,6 +99,7 @@ public:
     Q_INVOKABLE QString setRecentPeriod(const QString &period);
     Q_INVOKABLE QString setPlayTimeFormat(const QString &format);
     Q_INVOKABLE QString setShowScreenshots(bool on);
+    Q_INVOKABLE QString setShowVideo(bool on);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setSectionCollapsed(const QString &name, bool collapsed);
     Q_INVOKABLE QString setStartAtLogin(bool on);
@@ -117,6 +120,7 @@ signals:
 private:
     void load();
     void loadAutostart();
+    QString setMediaFlag(const QString &key, bool on);
     QString setFlag(const QString &key, bool value);
     QString writeGamePage(const QString &place, const QStringList &order, const QStringList &shown);
     QString setGamePageChoice(const QString &key, const QString &value, const QString &defaultValue);

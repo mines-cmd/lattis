@@ -245,12 +245,21 @@ QString General::setPlayTimeFormat(const QString &format)
 
 QString General::setShowScreenshots(bool on)
 {
+    return setMediaFlag(QStringLiteral("show_screenshots"), on);
+}
+
+QString General::setShowVideo(bool on)
+{
+    return setMediaFlag(QStringLiteral("show_video"), on);
+}
+
+QString General::setMediaFlag(const QString &key, bool on)
+{
     QString error;
     if (on)
-        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("show_screenshots"), &error);
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
     else
-        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("show_screenshots"),
-                                  QStringLiteral("false"), &error);
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, QStringLiteral("false"), &error);
     if (error.isEmpty())
         load();
     return error;
