@@ -33,6 +33,16 @@ Lattis only knows what Steam has written down. It doesn't check online, so a pat
 
 The labels and colors are theme settings: the `update_*`, `updating_*`, `installing_label` and `paused_label` settings of `[launch_button]`, and `update_icon_color` in `[list]`.
 
+## Clips
+
+A Steam game's page shows your own Steam clips (Steam's Game Recording) in a **Media** row under the description and tags: newest first, each with its length. Click a clip to watch it in Lattis, or right-click it for **Show in folder**. Lattis only reads Steam's files; it never changes them. Screenshots aren't shown yet.
+
+- **In the viewer:** the controls sit under the video. Space plays and pauses, Left and Right skip 5 seconds, Up and Down change the volume (remembered), M mutes, F goes fullscreen, Esc closes (or leaves the fullscreen the viewer turned on), and a click outside the video closes it.
+- **ffmpeg:** Steam saves clips in pieces that need joining before they play, and Lattis uses `ffmpeg` for that. If it's on your system, Lattis uses it. If not, the Media row offers **Install ffmpeg**, which downloads it (the size is shown; from github.com/BtbN/FFmpeg-Builds) only when you click. The **ffmpeg** section on Settings → Steam appears once Lattis installed it, with **Remove** to delete that copy.
+- **Clips that moved:** if you changed where Steam saves recordings, clips in both the old and the new folder show.
+- **Hiding it:** click the **Media** heading to fold the row. To remove it from every game's page, or move it, use Settings → Game page.
+- **Looks:** the row and viewer follow the theme's `[media]` settings.
+
 ## Launching and play time
 
 **Launch** starts the game through Steam, without opening Steam's window. **Open in Steam** shows the game's page in Steam.

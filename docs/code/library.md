@@ -402,6 +402,9 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `uninstallChoices(id)` | The uninstall dialog (below) |
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
+| `media(id)` | A Steam game's clips on a worker thread; `mediaReady(id, clips)` has them newest first (`id`, `folder`, `thumbnail`, `videoDir`, `durationMs`, `length`, `time`); none for a game that isn't Steam's (see [steam](steam.md#clips)) |
+| `prepareClip(token, videoDir, ffmpeg)`, `discardClip(path)` | Joins a clip into a temp MP4 for the viewer; `clipPrepared(token, path, error)` answers. `discardClip` deletes it |
+| `showClipFolder(folder)` | Opens a clip's folder in the file manager; false when it couldn't |
 | `playTime(minutes, format)` | Play time as text in a `[game_page] play_time_format`: `hours` ("206.7 hours") or `hours_minutes` ("206h 42m", "45m"); `""` for none |
 | `monthStats(year, month)` | Starts the month's statistics on a worker thread; `monthStatsReady(year, month, stats)` has the map (below) |
 | `yearStats(year)` | The same for a calendar year; `yearStatsReady(year, stats)` has the map (below) |
