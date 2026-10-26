@@ -207,7 +207,7 @@ ColumnLayout {
                         Label {
                             id: lengthLabel
                             anchors.centerIn: parent
-                            text: tile.modelData.length
+                            text: tile.modelData?.length ?? ""
                             color: Theme.media.badgeText
                             font.pixelSize: Theme.details.headingFontSize
                         }

@@ -27,6 +27,11 @@ MotionPopup {
     property real volume: 1
     property bool muted: false
     property bool ended: false
+    // A screenshot's zoom, and how far its centre is moved from the middle of the area.
+    readonly property real maxZoom: 8
+    property real zoom: 1
+    property real panX: 0
+    property real panY: 0
     // Fullscreen the viewer turned on is turned off again when it closes; one the window already had stays.
     property bool madeFullscreen: false
     readonly property bool preparing: token !== "" && file === "" && error === ""
@@ -41,6 +46,7 @@ MotionPopup {
         list = items
         current = item
         error = ""
+        resetZoom()
         volume = General.clipVolume
         open()
         prepare()
@@ -52,7 +58,32 @@ MotionPopup {
             return
         current = next
         error = ""
+        resetZoom()
         prepare()
+    }
+
+    function resetZoom() {
+        zoom = 1
+        panX = 0
+        panY = 0
+    }
+
+    // Keeps the point at (px, py) of the area where it is.
+    function zoomTo(value, px, py) {
+        const next = Math.max(1, Math.min(maxZoom, value))
+        const cx = shot.width / 2
+        const cy = shot.height / 2
+        const ux = (px - cx - panX) / zoom
+        const uy = (py - cy - panY) / zoom
+        zoom = next
+        panBy(px - cx - ux * next - panX, py - cy - uy * next - panY)
+    }
+
+    function panBy(dx, dy) {
+        const mx = Math.max(0, (shot.paintedWidth * zoom - shot.width) / 2)
+        const my = Math.max(0, (shot.paintedHeight * zoom - shot.height) / 2)
+        panX = Math.max(-mx, Math.min(mx, panX + dx))
+        panY = Math.max(-my, Math.min(my, panY + dy))
     }
 
     function prepare() {
@@ -306,6 +337,12 @@ MotionPopup {
                 root.toggleMute()
             else if (event.key === Qt.Key_F)
                 root.toggleFullscreen()
+            else if (!root.isClip && (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal))
+                root.zoomTo(root.zoom * 1.25, shot.width / 2, shot.height / 2)
+            else if (!root.isClip && event.key === Qt.Key_Minus)
+                root.zoomTo(root.zoom / 1.25, shot.width / 2, shot.height / 2)
+            else if (!root.isClip && event.key === Qt.Key_0)
+                root.resetZoom()
             else if (event.key === Qt.Key_PageUp)
                 root.step(-1)
             else if (event.key === Qt.Key_PageDown)
@@ -326,6 +363,17 @@ MotionPopup {
             }
         }
 
+        // A click that just misses the clip controls must not close the viewer.
+        MouseArea {
+            readonly property real pad: Theme.layout.spacing * 4
+            visible: root.isClip
+            x: column.x + clipControls.x - pad
+            y: column.y + clipControls.y - pad
+            width: clipControls.width + 2 * pad
+            height: clipControls.height + 2 * pad
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+        }
+
         ColumnLayout {
             id: column
             anchors.fill: parent
@@ -338,6 +386,7 @@ MotionPopup {
                 id: videoArea
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                clip: true
 
                 VideoOutput {
                     id: video
@@ -370,22 +419,44 @@ MotionPopup {
 
                 Image {
                     id: shot
-                    anchors.fill: parent
+                    width: parent.width
+                    height: parent.height
+                    x: root.panX
+                    y: root.panY
+                    scale: root.zoom
                     visible: !root.isClip
                     source: root.isClip ? "" : root.current.image
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
-                    // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory.
-                    sourceSize.width: width
-                    sourceSize.height: height
+                    // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory;
+                    // zoomed in, at its own.
+                    sourceSize.width: root.zoom > 1 ? 0 : width
+                    sourceSize.height: root.zoom > 1 ? 0 : height
                 }
                 MouseArea {
-                    x: root.picture.x
-                    y: root.picture.y
-                    width: root.picture.width
-                    height: root.picture.height
+                    id: shotArea
+                    property point last
+                    readonly property bool zoomed: root.zoom > 1
+                    x: zoomed ? 0 : root.picture.x
+                    y: zoomed ? 0 : root.picture.y
+                    width: zoomed ? parent.width : root.picture.width
+                    height: zoomed ? parent.height : root.picture.height
                     enabled: !root.isClip
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: !zoomed ? Qt.ArrowCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    onPressed: mouse => last = Qt.point(mouse.x, mouse.y)
+                    onPositionChanged: mouse => {
+                        if (pressed && zoomed) {
+                            root.panBy(mouse.x - last.x, mouse.y - last.y)
+                            last = Qt.point(mouse.x, mouse.y)
+                        }
+                    }
+                    WheelHandler {
+                        onWheel: event => {
+                            const at = shotArea.mapToItem(shot.parent, point.position.x, point.position.y)
+                            root.zoomTo(root.zoom * Math.pow(1.2, event.angleDelta.y / 120), at.x, at.y)
+                        }
+                    }
                     onClicked: mouse => {
                         if (mouse.button === Qt.RightButton)
                             clipMenu.popup(this, mouse.x, mouse.y)
@@ -448,8 +519,46 @@ MotionPopup {
                 }
             }
 
+            Item {
+                visible: !root.isClip && shot.status !== Image.Error
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: zoomRow.implicitWidth
+                implicitHeight: zoomRow.implicitHeight
+
+                // A click that just misses the controls must not close the viewer.
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -Theme.layout.spacing * 4
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                }
+
+                RowLayout {
+                    id: zoomRow
+                    spacing: Theme.layout.spacing
+
+                    ViewerButton {
+                        icon: Icons.search
+                        tip: qsTr("Reset zoom (0)")
+                        onClicked: root.resetZoom()
+                    }
+                    Bar {
+                        Layout.preferredWidth: Theme.media.viewerVolumeWidth * 2
+                        fraction: (root.zoom - 1) / (root.maxZoom - 1)
+                        onMoved: f => root.zoomTo(1 + f * (root.maxZoom - 1), shot.width / 2, shot.height / 2)
+                    }
+                    Label {
+                        Layout.preferredWidth: zoomMetrics.width
+                        horizontalAlignment: Text.AlignRight
+                        text: Math.round(root.zoom * 100) + "%"
+                        color: Theme.media.viewerTimeColor
+                        TextMetrics { id: zoomMetrics; font: parent.font; text: "800%" }
+                    }
+                }
+            }
+
             // As wide as the picture, not the window, so the controls line up under it.
             ColumnLayout {
+                id: clipControls
                 // Kept in the layout while the next clip loads, so the picture's area doesn't change size.
                 // Until its first frame the picture has no size, so the last clip's stands in.
                 readonly property bool sized: root.pictureKnown || root.lastPicture.width > 0
