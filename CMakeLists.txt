@@ -333,6 +333,7 @@ qt_add_qml_module(lattis
         src/steam/steamdownloads.h src/steam/steamdownloads.cpp
         src/steam/binaryvdf.h src/steam/binaryvdf.cpp
         src/steam/steamshortcuts.h src/steam/steamshortcuts.cpp
+        src/steam/steamachievements.h src/steam/steamachievements.cpp
         src/steam/steamsync.h src/steam/steamsync.cpp
         src/steam/steamart.h src/steam/steamart.cpp
         src/steam/steammedia.h src/steam/steammedia.cpp

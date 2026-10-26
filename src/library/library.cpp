@@ -9,6 +9,7 @@
 #include "romscan.h"
 #include "searchtext.h"
 #include "steamart.h"
+#include "steamachievements.h"
 #include "steammedia.h"
 #include "tomlpatch.h"
 
@@ -1716,6 +1717,35 @@ void Library::media(const QString &id)
             return a.toMap().value(QStringLiteral("time")).toDateTime()
                    > b.toMap().value(QStringLiteral("time")).toDateTime();
         });
+        return items;
+    }));
+}
+
+void Library::achievements(const QString &id)
+{
+    const qint64 appId = GameId::steamAppId(id);
+    const SteamInstall install = m_store.snapshot().steam.install;
+    if (appId <= 0 || install.userDataDir().isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, id] { emit achievementsReady(id, {}); }, Qt::QueuedConnection);
+        return;
+    }
+    auto *watcher = new QFutureWatcher<QVariantList>(this);
+    connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
+        emit achievementsReady(id, watcher->result());
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run([install, appId] {
+        const QString language = SteamAchievements::steamLanguage(install, QDir::homePath());
+        QVariantList items;
+        for (const SteamAchievements::Achievement &a : SteamAchievements::readAchievements(install, appId, language)) {
+            items.append(QVariantMap{{QStringLiteral("apiName"), a.apiName},
+                                     {QStringLiteral("name"), a.name},
+                                     {QStringLiteral("description"), a.description},
+                                     {QStringLiteral("hidden"), a.hidden},
+                                     {QStringLiteral("unlocked"), a.unlocked},
+                                     {QStringLiteral("time"), a.unlockTime},
+                                     {QStringLiteral("icon"), a.iconUrl}});
+        }
         return items;
     }));
 }

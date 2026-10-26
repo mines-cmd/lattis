@@ -17,6 +17,7 @@ private slots:
     void oversizedArtIsShrunk();
     void steamDownloadsFollowTheLog();
     void mediaListsTheGamesClips();
+    void achievementsListTheGamesAchievements();
 };
 
 void LibrarySteamImportTest::steamImportAddsGames()
@@ -445,6 +446,38 @@ void LibrarySteamImportTest::mediaListsTheGamesClips()
 
     // Not a Steam game: none, and no lookup.
     library->media(QStringLiteral("switch-mario-tennis-aces"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 3, 5000);
+    QVERIFY(ready.last().at(1).toList().isEmpty());
+}
+
+void LibrarySteamImportTest::achievementsListTheGamesAchievements()
+{
+    installFakeSteam();
+    auto library = openLibrary();
+    QSignalSpy ready(library.get(), &Library::achievementsReady);
+
+    library->achievements(QStringLiteral("steam-9001"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 1, 5000);
+    QCOMPARE(ready.last().at(0).toString(), QStringLiteral("steam-9001"));
+    const QVariantList items = ready.last().at(1).toList();
+    QStringList order;
+    for (const QVariant &item : items)
+        order.append(item.toMap().value("apiName").toString());
+    QCOMPARE(order, QStringList({"LONG_WALK", "FIRST_STEP", "SECRET_ROOM", "FINALE"}));
+    const QVariantMap first = items[0].toMap();
+    QCOMPARE(first.value("name").toString(), QStringLiteral("Long Walk"));
+    QVERIFY(first.value("unlocked").toBool());
+    QVERIFY(first.value("time").toDateTime().isValid());
+    QVERIFY(first.value("icon").toString().startsWith(QStringLiteral("https://")));
+    QVERIFY(items[2].toMap().value("hidden").toBool());
+
+    // A Steam game with no schema file: none.
+    library->achievements(QStringLiteral("steam-2231450"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 2, 5000);
+    QVERIFY(ready.last().at(1).toList().isEmpty());
+
+    // Not a Steam game: none, and no lookup.
+    library->achievements(QStringLiteral("switch-mario-tennis-aces"));
     QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 3, 5000);
     QVERIFY(ready.last().at(1).toList().isEmpty());
 }

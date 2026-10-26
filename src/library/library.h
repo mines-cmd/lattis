@@ -155,6 +155,7 @@ public:
     Q_INVOKABLE QVariantMap historyFor(const QString &id) const;
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
+    Q_INVOKABLE void achievements(const QString &id);
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);
     Q_INVOKABLE bool showClipFolder(const QString &folder);
@@ -297,6 +298,7 @@ signals:
     void yearStatsReady(int year, const QVariantMap &stats);
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
+    void achievementsReady(const QString &id, const QVariantList &achievements);
     void clipPrepared(const QString &token, const QString &path, const QString &error);
     void historyChanged(const QStringList &ids);
     // A change the user can undo; token 0 means it can't be, and `text` says so.

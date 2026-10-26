@@ -48,6 +48,7 @@ set(STEAM_SOURCES
     ../src/steam/steamscan.h ../src/steam/steamscan.cpp
     ../src/steam/binaryvdf.h ../src/steam/binaryvdf.cpp
     ../src/steam/steamshortcuts.h ../src/steam/steamshortcuts.cpp
+    ../src/steam/steamachievements.h ../src/steam/steamachievements.cpp
     ${CORE_SOURCES}
 )
 set(LIBRARY_FILE_SOURCES
@@ -244,6 +245,10 @@ lattis_test(steam_test OFFSCREEN
 lattis_test(steammedia_test
     SOURCES ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${STEAM_SOURCES}
+    LIBS tomlplusplus::tomlplusplus
+    DEFINES ${STEAM_DATA})
+lattis_test(steamachievements_test
+    SOURCES binaryvdfbuilder.h ${STEAM_SOURCES}
     LIBS tomlplusplus::tomlplusplus
     DEFINES ${STEAM_DATA})
 lattis_test(shortcuts_test
