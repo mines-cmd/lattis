@@ -6,39 +6,52 @@ import QtQuick.Layouts
 MotionPopup {
     id: root
 
-    property string gameTitle
+    property var game: ({})
     property var items: []
     property string query: ""
-    property var revealed: ({})
+    property bool hiddenShown: false
+    property int filter: 0
+    property var recent: ({})
     readonly property int unlocked: items.filter(a => a.unlocked).length
     readonly property string needle: query.trim().toLowerCase()
+    readonly property int concealedCount: items.filter(concealed).length
     readonly property var matches: items
-        .filter(a => needle === "" || !concealed(a)
-                     && (a.name.toLowerCase().includes(needle) || a.description.toLowerCase().includes(needle)))
+        .filter(a => !concealed(a) && wanted(a.unlocked)
+                     && (needle === "" || a.name.toLowerCase().includes(needle) || a.description.toLowerCase().includes(needle)))
         .map(a => Object.assign({ group: a.unlocked ? 0 : a.hidden ? 2 : 1 }, a))
+        .concat(needle === "" && concealedCount > 0 && wanted(false) ? [{ group: 2, summary: true, count: concealedCount }] : [])
         .sort((a, b) => a.group - b.group)
     readonly property var groupNames: [qsTr("Unlocked"), qsTr("Locked"), qsTr("Hidden")]
 
-    function show(title, list) {
-        gameTitle = title
+    function show(g, list) {
+        game = g
         items = list
         query = ""
-        revealed = ({})
+        filter = 0
+        hiddenShown = false
+        const history = Library.pageHistory(g.id ?? "")
+        recent = history.recent ?? {}
         open()
     }
 
+    function playTime(minutes): string {
+        return Library.playTime(minutes ?? 0, General.playTimeFormat)
+    }
+
+    Connections {
+        target: Library
+        function onPageHistoryReady(id, result) {
+            if (id === (root.game.id ?? ""))
+                root.recent = result.recent ?? {}
+        }
+    }
+
+    function wanted(isUnlocked): bool {
+        return filter === 0 || (filter === 1) === isUnlocked
+    }
+
     function concealed(a): bool {
-        return a.hidden && !a.unlocked && !revealed[a.apiName]
-    }
-
-    function reveal(a) {
-        const next = Object.assign({}, revealed)
-        next[a.apiName] = true
-        revealed = next
-    }
-
-    function description(a): string {
-        return concealed(a) ? qsTr("Details for this achievement will be revealed once you've unlocked it") : a.description
+        return a.hidden && !a.unlocked && !hiddenShown
     }
 
     parent: Overlay.overlay
@@ -88,56 +101,123 @@ MotionPopup {
                 anchors.margins: Theme.achievements.viewerPadding
                 spacing: Theme.layout.spacing * 3
 
-                Label {
+                RowLayout {
                     Layout.fillWidth: true
-                    text: root.gameTitle
-                    elide: Text.ElideRight
-                    color: Theme.achievements.titleColor
-                    font.pixelSize: Theme.achievements.viewerTitleSize
-                    font.weight: Theme.font.strongWeight
-                }
+                    spacing: Theme.layout.spacing * 3
 
-                Surface {
-                    Layout.fillWidth: true
-                    implicitHeight: summary.implicitHeight + 2 * Theme.achievements.padding
-                    radius: Theme.achievements.radius
-                    fill: Theme.achievements.background
-                    fillEnd: Theme.achievements.backgroundEnd
-                    direction: Theme.achievements.gradientDirection
+                    ArtThumb {
+                        visible: Theme.achievements.viewerCoverHeight > 0
+                        Layout.preferredHeight: Theme.achievements.viewerCoverHeight
+                        Layout.preferredWidth: implicitWidth
+                        implicitHeight: Theme.achievements.viewerCoverHeight
+                        cornerRadius: Theme.achievements.viewerCoverRadius
+                        color: Theme.achievements.iconPlaceholder
+                        iconWhenEmpty: true
+                        source: root.game.coverUrl ?? ""
+                    }
 
                     ColumnLayout {
-                        id: summary
-                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter
-                                  margins: Theme.achievements.padding }
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignBottom
                         spacing: Theme.layout.spacing * 2
 
-                        Label {
-                            readonly property bool complete: root.items.length > 0 && root.unlocked === root.items.length
-                            text: qsTr("%1 / %2 achievements unlocked (%3%)").arg(root.unlocked).arg(root.items.length)
-                                      .arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
-                            color: complete ? Theme.achievements.completeColor : Theme.achievements.titleColor
-                        }
-                        Rectangle {
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            implicitHeight: Theme.achievements.barHeight
-                            radius: height / 2
-                            color: Theme.achievements.barColor
+                            Layout.rightMargin: Math.max(0, closeButton.width + Theme.achievements.viewerCloseGap - Theme.achievements.viewerPadding)
+                            spacing: Theme.layout.spacing
 
-                            Rectangle {
-                                width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
-                                height: parent.height
-                                radius: parent.radius
-                                color: Theme.achievements.barFill
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing * 2
+
+                                Label {
+                                    Layout.maximumWidth: parent.width - (year.visible ? year.implicitWidth + parent.spacing : 0)
+                                    Layout.alignment: Qt.AlignBaseline
+                                    text: root.game.title ?? ""
+                                    elide: Text.ElideRight
+                                    color: Theme.achievements.titleColor
+                                    font.pixelSize: Theme.achievements.viewerTitleSize
+                                    font.weight: Theme.font.strongWeight
+                                }
+                                Label {
+                                    id: year
+                                    Layout.alignment: Qt.AlignBaseline
+                                    visible: text !== ""
+                                    text: root.game.year ?? ""
+                                    color: Theme.achievements.countColor
+                                    font.pixelSize: Theme.achievements.viewerYearSize
+                                    font.weight: Theme.font.emphasisWeight
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                text: [qsTr("Play time: %1").arg(root.playTime(root.game.playMinutes) || qsTr("None")),
+                                       qsTr("This week: %1").arg(root.playTime(root.recent.week) || qsTr("None")),
+                                       qsTr("This month: %1").arg(root.playTime(root.recent.month) || qsTr("None"))]
+                                      .slice(0, root.recent.week === undefined ? 1 : 3).join("  ·  ")
+                                elide: Text.ElideRight
+                                color: Theme.achievements.countColor
+                            }
+                        }
+
+                        Surface {
+                            Layout.fillWidth: true
+                            implicitHeight: summary.implicitHeight + 2 * Theme.achievements.padding
+                            radius: Theme.achievements.viewerSummaryRadius
+                            fill: Theme.achievements.viewerSummaryBackground
+
+                            ColumnLayout {
+                                id: summary
+                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter
+                                          margins: Theme.achievements.padding }
+                                spacing: Theme.layout.spacing * 2
+
+                                Label {
+                                    readonly property bool complete: root.items.length > 0 && root.unlocked === root.items.length
+                                    textFormat: Text.StyledText
+                                    text: qsTr("%1 / %2 achievements unlocked %3").arg(root.unlocked).arg(root.items.length)
+                                              .arg("<font color=\"" + Theme.achievements.countColor + "\">"
+                                                   + qsTr("(%1%)").arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
+                                                   + "</font>")
+                                    color: complete ? Theme.achievements.completeColor : Theme.achievements.titleColor
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: Theme.achievements.viewerBarHeight
+                                    radius: height / 2
+                                    color: Theme.achievements.barColor
+
+                                    Rectangle {
+                                        width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
+                                        height: parent.height
+                                        radius: parent.radius
+                                        color: Theme.achievements.barFill
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                SettingsSearchField {
+                RowLayout {
                     Layout.fillWidth: true
-                    placeholderText: qsTr("Search achievements")
-                    text: root.query
-                    onTextChanged: root.query = text
+                    spacing: Theme.layout.spacing
+
+                    SettingsSearchField {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Theme.achievements.viewerFilterHeight
+                        placeholderText: qsTr("Search achievements")
+                        text: root.query
+                        onTextChanged: root.query = text
+                    }
+                    SettingsComboBox {
+                        Layout.preferredWidth: Theme.achievements.viewerFilterWidth
+                        Layout.preferredHeight: Theme.achievements.viewerFilterHeight
+                        model: [qsTr("All achievements"), qsTr("Unlocked achievements"), qsTr("Locked achievements")]
+                        currentIndex: root.filter
+                        onActivated: index => root.filter = index
+                    }
                 }
 
                 ListView {
@@ -153,10 +233,11 @@ MotionPopup {
                     section.delegate: Label {
                         required property string section
                         width: ListView.view.width
-                        height: implicitHeight + Theme.layout.spacing * 3
+                        height: implicitHeight + Theme.layout.spacing
                         verticalAlignment: Text.AlignBottom
                         text: root.groupNames[Number(section)].toUpperCase()
-                              + " (" + root.matches.filter(a => a.group === Number(section)).length + ")"
+                              + " (" + root.matches.filter(a => a.group === Number(section))
+                                                   .reduce((n, a) => n + (a.summary ? a.count : 1), 0) + ")"
                         color: Theme.achievements.sectionColor
                         font.weight: Theme.font.strongWeight
                     }
@@ -165,16 +246,17 @@ MotionPopup {
                         id: row
                         required property var modelData
                         required property int index
+                        readonly property bool summary: modelData.summary === true
                         width: ListView.view.width
                         height: Theme.achievements.viewerIconSize + 2 * Theme.layout.spacing * 2
 
                         TapHandler {
-                            enabled: root.concealed(row.modelData)
-                            onTapped: root.reveal(row.modelData)
+                            enabled: row.summary
+                            onTapped: root.hiddenShown = true
                         }
                         HoverHandler {
                             id: rowHover
-                            cursorShape: root.concealed(row.modelData) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            cursorShape: row.summary ? Qt.PointingHandCursor : Qt.ArrowCursor
                         }
 
                         Rectangle {
@@ -194,18 +276,20 @@ MotionPopup {
 
                         ArtThumb {
                             id: icon
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors { left: parent.left; verticalCenter: parent.verticalCenter
+                                      leftMargin: Theme.layout.spacing * 2 }
                             width: Theme.achievements.viewerIconSize
+                            height: Theme.achievements.viewerIconSize
                             aspect: 1
                             cornerRadius: Theme.achievements.iconRadius
                             color: Theme.achievements.iconPlaceholder
                             failedIcon: Icons.medal
-                            iconWhenEmpty: !root.concealed(row.modelData)
-                            source: root.concealed(row.modelData) ? "" : row.modelData.icon ?? ""
+                            iconWhenEmpty: !row.summary
+                            source: row.summary ? "" : row.modelData.icon ?? ""
                             opacity: row.modelData.unlocked ? 1 : Theme.achievements.lockedOpacity
 
                             Label {
-                                visible: root.concealed(row.modelData)
+                                visible: row.summary
                                 anchors.centerIn: parent
                                 text: "?"
                                 color: Theme.achievements.countColor
@@ -219,7 +303,7 @@ MotionPopup {
 
                             Label {
                                 Layout.fillWidth: true
-                                text: root.concealed(row.modelData) ? qsTr("Hidden achievement") : row.modelData.name
+                                text: row.summary ? qsTr("%n hidden achievement(s)", "", row.modelData.count) : row.modelData.name
                                 elide: Text.ElideRight
                                 color: Theme.achievements.titleColor
                                 font.weight: Theme.font.strongWeight
@@ -227,7 +311,8 @@ MotionPopup {
                             Label {
                                 Layout.fillWidth: true
                                 visible: text !== ""
-                                text: root.description(row.modelData)
+                                text: row.summary ? qsTr("Details for each will be revealed once you've unlocked it. Click to show them anyway.")
+                                                  : row.modelData.description
                                 elide: Text.ElideRight
                                 color: Theme.achievements.countColor
                             }
@@ -235,7 +320,7 @@ MotionPopup {
                         Label {
                             id: stamp
                             anchors { right: parent.right; verticalCenter: parent.verticalCenter
-                                      rightMargin: Theme.layout.spacing * 3 }
+                                      rightMargin: Theme.layout.spacing * 2 }
                             text: row.modelData.unlocked
                                   ? qsTr("Unlocked %1").arg(row.modelData.time.toLocaleString(Qt.locale(), General.shortDateFormat + ", HH:mm"))
                                   : ""
@@ -244,22 +329,21 @@ MotionPopup {
                     }
                 }
             }
-        }
 
-        IconButton {
-            readonly property real gap: Theme.achievements.viewerCloseGap
-            plain: true
-            x: Math.min(parent.width - width - gap, card.x + card.width + gap)
-            y: card.y
-            implicitWidth: Theme.media.viewerButtonSize
-            implicitHeight: Theme.media.viewerButtonSize
-            radius: height / 2
-            icon: Icons.close
-            iconSize: Theme.media.viewerIconSize
-            iconColor: Theme.media.viewerCloseColor
-            hoverTint: Theme.media.viewerButtonHover
-            tip: qsTr("Close (Esc)")
-            onClicked: root.close()
+            IconButton {
+                id: closeButton
+                anchors { top: parent.top; right: parent.right; margins: Theme.achievements.viewerCloseGap }
+                plain: true
+                implicitWidth: Theme.media.viewerButtonSize
+                implicitHeight: Theme.media.viewerButtonSize
+                radius: height / 2
+                icon: Icons.close
+                iconSize: Theme.media.viewerIconSize
+                iconColor: Theme.media.viewerCloseColor
+                hoverTint: Theme.media.viewerButtonHover
+                tip: qsTr("Close (Esc)")
+                onClicked: root.close()
+            }
         }
     }
 }

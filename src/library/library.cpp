@@ -2218,6 +2218,7 @@ QVariantMap Library::gameAt(int row) const
         {QStringLiteral("tags"), tags},
         {QStringLiteral("hue"), hueOf(g.title)},
         {QStringLiteral("iconUrl"), g.iconUrl},
+        {QStringLiteral("coverUrl"), g.coverUrl},
         {QStringLiteral("heroUrl"), heroDisplayUrl(g)},
         {QStringLiteral("heroArt"), g.heroUrl},
         {QStringLiteral("logoUrl"), g.logoUrl},

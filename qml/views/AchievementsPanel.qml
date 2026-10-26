@@ -50,7 +50,7 @@ Surface {
 
     function openViewer() {
         viewer.active = true
-        viewer.item.show(game.title ?? "", items)
+        viewer.item.show(game, items)
     }
 
     onGameChanged: reload()
