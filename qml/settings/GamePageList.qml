@@ -27,7 +27,8 @@ Rectangle {
         }
     }
     readonly property var shown: place === "chips" ? General.gamePageChips
-                               : place === "buttons" ? General.gamePageButtons : General.gamePageInfoRows
+                               : place === "buttons" ? General.gamePageButtons
+                               : place === "sections" ? General.gamePageSections : General.gamePageInfoRows
 
     readonly property bool searching: query !== ""
     function matches(name) {

@@ -31,7 +31,13 @@ QtObject {
         menu: qsTr("Menu")
     })
 
+    readonly property var sections: ({
+        description: qsTr("Description"),
+        tags: qsTr("Tags"),
+        clips: qsTr("Steam clips")
+    })
+
     function forPlace(place) {
-        return place === "chips" ? chips : place === "buttons" ? buttons : fields
+        return place === "chips" ? chips : place === "buttons" ? buttons : place === "sections" ? sections : fields
     }
 }

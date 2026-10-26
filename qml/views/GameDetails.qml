@@ -108,7 +108,9 @@ Item {
             hero.openMenu()
     }
 
-    component TextBlock: ColumnLayout {
+    // The description, tags and Media row, in the order of `[game_page] sections`.
+    component TextBlock: GridLayout {
+        id: block
         property var game: ({})
         property int maxLines: 2147483647
         property bool cut: false
@@ -128,13 +130,41 @@ Item {
         property real tagsOpacity: contentOpacity
         property real tagsShift: contentShift
         property bool chipsHidden: false
+        // The copy that fades out the old game's text loads no clips: it keeps the room its Media row took.
+        property bool liveMedia: true
+        property real heldMediaHeight: 0
+        readonly property alias mediaRow: media
+        readonly property bool mediaShown: liveMedia ? media.visible : heldMediaHeight > 0
+        property real spacing: 10
 
         signal moreClicked()
+        signal clipRequested(var clip)
+        signal clipMenuRequested(var clip, Item tile, point position)
 
-        spacing: 10
+        columns: 1
+        rowSpacing: spacing
+        columnSpacing: 0
+
+        readonly property var shownSections: General.gamePageSections.filter(
+            name => name === "description" ? desc.visible : name === "tags" ? tagsTitle.visible : mediaShown)
+        function rowOf(name, offset) {
+            return Math.max(0, General.gamePageSections.indexOf(name)) * 3 + offset
+        }
+        // The description's last line carries the room its line height leaves under the text; a section
+        // after anything else gets that room as margin, so every gap between sections looks the same.
+        FontMetrics { id: descMetrics; font: desc.font }
+        function gapBefore(name) {
+            const at = shownSections.indexOf(name)
+            if (at <= 0)
+                return 0
+            const afterText = shownSections[at - 1] === "description" && !more.visible
+            return 14 + (afterText ? 0 : descMetrics.height * (desc.lineHeight - 1))
+        }
 
         Label {
             id: heading
+            Layout.row: rowOf("description", 0)
+            Layout.topMargin: gapBefore("description")
             opacity: descriptionHeadingOpacity
             visible: desc.visible
             text: qsTr("Description")
@@ -147,6 +177,7 @@ Item {
             opacity: contentOpacity
             transform: Translate { y: contentShift }
             visible: General.showDescription && text.trim() !== ""
+            Layout.row: rowOf("description", 1)
             Layout.fillWidth: true
             text: game.description ?? ""
             color: Theme.details.descriptionColor
@@ -160,6 +191,7 @@ Item {
             opacity: contentOpacity
             transform: Translate { y: contentShift }
             visible: desc.visible && cut
+            Layout.row: rowOf("description", 2)
             text: expanded ? qsTr("Show less") : qsTr("Show more")
             color: Theme.details.linkColor
             font.underline: moreMouse.containsMouse
@@ -178,7 +210,8 @@ Item {
             opacity: tagsOpacity
             transform: Translate { y: tagsShift }
             visible: General.showTags && tags.count > 0
-            Layout.topMargin: desc.visible ? 14 : 0
+            Layout.row: rowOf("tags", 0)
+            Layout.topMargin: gapBefore("tags")
             text: qsTr("Tags")
             color: Theme.details.headingColor
             font.weight: Theme.font.strongWeight
@@ -202,7 +235,8 @@ Item {
             // On the Flow, not the chips: the add transition takes over a chip's opacity.
             opacity: chipsHidden ? 0 : tagsOpacity
             transform: Translate { y: tagsShift }
-            visible: General.showTags
+            visible: General.showTags && tags.count > 0
+            Layout.row: rowOf("tags", 1)
             Layout.fillWidth: true
             spacing: Theme.tags.spacing
 
@@ -252,6 +286,24 @@ Item {
                     }
                 }
             }
+        }
+
+        MediaRow {
+            id: media
+            active: liveMedia
+            Layout.row: rowOf("clips", 0)
+            Layout.topMargin: gapBefore("clips")
+            Layout.fillWidth: true
+            opacity: contentOpacity
+            game: block.game
+            onClipRequested: clip => block.clipRequested(clip)
+            onMenuRequested: (clip, tile, position) => block.clipMenuRequested(clip, tile, position)
+        }
+        Item {
+            visible: !liveMedia && heldMediaHeight > 0
+            Layout.row: rowOf("clips", 0)
+            Layout.topMargin: gapBefore("clips")
+            Layout.preferredHeight: heldMediaHeight
         }
     }
 
@@ -364,6 +416,7 @@ Item {
             leavingText.maxLines = textColumn.maxLines
             leavingText.cut = textColumn.cut
             leavingText.expanded = textColumn.expanded
+            leavingText.heldMediaHeight = textColumn.mediaShown ? textColumn.mediaRow.height : 0
             leavingExit = textExit
             leavingExitAnimation.duration = Motion.duration(Theme.motion.fast) * (1 - textExit)
             leavingExitAnimation.restart()
@@ -495,11 +548,11 @@ Item {
     }
 
     function clipForScreenshot(spec) {
-        const clip = mediaRow.clips[0]
+        const clip = textColumn.mediaRow.clips[0]
         if (clip === undefined)
             return
         if (spec === "menu")
-            openClipMenu(clip, mediaRow, Qt.point(100, mediaRow.height - 40))
+            openClipMenu(clip, textColumn.mediaRow, Qt.point(100, textColumn.mediaRow.height - 40))
         else
             playClip(clip)
     }
@@ -1033,6 +1086,8 @@ Item {
                     tagsShift: !Theme.details.animateTags ? 0 : root.tagsMorphing ? (leavingText.tagsHeading.y - tagsHeading.y) * (1 - root.textIn)
                              : root.tagsStay ? 0 : flowShift
                     chipsHidden: root.tagsMorphing
+                    Layout.row: 0
+                    Layout.column: 0
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                     game: root.textGame
@@ -1040,6 +1095,8 @@ Item {
                     cut: needsCut
                     expanded: root.descriptionExpandedFor === (root.textGame.id ?? "")
                     onMoreClicked: root.descriptionExpandedFor = expanded ? "" : root.textGame.id
+                    onClipRequested: clip => root.playClip(clip)
+                    onClipMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
 
                     // details.fit_description: how many lines of the description fit the window.
                     // Worked out from the whole text (fullText) and the heights of everything else,
@@ -1081,30 +1138,10 @@ Item {
                         }
                     }
                 }
-                MediaRow {
-                    id: mediaRow
-                    Layout.row: root.compact ? 2 : 1
-                    Layout.column: 0
-                    Layout.columnSpan: 1
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    opacity: Theme.details.animateDescription ? textColumn.flowOpacity : 1
-                    game: root.textGame
-                    onClipRequested: clip => root.playClip(clip)
-                    onMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
-                }
-                // Takes the info panel's extra height, which would otherwise open a gap above the media row.
-                Item {
-                    visible: !root.compact
-                    Layout.row: 2
-                    Layout.column: 0
-                    Layout.fillHeight: true
-                }
                 InfoPanel {
                     id: info
                     Layout.row: root.compact ? 1 : 0
                     Layout.column: root.compact ? 0 : 1
-                    Layout.rowSpan: root.compact ? 1 : 3
                     visible: rows.length > 0
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width
@@ -1127,6 +1164,7 @@ Item {
 
             TextBlock {
                 id: leavingText
+                liveMedia: false
                 readonly property real flowOpacity: 1 - root.leavingExit
                 contentOpacity: Theme.details.animateDescription ? flowOpacity : 0
                 readonly property real flowShift: -root.riseDistance * root.leavingExit

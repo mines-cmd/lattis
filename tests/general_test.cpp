@@ -427,9 +427,7 @@ void GeneralTest::gamePageDefaults()
              (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
     QCOMPARE(empty.value.recentPeriod, QStringLiteral("two_weeks"));
     QCOMPARE(empty.value.playTimeFormat, QStringLiteral("hours"));
-    QVERIFY(empty.value.showDescription);
-    QVERIFY(empty.value.showTags);
-    QVERIFY(empty.value.showClips);
+    QCOMPARE(empty.value.sections, (QStringList{"description", "tags", "clips"}));
 
     const auto other = parseGamePageSettings("[general]\nreduce_motion = true\n", QStringLiteral("settings.toml"));
     QCOMPARE(other.value, GamePageSettings());
@@ -452,9 +450,7 @@ void GeneralTest::gamePageParser()
     QCOMPARE(r.value.infoRows, (QStringList{"times_played", "date_added"}));
     QCOMPARE(r.value.recentPeriod, QStringLiteral("month"));
     QCOMPARE(r.value.playTimeFormat, QStringLiteral("hours_minutes"));
-    QVERIFY(!r.value.showDescription);
-    QVERIFY(!r.value.showTags);
-    QVERIFY(!r.value.showClips);
+    QVERIFY(r.value.sections.isEmpty());
     QCOMPARE(r.value.chipsWithoutIcon, (QStringList{"steam_update", "rating"}));
 
     const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
@@ -479,8 +475,13 @@ void GeneralTest::gamePageParser()
     QCOMPARE(bad.value.buttons, GamePageSettings().buttons);
     QCOMPARE(bad.value.recentPeriod, QStringLiteral("two_weeks"));
     QCOMPARE(bad.value.playTimeFormat, QStringLiteral("hours"));
-    QVERIFY(bad.value.showTags);
-    QVERIFY(bad.value.showClips);
+    QCOMPARE(bad.value.sections, GamePageSettings::defaultSections());
+
+    const auto ordered = parseGamePageSettings("[game_page]\nsections = [\"clips\", \"description\"]\n"
+                                               "show_description = false\n",
+                                               QStringLiteral("settings.toml"));
+    QVERIFY(ordered.warnings.isEmpty());
+    QCOMPARE(ordered.value.sections, (QStringList{"clips", "description"}));
 }
 
 void GeneralTest::gamePageOrderKeepsNewNames()
@@ -577,19 +578,17 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.setPlayTimeFormat(QStringLiteral("hours")), QString());
     QVERIFY(!fileText().contains("play_time_format"));
 
-    QCOMPARE(general.setShowTags(false), QString());
+    const QString sections = QStringLiteral("sections");
+    QCOMPARE(general.setGamePageShown(sections, QStringLiteral("tags"), false), QString());
     QVERIFY(!general.showTags());
     QVERIFY(general.showDescription());
-    QVERIFY(fileText().contains("show_tags = false"));
-    QCOMPARE(general.setShowDescription(false), QString());
-    QVERIFY(!general.showDescription());
-    QCOMPARE(general.setShowTags(true), QString());
-    QCOMPARE(general.setShowDescription(true), QString());
-    QCOMPARE(general.setShowClips(false), QString());
-    QVERIFY(!general.showClips());
-    QVERIFY(fileText().contains("show_clips = false"));
-    QCOMPARE(general.setShowClips(true), QString());
-    QVERIFY(!fileText().contains("show_"));
+    QVERIFY(fileText().contains("sections = [\"description\", \"clips\"]"));
+    QCOMPARE(general.setGamePageOrder(sections, {"clips", "tags", "description"}), QString());
+    QCOMPARE(general.gamePageSections(), (QStringList{"clips", "description"}));
+    QCOMPARE(general.gamePageOrder(sections), (QStringList{"clips", "tags", "description"}));
+    QCOMPARE(general.setGamePageShown(sections, QStringLiteral("tags"), true), QString());
+    QCOMPARE(general.setGamePageOrder(sections, GamePageSettings::defaultSections()), QString());
+    QVERIFY(!fileText().contains("sections"));
 
     QCOMPARE(general.setChipIconShown(QStringLiteral("status"), false), QString());
     QCOMPARE(general.setChipIconShown(QStringLiteral("play_time"), false), QString());
@@ -657,8 +656,7 @@ void GeneralTest::gamePageMigration()
     QCOMPARE(r.value.chips, (QStringList{"last_played", "rating"}));
     QCOMPARE(r.value.buttons, QStringList{"menu"});
     QCOMPARE(r.value.infoRows, GamePageSettings::defaultInfoRows());
-    QVERIFY(r.value.showTags);
-    QVERIFY(!r.value.showDescription);
+    QCOMPARE(r.value.sections, (QStringList{"tags", "clips"}));
     QFile f(settings);
     QVERIFY(f.open(QIODevice::ReadOnly));
     QVERIFY(f.readAll().startsWith("# mine"));

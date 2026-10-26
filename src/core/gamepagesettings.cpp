@@ -17,18 +17,23 @@ const QStringList &fields()
 
 QStringList &shownOf(GamePageSettings &s, const QString &place)
 {
-    return place == GamePage::chips ? s.chips : place == GamePage::buttons ? s.buttons : s.infoRows;
+    return place == GamePage::chips     ? s.chips
+           : place == GamePage::buttons ? s.buttons
+           : place == GamePage::sections ? s.sections
+                                         : s.infoRows;
 }
-
 
 QStringList &orderOf(GamePageSettings &s, const QString &place)
 {
-    return place == GamePage::chips ? s.chipsOrder : place == GamePage::buttons ? s.buttonsOrder : s.infoRowsOrder;
+    return place == GamePage::chips     ? s.chipsOrder
+           : place == GamePage::buttons ? s.buttonsOrder
+           : place == GamePage::sections ? s.sectionsOrder
+                                         : s.infoRowsOrder;
 }
 
 const QStringList &orderOf(const GamePageSettings &s, const QString &place)
 {
-    return place == GamePage::chips ? s.chipsOrder : place == GamePage::buttons ? s.buttonsOrder : s.infoRowsOrder;
+    return orderOf(const_cast<GamePageSettings &>(s), place);
 }
 
 // Reads a list of names, dropping and reporting the ones that aren't choices or are listed twice.
@@ -73,8 +78,16 @@ QStringList GamePageSettings::defaultInfoRows()
             QStringLiteral("install_size"), QStringLiteral("platform")};
 }
 
+QStringList GamePageSettings::defaultSections()
+{
+    return {QStringLiteral("description"), QStringLiteral("tags"), QStringLiteral("clips")};
+}
+
 const QStringList &gamePageChoices(const QString &place)
 {
+    static const QStringList sections = GamePageSettings::defaultSections();
+    if (place == GamePage::sections)
+        return sections;
     // The Steam chips carry their own actions, so they're chips only; the buttons are the action row's.
     static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update")};
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
@@ -123,48 +136,65 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     if (!section.table)
         return out;
 
-    const QStringList known = {QStringLiteral("chips"),       QStringLiteral("buttons"),
-                               QStringLiteral("info_rows"),   QStringLiteral("chips_order"),
-                               QStringLiteral("buttons_order"), QStringLiteral("info_rows_order"),
-                               QStringLiteral("recent_period"), QStringLiteral("show_description"),
-                               QStringLiteral("show_tags"),   QStringLiteral("play_time_format"),
-                               QStringLiteral("chips_without_icon"), QStringLiteral("show_clips")};
-    const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows};
+    const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows, GamePage::sections};
+    QStringList known = places;
+    for (const QString &place : places)
+        known.append(place + QStringLiteral("_order"));
+    const qsizetype listKeys = known.size();
+    known += {QStringLiteral("recent_period"), QStringLiteral("play_time_format"),
+              QStringLiteral("chips_without_icon")};
+    // Before `sections`, each of them had a switch; a false one still hides it when `sections` isn't set.
+    const QStringList flags = {QStringLiteral("show_description"), QStringLiteral("show_tags"),
+                               QStringLiteral("show_clips")};
+    known += flags;
+    QStringList hiddenByFlag;
+    bool sectionsSet = false;
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
         const qsizetype at = known.indexOf(key);
         if (at < 0) {
             out.warnings.append(
                 QStringLiteral("%1: unknown key %2%3").arg(section.where(node), key, suggestion(key, known)));
-        } else if (at < 6) {
-            const QString &place = places.at(at % 3);
-            readNames(node, key, place, section, at < 3 ? shownOf(out.value, place) : orderOf(out.value, place),
-                      out.warnings);
-        } else if (at == 10) {
+        } else if (at < listKeys) {
+            const QString &place = places.at(at % places.size());
+            const bool shown = at < places.size();
+            if (readNames(node, key, place, section, shown ? shownOf(out.value, place) : orderOf(out.value, place),
+                          out.warnings)
+                && shown && place == GamePage::sections)
+                sectionsSet = true;
+        } else if (key == QLatin1String("chips_without_icon")) {
             readNames(node, key, GamePage::chips, section, out.value.chipsWithoutIcon, out.warnings);
-        } else if (at == 6 || at == 9) {
-            const QStringList &choices = at == 6 ? recentPeriods() : playTimeFormats();
+        } else if (flags.contains(key)) {
+            if (const auto *b = node.as_boolean()) {
+                if (!b->get())
+                    hiddenByFlag.append(GamePageSettings::defaultSections().at(flags.indexOf(key)));
+            } else {
+                out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
+            }
+        } else {
+            const bool period = key == QLatin1String("recent_period");
+            const QStringList &choices = period ? recentPeriods() : playTimeFormats();
             const auto *text = node.as_string();
             if (text && choices.contains(toQString(text->get())))
-                (at == 6 ? out.value.recentPeriod : out.value.playTimeFormat) = toQString(text->get());
+                (period ? out.value.recentPeriod : out.value.playTimeFormat) = toQString(text->get());
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be \"%3\"")
                                         .arg(section.where(node), key, choices.join(QStringLiteral("\", \""))));
-        } else if (const auto *b = node.as_boolean()) {
-            (at == 7 ? out.value.showDescription : at == 8 ? out.value.showTags : out.value.showClips) = b->get();
-        } else {
-            out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
         }
     }
+    if (!sectionsSet)
+        for (const QString &name : hiddenByFlag)
+            out.value.sections.removeAll(name);
     return out;
 }
 
 bool isGamePagePlace(const QString &place)
 {
-    return place == GamePage::chips || place == GamePage::buttons || place == GamePage::infoRows;
+    return place == GamePage::chips || place == GamePage::buttons || place == GamePage::infoRows
+           || place == GamePage::sections;
 }
 
 const QStringList &gamePageShown(const GamePageSettings &settings, const QString &place)
 {
-    return place == GamePage::chips ? settings.chips : place == GamePage::buttons ? settings.buttons : settings.infoRows;
+    return shownOf(const_cast<GamePageSettings &>(settings), place);
 }

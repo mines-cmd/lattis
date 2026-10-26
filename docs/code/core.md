@@ -41,13 +41,14 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | `chips` | The chips beside Launch, in order: `play_time`, `last_played`, `release_date`, `platform`, `status`, `install_size`, `rating`, `times_played`, `first_played`, `recent_play_time`, `date_added`, and the Steam chips `steam_waiting` and `steam_update`. Default `play_time last_played steam_waiting steam_update` |
 | `buttons` | The icon buttons at the right of the action row, in order: `favorite`, `open_platform`, `folder`, `settings`, `save_folder`, `menu` (⋯, opens the game's menu under it). `open_platform` is left out for Linux games, and `save_folder` for a game with no save folder (`GameRunner.saveFolder()`, looked up only for the shown game and only while the button is in the list). Default `favorite open_platform folder settings` |
 | `info_rows` | The info panel's rows, in order; the same fields as the chips without the Steam chips. Default `release_date rating status install_size platform`. `[]` hides the panel |
-| `chips_order`, `buttons_order`, `info_rows_order` | Every choice of that list in the order the settings page shows them, hidden ones included, so a hidden entry keeps its place. Only written when it differs from the shown ones followed by the rest; the shown ones' order in the list above wins |
+| `sections` | What shows under the action row, in order: `description`, `tags`, `clips` (the Media row of a Steam game's Steam clips). Default all three in that order |
+| `chips_order`, `buttons_order`, `info_rows_order`, `sections_order` | Every choice of that list in the order the settings page shows them, hidden ones included, so a hidden entry keeps its place. Only written when it differs from the shown ones followed by the rest; the shown ones' order in the list above wins |
 | `recent_period` | The period of `recent_play_time`: `week`, `two_weeks` (default), `month`, `year` |
 | `play_time_format` | How the `play_time` and `recent_play_time` fields write it: `hours` (default, "206.7 hours") or `hours_minutes` ("206h 42m") |
-| `show_description`, `show_tags`, `show_clips` | All default to true; `show_clips` is the Media row of a Steam game's Steam clips |
+| `show_description`, `show_tags`, `show_clips` | Older switches, still read: when `sections` isn't set, a `false` one leaves that section out. Writing `sections` removes them |
 | `chips_without_icon` | Chips drawn without their icon (any chip name), in the chips' catalog order; empty or absent: every chip has its icon. `General.setChipIconShown(name, shown)` writes it. The theme's `stat_chip.show_icons` still hides them all |
 
-A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The three lists are `GamePage::chips`, `buttons` and `infoRows` (the names `"chips"`, `"buttons"` and `"info_rows"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
+A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The four lists are `GamePage::chips`, `buttons`, `infoRows` and `sections` (the names `"chips"`, `"buttons"`, `"info_rows"` and `"sections"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
 
 The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
 
@@ -153,8 +154,8 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `railHiddenButtons` | The rail's bottom buttons turned off in its menu, by action name (`add_game`, `play_statistics`, `open_settings`; `rail_hidden_buttons`). `setRailButtonShown(name, shown)` writes it, removing the key when none is hidden; its own signal, `railHiddenButtonsChanged`, for the same reason |
 | `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes all three names and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
 | `clipVolume` | The clip viewer's volume, 0 to 1 (`clip_volume`, default 1). `setClipVolume(value)` rounds to hundredths and removes the key at 1; its own signal, `clipVolumeChanged` |
-| `gamePageChips`, `gamePageButtons`, `gamePageInfoRows` | The game page's shown chips, buttons and info rows, in order (`[game_page]`, above) |
-| `recentPeriod`, `playTimeFormat`, `showDescription`, `showTags`, `showClips` | The rest of `[game_page]` |
+| `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections` | The game page's shown chips, buttons, info rows and sections, in order (`[game_page]`, above) |
+| `recentPeriod`, `playTimeFormat` | The rest of `[game_page]`; `showDescription`, `showTags` and `showClips` say whether `sections` has each one |
 | `startAtLogin` | An autostart entry exists and is enabled |
 | `startAtLoginOurs` | That entry was written by Lattis |
 | `problems` | Parse warnings from `[general]` and `[game_page]` |
@@ -168,10 +169,10 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `setDownloadBarCollapsed(bool)` | Error string, or `""` |
 | `setReduceMotion(bool)` | Error string, or `""` |
 | `setRailHidden(bool)` | Error string, or `""` |
-| `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"` or `"info_rows"` in the order the settings page shows them |
+| `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"`, `"info_rows"` or `"sections"` in the order the settings page shows them |
 | `setGamePageShown(place, name, shown)` | Error string, or `""`; the entry keeps its place when hidden |
 | `setGamePageOrder(place, order)` | Error string, or `""`; `order` has every choice. Writes the list and, when it differs from the default arrangement, `<place>_order`; a default leaves no key |
-| `setRecentPeriod(period)`, `setPlayTimeFormat(format)`, `setShowDescription(bool)`, `setShowTags(bool)`, `setShowClips(bool)` | Error string, or `""`; a default removes the key |
+| `setRecentPeriod(period)`, `setPlayTimeFormat(format)` | Error string, or `""`; a default removes the key |
 | `setStartAtLogin(bool)` | Error string, or `""` |
 | `reload()` | — re-reads settings and autostart |
 

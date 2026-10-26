@@ -6,7 +6,7 @@ import Qt.labs.qmlmodels
 SettingsMenu {
     id: root
 
-    // chips, buttons or info_rows
+    // chips, buttons, info_rows or sections
     property string place: "chips"
 
     signal customizeRequested()
@@ -16,7 +16,8 @@ SettingsMenu {
     checkColumn: true
 
     readonly property var shown: place === "chips" ? General.gamePageChips
-                               : place === "buttons" ? General.gamePageButtons : General.gamePageInfoRows
+                               : place === "buttons" ? General.gamePageButtons
+                               : place === "sections" ? General.gamePageSections : General.gamePageInfoRows
 
     // Every choice, hidden ones included. Replaced only when the order changes, so a toggle doesn't
     // rebuild the rows under the pointer.

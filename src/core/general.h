@@ -31,6 +31,7 @@ class General : public QObject
     Q_PROPERTY(QStringList gamePageChips READ gamePageChips NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageButtons READ gamePageButtons NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageInfoRows READ gamePageInfoRows NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList gamePageSections READ gamePageSections NOTIFY gamePageChanged)
     Q_PROPERTY(QString recentPeriod READ recentPeriod NOTIFY gamePageChanged)
     Q_PROPERTY(QString playTimeFormat READ playTimeFormat NOTIFY gamePageChanged)
     Q_PROPERTY(bool showDescription READ showDescription NOTIFY gamePageChanged)
@@ -63,11 +64,12 @@ public:
     QStringList gamePageChips() const { return m_gamePage.chips; }
     QStringList gamePageButtons() const { return m_gamePage.buttons; }
     QStringList gamePageInfoRows() const { return m_gamePage.infoRows; }
+    QStringList gamePageSections() const { return m_gamePage.sections; }
     QString recentPeriod() const { return m_gamePage.recentPeriod; }
     QString playTimeFormat() const { return m_gamePage.playTimeFormat; }
-    bool showDescription() const { return m_gamePage.showDescription; }
-    bool showTags() const { return m_gamePage.showTags; }
-    bool showClips() const { return m_gamePage.showClips; }
+    bool showDescription() const { return m_gamePage.sections.contains(QLatin1String("description")); }
+    bool showTags() const { return m_gamePage.sections.contains(QLatin1String("tags")); }
+    bool showClips() const { return m_gamePage.sections.contains(QLatin1String("clips")); }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
@@ -90,9 +92,6 @@ public:
     Q_INVOKABLE QString setGamePageOrder(const QString &place, const QStringList &order);
     Q_INVOKABLE QString setRecentPeriod(const QString &period);
     Q_INVOKABLE QString setPlayTimeFormat(const QString &format);
-    Q_INVOKABLE QString setShowDescription(bool value);
-    Q_INVOKABLE QString setShowTags(bool value);
-    Q_INVOKABLE QString setShowClips(bool value);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
@@ -114,7 +113,6 @@ private:
     void loadAutostart();
     QString setFlag(const QString &key, bool value);
     QString writeGamePage(const QString &place, const QStringList &order, const QStringList &shown);
-    QString setGamePageFlag(const QString &key, bool value);
     QString setGamePageChoice(const QString &key, const QString &value, const QString &defaultValue);
     QString settingsFile() const { return m_dataDir + QStringLiteral("/settings.toml"); }
 

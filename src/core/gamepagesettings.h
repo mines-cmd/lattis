@@ -12,28 +12,29 @@ struct GamePageSettings
     QStringList chips = defaultChips();
     QStringList buttons = defaultButtons();
     QStringList infoRows = defaultInfoRows();
+    QStringList sections = defaultSections();
     QStringList chipsOrder;   // of every chip, as written: see gamePageOrder()
     QStringList buttonsOrder;
     QStringList infoRowsOrder;
+    QStringList sectionsOrder;
     QStringList chipsWithoutIcon;
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
-    bool showDescription = true;
-    bool showTags = true;
-    bool showClips = true;
 
     bool operator==(const GamePageSettings &) const = default;
 
     static QStringList defaultChips();
     static QStringList defaultButtons();
     static QStringList defaultInfoRows();
+    static QStringList defaultSections();
 };
 
-// The three lists on the game page.
+// The four lists on the game page.
 namespace GamePage {
 inline const QString chips = QStringLiteral("chips");
 inline const QString buttons = QStringLiteral("buttons");
 inline const QString infoRows = QStringLiteral("info_rows");
+inline const QString sections = QStringLiteral("sections");
 }
 
 const QStringList &gamePageChoices(const QString &place);

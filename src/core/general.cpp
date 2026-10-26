@@ -162,9 +162,7 @@ QString General::writeGamePage(const QString &place, const QStringList &order, c
             canonical.append(name);
 
     const GamePageSettings defaults;
-    const QStringList &defaultList = place == GamePage::chips    ? defaults.chips
-                                     : place == GamePage::buttons ? defaults.buttons
-                                                                  : defaults.infoRows;
+    const QStringList &defaultList = gamePageShown(defaults, place);
     const auto quoted = [](const QStringList &names) {
         QStringList out;
         for (const QString &name : names)
@@ -180,6 +178,10 @@ QString General::writeGamePage(const QString &place, const QStringList &order, c
         else
             TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, quoted(names), &error);
     };
+    if (place == GamePage::sections)
+        for (const char *flag : {"show_description", "show_tags", "show_clips"})
+            if (error.isEmpty())
+                TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QLatin1String(flag), &error);
     write(place, list, list == defaultList);
     write(place + QStringLiteral("_order"), order, order == canonical);
     if (error.isEmpty())
@@ -239,33 +241,6 @@ QString General::setPlayTimeFormat(const QString &format)
     if (!playTimeFormats().contains(format))
         return {};
     return setGamePageChoice(QStringLiteral("play_time_format"), format, GamePageSettings{}.playTimeFormat);
-}
-
-QString General::setGamePageFlag(const QString &key, bool value)
-{
-    QString error;
-    if (value)
-        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
-    else
-        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key, QStringLiteral("false"), &error);
-    if (error.isEmpty())
-        load();
-    return error;
-}
-
-QString General::setShowDescription(bool value)
-{
-    return setGamePageFlag(QStringLiteral("show_description"), value);
-}
-
-QString General::setShowTags(bool value)
-{
-    return setGamePageFlag(QStringLiteral("show_tags"), value);
-}
-
-QString General::setShowClips(bool value)
-{
-    return setGamePageFlag(QStringLiteral("show_clips"), value);
 }
 
 QString General::setChipIconShown(const QString &name, bool shown)
