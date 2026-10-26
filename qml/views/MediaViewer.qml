@@ -216,6 +216,7 @@ MotionPopup {
         id: bar
 
         property real fraction
+        property color fill: Theme.media.seekFill
         signal moved(real fraction)
 
         implicitHeight: Math.max(Theme.media.seekHeight, Theme.media.seekKnobSize) + 2 * Theme.layout.spacing
@@ -226,15 +227,14 @@ MotionPopup {
             width: parent.width
             height: Theme.media.seekHeight
             radius: Theme.radius.tiny
-            color: Theme.media.viewerControlColor
-            opacity: 0.25
+            color: Theme.media.seekTrack
         }
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: track.width * bar.fraction
             height: track.height
             radius: track.radius
-            color: Theme.media.viewerControlColor
+            color: bar.fill
         }
         Rectangle {
             readonly property bool shown: area.containsMouse || area.pressed
@@ -244,7 +244,7 @@ MotionPopup {
             width: Theme.media.seekKnobSize
             height: width
             radius: width / 2
-            color: Theme.media.viewerControlColor
+            color: Theme.media.seekKnob
             opacity: shown ? 1 : 0
             scale: shown ? 1 : 0.5
             Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
@@ -382,7 +382,7 @@ MotionPopup {
 
                     Label {
                         text: root.timeText(root.ended ? player.duration : player.position)
-                        color: Theme.media.viewerControlColor
+                        color: Theme.media.viewerTimeColor
                     }
                     Bar {
                         Layout.fillWidth: true
@@ -395,7 +395,7 @@ MotionPopup {
                     }
                     Label {
                         text: root.timeText(player.duration)
-                        color: Theme.media.viewerControlColor
+                        color: Theme.media.viewerTimeColor
                     }
                 }
 
@@ -416,6 +416,7 @@ MotionPopup {
                         }
                         Bar {
                             Layout.preferredWidth: Theme.media.viewerVolumeWidth
+                            fill: Theme.media.volumeFill
                             fraction: root.muted ? 0 : root.volume
                             onMoved: f => root.setVolume(f)
 
@@ -479,6 +480,7 @@ MotionPopup {
             x: Math.min(parent.width - width - Theme.media.viewerCloseGap, pictureRight + Theme.media.viewerCloseGap)
             y: Math.max(pictureTop, belowWindowButtons)
             icon: Icons.close
+            iconColor: Theme.media.viewerCloseColor
             tip: qsTr("Close (Esc)")
             onClicked: root.close()
         }

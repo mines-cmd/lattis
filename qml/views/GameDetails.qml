@@ -145,8 +145,10 @@ Item {
         rowSpacing: spacing
         columnSpacing: 0
 
+        signal failed(string text)
+
         readonly property var shownSections: General.gamePageSections.filter(
-            name => name === "description" ? desc.visible : name === "tags" ? tagsTitle.visible : mediaShown)
+            name => name === "description" ? heading.visible : name === "tags" ? tagsTitle.visible : mediaShown)
         function rowOf(name, offset) {
             return Math.max(0, General.gamePageSections.indexOf(name)) * 3 + offset
         }
@@ -157,26 +159,25 @@ Item {
             const at = shownSections.indexOf(name)
             if (at <= 0)
                 return 0
-            const afterText = shownSections[at - 1] === "description" && !more.visible
+            const afterText = shownSections[at - 1] === "description" && desc.visible && !more.visible
             return 14 + (afterText ? 0 : descMetrics.height * (desc.lineHeight - 1))
         }
 
-        Label {
+        CollapseHeading {
             id: heading
             Layout.row: rowOf("description", 0)
             Layout.topMargin: gapBefore("description")
             opacity: descriptionHeadingOpacity
-            visible: desc.visible
+            visible: General.showDescription && desc.text.trim() !== ""
             text: qsTr("Description")
-            color: Theme.details.headingColor
-            font.weight: Theme.font.strongWeight
-            font.pixelSize: Theme.details.headingFontSize
+            section: "description"
+            onFailed: text => block.failed(text)
         }
         Label {
             id: desc
             opacity: contentOpacity
             transform: Translate { y: contentShift }
-            visible: General.showDescription && text.trim() !== ""
+            visible: heading.visible && !heading.collapsed
             Layout.row: rowOf("description", 1)
             Layout.fillWidth: true
             text: game.description ?? ""
@@ -205,7 +206,7 @@ Item {
             }
         }
 
-        Label {
+        CollapseHeading {
             id: tagsTitle
             opacity: tagsOpacity
             transform: Translate { y: tagsShift }
@@ -213,9 +214,8 @@ Item {
             Layout.row: rowOf("tags", 0)
             Layout.topMargin: gapBefore("tags")
             text: qsTr("Tags")
-            color: Theme.details.headingColor
-            font.weight: Theme.font.strongWeight
-            font.pixelSize: Theme.details.headingFontSize
+            section: "tags"
+            onFailed: text => block.failed(text)
         }
         // Another game's tags replace these at once: the switch has its own motion. A tag added to or
         // removed from this game pops in or out.
@@ -235,7 +235,7 @@ Item {
             // On the Flow, not the chips: the add transition takes over a chip's opacity.
             opacity: chipsHidden ? 0 : tagsOpacity
             transform: Translate { y: tagsShift }
-            visible: General.showTags && tags.count > 0
+            visible: tagsTitle.visible && !tagsTitle.collapsed
             Layout.row: rowOf("tags", 1)
             Layout.fillWidth: true
             spacing: Theme.tags.spacing
@@ -296,6 +296,7 @@ Item {
             Layout.fillWidth: true
             opacity: contentOpacity
             game: block.game
+            onFailed: text => block.failed(text)
             onClipRequested: clip => block.clipRequested(clip)
             onMenuRequested: (clip, tile, position) => block.clipMenuRequested(clip, tile, position)
         }
@@ -327,7 +328,7 @@ Item {
     readonly property bool textLeaving: leavingText.game.id !== undefined && textIn < 1
     // The copy's own exit, so a new one starting (textExit back to 0) doesn't bring the old text back.
     property real leavingExit: 1
-    readonly property bool tagsMorphing: textLeaving && leavingText.tagsHeading.visible && textColumn.tagsHeading.visible
+    readonly property bool tagsMorphing: textLeaving && leavingText.tagsFlow.visible && textColumn.tagsFlow.visible
     readonly property bool tagsStay: textPending && textColumn.tagsHeading.visible && showsTags(game)
 
     function showsDescription(g): bool {
@@ -1089,6 +1090,9 @@ Item {
                     Layout.row: 0
                     Layout.column: 0
                     Layout.fillWidth: true
+                    // A layout's maximum width is its children's: with every section folded, none
+                    // fills, and the info panel would slide over to the left.
+                    Layout.maximumWidth: Number.POSITIVE_INFINITY
                     Layout.alignment: Qt.AlignTop
                     game: root.textGame
                     maxLines: needsCut && !expanded ? shownLines : 2147483647
@@ -1097,6 +1101,7 @@ Item {
                     onMoreClicked: root.descriptionExpandedFor = expanded ? "" : root.textGame.id
                     onClipRequested: clip => root.playClip(clip)
                     onClipMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
+                    onFailed: text => root.message(text)
 
                     // details.fit_description: how many lines of the description fit the window.
                     // Worked out from the whole text (fullText) and the heights of everything else,

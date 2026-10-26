@@ -47,6 +47,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | `play_time_format` | How the `play_time` and `recent_play_time` fields write it: `hours` (default, "206.7 hours") or `hours_minutes` ("206h 42m") |
 | `show_description`, `show_tags`, `show_clips` | Older switches, still read: when `sections` isn't set, a `false` one leaves that section out. Writing `sections` removes them |
 | `chips_without_icon` | Chips drawn without their icon (any chip name), in the chips' catalog order; empty or absent: every chip has its icon. `General.setChipIconShown(name, shown)` writes it. The theme's `stat_chip.show_icons` still hides them all |
+| `collapsed_sections` | Sections folded under their heading (`description`, `tags`, `clips`), in their catalog order; empty or absent: none. Clicking a heading on the game page writes it through `General.setSectionCollapsed(name, collapsed)` |
 
 A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The four lists are `GamePage::chips`, `buttons`, `infoRows` and `sections` (the names `"chips"`, `"buttons"`, `"info_rows"` and `"sections"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
 

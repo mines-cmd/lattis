@@ -38,6 +38,7 @@ class General : public QObject
     Q_PROPERTY(bool showTags READ showTags NOTIFY gamePageChanged)
     Q_PROPERTY(bool showClips READ showClips NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList collapsedSections READ collapsedSections NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
@@ -71,6 +72,7 @@ public:
     bool showTags() const { return m_gamePage.sections.contains(QLatin1String("tags")); }
     bool showClips() const { return m_gamePage.sections.contains(QLatin1String("clips")); }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
+    QStringList collapsedSections() const { return m_gamePage.collapsedSections; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
@@ -93,6 +95,7 @@ public:
     Q_INVOKABLE QString setRecentPeriod(const QString &period);
     Q_INVOKABLE QString setPlayTimeFormat(const QString &format);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
+    Q_INVOKABLE QString setSectionCollapsed(const QString &name, bool collapsed);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
     void refreshAutostart();
@@ -114,6 +117,8 @@ private:
     QString setFlag(const QString &key, bool value);
     QString writeGamePage(const QString &place, const QStringList &order, const QStringList &shown);
     QString setGamePageChoice(const QString &key, const QString &value, const QString &defaultValue);
+    QString setGamePageFlag(const QString &key, const QString &place, const QStringList &current, const QString &name,
+                            bool on);
     QString settingsFile() const { return m_dataDir + QStringLiteral("/settings.toml"); }
 
     static inline General *s_instance = nullptr;

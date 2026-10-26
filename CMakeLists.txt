@@ -79,6 +79,7 @@ qt_add_qml_module(lattis
         qml/components/ArtPlaceholder.qml
         qml/components/FadeImage.qml
         qml/components/GameIcon.qml
+        qml/components/CollapseHeading.qml
         qml/components/Icon.qml
         qml/components/Stars.qml
         qml/components/IconButton.qml

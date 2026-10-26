@@ -254,6 +254,7 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `components/FadeImage.qml` | An Image that fades in after an asynchronous load |
 | `components/GameIcon.qml` | Small icon: art or colored letter tile |
 | `components/KeyedListModel.qml` | A list model for animated JS arrays: only inserts and removes, matched by key |
+| `components/CollapseHeading.qml` | A game page section heading with a chevron; a click folds the section (`[game_page] collapsed_sections`) |
 | `components/Icon.qml` | Vector icon from Icons.qml path data |
 | `components/Stars.qml` | Five stars filled to a rating (any fraction: IGDB ratings come to a tenth), with an optional faint preview fill; the rating editor and the info panel use it |
 | `components/IconButton.qml` | Square icon button with tooltip, badge, busy state |

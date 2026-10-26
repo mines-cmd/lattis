@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Effects
 
 // See docs/code/qml.md.
 ColumnLayout {
@@ -15,6 +16,7 @@ ColumnLayout {
 
     signal clipRequested(var clip)
     signal menuRequested(var clip, Item tile, point position)
+    signal failed(string text)
 
     visible: wanted && clips.length > 0
     spacing: 10
@@ -38,21 +40,64 @@ ColumnLayout {
         }
     }
 
-    Label {
+    CollapseHeading {
+        id: heading
         text: qsTr("Media")
-        color: Theme.details.headingColor
-        font.weight: Theme.font.strongWeight
-        font.pixelSize: Theme.details.headingFontSize
+        section: "clips"
+        onFailed: text => root.failed(text)
     }
 
     FfmpegPrompt {
-        visible: !FfmpegTool.available && (!root.installDismissed || root.installing)
+        visible: !heading.collapsed && !FfmpegTool.available && (!root.installDismissed || root.installing)
         Layout.fillWidth: true
         onNotNow: root.installDismissed = true
     }
 
+    // Each fade grows with how far the row can still scroll that way, so an end at rest stays sharp.
+    // Invisible, so the layout leaves it out; the scroll bar under the thumbnails stays unfaded.
+    Item {
+        id: fadeMask
+        readonly property real leftFade: Math.min(Theme.media.edgeFade, flick.contentX)
+        readonly property real rightFade: Math.min(Theme.media.edgeFade, flick.contentWidth - flick.width - flick.contentX)
+        width: flick.width
+        height: flick.height
+        visible: false
+        layer.enabled: true
+
+        Rectangle {
+            width: fadeMask.leftFade
+            height: Theme.media.thumbHeight
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 1; color: "white" }
+            }
+        }
+        Rectangle {
+            x: fadeMask.leftFade
+            width: parent.width - fadeMask.leftFade - fadeMask.rightFade
+            height: Theme.media.thumbHeight
+        }
+        Rectangle {
+            x: parent.width - width
+            width: fadeMask.rightFade
+            height: Theme.media.thumbHeight
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: "white" }
+                GradientStop { position: 1; color: "transparent" }
+            }
+        }
+        Rectangle {
+            y: Theme.media.thumbHeight
+            width: parent.width
+            height: parent.height - y
+        }
+    }
+
     Flickable {
         id: flick
+        visible: !heading.collapsed
         Layout.fillWidth: true
         Layout.preferredHeight: Theme.media.thumbHeight
                                 + (scrollBar.policy === ScrollBar.AlwaysOn ? Theme.media.scrollbarGap + scrollBar.height : 0)
@@ -61,6 +106,13 @@ ColumnLayout {
         clip: true
         flickableDirection: Flickable.HorizontalFlick
         boundsBehavior: Flickable.StopAtBounds
+        layer.enabled: Theme.media.edgeFade > 0 && contentWidth > width
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: fadeMask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+        }
         ScrollBar.horizontal: ScrollBar {
             id: scrollBar
             policy: flick.contentWidth > flick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff

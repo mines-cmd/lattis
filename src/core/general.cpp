@@ -243,24 +243,36 @@ QString General::setPlayTimeFormat(const QString &format)
     return setGamePageChoice(QStringLiteral("play_time_format"), format, GamePageSettings{}.playTimeFormat);
 }
 
-QString General::setChipIconShown(const QString &name, bool shown)
+QString General::setGamePageFlag(const QString &key, const QString &place, const QStringList &current,
+                                 const QString &name, bool on)
 {
-    if (!gamePageChoices(GamePage::chips).contains(name))
+    if (!gamePageChoices(place).contains(name))
         return {};
-    QStringList without;
-    for (const QString &chip : gamePageChoices(GamePage::chips))
-        if (chip == name ? !shown : m_gamePage.chipsWithoutIcon.contains(chip))
-            without.append(u'"' + chip + u'"');
+    QStringList names;
+    for (const QString &choice : gamePageChoices(place))
+        if (choice == name ? on : current.contains(choice))
+            names.append(u'"' + choice + u'"');
     QString error;
-    if (without.isEmpty())
-        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("chips_without_icon"),
-                                     &error);
+    if (names.isEmpty())
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), key, &error);
     else
-        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("chips_without_icon"),
-                                  u'[' + without.join(QLatin1String(", ")) + u']', &error);
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), key,
+                                  u'[' + names.join(QLatin1String(", ")) + u']', &error);
     if (error.isEmpty())
         load();
     return error;
+}
+
+QString General::setChipIconShown(const QString &name, bool shown)
+{
+    return setGamePageFlag(QStringLiteral("chips_without_icon"), GamePage::chips, m_gamePage.chipsWithoutIcon, name,
+                           !shown);
+}
+
+QString General::setSectionCollapsed(const QString &name, bool collapsed)
+{
+    return setGamePageFlag(QStringLiteral("collapsed_sections"), GamePage::sections, m_gamePage.collapsedSections,
+                           name, collapsed);
 }
 
 QString General::setStartAtLogin(bool on)

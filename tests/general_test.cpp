@@ -600,6 +600,16 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.setChipIconShown(QStringLiteral("play_time"), true), QString());
     QVERIFY(general.chipsWithoutIcon().isEmpty());
     QVERIFY(!fileText().contains("chips_without_icon"));
+
+    QCOMPARE(general.setSectionCollapsed(QStringLiteral("clips"), true), QString());
+    QCOMPARE(general.setSectionCollapsed(QStringLiteral("description"), true), QString());
+    QCOMPARE(general.setSectionCollapsed(QStringLiteral("status"), true), QString());
+    QCOMPARE(general.collapsedSections(), (QStringList{"description", "clips"}));
+    QVERIFY(fileText().contains("collapsed_sections = [\"description\", \"clips\"]"));
+    QCOMPARE(general.setSectionCollapsed(QStringLiteral("description"), false), QString());
+    QCOMPARE(general.setSectionCollapsed(QStringLiteral("clips"), false), QString());
+    QVERIFY(general.collapsedSections().isEmpty());
+    QVERIFY(!fileText().contains("collapsed_sections"));
     QVERIFY(general.problems().isEmpty());
 
     // A hand edit shows on reload, and a mistake in it is a problem.

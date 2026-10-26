@@ -18,6 +18,7 @@ struct GamePageSettings
     QStringList infoRowsOrder;
     QStringList sectionsOrder;
     QStringList chipsWithoutIcon;
+    QStringList collapsedSections;
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
 
