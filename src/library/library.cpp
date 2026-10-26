@@ -1,5 +1,6 @@
 #include "library.h"
 #include "romdbfetch.h"
+#include "apppaths.h"
 #include "dateformat.h"
 #include "gameid.h"
 #include "igdb.h"
@@ -11,6 +12,7 @@
 #include "steammedia.h"
 #include "tomlpatch.h"
 
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -1689,6 +1691,7 @@ void Library::media(const QString &id)
         for (const SteamMedia::Clip &c : watcher->result()) {
             clips.append(QVariantMap{{QStringLiteral("id"), c.id},
                                      {QStringLiteral("folder"), c.folder},
+                                     {QStringLiteral("videoDir"), c.videoDir},
                                      {QStringLiteral("thumbnail"),
                                       c.thumbnail.isEmpty() ? QString() : QUrl::fromLocalFile(c.thumbnail).toString()},
                                      {QStringLiteral("durationMs"), c.durationMs},
@@ -1699,6 +1702,37 @@ void Library::media(const QString &id)
         watcher->deleteLater();
     });
     watcher->setFuture(QtConcurrent::run(SteamMedia::listClips, install, appId));
+}
+
+void Library::prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg)
+{
+    const QString folder = AppPaths::cacheDir() + QStringLiteral("/clips");
+    SteamMedia::Clip clip;
+    clip.videoDir = videoDir;
+    auto *watcher = new QFutureWatcher<QPair<QString, QString>>(this);
+    connect(watcher, &QFutureWatcher<QPair<QString, QString>>::finished, this, [this, watcher, token] {
+        emit clipPrepared(token, watcher->result().first, watcher->result().second);
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run([clip, ffmpeg, folder, token] {
+        // One clip plays at a time, so what an earlier run (or a crash) left is stale.
+        QDir(folder).removeRecursively();
+        QDir().mkpath(folder);
+        const QString path = folder + u'/' + token + QStringLiteral(".mp4");
+        const QString error = SteamMedia::remuxClip(clip, ffmpeg, path);
+        return qMakePair(error.isEmpty() ? path : QString(), error);
+    }));
+}
+
+void Library::discardClip(const QString &path)
+{
+    if (!path.isEmpty() && path.startsWith(AppPaths::cacheDir() + QStringLiteral("/clips/")))
+        QFile::remove(path);
+}
+
+bool Library::showClipFolder(const QString &folder)
+{
+    return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
 }
 
 QString Library::shortPlayTime(int minutes) const

@@ -170,6 +170,9 @@ QString FfmpegTool::ownPath(const QString &toolsDir)
 
 QString FfmpegTool::resolve(const QString &toolsDir)
 {
+    // LATTIS_FFMPEG=none shows the missing state in screenshots, where PATH can't be changed.
+    if (qEnvironmentVariable("LATTIS_FFMPEG") == u"none")
+        return {};
     const QString own = ownPath(toolsDir);
     return own.isEmpty() ? QStandardPaths::findExecutable(QStringLiteral("ffmpeg")) : own;
 }

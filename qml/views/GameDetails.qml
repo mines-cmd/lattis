@@ -464,6 +464,46 @@ Item {
         function onCustomizeRequested() { root.customizeRequested() }
         function onMessage(text) { root.message(text) }
     }
+    Loader {
+        id: clipMenu
+        active: false
+        source: "ClipMenu.qml"
+    }
+    Connections {
+        target: clipMenu.item
+        function onMessage(text) { root.message(text) }
+    }
+    function openClipMenu(clip, item, point) {
+        clipMenu.active = true
+        clipMenu.item.media = clip
+        clipMenu.item.popup(item, point.x, point.y)
+    }
+
+    // Qt Multimedia loads with the viewer, when the first clip is opened.
+    Loader {
+        id: mediaViewer
+        active: false
+        source: "MediaViewer.qml"
+    }
+    Connections {
+        target: mediaViewer.item
+        function onMessage(text) { root.message(text) }
+    }
+    function playClip(clip) {
+        mediaViewer.active = true
+        mediaViewer.item.show(clip)
+    }
+
+    function clipForScreenshot(spec) {
+        const clip = mediaRow.clips[0]
+        if (clip === undefined)
+            return
+        if (spec === "menu")
+            openClipMenu(clip, mediaRow, Qt.point(100, mediaRow.height - 40))
+        else
+            playClip(clip)
+    }
+
     function openPageMenu(place, item, point) {
         pageMenu.active = true
         pageMenu.item.place = place
@@ -1041,8 +1081,22 @@ Item {
                         }
                     }
                 }
+                MediaRow {
+                    id: mediaRow
+                    Layout.row: root.compact ? 2 : 1
+                    Layout.column: 0
+                    Layout.columnSpan: 1
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    opacity: Theme.details.animateDescription ? textColumn.flowOpacity : 1
+                    game: root.textGame
+                    onClipRequested: clip => root.playClip(clip)
+                    onMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
+                }
                 InfoPanel {
                     id: info
+                    Layout.row: 0
+                    Layout.column: 1
                     visible: rows.length > 0
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width

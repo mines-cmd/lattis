@@ -6,6 +6,9 @@
 #include <QJSEngine>
 #include <QLoggingCategory>
 
+#include <algorithm>
+#include <cmath>
+
 Q_LOGGING_CATEGORY(lcGeneral, "lattis.general")
 
 General::General(const QString &dataDir, QObject *parent)
@@ -76,6 +79,23 @@ QString General::setReduceMotion(bool value)
 QString General::setRailHidden(bool value)
 {
     return setFlag(QStringLiteral("rail_hidden"), value);
+}
+
+QString General::setClipVolume(double value)
+{
+    value = std::clamp(std::round(value * 100) / 100, 0.0, 1.0);
+    if (value == m_settings.clipVolume)
+        return {};
+    QString error;
+    if (value == 1.0) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("clip_volume"), &error);
+    } else {
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("clip_volume"),
+                                  QString::number(value, 'f', 2), &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
 }
 
 QString General::setRailButtonShown(const QString &name, bool shown)
@@ -243,6 +263,11 @@ QString General::setShowTags(bool value)
     return setGamePageFlag(QStringLiteral("show_tags"), value);
 }
 
+QString General::setShowClips(bool value)
+{
+    return setGamePageFlag(QStringLiteral("show_clips"), value);
+}
+
 QString General::setChipIconShown(const QString &name, bool shown)
 {
     if (!gamePageChoices(GamePage::chips).contains(name))
@@ -316,9 +341,10 @@ void General::load()
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
-    // systemLocale, reduceMotion, railHidden and railHiddenButtons and railButtonOrder have their own signals so that flipping them leaves the
-    // window alone.
+    // systemLocale, reduceMotion, railHidden and railHiddenButtons, railButtonOrder and clipVolume have their own signals so that
+    // flipping them leaves the window alone.
     GeneralSettings prevWindow = prev;
+    prevWindow.clipVolume = m_settings.clipVolume;
     prevWindow.systemLocale = m_settings.systemLocale;
     prevWindow.reduceMotion = m_settings.reduceMotion;
     prevWindow.railHidden = m_settings.railHidden;
@@ -338,6 +364,8 @@ void General::load()
         emit railHiddenButtonsChanged();
     if (orderedRailButtons(m_settings.railButtonOrder) != orderedRailButtons(prev.railButtonOrder))
         emit railButtonOrderChanged();
+    if (m_settings.clipVolume != prev.clipVolume)
+        emit clipVolumeChanged();
     for (const QString &w : std::as_const(m_problems))
         qCWarning(lcGeneral).noquote() << w;
 }

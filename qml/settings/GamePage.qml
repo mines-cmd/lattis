@@ -271,14 +271,15 @@ Item {
                     }
                 }
 
-                readonly property bool descriptionShown: root.matches(qsTr("Description and tags"), qsTr("Show the description"))
-                readonly property bool tagsShown: root.matches(qsTr("Description and tags"), qsTr("Show tags"))
+                readonly property bool descriptionShown: root.matches(qsTr("Description, tags and clips"), qsTr("Show the description"))
+                readonly property bool tagsShown: root.matches(qsTr("Description, tags and clips"), qsTr("Show tags"))
+                readonly property bool clipsShown: root.matches(qsTr("Description, tags and clips"), qsTr("Show Steam clips"))
                 SectionHeader {
-                    visible: content.descriptionShown || content.tagsShown
-                    text: qsTr("Description and tags")
+                    visible: content.descriptionShown || content.tagsShown || content.clipsShown
+                    text: qsTr("Description, tags and clips")
                 }
                 SettingsCard {
-                    visible: content.descriptionShown || content.tagsShown
+                    visible: content.descriptionShown || content.tagsShown || content.clipsShown
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         visible: content.descriptionShown
@@ -296,12 +297,21 @@ Item {
                             onToggled: root.report(General.setShowTags(checked))
                         }
                     }
+                    LabeledRow {
+                        visible: content.clipsShown
+                        label: qsTr("Show Steam clips")
+                        note: qsTr("The row of your Steam clips on a Steam game's page.")
+                        SettingsSwitch {
+                            checked: General.showClips
+                            onToggled: root.report(General.setShowClips(checked))
+                        }
+                    }
                 }
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
                              && !content.periodShown
-                             && !content.descriptionShown && !content.tagsShown
+                             && !content.descriptionShown && !content.tagsShown && !content.clipsShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

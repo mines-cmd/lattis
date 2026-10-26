@@ -31,9 +31,17 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
     const QStringList known = {QStringLiteral("start_fullscreen"), QStringLiteral("download_bar_collapsed"),
                                  QStringLiteral("system_locale"), QStringLiteral("reduce_motion"),
                                  QStringLiteral("rail_hidden_buttons"), QStringLiteral("rail_button_order"),
-                                 QStringLiteral("rail_hidden")};
+                                 QStringLiteral("rail_hidden"), QStringLiteral("clip_volume")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
+        if (key == known.at(7)) {
+            const std::optional<double> volume = node.value<double>();
+            if (!volume || *volume < 0 || *volume > 1)
+                out.warnings.append(QStringLiteral("%1: %2 must be a number from 0 to 1").arg(section.where(node), key));
+            else
+                out.value.clipVolume = *volume;
+            continue;
+        }
         if (key == known.at(4) || key == known.at(5)) {
             const auto *array = node.as_array();
             if (!array || (!array->empty() && !array->is_homogeneous(toml::node_type::string))) {

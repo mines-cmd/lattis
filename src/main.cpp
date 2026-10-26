@@ -361,6 +361,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "gamePageMenuForScreenshot", Q_ARG(QVariant, spec));
                 });
             }
+            if (const QString spec = qEnvironmentVariable("LATTIS_CLIP"); !spec.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, spec] {
+                    logHook("clipForScreenshot", spec);
+                    QMetaObject::invokeMethod(window, "clipForScreenshot", Q_ARG(QVariant, spec));
+                });
+            }
             if (const QString ids = qEnvironmentVariable("LATTIS_SELECT_GAMES"); !ids.isEmpty()) {
                 QTimer::singleShot(actualDelay / 2, window, [window, ids] {
                     logHook("selectGamesForScreenshot", ids);

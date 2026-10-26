@@ -20,6 +20,7 @@ struct GamePageSettings
     QString playTimeFormat = QStringLiteral("hours");
     bool showDescription = true;
     bool showTags = true;
+    bool showClips = true;
 
     bool operator==(const GamePageSettings &) const = default;
 

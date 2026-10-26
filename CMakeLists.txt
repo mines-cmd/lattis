@@ -130,6 +130,10 @@ qt_add_qml_module(lattis
         qml/views/ImportNotice.qml
         qml/views/DownloadBar.qml
         qml/views/DownloadPill.qml
+        qml/views/MediaRow.qml
+        qml/views/MediaViewer.qml
+        qml/views/ClipMenu.qml
+        qml/views/FfmpegPrompt.qml
         qml/views/GameEditor.qml
         qml/views/EmulatorInstallDialog.qml
         qml/views/SetupGuide.qml

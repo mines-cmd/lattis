@@ -306,6 +306,10 @@ ApplicationWindow {
         details.pageMenuForScreenshot(place, submenu)
     }
 
+    function clipForScreenshot(spec) {
+        details.clipForScreenshot(spec)
+    }
+
     function selectGamesForScreenshot(ids) {
         gameList.selectGames(ids.split(","))
     }
@@ -426,6 +430,15 @@ ApplicationWindow {
         ? (WindowState.maximized("main") ? Window.Maximized : Window.Windowed)
         : Window.Windowed
 
+    function toggleFullscreen() {
+        if (visibility === Window.FullScreen) {
+            visibility = windowedVisibility
+        } else {
+            windowedVisibility = visibility
+            visibility = Window.FullScreen
+        }
+    }
+
     function run(name) {
         if (name.startsWith("show_platform_")) {
             const platform = Library.platforms[parseInt(name.slice("show_platform_".length)) - 1]
@@ -470,14 +483,7 @@ ApplicationWindow {
         case "undo": toast.undo(); break
         case "play_statistics": setStatsOpen(!statsOpen); break
         case "add_game": addGame(); break
-        case "toggle_fullscreen":
-            if (visibility === Window.FullScreen) {
-                visibility = windowedVisibility
-            } else {
-                windowedVisibility = visibility
-                visibility = Window.FullScreen
-            }
-            break
+        case "toggle_fullscreen": toggleFullscreen(); break
         case "toggle_rail": {
             const error = General.setRailHidden(!General.railHidden)
             if (error.length > 0)

@@ -25,6 +25,7 @@ class General : public QObject
     Q_PROPERTY(bool systemLocale READ systemLocale NOTIFY systemLocaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY reduceMotionChanged)
     Q_PROPERTY(bool railHidden READ railHidden NOTIFY railHiddenChanged)
+    Q_PROPERTY(double clipVolume READ clipVolume NOTIFY clipVolumeChanged)
     Q_PROPERTY(QStringList railHiddenButtons READ railHiddenButtons NOTIFY railHiddenButtonsChanged)
     Q_PROPERTY(QStringList railButtonOrder READ railButtonOrder NOTIFY railButtonOrderChanged)
     Q_PROPERTY(QStringList gamePageChips READ gamePageChips NOTIFY gamePageChanged)
@@ -34,6 +35,7 @@ class General : public QObject
     Q_PROPERTY(QString playTimeFormat READ playTimeFormat NOTIFY gamePageChanged)
     Q_PROPERTY(bool showDescription READ showDescription NOTIFY gamePageChanged)
     Q_PROPERTY(bool showTags READ showTags NOTIFY gamePageChanged)
+    Q_PROPERTY(bool showClips READ showClips NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
@@ -55,6 +57,7 @@ public:
     bool systemLocale() const { return m_settings.systemLocale; }
     bool reduceMotion() const { return m_settings.reduceMotion; }
     bool railHidden() const { return m_settings.railHidden; }
+    double clipVolume() const { return m_settings.clipVolume; }
     QStringList railHiddenButtons() const { return m_settings.railHiddenButtons; }
     QStringList railButtonOrder() const { return orderedRailButtons(m_settings.railButtonOrder); }
     QStringList gamePageChips() const { return m_gamePage.chips; }
@@ -64,6 +67,7 @@ public:
     QString playTimeFormat() const { return m_gamePage.playTimeFormat; }
     bool showDescription() const { return m_gamePage.showDescription; }
     bool showTags() const { return m_gamePage.showTags; }
+    bool showClips() const { return m_gamePage.showClips; }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
@@ -78,6 +82,7 @@ public:
     Q_INVOKABLE QString setSystemLocale(bool value);
     Q_INVOKABLE QString setReduceMotion(bool value);
     Q_INVOKABLE QString setRailHidden(bool value);
+    Q_INVOKABLE QString setClipVolume(double value);
     Q_INVOKABLE QString setRailButtonShown(const QString &name, bool shown);
     Q_INVOKABLE QString setRailButtonOrder(const QStringList &order);
     Q_INVOKABLE QStringList gamePageOrder(const QString &place) const;
@@ -87,6 +92,7 @@ public:
     Q_INVOKABLE QString setPlayTimeFormat(const QString &format);
     Q_INVOKABLE QString setShowDescription(bool value);
     Q_INVOKABLE QString setShowTags(bool value);
+    Q_INVOKABLE QString setShowClips(bool value);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
@@ -97,6 +103,7 @@ signals:
     void systemLocaleChanged();
     void reduceMotionChanged();
     void railHiddenChanged();
+    void clipVolumeChanged();
     void railHiddenButtonsChanged();
     void railButtonOrderChanged();
     void gamePageChanged();

@@ -23,6 +23,7 @@ private slots:
     void writeRoundTrip();
     void startFullscreenSetting();
     void downloadBarCollapsedSetting();
+    void clipVolumeSetting();
     void railHiddenSetting();
     void systemLocaleSetting();
     void reduceMotionSetting();
@@ -222,6 +223,41 @@ void GeneralTest::downloadBarCollapsedSetting()
     QVERIFY(off.contains("# mine"));
 }
 
+void GeneralTest::clipVolumeSetting()
+{
+    QTemporaryDir data;
+    General general(data.path());
+    QCOMPARE(general.clipVolume(), 1.0);
+
+    QCOMPARE(parseGeneralSettings("[general]\nclip_volume = 0.4\n", QStringLiteral("settings.toml")).value.clipVolume, 0.4);
+    QCOMPARE(parseGeneralSettings("[general]\nclip_volume = 0\n", QStringLiteral("settings.toml")).value.clipVolume, 0.0);
+    const auto bad = parseGeneralSettings("[general]\nclip_volume = 1.5\n", QStringLiteral("settings.toml"));
+    QCOMPARE(bad.value.clipVolume, 1.0);
+    QCOMPARE(bad.warnings, QStringList{"settings.toml:2: clip_volume must be a number from 0 to 1"});
+
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("[general]\n");
+    settings.close();
+    general.reload();
+
+    // The window's bindings listen to settingsChanged, so a volume change must not emit it.
+    QSignalSpy settingsChanged(&general, &General::settingsChanged);
+    QSignalSpy volumeChanged(&general, &General::clipVolumeChanged);
+    QCOMPARE(general.setClipVolume(0.456), QString());
+    QCOMPARE(general.clipVolume(), 0.46);
+    QCOMPARE(volumeChanged.size(), 1);
+    QCOMPARE(settingsChanged.size(), 0);
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    QVERIFY(settings.readAll().contains("clip_volume = 0.46"));
+    settings.close();
+
+    QCOMPARE(general.setClipVolume(1), QString());
+    QCOMPARE(general.clipVolume(), 1.0);
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    QVERIFY(!settings.readAll().contains("clip_volume"));
+}
+
 void GeneralTest::railHiddenSetting()
 {
     QTemporaryDir data;
@@ -393,6 +429,7 @@ void GeneralTest::gamePageDefaults()
     QCOMPARE(empty.value.playTimeFormat, QStringLiteral("hours"));
     QVERIFY(empty.value.showDescription);
     QVERIFY(empty.value.showTags);
+    QVERIFY(empty.value.showClips);
 
     const auto other = parseGamePageSettings("[general]\nreduce_motion = true\n", QStringLiteral("settings.toml"));
     QCOMPARE(other.value, GamePageSettings());
@@ -406,7 +443,7 @@ void GeneralTest::gamePageParser()
     const auto r = parseGamePageSettings("[game_page]\nchips = [\"rating\", \"play_time\", \"rating\"]\n"
                                          "buttons = []\ninfo_rows = [\"times_played\", \"date_added\"]\n"
                                          "recent_period = \"month\"\nplay_time_format = \"hours_minutes\"\n"
-                                         "show_description = false\nshow_tags = false\n"
+                                         "show_description = false\nshow_tags = false\nshow_clips = false\n"
                                          "chips_without_icon = [\"steam_update\", \"rating\"]\n",
                                          QStringLiteral("settings.toml"));
     QVERIFY(r.warnings.isEmpty());
@@ -417,6 +454,7 @@ void GeneralTest::gamePageParser()
     QCOMPARE(r.value.playTimeFormat, QStringLiteral("hours_minutes"));
     QVERIFY(!r.value.showDescription);
     QVERIFY(!r.value.showTags);
+    QVERIFY(!r.value.showClips);
     QCOMPARE(r.value.chipsWithoutIcon, (QStringList{"steam_update", "rating"}));
 
     const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
@@ -442,6 +480,7 @@ void GeneralTest::gamePageParser()
     QCOMPARE(bad.value.recentPeriod, QStringLiteral("two_weeks"));
     QCOMPARE(bad.value.playTimeFormat, QStringLiteral("hours"));
     QVERIFY(bad.value.showTags);
+    QVERIFY(bad.value.showClips);
 }
 
 void GeneralTest::gamePageOrderKeepsNewNames()
@@ -546,6 +585,10 @@ void GeneralTest::gamePageSettersWrite()
     QVERIFY(!general.showDescription());
     QCOMPARE(general.setShowTags(true), QString());
     QCOMPARE(general.setShowDescription(true), QString());
+    QCOMPARE(general.setShowClips(false), QString());
+    QVERIFY(!general.showClips());
+    QVERIFY(fileText().contains("show_clips = false"));
+    QCOMPARE(general.setShowClips(true), QString());
     QVERIFY(!fileText().contains("show_"));
 
     QCOMPARE(general.setChipIconShown(QStringLiteral("status"), false), QString());

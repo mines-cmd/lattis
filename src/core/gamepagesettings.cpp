@@ -128,7 +128,7 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
                                QStringLiteral("buttons_order"), QStringLiteral("info_rows_order"),
                                QStringLiteral("recent_period"), QStringLiteral("show_description"),
                                QStringLiteral("show_tags"),   QStringLiteral("play_time_format"),
-                               QStringLiteral("chips_without_icon")};
+                               QStringLiteral("chips_without_icon"), QStringLiteral("show_clips")};
     const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
@@ -151,7 +151,7 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
                 out.warnings.append(QStringLiteral("%1: %2 must be \"%3\"")
                                         .arg(section.where(node), key, choices.join(QStringLiteral("\", \""))));
         } else if (const auto *b = node.as_boolean()) {
-            (at == 7 ? out.value.showDescription : out.value.showTags) = b->get();
+            (at == 7 ? out.value.showDescription : at == 8 ? out.value.showTags : out.value.showClips) = b->get();
         } else {
             out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
         }
