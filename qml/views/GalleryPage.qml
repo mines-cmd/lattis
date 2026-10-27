@@ -69,14 +69,14 @@ FocusScope {
     signal message(string text)
     signal started()
 
-    function start() {
+    function start(gameId = "") {
         all = []
         sorted = []
         shown = []
         rows = []
         typeSel = ({})
         platformSel = ({})
-        gameSel = ({})
+        gameSel = gameId === "" ? ({}) : ({ [gameId]: true })
         monthSel = ({})
         counts = { type: {}, platform: {}, game: {}, month: {} }
         platformList = []

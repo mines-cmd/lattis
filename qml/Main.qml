@@ -89,14 +89,14 @@ ApplicationWindow {
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
     readonly property bool pageCovering: statsCovering || galleryCovering
 
-    function setGalleryOpen(open) {
+    function setGalleryOpen(open, gameId = "") {
         if (open === galleryOpen)
             return
         if (open) {
             setStatsOpen(false)
             galleryPage.active = true
             galleryOpen = true
-            galleryPage.item.start()
+            galleryPage.item.start(gameId)
         } else {
             galleryOpen = false
             galleryPage.item.leave()
@@ -806,6 +806,7 @@ ApplicationWindow {
             onHistoryRequested: window.openPlayHistory(game)
             onMenuRequested: button => gameList.openMenuBelow(Library.rowOfGame(game.id), button)
             onCustomizeRequested: window.openSettingsAt("game_page")
+            onGalleryRequested: id => window.setGalleryOpen(true, id)
         }
     }
 

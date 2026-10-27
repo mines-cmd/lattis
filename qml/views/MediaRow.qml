@@ -19,6 +19,7 @@ ColumnLayout {
     signal mediaRequested(var item, var list)
     signal menuRequested(var clip, Item tile, point position)
     signal failed(string text)
+    signal showAllRequested(string id)
 
     visible: wanted && shown.length > 0
     spacing: 10
@@ -42,12 +43,30 @@ ColumnLayout {
         }
     }
 
-    CollapseHeading {
-        id: heading
-        text: qsTr("Media")
-        section: "clips"
-        count: root.shown.length
-        onFailed: text => root.failed(text)
+    RowLayout {
+        spacing: Theme.layout.spacing
+
+        CollapseHeading {
+            id: heading
+            text: qsTr("Media")
+            section: "clips"
+            count: root.shown.length
+            onFailed: text => root.failed(text)
+        }
+        Label {
+            text: qsTr("Show all (%1)").arg(root.shown.length)
+            color: showAll.containsMouse ? Theme.media.linkHoverColor : Theme.media.linkColor
+            font.pixelSize: Theme.details.countFontSize
+            Behavior on color { enabled: Motion.fades; MotionColor {} }
+
+            MouseArea {
+                id: showAll
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.showAllRequested(root.game.id)
+            }
+        }
     }
 
     FfmpegPrompt {

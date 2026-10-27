@@ -98,6 +98,7 @@ Item {
     signal historyRequested()
     signal menuRequested(Item button)
     signal customizeRequested()
+    signal galleryRequested(string id)
 
     function logoForScreenshot(mode) {
         if (mode === "adjust")
@@ -139,6 +140,7 @@ Item {
 
         signal moreClicked()
         signal mediaRequested(var item, var list)
+        signal galleryRequested(string id)
         signal clipMenuRequested(var clip, Item tile, point position)
 
         columns: 1
@@ -298,6 +300,7 @@ Item {
             game: block.game
             onFailed: text => block.failed(text)
             onMediaRequested: (item, list) => block.mediaRequested(item, list)
+            onShowAllRequested: id => block.galleryRequested(id)
             onMenuRequested: (clip, tile, position) => block.clipMenuRequested(clip, tile, position)
         }
         Item {
@@ -1102,6 +1105,7 @@ Item {
                     expanded: root.descriptionExpandedFor === (root.textGame.id ?? "")
                     onMoreClicked: root.descriptionExpandedFor = expanded ? "" : root.textGame.id
                     onMediaRequested: (item, list) => root.showMedia(item, list)
+                    onGalleryRequested: id => root.galleryRequested(id)
                     onClipMenuRequested: (clip, tile, position) => root.openClipMenu(clip, tile, position)
                     onFailed: text => root.message(text)
 

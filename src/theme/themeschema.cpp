@@ -880,6 +880,8 @@ constexpr Setting kSettings[] = {
     integer("download_bar", "pill_icon_size", "16", 0, 64, "The download icon in the pill; 0 hides it"),
 
     heading("media", "Row"),
+    color("media", "link_color", "@achievements.link_color", "\"Show all\" after the Media heading, which opens the Gallery"),
+    color("media", "link_hover_color", "@achievements.link_hover_color", "\"Show all\" under the pointer"),
     integer("media", "thumb_height", "126", 40, 600, "Height of a thumbnail; its width follows at 16:9"),
     integer("media", "thumb_gap", "12", 0, 100, "Space between thumbnails"),
     integer("media", "scrollbar_gap", "8", 0, 100, "Space between the thumbnails and the scroll bar under them"),
