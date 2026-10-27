@@ -45,10 +45,11 @@ FocusScope {
     readonly property bool grouped: grouping !== "none"
     readonly property bool newestFirst: General.gallerySort === "newest"
     readonly property real sideMargin: 2 * Theme.layout.margin
+    readonly property real sidebarX: Theme.layout.margin
     readonly property bool hasSidebar: loading || all.length > 0
     readonly property bool compact: hasSidebar && Theme.gallery.compactWidth > 0 && width < Theme.gallery.compactWidth
-    readonly property real sidebarWidth: Math.min(Theme.gallery.sidebarWidth, width - 2 * sideMargin)
-    readonly property real gridX: sideMargin + (hasSidebar && !compact ? sidebarWidth + 2 * Theme.layout.spacing : 0)
+    readonly property real sidebarWidth: Math.min(Theme.gallery.sidebarWidth, width - sidebarX - sideMargin)
+    readonly property real gridX: hasSidebar && !compact ? sidebarX + sidebarWidth + sideMargin : sideMargin
     readonly property real gridWidth: width - gridX - sideMargin
     readonly property bool filtersActive: Object.keys(typeSel).length + Object.keys(platformSel).length
                                           + Object.keys(gameSel).length + Object.keys(monthSel).length > 0
@@ -483,7 +484,7 @@ FocusScope {
     }
 
     ChromeButton {
-        x: root.sideMargin
+        x: root.sidebarX
         y: Theme.layout.margin
         icon: Icons.arrowUp
         iconRotation: -90
@@ -786,7 +787,7 @@ FocusScope {
             visible: root.hasSidebar && (!root.compact || opacity > 0)
             opacity: !root.compact || root.panelOpen ? 1 : 0
             z: 5
-            x: root.sideMargin
+            x: root.sidebarX
             y: root.compact ? list.y : 0
             width: root.sidebarWidth
             height: parent.height - y - Theme.layout.margin
