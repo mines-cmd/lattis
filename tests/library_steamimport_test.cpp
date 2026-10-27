@@ -463,13 +463,13 @@ void LibrarySteamImportTest::achievementsListTheGamesAchievements()
     QStringList order;
     for (const QVariant &item : items)
         order.append(item.toMap().value("apiName").toString());
-    QCOMPARE(order, QStringList({"LONG_WALK", "FIRST_STEP", "SECRET_ROOM", "FINALE"}));
+    QCOMPARE(order, QStringList({"LONG_WALK", "FIRST_STEP", "FINALE", "SECRET_ROOM"}));
     const QVariantMap first = items[0].toMap();
     QCOMPARE(first.value("name").toString(), QStringLiteral("Long Walk"));
     QVERIFY(first.value("unlocked").toBool());
     QVERIFY(first.value("time").toDateTime().isValid());
     QVERIFY(first.value("icon").toString().startsWith(QStringLiteral("https://")));
-    QVERIFY(items[2].toMap().value("hidden").toBool());
+    QVERIFY(items[3].toMap().value("hidden").toBool());
 
     // A Steam game with no schema file: none.
     library->achievements(QStringLiteral("steam-2231450"));
