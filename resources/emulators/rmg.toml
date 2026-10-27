@@ -18,3 +18,5 @@ extensions = ["z64", "n64", "v64"]
 # starts emulators in the home folder, so there's no portable entry. Save/Game holds the
 # saves, Save/State the save states. It needs no keys.
 saves = { native = ["~/.local/share/RMG/Save/Game", "~/.local/share/RMG/Save/State"], flatpak = ["~/.var/app/com.github.Rosalie241.RMG/data/RMG/Save/Game", "~/.var/app/com.github.Rosalie241.RMG/data/RMG/Save/State"] }
+# <cartridge header name>-<number>.png; the match ignores case.
+screenshots = { native = "~/.local/share/RMG/Screenshots/{serial}-[0-9]*.png", flatpak = "~/.var/app/com.github.Rosalie241.RMG/data/RMG/Screenshots/{serial}-[0-9]*.png" }

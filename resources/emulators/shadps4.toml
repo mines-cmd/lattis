@@ -20,3 +20,5 @@ files = ["eboot.bin"]
 # src/core/libraries/save_data/savedata.cpp), sys_modules/ the firmware's modules.
 saves = { native = "~/.local/share/shadPS4/home", flatpak = "~/.var/app/net.shadps4.shadPS4/data/shadPS4/home" }
 keys = { native = "~/.local/share/shadPS4/sys_modules", flatpak = "~/.var/app/net.shadps4.shadPS4/data/shadPS4/sys_modules" }
+# <CUSA id>_<stamp>_<game|hud>_<number>.png. The folder name is from its source (path_util.h, 2026-10).
+screenshots = { native = "~/.local/share/shadPS4/screenshots/{serial}_[0-9]*.png", flatpak = "~/.var/app/net.shadps4.shadPS4/data/shadPS4/screenshots/{serial}_[0-9]*.png" }

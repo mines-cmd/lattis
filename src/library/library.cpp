@@ -2,6 +2,7 @@
 #include "romdbfetch.h"
 #include "apppaths.h"
 #include "dateformat.h"
+#include "emulatorscreenshots.h"
 #include "gameid.h"
 #include "igdb.h"
 #include "launchcommand.h"
@@ -1680,6 +1681,38 @@ QVariantMap Library::pageHistory(const QString &id)
 
 void Library::media(const QString &id)
 {
+    if (const Game *g = game(id); g && g->rom) {
+        const Platform *p = platform(g->platform);
+        const QString chosen = Emulators::choose(g->emulator, p ? p->emulators : QStringList(), installs());
+        const EmulatorDef *def = Emulators::find(m_emulators, chosen);
+        if (!def || def->screenshots.isEmpty() || g->romPath.isEmpty()) {
+            QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
+            return;
+        }
+        auto *watcher = new QFutureWatcher<QVariantList>(this);
+        connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
+            emit mediaReady(id, watcher->result());
+            watcher->deleteLater();
+        });
+        watcher->setFuture(QtConcurrent::run([emulator = *def, install = installs().value(chosen), game = *g,
+                                              dataDir = m_store.dataDir()] {
+            const RomInfo info = EmulatorScreenshots::readInfo(game);
+            const QList<PlayHistory::Session> sessions = PlayHistory::read(dataDir, game.id).value.sessions;
+            QVariantList items;
+            for (const EmulatorScreenshots::Shot &s :
+                 EmulatorScreenshots::list(emulator, install, game, info, sessions, QDir::homePath())) {
+                const QString url = QUrl::fromLocalFile(s.path).toString();
+                items.append(QVariantMap{{QStringLiteral("kind"), QStringLiteral("screenshot")},
+                                         {QStringLiteral("id"), s.id},
+                                         {QStringLiteral("folder"), QFileInfo(s.path).absolutePath()},
+                                         {QStringLiteral("thumbnail"), url},
+                                         {QStringLiteral("image"), url},
+                                         {QStringLiteral("time"), s.time}});
+            }
+            return items;
+        }));
+        return;
+    }
     const qint64 appId = GameId::steamAppId(id);
     const SteamInstall install = m_store.snapshot().steam.install;
     if (appId <= 0 || install.userDataDir().isEmpty()) {

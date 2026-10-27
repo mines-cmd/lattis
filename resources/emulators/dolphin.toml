@@ -21,3 +21,5 @@ extensions = ["iso", "gcm", "gcz", "ciso", "rvz", "wia", "wbfs", "tgc", "dol", "
 # the Wii's storage with its saves, StateSaves/ the save states. It needs no keys.
 portable = "portable.txt"
 saves = { native = ["~/.local/share/dolphin-emu/GC", "~/.local/share/dolphin-emu/Wii", "~/.local/share/dolphin-emu/StateSaves"], flatpak = ["~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/GC", "~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/Wii", "~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/StateSaves"], portable = ["User/GC", "User/Wii", "User/StateSaves"] }
+# One folder per game, named by the 6-character game ID (ScreenShots/<GameID>/<GameID>_<date>_<time>.png).
+screenshots = { native = "~/.local/share/dolphin-emu/ScreenShots/{serial}/*.png", flatpak = "~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/ScreenShots/{serial}/*.png", portable = "User/ScreenShots/{serial}/*.png" }

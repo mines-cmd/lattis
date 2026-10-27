@@ -15,3 +15,5 @@ extensions = ["iso", "cso", "chd", "pbp", "elf"]
 # builds have no portable mode (UI/NativeApp.cpp, NativeInit, 2026-09). PSP/SAVEDATA holds
 # the saves, PSP/PPSSPP_STATE the save states. It needs no keys.
 saves = { native = ["~/.config/ppsspp/PSP/SAVEDATA", "~/.config/ppsspp/PSP/PPSSPP_STATE"], flatpak = ["~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/SAVEDATA", "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/PPSSPP_STATE"] }
+# <Disc ID>_<number>.jpg, or .png when set so.
+screenshots = { native = ["~/.config/ppsspp/PSP/SCREENSHOT/{serial}_[0-9]*.jpg", "~/.config/ppsspp/PSP/SCREENSHOT/{serial}_[0-9]*.png"], flatpak = ["~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/SCREENSHOT/{serial}_[0-9]*.jpg", "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/SCREENSHOT/{serial}_[0-9]*.png"] }

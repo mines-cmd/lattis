@@ -74,6 +74,7 @@ set(LIBRARY_SOURCES
     ../src/library/librarystore.h ../src/library/librarystore.cpp
     ../src/library/libraryundo.h ../src/library/libraryundo.cpp
     ../src/library/playhistory.h ../src/library/playhistory.cpp
+    ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
     ../src/library/artimage.h ../src/library/artimage.cpp
     ../src/library/herocache.h ../src/library/herocache.cpp
     ../src/library/libraryversion.h ../src/library/libraryversion.cpp
@@ -191,6 +192,12 @@ lattis_test(emulators_test PRESETS
     SOURCES ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus
     DEFINES ${DOCS})
+lattis_test(emulatorscreenshots_test PRESETS
+    SOURCES ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
+            ../src/library/playhistory.h ../src/library/playhistory.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+            ${LIBRARY_FILE_SOURCES}
+    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
 lattis_test(libraryformat_test PRESETS
     SOURCES ../src/library/game.h ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus

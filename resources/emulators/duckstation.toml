@@ -21,3 +21,5 @@ extensions = ["cue", "chd", "iso", "img", "ecm", "mds", "ccd", "pbp"]
 portable = "portable.txt"
 saves = { native = ["~/.local/share/duckstation/memcards", "~/.local/share/duckstation/savestates"], flatpak = ["~/.var/app/org.duckstation.DuckStation/config/duckstation/memcards", "~/.var/app/org.duckstation.DuckStation/config/duckstation/savestates"], portable = ["memcards", "savestates"] }
 keys = { native = "~/.local/share/duckstation/bios", flatpak = "~/.var/app/org.duckstation.DuckStation/config/duckstation/bios", portable = "bios" }
+# Its file name setting picks one layout; the three that name the game are listed: "<Title> <stamp>.png" in the folder (the default), and "<Title>/<stamp>.png" or "<Title>/<Title> <stamp>.png" in a folder per game.
+screenshots = { native = ["~/.local/share/duckstation/screenshots/{title} [0-9]*.png", "~/.local/share/duckstation/screenshots/{title}/*.png"], flatpak = ["~/.var/app/org.duckstation.DuckStation/config/duckstation/screenshots/{title} [0-9]*.png", "~/.var/app/org.duckstation.DuckStation/config/duckstation/screenshots/{title}/*.png"], portable = ["screenshots/{title} [0-9]*.png", "screenshots/{title}/*.png"] }

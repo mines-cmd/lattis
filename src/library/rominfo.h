@@ -12,6 +12,9 @@ struct RomInfo
     QString crc32;
     // A name the file carries that a database's should replace (a GameCube disc's internal name).
     QString fallbackTitle;
+    // IDs some emulators name screenshots by that no database is searched with: a PSP disc's DISC_ID, an N64 cartridge's header name.
+    QString discId;
+    QString headerName;
     bool fromDatabase = false;
 
     bool operator==(const RomInfo &) const = default;

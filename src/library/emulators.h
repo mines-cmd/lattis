@@ -60,6 +60,7 @@ struct EmulatorDef
     QMap<QString, QStringList> saves;
     QMap<QString, QStringList> keys;
     QStringList savesBesideRom;
+    QMap<QString, QStringList> screenshots;
 
     bool preset = false;
     QStringList userKeys;

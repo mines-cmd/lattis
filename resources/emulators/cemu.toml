@@ -21,3 +21,5 @@ extensions = ["wud", "wux", "wua"]
 portable = "portable"
 saves = { native = "~/.local/share/Cemu/mlc01/usr/save", flatpak = "~/.var/app/info.cemu.Cemu/data/Cemu/mlc01/usr/save", portable = "portable/mlc01/usr/save" }
 keys = { native = ["~/.local/share/Cemu/keys.txt", "~/.local/share/Cemu/otp.bin", "~/.local/share/Cemu/seeprom.bin"], flatpak = ["~/.var/app/info.cemu.Cemu/data/Cemu/keys.txt", "~/.var/app/info.cemu.Cemu/data/Cemu/otp.bin", "~/.var/app/info.cemu.Cemu/data/Cemu/seeprom.bin"], portable = ["portable/keys.txt", "portable/otp.bin", "portable/seeprom.bin"] }
+# Names only the time, so a screenshot counts for a game when it was taken during a play session started from the launcher.
+screenshots = { native = "~/.local/share/Cemu/screenshots/*.png", flatpak = "~/.var/app/info.cemu.Cemu/data/Cemu/screenshots/*.png", portable = "portable/screenshots/*.png" }

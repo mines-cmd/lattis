@@ -98,9 +98,9 @@ inline QByteArray nds(const QString &banner, qsizetype slot = 0x340)
     return d;
 }
 
-inline QByteArray sfo(const QByteArray &title, const QByteArray &id)
+inline QByteArray sfo(const QByteArray &title, const QByteArray &id, const QByteArray &idKey = "TITLE_ID")
 {
-    QByteArray keys = QByteArray("TITLE\0TITLE_ID\0", 15);
+    QByteArray keys = QByteArray("TITLE\0", 6) + idKey + QByteArray(1, '\0');
     QByteArray data = title + QByteArray(1, '\0');
     const qsizetype idAt = data.size();
     data += id + QByteArray(1, '\0');

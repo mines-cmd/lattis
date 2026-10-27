@@ -20,3 +20,5 @@ extensions = ["iso", "chd", "cso", "zso", "gz", "img", "mdf", "elf"]
 portable = "portable.txt"
 saves = { native = ["~/.config/PCSX2/memcards", "~/.config/PCSX2/sstates"], flatpak = ["~/.var/app/net.pcsx2.PCSX2/config/PCSX2/memcards", "~/.var/app/net.pcsx2.PCSX2/config/PCSX2/sstates"], portable = ["memcards", "sstates"] }
 keys = { native = "~/.config/PCSX2/bios", flatpak = "~/.var/app/net.pcsx2.PCSX2/config/PCSX2/bios", portable = "bios" }
+# <Title>_<Serial>_<stamp>.png in snaps/, or in a folder per game when "organize screenshots by game" is on.
+screenshots = { native = ["~/.config/PCSX2/snaps/*_{serial}_[0-9]*.png", "~/.config/PCSX2/snaps/{title}/*.png"], flatpak = ["~/.var/app/net.pcsx2.PCSX2/config/PCSX2/snaps/*_{serial}_[0-9]*.png", "~/.var/app/net.pcsx2.PCSX2/config/PCSX2/snaps/{title}/*.png"], portable = ["snaps/*_{serial}_[0-9]*.png", "snaps/{title}/*.png"] }

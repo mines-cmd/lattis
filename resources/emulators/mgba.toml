@@ -19,3 +19,5 @@ extensions = ["gba"]
 # Next to the ROM, under its name: .sav (.sa2 to .sa4 for players 2 to 4) and the save
 # states .ss0 to .ss9 (src/core/core.c, 2026-09).
 saves_beside_rom = ["sav", "sa2", "sa3", "sa4", "ss0", "ss1", "ss2", "ss3", "ss4", "ss5", "ss6", "ss7", "ss8", "ss9"]
+# Next to the ROM as <ROM file name>-<number>.png, unless its screenshot folder is set.
+screenshots = { native = "{romdir}/{rom}-[0-9]*.png", flatpak = "{romdir}/{rom}-[0-9]*.png" }

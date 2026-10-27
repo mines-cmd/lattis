@@ -51,6 +51,12 @@ constexpr Field kFields[] = {
     {"keys", PathTable, "Key and firmware folders and files by install type, like saves"},
     {"saves_beside_rom", StringList, "Extensions of the saves it writes next to the ROM under the ROM's name, "
                                      "lowercase, without the dot, like [\"sav\", \"ss1\"]. Export backs them up"},
+    {"screenshots", PathTable, "Patterns of the screenshot files it takes, by install type, like saves; the file name "
+                               "may use * ? and [0-9]. {serial} is the game's ID (disc ID, title ID, serial), {title} "
+                               "its title as the ROM or the library has it, {rom} the ROM's file name without "
+                               "extension, and {romdir} (at the start) the ROM's folder. A pattern with none of them "
+                               "matches the whole folder: only screenshots taken during a play session started from "
+                               "the launcher show. The game page shows them"},
 };
 }
 
@@ -264,6 +270,8 @@ QVariant readValue(const toml::node &node, const Field &field, const QString &di
             }
             const bool portable = type == QLatin1String("portable");
             const auto bad = std::find_if(paths.cbegin(), paths.cend(), [&](const QString &p) {
+                if (key == QLatin1String("screenshots") && p.startsWith(QLatin1String("{romdir}/")))
+                    return false;
                 return portable ? !relativeInside(p) : !p.startsWith(u'/') && !p.startsWith(QLatin1String("~/"));
             });
             if (bad != paths.cend()) {
@@ -356,6 +364,7 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.saves = pathTable(v.value(QStringLiteral("saves")));
     def.keys = pathTable(v.value(QStringLiteral("keys")));
     def.savesBesideRom = v.value(QStringLiteral("saves_beside_rom")).toStringList();
+    def.screenshots = pathTable(v.value(QStringLiteral("screenshots")));
     return def;
 }
 
@@ -420,6 +429,7 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("saves")) return def.saves.isEmpty() ? QString() : table(def.saves);
     if (key == QLatin1String("keys")) return def.keys.isEmpty() ? QString() : table(def.keys);
     if (key == QLatin1String("saves_beside_rom")) return def.savesBesideRom.isEmpty() ? QString() : list(def.savesBesideRom);
+    if (key == QLatin1String("screenshots")) return def.screenshots.isEmpty() ? QString() : table(def.screenshots);
     return {};
 }
 

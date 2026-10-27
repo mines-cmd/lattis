@@ -137,6 +137,13 @@ void RomInfoTest::pspImages()
     const RomInfo eboot = read(write(QStringLiteral("a.pbp"), pbp(param)), QStringLiteral("psp"));
     QCOMPARE(eboot, iso);
 
+    // A PSP disc names itself by DISC_ID, which PPSSPP names screenshots after.
+    const RomInfo disc = read(write(QStringLiteral("d.iso"), pspIso(sfo("Crisis Core", "ULUS10336", "DISC_ID"))),
+                              QStringLiteral("psp"));
+    QCOMPARE(disc.discId, QStringLiteral("ULUS10336"));
+    QVERIFY(disc.titleId.isEmpty());
+    QVERIFY(iso.discId.isEmpty());
+
     // The same bytes are not read as a PSP image on another platform.
     QVERIFY(read(write(QStringLiteral("b.iso"), pspIso(param)), QStringLiteral("ps2")).title.isEmpty());
 }
@@ -314,6 +321,22 @@ void RomInfoTest::cartridgeChecksums()
     QCOMPARE(read(write(QStringLiteral("a.z64"), z64), QStringLiteral("n64")).crc32, expected);
     QCOMPARE(read(write(QStringLiteral("a.v64"), v64), QStringLiteral("n64")).crc32, expected);
     QCOMPARE(read(write(QStringLiteral("a.n64"), n64), QStringLiteral("n64")).crc32, expected);
+
+    // The header name (20 bytes at 0x20) comes out the same from every byte order.
+    QByteArray named(0x1000, '\0');
+    named.replace(0, 4, QByteArray("\x80\x37\x12\x40", 4));
+    named.replace(0x20, 20, QByteArray("SUPER MARIO 64       ").left(20));
+    QByteArray namedV64 = named;
+    for (int i = 0; i + 1 < namedV64.size(); i += 2)
+        std::swap(namedV64[i], namedV64[i + 1]);
+    QByteArray namedN64 = named;
+    for (int i = 0; i + 3 < namedN64.size(); i += 4) {
+        std::swap(namedN64[i], namedN64[i + 3]);
+        std::swap(namedN64[i + 1], namedN64[i + 2]);
+    }
+    for (const auto &[file, bytes] : {std::pair{"n.z64", named}, {"n.v64", namedV64}, {"n.n64", namedN64}})
+        QCOMPARE(read(write(QString::fromLatin1(file), bytes), QStringLiteral("n64")).headerName,
+                 QStringLiteral("SUPER MARIO 64"));
 }
 
 QTEST_APPLESS_MAIN(RomInfoTest)

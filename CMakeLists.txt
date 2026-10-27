@@ -294,6 +294,7 @@ qt_add_qml_module(lattis
         src/library/libraryundo.h src/library/libraryundo.cpp
         src/library/libraryversion.h src/library/libraryversion.cpp
         src/library/emulators.h src/library/emulators.cpp
+        src/library/emulatorscreenshots.h src/library/emulatorscreenshots.cpp
         src/install/releasesource.h src/install/releasesource.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
         src/install/desktopentry.h src/install/desktopentry.cpp

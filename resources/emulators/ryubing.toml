@@ -18,3 +18,5 @@ extensions = ["nsp", "xci", "nro", "nso", "nca"]
 portable = "portable"
 saves = { native = ["~/.config/Ryujinx/bis/user/save", "~/.config/Ryujinx/bis/system/save"], flatpak = ["~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/user/save", "~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/system/save"], portable = ["portable/bis/user/save", "portable/bis/system/save"] }
 keys = { native = ["~/.config/Ryujinx/system", "~/.config/Ryujinx/bis/system/Contents/registered"], flatpak = ["~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/system", "~/.var/app/io.github.ryubing.Ryujinx/config/Ryujinx/bis/system/Contents/registered"], portable = ["portable/system", "portable/bis/system/Contents/registered"] }
+# <Title>_<stamp>.png in the Pictures folder (read from a mirror of the source; the Flatpak manifest was unreachable, so the Flatpak entry assumes it can read ~/Pictures).
+screenshots = { native = "~/Pictures/Ryujinx/{title}_[0-9]*.png", flatpak = "~/Pictures/Ryujinx/{title}_[0-9]*.png", portable = "portable/screenshots/{title}_[0-9]*.png" }

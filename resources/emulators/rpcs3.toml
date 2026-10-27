@@ -21,3 +21,5 @@ files = ["eboot.bin"]
 portable = "portable"
 saves = { native = "~/.config/rpcs3/dev_hdd0/home", flatpak = "~/.var/app/net.rpcs3.RPCS3/config/rpcs3/dev_hdd0/home", portable = "portable/dev_hdd0/home" }
 keys = { native = "~/.config/rpcs3/dev_flash", flatpak = "~/.var/app/net.rpcs3.RPCS3/config/rpcs3/dev_flash", portable = "portable/dev_flash" }
+# One folder per game, named by the title ID (screenshots/<TitleID>/<TitleID>_<date>.png).
+screenshots = { native = "~/.config/rpcs3/screenshots/{serial}/*.png", flatpak = "~/.var/app/net.rpcs3.RPCS3/config/rpcs3/screenshots/{serial}/*.png", portable = "portable/screenshots/{serial}/*.png" }

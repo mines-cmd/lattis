@@ -299,6 +299,8 @@ RomInfo parseSfo(const QByteArray &sfo)
             out.title = value;
         else if (key == "TITLE_ID")
             out.titleId = value;
+        else if (key == "DISC_ID")
+            out.discId = value;
     }
     return out;
 }
@@ -543,6 +545,23 @@ ByteOrder n64Order(const QByteArray &first)
     return ByteOrder::Native;
 }
 
+// The 20 bytes at 0x20 of the header in big-endian order, as RMG names its screenshots.
+QString n64HeaderName(QByteArray header, ByteOrder order)
+{
+    if (header.size() < 0x34)
+        return {};
+    if (order == ByteOrder::SwapPairs) {
+        for (qsizetype i = 0; i + 1 < header.size(); i += 2)
+            std::swap(header[i], header[i + 1]);
+    } else if (order == ByteOrder::ReverseWords) {
+        for (qsizetype i = 0; i + 3 < header.size(); i += 4) {
+            std::swap(header[i], header[i + 3]);
+            std::swap(header[i + 1], header[i + 2]);
+        }
+    }
+    return QString::fromLatin1(header.mid(0x20, 20)).trimmed();
+}
+
 // Each name is matched without case: dumps differ (`PARAM.SFO`, `param.sfo`).
 QString findFile(const QString &folder, const QStringList &parts)
 {
@@ -652,7 +671,9 @@ RomInfo read(const QString &path, const QString &platform)
     } else if (platform == QLatin1String("gba") && r.size() <= kCartridgeMax / 2) {
         out.crc32 = fileCrc(path, ByteOrder::Native);
     } else if (platform == QLatin1String("n64") && r.size() <= kCartridgeMax) {
-        out.crc32 = fileCrc(path, n64Order(r.read(0, 4)));
+        const ByteOrder order = n64Order(r.read(0, 4));
+        out.crc32 = fileCrc(path, order);
+        out.headerName = n64HeaderName(r.read(0, 0x34), order);
     }
     if (out.title.isEmpty() && out.serial.isEmpty() && out.crc32.isEmpty() && out.titleId.isEmpty()
         && out.fallbackTitle.isEmpty())
