@@ -114,9 +114,7 @@ ColumnLayout {
 
         Flickable {
             id: flick
-            anchors.fill: parent
-            leftMargin: Theme.media.cardPadding
-            rightMargin: Theme.media.cardPadding
+            anchors { fill: parent; leftMargin: Theme.media.cardPadding; rightMargin: Theme.media.cardPadding }
             topMargin: Theme.media.cardPadding
             contentWidth: tiles.width
             contentHeight: Theme.media.thumbHeight
@@ -132,16 +130,13 @@ ColumnLayout {
             }
             ScrollBar.horizontal: ScrollBar {
                 id: scrollBar
-                policy: flick.contentWidth > flick.width - 2 * Theme.media.cardPadding ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                policy: flick.contentWidth > flick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                 padding: 0
-                leftPadding: Theme.media.cardPadding
-                rightPadding: Theme.media.cardPadding
                 bottomPadding: Theme.media.scrollbarGap
                 hoverEnabled: true
                 background: Item {
                     Rectangle {
-                        anchors { fill: parent; leftMargin: scrollBar.leftPadding; rightMargin: scrollBar.rightPadding
-                                  bottomMargin: scrollBar.bottomPadding }
+                        anchors { fill: parent; bottomMargin: scrollBar.bottomPadding }
                         radius: height / 2
                         color: Theme.media.scrollbarTrack
                     }
