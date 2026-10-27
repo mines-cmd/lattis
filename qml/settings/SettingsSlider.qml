@@ -5,6 +5,7 @@ Slider {
     id: root
 
     readonly property real handleSize: Theme.controls.sliderHandleSize
+    property color fillColor: Theme.controls.sliderFill
 
     implicitHeight: Math.max(handleSize + 8, 24)
     hoverEnabled: true
@@ -26,7 +27,7 @@ Slider {
             width: travel > 0 ? Math.max(0, Math.min(1, (root.handle.x - root.leftPadding) / travel)) * parent.width : 0
             height: parent.height
             radius: parent.radius
-            color: Theme.controls.sliderFill
+            color: root.fillColor
         }
     }
 

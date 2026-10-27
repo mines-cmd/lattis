@@ -1041,6 +1041,8 @@ constexpr Setting kSettings[] = {
             "Below this window width the filters hide behind a button; 0 = never"),
     integer("gallery", "page_offset", "@stats.page_offset", 0, 200,
             "How far the page's content rises into place as it opens and sinks as it closes; 0 = fade only"),
+    color("gallery", "slider_fill", "@text_muted",
+          "The tile size slider's track left of the handle; neutral so it doesn't outshine the pictures"),
     heading("gallery", "Sidebar"),
     integer("gallery", "sidebar_width", "280", 160, 800, "Width of the filter sidebar, and of the panel it becomes in a narrow window"),
     integer("gallery", "sidebar_padding", "@filters.padding", 0, 100, "Space inside the sidebar"),

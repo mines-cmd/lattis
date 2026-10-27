@@ -60,8 +60,6 @@ FocusScope {
     readonly property bool showNames: grouping !== "game"
     readonly property real captionHeight: Theme.gallery.gameNameSize * 1.6
     readonly property real rowHeight: tileHeight + Theme.layout.spacing / 2 + captionHeight + Theme.gallery.tileGap
-    readonly property int screenshotCount: shown.reduce((n, i) => n + (i.kind === "screenshot" ? 1 : 0), 0)
-    readonly property int clipCount: shown.length - screenshotCount
     readonly property bool viewerOpen: viewer.item !== null && viewer.item.opened
 
     signal closeRequested()
@@ -518,14 +516,10 @@ FocusScope {
                 Layout.alignment: Qt.AlignBottom
                 Layout.bottomMargin: Theme.gallery.titleSize / 5
                 visible: root.shown.length > 0
-                text: {
-                    const parts = []
-                    if (root.screenshotCount > 0)
-                        parts.push(root.countText(root.screenshotCount, qsTr("screenshot"), qsTr("screenshots")))
-                    if (root.clipCount > 0)
-                        parts.push(root.countText(root.clipCount, qsTr("clip"), qsTr("clips")))
-                    return parts.join("  ·  ")
-                }
+                text: root.filtersActive
+                      ? qsTr("%1 of %2").arg(Number(root.shown.length).toLocaleString(Qt.locale(), "f", 0))
+                                        .arg(root.countText(root.all.length, qsTr("item"), qsTr("items")))
+                      : root.countText(root.shown.length, qsTr("item"), qsTr("items"))
                 color: Theme.gallery.countColor
             }
             Label {
@@ -621,6 +615,7 @@ FocusScope {
                 SettingsSlider {
                     id: sizeSlider
                     Layout.preferredWidth: 120
+                    fillColor: Theme.gallery.sliderFill
                     from: Theme.gallery.tileMinWidth
                     to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
                     stepSize: 1
