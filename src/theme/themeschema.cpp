@@ -882,6 +882,7 @@ constexpr Setting kSettings[] = {
     heading("media", "Row"),
     color("media", "link_color", "@achievements.link_color", "\"Show all\" after the Media heading, which opens the Gallery"),
     color("media", "link_hover_color", "@achievements.link_hover_color", "\"Show all\" under the pointer"),
+    integer("media", "link_inset", "6", 0, 100, "Space between \"Show all\" and the card's right edge"),
     integer("media", "thumb_height", "126", 40, 600, "Height of a thumbnail; its width follows at 16:9"),
     integer("media", "thumb_gap", "12", 0, 100, "Space between thumbnails"),
     integer("media", "scrollbar_gap", "8", 0, 100, "Space between the thumbnails and the scroll bar under them"),

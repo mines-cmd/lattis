@@ -44,6 +44,8 @@ ColumnLayout {
     }
 
     RowLayout {
+        Layout.fillWidth: true
+        Layout.maximumWidth: card.Layout.maximumWidth
         spacing: Theme.layout.spacing
 
         CollapseHeading {
@@ -53,8 +55,10 @@ ColumnLayout {
             count: root.shown.length
             onFailed: text => root.failed(text)
         }
+        Item { Layout.fillWidth: true }
         Label {
-            text: qsTr("Show all (%1)").arg(root.shown.length)
+            Layout.rightMargin: Theme.media.linkInset
+            text: qsTr("Show all")
             color: showAll.containsMouse ? Theme.media.linkHoverColor : Theme.media.linkColor
             font.pixelSize: Theme.details.countFontSize
             Behavior on color { enabled: Motion.fades; MotionColor {} }
