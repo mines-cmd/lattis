@@ -69,23 +69,6 @@ ArtThumb {
         border.width: Theme.filters.focusRingWidth
     }
     Rectangle {
-        visible: tile.isClip && Theme.media.playButton !== "never" && opacity > 0
-        opacity: Theme.media.playButton === "always" || tile.hovered || tile.focusRing ? 1 : 0
-        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
-        anchors.centerIn: parent
-        width: Theme.media.playSize
-        height: width
-        radius: width / 2
-        color: Theme.media.playBackground
-
-        Icon {
-            anchors.centerIn: parent
-            path: Icons.playFill
-            size: parent.width / 2
-            color: Theme.media.playIconColor
-        }
-    }
-    Rectangle {
         visible: tile.isClip
         anchors.right: parent.right
         anchors.bottom: parent.bottom
