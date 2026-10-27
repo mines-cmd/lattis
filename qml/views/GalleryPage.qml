@@ -25,11 +25,33 @@ FocusScope {
     // For screenshots: what to open once the items are in (see Main.qml's galleryForScreenshot()).
     property string autoOpen: ""
 
+    // `all` sorted, before the filters.
+    property var sorted: []
+    // What is ticked in each section, as {key: true}; empty = no filter from that section.
+    property var typeSel: ({})
+    property var platformSel: ({})
+    property var gameSel: ({})
+    property var monthSel: ({})
+    // How many items each entry would show given the other sections' choices: {section: {key: n}}.
+    property var counts: ({ type: {}, platform: {}, game: {}, month: {} })
+    // Every entry the sidebar lists, from all the items found, so a filter grays an entry out instead of removing it.
+    property var platformList: []
+    property var gameList: []
+    property var yearList: []
+    property bool listsStale: false
+    property bool panelOpen: false
+
     readonly property string grouping: General.galleryGroup
     readonly property bool grouped: grouping !== "none"
     readonly property bool newestFirst: General.gallerySort === "newest"
     readonly property real sideMargin: 2 * Theme.layout.margin
-    readonly property real gridWidth: width - 2 * sideMargin
+    readonly property bool hasSidebar: loading || all.length > 0
+    readonly property bool compact: hasSidebar && Theme.gallery.compactWidth > 0 && width < Theme.gallery.compactWidth
+    readonly property real sidebarWidth: Math.min(Theme.gallery.sidebarWidth, width - 2 * sideMargin)
+    readonly property real gridX: sideMargin + (hasSidebar && !compact ? sidebarWidth + 2 * Theme.layout.spacing : 0)
+    readonly property real gridWidth: width - gridX - sideMargin
+    readonly property bool filtersActive: Object.keys(typeSel).length + Object.keys(platformSel).length
+                                          + Object.keys(gameSel).length + Object.keys(monthSel).length > 0
     readonly property real tileTarget: dragWidth > 0 ? dragWidth
                                        : General.galleryTileWidth > 0 ? General.galleryTileWidth : Theme.gallery.tileWidth
     readonly property int columns: Math.max(1, Math.floor((gridWidth + Theme.gallery.tileGap) / (tileTarget + Theme.gallery.tileGap)))
@@ -45,11 +67,23 @@ FocusScope {
     signal closeRequested()
     signal gameRequested(string id)
     signal message(string text)
+    signal started()
 
     function start() {
         all = []
+        sorted = []
         shown = []
         rows = []
+        typeSel = ({})
+        platformSel = ({})
+        gameSel = ({})
+        monthSel = ({})
+        counts = { type: {}, platform: {}, game: {}, month: {} }
+        platformList = []
+        gameList = []
+        yearList = []
+        panelOpen = false
+        started()
         focusIndex = 0
         keyboardFocus = false
         games = Library.mediaGames()
@@ -90,10 +124,13 @@ FocusScope {
             if (games[item.gameId] === undefined)
                 continue
             item.stamp = item.time.getTime()
+            item.platform = games[item.gameId].platform
+            item.month = monthKey(item)
             added.push(item)
         }
         if (added.length > 0) {
             all = all.concat(added)
+            listsStale = true
             refresh.restart()
         }
     }
@@ -110,8 +147,114 @@ FocusScope {
         const sign = newestFirst ? -1 : 1
         const list = all.slice()
         list.sort((a, b) => (a.stamp - b.stamp) * sign || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-        shown = list
+        sorted = list
+        if (listsStale)
+            buildLists()
+        applyFilters()
+    }
+
+    function buildLists() {
+        listsStale = false
+        const platforms = {}
+        const gameIds = {}
+        const months = {}
+        for (const item of all) {
+            gameIds[item.gameId] = true
+            const game = games[item.gameId]
+            platforms[game.platform] = { id: game.platform, name: game.platformName, icon: game.platformIcon }
+            months[item.month] = true
+        }
+        platformList = Object.values(platforms).sort((a, b) => a.name.localeCompare(b.name))
+        gameList = Object.keys(gameIds).map(id => ({ id: id, title: games[id].title }))
+                         .sort((a, b) => a.title.localeCompare(b.title))
+        const byYear = {}
+        for (const key of Object.keys(months).sort().reverse()) {
+            const year = Math.floor(parseInt(key) / 100)
+            byYear[year] = byYear[year] ?? { year: year, months: [] }
+            const n = parseInt(key) % 100
+            byYear[year].months.push({ key: key, name: Qt.locale().monthName(n - 1, Locale.LongFormat) })
+        }
+        yearList = Object.values(byYear).sort((a, b) => b.year - a.year)
+    }
+
+    // One pass: the items every section lets through, and for each section how many it would show if
+    // only the other sections counted.
+    function applyFilters() {
+        const tally = { type: {}, platform: {}, game: {}, month: {} }
+        const out = []
+        const useType = Object.keys(typeSel).length > 0
+        const usePlatform = Object.keys(platformSel).length > 0
+        const useGame = Object.keys(gameSel).length > 0
+        const useMonth = Object.keys(monthSel).length > 0
+        for (const item of sorted) {
+            const okType = !useType || typeSel[item.kind] === true
+            const okPlatform = !usePlatform || platformSel[item.platform] === true
+            const okGame = !useGame || gameSel[item.gameId] === true
+            const okMonth = !useMonth || monthSel[item.month] === true
+            const failing = (okType ? 0 : 1) + (okPlatform ? 0 : 1) + (okGame ? 0 : 1) + (okMonth ? 0 : 1)
+            if (failing === 0)
+                out.push(item)
+            if (failing === 0 || (failing === 1 && !okType))
+                tally.type[item.kind] = (tally.type[item.kind] ?? 0) + 1
+            if (failing === 0 || (failing === 1 && !okPlatform))
+                tally.platform[item.platform] = (tally.platform[item.platform] ?? 0) + 1
+            if (failing === 0 || (failing === 1 && !okGame))
+                tally.game[item.gameId] = (tally.game[item.gameId] ?? 0) + 1
+            if (failing === 0 || (failing === 1 && !okMonth))
+                tally.month[item.month] = (tally.month[item.month] ?? 0) + 1
+        }
+        counts = tally
+        shown = out
         relayout()
+    }
+
+    function selection(section: string): var {
+        return section === "type" ? typeSel : section === "platform" ? platformSel : section === "game" ? gameSel : monthSel
+    }
+
+    function setSelection(section: string, value: var) {
+        if (section === "type")
+            typeSel = value
+        else if (section === "platform")
+            platformSel = value
+        else if (section === "game")
+            gameSel = value
+        else
+            monthSel = value
+        applyFilters()
+    }
+
+    function toggle(section: string, key: string) {
+        const next = Object.assign({}, selection(section))
+        if (next[key])
+            delete next[key]
+        else
+            next[key] = true
+        setSelection(section, next)
+    }
+
+    function toggleYear(year: var) {
+        const next = Object.assign({}, monthSel)
+        const every = year.months.every(m => next[m.key])
+        for (const m of year.months) {
+            if (every)
+                delete next[m.key]
+            else
+                next[m.key] = true
+        }
+        setSelection("month", next)
+    }
+
+    function clear(section: string) {
+        setSelection(section, ({}))
+    }
+
+    function clearAll() {
+        typeSel = ({})
+        platformSel = ({})
+        gameSel = ({})
+        monthSel = ({})
+        applyFilters()
     }
 
     function monthKey(item: var): string {
@@ -241,7 +384,21 @@ FocusScope {
     }
 
     function openForScreenshot() {
-        const [what, at] = autoOpen.split("/")
+        let what = ""
+        let at
+        for (const token of autoOpen.split(";")) {
+            if (token.startsWith("filter:")) {
+                const [section, keys] = token.slice(7).split("=")
+                const next = {}
+                for (const key of keys.split(","))
+                    next[key] = true
+                setSelection(section, next)
+            } else if (token === "panel") {
+                panelOpen = true
+            } else {
+                [what, at] = token.split("/")
+            }
+        }
         autoOpen = ""
         if (what === "viewer")
             open(at === undefined ? 0 : parseInt(at))
@@ -260,12 +417,25 @@ FocusScope {
     onGroupingChanged: if (all.length > 0) relayout()
     onNewestFirstChanged: if (all.length > 0) rebuild()
 
-    Keys.onEscapePressed: root.closeRequested()
-    Keys.onLeftPressed: root.focusMove(root.focusIndex - 1)
-    Keys.onRightPressed: root.focusMove(root.focusIndex + 1)
-    Keys.onUpPressed: root.focusRow(-1)
-    Keys.onDownPressed: root.focusRow(1)
+    // The sidebar's search field and entries keep their own keys.
+    readonly property bool gridKeys: !filters.activeFocus
+
+    Keys.onEscapePressed: {
+        if (panelOpen) {
+            panelOpen = false
+            forceActiveFocus()
+        } else {
+            root.closeRequested()
+        }
+    }
+    Keys.onLeftPressed: event => { if (event.accepted = root.gridKeys) root.focusMove(root.focusIndex - 1) }
+    Keys.onRightPressed: event => { if (event.accepted = root.gridKeys) root.focusMove(root.focusIndex + 1) }
+    Keys.onUpPressed: event => { if (event.accepted = root.gridKeys) root.focusRow(-1) }
+    Keys.onDownPressed: event => { if (event.accepted = root.gridKeys) root.focusRow(1) }
+    onCompactChanged: if (!compact) panelOpen = false
     Keys.onPressed: event => {
+        if (!root.gridKeys)
+            return
         if (event.key === Qt.Key_Home)
             root.focusMove(0)
         else if (event.key === Qt.Key_End)
@@ -322,7 +492,7 @@ FocusScope {
 
         RowLayout {
             id: header
-            x: root.sideMargin
+            x: root.gridX
             width: root.gridWidth
             spacing: 2 * Theme.layout.spacing
 
@@ -355,6 +525,29 @@ FocusScope {
             }
             Item { Layout.fillWidth: true }
 
+            ChromeButton {
+                id: filtersButton
+                visible: root.compact
+                icon: Icons.filter
+                label: qsTr("Filters")
+                onClicked: {
+                    root.panelOpen = !root.panelOpen
+                    if (root.panelOpen)
+                        filters.forceActiveFocus()
+                    else
+                        root.forceActiveFocus()
+                }
+
+                Rectangle {
+                    visible: root.filtersActive
+                    x: parent.width - width * 0.75
+                    y: -height * 0.25
+                    width: Theme.gallery.filterDotSize
+                    height: width
+                    radius: width / 2
+                    color: Theme.gallery.filterDotColor
+                }
+            }
             ChromeButton {
                 id: groupButton
                 icon: Icons.layoutMasonryLine
@@ -448,7 +641,7 @@ FocusScope {
 
         ListView {
             id: list
-            x: root.sideMargin
+            x: root.gridX
             y: header.height + Theme.layout.spacing
             width: root.gridWidth
             height: parent.height - y
@@ -497,6 +690,7 @@ FocusScope {
                             focusRing: root.keyboardFocus && root.activeFocus && root.focusIndex === cell.modelData.n
                             onClicked: {
                                 root.keyboardFocus = false
+                                root.forceActiveFocus()
                                 root.open(cell.modelData.n)
                             }
                             onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
@@ -529,12 +723,58 @@ FocusScope {
             info: header >= 0 ? root.groupInfo[root.rows[header].key] : null
         }
 
-        Label {
+        ColumnLayout {
             anchors.centerIn: list
             visible: !root.loading && root.shown.length === 0
-            text: qsTr("No clips or screenshots found")
-            color: Theme.gallery.countColor
-            font.pixelSize: Theme.font.size
+            width: Math.min(list.width - 2 * Theme.layout.margin, 420)
+            spacing: Theme.layout.spacing * 1.5
+
+            Label {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: root.all.length === 0 ? qsTr("No clips or screenshots found") : qsTr("Nothing matches these filters")
+                color: Theme.gallery.countColor
+                font.pixelSize: Theme.font.size
+            }
+            Label {
+                visible: root.all.length === 0
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: qsTr("Lattis looks for Steam's clips and screenshots, and in the screenshot folders of the emulators it knows, for the games in your library.")
+                color: Theme.gallery.countColor
+            }
+            SettingsButton {
+                visible: root.all.length > 0
+                Layout.alignment: Qt.AlignHCenter
+                text: qsTr("Clear all filters")
+                onClicked: root.clearAll()
+            }
+        }
+
+        // Closes the panel of a narrow window when the grid is clicked.
+        MouseArea {
+            anchors.fill: list
+            z: 4
+            enabled: root.panelOpen
+            onClicked: {
+                root.panelOpen = false
+                root.forceActiveFocus()
+            }
+        }
+
+        GalleryFilters {
+            id: filters
+            page: root
+            panel: root.compact
+            visible: root.hasSidebar && (!root.compact || opacity > 0)
+            opacity: !root.compact || root.panelOpen ? 1 : 0
+            z: 5
+            x: root.sideMargin
+            y: root.compact ? list.y : 0
+            width: root.sidebarWidth
+            height: parent.height - y - Theme.layout.margin
+            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
         }
     }
 

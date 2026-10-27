@@ -154,6 +154,7 @@ qt_add_qml_module(lattis
         qml/views/ForceClosePrompt.qml
         qml/views/PlayHistoryPopup.qml
         qml/views/StatsPage.qml
+        qml/views/GalleryFilters.qml
         qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml
         qml/views/SteamUninstallPrompt.qml

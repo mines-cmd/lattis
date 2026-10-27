@@ -104,7 +104,7 @@ ApplicationWindow {
         }
     }
 
-    // "1" opens the page; "viewer" or "viewer/<n>" also opens the n-th item (the first), "menu" the first tile's menu.
+    // "1" opens the page; "viewer" or "viewer/<n>" also opens the n-th item (the first), "menu" the first tile's menu; ";"-joined "filter:<section>=<keys>" and "panel" set filters and open the narrow window's panel.
     function galleryForScreenshot(spec) {
         setGalleryOpen(true)
         galleryPage.item.autoOpen = spec
