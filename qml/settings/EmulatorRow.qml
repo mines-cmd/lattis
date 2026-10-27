@@ -492,6 +492,63 @@ ColumnLayout {
             }
         }
 
+        Section {
+            visible: root.own || root.emulator.found
+            title: qsTr("Screenshot folders")
+            note: qsTr("The game page shows the screenshots it saved here.")
+            actions: RowLayout {
+                spacing: Theme.controls.controlSpacing
+
+                ListAction {
+                    visible: !root.own && root.emulator.custom.includes("screenshot_folders")
+                    iconPath: Icons.undo
+                    text: qsTr("Reset")
+                    tip: qsTr("Back to the built-in folders")
+                    onClicked: root.save("screenshot_folders", undefined)
+                }
+                ListAction {
+                    text: qsTr("Add folder")
+                    onClicked: screenshotFolderDialog.active = true
+                }
+            }
+
+            Repeater {
+                model: root.emulator.screenshotFolders
+
+                ListRow {
+                    id: folderItem
+                    required property string modelData
+                    required property int index
+                    last: index === root.emulator.screenshotFolders.length - 1
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: folderItem.modelData === "{romdir}" ? qsTr("Next to each game's ROM") : folderItem.modelData
+                        color: Theme.controls.labelColor
+                        elide: Text.ElideMiddle
+                    }
+                    ListButton {
+                        iconPath: Icons.close
+                        tip: qsTr("Stop looking here")
+                        onClicked: root.save("screenshot_folders",
+                                             root.emulator.screenshotFolders.filter(f => f !== folderItem.modelData))
+                    }
+                }
+            }
+            ListRow {
+                visible: root.emulator.screenshotFolders.length === 0
+                last: true
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("None: add the folder it saves screenshots in.")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
         Label {
             visible: root.error !== ""
             Layout.fillWidth: true
@@ -565,6 +622,18 @@ ColumnLayout {
                 tip: qsTr("Platforms stop using it; games pinned to it use their platform's emulators")
                 onClicked: removeDialog.active = true
             }
+        }
+    }
+
+    Loader {
+        id: screenshotFolderDialog
+        active: false
+        sourceComponent: RomFolderDialog {
+            onPicked: path => {
+                if (!root.emulator.screenshotFolders.includes(path))
+                    root.save("screenshot_folders", root.emulator.screenshotFolders.concat([path]))
+            }
+            onClosed: screenshotFolderDialog.active = false
         }
     }
 

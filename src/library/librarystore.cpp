@@ -1403,6 +1403,9 @@ QString LibraryStore::setEmulatorValue(const QString &id, const QString &key, co
     // The key stays for a user emulator: without extensions or files it would be skipped as a typo.
     if (!isPreset && formatted.isEmpty() && key == QLatin1String("extensions") && value.isValid())
         formatted = QStringLiteral("[]");
+    // An empty list means no folders at all, not the built-in ones.
+    if (formatted.isEmpty() && key == QLatin1String("screenshot_folders") && value.isValid())
+        formatted = QStringLiteral("[]");
     if (!isPreset && formatted.isEmpty() && (key == QLatin1String("name") || key == QLatin1String("command")))
         return key == QLatin1String("name") ? tr("An emulator needs a name")
                                             : tr("The command needs {exe}, where the program goes");

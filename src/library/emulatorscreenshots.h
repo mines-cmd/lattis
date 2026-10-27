@@ -29,6 +29,10 @@ QString idOf(const RomInfo &info);
 // The time in a file name (several stamp layouts); invalid when it has none.
 QDateTime timeInName(const QString &fileName);
 
+// The folders it looks in for this install: screenshot_folders when set, else where the screenshots patterns start.
+// "{romdir}" stands for the ROM's folder.
+QStringList folders(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home);
+
 QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, const Game &game, const RomInfo &info,
                  const QList<PlayHistory::Session> &sessions, const QString &home);
 }

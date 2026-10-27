@@ -28,6 +28,9 @@ private slots:
     void noMatches();
     void noScreenshotsKey();
     void newestFirst();
+    void ownFolders();
+    void ownFoldersWithoutPatterns();
+    void builtInFolders();
     void timeInName_data();
     void timeInName();
     void idOfPrefersSerial();
@@ -272,6 +275,46 @@ void EmulatorScreenshotsTest::newestFirst()
     info.serial = QStringLiteral("GALE01");
     const auto shots = list(QStringLiteral("dolphin"), game(QStringLiteral("g"), QStringLiteral("Melee")), info);
     QCOMPARE(names(shots), (QStringList{"b.png", "a.png"}));
+}
+
+void EmulatorScreenshotsTest::ownFolders()
+{
+    touch("elsewhere/GALE01/GALE01_2024-05-01_10-00-00.png");
+    touch(".local/share/dolphin-emu/ScreenShots/GALE01/GALE01_2024-05-02_10-00-00.png");
+    EmulatorDef dolphin = emulator(QStringLiteral("dolphin"));
+    dolphin.screenshotFolders = {QStringLiteral("~/elsewhere")};
+    dolphin.screenshotFoldersSet = true;
+    RomInfo info;
+    info.serial = QStringLiteral("GALE01");
+    const Game g = game(QStringLiteral("g"), QStringLiteral("Melee"));
+    QCOMPARE(names(EmulatorScreenshots::list(dolphin, install(), g, info, {}, m_dir->path())),
+             (QStringList{"GALE01_2024-05-01_10-00-00.png"}));
+    dolphin.screenshotFolders.clear();
+    QVERIFY(EmulatorScreenshots::list(dolphin, install(), g, info, {}, m_dir->path()).isEmpty());
+}
+
+void EmulatorScreenshotsTest::ownFoldersWithoutPatterns()
+{
+    touch("shots/a_2024-05-01_10-30-00.png");
+    touch("shots/b_2024-05-01_12-30-00.png");
+    EmulatorDef melonds = emulator(QStringLiteral("melonds"));
+    melonds.screenshotFolders = {path(QStringLiteral("shots"))};
+    melonds.screenshotFoldersSet = true;
+    PlayHistory::Session session;
+    session.minutes = 60;
+    session.end = QDateTime(QDate(2024, 5, 1), QTime(11, 0, 0)).toUTC();
+    QCOMPARE(names(EmulatorScreenshots::list(melonds, install(), game(QStringLiteral("g"), QStringLiteral("Game")),
+                                             {}, {session}, m_dir->path())),
+             (QStringList{"a_2024-05-01_10-30-00.png"}));
+}
+
+void EmulatorScreenshotsTest::builtInFolders()
+{
+    QCOMPARE(EmulatorScreenshots::folders(emulator(QStringLiteral("dolphin")), install(), m_dir->path()),
+             (QStringList{path(QStringLiteral(".local/share/dolphin-emu/ScreenShots"))}));
+    QCOMPARE(EmulatorScreenshots::folders(emulator(QStringLiteral("mgba")), install(), m_dir->path()),
+             (QStringList{"{romdir}"}));
+    QVERIFY(EmulatorScreenshots::folders(emulator(QStringLiteral("melonds")), install(), m_dir->path()).isEmpty());
 }
 
 void EmulatorScreenshotsTest::timeInName_data()

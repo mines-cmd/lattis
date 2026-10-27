@@ -22,6 +22,8 @@ Lattis knows twelve emulators out of the box, among them Ryubing (Switch), Azaha
 
 **Arguments** added on an emulator's row go to every game it runs, like `--fullscreen`. A single game can have its own arguments too, in its Properties.
 
+**Screenshot folders** on an emulator's row are where its game pages look for the screenshots it took. The built-in emulators come with the folders they save in by default. If you changed the folder in the emulator's own settings, or keep screenshots somewhere else too, **Add folder** adds it, the cross removes one, and **Reset** goes back to the built-in ones. Lattis still matches each file to its game the same way, by the game's ID or title in the file name; for an emulator that names its screenshots only by time (or one you added yourself), a screenshot shows on the page of the game you were playing from Lattis when it was taken.
+
 ### Installing an emulator
 
 A built-in emulator that isn't found says "Not found" on its row, which is normal on a fresh system. Open the row to install it: the card offers one tile for each way to install it, with **Install AppImage** and **Install Flatpak** buttons. The AppImage is the project's build from its release page, put in `~/Applications` (or `~/AppImages` if that's the one you have).  It also gets an entry in your applications menu, like Gear Lever makes, and Uninstall removes it. Dolphin publishes no AppImage of its own, so its AppImage is a community build (pkgforge-dev's), tagged **Unofficial**, and the Flatpak is the recommended one. Ryubing has no download source left for its AppImage, so only its Flatpak is offered. Without Flatpak on your system only the AppImage is offered. If you already have the emulator somewhere else, choose its program under "Already have it somewhere else?".
@@ -61,7 +63,7 @@ Its row, under **Yours**, sets:
 - **ROM extensions**: the files in ROM folders that are its games, like `3ds cci cxi`.
 - **Program**, with **Browse**, or its **Flatpak app id**, like `org.citra_emu.citra`.
 - **Command**: how it's started. `{exe}` is the program, `{args}` the arguments, `{rom}` the game's file. Most emulators take `{exe} {args} {rom}`, the default.
-- **Arguments**, as for the built-in ones.
+- **Arguments** and **Screenshot folders**, as for the built-in ones.
 
 **Remove emulator** takes it off every platform. Games pinned to it use their platform's emulators instead, and get their pin back if you add the emulator again under the same name.
 

@@ -57,6 +57,9 @@ constexpr Field kFields[] = {
                                "extension, and {romdir} (at the start) the ROM's folder. A pattern with none of them "
                                "matches the whole folder: only screenshots taken during a play session started from "
                                "the launcher show. The game page shows them"},
+    {"screenshot_folders", StringList, "Folders to look for screenshots in instead of the ones in screenshots, absolute "
+                                       "or ~/…; each gets the file names screenshots describes (any image when it "
+                                       "has none). [] looks nowhere"},
 };
 }
 
@@ -365,6 +368,8 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.keys = pathTable(v.value(QStringLiteral("keys")));
     def.savesBesideRom = v.value(QStringLiteral("saves_beside_rom")).toStringList();
     def.screenshots = pathTable(v.value(QStringLiteral("screenshots")));
+    def.screenshotFolders = v.value(QStringLiteral("screenshot_folders")).toStringList();
+    def.screenshotFoldersSet = v.contains(QStringLiteral("screenshot_folders"));
     return def;
 }
 
@@ -430,6 +435,7 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("keys")) return def.keys.isEmpty() ? QString() : table(def.keys);
     if (key == QLatin1String("saves_beside_rom")) return def.savesBesideRom.isEmpty() ? QString() : list(def.savesBesideRom);
     if (key == QLatin1String("screenshots")) return def.screenshots.isEmpty() ? QString() : table(def.screenshots);
+    if (key == QLatin1String("screenshot_folders")) return def.screenshotFoldersSet ? list(def.screenshotFolders) : QString();
     return {};
 }
 

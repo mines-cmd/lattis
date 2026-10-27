@@ -137,6 +137,62 @@ bool isImage(const QString &path)
     return kExtensions.contains(QFileInfo(path).suffix().toLower());
 }
 
+// A pattern's folder (the components before the first token or wildcard) and the rest.
+std::pair<QString, QString> splitPattern(const QString &pattern)
+{
+    const bool besideRom = pattern.startsWith(kRomDir);
+    const QStringList components = pattern.mid(besideRom ? kRomDir.size() : 0).split(u'/', Qt::SkipEmptyParts);
+    qsizetype i = 0;
+    while (i < components.size() - 1 && !hasWildcard(components.at(i)) && !components.at(i).contains(u'{'))
+        ++i;
+    QString folder = besideRom ? kRomDir.chopped(1) : QString();
+    if (i > 0 || !besideRom)
+        folder += u'/' + components.mid(0, i).join(u'/');
+    return {folder, components.mid(i).join(u'/')};
+}
+
+QStringList builtInPatterns(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home)
+{
+    QStringList patterns;
+    QMap<QString, QStringList> others;
+    const QString type = install.found() ? install.installType() : QStringLiteral("native");
+    for (const QString &p : emulator.screenshots.value(type)) {
+        if (p.startsWith(kRomDir))
+            patterns.append(p);
+        else
+            others[type].append(p);
+    }
+    if (install.found()) {
+        patterns.append(Emulators::installPaths(others, install, home));
+    } else {
+        for (const QString &p : others.value(type))
+            patterns.append(Emulators::expandHome(p, home));
+    }
+    return patterns;
+}
+
+QStringList searchPatterns(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home)
+{
+    const QStringList builtIn = builtInPatterns(emulator, install, home);
+    if (!emulator.screenshotFoldersSet)
+        return builtIn;
+    QStringList names;
+    for (const QString &p : builtIn) {
+        const QString rest = splitPattern(p).second;
+        if (!names.contains(rest))
+            names.append(rest);
+    }
+    if (names.isEmpty())
+        names.append(QStringLiteral("*"));
+    QStringList out;
+    for (const QString &folder : emulator.screenshotFolders) {
+        const QString base = folder.startsWith(kRomDir.chopped(1)) ? folder : Emulators::expandHome(folder, home);
+        for (const QString &name : std::as_const(names))
+            out.append(QDir::cleanPath(base) + u'/' + name);
+    }
+    return out;
+}
+
 bool during(const QDateTime &time, const QList<PlayHistory::Session> &sessions)
 {
     // Stamps count whole seconds and a session's length whole minutes.
@@ -179,22 +235,25 @@ QDateTime timeInName(const QString &fileName)
     return date.isValid() && time.isValid() ? QDateTime(date, time) : QDateTime();
 }
 
+QStringList folders(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home)
+{
+    if (emulator.screenshotFoldersSet)
+        return emulator.screenshotFolders;
+    QStringList out;
+    for (const QString &p : builtInPatterns(emulator, install, home)) {
+        const QString folder = splitPattern(p).first;
+        if (!out.contains(folder))
+            out.append(folder);
+    }
+    return out;
+}
+
 QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, const Game &game, const RomInfo &info,
                  const QList<PlayHistory::Session> &sessions, const QString &home)
 {
-    if (emulator.screenshots.isEmpty())
+    const QStringList patterns = searchPatterns(emulator, install, home);
+    if (patterns.isEmpty())
         return {};
-
-    QStringList patterns;
-    QMap<QString, QStringList> others;
-    const QString type = install.installType();
-    for (const QString &p : emulator.screenshots.value(type)) {
-        if (p.startsWith(kRomDir))
-            patterns.append(p);
-        else
-            others[type].append(p);
-    }
-    patterns.append(Emulators::installPaths(others, install, home));
 
     Tokens tokens;
     tokens.id = idOf(info);
