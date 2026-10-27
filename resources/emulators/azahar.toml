@@ -19,5 +19,5 @@ extensions = ["3ds", "cci", "cxi", "3dsx", "app", "elf"]
 # CIAs), states/ the save states; sysdata/ the keys and nand/ the system's files.
 saves = { native = ["~/.local/share/azahar-emu/sdmc", "~/.local/share/azahar-emu/states"], flatpak = ["~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sdmc", "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/states"] }
 keys = { native = ["~/.local/share/azahar-emu/sysdata", "~/.local/share/azahar-emu/nand"], flatpak = ["~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/sysdata", "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/nand"] }
-# <Title>_<stamp>.png in the user data folder (the title without / \ : * ? " < > |); the folder can be changed in its settings.
-screenshots = { native = "~/.local/share/azahar-emu/screenshots/{title}_[0-9]*.png", flatpak = "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/screenshots/{title}_[0-9]*.png" }
+# <Title>_<stamp>.png in the user data folder (the title without / \ : * ? " < > |); the folder can be changed in its settings; a setup moved over from Citra keeps ~/.local/share/citra-emu/screenshots (seen 2026-10-27).
+screenshots = { native = ["~/.local/share/azahar-emu/screenshots/{title}_[0-9]*.png", "~/.local/share/citra-emu/screenshots/{title}_[0-9]*.png"], flatpak = "~/.var/app/org.azahar_emu.Azahar/data/azahar-emu/screenshots/{title}_[0-9]*.png" }
