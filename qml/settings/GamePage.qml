@@ -89,6 +89,7 @@ Item {
         folder: { icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
         save_folder: { icon: Icons.save2Fill, hint: qsTr("Hidden when the game has none") },
         settings: { icon: Icons.gear, hint: qsTr("Edit the game") },
+        gallery: { icon: Icons.image, hint: qsTr("Open the Gallery on this game") },
         menu: { icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }
     })
 

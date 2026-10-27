@@ -92,7 +92,8 @@ const QStringList &gamePageChoices(const QString &place)
     static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update")};
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
-                                        QStringLiteral("save_folder"), QStringLiteral("menu")};
+                                        QStringLiteral("save_folder"), QStringLiteral("gallery"),
+                                        QStringLiteral("menu")};
     if (place == GamePage::chips)
         return chips;
     return place == GamePage::buttons ? buttons : fields();

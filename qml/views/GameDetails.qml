@@ -502,6 +502,12 @@ Item {
                              Actions.keys.game_settings),
             badge: game.pendingSteamEdits ?? false
         },
+        gallery: {
+            icon: Icons.image,
+            color: Theme.iconButton.icon,
+            tip: Actions.tip(qsTr("Show in Gallery"), Actions.keys.gallery),
+            badge: false
+        },
         menu: {
             icon: Icons.more,
             color: Theme.iconButton.icon,
@@ -613,6 +619,10 @@ Item {
         }
         if (button === "settings") {
             editRequested()
+            return
+        }
+        if (button === "gallery") {
+            galleryRequested(g.id)
             return
         }
         if (button === "folder")

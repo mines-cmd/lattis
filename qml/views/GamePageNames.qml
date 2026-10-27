@@ -28,6 +28,7 @@ QtObject {
         folder: qsTr("Open folder"),
         save_folder: qsTr("Save folder"),
         settings: qsTr("Properties"),
+        gallery: qsTr("Gallery"),
         menu: qsTr("Menu")
     })
 
