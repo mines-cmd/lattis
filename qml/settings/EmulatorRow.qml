@@ -85,9 +85,10 @@ ColumnLayout {
         // Corners against the card's follow its curve, so the gap around them is even.
         topLeftRadius: root.firstInCard ? root.cardCornerRadius : radius
         topRightRadius: topLeftRadius
-        bottomLeftRadius: root.lastInCard && details.progress === 0 ? root.cardCornerRadius : radius
+        bottomLeftRadius: details.progress > 0 ? 0 : root.lastInCard ? root.cardCornerRadius : radius
         bottomRightRadius: bottomLeftRadius
-        color: headerHover.hovered || header.activeFocus ? Theme.controls.hover : "transparent"
+        readonly property bool lit: headerHover.hovered || header.activeFocus
+        color: lit && details.progress === 0 ? Theme.controls.hover : "transparent"
         activeFocusOnTab: true
 
         Keys.onReturnPressed: root.toggleRequested()
@@ -96,6 +97,71 @@ ColumnLayout {
 
         HoverHandler { id: headerHover; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: { header.forceActiveFocus(); root.toggleRequested() } }
+
+        // Behind the header (z below its parent) and the details, which are its later sibling. It
+        // fills the panel up to its outline, which then serves as the card's sides: the outline is
+        // translucent, and a second one drawn over it shows brighter.
+        Rectangle {
+            id: openCard
+            readonly property real reach: Theme.settingsWindow.cardPadding - Theme.settingsWindow.cardBorderWidth
+            readonly property real cornerRadius: Math.max(0, Theme.settingsWindow.cardRadius - Theme.settingsWindow.cardBorderWidth)
+            z: -1
+            visible: details.progress > 0
+            opacity: details.progress
+            x: -reach
+            y: root.firstInCard ? -reach : 0
+            width: header.width + 2 * reach
+            height: root.height + (root.firstInCard ? reach : 0) + (root.lastInCard ? reach : 0)
+            topLeftRadius: root.firstInCard ? cornerRadius : 0
+            topRightRadius: topLeftRadius
+            bottomLeftRadius: root.lastInCard ? cornerRadius : 0
+            bottomRightRadius: bottomLeftRadius
+            color: Theme.settingsWindow.openRowHeaderBackground
+        }
+        Rectangle {
+            z: -1
+            visible: details.progress > 0
+            opacity: details.progress
+            x: openCard.x
+            y: header.height
+            width: openCard.width
+            height: Math.max(0, openCard.y + openCard.height - header.height)
+            bottomLeftRadius: openCard.bottomLeftRadius
+            bottomRightRadius: bottomLeftRadius
+            color: Qt.darker(Theme.settingsWindow.openRowBackground, Theme.settingsWindow.openRowDarkness)
+        }
+        Rectangle {
+            id: openHover
+            z: -1
+            visible: header.lit && details.progress > 0
+            x: openCard.x
+            y: openCard.y
+            width: openCard.width
+            height: header.height - y
+            topLeftRadius: openCard.topLeftRadius
+            topRightRadius: topLeftRadius
+            color: Theme.controls.hover
+        }
+        Repeater {
+            // Top edge, the line under the header, bottom edge; the panel's outline is the edge for
+            // the first and last rows.
+            model: [root.firstInCard ? -1 : 0,
+                    header.height - Theme.settingsWindow.openRowBorderWidth,
+                    root.lastInCard ? -1 : root.height - Theme.settingsWindow.openRowBorderWidth]
+
+            Rectangle {
+                required property real modelData
+                visible: details.progress > 0 && modelData >= 0
+                opacity: details.progress
+                x: openCard.x
+                y: modelData
+                width: openCard.width
+                height: Theme.settingsWindow.openRowBorderWidth
+                // The panel's outline is drawn over the window, not its own fill, so a translucent
+                // line over the card would come out a different shade than the outline it meets.
+                color: Qt.tint(Theme.settingsWindow.background, Theme.settingsWindow.openRowBorder)
+            }
+        }
 
         RowLayout {
             id: headerRow
@@ -369,15 +435,16 @@ ColumnLayout {
         }
 
         GridLayout {
+            id: commandGrid
             Layout.fillWidth: true
-            columns: root.own && width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
+            columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
             columnSpacing: Theme.settingsWindow.rowPadding * 2
             rowSpacing: Theme.settingsWindow.rowPadding * 1.5
 
             ColumnLayout {
                 visible: root.own
                 Layout.fillWidth: true
-                Layout.preferredWidth: 1
+                Layout.columnSpan: commandGrid.columns
                 Layout.alignment: Qt.AlignTop
                 spacing: 6
 
@@ -458,36 +525,38 @@ ColumnLayout {
                     wrapMode: Text.WordWrap
                 }
             }
-        }
 
-        ColumnLayout {
-            visible: root.own || root.emulator.found
-            Layout.fillWidth: true
-            spacing: 6
-
-            SectionTitle { text: qsTr("Runs") }
-            Rectangle {
+            ColumnLayout {
+                visible: root.own || root.emulator.found
                 Layout.fillWidth: true
-                implicitHeight: runsText.implicitHeight + 12
-                radius: Theme.controls.inputRadius
-                color: Theme.controls.inputBackground
-                border.color: Theme.controls.inputBorder
-                border.width: Theme.controls.inputBorderWidth
+                Layout.preferredWidth: 1
+                Layout.alignment: Qt.AlignTop
+                spacing: 6
 
-                TextEdit {
-                    id: runsText
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.margins: 8
-                    text: root.emulator.command
-                    readOnly: true
-                    selectByMouse: true
-                    wrapMode: TextEdit.WrapAnywhere
-                    color: Theme.controls.descriptionColor
-                    selectionColor: Theme.controls.inputBorderFocus
-                    font.family: Theme.font.monoFamily
-                    font.pixelSize: Theme.controls.descriptionFontSize
+                SectionTitle { text: qsTr("Runs") }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: Math.max(Theme.controls.inputHeight, runsText.implicitHeight + 12)
+                    radius: Theme.controls.inputRadius
+                    color: Theme.controls.inputBackground
+                    border.color: Theme.controls.inputBorder
+                    border.width: Theme.controls.inputBorderWidth
+
+                    TextEdit {
+                        id: runsText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.margins: 8
+                        text: root.emulator.command
+                        readOnly: true
+                        selectByMouse: true
+                        wrapMode: TextEdit.WrapAnywhere
+                        color: Theme.controls.descriptionColor
+                        selectionColor: Theme.controls.inputBorderFocus
+                        font.family: Theme.font.monoFamily
+                        font.pixelSize: Theme.controls.descriptionFontSize
+                    }
                 }
             }
         }
@@ -529,6 +598,7 @@ ColumnLayout {
                     }
                     ListButton {
                         iconPath: Icons.close
+                        textColor: hovered ? foreground : Theme.controls.descriptionColor
                         tip: qsTr("Stop looking here")
                         onClicked: root.save("screenshot_folders",
                                              root.emulator.screenshotFolders.filter(f => f !== folderItem.modelData))
