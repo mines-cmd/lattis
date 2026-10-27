@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Effects
 
 // See docs/code/qml.md.
 Surface {
@@ -28,6 +29,17 @@ Surface {
     border.width: Theme.downloadBar.borderWidth
 
     property real rowFromBottom: Theme.downloadBar.pillHeight / 2
+
+    // Under the bar at rest, where the bar draws its own shadow.
+    RectangularShadow {
+        z: -1
+        visible: root.slide > 0 && Theme.downloadBar.shadowSize > 0
+        anchors.fill: parent
+        offset.y: Theme.downloadBar.shadowSize / 6
+        radius: root.radius
+        blur: Theme.downloadBar.shadowSize
+        color: Theme.downloadBar.shadowColor
+    }
 
     // From the morph: 0 bar .. 1 pill, the bar's width at rest, and how far below the percent row the
     // bar's icon sits.

@@ -1260,7 +1260,7 @@ Item {
         z: 1
 
         readonly property real pillWidth: downloadPill.item ? downloadPill.item.implicitWidth : 0
-        readonly property real morphWidth: content.width + (pillWidth - content.width) * root.slide
+        readonly property real morphWidth: content.width + Theme.downloadBar.overhang * (1 - root.slide) + (pillWidth - content.width) * root.slide
         readonly property real morphHeight: Theme.downloadBar.height + (Theme.downloadBar.pillHeight - Theme.downloadBar.height) * root.slide
 
         readonly property real rowShift: downloadBar.item

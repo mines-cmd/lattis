@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Effects
 
 // See docs/code/qml.md.
 Surface {
@@ -35,6 +36,16 @@ Surface {
     direction: Theme.downloadBar.gradientDirection
     border.color: Theme.downloadBar.border
     border.width: morphing ? 0 : Theme.downloadBar.borderWidth
+
+    RectangularShadow {
+        z: -1
+        visible: !root.morphing && Theme.downloadBar.shadowSize > 0
+        anchors.fill: parent
+        offset.y: Theme.downloadBar.shadowSize / 6
+        radius: root.radius
+        blur: Theme.downloadBar.shadowSize
+        color: Theme.downloadBar.shadowColor
+    }
 
     // Laid out at the bar's full height whatever the size of the card, placed so the percent and chevron
     // row sits `rowFromBottom` above the card's bottom edge.
