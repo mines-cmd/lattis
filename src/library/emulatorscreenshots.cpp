@@ -22,6 +22,25 @@ QString stripped(const QString &title)
     return out.simplified();
 }
 
+// The library's title and the emulator's can differ in punctuation ("Bros Ultimate" vs "Bros. Ultimate"), so only
+// the letters and digits have to match.
+QString looseTitle(const QString &title)
+{
+    QString out;
+    bool gap = false;
+    for (const QChar c : title) {
+        if (c.isLetterOrNumber()) {
+            if (gap && !out.isEmpty())
+                out += QStringLiteral("[^\\p{L}\\p{N}]*");
+            gap = false;
+            out += QRegularExpression::escape(QString(c));
+        } else {
+            gap = true;
+        }
+    }
+    return out;
+}
+
 struct Tokens
 {
     QString id;
@@ -43,7 +62,7 @@ QRegularExpression componentRegex(const QString &component, const Tokens &tokens
                                     : name == QLatin1String("title")  ? title
                                     : name == QLatin1String("rom")    ? tokens.rom
                                                                       : QString();
-                re += QRegularExpression::escape(value);
+                re += name == QLatin1String("title") ? looseTitle(value) : QRegularExpression::escape(value);
                 i = end;
                 continue;
             }

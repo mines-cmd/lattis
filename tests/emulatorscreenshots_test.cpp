@@ -18,6 +18,7 @@ private slots:
     void idPrefixJpgAndPng();
     void titlePrefixWithStrippedCharacters();
     void titlePrefixDoesNotTakeALongerTitle();
+    void titleIgnoresPunctuation();
     void romTitleThenLibraryTitle();
     void duckStationLayouts();
     void pcsx2Layouts();
@@ -161,6 +162,14 @@ void EmulatorScreenshotsTest::titlePrefixDoesNotTakeALongerTitle()
     info.title = QStringLiteral("mario");
     const auto shots = list(QStringLiteral("azahar"), game(QStringLiteral("g"), QStringLiteral("Mario")), info);
     QCOMPARE(names(shots), (QStringList{"Mario_20240501_100000.png"}));
+}
+
+void EmulatorScreenshotsTest::titleIgnoresPunctuation()
+{
+    touch(".local/share/azahar-emu/screenshots/Super Smash Bros. Ultimate_20240501_100000.png");
+    touch(".local/share/azahar-emu/screenshots/Super Smash Bros Melee_20240501_100000.png");
+    const auto shots = list(QStringLiteral("azahar"), game(QStringLiteral("g"), QStringLiteral("Super Smash Bros Ultimate")), {});
+    QCOMPARE(names(shots), (QStringList{"Super Smash Bros. Ultimate_20240501_100000.png"}));
 }
 
 void EmulatorScreenshotsTest::romTitleThenLibraryTitle()
