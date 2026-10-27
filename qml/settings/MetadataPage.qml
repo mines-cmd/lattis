@@ -286,7 +286,6 @@ Item {
                             Layout.alignment: Qt.AlignTop
                             text: qsTr("Look up missing info")
                             tip: Actions.tip(qsTr("Choose games to look up, then review what was found"), Actions.keys.look_up_missing)
-                            enabled: missing.missingCount > 0
                             onClicked: root.lookUpMissing()
                         }
                     }

@@ -66,7 +66,6 @@ SettingsMenu {
     Entry {
         actionName: "look_up_missing"
         iconPath: Icons.searchEyeLine
-        enabled: missing.missingCount > 0
         text: missing.missingCount > 0 ? qsTr("Look up missing info (%1)").arg(missing.missingCount)
                                        : qsTr("Look up missing info")
     }
