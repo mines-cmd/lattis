@@ -4,6 +4,11 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: root
 
+    property color fieldBackground: Theme.controls.inputBackground
+    property color hoverBackground: Theme.controls.buttonHoverBackground
+    property color textColor: Theme.controls.inputText
+    property color iconColor: Theme.controls.iconColor
+
     implicitHeight: Theme.controls.inputHeight
     leftPadding: 12
     rightPadding: Theme.controls.iconSize + 20
@@ -13,7 +18,7 @@ ComboBox {
 
     contentItem: Label {
         text: root.displayText
-        color: Theme.controls.inputText
+        color: root.textColor
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }
@@ -23,7 +28,7 @@ ComboBox {
         y: (root.height - height) / 2
         path: Icons.chevron
         size: Theme.controls.iconSize
-        color: Theme.controls.iconColor
+        color: root.iconColor
         rotation: dropdown.showing ? -90 : 90
 
         Behavior on rotation { enabled: Motion.on; MotionNumber {} }
@@ -31,7 +36,7 @@ ComboBox {
 
     background: Rectangle {
         radius: Theme.controls.inputRadius
-        color: root.hovered ? Theme.controls.buttonHoverBackground : Theme.controls.inputBackground
+        color: root.hovered ? root.hoverBackground : root.fieldBackground
         border.color: root.visualFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
         border.width: root.visualFocus ? Theme.controls.inputBorderFocusWidth : Theme.controls.inputBorderWidth
 

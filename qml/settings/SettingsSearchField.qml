@@ -3,6 +3,8 @@ import QtQuick
 SettingsTextField {
     id: root
 
+    property color iconColor: Theme.controls.iconColor
+
     implicitHeight: Theme.settingsWindow.toolbarHeight
     leftPadding: Theme.controls.iconSize + 22
     rightPadding: text !== "" ? Theme.controls.iconSize + 22 : 12
@@ -13,7 +15,7 @@ SettingsTextField {
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.search
         size: Theme.controls.iconSize
-        color: Theme.controls.iconColor
+        color: root.iconColor
     }
 
     Icon {
@@ -24,7 +26,7 @@ SettingsTextField {
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.close
         size: Theme.controls.iconSize
-        color: clearMouse.containsMouse ? Theme.controls.inputText : Theme.controls.iconColor
+        color: clearMouse.containsMouse ? root.textColor : root.iconColor
 
         MouseArea {
             id: clearMouse

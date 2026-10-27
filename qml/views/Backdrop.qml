@@ -8,7 +8,7 @@ Item {
     property var game: ({})
     property int current: 0
 
-    readonly property color background: Theme.palette.background
+    property color background: Theme.palette.background
     readonly property real dim: 1 - Theme.backdrop.opacity
 
     clip: true
@@ -99,8 +99,10 @@ Item {
     // Dim the art, then fade it into the window background toward the bottom. With a "down"
     // or "up" gradient, fades to the gradient's color at the backdrop's bottom edge so the art
     // is covered and there's no seam; other directions keep the flat behavior.
+    property bool flat: false
+
     readonly property color fadeTarget: {
-        if (Qt.colorEqual(Theme.palette.background, Theme.palette.backgroundEnd))
+        if (flat || Qt.colorEqual(Theme.palette.background, Theme.palette.backgroundEnd))
             return root.background
         const direction = Theme.palette.gradientDirection
         if (direction !== "down" && direction !== "up")

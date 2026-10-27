@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Effects
 
 // See docs/code/qml.md.
 MotionPopup {
@@ -94,6 +95,33 @@ MotionPopup {
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
+            }
+
+            Item {
+                id: backdropClip
+                anchors.fill: parent
+                visible: Theme.backdrop.enabled
+                layer.enabled: visible
+                layer.effect: MultiEffect {
+                    maskEnabled: true
+                    maskSource: backdropMask
+                }
+
+                Backdrop {
+                    width: parent.width
+                    height: list.y + Theme.achievements.viewerPadding + list.height * 0.3
+                    flat: true
+                    background: Theme.achievements.viewerBackground
+                    game: root.game
+                }
+            }
+
+            Rectangle {
+                id: backdropMask
+                anchors.fill: parent
+                radius: card.radius
+                visible: false
+                layer.enabled: true
             }
 
             ColumnLayout {
@@ -207,11 +235,19 @@ MotionPopup {
                     SettingsSearchField {
                         Layout.fillWidth: true
                         Layout.preferredHeight: Theme.achievements.viewerFilterHeight
+                        fieldBackground: Theme.achievements.viewerFilterBackground
+                        textColor: Theme.achievements.viewerFilterText
+                        placeholderColor: Theme.achievements.viewerFilterPlaceholder
+                        iconColor: Theme.achievements.viewerFilterIcon
                         placeholderText: qsTr("Search achievements")
                         text: root.query
                         onTextChanged: root.query = text
                     }
                     SettingsComboBox {
+                        fieldBackground: Theme.achievements.viewerFilterBackground
+                        hoverBackground: Theme.achievements.viewerFilterHoverBackground
+                        textColor: Theme.achievements.viewerFilterText
+                        iconColor: Theme.achievements.viewerFilterIcon
                         Layout.preferredWidth: Theme.achievements.viewerFilterWidth
                         Layout.preferredHeight: Theme.achievements.viewerFilterHeight
                         model: [qsTr("All achievements"), qsTr("Unlocked achievements"), qsTr("Locked achievements")]
