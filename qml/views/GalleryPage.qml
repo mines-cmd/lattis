@@ -664,32 +664,110 @@ FocusScope {
                         }
                     }
                 }
-                RowLayout {
-                    spacing: Theme.layout.spacing
+                Surface {
+                    id: sizePill
+                    implicitHeight: Theme.gallery.buttonHeight
+                    implicitWidth: sizeRow.implicitWidth + 2 * sizeRow.inset
+                    radius: Theme.gallery.buttonRadius
+                    fill: Theme.iconButton.background
+                    fillEnd: Theme.iconButton.backgroundEnd
+                    direction: Theme.iconButton.gradientDirection
+                    border.color: Theme.iconButton.border
+                    border.width: Theme.iconButton.borderWidth
 
-                    Icon {
-                        path: Icons.image
-                        size: Theme.iconButton.iconSize - 4
-                        color: Theme.gallery.countColor
+                    function resize(width) {
+                        root.dragWidth = Math.round(Math.max(sizeSlider.from, Math.min(sizeSlider.to, width)))
+                        saveSize.restart()
                     }
-                    SettingsSlider {
-                        id: sizeSlider
-                        Layout.preferredWidth: 120
-                        fillColor: Theme.gallery.sliderFill
-                        from: Theme.gallery.tileMinWidth
-                        to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
-                        stepSize: 1
-                        value: root.tileTarget
-                        onMoved: {
-                            root.dragWidth = Math.round(value)
-                            saveSize.restart()
+
+                    // Inline components can't see the file's ids, hence the inset passed in.
+                    component SizeStep: Rectangle {
+                        id: step
+                        property bool plus
+                        property string tip
+                        property real inset
+                        signal clicked()
+                        implicitWidth: Theme.gallery.buttonHeight - 2 * inset
+                        implicitHeight: implicitWidth
+                        radius: Math.max(0, Theme.gallery.buttonRadius - inset)
+                        color: stepMouse.containsMouse ? Theme.iconButton.hoverBackground : "transparent"
+                        scale: stepMouse.pressed ? Theme.motion.pressScale : 1
+
+                        Behavior on color { enabled: Motion.fades; MotionColor {} }
+                        Behavior on scale { enabled: Motion.on; MotionNumber {} }
+
+                        // Bars rather than an Icon path: scaled to this size, the path's 2-unit bar
+                        // falls between pixel rows and blurs.
+                        Item {
+                            id: glyph
+                            readonly property int length: Math.round((Theme.iconButton.iconSize - 4) * 14 / 24)
+                            readonly property int thickness: Math.max(1, Math.round(length / 8))
+                            x: Math.round((step.width - length) / 2)
+                            y: Math.round((step.height - length) / 2)
+                            width: length
+                            height: length
+
+                            Rectangle {
+                                y: Math.round((glyph.length - glyph.thickness) / 2)
+                                width: glyph.length
+                                height: glyph.thickness
+                                color: Theme.iconButton.icon
+                            }
+                            Rectangle {
+                                visible: step.plus
+                                x: Math.round((glyph.length - glyph.thickness) / 2)
+                                width: glyph.thickness
+                                height: glyph.length
+                                color: Theme.iconButton.icon
+                            }
                         }
-                        Accessible.name: qsTr("Tile size")
+                        MouseArea {
+                            id: stepMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: step.clicked()
+                        }
+                        ToolTip.visible: stepMouse.containsMouse
+                        ToolTip.delay: Theme.tooltip.delay
+                        ToolTip.text: step.tip
+                        Accessible.role: Accessible.Button
+                        Accessible.name: step.tip
                     }
-                    Icon {
-                        path: Icons.image
-                        size: Theme.iconButton.iconSize + 4
-                        color: Theme.gallery.countColor
+
+                    Row {
+                        id: sizeRow
+                        readonly property real inset: Theme.layout.spacing / 2
+                        anchors.centerIn: parent
+                        spacing: Theme.layout.spacing / 2
+
+                        SizeStep {
+                            anchors.verticalCenter: parent.verticalCenter
+                            inset: sizeRow.inset
+                            tip: qsTr("Smaller tiles")
+                            onClicked: sizePill.resize(root.tileTarget - Theme.gallery.sliderStep)
+                        }
+                        SettingsSlider {
+                            id: sizeSlider
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.gallery.sliderWidth
+                            handleSize: Theme.gallery.sliderHandleSize
+                            trackHeight: Theme.gallery.sliderTrackHeight
+                            fillColor: Theme.gallery.sliderFill
+                            from: Theme.gallery.tileMinWidth
+                            to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
+                            stepSize: 1
+                            value: root.tileTarget
+                            onMoved: sizePill.resize(value)
+                            Accessible.name: qsTr("Tile size")
+                        }
+                        SizeStep {
+                            anchors.verticalCenter: parent.verticalCenter
+                            plus: true
+                            inset: sizeRow.inset
+                            tip: qsTr("Larger tiles")
+                            onClicked: sizePill.resize(root.tileTarget + Theme.gallery.sliderStep)
+                        }
                     }
                 }
             }

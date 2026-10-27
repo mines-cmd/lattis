@@ -4,7 +4,8 @@ import QtQuick.Controls.Basic
 Slider {
     id: root
 
-    readonly property real handleSize: Theme.controls.sliderHandleSize
+    property real handleSize: Theme.controls.sliderHandleSize
+    property real trackHeight: Theme.controls.sliderTrackHeight
     property color fillColor: Theme.controls.sliderFill
 
     implicitHeight: Math.max(handleSize + 8, 24)
@@ -17,7 +18,7 @@ Slider {
         x: root.leftPadding
         y: root.topPadding + (root.availableHeight - height) / 2
         width: root.availableWidth
-        height: Theme.controls.sliderTrackHeight
+        height: root.trackHeight
         radius: height / 2
         color: Theme.controls.sliderTrack
 
