@@ -483,7 +483,7 @@ FocusScope {
     }
 
     ChromeButton {
-        x: Theme.layout.margin
+        x: root.sideMargin
         y: Theme.layout.margin
         icon: Icons.arrowUp
         iconRotation: -90
