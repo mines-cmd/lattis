@@ -1056,7 +1056,7 @@ Rectangle {
                             Layout.preferredWidth: 0
                             Label {
                                 id: titleLabel
-                                Layout.maximumWidth: Math.max(0, parent.width - (runningLabel.visible ? runningLabel.implicitWidth + parent.spacing : 0))
+                                Layout.minimumWidth: 0
                                 text: row.title
                                 elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
                                      : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
