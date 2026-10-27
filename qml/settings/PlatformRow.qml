@@ -76,9 +76,10 @@ ColumnLayout {
         // Corners against the card's follow its curve, so the gap around them is even.
         topLeftRadius: root.firstInCard ? root.cardCornerRadius : radius
         topRightRadius: topLeftRadius
-        bottomLeftRadius: root.lastInCard && details.progress === 0 && !problemList.visible ? root.cardCornerRadius : radius
+        bottomLeftRadius: details.progress > 0 ? 0 : root.lastInCard && !problemList.visible ? root.cardCornerRadius : radius
         bottomRightRadius: bottomLeftRadius
-        color: headerHover.hovered || header.activeFocus ? Theme.controls.hover : "transparent"
+        readonly property bool lit: headerHover.hovered || header.activeFocus
+        color: lit && details.progress === 0 ? Theme.controls.hover : "transparent"
         activeFocusOnTab: root.editable
 
         Keys.onReturnPressed: root.toggleRequested()
@@ -89,6 +90,14 @@ ColumnLayout {
         TapHandler {
             enabled: root.editable
             onTapped: { header.forceActiveFocus(); root.toggleRequested() }
+        }
+
+        OpenRowCard {
+            row: root
+            progress: details.progress
+            firstInCard: root.firstInCard
+            lastInCard: root.lastInCard
+            lit: header.lit
         }
 
         RowLayout {
@@ -298,7 +307,7 @@ ColumnLayout {
         id: details
         open: root.expanded && root.editable
         Layout.fillWidth: true
-        leftPadding: Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize
+        leftPadding: Theme.settingsWindow.rowPadding
         rightPadding: Theme.settingsWindow.rowPadding
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
@@ -486,6 +495,7 @@ ColumnLayout {
                         }
                         ListButton {
                             iconPath: Icons.close
+                            textColor: hovered ? foreground : Theme.controls.descriptionColor
                             tip: qsTr("Remove from this platform")
                             onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 0))
                         }
@@ -545,6 +555,7 @@ ColumnLayout {
                         }
                         ListButton {
                             iconPath: Icons.close
+                            textColor: hovered ? foreground : Theme.controls.descriptionColor
                             tip: qsTr("Stop scanning this folder; its games stay, as \"ROM not found\"")
                             onClicked: root.save("rom_folders", root.edited(root.platform.romFolders, folderItem.index, 0))
                         }

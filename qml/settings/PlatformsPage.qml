@@ -383,15 +383,6 @@ Item {
                                     }
                                 }
 
-                                Rectangle {
-                                    visible: Theme.settingsWindow.rowDividers && entry.index > 0
-                                    Layout.fillWidth: true
-                                    Layout.leftMargin: Theme.settingsWindow.rowPadding
-                                    Layout.rightMargin: Theme.settingsWindow.rowPadding
-                                    implicitHeight: 1
-                                    color: Theme.settingsWindow.rowDivider
-                                }
-
                                 PlatformRow {
                                     id: row
                                     Layout.fillWidth: true

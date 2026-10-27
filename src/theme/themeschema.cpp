@@ -1422,7 +1422,7 @@ constexpr Setting kSettings[] = {
     integer("settings_window", "row_label_spacing", "16", 0, 200, "Space between a setting's name and description and its control"),
     integer("settings_window", "row_radius", "@radius.small", 0, 100, "Corner radius of each setting row"),
     color("settings_window", "open_row_header_background", "@game_editor.card_background",
-          "Behind an expanded emulator row's header"),
+          "Behind an expanded emulator or platform row's header"),
     color("settings_window", "open_row_background", "@game_editor.bulk_tray_background",
           "Behind an expanded emulator row's settings, under its header, drawn darker by open_row_darkness"),
     real("settings_window", "open_row_darkness", "@game_editor.bulk_tray_darkness", 1, 4,

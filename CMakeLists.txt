@@ -243,6 +243,7 @@ qt_add_qml_module(lattis
         qml/settings/SettingTag.qml
         qml/settings/SettingsButton.qml
         qml/settings/SettingsCard.qml
+        qml/settings/OpenRowCard.qml
         qml/settings/RowCard.qml
         qml/settings/SettingsNote.qml
         qml/settings/SettingsComboBox.qml
