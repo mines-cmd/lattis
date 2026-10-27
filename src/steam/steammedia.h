@@ -3,6 +3,7 @@
 #include "steamlocate.h"
 
 #include <QDateTime>
+#include <QHash>
 #include <QList>
 #include <QString>
 
@@ -25,8 +26,16 @@ struct Screenshot
     QDateTime time;
 };
 
+struct AppMedia
+{
+    QList<Clip> clips;
+    QList<Screenshot> screenshots;
+};
+
 QList<Clip> listClips(const SteamInstall &install, quint64 appId);
 QList<Screenshot> listScreenshots(const SteamInstall &install, quint64 appId);
+
+QHash<quint64, AppMedia> listAll(const SteamInstall &install);
 
 qint64 parseDurationMs(const QString &isoDuration);
 QString lengthText(qint64 durationMs);

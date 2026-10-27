@@ -34,6 +34,12 @@ private slots:
     void timeInName_data();
     void timeInName();
     void idOfPrefersSerial();
+    void listAllTitlesInOneFolder();
+    void listAllIdsInOneFolder();
+    void listAllCemuBySession();
+    void listAllGivesAFileToOneGame();
+    void listAllMatchesList();
+    void usesSessionsWhenNoTokenNamesTheGame();
 
 private:
     QString path(const QString &relative) const { return m_dir->filePath(relative); }
@@ -349,6 +355,111 @@ void EmulatorScreenshotsTest::idOfPrefersSerial()
     QCOMPARE(EmulatorScreenshots::idOf(info), QStringLiteral("BLUS30443"));
     info.serial = QStringLiteral("GALE01");
     QCOMPARE(EmulatorScreenshots::idOf(info), QStringLiteral("GALE01"));
+}
+
+void EmulatorScreenshotsTest::listAllTitlesInOneFolder()
+{
+    touch(".local/share/azahar-emu/screenshots/Mario_20240501_100000.png");
+    touch(".local/share/azahar-emu/screenshots/Mario Kart_20240502_100000.png");
+    touch(".local/share/azahar-emu/screenshots/Mario Kart_20240503_100000.png");
+    touch(".local/share/azahar-emu/screenshots/Someone Else_20240503_100000.png");
+    const QList<Game> games = {game(QStringLiteral("mario"), QStringLiteral("Mario")),
+                               game(QStringLiteral("kart"), QStringLiteral("Mario Kart")),
+                               game(QStringLiteral("none"), QStringLiteral("Nothing Taken"))};
+    const auto all = EmulatorScreenshots::listAll(emulator(QStringLiteral("azahar")), install(), games, {}, {}, m_dir->path());
+    QStringList got;
+    for (const auto &e : all)
+        got.append(e.gameId + u'/' + e.shot.id);
+    got.sort();
+    QCOMPARE(got, (QStringList{"kart/Mario Kart_20240502_100000.png", "kart/Mario Kart_20240503_100000.png",
+                               "mario/Mario_20240501_100000.png"}));
+}
+
+void EmulatorScreenshotsTest::listAllIdsInOneFolder()
+{
+    touch(".config/ppsspp/PSP/SCREENSHOT/ULUS10041_00000.jpg");
+    touch(".config/ppsspp/PSP/SCREENSHOT/ULUS10041_00001.png");
+    touch(".config/ppsspp/PSP/SCREENSHOT/ULUS10042_00000.jpg");
+    touch(".config/ppsspp/PSP/SCREENSHOT/ULES99999_00000.jpg");
+    RomInfo first;
+    first.discId = QStringLiteral("ULUS10041");
+    RomInfo second;
+    second.discId = QStringLiteral("ULUS10042");
+    const QList<Game> games = {game(QStringLiteral("a"), QStringLiteral("A")), game(QStringLiteral("b"), QStringLiteral("B")),
+                               game(QStringLiteral("c"), QStringLiteral("C"))};
+    const QHash<QString, RomInfo> infos = {{"a", first}, {"b", second}};
+    const auto all = EmulatorScreenshots::listAll(emulator(QStringLiteral("ppsspp")), install(), games, infos, {}, m_dir->path());
+    QMap<QString, int> perGame;
+    for (const auto &e : all)
+        ++perGame[e.gameId];
+    QCOMPARE(perGame, (QMap<QString, int>{{"a", 2}, {"b", 1}})); // C has no ID: nothing, and not every game's
+}
+
+void EmulatorScreenshotsTest::listAllCemuBySession()
+{
+    touch(".local/share/Cemu/screenshots/Screenshot_2024-05-01_10-30-00.png");
+    touch(".local/share/Cemu/screenshots/Screenshot_2024-05-02_10-30-00.png");
+    touch(".local/share/Cemu/screenshots/Screenshot_2024-05-03_10-30-00.png");
+    PlayHistory::Session first;
+    first.minutes = 60;
+    first.end = QDateTime(QDate(2024, 5, 1), QTime(11, 0, 0)).toUTC();
+    PlayHistory::Session second;
+    second.minutes = 60;
+    second.end = QDateTime(QDate(2024, 5, 2), QTime(11, 0, 0)).toUTC();
+    const QList<Game> games = {game(QStringLiteral("a"), QStringLiteral("A")), game(QStringLiteral("b"), QStringLiteral("B")),
+                               game(QStringLiteral("c"), QStringLiteral("C"))};
+    const QHash<QString, QList<PlayHistory::Session>> sessions = {{"a", {first}}, {"b", {second}}};
+    const auto all = EmulatorScreenshots::listAll(emulator(QStringLiteral("cemu")), install(), games, {}, sessions, m_dir->path());
+    QCOMPARE(all.size(), 2); // the third was taken outside any session
+    QMap<QString, QString> byGame;
+    for (const auto &e : all)
+        byGame.insert(e.gameId, e.shot.id);
+    QCOMPARE(byGame, (QMap<QString, QString>{{"a", "Screenshot_2024-05-01_10-30-00.png"},
+                                             {"b", "Screenshot_2024-05-02_10-30-00.png"}}));
+}
+
+void EmulatorScreenshotsTest::listAllGivesAFileToOneGame()
+{
+    touch(".local/share/azahar-emu/screenshots/Same_20240501_100000.png");
+    const QList<Game> games = {game(QStringLiteral("one"), QStringLiteral("Same")),
+                               game(QStringLiteral("two"), QStringLiteral("Same"))};
+    const auto all = EmulatorScreenshots::listAll(emulator(QStringLiteral("azahar")), install(), games, {}, {}, m_dir->path());
+    QCOMPARE(all.size(), 1);
+    QCOMPARE(all.first().gameId, QStringLiteral("one"));
+}
+
+void EmulatorScreenshotsTest::listAllMatchesList()
+{
+    touch(".local/share/duckstation/screenshots/Crash 2024-05-01-10-00-00.png");
+    touch(".local/share/duckstation/screenshots/Crash/2024-05-02-10-00-00.png");
+    touch(".local/share/duckstation/screenshots/Crash/Crash 2024-05-03-10-00-00.png");
+    touch(".local/share/duckstation/screenshots/Spyro/Spyro 2024-05-03-10-00-00.png");
+    const Game crash = game(QStringLiteral("crash"), QStringLiteral("Crash"));
+    const Game spyro = game(QStringLiteral("spyro"), QStringLiteral("Spyro"));
+    const auto all = EmulatorScreenshots::listAll(emulator(QStringLiteral("duckstation")), install(), {crash, spyro}, {}, {},
+                                                  m_dir->path());
+    QStringList crashAll;
+    QStringList spyroAll;
+    for (const auto &e : all)
+        (e.gameId == u"crash" ? crashAll : spyroAll).append(e.shot.path);
+    QStringList crashOne;
+    for (const auto &s : list(QStringLiteral("duckstation"), crash, {}))
+        crashOne.append(s.path);
+    crashAll.sort();
+    crashOne.sort();
+    QCOMPARE(crashAll, crashOne);
+    QCOMPARE(spyroAll.size(), 1);
+}
+
+void EmulatorScreenshotsTest::usesSessionsWhenNoTokenNamesTheGame()
+{
+    QVERIFY(EmulatorScreenshots::usesSessions(emulator(QStringLiteral("cemu")), install(), m_dir->path()));
+    QVERIFY(!EmulatorScreenshots::usesSessions(emulator(QStringLiteral("dolphin")), install(), m_dir->path()));
+    QVERIFY(!EmulatorScreenshots::usesSessions(emulator(QStringLiteral("mgba")), install(), m_dir->path()));
+    EmulatorDef melonds = emulator(QStringLiteral("melonds"));
+    melonds.screenshotFolders = {path(QStringLiteral("shots"))};
+    melonds.screenshotFoldersSet = true;
+    QVERIFY(EmulatorScreenshots::usesSessions(melonds, install(), m_dir->path()));
 }
 
 QTEST_APPLESS_MAIN(EmulatorScreenshotsTest)

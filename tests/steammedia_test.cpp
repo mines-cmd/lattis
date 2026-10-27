@@ -1,6 +1,7 @@
 #include "steammedia.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QProcess>
 #include <QStandardPaths>
@@ -41,6 +42,8 @@ private slots:
     void remuxWithoutFfmpeg();
     void screenshotsNewestFirst();
     void screenshotsOfNoOne();
+    void listAllOnePass();
+    void listAllWithoutSteamUser();
 };
 
 void SteamMediaTest::durations_data()
@@ -184,6 +187,74 @@ void SteamMediaTest::screenshotsOfNoOne()
     QVERIFY(SteamMedia::listScreenshots(fakeInstall(u"39734274"_s), 8000).isEmpty());
     QVERIFY(SteamMedia::listScreenshots(fakeInstall(), 1493710).isEmpty());
     QVERIFY(SteamMedia::listScreenshots({}, 8000).isEmpty());
+}
+
+namespace {
+void copyFolder(const QString &from, const QString &to)
+{
+    QDirIterator it(from, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString source = it.next();
+        const QString target = to + source.mid(from.size());
+        QDir().mkpath(QFileInfo(target).absolutePath());
+        QFile::copy(source, target);
+    }
+}
+}
+
+void SteamMediaTest::listAllOnePass()
+{
+    // Two games with media (8000 as it is, 8001 a copy with one clip and one screenshot) and an app ID the library
+    // may not know: listAll() reports every app ID; deciding which games exist is the caller's.
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    const QString user = root.path() + u"/userdata/39734273"_s;
+    const QString source = kFakeSteam + u"/userdata/39734273"_s;
+    copyFolder(source, user);
+    copyFolder(source + u"/gamerecordings/clips/clip_8000_20260215_090000"_s,
+               user + u"/gamerecordings/clips/clip_8001_20260215_090000"_s);
+    copyFolder(source + u"/760/remote/8000/screenshots/thumbnails"_s, user + u"/760/remote/8001/screenshots/thumbnails"_s);
+    QVERIFY(QFile::copy(source + u"/760/remote/8000/screenshots/20260220100000_1.jpg"_s,
+                        user + u"/760/remote/8001/screenshots/20260220100000_1.jpg"_s));
+    QVERIFY(QDir().mkpath(user + u"/760/remote/99999/screenshots"_s));
+    QVERIFY(QFile::copy(source + u"/760/remote/8000/screenshots/20260220100000_1.jpg"_s,
+                        user + u"/760/remote/99999/screenshots/20260105090000_1.jpg"_s));
+    QVERIFY(QDir().mkpath(user + u"/760/remote/not-an-app/screenshots"_s));
+    QVERIFY(QFile::copy(source + u"/760/remote/8000/screenshots/20260220100000_1.jpg"_s,
+                        user + u"/760/remote/not-an-app/screenshots/20260105090000_1.jpg"_s));
+
+    SteamInstall install = fakeInstall();
+    install.root = root.path();
+    const QHash<quint64, SteamMedia::AppMedia> all = SteamMedia::listAll(install);
+    QCOMPARE(all.size(), 3);
+
+    // Each app's lists are what listClips() and listScreenshots() give for it.
+    for (const quint64 appId : {quint64(8000), quint64(8001), quint64(99999)}) {
+        const QList<SteamMedia::Clip> clips = SteamMedia::listClips(install, appId);
+        const QList<SteamMedia::Screenshot> shots = SteamMedia::listScreenshots(install, appId);
+        QCOMPARE(all.value(appId).clips.size(), clips.size());
+        QCOMPARE(all.value(appId).screenshots.size(), shots.size());
+        for (qsizetype i = 0; i < clips.size(); ++i)
+            QCOMPARE(all.value(appId).clips[i].id, clips[i].id);
+        for (qsizetype i = 0; i < shots.size(); ++i)
+            QCOMPARE(all.value(appId).screenshots[i].id, shots[i].id);
+    }
+    QCOMPARE(all.value(8000).clips.size(), 2); // the clip without a manifest isn't one
+    QCOMPARE(all.value(8000).screenshots.size(), 2);
+    QCOMPARE(all.value(8001).clips.size(), 1);
+    QCOMPARE(all.value(8001).screenshots.size(), 1);
+    QCOMPARE(all.value(99999).clips.size(), 0);
+    QCOMPARE(all.value(99999).screenshots.size(), 1);
+    QCOMPARE(all.value(8000).clips[0].id, u"clip_8000_20260301_120000"_s);
+}
+
+void SteamMediaTest::listAllWithoutSteamUser()
+{
+    QVERIFY(SteamMedia::listAll({}).isEmpty());
+    SteamInstall noUser = fakeInstall();
+    noUser.userId.clear();
+    QVERIFY(SteamMedia::listAll(noUser).isEmpty());
+    QVERIFY(SteamMedia::listAll(fakeInstall(u"39734274"_s)).isEmpty());
 }
 
 QTEST_MAIN(SteamMediaTest)

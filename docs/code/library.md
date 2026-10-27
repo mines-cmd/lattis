@@ -201,6 +201,12 @@ A **Flatpak** emulator can only read the folders its permissions allow. `flatpak
 
 Launching picks the game's pinned emulator if it's installed, else the first installed one in the platform's list (`Emulators::choose()`).
 
+## Screenshots of ROM games
+
+`EmulatorScreenshots` (`emulatorscreenshots.*`) finds the screenshots an emulator took of a game. An emulator's `screenshots` patterns (per install type: `{serial}`, `{title}` and `{rom}` stand for the game's ID, title and ROM name; `{romdir}` for the ROM's folder) or its `screenshot_folders` say where to look. `readInfo(game)` opens the ROM for its serial and title, and `list(emulator, install, game, info, sessions, home)` returns the files that match: by the ID in the name or folder, by the title (ignoring punctuation, the ROM's own title first, then the library's), or, when no token names the game (Cemu), by the play sessions the file's time falls in.
+
+`listAll(emulator, install, games, infos, sessions, home)` is the same for all of one emulator's games in a single pass: the folders are listed once however many games look in them (`DirCache`), and each file goes to the first game it matches. `infos` and `sessions` are keyed by game ID; `usesSessions()` tells whether any pattern needs the sessions, so the play history is read only for such emulators. `readInfoCached(game)` is `readInfo` kept for the session by the ROM's path and modified time (a mutex guards it; the Gallery's worker calls it), so listing again doesn't open every ROM. Times come from the file name (several stamp layouts) or the modified time.
+
 ## Steam, Proton and Linux games
 
 These three kinds of game share a lot of the library's code. Their file formats and the sync are covered in [steam.md](steam.md); here is how the library uses them.
@@ -311,6 +317,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `game.h` | `Game`: a game as the UI shows it |
 | `gameid.*` | Ids: slugs, validation, `steam-<appid>` |
 | `emulators.*` | Emulator presets, `emulators.toml`, the merge, detection, Flatpak permissions |
+| `emulatorscreenshots.*` | An emulator's screenshots of a game, or of all its games in one pass; ROM info kept for the session |
 | `romscan.*` | ROM file names, the ROM index update, the folder scan, "+"'s inspection of a ROM |
 | `romfoldermatch.*` | Matching folder names to platforms |
 | `listsettings.*` | `[list]` in `settings.toml` |
@@ -403,7 +410,8 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
 | `achievements(id)` | A Steam game's achievements on a worker thread; `achievementsReady(id, list)` has them unlocked first (newest first), then locked, hidden ones last. Every item has `apiName`, `name`, `description`, `hidden`, `unlocked`, `time` and `icon` (a URL); none for a game that isn't Steam's (see [steam](steam.md#achievements)) |
-| `media(id)` | A Steam game's clips and screenshots on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip` or `screenshot`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`; none for a game that isn't Steam's (see [steam](steam.md#clips-and-screenshots)) |
+| `media(id)` | A Steam game's clips and screenshots, or a ROM game's emulator screenshots, on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip` or `screenshot`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`; none for a game with neither (see [steam](steam.md#clips-and-screenshots)) |
+| `allMedia()` | Every game's clips and screenshots, for the Gallery, on a worker thread; `allMediaReady(batch, done)` delivers them in batches: Steam's first (one `SteamMedia::listAll` pass, each app ID mapped to its library game; apps the library doesn't have are left out), then each emulator's (one `EmulatorScreenshots::listAll` pass over its games), and a last, usually empty, batch with `done` true. Items are those of `media()` plus `gameId`. Hidden games are included; the page filters them. Calling it again drops what an earlier call still had to deliver |
 | `prepareClip(token, videoDir, ffmpeg)`, `discardClip(path)` | Joins a clip into a temp MP4 for the viewer; `clipPrepared(token, path, error)` answers. `discardClip` deletes it |
 | `showClipFolder(folder)` | Opens a clip's folder in the file manager; false when it couldn't |
 | `playTime(minutes, format)` | Play time as text in a `[game_page] play_time_format`: `hours` ("206.7 hours") or `hours_minutes` ("206h 42m", "45m"); `""` for none |

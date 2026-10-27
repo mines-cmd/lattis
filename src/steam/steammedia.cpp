@@ -1,5 +1,6 @@
 #include "steammedia.h"
 
+#include "localtime.h"
 #include "vdf.h"
 
 #include <QDir>
@@ -96,27 +97,66 @@ QStringList recordingRoots(const QString &userDir)
     return roots;
 }
 
+// "yyyyMMddHHmmss", or "yyyyMMdd_HHmmss" with `underscore`; invalid for anything else.
+QDateTime stampTime(const QString &stamp, bool underscore)
+{
+    const QString digits = underscore && stamp.size() == 15 && stamp.at(8) == u'_' ? stamp.left(8) + stamp.mid(9) : stamp;
+    if (digits.size() != 14 || !std::all_of(digits.cbegin(), digits.cend(), [](QChar c) { return c >= u'0' && c <= u'9'; }))
+        return {};
+    const QDate date(digits.left(4).toInt(), digits.mid(4, 2).toInt(), digits.mid(6, 2).toInt());
+    const QTime time(digits.mid(8, 2).toInt(), digits.mid(10, 2).toInt(), digits.mid(12, 2).toInt());
+    return date.isValid() && time.isValid() ? localDateTime(date, time) : QDateTime();
+}
+
+// `stamp` is the part of the folder's name after "clip_<appId>_".
+bool readClip(const QDir &clips, const QString &name, const QString &stamp, Clip &clip)
+{
+    clip.id = name;
+    clip.folder = clips.filePath(name);
+    clip.videoDir = videoDirOf(clip.folder);
+    if (clip.videoDir.isEmpty())
+        return false;
+    QFile manifest(clip.videoDir + u"/session.mpd"_s);
+    if (!manifest.open(QIODevice::ReadOnly))
+        return false;
+    clip.durationMs = parseDurationMs(manifestAttribute(manifest.readAll(), "mediaPresentationDuration"));
+    if (clip.durationMs <= 0 || streamsIn(clip.videoDir).videoInit.isEmpty())
+        return false;
+    const QString thumbnail = clip.folder + u"/thumbnail.jpg"_s;
+    if (QFileInfo::exists(thumbnail))
+        clip.thumbnail = thumbnail;
+    clip.time = stampTime(stamp, true);
+    return true;
+}
+
 void appendClips(const QDir &clips, const QString &prefix, QList<Clip> &out)
 {
     for (const QString &name : clips.entryList({prefix + u'*'}, QDir::Dirs | QDir::NoDotAndDotDot)) {
         Clip clip;
-        clip.id = name;
-        clip.folder = clips.filePath(name);
-        clip.videoDir = videoDirOf(clip.folder);
-        if (clip.videoDir.isEmpty())
-            continue;
-        QFile manifest(clip.videoDir + u"/session.mpd"_s);
-        if (!manifest.open(QIODevice::ReadOnly))
-            continue;
-        clip.durationMs = parseDurationMs(manifestAttribute(manifest.readAll(), "mediaPresentationDuration"));
-        if (clip.durationMs <= 0 || streamsIn(clip.videoDir).videoInit.isEmpty())
-            continue;
-        const QString thumbnail = clip.folder + u"/thumbnail.jpg"_s;
-        if (QFileInfo::exists(thumbnail))
-            clip.thumbnail = thumbnail;
-        clip.time = QDateTime::fromString(name.mid(prefix.size()), u"yyyyMMdd_HHmmss"_s);
-        out.append(clip);
+        if (readClip(clips, name, name.mid(prefix.size()), clip))
+            out.append(clip);
     }
+}
+
+Screenshot readScreenshot(const QFileInfo &file)
+{
+    Screenshot shot;
+    shot.id = file.fileName();
+    shot.path = file.filePath();
+    shot.time = stampTime(file.completeBaseName().section(u'_', 0, 0), false);
+    if (!shot.time.isValid())
+        shot.time = file.lastModified();
+    return shot;
+}
+
+bool newer(const Clip &a, const Clip &b)
+{
+    return a.time != b.time ? a.time > b.time : a.id > b.id;
+}
+
+bool newer(const Screenshot &a, const Screenshot &b)
+{
+    return a.time != b.time ? a.time > b.time : a.id > b.id;
 }
 }
 
@@ -150,9 +190,7 @@ QList<Clip> listClips(const SteamInstall &install, quint64 appId)
     QList<Clip> out;
     for (const QString &root : recordingRoots(user))
         appendClips(QDir(root + u"/clips"_s), prefix, out);
-    std::sort(out.begin(), out.end(), [](const Clip &a, const Clip &b) {
-        return a.time != b.time ? a.time > b.time : a.id > b.id;
-    });
+    std::sort(out.begin(), out.end(), [](const Clip &a, const Clip &b) { return newer(a, b); });
     return out;
 }
 
@@ -163,18 +201,47 @@ QList<Screenshot> listScreenshots(const SteamInstall &install, quint64 appId)
         return {};
     const QDir dir(u"%1/760/remote/%2/screenshots"_s.arg(user).arg(appId));
     QList<Screenshot> out;
-    for (const QFileInfo &file : dir.entryInfoList({u"*.jpg"_s, u"*.png"_s}, QDir::Files)) {
-        Screenshot shot;
-        shot.id = file.fileName();
-        shot.path = file.filePath();
-        shot.time = QDateTime::fromString(file.completeBaseName().section(u'_', 0, 0), u"yyyyMMddHHmmss"_s);
-        if (!shot.time.isValid())
-            shot.time = file.lastModified();
-        out.append(shot);
+    for (const QFileInfo &file : dir.entryInfoList({u"*.jpg"_s, u"*.png"_s}, QDir::Files))
+        out.append(readScreenshot(file));
+    std::sort(out.begin(), out.end(), [](const Screenshot &a, const Screenshot &b) { return newer(a, b); });
+    return out;
+}
+
+QHash<quint64, AppMedia> listAll(const SteamInstall &install)
+{
+    const QString user = install.userDataDir();
+    QHash<quint64, AppMedia> out;
+    if (user.isEmpty())
+        return out;
+
+    static const QRegularExpression kClipName(QStringLiteral("^clip_(\\d+)_(.*)$"));
+    for (const QString &root : recordingRoots(user)) {
+        const QDir clips(root + u"/clips"_s);
+        for (const QString &name : clips.entryList({u"clip_*"_s}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+            const QRegularExpressionMatch m = kClipName.match(name);
+            const quint64 appId = m.hasMatch() ? m.captured(1).toULongLong() : 0;
+            Clip clip;
+            if (appId != 0 && readClip(clips, name, m.captured(2), clip))
+                out[appId].clips.append(clip);
+        }
     }
-    std::sort(out.begin(), out.end(), [](const Screenshot &a, const Screenshot &b) {
-        return a.time != b.time ? a.time > b.time : a.id > b.id;
-    });
+
+    const QDir remote(user + u"/760/remote"_s);
+    for (const QString &name : remote.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        bool numeric = false;
+        const quint64 appId = name.toULongLong(&numeric);
+        if (!numeric || appId == 0)
+            continue;
+        const QDir dir(remote.filePath(name) + u"/screenshots"_s);
+        for (const QFileInfo &file : dir.entryInfoList({u"*.jpg"_s, u"*.png"_s}, QDir::Files))
+            out[appId].screenshots.append(readScreenshot(file));
+    }
+
+    for (AppMedia &media : out) {
+        std::sort(media.clips.begin(), media.clips.end(), [](const Clip &a, const Clip &b) { return newer(a, b); });
+        std::sort(media.screenshots.begin(), media.screenshots.end(),
+                  [](const Screenshot &a, const Screenshot &b) { return newer(a, b); });
+    }
     return out;
 }
 

@@ -1,7 +1,12 @@
 #include "emulatorscreenshots.h"
 
+#include "localtime.h"
+
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QRegularExpression>
 #include <QSet>
 
@@ -40,6 +45,23 @@ QString looseTitle(const QString &title)
     }
     return out;
 }
+
+// A folder's entries are read once however many games look in it.
+class DirCache
+{
+public:
+    const QStringList &entries(const QString &dir, QDir::Filters kind)
+    {
+        const QString key = QString::number(int(kind)) + u'|' + dir;
+        auto it = m_entries.find(key);
+        if (it == m_entries.end())
+            it = m_entries.insert(key, QDir(dir).entryList(kind | QDir::Readable, QDir::Name));
+        return it.value();
+    }
+
+private:
+    QHash<QString, QStringList> m_entries;
+};
 
 struct Tokens
 {
@@ -91,7 +113,7 @@ bool hasWildcard(const QString &component)
     return component.contains(u'*') || component.contains(u'?') || component.contains(u'[');
 }
 
-QStringList expand(const QString &pattern, const Tokens &tokens, const QString &title)
+QStringList expand(const QString &pattern, const Tokens &tokens, const QString &title, DirCache &cache)
 {
     QString rest = pattern;
     QString base;
@@ -120,7 +142,7 @@ QStringList expand(const QString &pattern, const Tokens &tokens, const QString &
                 }
             }
             const QDir::Filters kind = last ? QDir::Files : QDir::Dirs | QDir::NoDotAndDotDot;
-            for (const QString &name : QDir(dir).entryList(kind | QDir::Readable, QDir::Name)) {
+            for (const QString &name : cache.entries(dir, kind)) {
                 if (re.match(name).hasMatch())
                     next.append(QDir(dir).filePath(name));
             }
@@ -232,7 +254,7 @@ QDateTime timeInName(const QString &fileName)
         return {};
     const QDate date(m.captured(1).toInt(), m.captured(2).toInt(), m.captured(3).toInt());
     const QTime time(m.captured(4).toInt(), m.captured(5).toInt(), m.captured(6).toInt());
-    return date.isValid() && time.isValid() ? QDateTime(date, time) : QDateTime();
+    return date.isValid() && time.isValid() ? localDateTime(date, time) : QDateTime();
 }
 
 QStringList folders(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home)
@@ -248,8 +270,9 @@ QStringList folders(const EmulatorDef &emulator, const EmulatorInstall &install,
     return out;
 }
 
-QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, const Game &game, const RomInfo &info,
-                 const QList<PlayHistory::Session> &sessions, const QString &home)
+namespace {
+QList<Shot> listIn(DirCache &cache, const EmulatorDef &emulator, const EmulatorInstall &install, const Game &game,
+                   const RomInfo &info, const QList<PlayHistory::Session> &sessions, const QString &home)
 {
     const QStringList patterns = searchPatterns(emulator, install, home);
     if (patterns.isEmpty())
@@ -281,7 +304,7 @@ QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, co
         // No token names the game (Cemu): only the play sessions tell whose a screenshot is.
         const QStringList variants = usesTitle ? titles : QStringList{QString()};
         for (const QString &title : variants) {
-            for (const QString &path : expand(pattern, tokens, title)) {
+            for (const QString &path : expand(pattern, tokens, title, cache)) {
                 const QFileInfo file(path);
                 if (!isImage(path) || seen.contains(file.absoluteFilePath()))
                     continue;
@@ -297,5 +320,60 @@ QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, co
     }
     std::stable_sort(out.begin(), out.end(), [](const Shot &a, const Shot &b) { return a.time > b.time; });
     return out;
+}
+}
+
+bool usesSessions(const EmulatorDef &emulator, const EmulatorInstall &install, const QString &home)
+{
+    const QStringList patterns = searchPatterns(emulator, install, home);
+    return std::any_of(patterns.cbegin(), patterns.cend(), [](const QString &p) {
+        return !p.contains(QLatin1String("{title}")) && !p.contains(QLatin1String("{serial}"))
+               && !p.contains(QLatin1String("{rom}")) && !p.startsWith(kRomDir);
+    });
+}
+
+QList<Shot> list(const EmulatorDef &emulator, const EmulatorInstall &install, const Game &game, const RomInfo &info,
+                 const QList<PlayHistory::Session> &sessions, const QString &home)
+{
+    DirCache cache;
+    return listIn(cache, emulator, install, game, info, sessions, home);
+}
+
+QList<Entry> listAll(const EmulatorDef &emulator, const EmulatorInstall &install, const QList<Game> &games,
+                     const QHash<QString, RomInfo> &infos,
+                     const QHash<QString, QList<PlayHistory::Session>> &sessions, const QString &home)
+{
+    DirCache cache;
+    QList<Entry> out;
+    QSet<QString> claimed;
+    for (const Game &game : games) {
+        for (const Shot &shot : listIn(cache, emulator, install, game, infos.value(game.id), sessions.value(game.id), home)) {
+            if (!claimed.contains(shot.path)) {
+                claimed.insert(shot.path);
+                out.append({game.id, shot});
+            }
+        }
+    }
+    return out;
+}
+
+RomInfo readInfoCached(const Game &game)
+{
+    static QMutex mutex;
+    static QHash<QString, std::pair<QDateTime, RomInfo>> cache;
+    if (!game.rom || game.romPath.isEmpty())
+        return {};
+    const QDateTime modified = QFileInfo(game.romPath).lastModified();
+    const QString key = game.platform + u'|' + game.romPath;
+    {
+        QMutexLocker lock(&mutex);
+        const auto it = cache.constFind(key);
+        if (it != cache.cend() && it->first == modified)
+            return it->second;
+    }
+    const RomInfo info = readInfo(game);
+    QMutexLocker lock(&mutex);
+    cache.insert(key, {modified, info});
+    return info;
 }
 }

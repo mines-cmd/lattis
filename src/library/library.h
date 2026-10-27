@@ -155,6 +155,7 @@ public:
     Q_INVOKABLE QVariantMap historyFor(const QString &id) const;
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
+    Q_INVOKABLE void allMedia();
     Q_INVOKABLE void achievements(const QString &id);
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);
@@ -298,6 +299,7 @@ signals:
     void yearStatsReady(int year, const QVariantMap &stats);
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
+    void allMediaReady(const QVariantList &batch, bool done);
     void achievementsReady(const QString &id, const QVariantList &achievements);
     void clipPrepared(const QString &token, const QString &path, const QString &error);
     void historyChanged(const QStringList &ids);
@@ -400,6 +402,7 @@ private:
     bool m_tagMatchAll = false;
     QStringList m_statusFilter;
     bool m_showHidden = false;
+    int m_allMediaGeneration = 0;
     bool m_showSortValue = true;
     int m_notInstalledHidden = 0;
     QSet<QString> m_tagNames;

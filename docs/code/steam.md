@@ -131,6 +131,8 @@ A Steam game's page shows the user's own Steam clips (Game Recording), read from
 
 **Screenshots.** `SteamMedia::listScreenshots(install, appId)` lists the `.jpg` and `.png` files in `userdata/<user>/760/remote/<appId>/screenshots/` (not its `thumbnails/` folder: Steam's are 200×112, too small for a tile, so the row decodes the full file at the tile's size). The time comes from the name (`yyyyMMddHHmmss_N.jpg`), else the file's modified time; newest first.
 
+**The whole library.** `SteamMedia::listAll(install)` reads every app's clips and screenshots in one pass for the Gallery: it lists `clips/` in each recording root once, taking the app ID from each `clip_<appId>_<stamp>` name, and `760/remote/` once, taking it from each folder name (a name that isn't a number is skipped). It returns a `QHash<quint64, AppMedia>`, each app's `clips` and `screenshots` newest first, the same as `listClips` and `listScreenshots` give for it; mapping an app ID to a library game, and leaving out the ones the library doesn't have, is `Library::allMedia()`'s job. Times from names are built with `localDateTime()` (core.md) because `QDateTime::fromString` costs about half a millisecond each, and a library can hold thousands.
+
 `Library::media(gameId)` lists a Steam game's clips and screenshots on a worker thread and answers with `mediaReady(id, items)`, one list newest first, each item with a `kind` (`clip` or `screenshot`); any other game gets an empty list. ffmpeg comes from `FfmpegTool` (see [install](install.md#ffmpeg)). Qt Multimedia is not linked: `MediaViewer.qml` imports it, so it loads with the viewer on the first clip.
 
 ## Achievements
@@ -157,7 +159,7 @@ The text is in Steam's language (`steamLanguage()` reads `language` from `regist
 | `steamscan.*` | `SteamStamp`, `SteamApp`, `SteamAppConfig`, `CompatTool`, `SteamState`; `SteamScan::scan()`, `isBlocked()`, `valveToolName()` |
 | `steamupdate.h` | `SteamUpdate` (`None`, `Waiting`, `Downloading`, `Paused`) |
 | `steamdownloads.*` | `SteamDownloads`: `setApps()`, `progress()`, `changed()`; `parseLog()`, `directorySize()` |
-| `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
+| `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `listAll()`, `AppMedia`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
 | `steamachievements.*` | `SteamAchievements::Achievement`; `readAchievements()`, `steamLanguage()` |
 | `steamsync.*` | `SteamSync::Record`, `Result`, `Edit`, `ShortcutEdit`; `sync()`, `apply()`, `compare()`, `withDefaults()`, `readRecord()`, `writeRecord()` |
 

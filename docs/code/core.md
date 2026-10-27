@@ -110,6 +110,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `autostart.*` | XDG autostart entry: read, write, remove, the Exec line |
 | `general.*` | General QML singleton: `[general]` settings, autostart state |
 | `generalsettings.*` | `[general]` struct and parser |
+| `localtime.h` | `localDateTime(date, time)`: a local `QDateTime` that doesn't ask libc for the zone each time |
 | `oldname.*` | One-time migration from the "game-launcher" folder names |
 | `restart.*` | Restarting the process after a library Import |
 | `singleinstance.*` | One running copy per data dir: lock, socket, activate |

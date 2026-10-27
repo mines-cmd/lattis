@@ -216,7 +216,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags rom emulators platforms version steamimport steamsync programs uninstall undo hero art)
+foreach(area list edit tags rom emulators platforms version steamimport steamsync programs uninstall undo hero art media)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects
