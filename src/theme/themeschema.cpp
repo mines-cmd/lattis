@@ -896,6 +896,9 @@ constexpr Setting kSettings[] = {
     color("media", "thumb_shadow_color", "#00000080", "Drop shadow under each thumbnail"),
     integer("media", "thumb_shadow_size", "16", 0, 100, "How far that shadow spreads; 0 = none"),
     color("media", "thumb_border_color", "#f0f6fc00", "Thumbnail outline"),
+    real("media", "thumb_fit_below", "1.2", 0, 4,
+         "A picture narrower than this (width / height), like a 3DS screenshot of both screens, is shown whole "
+         "instead of cropped to 16:9; 0 = always crop"),
     color("media", "thumb_scrim", "#000000aa", "Darkens each clip's thumbnail so the play button and length stay readable; transparent = none"),
     choice("media", "thumb_scrim_style", "bottom", "full bottom top",
            "Where the scrim is: over the whole thumbnail, or a gradient fading in from the bottom or the top edge"),

@@ -19,6 +19,7 @@ ArtThumb {
 
     aspect: 16 / 9
     source: media.thumbnail ?? ""
+    fillMode: pictureAspect > 0 && pictureAspect < Theme.media.thumbFitBelow ? Image.PreserveAspectFit : Image.PreserveAspectCrop
 
     RectangularShadow {
         z: -1

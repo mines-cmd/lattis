@@ -10,6 +10,7 @@ Rectangle {
     property string failedIcon: Icons.image
     property bool iconWhenEmpty: false
     readonly property alias status: thumbImage.status
+    readonly property real pictureAspect: thumbImage.loaded ? thumbImage.implicitWidth / thumbImage.implicitHeight : 0
     implicitHeight: Theme.gameEditor.bulkThumbnailHeight
     implicitWidth: implicitHeight * aspect
     radius: cornerRadius
