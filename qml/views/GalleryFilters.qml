@@ -244,6 +244,7 @@ FocusScope {
             id: unfold
             Layout.fillWidth: true
             open: !section.folded
+            spacing: 0
         }
     }
 
@@ -281,7 +282,7 @@ FocusScope {
         contentHeight: sections.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: SettingsScrollBar { trackless: true }
+        ScrollBar.vertical: SettingsScrollBar { trackless: true; thickness: Theme.gallery.sidebarScrollbarWidth }
 
         ColumnLayout {
             id: sections
@@ -341,6 +342,7 @@ FocusScope {
                 SettingsSearchField {
                     id: gameSearch
                     Layout.fillWidth: true
+                    implicitHeight: Theme.gallery.searchHeight
                     Layout.bottomMargin: Theme.layout.spacing / 2
                     placeholderText: qsTr("Search games")
                     text: root.gameQuery
@@ -354,7 +356,7 @@ FocusScope {
                     clip: true
                     model: root.shownGames
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: SettingsScrollBar { trackless: true }
+                    ScrollBar.vertical: SettingsScrollBar { trackless: true; thickness: Theme.gallery.sidebarScrollbarWidth }
 
                     delegate: Entry {
                         required property var modelData
@@ -390,7 +392,7 @@ FocusScope {
                     contentHeight: years.implicitHeight
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: SettingsScrollBar { trackless: true }
+                    ScrollBar.vertical: SettingsScrollBar { trackless: true; thickness: Theme.gallery.sidebarScrollbarWidth }
 
                     ColumnLayout {
                         id: years
@@ -449,13 +451,14 @@ FocusScope {
                                 Unfold {
                                     Layout.fillWidth: true
                                     open: yearBlock.open
+                                    spacing: 0
 
                                     Repeater {
                                         model: yearBlock.modelData.months
 
                                         Entry {
                                             required property var modelData
-                                            indent: Theme.gallery.entryHeight
+                                            indent: Theme.gallery.entryHeight + Theme.gallery.monthIndent
                                             text: modelData.name
                                             mark: root.page.monthSel[modelData.key] ? 2 : 0
                                             amount: root.count("month", modelData.key)

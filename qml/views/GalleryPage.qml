@@ -659,7 +659,7 @@ FocusScope {
             model: root.rows
             boundsBehavior: Flickable.StopAtBounds
             cacheBuffer: root.rowHeight * 2
-            ScrollBar.vertical: ScrollBar {}
+            ScrollBar.vertical: gridBar
 
             delegate: Item {
                 id: row
@@ -741,6 +741,16 @@ FocusScope {
         }
 
         // The heading of the group at the top stays there while its tiles scroll under it.
+        // In the right margin, clear of the cards.
+        SettingsScrollBar {
+            id: gridBar
+            trackless: true
+            thickness: Theme.gallery.scrollbarWidth
+            x: list.x + list.width + (root.sideMargin - width) / 2
+            y: list.y
+            height: list.height
+        }
+
         // The next group's card pushes it up out of the way.
         Item {
             id: sticky
