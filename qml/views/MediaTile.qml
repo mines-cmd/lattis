@@ -68,7 +68,9 @@ ArtThumb {
         border.width: Theme.filters.focusRingWidth
     }
     Rectangle {
-        visible: tile.isClip
+        visible: tile.isClip && Theme.media.playButton !== "never" && opacity > 0
+        opacity: Theme.media.playButton === "always" || tile.hovered || tile.focusRing ? 1 : 0
+        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
         anchors.centerIn: parent
         width: Theme.media.playSize
         height: width
@@ -87,17 +89,30 @@ ArtThumb {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: Theme.layout.spacing
-        width: lengthLabel.implicitWidth + Theme.layout.spacing * 2
+        width: badgeRow.implicitWidth + Theme.layout.spacing * 2
         height: lengthLabel.implicitHeight + Theme.layout.spacing / 2
         radius: Theme.radius.tiny
         color: Theme.media.badgeBackground
 
-        Label {
-            id: lengthLabel
+        Row {
+            id: badgeRow
             anchors.centerIn: parent
-            text: tile.media.length ?? ""
-            color: Theme.media.badgeText
-            font.pixelSize: Theme.details.headingFontSize
+            spacing: Theme.layout.spacing / 2
+
+            Icon {
+                visible: Theme.media.badgeIconSize > 0
+                anchors.verticalCenter: parent.verticalCenter
+                path: Icons.playFill
+                size: Theme.media.badgeIconSize
+                color: Theme.media.badgeText
+            }
+            Label {
+                id: lengthLabel
+                anchors.verticalCenter: parent.verticalCenter
+                text: tile.media.length ?? ""
+                color: Theme.media.badgeText
+                font.pixelSize: Theme.details.headingFontSize
+            }
         }
     }
 
