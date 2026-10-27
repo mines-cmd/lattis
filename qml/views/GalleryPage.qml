@@ -119,13 +119,13 @@ FocusScope {
     }
 
     // Not riseIn reversed: that saves its movement for the end, when the page has all but faded,
-    // so it can't be seen. Main.qml holds the fade-out back until this has mostly moved.
+    // so it can't be seen. The fade-out runs alongside it, over the same time.
     MotionNumber {
         id: sinkOut
         target: rise
         property: "y"
         to: Theme.gallery.pageOffset
-        speed: "slow"
+        speed: "normal"
     }
 
     function take(batch: var) {

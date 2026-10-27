@@ -822,17 +822,9 @@ ApplicationWindow {
         enabled: window.statsOpen && !setupGuide.active
         source: "views/StatsPage.qml"
 
-        // Closing, the fade waits for the content to sink most of the way, so the slide is seen.
         Behavior on opacity {
-            id: statsFade
             enabled: Motion.fades
-            SequentialAnimation {
-                PauseAnimation {
-                    duration: statsFade.targetValue > 0 ? 0
-                              : Math.max(0, Motion.duration(Motion.speedMs("slow") - Motion.speedMs("normal")))
-                }
-                MotionNumber { fade: true; speed: "normal"; linear: true }
-            }
+            MotionNumber { fade: true; speed: "normal"; linear: true }
         }
     }
     Binding {
@@ -859,17 +851,9 @@ ApplicationWindow {
         enabled: window.galleryOpen && !setupGuide.active
         source: "views/GalleryPage.qml"
 
-        // As the statistics page: the fade waits for the content to sink.
         Behavior on opacity {
-            id: galleryFade
             enabled: Motion.fades
-            SequentialAnimation {
-                PauseAnimation {
-                    duration: galleryFade.targetValue > 0 ? 0
-                              : Math.max(0, Motion.duration(Motion.speedMs("slow") - Motion.speedMs("normal")))
-                }
-                MotionNumber { fade: true; speed: "normal"; linear: true }
-            }
+            MotionNumber { fade: true; speed: "normal"; linear: true }
         }
     }
     Binding {
