@@ -58,8 +58,8 @@ FocusScope {
     readonly property real tileWidth: (gridWidth - (columns - 1) * Theme.gallery.tileGap) / columns
     readonly property real tileHeight: tileWidth * 9 / 16
     readonly property bool showNames: grouping !== "game"
-    readonly property real nameHeight: Theme.gallery.gameNameSize * 1.6
-    readonly property real rowHeight: tileHeight + (showNames ? Theme.layout.spacing / 2 + nameHeight : 0) + Theme.gallery.tileGap
+    readonly property real captionHeight: Theme.gallery.gameNameSize * 1.6
+    readonly property real rowHeight: tileHeight + Theme.layout.spacing / 2 + captionHeight + Theme.gallery.tileGap
     readonly property int screenshotCount: shown.reduce((n, i) => n + (i.kind === "screenshot" ? 1 : 0), 0)
     readonly property int clipCount: shown.length - screenshotCount
     readonly property bool viewerOpen: viewer.item !== null && viewer.item.opened
@@ -265,6 +265,18 @@ FocusScope {
     function monthLabel(key: string): string {
         const n = parseInt(key)
         return Qt.locale().monthName(n % 100 - 1, Locale.LongFormat) + " " + Math.floor(n / 100)
+    }
+
+    // The month heading already names the month, so a Month tile gives only the day.
+    function whenText(item: var): string {
+        const t = item.time
+        const day = grouping === "month" ? t.toLocaleDateString(Qt.locale(), qsTr("ddd d"))
+                  : grouping === "game" ? t.toLocaleDateString(Qt.locale(), qsTr("ddd d MMM yyyy"))
+                  : t.toLocaleDateString(Qt.locale(), qsTr("d MMM yyyy"))
+        // Without the system locale the app is en_US, whose 12 h clock isn't wanted.
+        const time = General.systemLocale ? t.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
+                                          : t.toLocaleTimeString(Qt.locale(), "HH:mm")
+        return day + "  ·  " + time
     }
 
     function relayout() {
@@ -695,14 +707,23 @@ FocusScope {
                             }
                             onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
                         }
-                        Label {
-                            visible: root.showNames
+                        Row {
                             y: root.tileHeight + Theme.layout.spacing / 2
-                            width: parent.width
-                            elide: Text.ElideRight
-                            text: root.games[cell.modelData.item.gameId]?.title ?? ""
-                            color: Theme.gallery.gameNameColor
-                            font.pixelSize: Theme.gallery.gameNameSize
+
+                            Label {
+                                visible: root.showNames
+                                width: Math.max(0, Math.min(implicitWidth, cell.width - dateLabel.implicitWidth))
+                                elide: Text.ElideRight
+                                text: root.games[cell.modelData.item.gameId]?.title ?? ""
+                                color: Theme.gallery.gameNameColor
+                                font.pixelSize: Theme.gallery.gameNameSize
+                            }
+                            Label {
+                                id: dateLabel
+                                text: (root.showNames ? "  ·  " : "") + root.whenText(cell.modelData.item)
+                                color: Theme.gallery.dateColor
+                                font.pixelSize: Theme.gallery.gameNameSize
+                            }
                         }
                     }
                 }
