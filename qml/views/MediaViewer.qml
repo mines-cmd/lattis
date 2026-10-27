@@ -425,7 +425,7 @@ MotionPopup {
                     y: root.panY
                     scale: root.zoom
                     visible: !root.isClip
-                    source: root.isClip ? "" : root.current.image
+                    source: root.isClip ? "" : (root.current.image ?? "")
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory;
@@ -547,11 +547,12 @@ MotionPopup {
                         onMoved: f => root.zoomTo(1 + f * (root.maxZoom - 1), shot.width / 2, shot.height / 2)
                     }
                     Label {
+                        id: zoomLabel
                         Layout.preferredWidth: zoomMetrics.width
                         horizontalAlignment: Text.AlignRight
                         text: Math.round(root.zoom * 100) + "%"
                         color: Theme.media.viewerTimeColor
-                        TextMetrics { id: zoomMetrics; font: parent.font; text: "800%" }
+                        TextMetrics { id: zoomMetrics; font: zoomLabel.font; text: "800%" }
                     }
                 }
             }
@@ -621,11 +622,12 @@ MotionPopup {
                             }
                         }
                         Label {
+                            id: percentLabel
                             Layout.preferredWidth: percentMetrics.width
                             horizontalAlignment: Text.AlignRight
                             text: Math.round((root.muted ? 0 : root.volume) * 100) + "%"
                             color: Theme.media.viewerTimeColor
-                            TextMetrics { id: percentMetrics; font: parent.font; text: "100%" }
+                            TextMetrics { id: percentMetrics; font: percentLabel.font; text: "100%" }
                         }
                     }
 
