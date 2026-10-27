@@ -80,7 +80,7 @@ QStringList GamePageSettings::defaultInfoRows()
 
 QStringList GamePageSettings::defaultSections()
 {
-    return {QStringLiteral("description"), QStringLiteral("tags"), QStringLiteral("clips")};
+    return {QStringLiteral("description"), QStringLiteral("clips"), QStringLiteral("tags")};
 }
 
 const QStringList &gamePageChoices(const QString &place)

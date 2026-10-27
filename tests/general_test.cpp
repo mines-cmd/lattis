@@ -427,7 +427,7 @@ void GeneralTest::gamePageDefaults()
              (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
     QCOMPARE(empty.value.recentPeriod, QStringLiteral("two_weeks"));
     QCOMPARE(empty.value.playTimeFormat, QStringLiteral("hours"));
-    QCOMPARE(empty.value.sections, (QStringList{"description", "tags", "clips"}));
+    QCOMPARE(empty.value.sections, (QStringList{"description", "clips", "tags"}));
 
     const auto other = parseGamePageSettings("[general]\nreduce_motion = true\n", QStringLiteral("settings.toml"));
     QCOMPARE(other.value, GamePageSettings());
