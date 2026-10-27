@@ -1059,7 +1059,7 @@ constexpr Setting kSettings[] = {
     color("gallery", "entry_hover", "@filters.sort_hover", "Filter entry under the mouse"),
     integer("gallery", "entry_radius", "@radius.small", 0, 100, "Filter entry corner radius"),
     real("gallery", "entry_empty_opacity", "0.4", 0, 1, "How strong an entry shows when the other filters leave it no items"),
-    integer("gallery", "list_height", "220", 60, 1000, "Tallest the game list and the date tree grow in the sidebar before they scroll"),
+    integer("gallery", "list_height", "220", 60, 1000, "Tallest the date tree grows before it scrolls; the game list fills the sidebar's free height, and at least this much"),
     color("gallery", "clear_color", "@accent", "The Clear and Clear all links"),
     color("gallery", "filter_dot_color", "@accent", "The dot on the Filters button while a filter is on"),
     integer("gallery", "filter_dot_size", "8", 2, 40, "Size of that dot"),

@@ -110,6 +110,9 @@ FocusScope {
         Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
 
         HoverHandler { cursorShape: Qt.PointingHandCursor }
+        ToolTip.visible: hovered && entryName.truncated
+        ToolTip.delay: Theme.tooltip.delay
+        ToolTip.text: text
 
         background: Rectangle {
             radius: Theme.gallery.entryRadius
@@ -157,6 +160,7 @@ FocusScope {
                 color: Theme.gallery.entryColor
             }
             Label {
+                id: entryName
                 Layout.fillWidth: true
                 text: entry.text
                 elide: Text.ElideRight
@@ -180,11 +184,14 @@ FocusScope {
         property bool active: false
         default property alias body: unfold.content
         readonly property bool folded: General.galleryFoldedSections.includes(name)
+        readonly property real headerHeight: headerRow.implicitHeight
+        readonly property alias bodySpacing: unfold.spacing
 
         Layout.fillWidth: true
         spacing: Theme.layout.spacing / 2
 
         RowLayout {
+            id: headerRow
             Layout.fillWidth: true
 
             AbstractButton {
@@ -282,6 +289,7 @@ FocusScope {
             spacing: Theme.gallery.sidebarSpacing
 
             FilterSection {
+                id: typeSection
                 name: "type"
                 title: qsTr("Type")
                 active: Object.keys(root.page.typeSel).length > 0
@@ -299,6 +307,7 @@ FocusScope {
             }
 
             FilterSection {
+                id: platformSection
                 name: "platform"
                 title: qsTr("Platform")
                 active: Object.keys(root.page.platformSel).length > 0
@@ -317,11 +326,20 @@ FocusScope {
             }
 
             FilterSection {
+                id: gameSection
                 name: "game"
                 title: qsTr("Game")
                 active: Object.keys(root.page.gameSel).length > 0
 
+                // The sidebar's height less everything but the game list, summed from the parts rather
+                // than from `sections`, whose height includes the list's own.
+                readonly property real listRoom: flick.height - typeSection.implicitHeight - platformSection.implicitHeight
+                                                 - dateSection.implicitHeight - 3 * sections.spacing
+                                                 - headerHeight - spacing - gameSearch.implicitHeight
+                                                 - gameSearch.Layout.bottomMargin - bodySpacing
+
                 SettingsSearchField {
+                    id: gameSearch
                     Layout.fillWidth: true
                     Layout.bottomMargin: Theme.layout.spacing / 2
                     placeholderText: qsTr("Search games")
@@ -332,7 +350,7 @@ FocusScope {
                 ListView {
                     id: gameListView
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, Theme.gallery.listHeight)
+                    Layout.preferredHeight: Math.min(contentHeight, Math.max(Theme.gallery.listHeight, gameSection.listRoom))
                     clip: true
                     model: root.shownGames
                     boundsBehavior: Flickable.StopAtBounds
@@ -359,6 +377,7 @@ FocusScope {
             }
 
             FilterSection {
+                id: dateSection
                 name: "date"
                 title: qsTr("Date")
                 active: Object.keys(root.page.monthSel).length > 0
