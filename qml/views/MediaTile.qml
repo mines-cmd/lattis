@@ -11,8 +11,14 @@ ArtThumb {
     property color shadowColor: Theme.media.thumbShadowColor
     property color borderColor: Theme.media.thumbBorderColor
     property bool focusRing: false
+    property bool showTooltip: true
     readonly property bool hovered: area.containsMouse
     readonly property bool isClip: media.kind === "clip"
+    property real hoverScale: Theme.media.thumbHoverScale
+
+    z: hovered ? 1 : 0
+    scale: hovered && Motion.on ? hoverScale : 1
+    Behavior on scale { enabled: Motion.on; MotionNumber { speed: "fast" } }
 
     signal clicked()
     signal menuRequested(point position)
@@ -112,7 +118,7 @@ ArtThumb {
             else
                 tile.clicked()
         }
-        ToolTip.visible: containsMouse && tile.media.time !== undefined
+        ToolTip.visible: tile.showTooltip && containsMouse && tile.media.time !== undefined
         ToolTip.delay: Theme.tooltip.delay
         ToolTip.text: tile.media.time ? tile.media.time.toLocaleDateString(Qt.locale(), General.shortDateFormat) : ""
     }

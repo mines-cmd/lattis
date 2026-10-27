@@ -617,12 +617,13 @@ FocusScope {
                     icon: Icons.layoutMasonryLine
                     label: root.grouping === "month" ? qsTr("Group: Month") : root.grouping === "game" ? qsTr("Group: Game")
                                                                                                        : qsTr("Group: None")
-                    onClicked: groupMenu.popup(groupButton, 0, height + Theme.layout.spacing / 2)
+                    onClicked: groupMenu.popup(parent, x, y + height + Theme.layout.spacing / 2)
 
                     SettingsMenu {
                         id: groupMenu
                         pops: true
-                        popDirection: "below"
+                        popDirection: "down"
+                        minWidth: groupButton.width
                         checkColumn: true
 
                         Repeater {
@@ -644,12 +645,13 @@ FocusScope {
                     icon: Icons.arrowDown
                     label: root.newestFirst ? qsTr("Newest first") : qsTr("Oldest first")
                     iconRotation: root.newestFirst ? 0 : 180
-                    onClicked: sortMenu.popup(sortButton, 0, height + Theme.layout.spacing / 2)
+                    onClicked: sortMenu.popup(parent, x, y + height + Theme.layout.spacing / 2)
 
                     SettingsMenu {
                         id: sortMenu
                         pops: true
-                        popDirection: "below"
+                        popDirection: "down"
+                        minWidth: sortButton.width
                         checkColumn: true
 
                         SettingsMenuItem {
@@ -802,7 +804,9 @@ FocusScope {
                 required property int index
                 readonly property bool isHeader: modelData.header
                 readonly property bool isLast: modelData.last === true
+                property int hotCount: 0
 
+                z: hotCount > 0 ? 2 : 1
                 width: list.width
                 height: root.rowSpan(modelData)
 
@@ -829,18 +833,24 @@ FocusScope {
                         required property var modelData
                         required property int index
 
+                        readonly property bool hot: tile.hovered
+
                         x: root.cardPad + index * (root.tileWidth + Theme.gallery.tileGap)
                         width: root.tileWidth
                         height: root.rowHeight
+                        z: hot ? 1 : 0
+                        onHotChanged: row.hotCount += hot ? 1 : -1
 
                         MediaTile {
                             id: tile
                             width: root.tileWidth
                             height: root.tileHeight
                             media: cell.modelData.item
+                            showTooltip: false
                             cornerRadius: Theme.gallery.tileRadius
                             shadowSize: Theme.gallery.tileShadowSize
                             shadowColor: Theme.gallery.tileShadowColor
+                            hoverScale: Theme.gallery.tileHoverScale
                             borderColor: Theme.gallery.tileBorderColor
                             focusRing: root.keyboardFocus && root.activeFocus && root.focusIndex === cell.modelData.n
                             onClicked: {
