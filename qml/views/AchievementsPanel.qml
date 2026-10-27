@@ -166,9 +166,11 @@ Surface {
                         function onSettledCountChanged() { tile.start() }
                     }
                     Component.onCompleted: start()
+                    // Deferred: a cached icon is Ready as soon as its source is set, so starting synchronously
+                    // nests one tile's source binding inside another's and Qt drops it as a binding loop.
                     function start() {
                         if (!started && index < root.settledCount + 3)
-                            started = true
+                            Qt.callLater(() => { started = true })
                     }
                     onSettledChanged: {
                         if (settled === counted)
@@ -190,7 +192,7 @@ Surface {
                         onTriggered: {
                             tile.tries++
                             tile.started = false
-                            tile.started = true
+                            Qt.callLater(() => { tile.started = true })
                         }
                     }
                     opacity: modelData?.unlocked ? 1 : Theme.achievements.lockedOpacity
