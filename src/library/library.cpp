@@ -1713,9 +1713,11 @@ void Library::media(const QString &id)
         }));
         return;
     }
-    const qint64 appId = GameId::steamAppId(id);
+    quint64 appId = quint64(qMax<qint64>(GameId::steamAppId(id), 0));
+    if (const Game *g = game(id); g && g->shortcut)
+        appId = (quint64(g->shortcut) << 32) | 0x02000000;
     const SteamInstall install = m_store.snapshot().steam.install;
-    if (appId <= 0 || install.userDataDir().isEmpty()) {
+    if (appId == 0 || install.userDataDir().isEmpty()) {
         QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
         return;
     }

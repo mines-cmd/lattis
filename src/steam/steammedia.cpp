@@ -141,10 +141,10 @@ QString lengthText(qint64 durationMs)
                  : u"%1:%2"_s.arg(m).arg(s, 2, 10, u'0');
 }
 
-QList<Clip> listClips(const SteamInstall &install, qint64 appId)
+QList<Clip> listClips(const SteamInstall &install, quint64 appId)
 {
     const QString user = install.userDataDir();
-    if (user.isEmpty() || appId <= 0)
+    if (user.isEmpty() || appId == 0)
         return {};
     const QString prefix = u"clip_%1_"_s.arg(appId);
     QList<Clip> out;
@@ -156,10 +156,10 @@ QList<Clip> listClips(const SteamInstall &install, qint64 appId)
     return out;
 }
 
-QList<Screenshot> listScreenshots(const SteamInstall &install, qint64 appId)
+QList<Screenshot> listScreenshots(const SteamInstall &install, quint64 appId)
 {
     const QString user = install.userDataDir();
-    if (user.isEmpty() || appId <= 0)
+    if (user.isEmpty() || appId == 0)
         return {};
     const QDir dir(u"%1/760/remote/%2/screenshots"_s.arg(user).arg(appId));
     QList<Screenshot> out;

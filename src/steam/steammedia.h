@@ -25,8 +25,8 @@ struct Screenshot
     QDateTime time;
 };
 
-QList<Clip> listClips(const SteamInstall &install, qint64 appId);
-QList<Screenshot> listScreenshots(const SteamInstall &install, qint64 appId);
+QList<Clip> listClips(const SteamInstall &install, quint64 appId);
+QList<Screenshot> listScreenshots(const SteamInstall &install, quint64 appId);
 
 qint64 parseDurationMs(const QString &isoDuration);
 QString lengthText(qint64 durationMs);
