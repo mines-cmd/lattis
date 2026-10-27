@@ -95,7 +95,7 @@ Item {
     readonly property var sectionDefs: ({
         description: { icon: Icons.fileTextLine, hint: qsTr("The game's text, with Show more when it's cut") },
         tags: { icon: Icons.tagLine, hint: qsTr("Click one to show only the games with it") },
-        clips: { icon: Icons.playLargeLine, hint: qsTr("Your Steam clips and screenshots of a Steam game, as the Media row") }
+        clips: { icon: Icons.playLargeLine, hint: qsTr("A Steam game's clips and screenshots, and an emulator's screenshots of a ROM game, as the Media row") }
     })
 
     GamePageNames { id: names }
@@ -304,7 +304,7 @@ Item {
                     LabeledRow {
                         visible: content.screenshotsShown
                         label: qsTr("Show screenshots")
-                        note: qsTr("Your Steam screenshots of the game, in the Media row.")
+                        note: qsTr("Your screenshots of the game, from Steam or its emulator, in the Media row.")
                         SettingsSwitch {
                             checked: General.showScreenshots
                             onToggled: root.report(General.setShowScreenshots(checked))

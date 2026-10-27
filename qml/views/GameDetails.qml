@@ -548,10 +548,10 @@ Item {
         mediaViewer.item.show(item, list)
     }
 
-    // "screenshot" opens the first screenshot, "menu" the first clip's menu, anything else plays the first clip.
+    // "screenshot" opens the first screenshot, "menu" the first tile's menu, anything else plays the first clip.
     function clipForScreenshot(spec) {
         const list = textColumn.mediaRow.shown
-        const item = list.find(i => i.kind === (spec === "screenshot" ? "screenshot" : "clip"))
+        const item = spec === "menu" ? list[0] : list.find(i => i.kind === (spec === "screenshot" ? "screenshot" : "clip"))
         if (item === undefined)
             return
         if (spec === "menu")

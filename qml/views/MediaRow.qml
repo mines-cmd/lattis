@@ -14,7 +14,7 @@ ColumnLayout {
     property bool installDismissed: false
     readonly property bool installing: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"
     property bool active: true
-    readonly property bool wanted: active && General.showClips && (game.platform ?? "") === "steam" && (game.id ?? "") !== ""
+    readonly property bool wanted: active && General.showClips && ((game.platform ?? "") === "steam" || (game.rom ?? false)) && (game.id ?? "") !== ""
 
     signal mediaRequested(var item, var list)
     signal menuRequested(var clip, Item tile, point position)
