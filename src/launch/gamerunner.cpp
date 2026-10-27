@@ -1,5 +1,6 @@
 #include "gamerunner.h"
 #include "detachedprocess.h"
+#include "emulators.h"
 #include "gameid.h"
 #include "launchcommand.h"
 #include "library.h"
@@ -862,6 +863,16 @@ QString GameRunner::openDataFolder()
 {
     if (!QDesktopServices::openUrl(QUrl::fromLocalFile(m_dataDir)))
         return tr("Could not open %1").arg(m_dataDir);
+    return {};
+}
+
+QString GameRunner::openPath(const QString &path)
+{
+    const QString expanded = Emulators::expandHome(path, QDir::homePath());
+    if (!QFileInfo::exists(expanded))
+        return tr("%1 doesn't exist yet").arg(path);
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(expanded)))
+        return tr("Could not open %1").arg(path);
     return {};
 }
 

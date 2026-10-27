@@ -22,7 +22,7 @@ Lattis knows twelve emulators out of the box, among them Ryubing (Switch), Azaha
 
 **Arguments** added on an emulator's row go to every game it runs, like `--fullscreen`. A single game can have its own arguments too, in its Properties.
 
-**Screenshot folders** on an emulator's row are where its game pages look for the screenshots it took. The built-in emulators come with the folders they save in by default. If you changed the folder in the emulator's own settings, or keep screenshots somewhere else too, **Add folder** adds it, the cross removes one, and **Reset** goes back to the built-in ones. Lattis still matches each file to its game the same way, by the game's ID or title in the file name; for an emulator that names its screenshots only by time (or one you added yourself), a screenshot shows on the page of the game you were playing from Lattis when it was taken.
+**Screenshot folders** on an emulator's row are where its game pages look for the screenshots it took. The built-in emulators come with the folders they save in by default. If you changed the folder in the emulator's own settings, or keep screenshots somewhere else too, **Add folder** adds it, the folder button opens one, the cross removes one, and **Reset** goes back to the built-in ones. Lattis still matches each file to its game the same way, by the game's ID or title in the file name; for an emulator that names its screenshots only by time (or one you added yourself), a screenshot shows on the page of the game you were playing from Lattis when it was taken.
 
 ### Installing an emulator
 

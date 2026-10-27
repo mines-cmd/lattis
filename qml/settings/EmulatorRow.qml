@@ -536,8 +536,15 @@ ColumnLayout {
                     Label {
                         Layout.fillWidth: true
                         text: folderItem.modelData === "{romdir}" ? qsTr("Next to each game's ROM") : folderItem.modelData
-                        color: Theme.controls.labelColor
+                        color: Theme.controls.descriptionColor
                         elide: Text.ElideMiddle
+                    }
+                    ListButton {
+                        visible: !folderItem.modelData.startsWith("{romdir}")
+                        iconPath: Icons.folderOpenLine
+                        textColor: hovered ? foreground : Theme.controls.descriptionColor
+                        tip: qsTr("Open the folder")
+                        onClicked: root.error = GameRunner.openPath(folderItem.modelData)
                     }
                     ListButton {
                         iconPath: Icons.close
