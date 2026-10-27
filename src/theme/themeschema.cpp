@@ -521,6 +521,8 @@ constexpr Setting kSettings[] = {
     color("details", "count_color", "@text_muted", "The number of items beside a heading (the Media row's count)"),
     color("details", "description_color", "@text_muted", "Description text color"),
     integer("details", "heading_font_size", "@font.heading_size", 6, 72, "Heading size"),
+    integer("details", "count_font_size", "14", 6, 72, "Size of the number beside a heading"),
+    integer("details", "count_font_weight", "500", 100, 900, "Weight of the number beside a heading"),
     integer("details", "collapse_chevron_size", "14", 0, 64,
             "The chevron after the Description, Tags and Media headings, shown on hover and while collapsed; 0 hides it (the heading still collapses)"),
     integer("details", "collapse_chevron_gap", "4", 0, 50, "Space between a heading and its chevron"),

@@ -32,8 +32,8 @@ Item {
             visible: root.count !== ""
             text: root.count
             color: Theme.details.countColor
-            font.weight: Theme.font.strongWeight
-            font.pixelSize: Theme.details.headingFontSize
+            font.weight: Theme.details.countFontWeight
+            font.pixelSize: Theme.details.countFontSize
         }
         Icon {
             visible: Theme.details.collapseChevronSize > 0
