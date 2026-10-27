@@ -29,7 +29,7 @@ Parsed<GallerySettings> parseGallerySettings(const QByteArray &bytes, const QStr
         return out;
 
     const QStringList known = {QStringLiteral("group"), QStringLiteral("sort"), QStringLiteral("tile_width"),
-                               QStringLiteral("folded_sections")};
+                               QStringLiteral("folded_sections"), QStringLiteral("captions")};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
         if (key == known.at(0) || key == known.at(1)) {
@@ -65,6 +65,11 @@ Parsed<GallerySettings> parseGallerySettings(const QByteArray &bytes, const QStr
                 else if (!out.value.foldedSections.contains(name))
                     out.value.foldedSections.append(name);
             }
+        } else if (key == known.at(4)) {
+            if (const auto *flag = node.as_boolean())
+                out.value.captions = flag->get();
+            else
+                out.warnings.append(QStringLiteral("%1: captions must be true or false").arg(section.where(node)));
         } else {
             out.warnings.append(
                 QStringLiteral("%1: unknown key %2%3").arg(section.where(node), key, suggestion(key, known)));

@@ -61,8 +61,17 @@ FocusScope {
     readonly property real tileWidth: (innerWidth - (columns - 1) * Theme.gallery.tileGap) / columns
     readonly property real tileHeight: tileWidth * 9 / 16
     readonly property bool showNames: grouping !== "game"
-    readonly property real captionHeight: Theme.gallery.gameNameSize * 1.6
-    readonly property real rowHeight: tileHeight + Theme.layout.spacing / 2 + captionHeight + Theme.gallery.tileGap
+    readonly property bool captions: General.galleryCaptions
+    readonly property real captionHeight: captions ? Theme.layout.spacing / 2 + Theme.gallery.gameNameSize * 1.6 : 0
+    readonly property real rowHeight: tileHeight + captionHeight + Theme.gallery.tileGap
+    // Every row's top, and the total at the end: exact, unlike the ListView's estimate from the rows it has made.
+    readonly property var rowTops: {
+        const tops = [0]
+        for (const r of rows)
+            tops.push(tops[tops.length - 1] + rowSpan(r))
+        return tops
+    }
+    readonly property real contentTotal: rowTops[rowTops.length - 1]
     readonly property bool viewerOpen: viewer.item !== null && viewer.item.opened
 
     signal closeRequested()
@@ -340,6 +349,37 @@ FocusScope {
     }
 
     // The item at the top of the grid, to stay on it when the layout changes under it.
+    function rowSpan(r: var): real {
+        return r.header ? Theme.gallery.groupHeight
+             : r.last ? rowHeight - Theme.gallery.tileGap + cardPad + Theme.gallery.groupSpacing
+             : rowHeight
+    }
+
+    function exactY(): real {
+        const i = list.indexAt(0, list.contentY + 1)
+        const item = i >= 0 ? list.itemAtIndex(i) : null
+        return item ? rowTops[i] + list.contentY - item.y : 0
+    }
+
+    function scrollToY(y: real) {
+        if (rows.length === 0)
+            return
+        y = Math.max(0, Math.min(y, contentTotal - list.height))
+        let lo = 0
+        let hi = rows.length - 1
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1
+            if (rowTops[mid] <= y)
+                lo = mid
+            else
+                hi = mid - 1
+        }
+        list.positionViewAtIndex(lo, ListView.Beginning)
+        const item = list.itemAtIndex(lo)
+        if (item)
+            list.contentY = item.y + y - rowTops[lo]
+    }
+
     function anchorKey(): string {
         if (rows.length === 0 || list.contentY < 1)
             return ""
@@ -534,105 +574,123 @@ FocusScope {
             }
             Item { Layout.fillWidth: true }
 
-            ChromeButton {
-                id: filtersButton
-                visible: root.compact
-                icon: Icons.filter
-                label: qsTr("Filters")
-                onClicked: {
-                    root.panelOpen = !root.panelOpen
-                    if (root.panelOpen)
-                        filters.forceActiveFocus()
-                    else
-                        root.forceActiveFocus()
+            RowLayout {
+                spacing: Theme.gallery.buttonSpacing
+
+                ChromeButton {
+                    id: filtersButton
+                    implicitHeight: Theme.gallery.buttonHeight
+                    radius: Theme.gallery.buttonRadius
+                    visible: root.compact
+                    icon: Icons.filter
+                    label: qsTr("Filters")
+                    onClicked: {
+                        root.panelOpen = !root.panelOpen
+                        if (root.panelOpen)
+                            filters.forceActiveFocus()
+                        else
+                            root.forceActiveFocus()
+                    }
+
+                    Rectangle {
+                        visible: root.filtersActive
+                        x: parent.width - width * 0.75
+                        y: -height * 0.25
+                        width: Theme.gallery.filterDotSize
+                        height: width
+                        radius: width / 2
+                        color: Theme.gallery.filterDotColor
+                    }
                 }
-
-                Rectangle {
-                    visible: root.filtersActive
-                    x: parent.width - width * 0.75
-                    y: -height * 0.25
-                    width: Theme.gallery.filterDotSize
-                    height: width
-                    radius: width / 2
-                    color: Theme.gallery.filterDotColor
+                ChromeButton {
+                    implicitHeight: Theme.gallery.buttonHeight
+                    radius: Theme.gallery.buttonRadius
+                    icon: root.captions ? Icons.closedCaptioningFill : Icons.closedCaptioningLine
+                    tip: root.captions ? qsTr("Hide captions") : qsTr("Show captions")
+                    onClicked: root.message(General.setGalleryCaptions(!root.captions))
+                    Accessible.name: tip
                 }
-            }
-            ChromeButton {
-                id: groupButton
-                icon: Icons.layoutMasonryLine
-                label: root.grouping === "month" ? qsTr("Group: Month") : root.grouping === "game" ? qsTr("Group: Game")
-                                                                                                   : qsTr("Group: None")
-                onClicked: groupMenu.popup(groupButton, 0, height + Theme.layout.spacing / 2)
+                ChromeButton {
+                    id: groupButton
+                    implicitHeight: Theme.gallery.buttonHeight
+                    radius: Theme.gallery.buttonRadius
+                    icon: Icons.layoutMasonryLine
+                    label: root.grouping === "month" ? qsTr("Group: Month") : root.grouping === "game" ? qsTr("Group: Game")
+                                                                                                       : qsTr("Group: None")
+                    onClicked: groupMenu.popup(groupButton, 0, height + Theme.layout.spacing / 2)
 
-                SettingsMenu {
-                    id: groupMenu
-                    pops: true
-                    popDirection: "below"
-                    checkColumn: true
+                    SettingsMenu {
+                        id: groupMenu
+                        pops: true
+                        popDirection: "below"
+                        checkColumn: true
 
-                    Repeater {
-                        model: [{ id: "month", text: qsTr("Month") }, { id: "game", text: qsTr("Game") },
-                                { id: "none", text: qsTr("None") }]
-                        SettingsMenuItem {
-                            required property var modelData
-                            text: modelData.text
-                            checked: root.grouping === modelData.id
-                            onTriggered: root.message(General.setGalleryGroup(modelData.id))
+                        Repeater {
+                            model: [{ id: "month", text: qsTr("Month") }, { id: "game", text: qsTr("Game") },
+                                    { id: "none", text: qsTr("None") }]
+                            SettingsMenuItem {
+                                required property var modelData
+                                text: modelData.text
+                                checked: root.grouping === modelData.id
+                                onTriggered: root.message(General.setGalleryGroup(modelData.id))
+                            }
                         }
                     }
                 }
-            }
-            ChromeButton {
-                id: sortButton
-                icon: Icons.arrowDown
-                label: root.newestFirst ? qsTr("Newest first") : qsTr("Oldest first")
-                iconRotation: root.newestFirst ? 0 : 180
-                onClicked: sortMenu.popup(sortButton, 0, height + Theme.layout.spacing / 2)
+                ChromeButton {
+                    id: sortButton
+                    implicitHeight: Theme.gallery.buttonHeight
+                    radius: Theme.gallery.buttonRadius
+                    icon: Icons.arrowDown
+                    label: root.newestFirst ? qsTr("Newest first") : qsTr("Oldest first")
+                    iconRotation: root.newestFirst ? 0 : 180
+                    onClicked: sortMenu.popup(sortButton, 0, height + Theme.layout.spacing / 2)
 
-                SettingsMenu {
-                    id: sortMenu
-                    pops: true
-                    popDirection: "below"
-                    checkColumn: true
+                    SettingsMenu {
+                        id: sortMenu
+                        pops: true
+                        popDirection: "below"
+                        checkColumn: true
 
-                    SettingsMenuItem {
-                        text: qsTr("Newest first")
-                        checked: root.newestFirst
-                        onTriggered: root.message(General.setGallerySort("newest"))
-                    }
-                    SettingsMenuItem {
-                        text: qsTr("Oldest first")
-                        checked: !root.newestFirst
-                        onTriggered: root.message(General.setGallerySort("oldest"))
+                        SettingsMenuItem {
+                            text: qsTr("Newest first")
+                            checked: root.newestFirst
+                            onTriggered: root.message(General.setGallerySort("newest"))
+                        }
+                        SettingsMenuItem {
+                            text: qsTr("Oldest first")
+                            checked: !root.newestFirst
+                            onTriggered: root.message(General.setGallerySort("oldest"))
+                        }
                     }
                 }
-            }
-            RowLayout {
-                spacing: Theme.layout.spacing
+                RowLayout {
+                    spacing: Theme.layout.spacing
 
-                Icon {
-                    path: Icons.image
-                    size: Theme.iconButton.iconSize - 4
-                    color: Theme.gallery.countColor
-                }
-                SettingsSlider {
-                    id: sizeSlider
-                    Layout.preferredWidth: 120
-                    fillColor: Theme.gallery.sliderFill
-                    from: Theme.gallery.tileMinWidth
-                    to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
-                    stepSize: 1
-                    value: root.tileTarget
-                    onMoved: {
-                        root.dragWidth = Math.round(value)
-                        saveSize.restart()
+                    Icon {
+                        path: Icons.image
+                        size: Theme.iconButton.iconSize - 4
+                        color: Theme.gallery.countColor
                     }
-                    Accessible.name: qsTr("Tile size")
-                }
-                Icon {
-                    path: Icons.image
-                    size: Theme.iconButton.iconSize + 4
-                    color: Theme.gallery.countColor
+                    SettingsSlider {
+                        id: sizeSlider
+                        Layout.preferredWidth: 120
+                        fillColor: Theme.gallery.sliderFill
+                        from: Theme.gallery.tileMinWidth
+                        to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
+                        stepSize: 1
+                        value: root.tileTarget
+                        onMoved: {
+                            root.dragWidth = Math.round(value)
+                            saveSize.restart()
+                        }
+                        Accessible.name: qsTr("Tile size")
+                    }
+                    Icon {
+                        path: Icons.image
+                        size: Theme.iconButton.iconSize + 4
+                        color: Theme.gallery.countColor
+                    }
                 }
             }
         }
@@ -658,8 +716,7 @@ FocusScope {
             clip: true
             model: root.rows
             boundsBehavior: Flickable.StopAtBounds
-            cacheBuffer: root.rowHeight * 2
-            ScrollBar.vertical: gridBar
+            cacheBuffer: Math.max(root.rowHeight * 2, height)
 
             delegate: Item {
                 id: row
@@ -669,9 +726,7 @@ FocusScope {
                 readonly property bool isLast: modelData.last === true
 
                 width: list.width
-                height: isHeader ? Theme.gallery.groupHeight
-                      : isLast ? root.rowHeight - Theme.gallery.tileGap + root.cardPad + Theme.gallery.groupSpacing
-                      : root.rowHeight
+                height: root.rowSpan(modelData)
 
                 CardSlice {
                     visible: root.grouped
@@ -718,6 +773,7 @@ FocusScope {
                             onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
                         }
                         Row {
+                            visible: root.captions
                             y: root.tileHeight + Theme.layout.spacing / 2
 
                             Label {
@@ -740,18 +796,38 @@ FocusScope {
             }
         }
 
-        // The heading of the group at the top stays there while its tiles scroll under it.
-        // In the right margin, clear of the cards.
+        // In the right margin, clear of the cards. Not attached to the list: rows differ in height
+        // and only those near the view exist, so the list's contentHeight is an estimate that
+        // changes as rows are made, which made the handle jump and a drag jerk the grid. This bar
+        // goes by the exact row tops instead.
         SettingsScrollBar {
             id: gridBar
             trackless: true
             thickness: Theme.gallery.scrollbarWidth
+            orientation: Qt.Vertical
             x: list.x + list.width + (root.sideMargin - width) / 2
             y: list.y
             height: list.height
+            size: root.contentTotal > 0 ? Math.min(1, list.height / root.contentTotal) : 1
+            readonly property real total: root.contentTotal
+            onTotalChanged: follow()
+
+            function follow() {
+                if (!pressed)
+                    position = root.contentTotal > 0 ? root.exactY() / root.contentTotal : 0
+            }
+
+            onPressedChanged: follow()
+            onPositionChanged: if (pressed) root.scrollToY(position * root.contentTotal)
+
+            Connections {
+                target: list
+                function onContentYChanged() { gridBar.follow() }
+            }
         }
 
-        // The next group's card pushes it up out of the way.
+        // The heading of the group at the top stays there while its tiles scroll under it; the
+        // next group's card pushes it up out of the way.
         Item {
             id: sticky
             readonly property int topRow: root.grouped && root.rows.length > 0 ? list.indexAt(0, list.contentY + 1) : -1

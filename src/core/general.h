@@ -48,6 +48,7 @@ class General : public QObject
     Q_PROPERTY(QString gallerySort READ gallerySort NOTIFY galleryChanged)
     Q_PROPERTY(int galleryTileWidth READ galleryTileWidth NOTIFY galleryChanged)
     Q_PROPERTY(QStringList galleryFoldedSections READ galleryFoldedSections NOTIFY galleryChanged)
+    Q_PROPERTY(bool galleryCaptions READ galleryCaptions NOTIFY galleryChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
     Q_PROPERTY(bool startAtLoginOurs READ startAtLoginOurs NOTIFY loginChanged)
@@ -89,6 +90,7 @@ public:
     QString gallerySort() const { return m_gallery.sort; }
     int galleryTileWidth() const { return m_gallery.tileWidth; }
     QStringList galleryFoldedSections() const { return m_gallery.foldedSections; }
+    bool galleryCaptions() const { return m_gallery.captions; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
     bool startAtLoginOurs() const { return m_loginOurs; }
@@ -118,6 +120,7 @@ public:
     Q_INVOKABLE QString setGallerySort(const QString &sort);
     Q_INVOKABLE QString setGalleryTileWidth(int width);
     Q_INVOKABLE QString setGallerySectionFolded(const QString &name, bool folded);
+    Q_INVOKABLE QString setGalleryCaptions(bool on);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
     void refreshAutostart();

@@ -334,6 +334,12 @@ QString General::setGalleryTileWidth(int width)
     return setGalleryValue(QStringLiteral("tile_width"), QString::number(width), false);
 }
 
+QString General::setGalleryCaptions(bool on)
+{
+    return setGalleryValue(QStringLiteral("captions"), on ? QStringLiteral("true") : QStringLiteral("false"),
+                           on == GallerySettings{}.captions);
+}
+
 QString General::setGallerySectionFolded(const QString &name, bool folded)
 {
     if (!gallerySections().contains(name))

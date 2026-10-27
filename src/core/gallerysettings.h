@@ -13,6 +13,7 @@ struct GallerySettings
     QString sort = QStringLiteral("newest");
     int tileWidth = 0;   // 0 = the theme's default
     QStringList foldedSections;
+    bool captions = true;
 
     bool operator==(const GallerySettings &) const = default;
 };
