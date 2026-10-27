@@ -104,7 +104,8 @@ SettingsMenu {
             required property string modelData
             name: modelData
             text: modelData === "add_game" ? qsTr("Add game")
-                : modelData === "play_statistics" ? qsTr("Play statistics") : qsTr("Settings")
+                : modelData === "play_statistics" ? qsTr("Play statistics")
+                : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }
         onObjectAdded: (index, object) => root.addItem(object)
         onObjectRemoved: (index, object) => root.removeItem(object)

@@ -156,6 +156,7 @@ public:
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
     Q_INVOKABLE void allMedia();
+    Q_INVOKABLE QVariantMap mediaGames() const;
     Q_INVOKABLE void achievements(const QString &id);
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);

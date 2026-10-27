@@ -61,6 +61,7 @@ constexpr Action kActions[] = {
     {"window", "toggle_fullscreen", "F11", "Fullscreen"},
     {"window", "toggle_rail", "", "Show or hide the rail"},
     {"window", "play_statistics", "F9", "Play statistics"},
+    {"window", "gallery", "F8", "Gallery"},
     {"window", "look_up_missing", "Ctrl+Shift+L", "Look up missing info"},
     {"window", "app_menu", "F10", "Open the app menu (the logo's)"},
     {"window", "scan_roms", "", "Scan ROM folders now"},

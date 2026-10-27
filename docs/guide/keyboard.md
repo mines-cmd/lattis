@@ -58,6 +58,7 @@ Open save folder, Hide and Uninstall have no keys at first; give them some on Se
 |---|---|
 | Ctrl+N | Add a game |
 | F9 | Play statistics (Esc, or F9 again, returns; Left / Right change the month) |
+| F8 | Gallery (Esc, or F8 again, returns; arrows move between pictures, Enter opens one) |
 | F11 | Fullscreen |
 | Ctrl+Shift+L | Look up missing info |
 | F10 | The app menu |

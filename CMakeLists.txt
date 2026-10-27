@@ -111,6 +111,7 @@ qt_add_qml_module(lattis
         qml/components/CaptionLabel.qml
         qml/components/StatChip.qml
         qml/components/Surface.qml
+        qml/components/ChromeButton.qml
         qml/components/SegmentedToggle.qml
         qml/components/TextLink.qml
         qml/components/TagChip.qml
@@ -153,6 +154,7 @@ qt_add_qml_module(lattis
         qml/views/ForceClosePrompt.qml
         qml/views/PlayHistoryPopup.qml
         qml/views/StatsPage.qml
+        qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml
         qml/views/SteamUninstallPrompt.qml
         qml/views/ProtonUninstall.qml
@@ -164,6 +166,7 @@ qt_add_qml_module(lattis
         qml/views/BulkTagsPopup.qml
         qml/views/ArtEditor.qml
         qml/views/ArtThumb.qml
+        qml/views/MediaTile.qml
         qml/views/ImageFileDialog.qml
         qml/views/TagsEditor.qml
         qml/views/GameList.qml
@@ -273,6 +276,7 @@ qt_add_qml_module(lattis
         src/core/general.h src/core/general.cpp
         src/core/gamepagemigration.h src/core/gamepagemigration.cpp
         src/core/gamepagesettings.h src/core/gamepagesettings.cpp
+        src/core/gallerysettings.h src/core/gallerysettings.cpp
         src/core/generalsettings.h src/core/generalsettings.cpp
         src/core/oldname.h src/core/oldname.cpp
         src/core/restart.h src/core/restart.cpp

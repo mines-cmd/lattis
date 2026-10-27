@@ -7,7 +7,7 @@
 const QStringList &railButtons()
 {
     static const QStringList buttons = {QStringLiteral("add_game"), QStringLiteral("play_statistics"),
-                                        QStringLiteral("open_settings")};
+                                        QStringLiteral("gallery"), QStringLiteral("open_settings")};
     return buttons;
 }
 
@@ -55,7 +55,7 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                 if (!railButtons().contains(name))
                     out.warnings.append(QStringLiteral("%1: unknown rail button \"%2\": they're %3%4")
                                             .arg(section.where(item), name,
-                                                 QStringLiteral("\"add_game\", \"play_statistics\", \"open_settings\""),
+                                                 QStringLiteral("\"add_game\", \"play_statistics\", \"gallery\", \"open_settings\""),
                                                  suggestion(name, railButtons())));
                 else if (!names.contains(name))
                     names.append(name);

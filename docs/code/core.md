@@ -52,6 +52,8 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 
 A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The four lists are `GamePage::chips`, `buttons`, `infoRows` and `sections` (the names `"chips"`, `"buttons"`, `"info_rows"` and `"sections"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
 
+**Gallery settings.** The Gallery's own choices live in `[gallery]` in `settings.toml`, read by `parseGallerySettings()` (`gallerysettings.*`) whenever `General` loads: `group` (`"month"` by default, `"game"` or `"none"`), `sort` (`"newest"` by default, or `"oldest"`), `tile_width` (80 to 1000 px; without it the theme's `gallery.tile_width`) and `folded_sections` (of `"type"`, `"platform"`, `"game"`, `"date"`: the sidebar sections the user folded). The filters are not kept: they start empty each time the page opens. Problems show in `General.problems` like the other sections'.
+
 The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
 
 **Window sizes.** `WindowState` is a QML singleton that persists each window's size and maximized state across starts in `~/.local/state/lattis/windows-<key>.toml`. QML reads the saved sizes in its property initializers — before the first frame — so the window opens at the right size immediately rather than snapping after paint. `track()` wires up the change signals and saves on quit. The Settings window ignores its saved size when `settings_window.remember_size` is off and opens at `settings_window.width` and `height` instead (applied on slider release, to the open window too, via `applyFixedSize()`); the schema flag `onRelease` marks settings whose slider applies on release.
@@ -154,14 +156,15 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `systemLocale` | Format dates and numbers in the system locale (false: English with dates as `dd/MM/yy`, applied at the next start via `QLocale::setDefault` and `DateFormat::setSystemLocale` in `main.cpp`) |
 | `reduceMotion` | The person turned on Reduce motion (`reduce_motion`); it has its own signal, `reduceMotionChanged`, because `settingsChanged` re-shows the main window |
 | `railHidden` | The rail is hidden (`rail_hidden`; the app menu's Hide rail / Show rail, action `toggle_rail`); applied at once, with its own signal, `railHiddenChanged`, for the same reason |
-| `railHiddenButtons` | The rail's bottom buttons turned off in its menu, by action name (`add_game`, `play_statistics`, `open_settings`; `rail_hidden_buttons`). `setRailButtonShown(name, shown)` writes it, removing the key when none is hidden; its own signal, `railHiddenButtonsChanged`, for the same reason |
-| `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes all three names and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
+| `railHiddenButtons` | The rail's bottom buttons turned off in its menu, by action name (`add_game`, `play_statistics`, `gallery`, `open_settings`; `rail_hidden_buttons`). `setRailButtonShown(name, shown)` writes it, removing the key when none is hidden; its own signal, `railHiddenButtonsChanged`, for the same reason |
+| `railButtonOrder` | The same buttons in the order the rail shows them (`rail_button_order`; a button the key leaves out follows the listed ones, via `orderedRailButtons()`). `setRailButtonOrder(order)` takes every name and removes the key when the order is the default; its own signal, `railButtonOrderChanged` |
 | `clipVolume` | The clip viewer's volume, 0 to 1 (`clip_volume`, default 1). `setClipVolume(value)` rounds to hundredths and removes the key at 1; its own signal, `clipVolumeChanged` |
 | `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections` | The game page's shown chips, buttons, info rows and sections, in order (`[game_page]`, above) |
 | `recentPeriod`, `playTimeFormat`, `showScreenshots`, `showVideo` | The rest of `[game_page]`; `showDescription`, `showTags` and `showClips` say whether `sections` has each one |
+| `galleryGroup`, `gallerySort`, `galleryTileWidth` (0 = the theme's), `galleryFoldedSections` | `[gallery]`, above; they notify with `galleryChanged`, not `settingsChanged` |
 | `startAtLogin` | An autostart entry exists and is enabled |
 | `startAtLoginOurs` | That entry was written by Lattis |
-| `problems` | Parse warnings from `[general]` and `[game_page]` |
+| `problems` | Parse warnings from `[general]`, `[game_page]` and `[gallery]` |
 | `gamePageProblems` | Those from `[game_page]` alone, for the Game page; notifies with `gamePageChanged` |
 | `dataDir` | The app's data directory |
 | `dataDirFromEnv` | The data dir comes from `$LATTIS_DATA` |
@@ -176,6 +179,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | `setGamePageShown(place, name, shown)` | Error string, or `""`; the entry keeps its place when hidden |
 | `setGamePageOrder(place, order)` | Error string, or `""`; `order` has every choice. Writes the list and, when it differs from the default arrangement, `<place>_order`; a default leaves no key |
 | `setRecentPeriod(period)`, `setPlayTimeFormat(format)` | Error string, or `""`; a default removes the key |
+| `setGalleryGroup(group)`, `setGallerySort(sort)`, `setGalleryTileWidth(width)`, `setGallerySectionFolded(name, folded)` | Error string, or `""`; a default removes the key (the width has none, so any width is written) |
 | `setStartAtLogin(bool)` | Error string, or `""` |
 | `reload()` | — re-reads settings and autostart |
 

@@ -2,6 +2,7 @@
 
 #include "dateformat.h"
 #include "gamepagesettings.h"
+#include "gallerysettings.h"
 #include "generalsettings.h"
 
 #include <QCoreApplication>
@@ -43,6 +44,10 @@ class General : public QObject
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList collapsedSections READ collapsedSections NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
+    Q_PROPERTY(QString galleryGroup READ galleryGroup NOTIFY galleryChanged)
+    Q_PROPERTY(QString gallerySort READ gallerySort NOTIFY galleryChanged)
+    Q_PROPERTY(int galleryTileWidth READ galleryTileWidth NOTIFY galleryChanged)
+    Q_PROPERTY(QStringList galleryFoldedSections READ galleryFoldedSections NOTIFY galleryChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
     Q_PROPERTY(bool startAtLoginOurs READ startAtLoginOurs NOTIFY loginChanged)
@@ -80,6 +85,10 @@ public:
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList collapsedSections() const { return m_gamePage.collapsedSections; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
+    QString galleryGroup() const { return m_gallery.group; }
+    QString gallerySort() const { return m_gallery.sort; }
+    int galleryTileWidth() const { return m_gallery.tileWidth; }
+    QStringList galleryFoldedSections() const { return m_gallery.foldedSections; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
     bool startAtLoginOurs() const { return m_loginOurs; }
@@ -105,6 +114,10 @@ public:
     Q_INVOKABLE QString setShowAchievements(bool on);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setSectionCollapsed(const QString &name, bool collapsed);
+    Q_INVOKABLE QString setGalleryGroup(const QString &group);
+    Q_INVOKABLE QString setGallerySort(const QString &sort);
+    Q_INVOKABLE QString setGalleryTileWidth(int width);
+    Q_INVOKABLE QString setGallerySectionFolded(const QString &name, bool folded);
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
     void refreshAutostart();
@@ -118,11 +131,13 @@ signals:
     void railHiddenButtonsChanged();
     void railButtonOrderChanged();
     void gamePageChanged();
+    void galleryChanged();
     void loginChanged();
 
 private:
     void load();
     void loadAutostart();
+    QString setGalleryValue(const QString &key, const QString &value, bool isDefault);
     QString setMediaFlag(const QString &key, bool on);
     QString setFlag(const QString &key, bool value);
     QString writeGamePage(const QString &place, const QStringList &order, const QStringList &shown);
@@ -137,6 +152,8 @@ private:
     bool m_startedFullscreen = false;
     GeneralSettings m_settings;
     GamePageSettings m_gamePage;
+    GallerySettings m_gallery;
+    QStringList m_galleryProblems;
     QStringList m_gamePageProblems;
     QStringList m_problems;
     bool m_loginExists = false;

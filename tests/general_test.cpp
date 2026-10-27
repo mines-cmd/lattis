@@ -29,6 +29,7 @@ private slots:
     void reduceMotionSetting();
     void railHiddenButtonsSetting();
     void railButtonOrderSetting();
+    void gallerySettings();
     void gamePageDefaults();
     void gamePageParser();
     void gamePageOrderKeepsNewNames();
@@ -392,14 +393,14 @@ void GeneralTest::railButtonOrderSetting()
                                               QStringLiteral("settings.toml"));
     QCOMPARE(partial.warnings.size(), 1);
     QCOMPARE(orderedRailButtons(partial.value.railButtonOrder),
-             (QStringList{"open_settings", "add_game", "play_statistics"}));
+             (QStringList{"open_settings", "add_game", "play_statistics", "gallery"}));
 
     QFile settings(data.filePath(QStringLiteral("settings.toml")));
     QVERIFY(settings.open(QIODevice::WriteOnly));
     settings.close();
     QSignalSpy changed(&general, &General::settingsChanged);
     QSignalSpy orderChanged(&general, &General::railButtonOrderChanged);
-    const QStringList moved{"play_statistics", "open_settings", "add_game"};
+    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game"};
     QCOMPARE(general.setRailButtonOrder(moved), QString());
     QCOMPARE(general.railButtonOrder(), moved);
     QCOMPARE(changed.size(), 0);
@@ -774,6 +775,60 @@ void GeneralTest::staleAutostartRewritten()
     QVERIFY(!general.startAtLoginOurs());
     QCOMPARE(Autostart::readEntry(folder).exec, QStringLiteral("/usr/bin/lattis --minimized"));
     QVERIFY(Autostart::removeEntry(folder).isEmpty());
+}
+
+void GeneralTest::gallerySettings()
+{
+    const auto none = parseGallerySettings("", QStringLiteral("settings.toml"));
+    QCOMPARE(none.value, GallerySettings{});
+    QCOMPARE(none.value.group, QStringLiteral("month"));
+    QCOMPARE(none.value.sort, QStringLiteral("newest"));
+
+    const auto set = parseGallerySettings(
+        "[gallery]\ngroup = \"game\"\nsort = \"oldest\"\ntile_width = 320\nfolded_sections = [\"date\", \"type\", \"date\"]\n",
+        QStringLiteral("settings.toml"));
+    QVERIFY(set.warnings.isEmpty());
+    QCOMPARE(set.value.group, QStringLiteral("game"));
+    QCOMPARE(set.value.sort, QStringLiteral("oldest"));
+    QCOMPARE(set.value.tileWidth, 320);
+    QCOMPARE(set.value.foldedSections, (QStringList{"date", "type"}));
+
+    const auto bad = parseGallerySettings(
+        "[gallery]\ngroup = \"year\"\ntile_width = 20\nfolded_sections = [\"dates\"]\nsize = 1\n",
+        QStringLiteral("settings.toml"));
+    QCOMPARE(bad.warnings.size(), 4);
+    QCOMPARE(bad.value, GallerySettings{});
+
+    QTemporaryDir data;
+    QFile created(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(created.open(QIODevice::WriteOnly));
+    created.close();
+    General general(data.path());
+    QSignalSpy changed(&general, &General::galleryChanged);
+    QSignalSpy window(&general, &General::settingsChanged);
+    QCOMPARE(general.setGalleryGroup(QStringLiteral("game")), QString());
+    QCOMPARE(general.galleryGroup(), QStringLiteral("game"));
+    QCOMPARE(general.setGallerySort(QStringLiteral("oldest")), QString());
+    QCOMPARE(general.setGalleryTileWidth(300), QString());
+    QCOMPARE(general.galleryTileWidth(), 300);
+    QCOMPARE(general.setGallerySectionFolded(QStringLiteral("date"), true), QString());
+    QCOMPARE(general.setGallerySectionFolded(QStringLiteral("type"), true), QString());
+    QCOMPARE(general.galleryFoldedSections(), (QStringList{"type", "date"}));
+    QCOMPARE(changed.size(), 5);
+    QCOMPARE(window.size(), 0);
+
+    general.setGalleryGroup(QStringLiteral("nope"));
+    QCOMPARE(general.galleryGroup(), QStringLiteral("game"));
+
+    QCOMPARE(general.setGalleryGroup(QStringLiteral("month")), QString());
+    QCOMPARE(general.setGallerySectionFolded(QStringLiteral("date"), false), QString());
+    QCOMPARE(general.setGallerySectionFolded(QStringLiteral("type"), false), QString());
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray text = settings.readAll();
+    QVERIFY(!text.contains("group"));
+    QVERIFY(!text.contains("folded_sections"));
+    QVERIFY(text.contains("sort = \"oldest\""));
 }
 
 QTEST_MAIN(GeneralTest)

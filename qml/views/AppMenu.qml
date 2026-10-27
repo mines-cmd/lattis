@@ -55,9 +55,11 @@ SettingsMenu {
         delegate: Entry {
             required property string modelData
             actionName: modelData
-            iconPath: modelData === "add_game" ? Icons.add : modelData === "play_statistics" ? Icons.barChartLine : Icons.gear
+            iconPath: modelData === "add_game" ? Icons.add : modelData === "play_statistics" ? Icons.barChartLine
+                    : modelData === "gallery" ? Icons.image : Icons.gear
             text: modelData === "add_game" ? qsTr("Add game")
-                : modelData === "play_statistics" ? qsTr("Play statistics") : qsTr("Settings")
+                : modelData === "play_statistics" ? qsTr("Play statistics")
+                : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }
         onObjectAdded: (index, object) => root.insertItem(index + 2, object)
         onObjectRemoved: (index, object) => root.removeItem(object)

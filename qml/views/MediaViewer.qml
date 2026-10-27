@@ -9,7 +9,11 @@ MotionPopup {
 
     property var current: ({})
     property var list: []
-    readonly property int index: list.findIndex(i => i.id === current.id)
+    // The Gallery's items carry gameId and share ids across games, so both identify one.
+    readonly property int index: list.findIndex(i => i.id === current.id && i.gameId === current.gameId)
+    // Game info by id ({title, platformName, platformIcon}); with it, items that carry a gameId get a line naming their game.
+    property var games: ({})
+    readonly property var game: games[current.gameId ?? ""]
     readonly property bool isClip: current.kind === "clip"
     readonly property rect picture: isClip ? (pictureKnown || lastPicture.width <= 0 ? video.contentRect : lastPicture)
                                            : Qt.rect((shot.width - shot.paintedWidth) / 2, (shot.height - shot.paintedHeight) / 2,
@@ -41,6 +45,7 @@ MotionPopup {
     readonly property bool fullscreen: window !== null && window.visibility === Window.FullScreen
 
     signal message(string text)
+    signal gameRequested(string id)
 
     function show(item, items) {
         list = items
@@ -143,6 +148,15 @@ MotionPopup {
             return
         madeFullscreen = !fullscreen
         window.toggleFullscreen()
+    }
+
+    function goToGame(id) {
+        close()
+        gameRequested(id)
+    }
+
+    function dateText(time) {
+        return time.toLocaleDateString(Qt.locale(), Locale.LongFormat) + ", " + time.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
     }
 
     function leave() {
@@ -253,6 +267,8 @@ MotionPopup {
     ClipMenu {
         id: clipMenu
         media: root.current
+        gameId: root.game !== undefined ? root.current.gameId : ""
+        onGameRequested: id => root.goToGame(id)
         onMessage: text => root.message(text)
     }
 
@@ -669,6 +685,76 @@ MotionPopup {
                         icon: root.fullscreen ? Icons.fullscreenExitLine : Icons.fullscreenLine
                         tip: root.fullscreen ? qsTr("Exit fullscreen (F)") : qsTr("Fullscreen (F)")
                         onClicked: root.toggleFullscreen()
+                    }
+                }
+            }
+
+            Item {
+                id: gameLine
+                visible: root.game !== undefined
+                Layout.alignment: Qt.AlignHCenter
+                Layout.maximumWidth: parent.width
+                implicitWidth: lineRow.implicitWidth
+                implicitHeight: lineRow.implicitHeight
+
+                // A click that just misses the line must not close the viewer.
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -Theme.layout.spacing * 4
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                }
+
+                RowLayout {
+                    id: lineRow
+                    width: Math.min(implicitWidth, gameLine.Layout.maximumWidth)
+                    spacing: Theme.layout.spacing * 1.5
+
+                    Icon {
+                        visible: (root.game?.platformIcon ?? "") !== ""
+                        size: Theme.gallery.viewerLineSize + 4
+                        path: Icons.forPlatform(root.game?.platformIcon ?? "")
+                        color: Theme.gallery.viewerLineColor
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        elide: Text.ElideRight
+                        text: root.game?.title ?? ""
+                        color: Theme.gallery.viewerLineColor
+                        font.pixelSize: Theme.gallery.viewerLineSize
+                        font.weight: Theme.font.emphasisWeight
+                    }
+                    Label {
+                        text: "·  " + (root.current.time ? root.dateText(root.current.time) : "") + "  ·  "
+                              + qsTr("%1 of %2").arg(root.index + 1).arg(root.list.length)
+                        color: Theme.gallery.viewerLineMuted
+                        font.pixelSize: Theme.gallery.viewerLineSize
+                    }
+                    Surface {
+                        Layout.leftMargin: Theme.layout.spacing
+                        implicitWidth: goLabel.implicitWidth + 2 * Theme.layout.spacing * 1.5
+                        implicitHeight: goLabel.implicitHeight + Theme.layout.spacing
+                        radius: height / 2
+                        fill: goArea.containsMouse ? Theme.gallery.viewerGameHover : "transparent"
+                        fillEnd: fill
+                        border.color: Theme.gallery.viewerLineMuted
+                        border.width: Theme.layout.borderWidth
+                        Behavior on fill { enabled: Motion.fades; MotionColor {} }
+
+                        Label {
+                            id: goLabel
+                            anchors.centerIn: parent
+                            text: qsTr("Go to game")
+                            color: Theme.gallery.viewerLineColor
+                            font.pixelSize: Theme.gallery.viewerLineSize
+                        }
+                        MouseArea {
+                            id: goArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.goToGame(root.current.gameId)
+                        }
                     }
                 }
             }

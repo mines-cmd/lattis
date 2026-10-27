@@ -1,0 +1,613 @@
+import QtQuick
+import QtQuick.Controls.Basic
+import QtQuick.Layouts
+
+// See docs/code/qml.md.
+FocusScope {
+    id: root
+
+    property real dragReserve: 0
+
+    // Every item found whose game the library shows, and the games' names and platforms by id.
+    property var all: []
+    property var games: ({})
+    property bool loading: false
+    // `all` filtered and sorted: what the grid shows and the viewer steps through.
+    property var shown: []
+    // The grid as rows: a group heading ({header, key, ...}) or a row of tiles ({items: [{item, n}]}).
+    property var rows: []
+    property var groupInfo: ({})
+    property var rowOfItem: []
+    property var headerOfRow: []
+    property int focusIndex: 0
+    property bool keyboardFocus: false
+    property int dragWidth: -1
+    // For screenshots: what to open once the items are in (see Main.qml's galleryForScreenshot()).
+    property string autoOpen: ""
+
+    readonly property string grouping: General.galleryGroup
+    readonly property bool grouped: grouping !== "none"
+    readonly property bool newestFirst: General.gallerySort === "newest"
+    readonly property real sideMargin: 2 * Theme.layout.margin
+    readonly property real gridWidth: width - 2 * sideMargin
+    readonly property real tileTarget: dragWidth > 0 ? dragWidth
+                                       : General.galleryTileWidth > 0 ? General.galleryTileWidth : Theme.gallery.tileWidth
+    readonly property int columns: Math.max(1, Math.floor((gridWidth + Theme.gallery.tileGap) / (tileTarget + Theme.gallery.tileGap)))
+    readonly property real tileWidth: (gridWidth - (columns - 1) * Theme.gallery.tileGap) / columns
+    readonly property real tileHeight: tileWidth * 9 / 16
+    readonly property bool showNames: grouping !== "game"
+    readonly property real nameHeight: Theme.gallery.gameNameSize * 1.6
+    readonly property real rowHeight: tileHeight + (showNames ? Theme.layout.spacing / 2 + nameHeight : 0) + Theme.gallery.tileGap
+    readonly property int screenshotCount: shown.reduce((n, i) => n + (i.kind === "screenshot" ? 1 : 0), 0)
+    readonly property int clipCount: shown.length - screenshotCount
+    readonly property bool viewerOpen: viewer.item !== null && viewer.item.opened
+
+    signal closeRequested()
+    signal gameRequested(string id)
+    signal message(string text)
+
+    function start() {
+        all = []
+        shown = []
+        rows = []
+        focusIndex = 0
+        keyboardFocus = false
+        games = Library.mediaGames()
+        loading = true
+        Library.allMedia()
+        sinkOut.stop()
+        riseIn.restart()
+        forceActiveFocus()
+    }
+
+    function leave() {
+        riseIn.stop()
+        sinkOut.restart()
+    }
+
+    MotionNumber {
+        id: riseIn
+        target: rise
+        property: "y"
+        from: Theme.gallery.pageOffset
+        to: 0
+        speed: "slow"
+    }
+
+    // Not riseIn reversed: that saves its movement for the end, when the page has all but faded,
+    // so it can't be seen. Main.qml holds the fade-out back until this has mostly moved.
+    MotionNumber {
+        id: sinkOut
+        target: rise
+        property: "y"
+        to: Theme.gallery.pageOffset
+        speed: "slow"
+    }
+
+    function take(batch: var) {
+        const added = []
+        for (const item of batch) {
+            if (games[item.gameId] === undefined)
+                continue
+            item.stamp = item.time.getTime()
+            added.push(item)
+        }
+        if (added.length > 0) {
+            all = all.concat(added)
+            refresh.restart()
+        }
+    }
+
+    // Batches come a few at a time while the page fills, so they are laid out together.
+    Timer {
+        id: refresh
+        interval: 150
+        onTriggered: root.rebuild()
+    }
+
+    function rebuild() {
+        refresh.stop()
+        const sign = newestFirst ? -1 : 1
+        const list = all.slice()
+        list.sort((a, b) => (a.stamp - b.stamp) * sign || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+        shown = list
+        relayout()
+    }
+
+    function monthKey(item: var): string {
+        const t = item.time
+        return t.getFullYear() * 100 + t.getMonth() + 1 + ""
+    }
+
+    function monthLabel(key: string): string {
+        const n = parseInt(key)
+        return Qt.locale().monthName(n % 100 - 1, Locale.LongFormat) + " " + Math.floor(n / 100)
+    }
+
+    function relayout() {
+        const keepKey = anchorKey()
+        const info = {}
+        const groups = []
+        const index = {}
+        if (!grouped) {
+            groups.push({ key: "", items: [] })
+        } else {
+            for (let n = 0; n < shown.length; ++n) {
+                const item = shown[n]
+                const key = grouping === "month" ? monthKey(item) : item.gameId
+                let g = index[key]
+                if (g === undefined) {
+                    g = { key: key, items: [] }
+                    index[key] = g
+                    groups.push(g)
+                    const game = games[item.gameId]
+                    info[key] = grouping === "month" ? { label: monthLabel(key), icon: "" }
+                                                     : { label: game.title, icon: game.platformIcon }
+                }
+                g.items.push(n)
+            }
+            if (grouping === "game")
+                groups.sort((a, b) => info[a.key].label.localeCompare(info[b.key].label))
+        }
+        if (!grouped)
+            for (let n = 0; n < shown.length; ++n)
+                groups[0].items.push(n)
+
+        const out = []
+        const rowOf = new Array(shown.length)
+        const headerOf = []
+        for (const g of groups) {
+            let header = -1
+            if (grouped) {
+                header = out.length
+                info[g.key].count = g.items.length
+                out.push({ header: true, key: g.key })
+                headerOf.push(header)
+            }
+            for (let at = 0; at < g.items.length; at += columns) {
+                const entries = []
+                for (const n of g.items.slice(at, at + columns)) {
+                    entries.push({ item: shown[n], n: n })
+                    rowOf[n] = out.length
+                }
+                headerOf.push(header)
+                out.push({ header: false, key: g.key, items: entries })
+            }
+        }
+        groupInfo = info
+        rowOfItem = rowOf
+        headerOfRow = headerOf
+        rows = out
+        focusIndex = Math.min(focusIndex, Math.max(0, shown.length - 1))
+        if (keepKey !== "")
+            Qt.callLater(() => scrollTo(indexOfKey(keepKey), true))
+    }
+
+    // The item at the top of the grid, to stay on it when the layout changes under it.
+    function anchorKey(): string {
+        if (rows.length === 0 || list.contentY < 1)
+            return ""
+        let row = list.indexAt(0, list.contentY + 1)
+        while (row >= 0 && rows[row].header)
+            ++row
+        return row >= 0 && row < rows.length ? keyOf(rows[row].items[0].item) : ""
+    }
+
+    function keyOf(item: var): string {
+        return item.gameId + "\n" + item.id
+    }
+
+    function indexOfKey(key: string): int {
+        return shown.findIndex(i => keyOf(i) === key)
+    }
+
+    function scrollTo(n: int, atTop: bool) {
+        if (n < 0 || n >= rowOfItem.length)
+            return
+        const row = rowOfItem[n]
+        list.positionViewAtIndex(row, atTop ? ListView.Beginning : ListView.Contain)
+        if (grouped && list.itemAtIndex(row) !== null && list.itemAtIndex(row).y - list.contentY < Theme.gallery.groupHeight)
+            list.contentY = list.itemAtIndex(row).y - Theme.gallery.groupHeight
+    }
+
+    function focusMove(n: int) {
+        if (shown.length === 0)
+            return
+        keyboardFocus = true
+        focusIndex = Math.max(0, Math.min(shown.length - 1, n))
+        scrollTo(focusIndex, false)
+    }
+
+    function focusRow(by: int) {
+        if (shown.length === 0)
+            return
+        let row = rowOfItem[focusIndex] + by
+        while (row >= 0 && row < rows.length && rows[row].header)
+            row += by
+        if (row < 0 || row >= rows.length)
+            return
+        const col = focusIndex - rows[rowOfItem[focusIndex]].items[0].n
+        const items = rows[row].items
+        focusMove(items[Math.min(col, items.length - 1)].n)
+    }
+
+    function open(n: int) {
+        if (n < 0 || n >= shown.length)
+            return
+        focusIndex = n
+        viewer.active = true
+        viewer.item.games = root.games
+        viewer.item.show(shown[n], shown)
+    }
+
+    function openForScreenshot() {
+        const [what, at] = autoOpen.split("/")
+        autoOpen = ""
+        if (what === "viewer")
+            open(at === undefined ? 0 : parseInt(at))
+        else if (what === "menu" && shown.length > 0)
+            openMenu(shown[0], list, Qt.point(list.width / 4, list.height / 4))
+    }
+
+    function openMenu(item: var, tile: Item, position: point) {
+        itemMenu.active = true
+        itemMenu.item.media = item
+        itemMenu.item.gameId = item.gameId
+        itemMenu.item.popup(tile, position.x, position.y)
+    }
+
+    onColumnsChanged: if (rows.length > 0) relayout()
+    onGroupingChanged: if (all.length > 0) relayout()
+    onNewestFirstChanged: if (all.length > 0) rebuild()
+
+    Keys.onEscapePressed: root.closeRequested()
+    Keys.onLeftPressed: root.focusMove(root.focusIndex - 1)
+    Keys.onRightPressed: root.focusMove(root.focusIndex + 1)
+    Keys.onUpPressed: root.focusRow(-1)
+    Keys.onDownPressed: root.focusRow(1)
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Home)
+            root.focusMove(0)
+        else if (event.key === Qt.Key_End)
+            root.focusMove(root.shown.length - 1)
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+            root.open(root.focusIndex)
+        else if (event.key === Qt.Key_PageUp)
+            root.focusMove(root.focusIndex - root.columns * Math.max(1, Math.floor(list.height / root.rowHeight) - 1))
+        else if (event.key === Qt.Key_PageDown)
+            root.focusMove(root.focusIndex + root.columns * Math.max(1, Math.floor(list.height / root.rowHeight) - 1))
+        else
+            return
+        event.accepted = true
+    }
+
+    Connections {
+        target: Library
+        function onAllMediaReady(batch, done) {
+            if (!root.loading)
+                return
+            root.take(batch)
+            if (done) {
+                root.loading = false
+                root.rebuild()
+                root.openForScreenshot()
+            }
+        }
+    }
+
+    Surface {
+        anchors.fill: parent
+        fill: Theme.palette.background
+        fillEnd: Theme.palette.backgroundEnd
+        direction: Theme.palette.gradientDirection
+    }
+
+    ChromeButton {
+        x: Theme.layout.margin
+        y: Theme.layout.margin
+        icon: Icons.arrowUp
+        iconRotation: -90
+        label: qsTr("Back to games")
+        tip: qsTr("Back to games (Esc)")
+        onClicked: root.closeRequested()
+    }
+
+    Item {
+        id: content
+        transform: Translate { id: rise }
+
+        y: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.layout.spacing
+        width: parent.width
+        height: parent.height - y
+
+        RowLayout {
+            id: header
+            x: root.sideMargin
+            width: root.gridWidth
+            spacing: 2 * Theme.layout.spacing
+
+            Label {
+                text: qsTr("Gallery")
+                color: Theme.palette.text
+                font.pixelSize: Theme.gallery.titleSize
+                font.weight: Theme.font.emphasisWeight
+            }
+            Label {
+                Layout.alignment: Qt.AlignBottom
+                Layout.bottomMargin: Theme.gallery.titleSize / 5
+                visible: root.shown.length > 0
+                text: {
+                    const parts = []
+                    if (root.screenshotCount > 0)
+                        parts.push(root.countText(root.screenshotCount, qsTr("screenshot"), qsTr("screenshots")))
+                    if (root.clipCount > 0)
+                        parts.push(root.countText(root.clipCount, qsTr("clip"), qsTr("clips")))
+                    return parts.join("  ·  ")
+                }
+                color: Theme.gallery.countColor
+            }
+            Label {
+                Layout.alignment: Qt.AlignBottom
+                Layout.bottomMargin: Theme.gallery.titleSize / 5
+                visible: root.loading
+                text: qsTr("Looking for more…")
+                color: Theme.gallery.countColor
+            }
+            Item { Layout.fillWidth: true }
+
+            ChromeButton {
+                id: groupButton
+                icon: Icons.layoutMasonryLine
+                label: root.grouping === "month" ? qsTr("Group: Month") : root.grouping === "game" ? qsTr("Group: Game")
+                                                                                                   : qsTr("Group: None")
+                onClicked: groupMenu.popup(groupButton, 0, height + Theme.layout.spacing / 2)
+
+                SettingsMenu {
+                    id: groupMenu
+                    pops: true
+                    popDirection: "below"
+                    checkColumn: true
+
+                    Repeater {
+                        model: [{ id: "month", text: qsTr("Month") }, { id: "game", text: qsTr("Game") },
+                                { id: "none", text: qsTr("None") }]
+                        SettingsMenuItem {
+                            required property var modelData
+                            text: modelData.text
+                            checked: root.grouping === modelData.id
+                            onTriggered: root.message(General.setGalleryGroup(modelData.id))
+                        }
+                    }
+                }
+            }
+            ChromeButton {
+                id: sortButton
+                icon: Icons.arrowDown
+                label: root.newestFirst ? qsTr("Newest first") : qsTr("Oldest first")
+                iconRotation: root.newestFirst ? 0 : 180
+                onClicked: sortMenu.popup(sortButton, 0, height + Theme.layout.spacing / 2)
+
+                SettingsMenu {
+                    id: sortMenu
+                    pops: true
+                    popDirection: "below"
+                    checkColumn: true
+
+                    SettingsMenuItem {
+                        text: qsTr("Newest first")
+                        checked: root.newestFirst
+                        onTriggered: root.message(General.setGallerySort("newest"))
+                    }
+                    SettingsMenuItem {
+                        text: qsTr("Oldest first")
+                        checked: !root.newestFirst
+                        onTriggered: root.message(General.setGallerySort("oldest"))
+                    }
+                }
+            }
+            RowLayout {
+                spacing: Theme.layout.spacing
+
+                Icon {
+                    path: Icons.image
+                    size: Theme.iconButton.iconSize - 4
+                    color: Theme.gallery.countColor
+                }
+                SettingsSlider {
+                    id: sizeSlider
+                    Layout.preferredWidth: 120
+                    from: Theme.gallery.tileMinWidth
+                    to: Math.max(Theme.gallery.tileMinWidth + 1, Theme.gallery.tileMaxWidth)
+                    stepSize: 1
+                    value: root.tileTarget
+                    onMoved: {
+                        root.dragWidth = Math.round(value)
+                        saveSize.restart()
+                    }
+                    Accessible.name: qsTr("Tile size")
+                }
+                Icon {
+                    path: Icons.image
+                    size: Theme.iconButton.iconSize + 4
+                    color: Theme.gallery.countColor
+                }
+            }
+        }
+
+        // Writing settings.toml on every step of a drag would be wasteful.
+        Timer {
+            id: saveSize
+            interval: 400
+            onTriggered: {
+                const width = root.dragWidth
+                root.dragWidth = -1
+                if (width > 0)
+                    root.message(General.setGalleryTileWidth(width))
+            }
+        }
+
+        ListView {
+            id: list
+            x: root.sideMargin
+            y: header.height + Theme.layout.spacing
+            width: root.gridWidth
+            height: parent.height - y
+            clip: true
+            model: root.rows
+            boundsBehavior: Flickable.StopAtBounds
+            cacheBuffer: root.rowHeight * 2
+            ScrollBar.vertical: ScrollBar {}
+
+            delegate: Item {
+                id: row
+                required property var modelData
+                required property int index
+                readonly property bool isHeader: modelData.header
+
+                width: list.width
+                height: isHeader ? Theme.gallery.groupHeight : root.rowHeight
+
+                GroupHeading {
+                    visible: row.isHeader
+                    anchors.fill: parent
+                    info: row.isHeader ? root.groupInfo[row.modelData.key] : null
+                }
+
+                Repeater {
+                    model: row.isHeader ? [] : row.modelData.items
+
+                    Item {
+                        id: cell
+                        required property var modelData
+                        required property int index
+
+                        x: index * (root.tileWidth + Theme.gallery.tileGap)
+                        width: root.tileWidth
+                        height: root.rowHeight
+
+                        MediaTile {
+                            id: tile
+                            width: root.tileWidth
+                            height: root.tileHeight
+                            media: cell.modelData.item
+                            cornerRadius: Theme.gallery.tileRadius
+                            shadowSize: Theme.gallery.tileShadowSize
+                            shadowColor: Theme.gallery.tileShadowColor
+                            borderColor: Theme.gallery.tileBorderColor
+                            focusRing: root.keyboardFocus && root.activeFocus && root.focusIndex === cell.modelData.n
+                            onClicked: {
+                                root.keyboardFocus = false
+                                root.open(cell.modelData.n)
+                            }
+                            onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
+                        }
+                        Label {
+                            visible: root.showNames
+                            y: root.tileHeight + Theme.layout.spacing / 2
+                            width: parent.width
+                            elide: Text.ElideRight
+                            text: root.games[cell.modelData.item.gameId]?.title ?? ""
+                            color: Theme.gallery.gameNameColor
+                            font.pixelSize: Theme.gallery.gameNameSize
+                        }
+                    }
+                }
+            }
+        }
+
+        // The heading of the group at the top stays there while its tiles scroll under it.
+        GroupHeading {
+            readonly property int topRow: root.grouped && root.rows.length > 0 ? list.indexAt(0, list.contentY + 1) : -1
+            readonly property int header: topRow >= 0 ? root.headerOfRow[topRow] : -1
+            visible: header >= 0
+            x: list.x
+            y: list.y
+            z: 2
+            width: list.width
+            height: Theme.gallery.groupHeight
+            opaque: true
+            info: header >= 0 ? root.groupInfo[root.rows[header].key] : null
+        }
+
+        Label {
+            anchors.centerIn: list
+            visible: !root.loading && root.shown.length === 0
+            text: qsTr("No clips or screenshots found")
+            color: Theme.gallery.countColor
+            font.pixelSize: Theme.font.size
+        }
+    }
+
+    function countText(n: int, one: string, many: string): string {
+        return Number(n).toLocaleString(Qt.locale(), "f", 0) + " " + (n === 1 ? one : many)
+    }
+
+    component GroupHeading: Item {
+        id: heading
+
+        property var info: null
+        property bool opaque: false
+
+        Rectangle {
+            anchors.fill: parent
+            visible: heading.opaque
+            color: Theme.gallery.groupBackground
+        }
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.layout.spacing * 1.5
+
+            Icon {
+                visible: (heading.info?.icon ?? "") !== ""
+                anchors.verticalCenter: parent.verticalCenter
+                size: Theme.gallery.groupIconSize
+                path: Icons.forPlatform(heading.info?.icon ?? "")
+                color: Theme.gallery.groupColor
+            }
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: heading.info?.label ?? ""
+                color: Theme.gallery.groupColor
+                font.pixelSize: Theme.gallery.groupSize
+                font.weight: Theme.font.emphasisWeight
+            }
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "·  " + (heading.info?.count ?? 0)
+                color: Theme.gallery.groupCountColor
+                font.pixelSize: Theme.gallery.groupSize - 2
+            }
+        }
+    }
+
+    Loader {
+        id: viewer
+        active: false
+        source: "MediaViewer.qml"
+    }
+    Connections {
+        target: viewer.item
+        function onMessage(text) { root.message(text) }
+        function onGameRequested(id) { root.gameRequested(id) }
+        function onClosed() {
+            root.scrollTo(root.focusIndex, false)
+            root.forceActiveFocus()
+        }
+        function onCurrentChanged() {
+            const n = root.indexOfKey(root.keyOf(viewer.item.current))
+            if (n >= 0)
+                root.focusIndex = n
+        }
+    }
+
+    Loader {
+        id: itemMenu
+        active: false
+        source: "ClipMenu.qml"
+    }
+    Connections {
+        target: itemMenu.item
+        function onMessage(text) { root.message(text) }
+        function onGameRequested(id) { root.gameRequested(id) }
+    }
+}

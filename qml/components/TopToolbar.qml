@@ -10,7 +10,8 @@ Rectangle {
     signal triggered(string name)
 
     readonly property var known: ({
-        stats: { icon: Icons.barChartLine, tip: qsTr("Play statistics"), action: "play_statistics" }
+        stats: { icon: Icons.barChartLine, tip: qsTr("Play statistics"), action: "play_statistics" },
+        gallery: { icon: Icons.image, tip: qsTr("Gallery"), action: "gallery" }
     })
     readonly property var buttons: Theme.toolbar.buttons.filter(b => known[b] !== undefined)
 

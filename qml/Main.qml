@@ -74,6 +74,7 @@ ApplicationWindow {
         if (open === statsOpen)
             return
         if (open) {
+            setGalleryOpen(false)
             statsPage.active = true
             statsOpen = true
             statsPage.item.start()
@@ -82,6 +83,31 @@ ApplicationWindow {
             statsPage.item.leave()
             gameList.focusList()
         }
+    }
+
+    property bool galleryOpen: false
+    readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
+    readonly property bool pageCovering: statsCovering || galleryCovering
+
+    function setGalleryOpen(open) {
+        if (open === galleryOpen)
+            return
+        if (open) {
+            setStatsOpen(false)
+            galleryPage.active = true
+            galleryOpen = true
+            galleryPage.item.start()
+        } else {
+            galleryOpen = false
+            galleryPage.item.leave()
+            gameList.focusList()
+        }
+    }
+
+    // "1" opens the page; "viewer" or "viewer/<n>" also opens the n-th item (the first), "menu" the first tile's menu.
+    function galleryForScreenshot(spec) {
+        setGalleryOpen(true)
+        galleryPage.item.autoOpen = spec
     }
 
     function statsForScreenshot(spec) {
@@ -482,6 +508,7 @@ ApplicationWindow {
         case "app_menu": rail.openMenu(); break
         case "undo": toast.undo(); break
         case "play_statistics": setStatsOpen(!statsOpen); break
+        case "gallery": setGalleryOpen(!galleryOpen); break
         case "add_game": addGame(); break
         case "toggle_fullscreen": toggleFullscreen(); break
         case "toggle_rail": {
@@ -715,7 +742,7 @@ ApplicationWindow {
     }
 
     Backdrop {
-        visible: Theme.backdrop.enabled && !window.statsCovering
+        visible: Theme.backdrop.enabled && !window.pageCovering
         x: Theme.backdrop.area === "details" ? details.x : 0
         width: parent.width - x
         height: parent.height * Theme.backdrop.height
@@ -726,7 +753,7 @@ ApplicationWindow {
         anchors.fill: parent
         spacing: 0
         enabled: !setupGuide.active
-        visible: !window.statsCovering
+        visible: !window.pageCovering
 
         Rail {
             id: rail
@@ -821,6 +848,47 @@ ApplicationWindow {
         }
     }
 
+    Loader {
+        id: galleryPage
+        anchors.fill: parent
+        active: false
+        visible: opacity > 0
+        opacity: window.galleryOpen ? 1 : 0
+        layer.enabled: opacity > 0 && opacity < 1
+        enabled: window.galleryOpen && !setupGuide.active
+        source: "views/GalleryPage.qml"
+
+        // As the statistics page: the fade waits for the content to sink.
+        Behavior on opacity {
+            id: galleryFade
+            enabled: Motion.fades
+            SequentialAnimation {
+                PauseAnimation {
+                    duration: galleryFade.targetValue > 0 ? 0
+                              : Math.max(0, Motion.duration(Motion.speedMs("slow") - Motion.speedMs("normal")))
+                }
+                MotionNumber { fade: true; speed: "normal"; linear: true }
+            }
+        }
+    }
+    Binding {
+        target: galleryPage.item
+        property: "dragReserve"
+        value: windowControls.width + 2 * Theme.windowControls.margin
+    }
+    Connections {
+        target: galleryPage.item
+        function onCloseRequested() { window.setGalleryOpen(false) }
+        function onMessage(text) {
+            if (text !== "")
+                toast.show(text)
+        }
+        function onGameRequested(id) {
+            gameList.selectGame(id)
+            window.setGalleryOpen(false)
+        }
+    }
+
     // A click anywhere outside the list clears a multi-selection. Passive, so the click still
     // reaches what it landed on.
     TapHandler {
@@ -842,7 +910,7 @@ ApplicationWindow {
         x: high - low < width ? low + (high - low - width) / 2
                               : Math.max(low, Math.min(high - width, (window.width - width) / 2))
         y: Theme.layout.margin + (Theme.layout.toolbarHeight - height) / 2
-        checkedButton: window.statsOpen ? "stats" : ""
+        checkedButton: window.statsOpen ? "stats" : window.galleryOpen ? "gallery" : ""
         onTriggered: name => window.run(name)
     }
 

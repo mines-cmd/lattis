@@ -302,6 +302,50 @@ QString General::setSectionCollapsed(const QString &name, bool collapsed)
                            name, collapsed);
 }
 
+QString General::setGalleryValue(const QString &key, const QString &value, bool isDefault)
+{
+    QString error;
+    if (isDefault)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("gallery"), key, &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("gallery"), key, value, &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGalleryGroup(const QString &group)
+{
+    if (!galleryGroups().contains(group))
+        return {};
+    return setGalleryValue(QStringLiteral("group"), u'"' + group + u'"', group == GallerySettings{}.group);
+}
+
+QString General::setGallerySort(const QString &sort)
+{
+    if (!gallerySorts().contains(sort))
+        return {};
+    return setGalleryValue(QStringLiteral("sort"), u'"' + sort + u'"', sort == GallerySettings{}.sort);
+}
+
+QString General::setGalleryTileWidth(int width)
+{
+    width = std::clamp(width, 80, 1000);
+    return setGalleryValue(QStringLiteral("tile_width"), QString::number(width), false);
+}
+
+QString General::setGallerySectionFolded(const QString &name, bool folded)
+{
+    if (!gallerySections().contains(name))
+        return {};
+    QStringList names;
+    for (const QString &section : gallerySections())
+        if (section == name ? folded : m_gallery.foldedSections.contains(section))
+            names.append(u'"' + section + u'"');
+    return setGalleryValue(QStringLiteral("folded_sections"), u'[' + names.join(QLatin1String(", ")) + u']',
+                           names.isEmpty());
+}
+
 QString General::setStartAtLogin(bool on)
 {
     const QString folder = Autostart::autostartFolder();
@@ -351,7 +395,12 @@ void General::load()
     const QStringList prevPageProblems = m_gamePageProblems;
     m_gamePage = page.value;
     m_gamePageProblems = page.ok ? page.warnings : QStringList();
-    m_problems = parsed.warnings + m_gamePageProblems;
+    const auto gallery = parseGallerySettings(bytes, QStringLiteral("settings.toml"));
+    const GallerySettings prevGallery = m_gallery;
+    const QStringList prevGalleryProblems = m_galleryProblems;
+    m_gallery = gallery.value;
+    m_galleryProblems = gallery.ok ? gallery.warnings : QStringList();
+    m_problems = parsed.warnings + m_gamePageProblems + m_galleryProblems;
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
@@ -368,6 +417,8 @@ void General::load()
         emit settingsChanged();
     if (m_gamePage != prevPage || m_gamePageProblems != prevPageProblems)
         emit gamePageChanged();
+    if (m_gallery != prevGallery)
+        emit galleryChanged();
     if (m_settings.systemLocale != prev.systemLocale)
         emit systemLocaleChanged();
     if (m_settings.reduceMotion != prev.reduceMotion)

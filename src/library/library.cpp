@@ -1854,6 +1854,24 @@ void Library::allMedia()
     });
 }
 
+QVariantMap Library::mediaGames() const
+{
+    QHash<QString, const Platform *> platforms;
+    for (const Platform &p : m_platforms)
+        platforms.insert(p.id, &p);
+    QVariantMap out;
+    for (const Game &g : m_games) {
+        if (g.hidden && !m_showHidden)
+            continue;
+        const Platform *p = platforms.value(g.platform);
+        out.insert(g.id, QVariantMap{{QStringLiteral("title"), g.title},
+                                     {QStringLiteral("platform"), g.platform},
+                                     {QStringLiteral("platformName"), g.platformName},
+                                     {QStringLiteral("platformIcon"), p ? p->icon : QString()}});
+    }
+    return out;
+}
+
 void Library::achievements(const QString &id)
 {
     const qint64 appId = GameId::steamAppId(id);
