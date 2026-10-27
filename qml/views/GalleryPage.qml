@@ -55,8 +55,10 @@ FocusScope {
                                           + Object.keys(gameSel).length + Object.keys(monthSel).length > 0
     readonly property real tileTarget: dragWidth > 0 ? dragWidth
                                        : General.galleryTileWidth > 0 ? General.galleryTileWidth : Theme.gallery.tileWidth
-    readonly property int columns: Math.max(1, Math.floor((gridWidth + Theme.gallery.tileGap) / (tileTarget + Theme.gallery.tileGap)))
-    readonly property real tileWidth: (gridWidth - (columns - 1) * Theme.gallery.tileGap) / columns
+    readonly property real cardPad: grouped ? Theme.gallery.groupPadding : 0
+    readonly property real innerWidth: gridWidth - 2 * cardPad
+    readonly property int columns: Math.max(1, Math.floor((innerWidth + Theme.gallery.tileGap) / (tileTarget + Theme.gallery.tileGap)))
+    readonly property real tileWidth: (innerWidth - (columns - 1) * Theme.gallery.tileGap) / columns
     readonly property real tileHeight: tileWidth * 9 / 16
     readonly property bool showNames: grouping !== "game"
     readonly property real captionHeight: Theme.gallery.gameNameSize * 1.6
@@ -325,7 +327,7 @@ FocusScope {
                     rowOf[n] = out.length
                 }
                 headerOf.push(header)
-                out.push({ header: false, key: g.key, items: entries })
+                out.push({ header: false, key: g.key, items: entries, last: grouped && at + columns >= g.items.length })
             }
         }
         groupInfo = info
@@ -664,13 +666,25 @@ FocusScope {
                 required property var modelData
                 required property int index
                 readonly property bool isHeader: modelData.header
+                readonly property bool isLast: modelData.last === true
 
                 width: list.width
-                height: isHeader ? Theme.gallery.groupHeight : root.rowHeight
+                height: isHeader ? Theme.gallery.groupHeight
+                      : isLast ? root.rowHeight - Theme.gallery.tileGap + root.cardPad + Theme.gallery.groupSpacing
+                      : root.rowHeight
 
+                CardSlice {
+                    visible: root.grouped
+                    width: parent.width
+                    height: row.isLast ? parent.height - Theme.gallery.groupSpacing : parent.height
+                    first: row.isHeader
+                    last: row.isLast
+                }
                 GroupHeading {
                     visible: row.isHeader
-                    anchors.fill: parent
+                    x: root.cardPad
+                    width: parent.width - 2 * root.cardPad
+                    height: parent.height
                     info: row.isHeader ? root.groupInfo[row.modelData.key] : null
                 }
 
@@ -682,7 +696,7 @@ FocusScope {
                         required property var modelData
                         required property int index
 
-                        x: index * (root.tileWidth + Theme.gallery.tileGap)
+                        x: root.cardPad + index * (root.tileWidth + Theme.gallery.tileGap)
                         width: root.tileWidth
                         height: root.rowHeight
 
@@ -727,17 +741,52 @@ FocusScope {
         }
 
         // The heading of the group at the top stays there while its tiles scroll under it.
-        GroupHeading {
+        // The next group's card pushes it up out of the way.
+        Item {
+            id: sticky
             readonly property int topRow: root.grouped && root.rows.length > 0 ? list.indexAt(0, list.contentY + 1) : -1
-            readonly property int header: topRow >= 0 ? root.headerOfRow[topRow] : -1
-            visible: header >= 0
+            readonly property int headerRow: sticky.topRow >= 0 ? root.headerOfRow[sticky.topRow] : -1
+            readonly property int nextHeader: {
+                if (sticky.headerRow < 0)
+                    return -1
+                for (let r = sticky.topRow + 1; r < root.rows.length; ++r)
+                    if (root.rows[r].header)
+                        return r
+                return -1
+            }
+            readonly property real push: {
+                const next = sticky.nextHeader >= 0 ? list.itemAtIndex(sticky.nextHeader) : null
+                return next === null ? 0 : Math.min(0, next.y - list.contentY - Theme.gallery.groupSpacing
+                                                       - root.cardPad - height)
+            }
+            visible: sticky.headerRow >= 0
             x: list.x
             y: list.y
             z: 2
             width: list.width
             height: Theme.gallery.groupHeight
-            opaque: true
-            info: header >= 0 ? root.groupInfo[root.rows[header].key] : null
+            clip: true
+
+            Item {
+                y: sticky.push
+                width: parent.width
+                height: parent.height
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Theme.gallery.groupBackground
+                }
+                CardSlice {
+                    anchors.fill: parent
+                    first: true
+                }
+                GroupHeading {
+                    x: root.cardPad
+                    width: parent.width - 2 * root.cardPad
+                    height: parent.height
+                    info: sticky.headerRow >= 0 ? root.groupInfo[root.rows[sticky.headerRow].key] : null
+                }
+            }
         }
 
         ColumnLayout {
@@ -803,13 +852,7 @@ FocusScope {
         id: heading
 
         property var info: null
-        property bool opaque: false
 
-        Rectangle {
-            anchors.fill: parent
-            visible: heading.opaque
-            color: Theme.gallery.groupBackground
-        }
         Row {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.layout.spacing * 1.5
@@ -834,6 +877,29 @@ FocusScope {
                 color: Theme.gallery.groupCountColor
                 font.pixelSize: Theme.gallery.groupSize - 2
             }
+        }
+    }
+
+    // One row's band of its group's card: the card is drawn whole and clipped, so the rows join
+    // without seams and only the first and last show its rounded edges.
+    component CardSlice: Item {
+        id: slice
+
+        property bool first: false
+        property bool last: false
+
+        clip: true
+
+        Rectangle {
+            readonly property real hidden: Math.max(radius, border.width) + 1
+            y: slice.first ? 0 : -hidden
+            width: parent.width
+            height: parent.height + (slice.first ? 0 : hidden) + (slice.last ? 0 : hidden)
+            radius: Theme.gallery.groupRadius
+            color: Theme.gallery.groupCardBackground
+            border.color: Theme.gallery.groupCardBorder
+            border.width: Theme.gallery.groupCardBorderWidth
+            antialiasing: true
         }
     }
 
