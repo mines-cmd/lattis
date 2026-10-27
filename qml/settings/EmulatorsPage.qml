@@ -11,7 +11,15 @@ Item {
     readonly property string query: search.text.trim().toLowerCase()
     readonly property var shown: Library.emulators.filter(
         e => query === "" || [e.name, e.id, e.platforms.join(" ")].some(t => t.toLowerCase().includes(query)))
-        .sort((a, b) => b.found - a.found)
+        .sort((a, b) => {
+            if (a.found !== b.found)
+                return b.found - a.found
+            const pa = a.platforms.length > 0 ? a.platforms[0] : ""
+            const pb = b.platforms.length > 0 ? b.platforms[0] : ""
+            if ((pa === "") !== (pb === ""))
+                return pa === "" ? 1 : -1
+            return pa.localeCompare(pb) || a.name.localeCompare(b.name)
+        })
     readonly property var presets: shown.filter(e => e.preset)
     readonly property var own: shown.filter(e => !e.preset)
     readonly property var problems: Library.problems.filter(p => p.includes("emulators.toml"))
