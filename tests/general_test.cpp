@@ -691,7 +691,7 @@ void GeneralTest::gamePageMigration()
     QCOMPARE(r.value.chips, (QStringList{"last_played", "rating"}));
     QCOMPARE(r.value.buttons, QStringList{"menu"});
     QCOMPARE(r.value.infoRows, GamePageSettings::defaultInfoRows());
-    QCOMPARE(r.value.sections, (QStringList{"tags", "clips"}));
+    QCOMPARE(r.value.sections, (QStringList{"clips", "tags"}));
     QFile f(settings);
     QVERIFY(f.open(QIODevice::ReadOnly));
     QVERIFY(f.readAll().startsWith("# mine"));
