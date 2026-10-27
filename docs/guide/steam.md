@@ -46,6 +46,17 @@ A Steam game's page shows your own Steam clips (Steam's Game Recording) and scre
 - **Hiding it:** click the **Media** heading to fold the row. To remove it from every game's page, or move it, use Settings → Game page.
 - **Looks:** the Media heading shows how many items there are, the row sits on one card the items scroll inside, each item has a drop shadow, and the row and viewer follow the theme's `[media]` settings.
 
+## Achievements
+
+A Steam game's page shows its achievements in a panel below the info panel: how many are unlocked, a progress bar and a grid of icons (colored when unlocked, gray when locked). Hover an icon to see its name, description and when you unlocked it. A hidden achievement you haven't unlocked shows a **?** and no details, as in Steam.
+
+Click the panel or **Show all** to open the full list: your progress, a search box, an All / Unlocked / Locked filter, and the achievements in **Unlocked**, **Locked** and **Hidden** sections with their icons, descriptions and unlock dates. Esc, the close button or a click outside closes it.
+
+- **Where it comes from:** the files Steam keeps on this computer, for the Steam user Lattis found. No API key or public profile is needed, and nothing is changed. If nothing shows for a game, open the game in Steam once so it fetches the list, then select it again here.
+- **The only download** is the icons, from Steam's image servers, kept on disk afterwards. Offline, a plain square stands in for an icon not saved yet.
+- **Language:** the names and descriptions are in the language Steam runs in.
+- **Hiding it:** turn off **Show achievements** on Settings → Game page, or in the info panel's right-click menu. The panel follows the theme's `[achievements]` settings.
+
 ## Launching and play time
 
 **Launch** starts the game through Steam, without opening Steam's window. **Open in Steam** shows the game's page in Steam.

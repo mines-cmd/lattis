@@ -402,6 +402,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `uninstallChoices(id)` | The uninstall dialog (below) |
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
+| `achievements(id)` | A Steam game's achievements on a worker thread; `achievementsReady(id, list)` has them unlocked first (newest first), then locked, hidden ones last. Every item has `apiName`, `name`, `description`, `hidden`, `unlocked`, `time` and `icon` (a URL); none for a game that isn't Steam's (see [steam](steam.md#achievements)) |
 | `media(id)` | A Steam game's clips and screenshots on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip` or `screenshot`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`; none for a game that isn't Steam's (see [steam](steam.md#clips-and-screenshots)) |
 | `prepareClip(token, videoDir, ffmpeg)`, `discardClip(path)` | Joins a clip into a temp MP4 for the viewer; `clipPrepared(token, path, error)` answers. `discardClip` deletes it |
 | `showClipFolder(folder)` | Opens a clip's folder in the file manager; false when it couldn't |

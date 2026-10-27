@@ -13,6 +13,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Art in Steam's grid](#art-in-steams-grid)
 - [Launch option presets](#launch-option-presets)
 - [Clips and screenshots](#clips-and-screenshots)
+- [Achievements](#achievements)
 - [Files](#files)
 - [Reference](#reference)
 
@@ -132,6 +133,17 @@ A Steam game's page shows the user's own Steam clips (Game Recording), read from
 
 `Library::media(gameId)` lists a Steam game's clips and screenshots on a worker thread and answers with `mediaReady(id, items)`, one list newest first, each item with a `kind` (`clip` or `screenshot`); any other game gets an empty list. ffmpeg comes from `FfmpegTool` (see [install](install.md#ffmpeg)). Qt Multimedia is not linked: `MediaViewer.qml` imports it, so it loads with the viewer on the first clip.
 
+## Achievements
+
+A Steam game's page shows its achievements, read from the files the Steam client keeps under the Steam root (read only, nothing written). No Web API key, public profile or login is involved. `SteamAchievements::readAchievements(install, appId, language)` reads two binary KeyValues files with `BinaryVdf` and returns an empty list when there is no Steam user, no schema file or no achievements in it:
+
+- `appcache/stats/UserGameStatsSchema_<appid>.bin`: the list. Every stat of `type` `ACHIEVEMENTS` (the text, or the number 4) has `bits`, each `<bit>` with the API `name` and a `display` holding `name` and `desc` (maps of language to text), `hidden`, `icon` and `icon_gray`. The bits are read from every such stat, not only stat 0: a game can split its achievements over several stats, and the progress file uses the same bit numbers.
+- `appcache/stats/UserGameStats_<accountid>_<appid>.bin`: the picked user's progress. `cache` → `<stat id>` → `data` is an int32 with one bit per achievement, and `AchievementTimes` → `<bit>` is the Unix time of the unlock. A schema with no progress file means all locked.
+
+The text is in Steam's language (`steamLanguage()` reads `language` from `registry.vdf`: `~/.steam/registry.vdf`, or the Flatpak's under `~/.var/app/com.valvesoftware.Steam/.steam/`), then `english`, then the first text there is. The order is unlocked first (newest first), then locked in the schema's order, hidden ones last. Icons are not on disk: `iconUrl` is `https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/<appid>/<icon>`, `icon` when unlocked and `icon_gray` when locked. They are the only network use, loaded by QML through `ThumbnailCache`.
+
+`Library::achievements(gameId)` reads the lists on a worker thread when a Steam game's page is shown and answers with `achievementsReady(id, list)`, in the style of `pageHistory`; nothing is read at startup, cached or watched. A game that isn't Steam's gets an empty list. The fixtures are in `tests/data/steam/appcache/stats/`, written by `make-fixtures.py` beside them.
+
 ## Files
 
 | File | Contents |
@@ -146,6 +158,7 @@ A Steam game's page shows the user's own Steam clips (Game Recording), read from
 | `steamupdate.h` | `SteamUpdate` (`None`, `Waiting`, `Downloading`, `Paused`) |
 | `steamdownloads.*` | `SteamDownloads`: `setApps()`, `progress()`, `changed()`; `parseLog()`, `directorySize()` |
 | `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
+| `steamachievements.*` | `SteamAchievements::Achievement`; `readAchievements()`, `steamLanguage()` |
 | `steamsync.*` | `SteamSync::Record`, `Result`, `Edit`, `ShortcutEdit`; `sync()`, `apply()`, `compare()`, `withDefaults()`, `readRecord()`, `writeRecord()` |
 
 ## Reference
