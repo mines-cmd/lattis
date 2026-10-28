@@ -864,7 +864,7 @@ Item {
             id: content
 
             x: Theme.details.marginLeft + Theme.details.padding
-            y: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.layout.spacing
+            y: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.details.marginTop
             // One expression, not root.marginRight: a binding on it would see compact's old value for a
             // moment, and the hero would load its first game at that width.
             width: root.width - Theme.details.marginLeft - 2 * Theme.details.padding
