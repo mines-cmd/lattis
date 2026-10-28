@@ -1,0 +1,28 @@
+{
+ "response": {
+  "store_items": [
+   {
+    "item_type": 0,
+    "id": 2131,
+    "success": 1,
+    "visible": true,
+    "name": "Darkk Messiah Might and Magic Multi-Player",
+    "store_url_path": "app/2131/Darkk_Messiah_Might_and_Magic_MultiPlayer",
+    "store_url_slug": "Darkk_Messiah_Might_and_Magic_MultiPlayer",
+    "appid": 2131,
+    "type": 14,
+    "related_items": {
+     "parent_appid": 2100
+    },
+    "assets": {
+     "asset_url_format": "steam/apps/2131/${FILENAME}?t=1447352988",
+     "small_capsule": "capsule_231x87.jpg",
+     "header": "header.jpg",
+     "header_2x": "header.jpg",
+     "page_background_path": "app/2131?t=1447352988",
+     "last_modified": 1447352988
+    }
+   }
+  ]
+ }
+}

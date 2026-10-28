@@ -281,6 +281,7 @@ lattis_test(metadata_test
             ../src/metadata/igdb.h ../src/metadata/igdb.cpp
             ../src/metadata/namematch.h ../src/metadata/namematch.cpp
             ../src/metadata/steamgriddb.h ../src/metadata/steamgriddb.cpp
+            ../src/metadata/steamstore.h ../src/metadata/steamstore.cpp
             ../src/metadata/metadataclient.h ../src/metadata/metadataclient.cpp
             ../src/metadata/idlistmodel.h ../src/metadata/idlistmodel.cpp
             ../src/metadata/bulklookup.h ../src/metadata/bulklookup.cpp

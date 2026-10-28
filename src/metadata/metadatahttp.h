@@ -25,6 +25,7 @@ struct MetadataEndpoints
     QUrl twitchToken = QUrl(QStringLiteral("https://id.twitch.tv/oauth2/token"));
     QUrl igdb = QUrl(QStringLiteral("https://api.igdb.com/v4"));
     QUrl steamGridDb = QUrl(QStringLiteral("https://www.steamgriddb.com/api/v2"));
+    QUrl steamStore = QUrl(QStringLiteral("https://api.steampowered.com"));
 };
 
 struct MetadataReply
@@ -52,6 +53,7 @@ public:
 
     void igdb(const QString &endpoint, const QByteArray &query, QObject *context, Callback done);
     void steamGridDb(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
+    void steamStore(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void download(const QUrl &url, const QString &fileName, QObject *context,
                   std::function<void(const QString &path, const QString &error)> done);
     QString downloadsDir() const;
@@ -72,7 +74,7 @@ public:
     int tokenFetches() const { return m_tokenFetches; }
 
 private:
-    enum class Service { Twitch, Igdb, SteamGridDb };
+    enum class Service { Twitch, Igdb, SteamGridDb, Steam };
 
     struct Pending
     {

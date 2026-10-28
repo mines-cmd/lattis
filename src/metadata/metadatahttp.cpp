@@ -77,7 +77,14 @@ QNetworkAccessManager *MetadataHttp::network()
 
 QString MetadataHttp::serviceName(Service service)
 {
-    return service == Service::SteamGridDb ? QStringLiteral("SteamGridDB") : QStringLiteral("IGDB");
+    switch (service) {
+    case Service::SteamGridDb:
+        return QStringLiteral("SteamGridDB");
+    case Service::Steam:
+        return QStringLiteral("Steam");
+    default:
+        return QStringLiteral("IGDB");
+    }
 }
 
 void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject> context, Callback done, bool json)
@@ -325,6 +332,21 @@ void MetadataHttp::steamGridDb(const QString &path, const QUrlQuery &query, QObj
     QNetworkRequest request(url);
     request.setRawHeader("Authorization", "Bearer " + m_credentials.steamGridDbKey.toUtf8());
     send(Service::SteamGridDb, network()->get(request), context, std::move(done));
+}
+
+void MetadataHttp::steamStore(const QString &path, const QUrlQuery &query, QObject *context, Callback done)
+{
+    if (usesFixtures()) {
+        static const QRegularExpression items(QStringLiteral("\"appid\":(\\d+)"));
+        const auto m = items.match(query.queryItemValue(QStringLiteral("input_json"), QUrl::FullyDecoded));
+        answerFromFixture(m.hasMatch() ? QStringLiteral("steam-items-") + m.captured(1) : QString(),
+                          R"({"response": {"store_items": []}})", context, std::move(done));
+        return;
+    }
+    QUrl url = m_endpoints.steamStore;
+    url.setPath(url.path() + path, QUrl::TolerantMode);
+    url.setQuery(query);
+    send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
 }
 
 void MetadataHttp::answerFromFixture(const QString &name, const QByteArray &empty, QObject *context, Callback done,

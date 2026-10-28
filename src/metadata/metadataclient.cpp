@@ -3,6 +3,7 @@
 #include "igdb.h"
 #include "namematch.h"
 #include "steamgriddb.h"
+#include "steamstore.h"
 
 #include <QCryptographicHash>
 #include <QFileInfo>
@@ -391,6 +392,33 @@ int MetadataClient::artChoices(int steamGridDbId, const QString &kind, const QSt
         const QJsonObject page = reply.json.object();
         const bool end = page.value(QLatin1String("data")).toArray().size() < page.value(QLatin1String("limit")).toInt(50);
         finish(request, {{QStringLiteral("images"), out}, {QStringLiteral("end"), end}});
+    });
+    return request;
+}
+
+int MetadataClient::steamArt(qint64 appId)
+{
+    int request = 0;
+    QObject *context = start(&request);
+    const auto [path, query] = SteamStore::itemsRequest(appId);
+    m_http.steamStore(path, query, context, [this, request, appId](const MetadataReply &reply) {
+        if (!reply.ok())
+            return finish(request, failure(reply.error));
+        QString error;
+        const QList<SteamImage> images = SteamStore::parseArt(reply.json, appId, &error);
+        if (!error.isEmpty())
+            return finish(request, failure(error));
+        QVariantList out;
+        for (const SteamImage &image : images) {
+            out.append(QVariantMap{
+                {QStringLiteral("kind"), image.kind},
+                {QStringLiteral("url"), image.url.toString()},
+                {QStringLiteral("thumbnail"), imageUrl(image.url, image.kind)},
+                {QStringLiteral("width"), image.width},
+                {QStringLiteral("height"), image.height},
+            });
+        }
+        finish(request, {{QStringLiteral("images"), out}});
     });
     return request;
 }

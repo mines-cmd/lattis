@@ -7,6 +7,7 @@
 #include "metadatasettings.h"
 #include "scanlookup.h"
 #include "steamgriddb.h"
+#include "steamstore.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -88,6 +89,9 @@ private slots:
     void clientLookupIds();
     void clientLookupIdsBatches();
     void clientArt();
+    void steamArtParse();
+    void steamArtRequest();
+    void clientSteamArt();
     void clientCancelAndKeys();
 
     void bulkChoosing();
@@ -1103,6 +1107,115 @@ void MetadataTest::clientArt()
     QCOMPARE(QImage(path).size(), QSize(300, 450));
 
     QCOMPARE(client.styles(QStringLiteral("hero")).first().toMap().value("name").toString(), QStringLiteral("Alternate"));
+    QVERIFY(!client.http()->hasNetworkManager());
+}
+
+void MetadataTest::steamArtParse()
+{
+    const QString base = QStringLiteral("https://shared.steamstatic.com/store_item_assets/steam/apps/");
+    QString error;
+
+    // Plain file names; the large version of each kind, then the logo.
+    QCOMPARE(SteamStore::parseArt(fixture("steam-items-1145360"), 1145360, &error),
+             (QList<SteamImage>{
+                 {"cover", QUrl(base + "1145360/library_600x900_2x.jpg?t=1758127023"), 600, 900},
+                 {"hero", QUrl(base + "1145360/library_hero_2x.jpg?t=1758127023"), 3840, 1240},
+                 {"logo", QUrl(base + "1145360/logo.png"), 640, 0},
+             }));
+    QVERIFY(error.isEmpty());
+
+    // Hashed file names are used as given.
+    const QList<SteamImage> hashed = SteamStore::parseArt(fixture("steam-items-1145350"), 1145350);
+    QCOMPARE(hashed.size(), 3);
+    QCOMPARE(hashed.at(0).url,
+             QUrl(base + "1145350/2ba105370a00877459144db0dd68af5f2d338429/library_capsule_2x.jpg?t=1779901265"));
+    QCOMPARE(hashed.at(1).url,
+             QUrl(base + "1145350/2d2e4115cc8ef9a9f64164714a6f18112dd4831a/library_hero_2x.jpg?t=1779901265"));
+
+    // Without the 2x files the 1x ones stand in, of a size that isn't known.
+    const QJsonDocument small = QJsonDocument::fromJson(
+        R"({"response":{"store_items":[{"appid":5,"success":1,"assets":{"asset_url_format":"steam/apps/5/${FILENAME}?t=1",
+            "library_capsule":"library_600x900.jpg","library_hero":"library_hero.jpg"}}]}})");
+    const QList<SteamImage> halved = SteamStore::parseArt(small, 5);
+    QCOMPARE(halved.size(), 3);
+    QCOMPARE(halved.at(0).url, QUrl(base + "5/library_600x900.jpg?t=1"));
+    QCOMPARE(halved.at(0).width, 0);
+    QCOMPARE(halved.at(1).height, 0);
+
+    // A file name of its own (Rainbow Six Vegas has a cover and no hero).
+    const QList<SteamImage> odd = SteamStore::parseArt(fixture("steam-items-13540"), 13540);
+    QCOMPARE(odd.size(), 2);
+    QCOMPARE(odd.at(0).kind, QStringLiteral("cover"));
+    QCOMPARE(odd.at(0).url, QUrl(base + "13540/portrait.png?t=1765569332"));
+    QCOMPARE(odd.at(1).kind, QStringLiteral("logo"));
+
+    // An app without library art, one Steam doesn't know, and an answer that isn't Steam's.
+    QVERIFY(SteamStore::parseArt(fixture("steam-items-2131"), 2131, &error).isEmpty());
+    QVERIFY(error.isEmpty());
+    QVERIFY(SteamStore::parseArt(fixture("steam-items-99999999"), 99999999, &error).isEmpty());
+    QVERIFY(error.isEmpty());
+    QVERIFY(SteamStore::parseArt(fixture("steam-items-1145360"), 7, &error).isEmpty()); // another app's answer
+    SteamStore::parseArt(QJsonDocument::fromJson("[]"), 1145360, &error);
+    QCOMPARE(error, QStringLiteral("Steam sent an answer the launcher couldn't read"));
+}
+
+void MetadataTest::steamArtRequest()
+{
+    const auto [path, query] = SteamStore::itemsRequest(1145360);
+    QCOMPARE(path, QStringLiteral("/IStoreBrowseService/GetItems/v1"));
+    const QJsonObject input =
+        QJsonDocument::fromJson(query.queryItemValue(QStringLiteral("input_json"), QUrl::FullyDecoded).toUtf8()).object();
+    QCOMPARE(input.value("ids").toArray().first().toObject().value("appid").toInteger(), 1145360);
+    QVERIFY(input.value("data_request").toObject().value("include_assets").toBool());
+
+    // Keyless, and a failure names Steam.
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/store/IStoreBrowseService/GetItems/v1", {200, "{\"response\":{}}"});
+    MetadataEndpoints points = endpoints(server);
+    points.steamStore = server.url(QStringLiteral("/store"));
+    MetadataHttp http(cache.path(), points);
+    MetadataReply reply;
+    bool done = false;
+    http.steamStore(path, query, &http, [&](const MetadataReply &r) {
+        reply = r;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(reply.ok());
+    QVERIFY(!server.requests.first().target.contains("key"));
+    QVERIFY(server.requests.first().target.contains("input_json="));
+
+    server.clear("/store/IStoreBrowseService/GetItems/v1");
+    server.on("/store/IStoreBrowseService/GetItems/v1", {500, "oops"});
+    done = false;
+    http.steamStore(path, query, &http, [&](const MetadataReply &r) {
+        reply = r;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(reply.error, QStringLiteral("Steam answered with an error (500)"));
+}
+
+void MetadataTest::clientSteamArt()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    MetadataClient client(data.path(), cache.path());
+    client.http()->setFixturesDir(QStringLiteral(METADATA_DATA_DIR));
+    client.http()->setFixtureDelay(0);
+
+    const QVariantList images = result(client, client.steamArt(1145360)).value("images").toList();
+    QCOMPARE(images.size(), 3);
+    const QVariantMap cover = images.first().toMap();
+    QCOMPARE(cover.value("kind").toString(), QStringLiteral("cover"));
+    QVERIFY(cover.value("url").toString().startsWith(QStringLiteral("https://shared.steamstatic.com/")));
+    QVERIFY(QUrl(cover.value("thumbnail").toString()).isLocalFile());
+    QCOMPARE(cover.value("height").toInt(), 900);
+
+    QVERIFY(result(client, client.steamArt(2131)).value("images").toList().isEmpty());
+    QVERIFY(result(client, client.steamArt(99999999)).value("images").toList().isEmpty());
+    QVERIFY(result(client, client.steamArt(99999999)).value("error").toString().isEmpty());
     QVERIFY(!client.http()->hasNetworkManager());
 }
 

@@ -1,0 +1,37 @@
+{
+ "response": {
+  "store_items": [
+   {
+    "item_type": 0,
+    "id": 1145350,
+    "success": 1,
+    "visible": true,
+    "name": "Hades II",
+    "store_url_path": "app/1145350/Hades_II",
+    "store_url_slug": "Hades_II",
+    "appid": 1145350,
+    "type": 0,
+    "assets": {
+     "asset_url_format": "steam/apps/1145350/${FILENAME}?t=1779901265",
+     "main_capsule": "65e1c51cf2950d70209d63e288d1c5ba3f86044b/capsule_616x353.jpg",
+     "main_capsule_2x": "65e1c51cf2950d70209d63e288d1c5ba3f86044b/capsule_616x353_2x.jpg",
+     "small_capsule": "10c9138570a8d7ac9144f601ab0f2ccbc820337e/capsule_231x87.jpg",
+     "small_capsule_2x": "10c9138570a8d7ac9144f601ab0f2ccbc820337e/capsule_231x87_2x.jpg",
+     "header": "91ac334a2c137d08968ccc0bc474a02579602100/header.jpg",
+     "header_2x": "91ac334a2c137d08968ccc0bc474a02579602100/header_2x.jpg",
+     "page_background": "page_bg_generated_v6b.jpg",
+     "hero_capsule": "a783c3347d40597930d282fa6727044c214e4be1/hero_capsule.jpg",
+     "hero_capsule_2x": "a783c3347d40597930d282fa6727044c214e4be1/hero_capsule_2x.jpg",
+     "library_capsule": "2ba105370a00877459144db0dd68af5f2d338429/library_capsule.jpg",
+     "library_capsule_2x": "2ba105370a00877459144db0dd68af5f2d338429/library_capsule_2x.jpg",
+     "library_hero": "2d2e4115cc8ef9a9f64164714a6f18112dd4831a/library_hero.jpg",
+     "library_hero_2x": "2d2e4115cc8ef9a9f64164714a6f18112dd4831a/library_hero_2x.jpg",
+     "community_icon": "621d9f1cfa204c0bae07a981f41007d2cf03a56c",
+     "page_background_path": "app/1145350?t=1779901265",
+     "raw_page_background": "page_bg_raw.jpg",
+     "last_modified": 1779901265
+    }
+   }
+  ]
+ }
+}
