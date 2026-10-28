@@ -41,9 +41,15 @@ QString processExe(qint64 pid)
     return exe;
 }
 
-QString steamExe(const QString &root)
+// The 64-bit client (steamrt64) replaced the 32-bit one in 2026; older installs still run the latter.
+QStringList steamExes(const QString &root)
 {
-    return root + QStringLiteral("/ubuntu12_32/steam");
+    QStringList exes;
+    for (const QString &path : {root + QStringLiteral("/steamrt64/steam"), root + QStringLiteral("/ubuntu12_32/steam")}) {
+        if (const QString exe = canonical(path); !exe.isEmpty())
+            exes.append(exe);
+    }
+    return exes;
 }
 }
 
@@ -173,8 +179,8 @@ qint64 runningPid(const SteamInstall &install, const SteamLocations &where)
 {
     if (!install.found())
         return 0;
-    const QString exe = canonical(steamExe(install.root));
-    if (exe.isEmpty())
+    const QStringList exes = steamExes(install.root);
+    if (exes.isEmpty())
         return 0;
 
     if (install.kind == SteamInstall::Kind::Native) {
@@ -182,14 +188,14 @@ qint64 runningPid(const SteamInstall &install, const SteamLocations &where)
         if (!file.open(QIODevice::ReadOnly))
             return 0;
         const qint64 pid = file.readAll().trimmed().toLongLong();
-        return pid > 0 && processExe(pid) == exe ? pid : 0;
+        return pid > 0 && exes.contains(processExe(pid)) ? pid : 0;
     }
 
     const QStringList pids = QDir(QStringLiteral("/proc")).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const QString &name : pids) {
         bool ok = false;
         const qint64 pid = name.toLongLong(&ok);
-        if (ok && processExe(pid) == exe)
+        if (ok && exes.contains(processExe(pid)))
             return pid;
     }
     return 0;

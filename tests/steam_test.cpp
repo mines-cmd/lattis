@@ -37,6 +37,7 @@ private slots:
     void notRunning();
     void stalePid();
     void runningAndExit();
+    void running64Bit();
     void runningFlatpak();
     void scanFakeTree();
     void scanOff();
@@ -113,10 +114,10 @@ const QString kNative = u".local/share/Steam"_s;
 const QString kFlatpak = u".var/app/com.valvesoftware.Steam/.local/share/Steam"_s;
 
 // A copy of `sleep` named like Steam's binary, in `root`, so /proc/<pid>/exe points there.
-QString fakeSteamBinary(const QString &root)
+QString fakeSteamBinary(const QString &root, const QString &folder = u"ubuntu12_32"_s)
 {
-    const QString exe = root + u"/ubuntu12_32/steam"_s;
-    QDir().mkpath(root + u"/ubuntu12_32"_s);
+    const QString exe = root + u'/' + folder + u"/steam"_s;
+    QDir().mkpath(root + u'/' + folder);
     QFile::copy(QStandardPaths::findExecutable(u"sleep"_s), exe);
     QFile::setPermissions(exe, QFile::permissions(exe) | QFile::ExeUser);
     return exe;
@@ -316,6 +317,23 @@ void SteamTest::runningAndExit()
     QVERIFY(!watch.watching());
     steam.waitForFinished();
     QCOMPARE(SteamLocate::runningPid(install, {home}), 0);
+}
+
+void SteamTest::running64Bit()
+{
+    QTemporaryDir dir;
+    const QString home = makeHome(dir, kNative, true);
+    fakeSteamBinary(home + u'/' + kNative);
+    const QString exe = fakeSteamBinary(home + u'/' + kNative, u"steamrt64"_s);
+    const SteamInstall install = SteamLocate::find({home});
+
+    QProcess steam;
+    steam.start(exe, {u"30"_s});
+    QVERIFY(steam.waitForStarted());
+    writePid(home, steam.processId());
+    QCOMPARE(SteamLocate::runningPid(install, {home}), steam.processId());
+    steam.kill();
+    steam.waitForFinished();
 }
 
 void SteamTest::runningFlatpak()
