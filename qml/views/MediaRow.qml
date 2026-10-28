@@ -22,7 +22,10 @@ ColumnLayout {
     signal showAllRequested(string id)
 
     visible: wanted && shown.length > 0
-    spacing: 10
+    spacing: 10 * reveal
+
+    property real reveal: heading.collapsed ? 0 : 1
+    Behavior on reveal { enabled: Motion.on; MotionNumber { speed: "fast" } }
 
     function reload() {
         if (wanted)
@@ -43,21 +46,25 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    Item {
+        id: headRow
         Layout.fillWidth: true
-        Layout.maximumWidth: card.Layout.maximumWidth
-        spacing: Theme.layout.spacing
+        Layout.maximumWidth: tiles.width + 2 * Theme.media.cardPadding
+        implicitHeight: heading.implicitHeight
 
         CollapseHeading {
             id: heading
+            width: implicitWidth
+            height: parent.height
             text: qsTr("Media")
             section: "clips"
             count: root.shown.length
             onFailed: text => root.failed(text)
         }
-        Item { Layout.fillWidth: true }
         Label {
-            Layout.rightMargin: Theme.media.linkInset
+            anchors.verticalCenter: parent.verticalCenter
+            readonly property real collapsedX: heading.width + Theme.layout.spacing
+            x: collapsedX + (headRow.width - width - Theme.media.linkInset - collapsedX) * root.reveal
             text: qsTr("Show all")
             color: showAll.containsMouse ? Theme.media.linkHoverColor : Theme.media.linkColor
             font.pixelSize: Theme.details.countFontSize
@@ -124,12 +131,15 @@ ColumnLayout {
 
     Surface {
         id: card
-        visible: !heading.collapsed
+        visible: root.reveal > 0
+        clip: root.reveal < 1
+        opacity: root.reveal
         Layout.fillWidth: true
-        Layout.maximumWidth: tiles.width + 2 * Theme.media.cardPadding
-        Layout.preferredHeight: Theme.media.cardPadding + Theme.media.thumbHeight
-                                + (scrollBar.policy === ScrollBar.AlwaysOn
-                                   ? 2 * Theme.media.scrollbarGap + Theme.media.scrollbarHeight : Theme.media.cardPadding)
+        Layout.maximumWidth: (tiles.width + 2 * Theme.media.cardPadding) * root.reveal
+        Layout.preferredHeight: (Theme.media.cardPadding + Theme.media.thumbHeight
+                                 + (scrollBar.policy === ScrollBar.AlwaysOn
+                                    ? 2 * Theme.media.scrollbarGap + Theme.media.scrollbarHeight : Theme.media.cardPadding))
+                                * root.reveal
         radius: Theme.media.cardRadius
         fill: Theme.media.cardBackground
         border.color: Theme.media.cardBorder
@@ -153,7 +163,7 @@ ColumnLayout {
             }
             ScrollBar.horizontal: ScrollBar {
                 id: scrollBar
-                policy: flick.contentWidth > flick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                policy: flick.contentWidth > headRow.width - 2 * Theme.media.cardPadding ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                 padding: 0
                 bottomPadding: Theme.media.scrollbarGap
                 hoverEnabled: true
