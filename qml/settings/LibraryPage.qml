@@ -633,7 +633,7 @@ Item {
                                     SettingsButton {
                                         leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
                                         rightPadding: leftPadding
-                                        iconPath: Icons.edit
+                                        iconPath: Icons.editLine
                                         tip: qsTr("Rename %1").arg(tagRow.modelData.name)
                                         onClicked: root.renaming = tagRow.modelData.name
                                     }

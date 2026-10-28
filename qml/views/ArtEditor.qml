@@ -149,7 +149,7 @@ Item {
                 color: Theme.gameEditor.artHoverOverlay
                 Icon {
                     anchors.centerIn: parent
-                    path: Icons.folderImageFill
+                    path: Icons.folderImageLine
                     size: Theme.controls.iconSize * 1.5
                     color: Theme.gameEditor.artHoverIcon
                 }

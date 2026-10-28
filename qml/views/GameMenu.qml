@@ -153,7 +153,7 @@ SettingsMenu {
 
     Entry {
         actionName: "launch"
-        iconPath: !root.installed && root.game.platform === "steam" ? Icons.download2Line
+        iconPath: !root.installed && root.game.platform === "steam" ? Icons.download
                 : !root.installed && root.programGame ? Icons.fileSearchLine
                 : Icons.playLargeLine
         visible: !root.multi

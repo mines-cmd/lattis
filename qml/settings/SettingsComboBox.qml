@@ -26,7 +26,7 @@ ComboBox {
     indicator: Icon {
         x: root.width - width - 10
         y: (root.height - height) / 2
-        path: Icons.chevron
+        path: Icons.chevronRight
         size: Theme.controls.iconSize
         color: root.iconColor
         rotation: dropdown.showing ? -90 : 90

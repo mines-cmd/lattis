@@ -66,7 +66,7 @@ Surface {
         }
         Icon {
             visible: Theme.downloadBar.chevronSize > 0
-            path: Icons.chevron
+            path: Icons.chevronRight
             size: Theme.downloadBar.chevronSize
             rotation: 90 - 180 * root.slide
             color: hot ? Theme.downloadBar.chevronHover : Theme.downloadBar.text

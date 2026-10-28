@@ -108,7 +108,7 @@ ColumnLayout {
             spacing: 10
 
             Icon {
-                path: Icons.chevron
+                path: Icons.chevronRight
                 size: Theme.controls.iconSize
                 color: Theme.controls.iconColor
                 rotation: root.expanded ? 90 : 0

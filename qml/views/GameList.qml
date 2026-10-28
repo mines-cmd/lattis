@@ -1002,7 +1002,7 @@ Rectangle {
                     spacing: 6
 
                     Icon {
-                        path: Icons.chevron
+                        path: Icons.chevronRight
                         size: Theme.list.headerFontSize + 3
                         color: row.headerColor
                         rotation: row.collapsed ? 0 : 90

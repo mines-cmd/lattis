@@ -394,7 +394,7 @@ ApplicationWindow {
 
                                     Icon {
                                         visible: category.sections.length > 0
-                                        path: Icons.chevron
+                                        path: Icons.chevronRight
                                         size: Theme.controls.iconSize
                                         color: category.selected ? Theme.settingsWindow.sidebarSelectedText
                                              : Theme.settingsWindow.sidebarText
@@ -513,7 +513,7 @@ ApplicationWindow {
                                                     anchors.right: parent.right
                                                     anchors.rightMargin: 10
                                                     anchors.verticalCenter: parent.verticalCenter
-                                                    path: Icons.chevron
+                                                    path: Icons.chevronRight
                                                     size: Theme.controls.iconSize
                                                     color: link.current || linkMouse.containsMouse
                                                            ? Theme.settingsWindow.sidebarSectionSelectedText

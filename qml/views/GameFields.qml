@@ -21,20 +21,20 @@ QtObject {
             play_time: { label: qsTr("Play time"), value: game.id ? playTime(game.playMinutes) || qsTr("None") : "",
                          icon: Icons.clock, history: true, tip: qsTr("Show play history") },
             last_played: { label: qsTr("Last played"), value: game.id ? game.lastPlayedText || qsTr("Never") : "",
-                           icon: Icons.historyFill },
-            release_date: { label: qsTr("Release date"), value: game.year ?? "", icon: Icons.calendarEventFill },
+                           icon: Icons.history },
+            release_date: { label: qsTr("Release date"), value: game.year ?? "", icon: Icons.calendarEventLine },
             platform: { label: qsTr("Platform"), value: game.platformName ?? "", icon: Icons.forPlatform(game.platformIcon ?? ""),
                         valueIcon: true, filterPlatform: game.platform ?? "",
                         tip: qsTr("Show only %1 games").arg(game.platformName ?? "") },
-            status: { label: qsTr("Status"), value: game.statusText ?? "", icon: Icons.flagFill },
-            install_size: { label: qsTr("Install size"), value: game.sizeText ?? "", icon: Icons.hardDrive2Fill },
+            status: { label: qsTr("Status"), value: game.statusText ?? "", icon: Icons.flagLine },
+            install_size: { label: qsTr("Install size"), value: game.sizeText ?? "", icon: Icons.hardDrive2Line },
             rating: { label: qsTr("Rating"), value: (game.rating ?? -1) >= 0 ? game.rating.toFixed(1) : "", icon: Icons.star,
                       stars: game.rating ?? -1 },
-            times_played: { label: qsTr("Times played"), value: played.timesPlayed ?? "", icon: Icons.loopRightFill },
-            first_played: { label: qsTr("First played"), value: played.firstPlayed ?? "", icon: Icons.signpostFill },
+            times_played: { label: qsTr("Times played"), value: played.timesPlayed ?? "", icon: Icons.loopRightLine },
+            first_played: { label: qsTr("First played"), value: played.firstPlayed ?? "", icon: Icons.signpostLine },
             recent_play_time: { label: periodLabels[General.recentPeriod] ?? "", value: playTime((played.recent ?? {})[General.recentPeriod]),
-                                icon: Icons.clock },
-            date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckFill }
+                                icon: Icons.timerLine },
+            date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckLine }
         }
     }
 

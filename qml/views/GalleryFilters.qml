@@ -218,7 +218,7 @@ FocusScope {
 
                     Icon {
                         anchors.verticalCenter: parent.verticalCenter
-                        path: Icons.chevron
+                        path: Icons.chevronRight
                         size: Theme.gallery.sectionSize + 2
                         color: Theme.gallery.sectionColor
                         rotation: section.folded ? 0 : 90
@@ -433,7 +433,7 @@ FocusScope {
                                         contentItem: Item {
                                             Icon {
                                                 anchors.centerIn: parent
-                                                path: Icons.chevron
+                                                path: Icons.chevronRight
                                                 size: Theme.gallery.entrySize + 2
                                                 color: Theme.gallery.sectionColor
                                                 rotation: yearBlock.open ? 90 : 0

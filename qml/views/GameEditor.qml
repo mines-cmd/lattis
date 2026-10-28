@@ -1057,7 +1057,7 @@ Item {
                                         }
                                         SettingsButton {
                                             visible: root.programGame
-                                            iconPath: Icons.edit
+                                            iconPath: Icons.editLine
                                             tip: qsTr("Change the install folder")
                                             onClicked: folderPicker.pickFor("install")
                                         }
@@ -1088,7 +1088,7 @@ Item {
                                         readonly property bool locating: root.newExe === ""
                                             && ((root.game.gameNotFound ?? false) || (root.game.uninstalled ?? false))
                                         text: locating ? qsTr("Locate") : ""
-                                        iconPath: locating ? "" : Icons.edit
+                                        iconPath: locating ? "" : Icons.editLine
                                         tip: locating ? "" : qsTr("Change the program")
                                         onClicked: exePicker.active = true
                                     }
@@ -1140,7 +1140,7 @@ Item {
                                     fontSize: Theme.gameEditor.pathFontSize
 
                                     SettingsButton {
-                                        iconPath: Icons.edit
+                                        iconPath: Icons.editLine
                                         tip: qsTr("Change the start folder")
                                         onClicked: folderPicker.pickFor("start")
                                     }
@@ -1171,7 +1171,7 @@ Item {
                                     fontSize: Theme.gameEditor.pathFontSize
 
                                     SettingsButton {
-                                        iconPath: Icons.edit
+                                        iconPath: Icons.editLine
                                         tip: qsTr("Choose the save folder")
                                         onClicked: folderPicker.pickFor("saves")
                                     }

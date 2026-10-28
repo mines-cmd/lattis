@@ -270,7 +270,7 @@ Item {
                         elide: Text.ElideRight
                     }
                     Icon {
-                        path: Icons.chevron
+                        path: Icons.chevronRight
                         size: Theme.controls.iconSize
                         color: Theme.controls.iconColor
                         rotation: themePopup.opened ? -90 : 90
@@ -365,7 +365,7 @@ Item {
                         color: showButton.foreground
                     }
                     Icon {
-                        path: Icons.chevron
+                        path: Icons.chevronRight
                         size: Theme.controls.iconSize
                         color: showButton.primary ? showButton.foreground : Theme.controls.iconColor
                         rotation: showPopup.opened ? -90 : 90

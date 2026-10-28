@@ -37,7 +37,7 @@ Item {
         }
         Icon {
             visible: Theme.details.collapseChevronSize > 0
-            path: Icons.chevron
+            path: Icons.chevronRight
             size: Theme.details.collapseChevronSize
             color: Theme.details.collapseChevronColor
             opacity: area.containsMouse || root.collapsed ? 1 : 0

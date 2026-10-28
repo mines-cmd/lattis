@@ -653,7 +653,7 @@ MotionPopup {
 
                         ViewerButton {
                             anchors.verticalCenter: parent.verticalCenter
-                            icon: Icons.replay5Fill
+                            icon: Icons.replay5Line
                             tip: qsTr("Back 5 seconds (Left)")
                             onClicked: root.seekBy(-5000)
                         }
@@ -673,7 +673,7 @@ MotionPopup {
                         }
                         ViewerButton {
                             anchors.verticalCenter: parent.verticalCenter
-                            icon: Icons.forward5Fill
+                            icon: Icons.forward5Line
                             tip: qsTr("Forward 5 seconds (Right)")
                             onClicked: root.seekBy(5000)
                         }

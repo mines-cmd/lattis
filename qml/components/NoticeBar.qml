@@ -32,7 +32,7 @@ Surface {
         spacing: Theme.layout.spacing
 
         Icon {
-            path: Icons.info
+            path: Icons.informationLine
             size: Theme.notice.iconSize
             color: Theme.notice.icon
         }

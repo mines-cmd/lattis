@@ -51,7 +51,7 @@ Item {
     }
 
     readonly property var fieldDefs: ({
-        play_time: { icon: Icons.timeLine,
+        play_time: { icon: Icons.clock,
                      hint: hint("play_time", qsTr("The time played in all"), qsTr("click opens play history")) },
         last_played: { icon: Icons.history,
                        hint: hint("last_played", qsTr("The day of the last session")) },
@@ -76,9 +76,9 @@ Item {
     })
 
     readonly property var chipDefs: Object.assign({
-        steam_waiting: { icon: Icons.info,
+        steam_waiting: { icon: Icons.informationLine,
                          hint: qsTr("Only while the game's edits wait for Steam to close, with Close Steam and apply, and Undo. Hidden, they still show on Properties and the Launch button.") },
-        steam_update: { icon: Icons.download2Line,
+        steam_update: { icon: Icons.download,
                         hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") }
     }, fieldDefs)
 
@@ -87,7 +87,7 @@ Item {
         open_platform: { icon: Icons.openExternal,
                          hint: qsTr("Hidden for Linux games") },
         folder: { icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
-        save_folder: { icon: Icons.save2Fill, hint: qsTr("Hidden when the game has none") },
+        save_folder: { icon: Icons.save2Line, hint: qsTr("Hidden when the game has none") },
         settings: { icon: Icons.gear, hint: qsTr("Edit the game") },
         gallery: { icon: Icons.image, hint: qsTr("Open the Gallery on this game") },
         menu: { icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }

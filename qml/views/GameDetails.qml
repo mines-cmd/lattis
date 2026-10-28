@@ -488,7 +488,7 @@ Item {
             badge: false
         },
         save_folder: {
-            icon: Icons.save2Fill,
+            icon: Icons.save2Line,
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Open save folder: %1").arg(GameRunner.shownPath(saveFolder)),
                              Actions.keys.open_save_folder),
@@ -667,7 +667,7 @@ Item {
             readonly property bool mine: root.game.pendingSteamEdits ?? false
 
             attention: true
-            icon: General.chipsWithoutIcon.includes("steam_waiting") ? "" : Icons.info
+            icon: General.chipsWithoutIcon.includes("steam_waiting") ? "" : Icons.informationLine
             label: qsTr("Steam")
             value: (root.game.shortcutQueued ?? false) ? qsTr("Added when it closes")
                  : mine ? qsTr("Changes wait for it to close")
@@ -687,7 +687,7 @@ Item {
                 rightPadding: leftPadding
                 implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
                 text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
-                iconPath: GameRunner.closingSteam ? "" : Icons.chevron
+                iconPath: GameRunner.closingSteam ? "" : Icons.chevronRight
                 iconRotation: pendingMenu.showing ? -90 : 90
                 enabled: !GameRunner.closingSteam
                 tip: qsTr("Apply the changes now, or undo them")
@@ -720,7 +720,7 @@ Item {
             attention: true
             attentionColor: launchButton.updateAction ? Theme.launchButton.updateBackground
                                                       : Theme.launchButton.updatingBackground
-            icon: General.chipsWithoutIcon.includes("steam_update") ? "" : Icons.download2Line
+            icon: General.chipsWithoutIcon.includes("steam_update") ? "" : Icons.download
             label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
             value: root.game.steamUpdateText ?? ""
         }

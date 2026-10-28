@@ -52,7 +52,7 @@ SettingsButton {
         contentItem: Item {
             Icon {
                 anchors.centerIn: parent
-                path: Icons.chevron
+                path: Icons.chevronRight
                 size: Theme.controls.iconSize
                 color: root.textColor
                 rotation: menu.showing ? -90 : 90

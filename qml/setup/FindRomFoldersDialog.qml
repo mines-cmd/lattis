@@ -154,7 +154,7 @@ MotionPopup {
                                 color: Theme.controls.inputText
                                 elide: Text.ElideRight
                             }
-                            Icon { path: Icons.chevron; size: 14; color: Theme.controls.iconColor }
+                            Icon { path: Icons.chevronRight; size: 14; color: Theme.controls.iconColor }
                             Label {
                                 Layout.fillWidth: true
                                 text: matchRow.modelData.platformName

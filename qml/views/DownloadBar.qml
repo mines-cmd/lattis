@@ -120,7 +120,7 @@ Surface {
 
                     Icon {
                         anchors.centerIn: parent
-                        path: Icons.chevron
+                        path: Icons.chevronRight
                         size: Theme.downloadBar.chevronSize
                         opacity: root.morphing ? 0 : 1
                         rotation: 90

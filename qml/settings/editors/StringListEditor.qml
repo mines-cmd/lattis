@@ -51,7 +51,7 @@ ColumnLayout {
             IconButton {
                 implicitWidth: Theme.settingsWindow.listButtonSize; implicitHeight: Theme.settingsWindow.listButtonSize
                 iconSize: Theme.settingsWindow.listIconSize
-                icon: Icons.chevron
+                icon: Icons.chevronRight
                 rotation: -90
                 enabled: index > 0
                 opacity: enabled ? 1 : 0.3
@@ -60,7 +60,7 @@ ColumnLayout {
             IconButton {
                 implicitWidth: Theme.settingsWindow.listButtonSize; implicitHeight: Theme.settingsWindow.listButtonSize
                 iconSize: Theme.settingsWindow.listIconSize
-                icon: Icons.chevron
+                icon: Icons.chevronRight
                 rotation: 90
                 enabled: index < root.value.length - 1
                 opacity: enabled ? 1 : 0.3

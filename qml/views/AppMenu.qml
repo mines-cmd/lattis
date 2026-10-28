@@ -153,7 +153,7 @@ SettingsMenu {
     }
     Entry {
         actionName: "back_up_saves"
-        iconPath: Icons.saveLine
+        iconPath: Icons.save2Line
         text: qsTr("Back up saves")
     }
     Entry {

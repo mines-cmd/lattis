@@ -120,7 +120,7 @@ ColumnLayout {
             }
 
             Icon {
-                path: Icons.chevron
+                path: Icons.chevronRight
                 size: Theme.controls.iconSize
                 color: Theme.controls.iconColor
                 rotation: root.expanded ? 90 : 0
@@ -480,7 +480,7 @@ ColumnLayout {
                         ListButton {
                             visible: root.platform.emulators.length > 1
                             enabled: emulatorItem.index > 0
-                            iconPath: Icons.chevron
+                            iconPath: Icons.chevronRight
                             iconRotation: -90
                             tip: qsTr("Prefer it over the one above")
                             onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, -1))
@@ -488,7 +488,7 @@ ColumnLayout {
                         ListButton {
                             visible: root.platform.emulators.length > 1
                             enabled: emulatorItem.index < root.platform.emulators.length - 1
-                            iconPath: Icons.chevron
+                            iconPath: Icons.chevronRight
                             iconRotation: 90
                             tip: qsTr("Prefer the one below over it")
                             onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 1))

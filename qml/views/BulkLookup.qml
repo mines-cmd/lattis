@@ -362,7 +362,7 @@ ApplicationWindow {
             color: Theme.gameEditor.artHoverOverlay
             Icon {
                 anchors.centerIn: parent
-                path: Icons.folderImageFill
+                path: Icons.folderImageLine
                 size: Math.min(Theme.controls.iconSize * 1.5, parent.height * 0.6)
                 color: Theme.gameEditor.artHoverIcon
             }
