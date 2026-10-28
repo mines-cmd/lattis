@@ -1,4 +1,5 @@
 #include "bulklookup.h"
+#include "gameid.h"
 #include "igdb.h"
 #include "libraryfiles.h"
 #include "metadataclient.h"
@@ -866,14 +867,14 @@ int BulkLookup::steamGridDbId(const QString &id) const
     return 0;
 }
 
-// -1: a Steam game, whose art already comes from Steam.
+// A Steam game's own app id, whose art is read from Steam's library cache first.
 int BulkLookup::steamApp(const QString &id) const
 {
     for (const Row &r : m_rows) {
         if (r.game.id != id)
             continue;
         if (r.game.platform == kSteamPlatform)
-            return -1;
+            return int(qMax<qint64>(GameId::steamAppId(id), 0));
         return r.steamApp > 0 ? r.steamApp : qMax(r.game.steamApp, 0);
     }
     return 0;

@@ -13,7 +13,7 @@ To turn Steam off in Lattis, switch off **Import Steam games** on Settings → S
 - **Installed games are imported**, and games Steam installs or uninstalls later show up without a restart. The rest of your Steam library (games you own but haven't installed) isn't.
 - **An uninstalled game stays in the library**, dimmed, with **Install** in place of Launch, which hands off to Steam. Its play time, tags and art stay. Hide it if you don't want to see it.
 - **Steam's tools aren't games:** Proton, the Steam Linux Runtimes and the like are left out.
-- **Art:** Steam's own art for the game (your custom art in Steam first) is copied into Lattis once. Art you choose yourself wins. Remove Steam's art in Properties and it isn't copied back.
+- **Art:** Steam's own art for the game (your custom art in Steam first) is copied into Lattis once. Art you choose yourself wins. Remove Steam's art in Properties and it isn't copied back; the art browser's Steam tab (see [Game info and art](game-info.md)) brings it back.
 
 ## Updates
 

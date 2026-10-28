@@ -34,7 +34,7 @@ Item {
     property var downloading: ({})
     property var downloaded: ({})
 
-    // -1: a Steam game (its art already comes from Steam); 0: not known yet.
+    // 0: not known yet.
     property int steamApp: 0
     property var steamImages: []
     property bool steamLoading: false
@@ -43,7 +43,7 @@ Item {
     property int steamRequest: 0
     property int steamFindRequest: 0
     readonly property var steamKinds: ["cover", "hero", "logo"].filter(k => shownKinds.includes(k))
-    readonly property bool steamAvailable: steamApp >= 0 && steamKinds.length > 0
+    readonly property bool steamAvailable: steamKinds.length > 0
     readonly property var shownSteamImages: steamImages.filter(i => steamKinds.includes(i.kind))
     readonly property var tabList: kinds.filter(k => shownKinds.includes(k.id))
                                    .concat(steamAvailable ? [{ id: "steam", name: qsTr("Steam") }] : [])
@@ -146,6 +146,12 @@ Item {
         if (steamLoading || steamLoaded)
             return
         steamError = ""
+        const local = steamApp > 0 ? localSteamImages() : []
+        if (steamKinds.every(k => local.some(i => i.kind === k))) {
+            steamImages = local
+            steamLoaded = true
+            return
+        }
         steamLoading = true
         if (steamApp > 0)
             steamRequest = Metadata.steamArt(steamApp)
@@ -180,8 +186,15 @@ Item {
             steamError = result.error
             return
         }
-        steamImages = result.images
+        const local = localSteamImages()
+        steamImages = local.concat(result.images.filter(i => !local.some(l => l.kind === i.kind)))
         steamLoaded = true
+    }
+
+    // Files in Steam's own library cache and grid folder come first; the web fills in what's missing.
+    function localSteamImages() {
+        const files = Library.steamLocalArt(steamApp)
+        return Object.keys(files).map(k => ({ kind: k, url: files[k], thumbnail: files[k], width: 0, height: 0, local: true }))
     }
 
     // Steam's logo path can't tell whether the app has one, so a missing logo shows up here as a failed load.
@@ -313,13 +326,18 @@ Item {
 
     function useSelected() {
         const running = {}
-        for (const k of Object.keys(picks))
-            running[k] = Metadata.download(picks[k].url, k)
+        const files = {}
+        for (const k of Object.keys(picks)) {
+            if (picks[k].url.startsWith("file:"))
+                files[k] = picks[k].url
+            else
+                running[k] = Metadata.download(picks[k].url, k)
+        }
         downloading = running
-        downloaded = {}
+        downloaded = files
         error.text = ""
         if (Object.keys(running).length === 0) {
-            chosen({})
+            chosen(files)
             popup.close()
         }
     }

@@ -236,6 +236,8 @@ public:
     Q_INVOKABLE QString locateProgram(const QString &id, const QString &file);
     Q_INVOKABLE QString setArt(const QString &id, const QString &kind, const QString &file);
     Q_INVOKABLE QString removeArt(const QString &id, const QString &kind);
+    Q_INVOKABLE QVariantMap steamLocalArt(qint64 appId) const;
+    Q_INVOKABLE qint64 steamAppFor(const QString &id) const;
     Q_INVOKABLE QString removeGame(const QString &id, bool wipe = false);
     Q_INVOKABLE QString unhideGame(const QString &id);
     Q_INVOKABLE QString setGamesValue(const QStringList &ids, const QString &key, const QVariant &value);

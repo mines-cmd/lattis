@@ -1605,6 +1605,22 @@ QString Library::removeArt(const QString &id, const QString &kind)
     return m_store.setGameValues(id, {{QStringLiteral("skip_steam_art"), skip}});
 }
 
+QVariantMap Library::steamLocalArt(qint64 appId) const
+{
+    QVariantMap out;
+    const QHash<QString, QString> found = SteamArt::find(
+        m_store.snapshot().steam.install, appId,
+        {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo")});
+    for (auto it = found.cbegin(); it != found.cend(); ++it)
+        out.insert(it.key(), QUrl::fromLocalFile(it.value()).toString());
+    return out;
+}
+
+qint64 Library::steamAppFor(const QString &id) const
+{
+    return GameId::steamAppId(id);
+}
+
 QString Library::setGameValue(const QString &id, const QString &key, const QVariant &value)
 {
     return m_store.setGameValues(id, {{key, value}});

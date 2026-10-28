@@ -370,7 +370,7 @@ Item {
 
     function steamAppForArt() {
         if (steamGame)
-            return -1
+            return Library.steamAppFor(game.id)
         return (lookupIds.steam ?? 0) > 0 ? lookupIds.steam : Math.max(0, game.steamApp ?? 0)
     }
 
