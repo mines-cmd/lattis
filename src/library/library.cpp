@@ -2826,6 +2826,7 @@ QList<LookupGame> Library::lookupGames() const
         l.igdb = file.igdb;
         l.steamgriddb = file.steamgriddb;
         l.steamAppId = g.platform == kSteamPlatform ? GameId::steamAppId(g.id) : 0;
+        l.steamApp = g.platform == kSteamPlatform ? 0 : qMax(file.steamApp, 0);
         for (const QVariant &id : igdbPlatformIds(g.platform))
             l.igdbPlatforms.append(id.toInt());
         out.append(l);
@@ -2927,6 +2928,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("igdb"), file.igdb},
         {QStringLiteral("steamgriddb"), file.steamgriddb},
         {QStringLiteral("steamAppId"), g->platform == kSteamPlatform ? GameId::steamAppId(g->id) : 0},
+        {QStringLiteral("steamApp"), g->platform == kSteamPlatform ? 0 : qMax(file.steamApp, 0)},
         {QStringLiteral("tags"), tags},
         {QStringLiteral("emulator"), file.emulator},
         {QStringLiteral("args"), file.args},

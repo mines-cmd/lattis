@@ -27,6 +27,7 @@ struct LookupGame
     int igdb = -1;
     int steamgriddb = -1;
     qint64 steamAppId = 0;
+    int steamApp = 0; // stored from an IGDB lookup, for games not from Steam
     QList<int> igdbPlatforms;
 
     QStringList missing() const

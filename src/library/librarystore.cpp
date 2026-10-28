@@ -1832,6 +1832,8 @@ QString LibraryStore::relocateRom(const QString &id, const QString &romPath)
             values.append({QStringLiteral("igdb"), theirs.igdb});
         if (theirs.steamgriddb >= 0 && mine.steamgriddb < 0)
             values.append({QStringLiteral("steamgriddb"), theirs.steamgriddb});
+        if (theirs.steamApp > 0 && mine.steamApp <= 0)
+            values.append({QStringLiteral("steam_app"), theirs.steamApp});
         QStringList tags = mine.tags + theirs.tags;
         tags.removeDuplicates();
         if (tags != mine.tags)

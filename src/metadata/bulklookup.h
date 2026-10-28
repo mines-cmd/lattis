@@ -165,6 +165,7 @@ private:
         QMap<QString, Art> art;
         int igdb = -1;
         int steamgriddb = 0;
+        int steamApp = 0;
         int pending = 0;
         QString applyError;
     };

@@ -218,6 +218,7 @@ favorite = true
 status = "finished"
 igdb = 1942
 steamgriddb = 0
+steam_app = 1145360
 play_minutes = 4100
 last_played = 2026-09-19T21:04:00-03:00
 added = 2026-01-12
@@ -247,6 +248,7 @@ logo_scrim_strength = 0.5
     QCOMPARE(g.status, QStringLiteral("finished"));
     QCOMPARE(g.igdb, 1942);
     QCOMPARE(g.steamgriddb, 0);
+    QCOMPARE(g.steamApp, 1145360);
     QCOMPARE(g.playMinutes, 4100);
     QCOMPARE(g.lastPlayed.offsetFromUtc(), -3 * 3600);
     QCOMPARE(g.lastPlayed.toUTC(), QDateTime(QDate(2026, 9, 20), QTime(0, 4), QTimeZone::UTC));
@@ -254,7 +256,7 @@ logo_scrim_strength = 0.5
     QVERIFY(g.hidden);
     QCOMPARE(g.emulator, QStringLiteral("ryubing"));
     QCOMPARE(g.rom, QStringLiteral("~/Downloads/Hades.nsp"));
-    QCOMPARE(g.romLine, 17);
+    QCOMPARE(g.romLine, 18);
     QCOMPARE(g.args, (QStringList{"--fullscreen", "--no-gui"}));
     QCOMPARE(g.logoScale, 1.5);
     QCOMPARE(g.logoPosition, QStringLiteral("center_right"));
@@ -274,6 +276,7 @@ void LibraryFormatTest::gameDefaults()
     QVERIFY(r.game.platform.isEmpty());
     QCOMPARE(r.game.year, 0);
     QCOMPARE(r.game.rating, -1.0);
+    QCOMPARE(r.game.steamApp, -1);
     QCOMPARE(r.game.playMinutes, 0);
     QCOMPARE(r.game.logoScale, 1.0);
     QVERIFY(r.game.logoPosition.isEmpty());

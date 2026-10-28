@@ -1,5 +1,6 @@
 #include "bulklookup.h"
 #include "igdb.h"
+#include "libraryfiles.h"
 #include "metadataclient.h"
 #include "searchtext.h"
 
@@ -424,6 +425,7 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
     r.state = State::Running;
     r.match = candidate;
     r.igdb = candidate.value(QStringLiteral("igdb")).toInt();
+    r.steamApp = r.game.platform == kSteamPlatform ? 0 : candidate.value(QStringLiteral("steamAppId")).toInt();
     r.fields.clear();
     r.uncheckedFields.clear();
     r.replaces.clear();
@@ -1025,6 +1027,8 @@ void BulkLookup::apply()
                 values.insert(QStringLiteral("tags"), tags);
             if (r.igdb > 0)
                 values.insert(QStringLiteral("igdb"), r.igdb);
+            if (r.steamApp > 0)
+                values.insert(QStringLiteral("steam_app"), r.steamApp);
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
             for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {

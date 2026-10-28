@@ -471,6 +471,7 @@ romWritten      `rom` as written
 removeDeletes   wiping it deletes its file
 igdb, steamgriddb   the matched ids: 0 = not there, -1 = not looked up
 steamAppId      Steam games, else 0
+steamApp        other games: the `steam_app` IGDB found, else 0 (Steam games: 0)
 saveFolder      the file's `save_folder` as written, or ""; Save writes one in the home folder with ~
 Steam and Proton games:
   launchOptions, proton, pendingSteamEdits, installPath

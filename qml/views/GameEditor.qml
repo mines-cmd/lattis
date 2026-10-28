@@ -329,7 +329,7 @@ Item {
         lookupFilled = filled
         lookupDiffers = differs
         lookupMatch = candidate
-        lookupIds = { igdb: candidate.igdb }
+        lookupIds = steamGame ? { igdb: candidate.igdb } : { igdb: candidate.igdb, steam: candidate.steamAppId || 0 }
         tagsEditor.addSuggested(Library.igdbTags(candidate.facets ?? [], tagsEditor.names()))
         lookupRow.phase = "matched"
         if (Metadata.hasSteamGridDbKey)
@@ -475,6 +475,8 @@ Item {
             if (lookupIds[key] !== undefined && lookupIds[key] !== (game[key] ?? -1))
                 out[key] = lookupIds[key]
         }
+        if (!steamGame && (lookupIds.steam ?? 0) > 0 && lookupIds.steam !== (game.steamApp ?? 0))
+            out.steam_app = lookupIds.steam
         if (romGame) {
             if (emulatorId !== game.emulator)
                 out.emulator = emulatorId

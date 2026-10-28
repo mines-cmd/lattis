@@ -36,6 +36,7 @@ constexpr Field kFields[] = {
     {"logo_scrim_strength", Float, 0, 2, "1", "How strong the gradient or shadow is, times the theme's color; 0 shows nothing"},
     {"igdb", Integer, 0, 2147483647, "", "The game's IGDB id, set when a lookup matches it; 0 = not on IGDB, so bulk lookups skip it"},
     {"steamgriddb", Integer, 0, 2147483647, "", "The game's SteamGridDB id, set when its art is looked up; 0 = not on SteamGridDB"},
+    {"steam_app", Integer, 0, 2147483647, "", "The game's Steam app id, set when a lookup finds it on IGDB; 0 or not set = not known. Steam games don't have it"},
     {"play_minutes", Integer, 0, 2147483647, "0", "Total play time in minutes"},
     {"last_played", DateTime, 0, 0, "", "When the last session ended, with its UTC offset"},
     {"added", Date, 0, 0, "", "When the game was added to the library"},
@@ -340,6 +341,8 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.igdb = value.toInt();
     else if (key == QLatin1String("steamgriddb"))
         game.steamgriddb = value.toInt();
+    else if (key == QLatin1String("steam_app"))
+        game.steamApp = value.toInt();
     else if (key == QLatin1String("play_minutes"))
         game.playMinutes = value.toInt();
     else if (key == QLatin1String("last_played"))

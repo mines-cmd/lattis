@@ -196,7 +196,7 @@ void LibraryEditTest::unchangedValuesWriteNothing()
 
 void LibraryEditTest::lookupGames()
 {
-    writeFile(gamePath("switch-pikmin-4"), "title = \"Pikmin 4\"\nplatform = \"switch\"\nigdb = 0\n");
+    writeFile(gamePath("switch-pikmin-4"), "title = \"Pikmin 4\"\nplatform = \"switch\"\nigdb = 0\nsteam_app = 620\n");
     auto library = openLibrary();
     const QList<LookupGame> games = library->lookupGames();
     const auto find = [&](const QString &id) {
@@ -205,6 +205,7 @@ void LibraryEditTest::lookupGames()
     QVERIFY(std::none_of(games.cbegin(), games.cend(), [](const LookupGame &g) { return g.id == "steam-730"; })); // hidden
     const LookupGame hades = find(QStringLiteral("steam-1145360"));
     QCOMPARE(hades.steamAppId, 1145360);
+    QCOMPARE(hades.steamApp, 0);
     QCOMPARE(hades.igdbPlatforms, QList<int>{6});
     const LookupGame pikmin = find(QStringLiteral("switch-pikmin-4"));
     QCOMPARE(pikmin.igdb, 0);
@@ -212,6 +213,7 @@ void LibraryEditTest::lookupGames()
     QVERIFY(!pikmin.hasDescription);
     QCOMPARE(pikmin.missing().first(), QStringLiteral("description"));
     QCOMPARE(pikmin.steamAppId, 0);
+    QCOMPARE(pikmin.steamApp, 620);
 }
 
 void LibraryEditTest::batchWritesRebuildOnce()
@@ -219,7 +221,7 @@ void LibraryEditTest::batchWritesRebuildOnce()
     auto library = openLibrary();
     QSignalSpy changed(&library->store(), &LibraryStore::changed);
     const QHash<QString, QString> errors = library->saveGames({
-        {QStringLiteral("switch-pikmin-4"), {{"igdb", 1942}, {"year", 2023}}},
+        {QStringLiteral("switch-pikmin-4"), {{"igdb", 1942}, {"year", 2023}, {"steam_app", 1234}}},
         {QStringLiteral("steam-504230"), {{"igdb", 0}}},
         {QStringLiteral("no-such-game"), {{"igdb", 1}}},
         {QStringLiteral("switch-metroid-dread"), {{"steamgriddb", 5}}},
@@ -228,6 +230,7 @@ void LibraryEditTest::batchWritesRebuildOnce()
     QVERIFY(errors.contains(QStringLiteral("no-such-game")));
     QCOMPARE(changed.size(), 1);
     QCOMPARE(library->store().snapshot().content.games.value(QStringLiteral("switch-pikmin-4")).igdb, 1942);
+    QCOMPARE(library->store().snapshot().content.games.value(QStringLiteral("switch-pikmin-4")).steamApp, 1234);
     QCOMPARE(library->store().snapshot().content.games.value(QStringLiteral("steam-504230")).igdb, 0);
 
     const QString image = m_dir->filePath(QStringLiteral("cover.png"));
