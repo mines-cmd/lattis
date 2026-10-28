@@ -1,12 +1,14 @@
 # Metadata (`src/metadata/`)
 
-The metadata code looks up game information on IGDB and art on SteamGridDB, and gives QML the tools to show, review and apply what it finds. It owns the network requests, the API keys, the matching logic and the two ways lookups reach the library: the per-game editor and the bulk workflows. Everything about the library's own game files lives in `src/library/`; metadata only writes through the callbacks it's handed.
+The metadata code looks up game information on IGDB and art on SteamGridDB and Steam, and gives QML the tools to show, review and apply what it finds. It owns the network requests, the API keys, the matching logic and the two ways lookups reach the library: the per-game editor and the bulk workflows. Everything about the library's own game files lives in `src/library/`; metadata only writes through the callbacks it's handed.
 
-## The two services
+## The three services
 
 **IGDB** (the Internet Game Database) supplies title, description, year, rating, platforms and genre/theme/mode/keyword facets. Every request posts an [Apicalypse](https://api-docs.igdb.com/#apicalypse) query to its API. IGDB requires an OAuth token from Twitch; the token is fetched before the first IGDB request, cached to `<cache dir>/igdb-token`, and refreshed automatically on a 401.
 
 **SteamGridDB** supplies art in four kinds — cover, hero, logo and icon — from community contributors. It's found by Steam app ID when a game has one, or by title otherwise. When the title search finds nothing, the search is retried with the sequel number the other way (`SteamGridDb::otherNumerals`): "Mortal Shell 2" → "Mortal Shell II" and vice versa, since SteamGridDB often indexes a game by only one spelling.
+
+**Steam's store** supplies the official library art (cover, hero, logo) of games not imported from Steam, and needs no key. `steamArt(appId)` makes one `IStoreBrowseService/GetItems` request (`api.steampowered.com`) whose `assets` give the file names (they vary by app, some with a hash) and the URL format; the cover is `library_capsule_2x` (600×900) else `library_capsule` (size 0), the hero `library_hero_2x` else `library_hero`. The response has no logo, so `…/steam/apps/<id>/logo.png` on the same CDN is returned whenever the app has any library art; it 404s for an app without one, so the art browser drops a logo that fails to load. No library art at all gives an empty list. `findSteamApp(title)` makes one `storesearch` request (`store.steampowered.com`, a different host), counts only `type: "app"` results and applies `NameMatch::clearMatch` (the results carry no year, so a tie stays unmatched). The Steam icon is 32×32 and isn't offered. Parsing and request paths are in `steamstore.*`.
 
 **The rating** is IGDB's members' rating (`rating`, 0-100) and nothing else: `total_rating` blends in critic scores, which run high and bunch most well-known games into the top step of the scale. `Igdb::stars(rating, ratingCount)` turns it into stars to a tenth (`rating / 20`) and pulls it toward `kTypicalStars` (3.5) the fewer ratings it rests on, as if the game had `kPriorRatings` (30) extra ratings at 3.5, so a game with a few hundred ratings moves a little and one with thousands not at all. A game with fewer than `kMinRatings` (20) ratings has no rating (-1). Ratings you set yourself stay in half stars; only IGDB's come in tenths, and `Stars` fills any fraction. A lookup that writes the rating also writes `rating_source = "igdb"` (BulkLookup applying, or the editor saving a lookup's rating); `LibraryStore::setGameValues` removes it whenever a rating is written without it, so a rating you set yourself is never marked. The game editor shows "from IGDB" beside Rating while the rating is unchanged and its source is `igdb`.
 
@@ -18,6 +20,7 @@ Neither service is touched before a lookup is actually started. `MetadataClient`
 
 - **IGDB requests** are queued to stay within IGDB's limit of four requests per second. Each request fetches the token first when there is none, and once more when IGDB answers 401. The path of a logged request shows only the endpoint, not the query, to keep credentials out of logs.
 - **SteamGridDB requests** are straightforward GETs to its API v2.
+- **Steam store requests** (`steamStore`, `steamStoreSearch`) are keyless GETs to the two Steam hosts.
 - **Downloads** (art picked in an editor or bulk dialog) are saved under `<cache dir>/downloads/`, under a name that includes the kind (`cover`, `hero`, `logo`, `icon`), so two concurrent editors don't collide. `removeDownloads()` empties that folder when the editor is discarded.
 - **Timeouts** apply per chunk of data arriving, not to the total transfer time, so a large image on a slow line still arrives. Tests shorten the timeout.
 - **Fixtures** replace the network for screenshots and tests: `setFixturesDir(dir)` points every request at canned JSON files in that directory (named after the request; see `MetadataHttp::setFixturesDir()`). A missing fixture is an empty answer. Art images in fixture mode are generated placeholders — a two-color diagonal gradient shaped like the kind's art — so tests and screenshots run without keys or a network connection.
@@ -104,6 +107,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `scanlookup.*` | `ScanLookup`: automatic lookup of newly discovered games |
 | `igdb.*` | IGDB search and fetch queries, parsing, platform list, clear-match |
 | `namematch.*` | The name comparison both clear-matches share: the compact key, similarity, the rule |
+| `steamstore.*` | Steam store request paths, art and search parsing, clear-match |
 | `steamgriddb.*` | SteamGridDB request paths, parsing, art filtering, clear-match |
 | `credentials.*` | `credentials.toml`: parsing and writing API keys |
 | `metadatasettings.*` | `[metadata]` in `settings.toml` |
@@ -134,6 +138,8 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `searchArtGames(text)` | One plain SteamGridDB search: no numeral retry, no clear-match rule |
 | `artChoices(steamGridDbId, kind, style, page)` | A page of art images |
 | `download(url, kind)` | Downloads a picked image |
+| `steamArt(appId)` | Steam's library art for an app: one request |
+| `findSteamApp(title)` | Steam's store search for a title, clear match only |
 | `testKeys(service)` | Checks the keys of `"igdb"` or `"steamgriddb"` |
 | `cancel(id)` | Drops a result |
 | `discardDownloads()` | Removes images picked but not saved |
@@ -168,6 +174,19 @@ games   [{steamgriddb, name, year}]
 ```
 images   [{id, url, thumbnail, width, height, style, author}]
 end      whether this was the last page
+```
+
+`steamArt()` result:
+
+```
+images   [{kind, url, thumbnail, width, height}]   kind: cover, hero or logo; height 0 = not known
+```
+
+`findSteamApp()` result:
+
+```
+steamAppId   the matched app, or 0
+name         its name, or ""
 ```
 
 `download()` result:
