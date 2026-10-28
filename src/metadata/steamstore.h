@@ -17,18 +17,18 @@ struct SteamImage
     bool operator==(const SteamImage &) const = default;
 };
 
-struct SteamApp
+struct SteamStoreApp
 {
     qint64 id = 0;
     QString name;
 
-    bool operator==(const SteamApp &) const = default;
+    bool operator==(const SteamStoreApp &) const = default;
 };
 
 namespace SteamStore {
 std::pair<QString, QUrlQuery> itemsRequest(qint64 appId);
 QList<SteamImage> parseArt(const QJsonDocument &json, qint64 appId, QString *error = nullptr);
 std::pair<QString, QUrlQuery> searchRequest(const QString &title);
-QList<SteamApp> parseSearch(const QJsonDocument &json, QString *error = nullptr);
-int clearMatch(const QList<SteamApp> &apps, const QString &title);
+QList<SteamStoreApp> parseSearch(const QJsonDocument &json, QString *error = nullptr);
+int clearMatch(const QList<SteamStoreApp> &apps, const QString &title);
 }

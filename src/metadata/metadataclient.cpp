@@ -432,7 +432,7 @@ int MetadataClient::findSteamApp(const QString &title)
         if (!reply.ok())
             return finish(request, failure(reply.error));
         QString error;
-        const QList<SteamApp> apps = SteamStore::parseSearch(reply.json, &error);
+        const QList<SteamStoreApp> apps = SteamStore::parseSearch(reply.json, &error);
         if (!error.isEmpty())
             return finish(request, failure(error));
         const int match = SteamStore::clearMatch(apps, title);

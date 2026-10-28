@@ -88,7 +88,7 @@ std::pair<QString, QUrlQuery> searchRequest(const QString &title)
     return {QStringLiteral("/api/storesearch/"), query};
 }
 
-QList<SteamApp> parseSearch(const QJsonDocument &json, QString *error)
+QList<SteamStoreApp> parseSearch(const QJsonDocument &json, QString *error)
 {
     const QJsonValue items = json.object().value(QLatin1String("items"));
     if (!items.isArray()) {
@@ -96,7 +96,7 @@ QList<SteamApp> parseSearch(const QJsonDocument &json, QString *error)
             *error = QStringLiteral("Steam sent an answer the launcher couldn't read");
         return {};
     }
-    QList<SteamApp> out;
+    QList<SteamStoreApp> out;
     for (const QJsonValue &v : items.toArray()) {
         const QJsonObject item = v.toObject();
         const qint64 id = item.value(QLatin1String("id")).toInteger();
@@ -107,10 +107,10 @@ QList<SteamApp> parseSearch(const QJsonDocument &json, QString *error)
     return out;
 }
 
-int clearMatch(const QList<SteamApp> &apps, const QString &title)
+int clearMatch(const QList<SteamStoreApp> &apps, const QString &title)
 {
     QList<QStringList> names;
-    for (const SteamApp &app : apps)
+    for (const SteamStoreApp &app : apps)
         names.append({app.name});
     return NameMatch::clearMatch(names, title);
 }

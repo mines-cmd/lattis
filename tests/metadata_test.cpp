@@ -1225,16 +1225,16 @@ void MetadataTest::clientSteamArt()
 void MetadataTest::steamSearch()
 {
     QString error;
-    const QList<SteamApp> hades = SteamStore::parseSearch(fixture("steam-search-hades"), &error);
+    const QList<SteamStoreApp> hades = SteamStore::parseSearch(fixture("steam-search-hades"), &error);
     QVERIFY(error.isEmpty());
     QCOMPARE(hades.size(), 10);
-    QCOMPARE(hades.at(1), (SteamApp{1145360, QStringLiteral("Hades")}));
+    QCOMPARE(hades.at(1), (SteamStoreApp{1145360, QStringLiteral("Hades")}));
     QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("Hades")), 1);
     QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("hades II")), 0);
     QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("Hades III")), -1);
 
     // Only the title as Steam names it is clear, not a subtitle or a prefix.
-    const QList<SteamApp> vegas = SteamStore::parseSearch(fixture("steam-search-rainbow-six-vegas"));
+    const QList<SteamStoreApp> vegas = SteamStore::parseSearch(fixture("steam-search-rainbow-six-vegas"));
     QCOMPARE(vegas.size(), 2);
     QCOMPARE(SteamStore::clearMatch(vegas, QStringLiteral("Rainbow Six Vegas")), -1);
 
@@ -1245,7 +1245,7 @@ void MetadataTest::steamSearch()
     // Bundles and packages are left out.
     const QJsonDocument mixed = QJsonDocument::fromJson(
         R"({"items":[{"type":"sub","id":7,"name":"Hades"},{"type":"app","id":8,"name":"Hades"}]})");
-    QCOMPARE(SteamStore::parseSearch(mixed), (QList<SteamApp>{{8, QStringLiteral("Hades")}}));
+    QCOMPARE(SteamStore::parseSearch(mixed), (QList<SteamStoreApp>{{8, QStringLiteral("Hades")}}));
 
     SteamStore::parseSearch(QJsonDocument::fromJson("[]"), &error);
     QCOMPARE(error, QStringLiteral("Steam sent an answer the launcher couldn't read"));
