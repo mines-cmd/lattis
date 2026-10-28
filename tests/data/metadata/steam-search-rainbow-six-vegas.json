@@ -1,0 +1,25 @@
+{
+ "total": 2,
+ "items": [
+  {
+   "type": "app",
+   "name": "Tom Clancy's Rainbow Six\u00ae Vegas 2",
+   "id": 15120,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Tom Clancy's Rainbow Six\u00ae Vegas",
+   "id": 13540,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  }
+ ]
+}

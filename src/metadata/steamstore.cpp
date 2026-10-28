@@ -1,4 +1,5 @@
 #include "steamstore.h"
+#include "namematch.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -76,5 +77,41 @@ QList<SteamImage> parseArt(const QJsonDocument &json, qint64 appId, QString *err
                     QUrl(kAssetBase + QStringLiteral("steam/apps/%1/logo.png").arg(appId)), 640, 0});
     }
     return out;
+}
+
+std::pair<QString, QUrlQuery> searchRequest(const QString &title)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("term"), title);
+    query.addQueryItem(QStringLiteral("l"), QStringLiteral("english"));
+    query.addQueryItem(QStringLiteral("cc"), QStringLiteral("US"));
+    return {QStringLiteral("/api/storesearch/"), query};
+}
+
+QList<SteamApp> parseSearch(const QJsonDocument &json, QString *error)
+{
+    const QJsonValue items = json.object().value(QLatin1String("items"));
+    if (!items.isArray()) {
+        if (error)
+            *error = QStringLiteral("Steam sent an answer the launcher couldn't read");
+        return {};
+    }
+    QList<SteamApp> out;
+    for (const QJsonValue &v : items.toArray()) {
+        const QJsonObject item = v.toObject();
+        const qint64 id = item.value(QLatin1String("id")).toInteger();
+        // Bundles and packages have no library art.
+        if (item.value(QLatin1String("type")).toString() == QLatin1String("app") && id > 0)
+            out.append({id, item.value(QLatin1String("name")).toString()});
+    }
+    return out;
+}
+
+int clearMatch(const QList<SteamApp> &apps, const QString &title)
+{
+    QList<QStringList> names;
+    for (const SteamApp &app : apps)
+        names.append({app.name});
+    return NameMatch::clearMatch(names, title);
 }
 }

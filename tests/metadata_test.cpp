@@ -92,6 +92,9 @@ private slots:
     void steamArtParse();
     void steamArtRequest();
     void clientSteamArt();
+    void steamSearch();
+    void steamSearchRequest();
+    void clientFindSteamApp();
     void clientCancelAndKeys();
 
     void bulkChoosing();
@@ -1217,6 +1220,80 @@ void MetadataTest::clientSteamArt()
     QVERIFY(result(client, client.steamArt(99999999)).value("images").toList().isEmpty());
     QVERIFY(result(client, client.steamArt(99999999)).value("error").toString().isEmpty());
     QVERIFY(!client.http()->hasNetworkManager());
+}
+
+void MetadataTest::steamSearch()
+{
+    QString error;
+    const QList<SteamApp> hades = SteamStore::parseSearch(fixture("steam-search-hades"), &error);
+    QVERIFY(error.isEmpty());
+    QCOMPARE(hades.size(), 10);
+    QCOMPARE(hades.at(1), (SteamApp{1145360, QStringLiteral("Hades")}));
+    QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("Hades")), 1);
+    QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("hades II")), 0);
+    QCOMPARE(SteamStore::clearMatch(hades, QStringLiteral("Hades III")), -1);
+
+    // Only the title as Steam names it is clear, not a subtitle or a prefix.
+    const QList<SteamApp> vegas = SteamStore::parseSearch(fixture("steam-search-rainbow-six-vegas"));
+    QCOMPARE(vegas.size(), 2);
+    QCOMPARE(SteamStore::clearMatch(vegas, QStringLiteral("Rainbow Six Vegas")), -1);
+
+    QVERIFY(SteamStore::parseSearch(fixture("steam-search-star-road-hack"), &error).isEmpty());
+    QVERIFY(error.isEmpty());
+    QVERIFY(SteamStore::clearMatch({}, QStringLiteral("Hades")) < 0);
+
+    // Bundles and packages are left out.
+    const QJsonDocument mixed = QJsonDocument::fromJson(
+        R"({"items":[{"type":"sub","id":7,"name":"Hades"},{"type":"app","id":8,"name":"Hades"}]})");
+    QCOMPARE(SteamStore::parseSearch(mixed), (QList<SteamApp>{{8, QStringLiteral("Hades")}}));
+
+    SteamStore::parseSearch(QJsonDocument::fromJson("[]"), &error);
+    QCOMPARE(error, QStringLiteral("Steam sent an answer the launcher couldn't read"));
+
+    const auto [path, query] = SteamStore::searchRequest(QStringLiteral("Hades"));
+    QCOMPARE(path, QStringLiteral("/api/storesearch/"));
+    QCOMPARE(query.queryItemValue(QStringLiteral("term")), QStringLiteral("Hades"));
+}
+
+void MetadataTest::clientFindSteamApp()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    MetadataClient client(data.path(), cache.path());
+    client.http()->setFixturesDir(QStringLiteral(METADATA_DATA_DIR));
+    client.http()->setFixtureDelay(0);
+
+    const QVariantMap hades = result(client, client.findSteamApp(QStringLiteral("Hades")));
+    QCOMPARE(hades.value("steamAppId").toLongLong(), 1145360);
+    QCOMPARE(hades.value("name").toString(), QStringLiteral("Hades"));
+
+    for (const QString &title : {QStringLiteral("Rainbow Six Vegas"), QStringLiteral("Star Road Hack")}) {
+        const QVariantMap none = result(client, client.findSteamApp(title));
+        QCOMPARE(none.value("steamAppId").toLongLong(), 0);
+        QVERIFY(none.value("error").toString().isEmpty());
+    }
+    QVERIFY(!client.http()->hasNetworkManager());
+}
+
+void MetadataTest::steamSearchRequest()
+{
+    const auto [path, query] = SteamStore::searchRequest(QStringLiteral("Hades"));
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/store/api/storesearch/", {200, "{\"items\":[]}"});
+    MetadataEndpoints points = endpoints(server);
+    points.steamStoreSearch = server.url(QStringLiteral("/store"));
+    MetadataHttp http(cache.path(), points);
+    MetadataReply reply;
+    bool done = false;
+    http.steamStoreSearch(path, query, &http, [&](const MetadataReply &r) {
+        reply = r;
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(reply.ok());
+    QVERIFY(server.requests.first().target.contains("term=Hades"));
+    QVERIFY(!server.requests.first().target.contains("key"));
 }
 
 void MetadataTest::clientCancelAndKeys()

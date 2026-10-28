@@ -46,6 +46,7 @@ public:
     Q_INVOKABLE int searchArtGames(const QString &text);
     Q_INVOKABLE int artChoices(int steamGridDbId, const QString &kind, const QString &style, int page);
     Q_INVOKABLE int steamArt(qint64 appId);
+    Q_INVOKABLE int findSteamApp(const QString &title);
     Q_INVOKABLE int download(const QString &url, const QString &kind);
     Q_INVOKABLE int testKeys(const QString &service);
     Q_INVOKABLE void cancel(int request);

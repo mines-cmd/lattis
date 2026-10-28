@@ -423,6 +423,25 @@ int MetadataClient::steamArt(qint64 appId)
     return request;
 }
 
+int MetadataClient::findSteamApp(const QString &title)
+{
+    int request = 0;
+    QObject *context = start(&request);
+    const auto [path, query] = SteamStore::searchRequest(title);
+    m_http.steamStoreSearch(path, query, context, [this, request, title](const MetadataReply &reply) {
+        if (!reply.ok())
+            return finish(request, failure(reply.error));
+        QString error;
+        const QList<SteamApp> apps = SteamStore::parseSearch(reply.json, &error);
+        if (!error.isEmpty())
+            return finish(request, failure(error));
+        const int match = SteamStore::clearMatch(apps, title);
+        finish(request, {{QStringLiteral("steamAppId"), match >= 0 ? apps.at(match).id : 0},
+                         {QStringLiteral("name"), match >= 0 ? apps.at(match).name : QString()}});
+    });
+    return request;
+}
+
 int MetadataClient::download(const QString &url, const QString &kind)
 {
     int request = 0;

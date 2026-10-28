@@ -349,6 +349,20 @@ void MetadataHttp::steamStore(const QString &path, const QUrlQuery &query, QObje
     send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
 }
 
+void MetadataHttp::steamStoreSearch(const QString &path, const QUrlQuery &query, QObject *context, Callback done)
+{
+    if (usesFixtures()) {
+        answerFromFixture(QStringLiteral("steam-search-")
+                              + GameId::slug(query.queryItemValue(QStringLiteral("term"), QUrl::FullyDecoded)),
+                          R"({"total": 0, "items": []})", context, std::move(done));
+        return;
+    }
+    QUrl url = m_endpoints.steamStoreSearch;
+    url.setPath(url.path() + path, QUrl::TolerantMode);
+    url.setQuery(query);
+    send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
+}
+
 void MetadataHttp::answerFromFixture(const QString &name, const QByteArray &empty, QObject *context, Callback done,
                                      const QString &style)
 {

@@ -1,0 +1,105 @@
+{
+ "total": 10,
+ "items": [
+  {
+   "type": "app",
+   "name": "Hades II",
+   "id": 1145350,
+   "platforms": {
+    "windows": true,
+    "mac": true,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades",
+   "id": 1145360,
+   "platforms": {
+    "windows": true,
+    "mac": true,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades' Star",
+   "id": 755800,
+   "platforms": {
+    "windows": true,
+    "mac": true,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades II Original Soundtrack",
+   "id": 2950840,
+   "platforms": {
+    "windows": true,
+    "mac": true,
+    "linux": true
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades Original Soundtrack",
+   "id": 1206340,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades Harem",
+   "id": 3653720,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "The Road to Hades",
+   "id": 826460,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hearts in Hades: Divine Passion",
+   "id": 3992460,
+   "platforms": {
+    "windows": true,
+    "mac": true,
+    "linux": true
+   }
+  },
+  {
+   "type": "app",
+   "name": "Hades Hinderance",
+   "id": 4516620,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  },
+  {
+   "type": "app",
+   "name": "Cyborg-Hades",
+   "id": 3135730,
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": false
+   }
+  }
+ ]
+}
