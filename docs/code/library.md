@@ -250,6 +250,8 @@ A session stores its end, with the UTC offset it was written with, and its lengt
 - For a ROM or Linux game, the minutes also come off `play_minutes` (never below 0), so a game left running overnight can be fixed, and `last_played` moves to the newest session left. When none is left it stays as it was, since it may predate the history.
 - For a Steam or Proton game the total is Steam's and read-only, so it stays. The session only leaves the history and the statistics, and its minutes are added to the file's `deleted_minutes`, so "Before history" doesn't grow to absorb them.
 
+**Copies of one game.** A game file's `same_as` names another game (its main copy) that is the same game from another source, such as a Steam game bought again and run through Proton. Each copy keeps its own play time and history file, and nothing is ever written into another copy's; a Steam or Proton copy's total stays Steam's. `buildLibrary()` checks the links (`linkCopies()`): a `same_as` that names the game itself, a game that isn't in the library, or a game that is itself a copy is reported and ignored, so a group is always one main copy and the games pointing at it. Every game in a group gets `Game::groupId` (the main copy), `linked` (the others) and the group's `groupPlayMinutes` (the sum) and `groupLastPlayed` (the latest); an unlinked game's group values are its own. The list's play time and last played columns and sorts, `gameAt()`'s `playMinutes`, `playTimeText` and `lastPlayedText`, the history popup and the page's history fields all use the group's. The statistics count a group as one game under its main copy (or its first shown copy when the main one is hidden), so it's in the top five once; each copy's sessions still count toward its own platform (`StatsGame::historyId` names whose file to read). Hidden copies count while any copy is shown. A session deleted from a linked game's popup is deleted from its own copy's file.
+
 Removing a game removes its history file with its game file; hiding keeps it. The backup takes `library/history/` with the rest of `library/`.
 
 **Counting days.** A session counts toward the day it started (end minus length, in local time), and a merged entry toward the day it ended. A session isn't split across midnight or weeks. Weeks start on `QLocale().firstDayOfWeek()`.
@@ -407,7 +409,9 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `retagGames(ids, add, remove)` | Adds and removes tags on many games the same way; a tag already there or absent is left alone |
 | `unhideGame(id)` | |
 | `uninstallChoices(id)` | The uninstall dialog (below) |
-| `historyFor(id)` | A game's play history for its popup (below); read from its file when asked |
+| `sameGameCandidates(id)` | The games that may be another copy of this one, for the game menu's **Same game as**: those with the same IGDB id or the same folded title, not already in its group; `[{id, title, platformName}]` |
+| `linkCopy(id, other)`, `unlinkCopy(id)` | Writes or clears `same_as` through `editGames`, so both offer an Undo. Linking joins `other`'s group (its main copy); two unlinked games make the Steam one the main copy when only one of them is Steam's. Unlinking the main copy unlinks the whole group |
+| `historyFor(id)` | A game's play history for its popup (below); read from its file when asked, or its copies' files for a linked game |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
 | `achievements(id)` | A Steam game's achievements on a worker thread; `achievementsReady(id, list)` has them unlocked first (newest first), then locked, hidden ones last. Every item has `apiName`, `name`, `description`, `hidden`, `unlocked`, `time` and `icon` (a URL); none for a game that isn't Steam's (see [steam](steam.md#achievements)) |
 | `media(id)` | A Steam game's clips and screenshots, or a ROM game's emulator screenshots, on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip` or `screenshot`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`; none for a game with neither (see [steam](steam.md#clips-and-screenshots)) |
@@ -561,7 +565,7 @@ checked it has a tool
 art     a file: URL, or ""
 ```
 
-`historyFor(id)`, empty if the game isn't shown. Minutes throughout; `Library` also emits `historyChanged(ids)` when a Steam diff added sessions:
+`historyFor(id)`, empty if the game isn't shown. Minutes throughout; `Library` also emits `historyChanged(ids)` when a Steam diff added sessions, with the linked copies of those games added to `ids`:
 
 ```
 id, fromSteam   Steam and Proton games: the total isn't the launcher's to change
@@ -569,11 +573,13 @@ total           the game's play time now
 before          "Before history": total minus the sessions and deleted minutes, 0 at least
 week, month     minutes in this week and this month
 count           how many sessions
-sessions        newest first: [{end, endMs, startMs, minutes, merged}]
+sessions        newest first: [{end, key, gameId, endMs, startMs, minutes, merged}]; a linked game's
+                sessions are its copies' together, each with the copy's gameId and source (its
+                platform name); key is end, or gameId|end for a linked game
 problems        warnings from reading the file
 ```
 
-`pageHistory(id)`, the numbers behind the game page's `times_played`, `first_played` and `recent_play_time` fields: `timesPlayed` and `firstPlayed` as text (`""` for none), and `recent`, the minutes played in each period (`week`, `two_weeks`, `month`, `year`), which the page writes with `playTime()` in the chosen format. It reads the history file on the spot when the file is 24 KB or smaller (about 450 sessions, which parse in about 1 ms; the demo's longest histories take about 0.2 ms) and returns `{pending: true}` for a longer one, which it reads on a worker thread (2000 sessions take about 4.5 ms) and delivers through `pageHistoryReady(id, played)`. It uses `QTimeZone::LocalTime`: the first `systemTimeZone()` loads the zone database, about 3 ms on the main thread. The numbers are `PlayHistory::pageStats()`'s, a pure function counting days as above:
+`pageHistory(id)`, the numbers behind the game page's `times_played`, `first_played` and `recent_play_time` fields (a linked game's from all its copies' sessions; the 24 KB below is their files together): `timesPlayed` and `firstPlayed` as text (`""` for none), and `recent`, the minutes played in each period (`week`, `two_weeks`, `month`, `year`), which the page writes with `playTime()` in the chosen format. It reads the history file on the spot when the file is 24 KB or smaller (about 450 sessions, which parse in about 1 ms; the demo's longest histories take about 0.2 ms) and returns `{pending: true}` for a longer one, which it reads on a worker thread (2000 sessions take about 4.5 ms) and delivers through `pageHistoryReady(id, played)`. It uses `QTimeZone::LocalTime`: the first `systemTimeZone()` loads the zone database, about 3 ms on the main thread. The numbers are `PlayHistory::pageStats()`'s, a pure function counting days as above:
 
 ```
 timesPlayed     how many entries the history has; a merged Steam entry counts once

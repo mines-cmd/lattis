@@ -18,6 +18,7 @@ struct Session
     QDateTime end;
     int minutes = 0;
     bool merged = false; // may hold several sessions (Steam's total grew while the launcher was closed)
+    QString gameId; // not in the file: set when copies of one game (same_as) are shown together
 
     QDateTime start() const { return end.addSecs(-qint64(minutes) * 60); }
 };
@@ -88,10 +89,11 @@ QDate dayOf(const Session &session, const QTimeZone &zone);
 
 struct StatsGame
 {
-    QString id;
+    QString id; // copies of one game (same_as) share their main copy's
     QString title;
     QString platform;
     QList<Session> sessions;
+    QString historyId; // whose history to read; empty = id
 };
 
 struct GameMinutes

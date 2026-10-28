@@ -222,7 +222,15 @@ Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary new
     // changed() comes while the store still counts as loading or scanning, which holds a shrink back.
     connect(&m_store, &LibraryStore::loadingChanged, this, &Library::makeNextHeroCopy);
     connect(&m_store, &LibraryStore::scanningChanged, this, &Library::makeNextHeroCopy);
-    connect(&m_store, &LibraryStore::historyChanged, this, &Library::historyChanged);
+    connect(&m_store, &LibraryStore::historyChanged, this, [this](const QStringList &ids) {
+        QStringList withCopies = ids;
+        for (const QString &id : ids) {
+            if (const Game *g = game(id))
+                withCopies += g->linked;
+        }
+        withCopies.removeDuplicates();
+        emit historyChanged(withCopies);
+    });
     connect(&m_downloads, &SteamDownloads::changed, this, [this] {
         if (!applyDownloads())
             return;
@@ -1163,9 +1171,9 @@ QVariant Library::data(const QModelIndex &index, int role) const
         if (!game)
             return QString();
         if (m_sort == QLatin1String("play_time"))
-            return shortPlayTimeText(game->playMinutes);
-        if (m_sort == QLatin1String("last_played") && game->lastPlayed.isValid())
-            return lastPlayedText(game->lastPlayed);
+            return shortPlayTimeText(game->groupPlayMinutes);
+        if (m_sort == QLatin1String("last_played") && game->groupLastPlayed.isValid())
+            return lastPlayedText(game->groupLastPlayed);
         return QString();
     }
     return {};
@@ -1269,9 +1277,9 @@ void Library::updateOrder()
     for (int i = 0; i < m_games.size(); ++i) {
         const Game &g = m_games.at(i);
         if (m_sort == QLatin1String("play_time"))
-            value[i] = g.playMinutes > 0 ? g.playMinutes : -1;
+            value[i] = g.groupPlayMinutes > 0 ? g.groupPlayMinutes : -1;
         else
-            value[i] = g.lastPlayed.isValid() ? g.lastPlayed.toMSecsSinceEpoch() : -1;
+            value[i] = g.groupLastPlayed.isValid() ? g.groupLastPlayed.toMSecsSinceEpoch() : -1;
     }
     std::stable_sort(m_order.begin(), m_order.end(), [&](int a, int b) {
         const qint64 va = value.at(a), vb = value.at(b);
@@ -1623,14 +1631,117 @@ bool playedInSteam(const Game &g)
 }
 }
 
+namespace {
+QStringList copiesOf(const Game &g)
+{
+    return g.linked.isEmpty() ? QStringList{g.id} : g.linked + QStringList{g.id};
+}
+
+// The copies' histories as one: each session names its game when there's more than one.
+Parsed<PlayHistory::File> readCopies(const QString &dataDir, const QStringList &ids)
+{
+    if (ids.size() == 1)
+        return PlayHistory::read(dataDir, ids.first());
+    Parsed<PlayHistory::File> out;
+    for (const QString &id : ids) {
+        const Parsed<PlayHistory::File> file = PlayHistory::read(dataDir, id);
+        for (PlayHistory::Session s : file.value.sessions) {
+            s.gameId = id;
+            out.value.sessions.append(s);
+        }
+        out.value.deletedMinutes += file.value.deletedMinutes;
+        out.warnings += file.warnings;
+    }
+    std::stable_sort(out.value.sessions.begin(), out.value.sessions.end(),
+                     [](const PlayHistory::Session &a, const PlayHistory::Session &b) { return a.end < b.end; });
+    return out;
+}
+}
+
+QVariantList Library::linkedCopies(const Game &g) const
+{
+    QVariantList out;
+    for (const QString &id : g.linked) {
+        if (const Game *copy = game(id))
+            out.append(QVariantMap{{QStringLiteral("id"), id},
+                                   {QStringLiteral("title"), copy->title},
+                                   {QStringLiteral("platformName"), copy->platformName}});
+    }
+    return out;
+}
+
+QVariantList Library::sameGameCandidates(const QString &id) const
+{
+    const Game *g = game(id);
+    if (!g)
+        return {};
+    const LibraryContent &content = m_store.snapshot().content;
+    const int igdb = content.games.value(id).igdb;
+    const QString title = SearchText::fold(g->title);
+    QVariantList out;
+    for (int i = 0; i < m_games.size(); ++i) {
+        const Game &other = m_games.at(i);
+        if (other.id == id || g->linked.contains(other.id))
+            continue;
+        const int otherIgdb = content.games.value(other.id).igdb;
+        if ((igdb > 0 && otherIgdb == igdb) || m_foldedTitles.at(i) == title)
+            out.append(QVariantMap{{QStringLiteral("id"), other.id},
+                                   {QStringLiteral("title"), other.title},
+                                   {QStringLiteral("platformName"), other.platformName}});
+    }
+    return out;
+}
+
+QString Library::linkCopy(const QString &id, const QString &other)
+{
+    const Game *g = game(id);
+    const Game *o = game(other);
+    if (!g || !o || id == other)
+        return tr("There's no game with the id %1").arg(!g ? id : other);
+    if (!g->groupId.isEmpty())
+        return tr("%1 is already linked; unlink it first").arg(g->title);
+    // The Steam copy stays the main one, so a store game never points at a shortcut.
+    QString main = o->groupId.isEmpty() ? other : o->groupId;
+    QStringList ids{id};
+    if (o->groupId.isEmpty() && g->platform == kSteamPlatform && o->platform != kSteamPlatform) {
+        main = id;
+        ids = {other};
+    }
+    return editGames(ids, tr("Linked %1 and %2").arg(g->title, o->title), [&](const QString &copy) {
+        return m_store.setGameValues(copy, {{QStringLiteral("same_as"), main}});
+    });
+}
+
+QString Library::unlinkCopy(const QString &id)
+{
+    const Game *g = game(id);
+    if (!g || g->groupId.isEmpty())
+        return {};
+    // Unlinking the main copy breaks up the whole group.
+    const QStringList ids = g->groupId == id ? g->linked : QStringList{id};
+    return editGames(ids, tr("Unlinked %1").arg(g->title), [&](const QString &copy) {
+        return m_store.setGameValues(copy, {{QStringLiteral("same_as"), QString()}});
+    });
+}
+
 QVariantMap Library::historyFor(const QString &id) const
 {
     const auto it = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == id; });
     if (it == m_games.cend())
         return {};
-    const Parsed<PlayHistory::File> file = PlayHistory::read(m_store.dataDir(), id);
-    QVariantMap out = PlayHistory::summary(file.value, it->playMinutes, QDate::currentDate(),
+    const Parsed<PlayHistory::File> file = readCopies(m_store.dataDir(), copiesOf(*it));
+    QVariantMap out = PlayHistory::summary(file.value, it->groupPlayMinutes, QDate::currentDate(),
                                            QLocale().firstDayOfWeek(), QTimeZone::systemTimeZone());
+    if (!it->linked.isEmpty()) {
+        QVariantList sessions = out.value(QStringLiteral("sessions")).toList();
+        for (QVariant &s : sessions) {
+            QVariantMap map = s.toMap();
+            const Game *copy = game(map.value(QStringLiteral("gameId")).toString());
+            map.insert(QStringLiteral("source"), copy ? copy->platformName : QString());
+            s = map;
+        }
+        out.insert(QStringLiteral("sessions"), sessions);
+    }
     out.insert(QStringLiteral("id"), id);
     out.insert(QStringLiteral("fromSteam"), playedInSteam(*it));
     out.insert(QStringLiteral("problems"), file.warnings);
@@ -1641,12 +1752,11 @@ namespace {
 // About 1 ms of parsing (some 450 sessions); a longer history is read on a worker thread.
 constexpr qint64 kPageHistorySyncBytes = 24 * 1024;
 
-PlayHistory::PageStats readPageStats(const QString &dataDir, const QString &id, const QDate &today,
+PlayHistory::PageStats readPageStats(const QString &dataDir, const QStringList &ids, const QDate &today,
                                      Qt::DayOfWeek firstDay)
 {
     // LocalTime, not systemTimeZone(): the first systemTimeZone() loads the zone database, about 3 ms.
-    return PlayHistory::pageStats(PlayHistory::read(dataDir, id).value, today, firstDay,
-                                  QTimeZone(QTimeZone::LocalTime));
+    return PlayHistory::pageStats(readCopies(dataDir, ids).value, today, firstDay, QTimeZone(QTimeZone::LocalTime));
 }
 
 QVariantMap pageHistoryMap(const PlayHistory::PageStats &s)
@@ -1668,15 +1778,20 @@ QVariantMap Library::pageHistory(const QString &id)
     const QString dataDir = m_store.dataDir();
     const QDate today = QDate::currentDate();
     const Qt::DayOfWeek firstDay = QLocale().firstDayOfWeek();
-    if (QFileInfo(PlayHistory::path(dataDir, id)).size() <= kPageHistorySyncBytes)
-        return pageHistoryMap(readPageStats(dataDir, id, today, firstDay));
+    const Game *g = game(id);
+    const QStringList ids = g ? copiesOf(*g) : QStringList{id};
+    qint64 bytes = 0;
+    for (const QString &copy : ids)
+        bytes += QFileInfo(PlayHistory::path(dataDir, copy)).size();
+    if (bytes <= kPageHistorySyncBytes)
+        return pageHistoryMap(readPageStats(dataDir, ids, today, firstDay));
 
     auto *watcher = new QFutureWatcher<PlayHistory::PageStats>(this);
     connect(watcher, &QFutureWatcher<PlayHistory::PageStats>::finished, this, [this, watcher, id] {
         emit pageHistoryReady(id, pageHistoryMap(watcher->result()));
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run(readPageStats, dataDir, id, today, firstDay));
+    watcher->setFuture(QtConcurrent::run(readPageStats, dataDir, ids, today, firstDay));
     return {{QStringLiteral("pending"), true}};
 }
 
@@ -1952,14 +2067,34 @@ struct Library::StatsInput
 Library::StatsInput Library::statsInput() const
 {
     StatsInput in;
+    const auto shown = [this](const Game &g) { return !g.hidden || m_showHidden; };
+    // A group counts while any copy is shown, under its main copy, or the first shown one when that's hidden.
+    QHash<QString, const Game *> groupKey;
     for (const Game &g : m_games) {
-        if (g.hidden && !m_showHidden)
+        if (g.groupId.isEmpty() || groupKey.contains(g.groupId))
             continue;
-        in.games.append({g.id, g.title, g.platform, {}});
-        in.gameInfo.insert(g.id, {{QStringLiteral("title"), g.title},
-                                  {QStringLiteral("platform"), g.platform},
-                                  {QStringLiteral("iconUrl"), g.iconUrl},
-                                  {QStringLiteral("hue"), hueOf(g.title)}});
+        const Game *main = game(g.groupId);
+        if (main && shown(*main)) {
+            groupKey.insert(g.groupId, main);
+            continue;
+        }
+        for (const QString &id : copiesOf(g)) {
+            const Game *copy = game(id);
+            if (copy && shown(*copy)) {
+                groupKey.insert(g.groupId, copy);
+                break;
+            }
+        }
+    }
+    for (const Game &g : m_games) {
+        const Game *key = g.groupId.isEmpty() ? (shown(g) ? &g : nullptr) : groupKey.value(g.groupId);
+        if (!key)
+            continue;
+        in.games.append({key->id, key->title, g.platform, {}, g.groupId.isEmpty() ? QString() : g.id});
+        in.gameInfo.insert(key->id, {{QStringLiteral("title"), key->title},
+                                     {QStringLiteral("platform"), key->platform},
+                                     {QStringLiteral("iconUrl"), key->iconUrl},
+                                     {QStringLiteral("hue"), hueOf(key->title)}});
         if (!in.platformInfo.contains(g.platform)) {
             const Platform *p = platform(g.platform);
             in.platformInfo.insert(g.platform, {{QStringLiteral("name"), g.platformName},
@@ -2343,9 +2478,10 @@ QVariantMap Library::gameAt(int row) const
         {QStringLiteral("sizeText"),
          g.sizeBytes > 0 ? QLocale().formattedDataSize(g.sizeBytes, 1, QLocale::DataSizeTraditionalFormat)
                          : QString()},
-        {QStringLiteral("playMinutes"), g.playMinutes},
-        {QStringLiteral("playTimeText"), playTimeText(g.playMinutes)},
-        {QStringLiteral("lastPlayedText"), lastPlayedText(g.lastPlayed)},
+        {QStringLiteral("playMinutes"), g.groupPlayMinutes},
+        {QStringLiteral("playTimeText"), playTimeText(g.groupPlayMinutes)},
+        {QStringLiteral("lastPlayedText"), lastPlayedText(g.groupLastPlayed)},
+        {QStringLiteral("linked"), linkedCopies(g)},
         {QStringLiteral("addedText"), g.added.isValid() ? DateFormat::shortDate(g.added) : QString()},
         {QStringLiteral("rating"), g.rating},
         {QStringLiteral("statusText"), g.status.isEmpty() ? QString() : statusName(g.status)},

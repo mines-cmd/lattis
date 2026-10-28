@@ -587,6 +587,67 @@ void checkRomType(const GameFile &f, const QString &file, const Platform &platfo
                          .arg(f.romLine)
                          .arg(rom.fileName(), platform.name, takes.join(QStringLiteral(", "))));
 }
+
+// Each game's groupId holds its same_as on the way in.
+void linkCopies(BuiltLibrary *out)
+{
+    QHash<QString, Game *> byId;
+    for (QList<Game> *list : {&out->games, &out->hidden}) {
+        for (Game &g : *list)
+            byId.insert(g.id, &g);
+    }
+    QHash<QString, QStringList> groups;
+    for (Game *g : std::as_const(byId)) {
+        if (g->groupId.isEmpty())
+            continue;
+        const QString file = QStringLiteral("library/games/%1.toml").arg(g->id);
+        const Game *main = byId.value(g->groupId);
+        QString problem;
+        if (g->groupId == g->id)
+            problem = QStringLiteral("%1: same_as names the game itself; ignored").arg(file);
+        else if (!main)
+            problem = QStringLiteral("%1: same_as \"%2\" isn't a game in the library; ignored").arg(file, g->groupId);
+        // One level only: the main copy is found without following a chain.
+        else if (!main->groupId.isEmpty() && byId.value(main->groupId) && main->groupId != main->id)
+            problem = QStringLiteral("%1: same_as \"%2\" is itself a copy of \"%3\"; point at \"%3\" instead")
+                          .arg(file, g->groupId, main->groupId);
+        if (!problem.isEmpty()) {
+            if (!g->hidden)
+                out->warnings.append(problem);
+            continue;
+        }
+        groups[g->groupId].append(g->id);
+    }
+    for (Game *g : std::as_const(byId))
+        g->groupId.clear();
+    for (auto it = groups.begin(); it != groups.end(); ++it) {
+        QStringList ids = it.value();
+        ids.prepend(it.key());
+        ids.sort();
+        int minutes = 0;
+        QDateTime last;
+        for (const QString &id : std::as_const(ids)) {
+            const Game *g = byId.value(id);
+            minutes += g->playMinutes;
+            if (g->lastPlayed.isValid() && (!last.isValid() || g->lastPlayed > last))
+                last = g->lastPlayed;
+        }
+        for (const QString &id : std::as_const(ids)) {
+            Game *g = byId.value(id);
+            g->groupId = it.key();
+            g->linked = ids;
+            g->linked.removeOne(id);
+            g->groupPlayMinutes = minutes;
+            g->groupLastPlayed = last;
+        }
+    }
+    for (Game *g : std::as_const(byId)) {
+        if (g->groupId.isEmpty()) {
+            g->groupPlayMinutes = g->playMinutes;
+            g->groupLastPlayed = g->lastPlayed;
+        }
+    }
+}
 }
 
 QCollator titleCollator()
@@ -868,6 +929,7 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         g.iconUrl = url(a.icon);
         g.coverUrl = url(a.cover);
         g.hidden = f.hidden;
+        g.groupId = f.sameAs;
         (g.hidden ? out.hidden : out.games).append(g);
     }
 
@@ -901,6 +963,8 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         if (!unknownPlatforms.contains(id))
             out.platforms.append({id, id, {}});
     }
+
+    linkCopies(&out);
 
     const QCollator collator = titleCollator();
     const auto byTitle = [&](const Game &a, const Game &b) { return titleBefore(collator, a, b); };

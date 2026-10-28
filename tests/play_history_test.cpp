@@ -78,6 +78,8 @@ private slots:
     void pageStatsWeekFollowsTheFirstDay();
     void pageStatsWithoutHistory();
     void pageHistoryFromTheLibrary();
+    void linkedCopiesCountAsOne();
+    void badSameAsIsIgnored();
 
 private:
     QString historyFile(const QString &id) const { return PlayHistory::path(m_data, id); }
@@ -879,6 +881,63 @@ void PlayHistoryTest::steamUsersDontMix()
     QCOMPARE(seen.value("39734273").value(id), 4085);
     QCOMPARE(seen.value("39734274").value(id), 12);
     QVERIFY(!QFileInfo::exists(historyFile(id)));
+}
+
+void PlayHistoryTest::linkedCopiesCountAsOne()
+{
+    auto library = openLibrary();
+    const QString main = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString copy = QStringLiteral("switch-metroid-dread");
+    const QDateTime now = QDateTime::currentDateTime();
+    QCOMPARE(library->recordPlaySession(main, 90, now.addSecs(-3600)), QString());
+    QCOMPARE(library->recordPlaySession(copy, 30, now), QString());
+    QCOMPARE(library->linkCopy(copy, main), QString());
+    QCOMPARE(library->store().snapshot().content.games.value(copy).sameAs, main);
+    QVERIFY(library->sameGameCandidates(main).isEmpty() || !library->sameGameCandidates(main).contains(copy));
+
+    const QVariantMap history = library->historyFor(copy);
+    QCOMPARE(history.value("total").toInt(), 2460 + 90 + 720 + 30);
+    QCOMPARE(history.value("count").toInt(), 2);
+    const QVariantList sessions = history.value("sessions").toList();
+    QCOMPARE(sessions.at(0).toMap().value("gameId").toString(), copy);
+    QCOMPARE(sessions.at(1).toMap().value("gameId").toString(), main);
+    QCOMPARE(sessions.at(0).toMap().value("source").toString(), QStringLiteral("Switch"));
+    QCOMPARE(library->gameAt(library->rowOfGame(main)).value("playMinutes").toInt(), 2460 + 90 + 720 + 30);
+
+    // A hidden copy still counts, under the main one, once.
+    QCOMPARE(library->setGameValue(copy, QStringLiteral("hidden"), true), QString());
+    QSignalSpy ready(library.get(), &Library::monthStatsReady);
+    library->monthStats(now.date().year(), now.date().month());
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 1, 5000);
+    const QVariantMap stats = ready.at(0).at(2).toMap();
+    QCOMPARE(stats.value("minutes").toInt(), 120);
+    QCOMPARE(stats.value("games").toInt(), 1);
+    QCOMPARE(stats.value("top").toList().at(0).toMap().value("id").toString(), main);
+
+    // A session goes from its own copy's file.
+    const QString end = sessions.at(0).toMap().value("end").toString();
+    QCOMPARE(library->deleteSession(copy, end).value("error").toString(), QString());
+    QCOMPARE(PlayHistory::read(m_data, copy).value.sessions.size(), 0);
+    QCOMPARE(PlayHistory::read(m_data, main).value.sessions.size(), 1);
+
+    QCOMPARE(library->unlinkCopy(main), QString());
+    QCOMPARE(library->store().snapshot().content.games.value(copy).sameAs, QString());
+    QCOMPARE(library->historyFor(main).value("total").toInt(), 2460 + 90);
+}
+
+void PlayHistoryTest::badSameAsIsIgnored()
+{
+    auto library = openLibrary();
+    const QString a = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString b = QStringLiteral("switch-metroid-dread");
+    const QString c = QStringLiteral("switch-pikmin-4");
+    QCOMPARE(library->setGameValue(a, QStringLiteral("same_as"), QStringLiteral("no-such-game")), QString());
+    QCOMPARE(library->setGameValue(b, QStringLiteral("same_as"), c), QString());
+    QCOMPARE(library->setGameValue(c, QStringLiteral("same_as"), QStringLiteral("switch-metroid-dread")), QString());
+    const QString problems = library->problems().join(u'\n');
+    QVERIFY(problems.contains(QStringLiteral("same_as \"no-such-game\" isn't a game")));
+    QVERIFY(problems.contains(QStringLiteral("is itself a copy of")));
+    QCOMPARE(library->historyFor(a).value("total").toInt(), 2460);
 }
 
 void PlayHistoryTest::statsOnAWorkerThread()

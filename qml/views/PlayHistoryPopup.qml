@@ -11,6 +11,7 @@ MotionPopup {
     property url gameIcon
     property real gameHue: 0
     readonly property var sessions: history.sessions ?? []
+    readonly property bool linked: sessions.some(s => (s.gameId ?? "") !== "")
     readonly property int undoDuration: 15000
 
     property var pendingUndo: null
@@ -36,12 +37,12 @@ MotionPopup {
         history = Library.historyFor(gameId)
         const kept = {}
         for (const e of Object.keys(selection)) {
-            if (sessions.some(s => s.end === e))
+            if (sessions.some(s => s.key === e))
                 kept[e] = true
         }
         selection = kept
         sessionModel.scope = gameId
-        sessionModel.source = sessions.map(s => Object.assign({ key: s.end }, s))
+        sessionModel.source = sessions.map(s => Object.assign({ gameId: "", source: "" }, s))
     }
 
     function durationText(minutes: int): string {
@@ -84,7 +85,7 @@ MotionPopup {
 
     property var selection: ({})
     readonly property int selectionCount: Object.keys(selection).length
-    property string anchorEnd: ""
+    property string anchorKey: ""
 
     function clearSelection() {
         if (selectionCount > 0)
@@ -92,44 +93,46 @@ MotionPopup {
     }
 
     function clickSession(index, modifiers) {
-        const end = sessions[index].end
+        const key = sessions[index].key
         const ctrl = (modifiers & Qt.ControlModifier) !== 0
         const next = ctrl ? Object.assign({}, selection) : {}
         if ((modifiers & Qt.ShiftModifier) !== 0) {
-            const from = Math.max(0, sessions.findIndex(s => s.end === anchorEnd))
+            const from = Math.max(0, sessions.findIndex(s => s.key === anchorKey))
             for (let i = Math.min(from, index); i <= Math.max(from, index); ++i)
-                next[sessions[i].end] = true
-        } else if (ctrl && selection[end] === true) {
-            delete next[end]
-            anchorEnd = end
+                next[sessions[i].key] = true
+        } else if (ctrl && selection[key] === true) {
+            delete next[key]
+            anchorKey = key
         } else if (ctrl) {
-            next[end] = true
-            anchorEnd = end
+            next[key] = true
+            anchorKey = key
         } else {
-            anchorEnd = end
+            anchorKey = key
         }
         selection = next
     }
 
     function deleteSession(s) {
-        deleteSessions([s.end])
+        deleteSessions([s])
     }
 
     function deleteSelected() {
-        deleteSessions(sessions.filter(s => selection[s.end] === true).map(s => s.end))
+        deleteSessions(sessions.filter(s => selection[s.key] === true))
     }
 
-    function deleteSessions(ends) {
+    // A linked game's sessions each belong to one of its copies.
+    function deleteSessions(list) {
         const id = gameId
         const deleted = []
         let error = ""
-        for (const end of ends) {
-            const result = Library.deleteSession(id, end)
+        for (const s of list) {
+            const owner = s.gameId || id
+            const result = Library.deleteSession(owner, s.end)
             if (result.error !== "") {
                 error = result.error
                 break
             }
-            deleted.push(result.session)
+            deleted.push({ owner: owner, session: result.session })
         }
         clearSelection()
         refresh()
@@ -142,8 +145,8 @@ MotionPopup {
             run: () => {
                 pendingUndo = null
                 let e = ""
-                for (const session of deleted) {
-                    e = Library.restoreSession(id, session)
+                for (const d of deleted) {
+                    e = Library.restoreSession(d.owner, d.session)
                     if (e !== "")
                         break
                 }
@@ -385,6 +388,11 @@ MotionPopup {
                     text: qsTr("Time")
                 }
                 HeaderLabel {
+                    Layout.preferredWidth: Theme.playHistory.platformColumnWidth
+                    visible: root.linked
+                    text: qsTr("Platform")
+                }
+                HeaderLabel {
                     Layout.preferredWidth: Theme.playHistory.durationColumnWidth
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Length")
@@ -409,9 +417,10 @@ MotionPopup {
                     required property var model
                     required property int index
                     readonly property bool leaving: model.leaving
-                    readonly property bool selected: root.selection[model.end] === true
-                    readonly property var session: ({ end: model.end, startMs: model.startMs, endMs: model.endMs,
-                                                      merged: model.merged, minutes: model.minutes })
+                    readonly property bool selected: root.selection[model.key] === true
+                    readonly property var session: ({ end: model.end, key: model.key, gameId: model.gameId,
+                                                      source: model.source, startMs: model.startMs,
+                                                      endMs: model.endMs, merged: model.merged, minutes: model.minutes })
 
                     // A session that comes back while the popup is open unfolds, the way a deleted one
                     // folds away; the rows made on opening, or for another game, are there at once.
@@ -477,6 +486,13 @@ MotionPopup {
                             Layout.fillWidth: true
                             text: root.sessionTime(row.session)
                             color: row.session.merged ? Theme.playHistory.noteColor : Theme.palette.text
+                            elide: Text.ElideRight
+                        }
+                        Label {
+                            Layout.preferredWidth: Theme.playHistory.platformColumnWidth
+                            visible: root.linked
+                            text: row.session.source
+                            color: Theme.playHistory.noteColor
                             elide: Text.ElideRight
                         }
                         Label {

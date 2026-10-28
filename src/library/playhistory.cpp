@@ -379,7 +379,10 @@ QDate weekStart(const QDate &date, Qt::DayOfWeek firstDay)
 
 QVariantMap sessionMap(const Session &s)
 {
-    return {{QStringLiteral("end"), formatted(s.end)},
+    const QString end = formatted(s.end);
+    return {{QStringLiteral("end"), end},
+            {QStringLiteral("key"), s.gameId.isEmpty() ? end : s.gameId + u'|' + end},
+            {QStringLiteral("gameId"), s.gameId},
             {QStringLiteral("endMs"), s.end.toMSecsSinceEpoch()},
             {QStringLiteral("startMs"), s.start().toMSecsSinceEpoch()},
             {QStringLiteral("minutes"), s.minutes},
@@ -440,7 +443,7 @@ PageStats pageStats(const File &file, const QDate &today, Qt::DayOfWeek firstDay
 void load(const QString &dataDir, QList<StatsGame> *games)
 {
     for (StatsGame &game : *games) {
-        const Parsed<File> file = read(dataDir, game.id);
+        const Parsed<File> file = read(dataDir, game.historyId.isEmpty() ? game.id : game.historyId);
         game.sessions = file.value.sessions;
     }
 }

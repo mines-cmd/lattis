@@ -152,6 +152,10 @@ public:
     Q_INVOKABLE QString setGameValue(const QString &id, const QString &key, const QVariant &value);
     QString recordPlaySession(const QString &id, int minutes, const QDateTime &endedAt);
 
+    Q_INVOKABLE QVariantList sameGameCandidates(const QString &id) const;
+    Q_INVOKABLE QString linkCopy(const QString &id, const QString &other);
+    Q_INVOKABLE QString unlinkCopy(const QString &id);
+
     Q_INVOKABLE QVariantMap historyFor(const QString &id) const;
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
@@ -315,6 +319,7 @@ private:
     QString movePlatformWith(const QString &id, const std::function<QString()> &move);
     struct StatsInput;
     StatsInput statsInput() const;
+    QVariantList linkedCopies(const Game &g) const;
     struct Row
     {
         int game = -1; // -1 = group header

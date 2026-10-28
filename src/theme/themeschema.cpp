@@ -1416,6 +1416,7 @@ constexpr Setting kSettings[] = {
           "The total in the summary"),
     heading("play_history", "Rows"),
     integer("play_history", "date_column_width", "110", 40, 400, "Width of the Date column"),
+    integer("play_history", "platform_column_width", "110", 40, 400, "Width of the Platform column, shown for a game linked to another copy"),
     integer("play_history", "duration_column_width", "90", 40, 400, "Width of the Length column"),
     integer("play_history", "delete_size", "26", 16, 60, "The delete × shown on the session under the mouse: its clickable area"),
     integer("play_history", "delete_icon_size", "14", 8, 40, "The × in that button"),

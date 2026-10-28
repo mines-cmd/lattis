@@ -68,6 +68,7 @@ struct GameFile
     QString saveFolder;
     qint64 shortcut = 0;
     bool installed = true;
+    QString sameAs;
 
     bool operator==(const GameFile &) const = default;
 };

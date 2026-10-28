@@ -31,6 +31,16 @@ When an emulated or Linux game closes, the session is added to its play time and
 
 Steam and Windows games show the play time Steam records instead, including sessions started from Steam.
 
+### The same game from two sources
+
+When you have one game twice, for example bought on Steam and also added as a Windows game, right-click either copy and choose **Same game as**, then the other copy. The menu lists games with the same title, or the same IGDB entry after a lookup. Linked copies count as one game:
+
+- Both show the combined play time and last played, and their play history lists the sessions of both, each marked with the platform it was played on.
+- The statistics count the game once in Most played, under the Steam copy (between two copies not from Steam, under the one you picked in the menu); each copy's hours still go to its own platform.
+- Nothing is moved between the copies: each keeps its own play time, and Steam's own numbers stay separate. **Unlink** in the right-click menu (Undo is offered) puts each copy back on its own time. Unlinking the copy the others point at unlinks them all.
+
+You can hide one of the copies and keep the other on the list; the hidden copy's sessions still count.
+
 ## Play history
 
 Lattis keeps each session, so you can see when you played and for how long. Click the play time on a game's page, or choose **Play history** in its right-click menu, to open the game's history: its total, this week and this month, then the sessions, newest first (the day, the start and end times and the length: "Today, 20:46 – 22:41, 1h 55m").

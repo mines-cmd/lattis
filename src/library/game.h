@@ -67,6 +67,12 @@ struct Game
     quint32 shortcut = 0;
     bool uninstalled = false;
 
+    // Copies of the same game (same_as): the group's main copy, the others in it, and its totals.
+    QString groupId;
+    QStringList linked;
+    int groupPlayMinutes = 0;
+    QDateTime groupLastPlayed;
+
     QUrl heroUrl;
     QUrl logoUrl;
     QUrl iconUrl;

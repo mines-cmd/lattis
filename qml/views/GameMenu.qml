@@ -22,6 +22,9 @@ SettingsMenu {
     readonly property bool emulatorChoosable: multi && !["steam", "proton", "linux"].includes(games[0].platform)
                                               && games.every(g => g.platform === games[0].platform)
     readonly property var emulatorChoices: emulatorChoosable ? Library.emulatorChoices(games[0].platform).choices : []
+    readonly property var linked: game.linked ?? []
+    readonly property var sameGameChoices: !multi && game.id && linked.length === 0
+                                           ? Library.sameGameCandidates(game.id) : []
     property var tagStates: ({})
 
     signal chosen(string name)
@@ -48,6 +51,8 @@ SettingsMenu {
                 item.visible = multi
             if (item?.subMenu === emulatorMenu)
                 item.enabled = emulatorChoosable
+            if (item?.subMenu === sameGameMenu)
+                item.visible = sameGameChoices.length > 0
         }
     }
     function openSubmenu(which) {
@@ -62,6 +67,7 @@ SettingsMenu {
     }
     onMultiChanged: syncSubmenus()
     onEmulatorChoosableChanged: syncSubmenus()
+    onSameGameChoicesChanged: syncSubmenus()
     Component.onCompleted: syncSubmenus()
 
     function toggleTag(name) {
@@ -238,6 +244,37 @@ SettingsMenu {
         iconPath: Icons.history
         visible: !root.multi
         text: qsTr("Play history")
+    }
+    SettingsMenu {
+        id: sameGameMenu
+        pops: true
+        title: qsTr("Same game as")
+        iconPath: Icons.link
+
+        Instantiator {
+            model: root.sameGameChoices
+            delegate: SettingsMenuItem {
+                required property var modelData
+                text: qsTr("%1 (%2)").arg(modelData.title).arg(modelData.platformName)
+                onTriggered: {
+                    const error = Library.linkCopy(root.game.id, modelData.id)
+                    if (error !== "")
+                        root.failed(error)
+                }
+            }
+            onObjectAdded: (index, object) => sameGameMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => sameGameMenu.removeItem(object)
+        }
+    }
+    SettingsMenuItem {
+        iconPath: Icons.unlink
+        visible: !root.multi && root.linked.length > 0
+        text: root.linked.length === 1 ? qsTr("Unlink from %1").arg(root.linked[0].platformName) : qsTr("Unlink")
+        onTriggered: {
+            const error = Library.unlinkCopy(root.game.id)
+            if (error !== "")
+                root.failed(error)
+        }
     }
     SettingsMenuSeparator {}
     Entry {
