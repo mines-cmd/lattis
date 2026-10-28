@@ -730,7 +730,7 @@ constexpr Setting kSettings[] = {
     color("achievements", "bar_color", "@surface_hover", "The progress bar's empty part"),
     color("achievements", "bar_fill", "@accent", "The progress bar's filled part"),
     heading("achievements", "Icons"),
-    integer("achievements", "icon_size", "40", 16, 200, "Size of each achievement's icon"),
+    integer("achievements", "icon_size", "39", 16, 200, "Size of each achievement's icon"),
     integer("achievements", "icon_gap", "6", 0, 50, "Space between icons"),
     integer("achievements", "icon_radius", "@radius.small", 0, 100, "Icon corner radius"),
     color("achievements", "icon_placeholder", "@surface_hover", "Behind an icon that is loading or can't be loaded"),
