@@ -19,7 +19,7 @@ Item {
                                              ["libarchive", "https://www.libarchive.org"]] },
         { label: qsTr("Game info"), links: [["IGDB", "https://www.igdb.com"]] },
         { label: qsTr("Artwork"), links: [["SteamGridDB", "https://www.steamgriddb.com"]] },
-        { label: qsTr("Icons"), links: [["Remix Icon", "https://remixicon.com"]].concat(LicensedIcons.credits) },
+        { label: qsTr("Icons"), links: [["Remix Icon", "https://remixicon.com"], ["Lucide", "https://lucide.dev"]].concat(LicensedIcons.credits) },
         { label: qsTr("Covers"), text: qsTr("Game covers © their respective owners.") },
     ]
 
