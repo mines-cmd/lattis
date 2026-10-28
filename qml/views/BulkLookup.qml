@@ -161,7 +161,8 @@ ApplicationWindow {
                     picks[a.kind] = a.image
             }
             return { id: r.id, title: r.title, steamGridDbId: lookupModel.steamGridDbId(r.id),
-                     kinds: r.art.filter(a => !a.none).map(a => a.kind), picks: picks }
+                     kinds: r.art.filter(a => !a.none).map(a => a.kind), picks: picks,
+                     steamApp: lookupModel.steamApp(r.id) }
         })
     }
     function browseArt(id, kind) {
@@ -178,6 +179,7 @@ ApplicationWindow {
         active: false
         sourceComponent: ArtBrowser {
             onStepPicked: (id, kind, image) => lookupModel.setArt(id, kind, image)
+            onSteamAppFound: appId => lookupModel.setSteamApp(steps[stepIndex].id, appId)
         }
     }
 

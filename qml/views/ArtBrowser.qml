@@ -34,6 +34,20 @@ Item {
     property var downloading: ({})
     property var downloaded: ({})
 
+    // -1: a Steam game (its art already comes from Steam); 0: not known yet.
+    property int steamApp: 0
+    property var steamImages: []
+    property bool steamLoading: false
+    property bool steamLoaded: false
+    property string steamError
+    property int steamRequest: 0
+    property int steamFindRequest: 0
+    readonly property var steamKinds: ["cover", "hero", "logo"].filter(k => shownKinds.includes(k))
+    readonly property bool steamAvailable: steamApp >= 0 && steamKinds.length > 0
+    readonly property var shownSteamImages: steamImages.filter(i => steamKinds.includes(i.kind))
+    readonly property var tabList: kinds.filter(k => shownKinds.includes(k.id))
+                                   .concat(steamAvailable ? [{ id: "steam", name: qsTr("Steam") }] : [])
+
     property bool bulk: false
     property var steps: []
     property int stepIndex: 0
@@ -42,6 +56,7 @@ Item {
     signal chosen(var files)
     signal stepPicked(string id, string kind, var image)
     signal gamePicked(int steamGridDbId)
+    signal steamAppFound(int appId)
     signal closed()
 
     function openSteps(allSteps, index, startKind) {
@@ -55,10 +70,11 @@ Item {
         stepIndex = index
         const step = steps[index]
         shownKinds = step.kinds
-        openFor(step.steamGridDbId, step.title, step.kinds.includes(startKind) ? startKind : step.kinds[0], step.picks)
+        openFor(step.steamGridDbId, step.title, startKind === "steam" || step.kinds.includes(startKind) ? startKind : step.kinds[0],
+                step.picks, step.steamApp)
     }
 
-    function openFor(steamGridDbId, title, startKind, preselected) {
+    function openFor(steamGridDbId, title, startKind, preselected, steamAppId) {
         if (!popup.opened && !bulk)
             shownKinds = kinds.map(k => k.id)
         ownId = steamGridDbId
@@ -68,13 +84,14 @@ Item {
         downloaded = {}
         error.text = ""
         noGame = false
+        resetSteam(steamAppId)
         resetSearch()
-        showGame(steamGridDbId, title, startKind)
+        showGame(steamGridDbId, title, startKind === "steam" && !steamAvailable ? shownKinds[0] : startKind)
         if (!bulk)
             popup.open()
     }
 
-    function openWithoutGame(title, startKind) {
+    function openWithoutGame(title, startKind, steamAppId) {
         ownId = 0
         ownTitle = title
         picks = {}
@@ -82,6 +99,7 @@ Item {
         downloaded = {}
         error.text = ""
         shownKinds = kinds.map(k => k.id)
+        resetSteam(steamAppId)
         resetSearch()
         resetTabs(0, title, startKind)
         noGame = true
@@ -106,7 +124,79 @@ Item {
     // The tabs start over; the picks stay.
     function showGame(id, title, startKind) {
         resetTabs(id, title, startKind)
-        load(kind)
+        if (kind === "steam")
+            loadSteam()
+        else
+            load(kind)
+    }
+
+    function resetSteam(appId) {
+        Metadata.cancel(steamRequest)
+        Metadata.cancel(steamFindRequest)
+        steamApp = appId ?? 0
+        steamImages = []
+        steamLoading = false
+        steamLoaded = false
+        steamError = ""
+        steamRequest = 0
+        steamFindRequest = 0
+    }
+
+    function loadSteam() {
+        if (steamLoading || steamLoaded)
+            return
+        steamError = ""
+        steamLoading = true
+        if (steamApp > 0)
+            steamRequest = Metadata.steamArt(steamApp)
+        else
+            steamFindRequest = Metadata.findSteamApp(ownTitle)
+    }
+
+    function steamAppSearched(result) {
+        steamFindRequest = 0
+        if (result.error !== "") {
+            steamLoading = false
+            steamError = result.error
+        } else if (result.steamAppId > 0) {
+            steamApp = result.steamAppId
+            if (bulk) {
+                const s = steps.slice()
+                s[stepIndex] = Object.assign({}, s[stepIndex], { steamApp: steamApp })
+                steps = s
+            }
+            steamAppFound(steamApp)
+            steamRequest = Metadata.steamArt(steamApp)
+        } else {
+            steamLoading = false
+            steamLoaded = true
+        }
+    }
+
+    function steamArtLoaded(result) {
+        steamRequest = 0
+        steamLoading = false
+        if (result.error !== "") {
+            steamError = result.error
+            return
+        }
+        steamImages = result.images
+        steamLoaded = true
+    }
+
+    // Steam's logo path can't tell whether the app has one, so a missing logo shows up here as a failed load.
+    function dropSteamImage(url) {
+        steamImages = steamImages.filter(i => i.url !== url)
+    }
+
+    function thumbHeight(k) {
+        return ({ cover: Theme.gameEditor.browserCoverHeight, hero: Theme.gameEditor.browserHeroHeight,
+                  logo: Theme.gameEditor.browserLogoHeight, icon: Theme.gameEditor.browserIconSize })[k] ?? 0
+    }
+
+    function thumbWidth(k) {
+        const h = thumbHeight(k)
+        return ({ cover: h * 2 / 3, hero: h * 1920 / 620, logo: h * 2.5, icon: h })[k] ?? 0
     }
 
     function openSearch() {
@@ -206,18 +296,18 @@ Item {
                     request: Metadata.artChoices(steamGridDbId, k, t.style, page) })
     }
 
-    function toggle(image) {
+    function toggle(image, pickKind) {
         const next = Object.assign({}, picks)
-        if (next[kind]?.id === image.id)
-            delete next[kind]
+        if (next[pickKind]?.id === image.id)
+            delete next[pickKind]
         else
-            next[kind] = image
+            next[pickKind] = image
         picks = next
         if (bulk) {
             const s = steps.slice()
             s[stepIndex] = Object.assign({}, s[stepIndex], { picks: next })
             steps = s
-            stepPicked(s[stepIndex].id, kind, next[kind] ?? {})
+            stepPicked(s[stepIndex].id, pickKind, next[pickKind] ?? {})
         }
     }
 
@@ -243,6 +333,14 @@ Item {
                     root.searchError = result.error
                 else
                     root.searchResults = result.games
+                return
+            }
+            if (request === root.steamFindRequest && request !== 0) {
+                root.steamAppSearched(result)
+                return
+            }
+            if (request === root.steamRequest && request !== 0) {
+                root.steamArtLoaded(result)
                 return
             }
             for (const k of Object.keys(root.tabs)) {
@@ -288,6 +386,20 @@ Item {
         onTriggered: root.searchNow()
     }
 
+    component Checker: Canvas {
+        onPaint: {
+            const ctx = getContext("2d")
+            const size = Theme.gameEditor.checkerSize
+            for (let y = 0; y < height; y += size) {
+                for (let x = 0; x < width; x += size) {
+                    ctx.fillStyle = ((x + y) / size) % 2 === 0 ? Theme.gameEditor.checkerLight
+                                                               : Theme.gameEditor.checkerDark
+                    ctx.fillRect(x, y, size, size)
+                }
+            }
+        }
+    }
+
     ListModel { id: coverModel }
     ListModel { id: heroModel }
     ListModel { id: logoModel }
@@ -308,6 +420,8 @@ Item {
         onClosed: {
             for (const k of Object.keys(root.tabs))
                 Metadata.cancel(root.tabs[k].request)
+            Metadata.cancel(root.steamRequest)
+            Metadata.cancel(root.steamFindRequest)
             for (const k of Object.keys(root.downloading))
                 Metadata.cancel(root.downloading[k])
             root.downloading = {}
@@ -384,7 +498,7 @@ Item {
                 spacing: Theme.layout.spacing
 
                 Repeater {
-                    model: root.kinds.filter(k => root.shownKinds.includes(k.id))
+                    model: root.tabList
 
                     AbstractButton {
                         id: tabButton
@@ -400,7 +514,10 @@ Item {
                             }
                             root.closeSearch()
                             root.kind = modelData.id
-                            root.load(modelData.id)
+                            if (modelData.id === "steam")
+                                root.loadSteam()
+                            else
+                                root.load(modelData.id)
                         }
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
 
@@ -420,7 +537,9 @@ Item {
                                     font.weight: tabButton.current ? Theme.font.strongWeight : Font.Normal
                                 }
                                 Rectangle {
-                                    visible: root.picks[tabButton.modelData.id] !== undefined
+                                    visible: tabButton.modelData.id === "steam"
+                                             ? Object.values(root.picks).some(p => p.steam === true)
+                                             : root.picks[tabButton.modelData.id] !== undefined
                                     implicitWidth: 7
                                     implicitHeight: 7
                                     radius: height / 2
@@ -485,13 +604,13 @@ Item {
                     }
                 }
                 Label {
-                    visible: !root.searching
+                    visible: !root.searching && root.kind !== "steam"
                     text: qsTr("Style")
                     color: Theme.gameEditor.labelColor
                 }
                 SettingsComboBox {
                     id: styleBox
-                    visible: !root.searching
+                    visible: !root.searching && root.kind !== "steam"
                     readonly property var styles: [{ id: "", name: qsTr("All styles") }].concat(Metadata.styles(root.kind))
                     Layout.preferredWidth: 170
                     model: styles.map(s => s.name)
@@ -502,7 +621,7 @@ Item {
                     }
                 }
                 SettingsButton {
-                    visible: !root.searching
+                    visible: !root.searching && root.kind !== "steam"
                     text: qsTr("Other game")
                     tip: qsTr("Browse art from a different SteamGridDB game, such as a remaster")
                     onClicked: root.openSearch()
@@ -635,14 +754,10 @@ Item {
 
             GridView {
                 id: grid
-                visible: !root.searching
+                visible: !root.searching && root.kind !== "steam"
 
-                readonly property real thumbHeight: ({ cover: Theme.gameEditor.browserCoverHeight,
-                                                       hero: Theme.gameEditor.browserHeroHeight,
-                                                       logo: Theme.gameEditor.browserLogoHeight,
-                                                       icon: Theme.gameEditor.browserIconSize })[root.kind]
-                readonly property real thumbWidth: ({ cover: thumbHeight * 2 / 3, hero: thumbHeight * 1920 / 620,
-                                                      logo: thumbHeight * 2.5, icon: thumbHeight })[root.kind]
+                readonly property real thumbHeight: root.thumbHeight(root.kind)
+                readonly property real thumbWidth: root.thumbWidth(root.kind)
 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -677,20 +792,9 @@ Item {
                     width: grid.thumbWidth
                     height: grid.thumbHeight
 
-                    Canvas {
+                    Checker {
                         anchors.fill: parent
                         visible: root.kind === "logo" || root.kind === "icon"
-                        onPaint: {
-                            const ctx = getContext("2d")
-                            const size = Theme.gameEditor.checkerSize
-                            for (let y = 0; y < height; y += size) {
-                                for (let x = 0; x < width; x += size) {
-                                    ctx.fillStyle = ((x + y) / size) % 2 === 0 ? Theme.gameEditor.checkerLight
-                                                                               : Theme.gameEditor.checkerDark
-                                    ctx.fillRect(x, y, size, size)
-                                }
-                            }
-                        }
                     }
                     Rectangle {
                         anchors.fill: parent
@@ -741,7 +845,7 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.toggle({ id: thumb.model.id, url: thumb.model.url, thumbnail: thumb.model.thumbnail,
                                                  width: thumb.model.width, height: thumb.model.height,
-                                                 style: thumb.model.style, author: thumb.model.author })
+                                                 style: thumb.model.style, author: thumb.model.author }, root.kind)
                     }
                     ToolTip.visible: thumbMouse.containsMouse
                     ToolTip.delay: Theme.tooltip.delay
@@ -770,6 +874,128 @@ Item {
                             : qsTr("SteamGridDB has no images of this kind for this game")
                         color: (root.tab.error ?? "") !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
                     }
+                }
+            }
+
+            Item {
+                id: steamView
+                visible: !root.searching && root.kind === "steam"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                Flow {
+                    width: parent.width
+                    spacing: Theme.gameEditor.browserSpacing
+
+                    Repeater {
+                        model: root.shownSteamImages
+
+                        ColumnLayout {
+                            id: steamThumb
+                            required property var modelData
+                            readonly property bool picked: root.picks[modelData.kind]?.id === modelData.url
+                            readonly property bool checkered: modelData.kind === "logo"
+                            spacing: Theme.layout.spacing / 2
+
+                            Item {
+                                implicitWidth: root.thumbWidth(steamThumb.modelData.kind)
+                                implicitHeight: root.thumbHeight(steamThumb.modelData.kind)
+
+                                Checker {
+                                    anchors.fill: parent
+                                    visible: steamThumb.checkered
+                                }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    visible: !steamThumb.checkered
+                                    color: Theme.gameEditor.artPreviewBackground
+                                }
+                                FadeImage {
+                                    anchors.fill: parent
+                                    anchors.margins: steamThumb.checkered ? 6 : 0
+                                    source: steamThumb.modelData.thumbnail
+                                    sourceSize.width: width * 2
+                                    fillMode: steamThumb.checkered ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+                                    onStatusChanged: if (status === Image.Error && steamThumb.modelData.kind === "logo")
+                                        root.dropSteamImage(steamThumb.modelData.url)
+                                }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    border.color: Theme.gameEditor.selectedColor
+                                    border.width: Theme.gameEditor.selectedWidth
+                                    opacity: steamThumb.picked ? 1 : 0
+                                    visible: opacity > 0
+                                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                                }
+                                MarkPop {
+                                    shown: steamThumb.picked
+                                    anchors.top: parent.top
+                                    anchors.right: parent.right
+                                    anchors.margins: 6
+                                    width: 22
+                                    height: 22
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: height / 2
+                                        color: Theme.gameEditor.selectedColor
+                                        Icon {
+                                            anchors.centerIn: parent
+                                            path: Icons.check
+                                            size: 16
+                                            color: Theme.controls.buttonPrimaryText
+                                        }
+                                    }
+                                }
+                                MouseArea {
+                                    id: steamMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.toggle({ id: steamThumb.modelData.url, url: steamThumb.modelData.url,
+                                                             thumbnail: steamThumb.modelData.thumbnail,
+                                                             width: steamThumb.modelData.width, height: steamThumb.modelData.height,
+                                                             style: "", author: "", steam: true }, steamThumb.modelData.kind)
+                                }
+                                ToolTip.visible: steamMouse.containsMouse && steamThumb.modelData.width > 0
+                                ToolTip.delay: Theme.tooltip.delay
+                                ToolTip.text: qsTr("%1 × %2").arg(steamThumb.modelData.width).arg(steamThumb.modelData.height)
+                            }
+                            Label {
+                                text: root.kinds.find(k => k.id === steamThumb.modelData.kind)?.name ?? ""
+                                color: Theme.gameEditor.hintColor
+                                font.pixelSize: Theme.gameEditor.hintFontSize
+                            }
+                        }
+                    }
+                }
+
+                Icon {
+                    id: steamSpinner
+                    anchors.centerIn: parent
+                    visible: root.steamLoading
+                    path: Icons.loader
+                    size: Theme.controls.iconSize * 1.5
+                    color: Theme.gameEditor.hintColor
+                    RotationAnimation on rotation {
+                        running: steamSpinner.visible
+                        from: 0
+                        to: 360
+                        duration: Theme.iconButton.spinDuration
+                        loops: Animation.Infinite
+                    }
+                }
+                Label {
+                    anchors.centerIn: parent
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    visible: !root.steamLoading && (root.steamError !== "" || (root.steamLoaded && root.shownSteamImages.length === 0))
+                    text: root.steamError !== "" ? root.steamError
+                        : root.steamApp <= 0 ? qsTr("Steam has no game called \"%1\"").arg(root.ownTitle)
+                        : qsTr("Steam has no library art for this game")
+                    color: root.steamError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
                 }
             }
 

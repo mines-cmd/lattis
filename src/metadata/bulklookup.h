@@ -122,6 +122,8 @@ public:
     Q_INVOKABLE void setArtChecked(const QString &id, const QString &kind, bool checked);
     Q_INVOKABLE void setArt(const QString &id, const QString &kind, const QVariantMap &image);
     Q_INVOKABLE int steamGridDbId(const QString &id) const;
+    Q_INVOKABLE int steamApp(const QString &id) const;
+    Q_INVOKABLE void setSteamApp(const QString &id, int appId);
     Q_INVOKABLE void clearResults();
 
     Q_INVOKABLE void apply();

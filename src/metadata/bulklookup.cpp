@@ -866,6 +866,29 @@ int BulkLookup::steamGridDbId(const QString &id) const
     return 0;
 }
 
+// -1: a Steam game, whose art already comes from Steam.
+int BulkLookup::steamApp(const QString &id) const
+{
+    for (const Row &r : m_rows) {
+        if (r.game.id != id)
+            continue;
+        if (r.game.platform == kSteamPlatform)
+            return -1;
+        return r.steamApp > 0 ? r.steamApp : qMax(r.game.steamApp, 0);
+    }
+    return 0;
+}
+
+void BulkLookup::setSteamApp(const QString &id, int appId)
+{
+    for (Row &r : m_rows) {
+        if (r.game.id == id && r.game.platform != kSteamPlatform && appId > 0) {
+            r.steamApp = appId;
+            return;
+        }
+    }
+}
+
 void BulkLookup::clearResults()
 {
     stop();

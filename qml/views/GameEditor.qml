@@ -368,12 +368,18 @@ Item {
         return lookupIds.steamgriddb ?? Math.max(0, game.steamgriddb ?? 0)
     }
 
+    function steamAppForArt() {
+        if (steamGame)
+            return -1
+        return (lookupIds.steam ?? 0) > 0 ? lookupIds.steam : Math.max(0, game.steamApp ?? 0)
+    }
+
     function browseArt(kind) {
         if (!Metadata.hasSteamGridDbKey)
             return
         if (steamGridDbId() > 0) {
             artBrowser.active = true
-            artBrowser.item.openFor(steamGridDbId(), titleField.text.trim(), kind, {})
+            artBrowser.item.openFor(steamGridDbId(), titleField.text.trim(), kind, {}, steamAppForArt())
             return
         }
         const title = titleField.text.trim()
@@ -399,7 +405,7 @@ Item {
         }
         if (result.steamgriddb <= 0) {
             artBrowser.active = true
-            artBrowser.item.openWithoutGame(lookupRow.title, browseKind)
+            artBrowser.item.openWithoutGame(lookupRow.title, browseKind, steamAppForArt())
             return
         }
         lookupIds = Object.assign({}, lookupIds, { steamgriddb: result.steamgriddb })
@@ -1553,6 +1559,7 @@ Item {
         active: false
         sourceComponent: ArtBrowser {
             onGamePicked: id => root.lookupIds = Object.assign({}, root.lookupIds, { steamgriddb: id })
+            onSteamAppFound: id => root.lookupIds = Object.assign({}, root.lookupIds, { steam: id })
             onChosen: files => {
                 for (const kind of Object.keys(files))
                     artEditor.set(kind, files[kind])
