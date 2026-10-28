@@ -251,31 +251,39 @@ MotionPopup {
         border.width: Theme.gameEditor.cardBorderWidth
     }
 
-    component Figure: ColumnLayout {
+    component Figure: Card {
+        id: figure
         property string label
         property int minutes
         property bool primary: false
 
-        // Equal columns whatever the text: the widest value must not push the last one out of the card.
+        // Equal cards whatever the text: the widest value must not push the last one out of the row.
         Layout.fillWidth: true
         Layout.preferredWidth: 0
-        spacing: 2
+        implicitHeight: figureText.implicitHeight + 2 * Theme.gameEditor.cardPadding
 
-        CaptionLabel {
-            Layout.fillWidth: true
-            text: parent.label
-            color: Theme.gameEditor.labelColor
-            font.pixelSize: Theme.playHistory.headerSize
-            elide: Text.ElideRight
-        }
-        Label {
-            Layout.fillWidth: true
-            elide: Text.ElideRight
-            text: root.durationText(parent.minutes)
-            color: parent.primary ? Theme.playHistory.summaryPrimaryColor
-                                  : Theme.playHistory.summaryValueColor
-            font.pixelSize: Theme.playHistory.summaryValueSize
-            font.weight: Theme.font.strongWeight
+        ColumnLayout {
+            id: figureText
+            anchors.fill: parent
+            anchors.margins: Theme.gameEditor.cardPadding
+            spacing: 2
+
+            CaptionLabel {
+                Layout.fillWidth: true
+                text: figure.label
+                color: Theme.gameEditor.labelColor
+                font.pixelSize: Theme.playHistory.headerSize
+                elide: Text.ElideRight
+            }
+            Label {
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+                text: root.durationText(figure.minutes)
+                color: figure.primary ? Theme.playHistory.summaryPrimaryColor
+                                      : Theme.playHistory.summaryValueColor
+                font.pixelSize: Theme.playHistory.summaryValueSize
+                font.weight: Theme.font.strongWeight
+            }
         }
     }
 
@@ -313,24 +321,17 @@ MotionPopup {
             }
         }
 
-        Card {
+        RowLayout {
             Layout.fillWidth: true
-            implicitHeight: figures.implicitHeight + 2 * Theme.gameEditor.cardPadding
+            spacing: Theme.gameEditor.rowSpacing
 
-            RowLayout {
-                id: figures
-                anchors.fill: parent
-                anchors.margins: Theme.gameEditor.cardPadding
-                spacing: Theme.gameEditor.columnSpacing
-
-                Figure { label: qsTr("Total"); minutes: root.history.total ?? 0; primary: true }
-                Figure { label: qsTr("This week"); minutes: root.history.week ?? 0 }
-                Figure { label: qsTr("This month"); minutes: root.history.month ?? 0 }
-                Figure {
-                    visible: (root.history.before ?? 0) > 0
-                    label: qsTr("Before history")
-                    minutes: root.history.before ?? 0
-                }
+            Figure { label: qsTr("Total"); minutes: root.history.total ?? 0; primary: true }
+            Figure { label: qsTr("This week"); minutes: root.history.week ?? 0 }
+            Figure { label: qsTr("This month"); minutes: root.history.month ?? 0 }
+            Figure {
+                visible: (root.history.before ?? 0) > 0
+                label: qsTr("Before history")
+                minutes: root.history.before ?? 0
             }
         }
 
@@ -535,7 +536,7 @@ MotionPopup {
 
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(toast.implicitHeight, deleteSelected.implicitHeight)
+                Layout.preferredHeight: deleteSelected.implicitHeight
 
                 SettingsButton {
                     id: deleteSelected
