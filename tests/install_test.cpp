@@ -173,6 +173,7 @@ private slots:
     void appUpdateCantReplace();
     void appUpdateSkipsAVersion();
     void appUpdateRestart();
+    void appUpdateWhatsNew();
     void appUpdateDailyCheck();
 };
 
@@ -2141,6 +2142,42 @@ void InstallTest::appUpdateRestart()
     h.restartWorks = true;
     update.restart();
     QCOMPARE(h.restarts, 2);
+}
+
+void InstallTest::appUpdateWhatsNew()
+{
+    UpdateHome h;
+    h.release("new image");
+    {
+        AppUpdate update(h.setup());
+        h.use(update);
+        QVERIFY(update.whatsNewVersion().isEmpty());
+        update.check();
+        QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+        QVERIFY(update.whatsNewVersion().isEmpty());
+        update.update();
+        QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+        QCOMPARE(update.state(), QStringLiteral("ready"));
+        // Still the old version running ("Later"): nothing to show yet.
+        QVERIFY(update.whatsNewVersion().isEmpty());
+    }
+
+    {
+        AppUpdate still(h.setup());
+        still.setCurrentVersion("1.1.1");
+        QVERIFY(still.whatsNewVersion().isEmpty());
+    }
+
+    AppUpdate next(h.setup());
+    next.setCurrentVersion("1.2.0");
+    QCOMPARE(next.whatsNewVersion(), QStringLiteral("1.2.0"));
+    QVERIFY(next.whatsNewNotes().contains(QStringLiteral("a thing")));
+    next.dismissWhatsNew();
+    QVERIFY(next.whatsNewVersion().isEmpty());
+
+    AppUpdate after(h.setup());
+    after.setCurrentVersion("1.2.0");
+    QVERIFY(after.whatsNewVersion().isEmpty());
 }
 
 void InstallTest::appUpdateDailyCheck()

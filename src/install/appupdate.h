@@ -50,6 +50,9 @@ class AppUpdate : public QObject
     Q_PROPERTY(QUrl releasePage READ releasePage NOTIFY changed)
     // The title of the game that keeps Restart from running, or "".
     Q_PROPERTY(QString runningGame READ runningGame NOTIFY changed)
+    // The version this start follows an update made from the app to, and its notes; "" otherwise or once dismissed.
+    Q_PROPERTY(QString whatsNewVersion READ whatsNewVersion NOTIFY changed)
+    Q_PROPERTY(QString whatsNewNotes READ whatsNewNotes NOTIFY changed)
 
 public:
     struct Setup
@@ -91,6 +94,8 @@ public:
     QString replaceBlocker() const { return m_blocker; }
     QUrl releasePage() const;
     QString runningGame() const;
+    QString whatsNewVersion() const { return m_whatsNewVersion; }
+    QString whatsNewNotes() const { return m_whatsNewNotes; }
 
     // quiet: a failure is only logged (the daily check). A fresh answer from the last hour is reused.
     Q_INVOKABLE void check(bool quiet = false);
@@ -99,6 +104,7 @@ public:
     Q_INVOKABLE void cancel();
     Q_INVOKABLE void skip();
     Q_INVOKABLE void restart();
+    Q_INVOKABLE void dismissWhatsNew();
 
     // The daily check: waits `delayMs`, checks when the last check is over a day old, and again a day after each.
     void startDailyCheck(int delayMs = 10000);
@@ -125,6 +131,10 @@ private:
     QString currentVersion() const;
     QString lastCheckPath() const;
     void dailyCheck();
+    void saveUpdated();
+    void loadWhatsNew();
+    QString updatedPath() const;
+    QString notesPath() const;
 
     static Setup s_setup;
     Setup m_setup;
@@ -148,4 +158,6 @@ private:
     QPointer<QNetworkReply> m_reply;
     QPointer<AppImageDownload> m_download;
     QTimer m_daily;
+    QString m_whatsNewVersion;
+    QString m_whatsNewNotes;
 };

@@ -227,7 +227,37 @@ ApplicationWindow {
     // Set by main.cpp once the first frame is shown.
     property bool startedUp: false
 
-    onStartedUpChanged: if (startedUp && Library.setupPending) openSetup()
+    onStartedUpChanged: {
+        if (!startedUp)
+            return
+        if (Library.setupPending)
+            openSetup()
+        else if (AppUpdate.whatsNewVersion !== "")
+            showWhatsNew()
+    }
+
+    // The marker goes at once so the note shows once; the notes stay in the link.
+    function showWhatsNew() {
+        const version = AppUpdate.whatsNewVersion
+        const notes = AppUpdate.whatsNewNotes
+        AppUpdate.dismissWhatsNew()
+        updatedVersion = version
+        updatedNotes = notes
+        toast.show(qsTr("Updated to %1").arg(version), {
+            text: qsTr("What's new"),
+            run: () => openWhatsNew()
+        }, 10000)
+    }
+
+    property string updatedVersion: ""
+    property string updatedNotes: ""
+
+    function openWhatsNew() {
+        whatsNewDialog.active = true
+        whatsNewDialog.item.version = updatedVersion
+        whatsNewDialog.item.notes = updatedNotes
+        whatsNewDialog.item.open()
+    }
 
     function openUpdate() {
         updateDialog.active = true
@@ -550,6 +580,7 @@ ApplicationWindow {
             aboutDialog.item.open()
             break
         case "update_app": openUpdate(); break
+        case "whats_new": openWhatsNew(); break
         case "open_data_folder": {
             const error = GameRunner.openDataFolder()
             if (error !== "")
@@ -638,6 +669,16 @@ ApplicationWindow {
     Connections {
         target: steamUninstall.item
         function onFailed(text) { toast.show(text) }
+    }
+
+    Loader {
+        id: whatsNewDialog
+        active: false
+        source: "views/WhatsNewDialog.qml"
+    }
+    Connections {
+        target: whatsNewDialog.item
+        function onClosed() { gameList.focusList() }
     }
 
     Loader {

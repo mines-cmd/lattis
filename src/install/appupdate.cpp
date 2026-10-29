@@ -96,6 +96,7 @@ AppUpdate::AppUpdate(const Setup &setup, QObject *parent)
     m_available = m_setup.enabled && !m_setup.appImage.isEmpty();
     if (m_available)
         m_blocker = AppUpdates::replaceBlocker(m_setup.appImage, m_setup.applicationsDir);
+    loadWhatsNew();
     m_daily.setSingleShot(true);
     connect(&m_daily, &QTimer::timeout, this, &AppUpdate::dailyCheck);
     if (auto *app = QCoreApplication::instance())
@@ -150,6 +151,7 @@ QString AppUpdate::currentVersion() const
 void AppUpdate::setCurrentVersion(const QString &version)
 {
     m_currentVersion = version;
+    loadWhatsNew();
 }
 
 void AppUpdate::setPace(qint64 bytes, int tickMs)
@@ -338,6 +340,7 @@ void AppUpdate::downloadFinished(quint64 serial, const AppImageDownload::Result 
             qCWarning(lcAppUpdate).noquote() << "can't trash the old AppImage" << result.replaced << problem;
         QDir().rmdir(QFileInfo(result.replaced).absolutePath());
     }
+    saveUpdated();
     setState(State::Ready);
 }
 
@@ -382,6 +385,70 @@ void AppUpdate::restart()
         m_error = tr("Couldn't start Lattis again: %1").arg(problem);
         emit changed();
     }
+}
+
+QString AppUpdate::updatedPath() const
+{
+    return QDir(m_setup.stateDir).filePath(QStringLiteral("app-updated.toml"));
+}
+
+QString AppUpdate::notesPath() const
+{
+    return QDir(m_setup.cacheDir).filePath(QStringLiteral("update-notes.md"));
+}
+
+// The marker waits for the start that runs the new version; after "Later" the old one still runs and leaves it.
+void AppUpdate::saveUpdated()
+{
+    QDir().mkpath(m_setup.stateDir);
+    QDir().mkpath(m_setup.cacheDir);
+    QSaveFile notes(notesPath());
+    if (notes.open(QIODevice::WriteOnly)) {
+        notes.write(m_release.notes.toUtf8());
+        notes.commit();
+    }
+    QSaveFile marker(updatedPath());
+    if (marker.open(QIODevice::WriteOnly)) {
+        marker.write(QStringLiteral("version = \"%1\"\n").arg(m_version).toUtf8());
+        marker.commit();
+    }
+}
+
+void AppUpdate::loadWhatsNew()
+{
+    m_whatsNewVersion.clear();
+    m_whatsNewNotes.clear();
+    QFile file(updatedPath());
+    if (!file.open(QIODevice::ReadOnly))
+        return;
+    QString version;
+    try {
+        const toml::table table = toml::parse(std::string_view(file.readAll().constData()));
+        if (const auto *text = table["version"].as_string())
+            version = toQString(text->get());
+    } catch (const toml::parse_error &) {
+    }
+    file.close();
+    const QString current = currentVersion();
+    if (!version.isEmpty() && Versions::newer(version, current))
+        return;
+    if (version.isEmpty() || Versions::newer(current, version)) {
+        QFile::remove(updatedPath());
+        return;
+    }
+    m_whatsNewVersion = version;
+    QFile notes(notesPath());
+    if (notes.open(QIODevice::ReadOnly))
+        m_whatsNewNotes = QString::fromUtf8(notes.readAll());
+}
+
+void AppUpdate::dismissWhatsNew()
+{
+    if (m_whatsNewVersion.isEmpty())
+        return;
+    QFile::remove(updatedPath());
+    m_whatsNewVersion.clear();
+    emit changed();
 }
 
 void AppUpdate::saveLastCheck()
