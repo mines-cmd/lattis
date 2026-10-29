@@ -4,7 +4,7 @@ Lattis makes two kinds of backup, each a single `.tar.zst` file: one of your **l
 
 ## Back up library
 
-Your whole [data folder](data-folder.md): your games and everything you've set on them (tags, favorites, play time, launch options), their art, your themes, your settings, your platforms and emulators, and your API keys (uncheck "API keys" to leave them out).
+Your whole [data folder](data-folder.md): your games and everything you've set on them (tags, favorites, play time, launch options), their art, your themes, your settings, your platforms and emulators, and your API keys, a Steam Web API key included (uncheck "API keys" to leave them out). Your Steam sign-in is never in a backup: on a new machine, sign in again in Settings → Steam.
 
 ROMs are never included, even ones you keep inside the data folder.
 
