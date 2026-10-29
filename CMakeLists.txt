@@ -5,7 +5,7 @@ project(Lattis VERSION 1.1.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Concurrent Network Multimedia ShaderTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Concurrent Network DBus Multimedia ShaderTools)
 find_package(tomlplusplus 3 REQUIRED)
 # Backups (.tar.zst); zstd threads need 3.6.
 find_package(LibArchive 3.6 REQUIRED)
@@ -344,6 +344,8 @@ qt_add_qml_module(lattis
         src/metadata/metadatasettings.h src/metadata/metadatasettings.cpp
         src/steam/vdf.h src/steam/vdf.cpp
         src/steam/steamlocate.h src/steam/steamlocate.cpp
+        src/steam/steamauth.h src/steam/steamauth.cpp
+        src/core/secretstore.h src/core/secretstore.cpp
         src/steam/steampresets.h src/steam/steampresets.cpp
         src/steam/steamscan.h src/steam/steamscan.cpp
         src/steam/steamdownloads.h src/steam/steamdownloads.cpp
@@ -420,6 +422,7 @@ target_link_libraries(lattis PRIVATE
     Qt6::QuickControls2
     Qt6::Concurrent
     Qt6::Network
+    Qt6::DBus
     Qt6::Multimedia
     tomlplusplus::tomlplusplus
     LibArchive::LibArchive

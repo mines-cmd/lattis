@@ -89,7 +89,7 @@ A batch runs without user interaction. `ScanLookup` batches the incoming ids to 
 
 ## API keys
 
-`Credentials` reads and writes `credentials.toml` in the data dir's root. It's separate from `settings.toml` so the settings file — and themes — can be shared freely without leaking the keys. A backup of the data dir does restore them.
+`Credentials` reads and writes `credentials.toml` in the data dir's root. It's separate from `settings.toml` so the settings file — and themes — can be shared freely without leaking the keys. A backup of the data dir does restore them. Besides the `[igdb]` and `[steamgriddb]` keys it holds `[steam] web_key`, the user's own Steam Web API key (`steamWebKey`, `hasSteamWebKey()`).
 
 The file is created with a mode of 0600, and an existing one is set to 0600 before every write. The atomic write (`QSaveFile`) gives the new file the permissions of the one it replaces, so setting them afterwards would leave a moment where the keys are readable by others; a new file would get the umask's 0644, which is why the file is created first. The IGDB token in `<cache dir>/igdb-token` is written the same way. A missing file is treated as no keys, without a warning. Unreadable values and unknown keys warn with `file:line` and are ignored.
 

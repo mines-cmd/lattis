@@ -20,6 +20,7 @@ const QList<std::pair<QString, QStringList>> &sections()
     static const QList<std::pair<QString, QStringList>> known = {
         {QStringLiteral("igdb"), {QStringLiteral("client_id"), QStringLiteral("client_secret")}},
         {QStringLiteral("steamgriddb"), {QStringLiteral("api_key")}},
+        {QStringLiteral("steam"), {QStringLiteral("web_key")}},
     };
     return known;
 }
@@ -32,6 +33,8 @@ QString *field(Credentials &c, const QString &section, const QString &key)
         return &c.igdbClientSecret;
     if (section == QLatin1String("steamgriddb") && key == QLatin1String("api_key"))
         return &c.steamGridDbKey;
+    if (section == QLatin1String("steam") && key == QLatin1String("web_key"))
+        return &c.steamWebKey;
     return nullptr;
 }
 }

@@ -18,6 +18,7 @@ public:
         int status = 200;
         QByteArray body;
         int delayMs = 0;
+        QByteArray extraHeaders; // raw lines, each ending in \r\n
     };
 
     struct Request
@@ -94,8 +95,9 @@ private:
             if (socket->state() != QAbstractSocket::ConnectedState)
                 return;
             socket->write("HTTP/1.1 " + QByteArray::number(response.status) + " X\r\nContent-Type: "
-                          "application/json\r\nConnection: close\r\nContent-Length: "
-                          + QByteArray::number(response.body.size()) + "\r\n\r\n" + response.body);
+                          "application/json\r\nConnection: close\r\n" + response.extraHeaders
+                          + "Content-Length: " + QByteArray::number(response.body.size()) + "\r\n\r\n"
+                          + response.body);
             socket->disconnectFromHost();
         };
         if (response.delayMs > 0)

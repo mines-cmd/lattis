@@ -1,7 +1,7 @@
 # The default platforms.toml and the emulator presets, relative to this folder.
 list(TRANSFORM LIBRARY_RESOURCES PREPEND "../" OUTPUT_VARIABLE TEST_LIBRARY_RESOURCES)
 
-find_package(Qt6 REQUIRED COMPONENTS Test Qml Gui Concurrent Network)
+find_package(Qt6 REQUIRED COMPONENTS Test Qml Gui Concurrent Network DBus)
 
 # Every source folder, as the app has them; no two headers share a name.
 set(TEST_INCLUDES ../src/core ../src/input ../src/launch ../src/library ../src/metadata ../src/steam ../src/theme
@@ -124,6 +124,23 @@ lattis_test(general_test OFFSCREEN
 lattis_test(windowstate_test OFFSCREEN
     SOURCES ../src/core/windowstate.h ../src/core/windowstate.cpp
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
+# The fake Secret Service needs a bus of its own whose config has no activatable services, so nothing here
+# can reach (or start) the real keyring.
+lattis_test(secretstore_test BENCH
+    SOURCES ../src/core/secretstore.h ../src/core/secretstore.cpp
+    LIBS Qt6::DBus)
+find_program(DBUS_RUN_SESSION dbus-run-session)
+if(DBUS_RUN_SESSION)
+    add_test(NAME secretstore_test
+        COMMAND ${DBUS_RUN_SESSION} --config-file=${CMAKE_CURRENT_SOURCE_DIR}/data/dbus-session.conf --
+                $<TARGET_FILE:secretstore_test>)
+    set_tests_properties(secretstore_test PROPERTIES ENVIRONMENT "LATTIS_TEST_PRIVATE_BUS=1;QT_QPA_PLATFORM=offscreen")
+endif()
+lattis_test(steamauth_test
+    SOURCES fakehttpserver.h
+            ../src/steam/steamauth.h ../src/steam/steamauth.cpp
+            ../src/core/secretstore.h ../src/core/secretstore.cpp
+    LIBS Qt6::Network Qt6::DBus Qt6::Concurrent)
 lattis_test(autostart_test OFFSCREEN
     SOURCES ../src/core/autostart.h ../src/core/autostart.cpp
     LIBS Qt6::Gui)

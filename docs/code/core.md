@@ -102,6 +102,14 @@ Each part of `settings.toml` has its own parser (`[general]`, `[launch]`, `[meta
 
 The header also has `toQString(std::string_view)`, which every file that reads TOML uses.
 
+## Secrets
+
+`SecretStore` keeps a secret (one item: a label, attributes that find it, bytes) outside the data dir. `SecretStore::create()` returns a `SecretServiceStore` when something on the session bus answers for `org.freedesktop.secrets` (GNOME Keyring, KWallet), else a `MemorySecretStore`, whose items last until the process quits; `persistent()` tells which. There is no file fallback, so a secret never reaches the data dir or a backup.
+
+`SecretServiceStore` talks to the Secret Service through Qt D-Bus with a plain session. `store()` replaces the item with the same attributes (unlocking the default collection first), `read()` returns the first match, `remove()` deletes every match. A locked keyring is unlocked through the service's own prompt, which the call waits for (up to two minutes; a dismissed prompt fails the call). The calls block, and each opens its own bus connection, so call them from a worker thread (`SteamAuth` does); `serviceAvailable()` is quick. `read()` returns nothing for a missing item and for a failure alike.
+
+The tests (`secretstore_test`) run a fake Secret Service on a private session bus (`dbus-run-session` with `tests/data/dbus-session.conf`, which has no activatable services, so the real keyring can't be started); the test skips itself without `LATTIS_TEST_PRIVATE_BUS=1`.
+
 ---
 
 ## Files
@@ -109,6 +117,7 @@ The header also has `toQString(std::string_view)`, which every file that reads T
 | File | Responsibility |
 |---|---|
 | `apppaths.*` | Data, cache and state dir paths; the data dir key |
+| `secretstore.*` | `SecretStore`, `SecretServiceStore`, `MemorySecretStore`: one secret in the Secret Service or in memory |
 | `autostart.*` | XDG autostart entry: read, write, remove, the Exec line |
 | `general.*` | General QML singleton: `[general]` settings, autostart state |
 | `generalsettings.*` | `[general]` struct and parser |

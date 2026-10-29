@@ -135,6 +135,13 @@ api_key = "ijkl9012"
     QVERIFY(r.value.hasIgdb());
     QVERIFY(r.value.hasSteamGridDb());
     QVERIFY(!(Credentials{"abcd1234", "", ""}.hasIgdb()));
+
+    const auto steam = CredentialsFile::parse("[steam]\nweb_key = \" 0123ABCD \"\n", "credentials.toml");
+    QVERIFY(steam.ok);
+    QVERIFY2(steam.warnings.isEmpty(), qPrintable(steam.warnings.join(u'\n')));
+    QCOMPARE(steam.value.steamWebKey, QStringLiteral("0123ABCD"));
+    QVERIFY(steam.value.hasSteamWebKey());
+    QVERIFY(!Credentials().hasSteamWebKey());
 }
 
 void MetadataTest::credentialsBadValuesWarn()

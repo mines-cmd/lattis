@@ -11,7 +11,9 @@ struct Credentials
     QString igdbClientId;
     QString igdbClientSecret;
     QString steamGridDbKey;
+    QString steamWebKey;
 
+    bool hasSteamWebKey() const { return !steamWebKey.isEmpty(); }
     bool hasIgdb() const { return !igdbClientId.isEmpty() && !igdbClientSecret.isEmpty(); }
     bool hasSteamGridDb() const { return !steamGridDbKey.isEmpty(); }
 

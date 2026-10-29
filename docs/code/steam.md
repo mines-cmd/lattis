@@ -14,6 +14,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Launch option presets](#launch-option-presets)
 - [Clips and screenshots](#clips-and-screenshots)
 - [Achievements](#achievements)
+- [Signing in to Steam](#signing-in-to-steam)
 - [Files](#files)
 - [Reference](#reference)
 
@@ -146,10 +147,23 @@ The text is in Steam's language (`steamLanguage()` reads `language` from `regist
 
 `Library::achievements(gameId)` reads the lists on a worker thread when a Steam game's page is shown and answers with `achievementsReady(id, list)`, in the style of `pageHistory`; nothing is read at startup, cached or watched. A game that isn't Steam's gets an empty list. The fixtures are in `tests/data/steam/appcache/stats/`, written by `make-fixtures.py` beside them.
 
+## Signing in to Steam
+
+`SteamAuth` signs in to the account through Steam's QR flow, so Lattis never sees the password. It talks to `api.steampowered.com` with its own network access manager; every call is a form POST of `input_json={…}` to `/IAuthenticationService/<method>/v1/`, answered in JSON with the result code in the `x-eresult` header (1 is OK, always HTTP 200).
+
+- `startSignIn()` calls `BeginAuthSessionViaQR` as a mobile app (`platform_type` 3: with the desktop client's type Steam refuses to renew the access token) and exposes `challengeUrl()`, which QML draws as a QR code, and `status()` `Waiting`. It polls `PollAuthSessionStatus` at the answer's `interval`; the code rotates about every 20 s, and a `new_challenge_url` replaces it with `new_client_id` polled from then on. Approval answers the refresh token, an access token and the account name; the account's SteamID64 is the refresh token's `sub` claim (`parseToken()` reads `sub` and `exp`). Eresult 27 or 9 is an expired code (`CodeExpired`; `startSignIn()` again makes a fresh one), `cancel()` stops and goes back to `SignedOut`. A poll that fails five times in a row ends the sign-in with `error()`.
+- The refresh token (about 210 days) goes to `SecretStore` as one item labelled "Lattis Steam sign-in" with the attributes `application=lattis` and `steamid=<id>`, written on a worker thread; `keptInKeyring()` says whether it reached a real keyring. Without one the session lasts until Lattis quits. It is never written to a file, a log or a request path (it travels only in a POST body).
+- `restore(steamId)` reads that item on a worker thread (`restored` is emitted when it is done); a token past its `exp` is deleted and the status is `TokenRefused`. An item of another account is ignored.
+- `accessToken(context, done)` calls back with an access token (24 h, kept in memory, renewed a minute early) from `GenerateAccessTokenForApp`; calls made while a renewal runs share it. Steam refusing the refresh token (any result but a transient one: 2, 3, 16, 20, 84) deletes the item, forgets the tokens and sets `TokenRefused` with "Your Steam sign-in expired"; a network error or a transient result only fails that call.
+- `signOut()` deletes the item and forgets every token. Revoking the session at Steam is the user's to do on Steam's authorized devices page.
+
+`tests/steamauth_test.cpp` runs it against a fake server (`FakeHttpServer` with `x-eresult` headers) and an in-memory store.
+
 ## Files
 
 | File | Contents |
 |---|---|
+| `steamauth.*` | `SteamAuth`: the QR sign-in, the refresh token in `SecretStore`, access tokens; `parseToken()` |
 | `vdf.*` | `Vdf::Document`, `Node`; `parse()`, `setValue()`, `remove()`, `quoted()` |
 | `binaryvdf.*` | `BinaryVdf::Document`, `Node`; `parse()`, `write()` |
 | `steamshortcuts.*` | `SteamShortcut`; `read()`, `add()`, `update()`, `remove()`; `exeField()`, `splitExe()`, `gameId()`, `newAppId()` |
