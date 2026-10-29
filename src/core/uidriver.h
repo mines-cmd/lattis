@@ -34,6 +34,7 @@ private:
     QStringList visibleTexts() const;
     void click(QQuickItem *item);
     bool key(const QString &name);
+    void type(const QString &text);
 
     QQuickWindow *m_window;
     QList<Command> m_commands;

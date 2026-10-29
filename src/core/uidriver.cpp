@@ -119,6 +119,12 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
+    if (command.name == u"type") {
+        type(command.argument);
+        qInfo().noquote() << "uitest: type" << command.argument;
+        settle();
+        return true;
+    }
     if (command.name == u"expect")
         return find(command.argument) != nullptr;
     if (command.name == u"expect-not")
@@ -159,8 +165,8 @@ QStringList UiDriver::visibleTexts() const
     collect(m_window->contentItem(), [&](QQuickItem *item) {
         const QVariant value = item->property("text");
         if (value.typeId() == QMetaType::QString && !value.toString().isEmpty() && shownOnScreen(item)
-            && texts.size() < 60)
-            texts.append(value.toString().left(40));
+            && texts.size() < 120)
+            texts.append(value.toString().left(30));
     });
     return texts;
 }
@@ -181,15 +187,40 @@ void UiDriver::click(QQuickItem *item)
 
 bool UiDriver::key(const QString &name)
 {
+    QStringList parts = name.split(u'+');
+    const QString keyName = parts.takeLast();
+    Qt::KeyboardModifiers modifiers;
+    for (const QString &part : parts) {
+        if (part == u"Ctrl")
+            modifiers |= Qt::ControlModifier;
+        else if (part == u"Shift")
+            modifiers |= Qt::ShiftModifier;
+        else if (part == u"Alt")
+            modifiers |= Qt::AltModifier;
+        else
+            return false;
+    }
     bool ok = false;
-    const int value = QMetaEnum::fromType<Qt::Key>().keyToValue(("Key_" + name.toLatin1()).constData(), &ok);
+    const int value = QMetaEnum::fromType<Qt::Key>().keyToValue(("Key_" + keyName.toLatin1()).constData(), &ok);
     if (!ok)
         return false;
-    QKeyEvent press(QEvent::KeyPress, value, Qt::NoModifier);
+    QKeyEvent press(QEvent::KeyPress, value, modifiers);
     QCoreApplication::sendEvent(m_window, &press);
-    QKeyEvent release(QEvent::KeyRelease, value, Qt::NoModifier);
+    QKeyEvent release(QEvent::KeyRelease, value, modifiers);
     QCoreApplication::sendEvent(m_window, &release);
     return true;
+}
+
+void UiDriver::type(const QString &text)
+{
+    for (const QChar ch : text) {
+        const int value = ch.isLetter() && ch.unicode() < 128 ? ch.toUpper().unicode() : ch.unicode();
+        const Qt::KeyboardModifiers modifiers = ch.isUpper() ? Qt::ShiftModifier : Qt::NoModifier;
+        QKeyEvent press(QEvent::KeyPress, value, modifiers, QString(ch));
+        QCoreApplication::sendEvent(m_window, &press);
+        QKeyEvent release(QEvent::KeyRelease, value, modifiers, QString(ch));
+        QCoreApplication::sendEvent(m_window, &release);
+    }
 }
 
 void UiDriver::fail(const QString &reason)
