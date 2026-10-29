@@ -18,7 +18,8 @@ trap 'rm -rf "$appdir"' EXIT
 
 # The static runtime keeps the binary independent of the target's libstdc++ and libgcc.
 cmake -S "$repo" -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
+    -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc" \
+    -DLATTIS_UPDATES="${LATTIS_UPDATES:-OFF}"
 cmake --build "$build" --target lattis
 DESTDIR="$appdir" cmake --install "$build"
 

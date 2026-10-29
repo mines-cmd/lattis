@@ -17,6 +17,8 @@ struct GeneralSettings
     QStringList railHiddenButtons;
     QStringList railButtonOrder;   // of railButtons(), as written: see orderedRailButtons()
     double clipVolume = 1.0;
+    bool checkForUpdates = true;
+    QString skippedUpdate;
 
     bool operator==(const GeneralSettings &) const = default;
 };

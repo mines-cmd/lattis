@@ -39,6 +39,7 @@ struct Release
 {
     QString tag;
     QString date;
+    QString notes;
     QList<ReleaseAsset> assets;
 
     bool operator==(const Release &) const = default;

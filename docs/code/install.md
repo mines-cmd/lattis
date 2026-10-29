@@ -13,6 +13,7 @@ The install code puts an emulator on the computer from inside the app, as the up
 - [Updates](#updates)
 - [Uninstall](#uninstall)
 - [ffmpeg](#ffmpeg)
+- [Updating Lattis](#updating-lattis)
 - [Testing hooks](#testing-hooks)
 - [Files](#files)
 - [QML reference](#qml-reference)
@@ -142,6 +143,23 @@ A release counts as newer when the matching asset's sha256 differs from the reco
 
 Test hooks (set before `install()`): `setReleaseUrl()` answers the release from another address, `setAssetName()` picks another asset, `setRelaxed(true)` allows `http:` and `file:` downloads.
 
+## Updating Lattis
+
+`AppUpdate` (`appupdate.*`) is the QML singleton that finds a newer Lattis in the public repo's GitHub releases (`github:mines-cmd/lattis`, asset `Lattis-*-x86_64.AppImage`; the `.zsync` next to it is for Gear Lever and AppImageUpdate), downloads it over the running AppImage and offers to restart. `AppUpdate::setup()` at startup gives it the state and cache dirs, `$APPIMAGE`, the menu entries' folder and callbacks (the `[general]` settings, the trash, the running game's title, the restart); it is created on first use, and `startDailyCheck()` from `main.cpp` makes it after the first frame.
+
+- **`available`**: the build has `-DLATTIS_UPDATES=ON` (`tools/appimage.sh --update-info` passes it) and `$APPIMAGE` is set. Without it nothing is checked, downloaded or shown. A local test AppImage, built without `--update-info`, never offers to replace itself.
+- **Newer**: `Versions::newer(candidate, current)` (`versions.*`, pure) compares the numbers of the release tag (`v1.2.0` = 1.2.0) with `QCoreApplication::applicationVersion()`, padding the shorter with zeros (`1.2` = `1.2.0`, `1.10` > `1.9`). A tag that isn't dotted numbers is never newer. GitHub's latest-release answer already leaves out drafts and prereleases.
+- **`check(quiet)`**: one request to the latest-release API (state `checking`), cached an hour in `<cache dir>/releases/app-update.json`; a failure is the `failed` state with `error`, or only a log line when `quiet`. A found release sets `latestVersion`, `hasUpdate`, `size`, `notes` (the release body, Markdown) and `releasePage`, and writes the time to `<state dir>/app-update.toml` (`last_check`).
+- **`startDailyCheck(delayMs)`**: after `delayMs` (10 s from `main.cpp`), a quiet check when `[general] check_for_updates` is on and the last check is over a day old; it looks again a day later (or when the last one will be a day old).
+- **`update()`**: refused with the `replaceBlocker` text when the file can't be replaced, and with "no checksum" when the release lists no sha256 for the AppImage. Otherwise an `AppImageDownload` into the running file's folder with `setReplace(true)` and `setTargetName(<the running file's name>)`, so the new file takes the **same path** as `$APPIMAGE` and every menu entry, autostart entry, Steam shortcut and Gear Lever entry that points at it keeps working. Replacing the running file is safe: the mounted image keeps the old one open. The old file (`Result::replaced`) goes to the trash; the state is then `ready`. A bad checksum or a cut download fails and leaves the old file. `cancel()` stops it and deletes the partial file.
+- **`canReplace`, `replaceBlocker`**: `AppUpdates::replaceBlocker(appImage, applicationsDir)` says why not: the file isn't there, its folder can't be written to, or a `gearlever_*.desktop` / `appimagekit_*.desktop` entry names the file (Gear Lever and AppImageLauncher manage it and would put the old one back). The UI then offers `releasePage` instead of Update.
+- **`skip()`** stores `latestVersion` in `[general] skipped_update`; `skipped` is true while the newest release is that one. A newer release shows again.
+- **`restart()`**: only in `ready`, and not while a game runs (`runningGame` is its title, for "Close <game> first"); it calls the restart callback (`Restart::start()`, then quit). A game running doesn't stop the download.
+
+`state` is `idle`, `checking`, `downloading`, `ready` or `failed`; `progress` is 0 to 1 while downloading. `cancel()` also clears a failure.
+
+Test hooks (tests and screenshots): `setReleaseUrl()` answers the release from another address (`file:` or `http:`), `setRelaxed(true)` allows `http:` and `file:` downloads, `setCurrentVersion()`, `setPace()`. With `LATTIS_INSTALL_FIXTURES` set, `LATTIS_UPDATE_RELEASE=<release JSON file or URL>` does the first two and `LATTIS_UPDATE_APPIMAGE=<file>` stands in for `$APPIMAGE` (and makes the feature available); both are ignored otherwise, so nothing can point a real run at them.
+
 ## Testing hooks
 
 `LATTIS_INSTALL_FIXTURES=<dir>` makes the Installer read the release from `<dir>/<release value with ":" and "/" as "-">.json` (`github-mgba-emu-mgba.json`) after a short delay, and download the asset from `<dir>/<asset name>` as a `file:` URL. With no such file it makes a script that sleeps (2 MB, no checksum) under the cache dir. The download is paced (40 steps of 60 ms), so the progress shows. Fixtures skip the release cache.
@@ -163,6 +181,8 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
 | `installer.*` | The `Installer` singleton |
 | `ffmpegtool.*` | The `FfmpegTool` singleton; `FfmpegInstall::assetName()` and `extract()` |
+| `versions.*` | `Versions::parse()` and `newer()` |
+| `appupdate.*` | The `AppUpdate` singleton; `AppUpdates::replaceBlocker()` |
 
 ## QML reference
 
@@ -175,6 +195,25 @@ Installer.checkUpdates(id)    no id: every installed AppImage, quietly
 Installer.retry(id)           runs a failed job again
 Installer.cancel(id)          also clears a failure
 Installer.refresh()
+
+AppUpdate.available           a release AppImage: the rest does nothing when false
+AppUpdate.state               "idle", "checking", "downloading", "ready" or "failed"
+AppUpdate.hasUpdate           a newer release is known
+AppUpdate.latestVersion       "1.2" while hasUpdate, else ""
+AppUpdate.skipped             that version is the one the user skipped
+AppUpdate.size                the download's size in bytes
+AppUpdate.notes               the release notes (Markdown)
+AppUpdate.progress            0 to 1 while downloading, -1 otherwise
+AppUpdate.error               the message of a failure
+AppUpdate.canReplace          the running file can be replaced
+AppUpdate.replaceBlocker      why not
+AppUpdate.releasePage         the release's page on GitHub
+AppUpdate.runningGame         title of a running game (Restart waits), else ""
+AppUpdate.check(quiet)
+AppUpdate.update()
+AppUpdate.cancel()            also clears a failure
+AppUpdate.skip()
+AppUpdate.restart()
 
 FfmpegTool.state              "idle", "checking", "downloading", "installing" or "failed"
 FfmpegTool.progress           0 to 1 while downloading, -1 otherwise

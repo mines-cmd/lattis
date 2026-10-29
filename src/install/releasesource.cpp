@@ -47,6 +47,7 @@ std::optional<Release> fromGitHub(const QJsonObject &root, QString *error)
     Release release;
     release.tag = root.value(QLatin1String("tag_name")).toString();
     release.date = root.value(QLatin1String("published_at")).toString();
+    release.notes = root.value(QLatin1String("body")).toString();
     for (const QJsonValue &item : root.value(QLatin1String("assets")).toArray()) {
         const QJsonObject a = item.toObject();
         ReleaseAsset asset;
@@ -71,6 +72,7 @@ std::optional<Release> fromGitLab(const QJsonObject &root, QString *error)
     Release release;
     release.tag = root.value(QLatin1String("tag_name")).toString();
     release.date = root.value(QLatin1String("released_at")).toString();
+    release.notes = root.value(QLatin1String("description")).toString();
     for (const QJsonValue &item : root.value(QLatin1String("assets")).toObject().value(QLatin1String("links")).toArray()) {
         const QJsonObject a = item.toObject();
         ReleaseAsset asset;

@@ -1,5 +1,6 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/appupdate.h"
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
 #include "core/apppaths.h"
@@ -189,6 +190,35 @@ int main(int argc, char *argv[])
                           const Game *game = id.isEmpty() ? nullptr : library.game(id);
                           return game ? game->title : id;
                       }});
+    {
+        AppUpdate::Setup update;
+        update.stateDir = AppPaths::stateDir();
+        update.cacheDir = AppPaths::cacheDir();
+#ifdef LATTIS_UPDATES
+        update.enabled = true;
+#endif
+        update.appImage = qEnvironmentVariable("APPIMAGE");
+        update.applicationsDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                                 + QStringLiteral("/applications");
+        update.autoCheck = [&general] { return general.checkForUpdates(); };
+        update.skippedVersion = [&general] { return general.skippedUpdate(); };
+        update.setSkippedVersion = [&general](const QString &version) { general.setSkippedUpdate(version); };
+        update.trash = [](const QString &path, QString *error) { return Uninstall::systemTrash(path, error); };
+        update.runningGame = [&library, &runner] {
+            const QStringList running = runner.running();
+            if (running.isEmpty())
+                return QString();
+            const Game *game = library.game(running.first());
+            return game ? game->title : running.first();
+        };
+        update.restart = [arguments](QString *error) {
+            if (!Restart::start(arguments, error))
+                return false;
+            QCoreApplication::quit();
+            return true;
+        };
+        AppUpdate::setup(update);
+    }
     FfmpegTool::setup({AppPaths::toolsDir(),
                        [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());
@@ -210,6 +240,8 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(0, &library, &Library::startRefresh);
                 QTimer::singleShot(0, &runner, &GameRunner::start);
                 QTimer::singleShot(0, &general, &General::refreshAutostart);
+                // Not before the first frame, and its own 10 s after it.
+                QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
                 if (!instance.listen())
                     qWarning() << "can't listen for other copies of the app starting";
             },

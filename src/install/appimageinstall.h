@@ -55,6 +55,8 @@ public:
     void setRelaxed(bool relaxed) { m_relaxed = relaxed; }
     // An update: a file with the target's name is moved aside instead of refusing the install.
     void setReplace(bool replace) { m_replace = replace; }
+    // Installs under this name instead of the asset's (an update keeps the running file's path).
+    void setTargetName(const QString &name) { m_targetName = name; }
     // Ends after the checks with the downloaded file itself (Result::path, still the partial file), for the caller to unpack.
     void setDownloadOnly(bool only) { m_downloadOnly = only; }
     // Reads this many bytes every tick instead of all that has arrived (so a screenshot can catch the progress).
@@ -83,6 +85,7 @@ private:
     ReleaseAsset m_asset;
     QString m_inside;
     QString m_folder;
+    QString m_targetName;
     bool m_relaxed = false;
     bool m_replace = false;
     bool m_downloadOnly = false;

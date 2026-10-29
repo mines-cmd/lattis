@@ -9,8 +9,9 @@
 #
 # --update-info is for releases (tools/publish.sh passes it): the AppImage tells Gear Lever and
 # AppImageUpdate to look for newer ones in the public repo's GitHub releases, and a .zsync file
-# made beside it lets them download only what changed. Local builds leave it out, or an
-# updater would replace them with the latest release.
+# made beside it lets them download only what changed. The app itself then checks the releases
+# too (-DLATTIS_UPDATES=ON). Local builds leave it out, or an updater would replace them with
+# the latest release.
 #
 # The build runs in the lattis-appimage podman image (tools/appimage/Containerfile), made the
 # first time and whenever the Containerfile is newer than it. Ubuntu 22.04 has glibc 2.35, so
@@ -84,7 +85,8 @@ mkdir -p "$out"
 # An empty LDAI_UPDATE_INFORMATION could still count as set, so it is only passed for releases.
 set -- -e LATTIS_VERSION="$version"
 if [ -n "$update_info" ]; then
-    set -- "$@" -e "LDAI_UPDATE_INFORMATION=gh-releases-zsync|mines-cmd|lattis|latest|Lattis-*x86_64.AppImage.zsync"
+    set -- "$@" -e "LDAI_UPDATE_INFORMATION=gh-releases-zsync|mines-cmd|lattis|latest|Lattis-*x86_64.AppImage.zsync" \
+        -e LATTIS_UPDATES=ON
 fi
 # keep-id: the files the build writes into the mounted repo stay the user's. label=disable:
 # the repo is not relabelled for SELinux.

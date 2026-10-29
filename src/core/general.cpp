@@ -81,6 +81,36 @@ QString General::setRailHidden(bool value)
     return setFlag(QStringLiteral("rail_hidden"), value);
 }
 
+QString General::setCheckForUpdates(bool value)
+{
+    QString error;
+    if (value) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("check_for_updates"), &error);
+    } else {
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("check_for_updates"),
+                                  QStringLiteral("false"), &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setSkippedUpdate(const QString &version)
+{
+    QString error;
+    if (version.isEmpty()) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("skipped_update"), &error);
+    } else {
+        QString quoted = version;
+        quoted.replace(u'\\', QStringLiteral("\\\\")).replace(u'"', QStringLiteral("\\\""));
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("skipped_update"),
+                                  u'"' + quoted + u'"', &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setClipVolume(double value)
 {
     value = std::clamp(std::round(value * 100) / 100, 0.0, 1.0);

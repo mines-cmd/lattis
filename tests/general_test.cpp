@@ -24,6 +24,7 @@ private slots:
     void startFullscreenSetting();
     void downloadBarCollapsedSetting();
     void clipVolumeSetting();
+    void updateSettings();
     void railHiddenSetting();
     void systemLocaleSetting();
     void reduceMotionSetting();
@@ -257,6 +258,49 @@ void GeneralTest::clipVolumeSetting()
     QCOMPARE(general.clipVolume(), 1.0);
     QVERIFY(settings.open(QIODevice::ReadOnly));
     QVERIFY(!settings.readAll().contains("clip_volume"));
+}
+
+void GeneralTest::updateSettings()
+{
+    const auto parse = [](const char *text) {
+        return parseGeneralSettings(text, QStringLiteral("settings.toml"));
+    };
+    QVERIFY(parse("[general]\n").value.checkForUpdates);
+    QVERIFY(parse("[general]\n").value.skippedUpdate.isEmpty());
+    QVERIFY(!parse("[general]\ncheck_for_updates = false\n").value.checkForUpdates);
+    QCOMPARE(parse("[general]\nskipped_update = \"1.2\"\n").value.skippedUpdate, QStringLiteral("1.2"));
+    const auto bad = parse("[general]\nskipped_update = 1.2\ncheck_for_updates = \"no\"\n");
+    QVERIFY(bad.value.checkForUpdates);
+    QVERIFY(bad.value.skippedUpdate.isEmpty());
+    QCOMPARE(bad.warnings.size(), 2);
+
+    QTemporaryDir data;
+    General general(data.path());
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("[general]\n");
+    settings.close();
+    general.reload();
+    QVERIFY(general.checkForUpdates());
+    QCOMPARE(general.setCheckForUpdates(false), QString());
+    QVERIFY(!general.checkForUpdates());
+    QCOMPARE(general.setSkippedUpdate("1.2"), QString());
+    QCOMPARE(general.skippedUpdate(), QStringLiteral("1.2"));
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray written = settings.readAll();
+    settings.close();
+    QVERIFY(written.contains("check_for_updates = false"));
+    QVERIFY(written.contains("skipped_update = \"1.2\""));
+
+    QCOMPARE(general.setCheckForUpdates(true), QString());
+    QCOMPARE(general.setSkippedUpdate({}), QString());
+    QVERIFY(general.checkForUpdates());
+    QVERIFY(general.skippedUpdate().isEmpty());
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray cleared = settings.readAll();
+    QVERIFY(!cleared.contains("check_for_updates"));
+    QVERIFY(!cleared.contains("skipped_update"));
+    QVERIFY(general.problems().isEmpty());
 }
 
 void GeneralTest::railHiddenSetting()

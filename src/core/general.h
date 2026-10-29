@@ -27,6 +27,8 @@ class General : public QObject
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY reduceMotionChanged)
     Q_PROPERTY(bool railHidden READ railHidden NOTIFY railHiddenChanged)
     Q_PROPERTY(double clipVolume READ clipVolume NOTIFY clipVolumeChanged)
+    Q_PROPERTY(bool checkForUpdates READ checkForUpdates NOTIFY settingsChanged)
+    Q_PROPERTY(QString skippedUpdate READ skippedUpdate NOTIFY settingsChanged)
     Q_PROPERTY(QStringList railHiddenButtons READ railHiddenButtons NOTIFY railHiddenButtonsChanged)
     Q_PROPERTY(QStringList railButtonOrder READ railButtonOrder NOTIFY railButtonOrderChanged)
     Q_PROPERTY(QStringList gamePageChips READ gamePageChips NOTIFY gamePageChanged)
@@ -69,6 +71,8 @@ public:
     bool reduceMotion() const { return m_settings.reduceMotion; }
     bool railHidden() const { return m_settings.railHidden; }
     double clipVolume() const { return m_settings.clipVolume; }
+    bool checkForUpdates() const { return m_settings.checkForUpdates; }
+    QString skippedUpdate() const { return m_settings.skippedUpdate; }
     QStringList railHiddenButtons() const { return m_settings.railHiddenButtons; }
     QStringList railButtonOrder() const { return orderedRailButtons(m_settings.railButtonOrder); }
     QStringList gamePageChips() const { return m_gamePage.chips; }
@@ -104,6 +108,8 @@ public:
     Q_INVOKABLE QString setReduceMotion(bool value);
     Q_INVOKABLE QString setRailHidden(bool value);
     Q_INVOKABLE QString setClipVolume(double value);
+    Q_INVOKABLE QString setCheckForUpdates(bool value);
+    Q_INVOKABLE QString setSkippedUpdate(const QString &version);
     Q_INVOKABLE QString setRailButtonShown(const QString &name, bool shown);
     Q_INVOKABLE QString setRailButtonOrder(const QStringList &order);
     Q_INVOKABLE QStringList gamePageOrder(const QString &place) const;

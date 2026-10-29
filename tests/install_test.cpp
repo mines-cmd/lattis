@@ -1,3 +1,4 @@
+#include "appupdate.h"
 #include "appimageinstall.h"
 #include "desktopentry.h"
 #include "fakehttpserver.h"
@@ -6,6 +7,7 @@
 #include "installer.h"
 #include "installrecord.h"
 #include "releasesource.h"
+#include "versions.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -156,6 +158,22 @@ private slots:
     void ffmpegCancelLeavesNothing();
     void ffmpegRemoves();
     void ffmpegPrefersTheOwnCopy();
+
+    void versionCompare_data();
+    void versionCompare();
+    void releaseNotes();
+    void downloadTargetName();
+    void appUpdateFindsANewerRelease();
+    void appUpdateIgnoresOlderAndEqual();
+    void appUpdateUnavailableDoesNothing();
+    void appUpdateRefusesWithoutChecksum();
+    void appUpdateWrongChecksumKeepsTheOldFile();
+    void appUpdateReplacesKeepingThePath();
+    void appUpdateCancels();
+    void appUpdateCantReplace();
+    void appUpdateSkipsAVersion();
+    void appUpdateRestart();
+    void appUpdateDailyCheck();
 };
 
 void InstallTest::sourceParses_data()
@@ -1698,6 +1716,459 @@ void InstallTest::ffmpegPrefersTheOwnCopy()
 
     tool.remove();
     QCOMPARE(tool.path(), bin + "/ffmpeg");
+}
+
+void InstallTest::versionCompare_data()
+{
+    QTest::addColumn<QString>("candidate");
+    QTest::addColumn<QString>("current");
+    QTest::addColumn<bool>("newer");
+    QTest::newRow("patch") << "1.1.2" << "1.1.1" << true;
+    QTest::newRow("tag prefix") << "v1.2.0" << "1.1.1" << true;
+    QTest::newRow("numbers, not text") << "1.10" << "1.9" << true;
+    QTest::newRow("shorter is padded") << "1.2" << "1.2.0" << false;
+    QTest::newRow("longer is padded") << "1.2.0.1" << "1.2" << true;
+    QTest::newRow("equal") << "1.1.1" << "1.1.1" << false;
+    QTest::newRow("older") << "1.1.0" << "1.1.1" << false;
+    QTest::newRow("older major") << "0.99" << "1.0" << false;
+    QTest::newRow("bad tag") << "latest" << "1.1.1" << false;
+    QTest::newRow("prerelease tag") << "1.2.0-rc1" << "1.1.1" << false;
+    QTest::newRow("empty tag") << "" << "1.1.1" << false;
+    QTest::newRow("bad current") << "1.2" << "dev" << false;
+}
+
+void InstallTest::versionCompare()
+{
+    QFETCH(QString, candidate);
+    QFETCH(QString, current);
+    QFETCH(bool, newer);
+    QCOMPARE(Versions::newer(candidate, current), newer);
+}
+
+void InstallTest::releaseNotes()
+{
+    QString error;
+    const auto source = ReleaseSources::parse("github:o/r");
+    const auto release = ReleaseSources::parseRelease(*source, json("{'tag_name': 'v1', 'body': '## New\\n- one', 'assets': []}"),
+                                                      &error);
+    QVERIFY(release);
+    QCOMPARE(release->notes, QStringLiteral("## New\n- one"));
+}
+
+void InstallTest::downloadTargetName()
+{
+    FakeHttpServer server;
+    server.on("/d/Lattis-1.2.0-x86_64.AppImage", {200, "new"});
+    QTemporaryDir home;
+    const QString folder = home.filePath("apps");
+    QVERIFY(write(folder + "/lattis.appimage", "old"));
+    QNetworkAccessManager network;
+    AppImageDownload download(&network, assetFor(server, "/d/Lattis-1.2.0-x86_64.AppImage", "new"), {}, folder);
+    download.setRelaxed(true);
+    download.setReplace(true);
+    download.setTargetName("lattis.appimage");
+    const auto result = runDownload(download);
+    QVERIFY2(result.ok, qPrintable(result.error));
+    QCOMPARE(result.path, folder + "/lattis.appimage");
+    QCOMPARE(result.replaced, folder + "/.lattis.appimage.replaced/lattis.appimage");
+    QCOMPARE(names(folder), (QStringList{".lattis.appimage.replaced", "lattis.appimage"}));
+    QFile old(result.replaced);
+    QVERIFY(old.open(QIODevice::ReadOnly));
+    QCOMPARE(old.readAll(), QByteArray("old"));
+    QFile now(folder + "/lattis.appimage");
+    QVERIFY(now.open(QIODevice::ReadOnly));
+    QCOMPARE(now.readAll(), QByteArray("new"));
+}
+
+namespace {
+const QString kUpdateAsset = QStringLiteral("Lattis-1.2.0-x86_64.AppImage");
+
+struct UpdateHome
+{
+    FakeHttpServer server;
+    QTemporaryDir dir;
+    QString folder = dir.filePath("apps");
+    QString appImage = folder + "/lattis.appimage";
+    QString state = dir.filePath("state");
+    QString cache = dir.filePath("cache");
+    QString applications = dir.filePath("applications");
+    QStringList trashed;
+    QStringList skipped;
+    QString game;
+    int restarts = 0;
+    bool restartWorks = true;
+    bool enabled = true;
+    bool autoCheck = true;
+
+    UpdateHome() { write(appImage, "old"); }
+
+    // The release lists the AppImage with `listedSha` (its own when empty); `digest` false lists none.
+    void release(const QByteArray &image, const QString &tag = QStringLiteral("v1.2.0"), bool digest = true,
+                 const QString &listedSha = {})
+    {
+        QJsonObject item{{"id", 1},
+                         {"name", kUpdateAsset},
+                         {"browser_download_url", server.url("/d/lattis").toString()},
+                         {"size", image.size()},
+                         {"updated_at", "2026-10-29T00:00:00Z"}};
+        if (digest)
+            item["digest"] = "sha256:" + (listedSha.isEmpty() ? sha(image) : listedSha);
+        const QJsonObject zsync{{"id", 2},
+                                {"name", kUpdateAsset + ".zsync"},
+                                {"browser_download_url", server.url("/d/zsync").toString()},
+                                {"size", 3}};
+        const QJsonObject release{{"tag_name", tag},
+                                  {"published_at", "2026-10-29T00:00:00Z"},
+                                  {"body", "## What's new\n- a thing"},
+                                  {"assets", QJsonArray{zsync, item}}};
+        server.clear("/release");
+        server.on("/release", {200, QJsonDocument(release).toJson()});
+        server.clear("/d/lattis");
+        server.on("/d/lattis", {200, image});
+    }
+
+    AppUpdate::Setup setup()
+    {
+        AppUpdate::Setup s;
+        s.stateDir = state;
+        s.cacheDir = cache;
+        s.enabled = enabled;
+        s.appImage = appImage;
+        s.applicationsDir = applications;
+        s.autoCheck = [this] { return autoCheck; };
+        s.skippedVersion = [this] { return skipped.value(skipped.size() - 1); };
+        s.setSkippedVersion = [this](const QString &v) { skipped.append(v); };
+        s.trash = [this](const QString &path, QString *) {
+            trashed.append(path);
+            return QFile::remove(path);
+        };
+        s.runningGame = [this] { return game; };
+        s.restart = [this](QString *error) {
+            ++restarts;
+            if (!restartWorks)
+                *error = QStringLiteral("no");
+            return restartWorks;
+        };
+        return s;
+    }
+
+    void use(AppUpdate &update)
+    {
+        update.setReleaseUrl(server.url("/release"));
+        update.setRelaxed(true);
+        update.setCurrentVersion("1.1.1");
+    }
+};
+
+bool busy(const AppUpdate &update)
+{
+    return update.state() == QLatin1String("checking") || update.state() == QLatin1String("downloading");
+}
+
+QByteArray fileText(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+}
+
+void InstallTest::appUpdateFindsANewerRelease()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate update(h.setup());
+    h.use(update);
+    QVERIFY(update.available());
+    QVERIFY(update.canReplace());
+    QVERIFY(!update.hasUpdate());
+    QVERIFY(update.latestVersion().isEmpty());
+
+    update.check();
+    QCOMPARE(update.state(), QStringLiteral("checking"));
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    QVERIFY(update.hasUpdate());
+    QCOMPARE(update.latestVersion(), QStringLiteral("1.2.0"));
+    QCOMPARE(update.size(), qint64(9));
+    QVERIFY(update.notes().contains(QStringLiteral("a thing")));
+    QCOMPARE(update.releasePage(), QUrl("https://github.com/mines-cmd/lattis/releases/tag/v1.2.0"));
+    QVERIFY(!update.skipped());
+    QVERIFY(QFileInfo(h.state + "/app-update.toml").isFile());
+    QCOMPARE(fileText(h.appImage), QByteArray("old"));
+}
+
+void InstallTest::appUpdateIgnoresOlderAndEqual()
+{
+    UpdateHome h;
+    AppUpdate update(h.setup());
+    h.use(update);
+    for (const QString &tag : {QStringLiteral("v1.1.1"), QStringLiteral("v1.1.0"), QStringLiteral("nightly")}) {
+        h.release("img", tag);
+        update.check();
+        QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+        QVERIFY(!update.hasUpdate());
+        QVERIFY(update.latestVersion().isEmpty());
+    }
+    // An API error is a failure; a quiet check only logs it.
+    h.server.clear("/release");
+    h.server.on("/release", {200, json("{'message': 'API rate limit exceeded'}")});
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("failed"));
+    QVERIFY(update.error().contains(QStringLiteral("rate limit")));
+    update.cancel();
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    update.check(true);
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    QVERIFY(update.error().isEmpty());
+}
+
+void InstallTest::appUpdateUnavailableDoesNothing()
+{
+    UpdateHome h;
+    h.release("new image");
+    h.enabled = false;
+    AppUpdate update(h.setup());
+    h.use(update);
+    QVERIFY(!update.available());
+    QVERIFY(!update.canReplace());
+    update.check();
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    update.startDailyCheck(0);
+    QTest::qWait(100);
+    update.update();
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    QVERIFY(h.server.requests.isEmpty());
+
+    // Not an AppImage either.
+    UpdateHome other;
+    other.appImage.clear();
+    AppUpdate plain(other.setup());
+    QVERIFY(!plain.available());
+}
+
+void InstallTest::appUpdateRefusesWithoutChecksum()
+{
+    UpdateHome h;
+    h.release("new image", "v1.2.0", false);
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY(update.hasUpdate());
+    update.update();
+    QCOMPARE(update.state(), QStringLiteral("failed"));
+    QVERIFY2(update.error().contains(QStringLiteral("checksum")), qPrintable(update.error()));
+    QCOMPARE(fileText(h.appImage), QByteArray("old"));
+    QVERIFY(h.server.requestsTo("/d/lattis").isEmpty());
+    QCOMPARE(names(h.folder), QStringList{"lattis.appimage"});
+}
+
+void InstallTest::appUpdateWrongChecksumKeepsTheOldFile()
+{
+    UpdateHome h;
+    h.release("new image", "v1.2.0", true, QString(64, 'a'));
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    update.update();
+    QCOMPARE(update.state(), QStringLiteral("downloading"));
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("failed"));
+    QVERIFY2(update.error().contains(QStringLiteral("checksum")), qPrintable(update.error()));
+    QCOMPARE(fileText(h.appImage), QByteArray("old"));
+    QCOMPARE(names(h.folder), QStringList{"lattis.appimage"});
+    QVERIFY(h.trashed.isEmpty());
+}
+
+void InstallTest::appUpdateReplacesKeepingThePath()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+
+    QStringList states;
+    QObject::connect(&update, &AppUpdate::changed, [&] {
+        if (states.isEmpty() || states.last() != update.state())
+            states.append(update.state());
+    });
+    update.update();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QCOMPARE(update.state(), QStringLiteral("ready"));
+    QCOMPARE(states, (QStringList{"downloading", "ready"}));
+
+    // The new file sits at the running file's path, the old one went to the trash.
+    QCOMPARE(fileText(h.appImage), QByteArray("new image"));
+    QVERIFY(QFileInfo(h.appImage).isExecutable());
+    QCOMPARE(names(h.folder), QStringList{"lattis.appimage"});
+    QCOMPARE(h.trashed, QStringList{h.folder + "/.lattis.appimage.replaced/lattis.appimage"});
+
+    // Nothing more is checked or downloaded while it waits for a restart.
+    update.check();
+    update.update();
+    QCOMPARE(update.state(), QStringLiteral("ready"));
+    QCOMPARE(h.server.requestsTo("/release").size(), 1);
+    QCOMPARE(h.server.requestsTo("/d/lattis").size(), 1);
+}
+
+void InstallTest::appUpdateCancels()
+{
+    UpdateHome h;
+    h.release(QByteArray(2000, 'x'));
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.setPace(100, 20);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    update.update();
+    QTRY_VERIFY_WITH_TIMEOUT(update.progress() > 0, 10000);
+    update.cancel();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    QVERIFY(update.error().isEmpty());
+    QCOMPARE(fileText(h.appImage), QByteArray("old"));
+    QCOMPARE(names(h.folder), QStringList{"lattis.appimage"});
+    QVERIFY(h.trashed.isEmpty());
+    QVERIFY(update.hasUpdate());
+}
+
+void InstallTest::appUpdateCantReplace()
+{
+    {
+        // A folder that can't be written to.
+        UpdateHome h;
+        h.release("new image");
+        QFile::setPermissions(h.folder, QFileDevice::ReadOwner | QFileDevice::ExeOwner);
+        const bool writable = QFileInfo(h.folder).isWritable();
+        AppUpdate update(h.setup());
+        h.use(update);
+        QFile::setPermissions(h.folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        if (writable)
+            QSKIP("the folder stays writable (running as root)");
+        QVERIFY(update.available());
+        QVERIFY(!update.canReplace());
+        QVERIFY(!update.replaceBlocker().isEmpty());
+        update.check();
+        QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+        QVERIFY(update.hasUpdate());
+        QVERIFY(update.releasePage().isValid());
+        QFile::setPermissions(h.folder, QFileDevice::ReadOwner | QFileDevice::ExeOwner);
+        update.update();
+        QCOMPARE(update.state(), QStringLiteral("failed"));
+        QVERIFY(h.server.requestsTo("/d/lattis").isEmpty());
+        QFile::setPermissions(h.folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    }
+    {
+        // Gear Lever and AppImageLauncher keep the file in step with their menu entry.
+        UpdateHome h;
+        QCOMPARE(AppUpdates::replaceBlocker(h.appImage, h.applications), QString());
+        QVERIFY(write(h.applications + "/gearlever_lattis.desktop", "[Desktop Entry]\nExec=" + h.appImage.toUtf8() + "\n"));
+        QVERIFY(AppUpdates::replaceBlocker(h.appImage, h.applications).contains(QStringLiteral("Gear Lever")));
+        AppUpdate update(h.setup());
+        QVERIFY(update.available());
+        QVERIFY(!update.canReplace());
+
+        QVERIFY(QFile::remove(h.applications + "/gearlever_lattis.desktop"));
+        QVERIFY(write(h.applications + "/appimagekit_abc-lattis.desktop", "Exec=" + h.appImage.toUtf8() + " %U\n"));
+        QVERIFY(AppUpdates::replaceBlocker(h.appImage, h.applications).contains(QStringLiteral("AppImageLauncher")));
+
+        // Another file's entry doesn't count.
+        QVERIFY(write(h.applications + "/appimagekit_abc-lattis.desktop", "Exec=/elsewhere/lattis.appimage\n"));
+        QCOMPARE(AppUpdates::replaceBlocker(h.appImage, h.applications), QString());
+        QVERIFY(!AppUpdates::replaceBlocker(h.folder + "/missing.appimage", h.applications).isEmpty());
+    }
+}
+
+void InstallTest::appUpdateSkipsAVersion()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.skip();
+    QVERIFY(h.skipped.isEmpty());
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY(!update.skipped());
+    update.skip();
+    QCOMPARE(h.skipped, QStringList{"1.2.0"});
+    QVERIFY(update.skipped());
+    QVERIFY(update.hasUpdate());
+
+    // A newer release than the skipped one shows again.
+    h.release("newer image", "v1.3.0");
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.latestVersion(), QStringLiteral("1.3.0"));
+    QVERIFY(!update.skipped());
+}
+
+void InstallTest::appUpdateRestart()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.restart();
+    QCOMPARE(h.restarts, 0);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    update.restart();
+    QCOMPARE(h.restarts, 0);
+    update.update();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("ready"));
+
+    // The download was allowed while a game runs; the restart is not.
+    h.game = QStringLiteral("Hades");
+    QCOMPARE(update.runningGame(), QStringLiteral("Hades"));
+    update.restart();
+    QCOMPARE(h.restarts, 0);
+
+    h.game.clear();
+    h.restartWorks = false;
+    update.restart();
+    QCOMPARE(h.restarts, 1);
+    QVERIFY(update.error().contains(QStringLiteral("no")));
+    QCOMPARE(update.state(), QStringLiteral("ready"));
+    h.restartWorks = true;
+    update.restart();
+    QCOMPARE(h.restarts, 2);
+}
+
+void InstallTest::appUpdateDailyCheck()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate update(h.setup());
+    h.use(update);
+
+    h.autoCheck = false;
+    update.startDailyCheck(10);
+    QTest::qWait(200);
+    QVERIFY(h.server.requests.isEmpty());
+
+    h.autoCheck = true;
+    update.startDailyCheck(10);
+    QTRY_VERIFY_WITH_TIMEOUT(update.hasUpdate(), 10000);
+    QCOMPARE(h.server.requestsTo("/release").size(), 1);
+
+    // The last check is recent, so the next start doesn't ask again.
+    update.startDailyCheck(10);
+    QTest::qWait(200);
+    QCOMPARE(h.server.requestsTo("/release").size(), 1);
+
+    // A day later it does.
+    QVERIFY(write(h.state + "/app-update.toml", "last_check = \"2020-01-01T00:00:00Z\"\n"));
+    update.startDailyCheck(10);
+    QTRY_VERIFY_WITH_TIMEOUT(h.server.requestsTo("/release").size() == 2, 10000);
 }
 
 QTEST_GUILESS_MAIN(InstallTest)

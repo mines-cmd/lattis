@@ -260,7 +260,7 @@ void AppImageDownload::downloaded()
                                               m_folder, &m_cancelExtract));
         return;
     }
-    install(partialPath(m_asset.name), m_asset.name);
+    install(partialPath(m_asset.name), m_targetName.isEmpty() ? m_asset.name : m_targetName);
 }
 
 void AppImageDownload::extracted()

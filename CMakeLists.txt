@@ -310,6 +310,8 @@ qt_add_qml_module(lattis
         src/install/flatpakinstall.h src/install/flatpakinstall.cpp
         src/install/installer.h src/install/installer.cpp
         src/install/ffmpegtool.h src/install/ffmpegtool.cpp
+        src/install/versions.h src/install/versions.cpp
+        src/install/appupdate.h src/install/appupdate.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp
@@ -404,6 +406,12 @@ qt_add_shaders(lattis "shaders"
 target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup src/install)
 # Shown in About.
 target_compile_definitions(lattis PRIVATE LATTIS_VERSION="${PROJECT_VERSION}")
+# Only the AppImage built for a release (tools/appimage.sh --update-info) checks for a newer one: a local
+# test build would otherwise offer to replace itself with the public release.
+option(LATTIS_UPDATES "Check the public releases for a newer AppImage" OFF)
+if(LATTIS_UPDATES)
+    target_compile_definitions(lattis PRIVATE LATTIS_UPDATES)
+endif()
 
 target_link_libraries(lattis PRIVATE
     Qt6::Quick

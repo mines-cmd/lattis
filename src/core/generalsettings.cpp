@@ -31,9 +31,18 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
     const QStringList known = {QStringLiteral("start_fullscreen"), QStringLiteral("download_bar_collapsed"),
                                  QStringLiteral("system_locale"), QStringLiteral("reduce_motion"),
                                  QStringLiteral("rail_hidden_buttons"), QStringLiteral("rail_button_order"),
-                                 QStringLiteral("rail_hidden"), QStringLiteral("clip_volume")};
+                                 QStringLiteral("rail_hidden"), QStringLiteral("clip_volume"),
+                                 QStringLiteral("check_for_updates"), QStringLiteral("skipped_update")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
+        if (key == known.at(9)) {
+            if (const auto *s = node.as_string())
+                out.value.skippedUpdate = toQString(s->get());
+            else
+                out.warnings.append(QStringLiteral("%1: %2 must be a version in quotes, like \"1.2\"")
+                                        .arg(section.where(node), key));
+            continue;
+        }
         if (key == known.at(7)) {
             const std::optional<double> volume = node.value<double>();
             if (!volume || *volume < 0 || *volume > 1)
@@ -67,6 +76,7 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                        : key == known.at(2) ? &out.value.systemLocale
                        : key == known.at(3) ? &out.value.reduceMotion
                        : key == known.at(6) ? &out.value.railHidden
+                       : key == known.at(8) ? &out.value.checkForUpdates
                                             : nullptr;
         if (!target) {
             out.warnings.append(
