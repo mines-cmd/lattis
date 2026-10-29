@@ -87,6 +87,7 @@ private:
 
     void dailyCheck();
     void begin(bool manual);
+    void restore(const QString &steamId);
     void fetch(const std::shared_ptr<Job> &job);
     void request(const std::shared_ptr<Job> &job, const SteamWebApi::Request &request,
                  std::function<void(const QJsonDocument &json)> done);
@@ -106,6 +107,7 @@ private:
     QDateTime m_lastFetch;
     int m_gameCount = 0;
     bool m_restoreTried = false;
+    bool m_restoring = false;
     QString m_fixtureAccount;
     QString m_signedInAs;
 

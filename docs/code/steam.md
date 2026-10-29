@@ -182,7 +182,7 @@ The scan only reads Steam's files on disk. The games the account owns but has no
 
 1. A signed-in `SteamAuth` (access token from the refresh token): the owned games, the family and the sizes.
 2. Otherwise `steam_web_key` from `credentials.toml`: the owned games only.
-3. Neither: nothing is requested (`Outcome::NotConfigured`). The keyring is read only for an account that signed in here before (`signed_in`) or when `syncNow()` is pressed, so a user who never signs in is never shown an unlock prompt. A refresh token Steam refuses ends in `SignInExpired` (or in the key, if one is set).
+3. Neither: nothing is requested (`Outcome::NotConfigured`). The keyring is read only for an account that signed in here before (`signed_in`, read back by `startDaily()` at startup so the sign-in shows before the next fetch) or when `syncNow()` is pressed, so a user who never signs in is never shown an unlock prompt. A refresh token Steam refuses ends in `SignInExpired` (or in the key, if one is set).
 
 The outcome (`Synced`, `NotConfigured`, `NoAccount`, `SignInExpired`, `NoGames`, `Failed`), `error()`, `lastFetch()` and `gameCount()` are for the settings page. A fetch that lost a part does not move `last_fetch`, so it is tried again at the next start. When the cache changed, the `changed` callback asks the library to scan again.
 

@@ -122,6 +122,12 @@ bool SteamLibrarySync::enabled() const
 
 void SteamLibrarySync::startDaily(int delayMs)
 {
+    // A fetch may be a day away, so the account that signed in before is read back now, not on the next sync.
+    if (m_fixtureAccount.isEmpty() && !m_restoreTried) {
+        const QString id = m_setup.steamId ? m_setup.steamId() : QString();
+        if (!id.isEmpty() && id == m_signedInAs)
+            restore(id);
+    }
     m_daily.start(delayMs);
 }
 
@@ -220,13 +226,28 @@ void SteamLibrarySync::begin(bool manual)
         }
         return;
     }
+    if (m_restoring) {
+        connect(auth(), &SteamAuth::restored, this, proceed, Qt::SingleShotConnection);
+        return;
+    }
     if (auth()->status() == SteamAuth::Status::SignedIn || m_restoreTried) {
         proceed();
         return;
     }
-    m_restoreTried = true;
     connect(auth(), &SteamAuth::restored, this, proceed, Qt::SingleShotConnection);
-    auth()->restore(id);
+    restore(id);
+}
+
+void SteamLibrarySync::restore(const QString &steamId)
+{
+    m_restoreTried = true;
+    m_restoring = true;
+    // The status handler stays quiet when the restored account is the one already recorded, so the UI is told here.
+    connect(auth(), &SteamAuth::restored, this, [this] {
+        m_restoring = false;
+        emit stateChanged();
+    }, Qt::SingleShotConnection);
+    auth()->restore(steamId);
 }
 
 void SteamLibrarySync::request(const std::shared_ptr<Job> &job, const SteamWebApi::Request &request,

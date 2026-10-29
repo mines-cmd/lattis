@@ -291,9 +291,7 @@ void SteamAuth::restore(const QString &steamId)
     inBackground<std::optional<QByteArray>>(
         this, [store, steamId] { return store->read(itemAttributes(steamId)); },
         [this, steamId](const std::optional<QByteArray> &secret) {
-            if (m_status != Status::SignedOut)
-                return;
-            if (!secret) {
+            if (m_status != Status::SignedOut || !secret) {
                 emit restored();
                 return;
             }
