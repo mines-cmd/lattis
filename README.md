@@ -61,7 +61,7 @@ Lattis ships as an AppImage: a single file with everything it needs, which runs 
 
 3. Double-click it to start. A setup guide walks you through the first start.
 
-Keeping it in `~/Applications` is a good habit; tools like [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) can add it to your app menu. To open Lattis when you log in, turn on **Start at login** in Settings → General. See [Getting started](docs/guide/getting-started.md) in the user guide for more.
+Keeping it in `~/Applications` is a good habit; tools like [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) can add it to your app menu. To open Lattis when you log in, turn on **Start at login** in Settings → General. The AppImage updates itself from the app: once a day it checks the latest release (one request to GitHub; switch it off in Settings → General) and offers to replace itself. If Gear Lever manages the file, update it there. See [Getting started](docs/guide/getting-started.md) in the user guide for more.
 
 ## Building from source
 

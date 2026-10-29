@@ -12,6 +12,18 @@ Keeping it in `~/Applications` or `~/AppImages` is a good habit; tools like Gear
 
 To build it yourself instead, see the project's README.
 
+## Updating Lattis
+
+The released AppImage looks for a newer version by itself, once a day. When there is one, the app menu gets an **Update to <version>** entry at the top, the logo gets a small dot, and Settings → General and About show "Update available". Nothing pops up on its own.
+
+Open the entry to see the release notes, then click **Update**. Lattis downloads the new AppImage, checks it, and replaces the file you started it from, keeping its name and place, so your menu entries, autostart and Steam shortcut keep working. The old file goes to the trash. Then **Restart now** starts the new version; **Later** leaves it for the next start. Restart is off while a game runs. The first start afterwards shows "Updated to <version>" with a **What's new** link to the notes.
+
+- **Skip this version** hides the entry and the dot until a newer one comes out; Settings → General still lists it.
+- **Check now** in Settings → General looks right away.
+- The check is one request to `api.github.com` for the project's latest release, and nothing else is sent. Turn it off with **Check for updates** in Settings → General.
+- If the AppImage's folder can't be written to, or Gear Lever or AppImageLauncher manages it, the button is **Open release page** instead; update it in that tool.
+- A build from source, a distro package and a local test AppImage never check.
+
 ## The setup guide
 
 The first time Lattis starts, a setup guide walks you through six short steps. Every one can be skipped, and everything it sets up can be changed later in Settings.
@@ -44,7 +56,7 @@ Open Settings with the button at the bottom of the rail, or Ctrl+,. Its pages:
 
 | Page | What's on it |
 |---|---|
-| General | Start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, the setup guide, About |
+| General | Start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, updates (the daily check, Check now), the setup guide, About |
 | Game page | What the game's page shows and in what order: the chips beside Launch (the eye beside a chip hides or shows its icon), the buttons, the info panel rows (drag a row by its dots to move it; holding it near the top or bottom of the page scrolls it), how play time is written ("206,7 hours" or "206h 42m"), the period Recent play time counts, and which of the description, tags and media (Steam clips and screenshots, an emulator's screenshots) show and in what order, and whether the media shows screenshots and video |
 | Appearance | The theme in use: pick one, or mix colors and a style, and save the pair as a theme |
 | Customize | Every color and style setting, by part of the window, with the colors and style in use |
