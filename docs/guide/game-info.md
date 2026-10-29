@@ -17,7 +17,7 @@ The keys are kept in `credentials.toml` in your [data folder](data-folder.md), r
 
 With the keys set, new ROMs from a scan, newly imported Steam games and shortcuts brought in from Steam are looked up as they arrive. When IGDB has a clear match, the game gets its description, year and rating, and SteamGridDB's top image for each kind of art it's missing. Games without a clear match are left as they are, and a message offers **Review**, which opens [Look up missing info](#look-up-missing-info).
 
-The rating is what IGDB's members give the game, out of five stars to a tenth of a star (4.2 fills the fifth star a fifth of the way). A game with few ratings is pulled toward a middling score, and one with fewer than 20 gets none. Critics' scores aren't counted. Your own ratings stay in half stars. A rating from IGDB is marked "from IGDB" beside Rating in the game editor until you change it.
+The rating is what IGDB's members give the game, out of five stars to a tenth of a star (4.2 fills the fifth star a fifth of the way). A game with few ratings is pulled toward a middling score, and one with fewer than 5 gets none. Critics' scores aren't counted. Your own ratings stay in half stars. A rating from IGDB is marked "from IGDB" beside Rating in the game editor until you change it.
 
 Your tags that fit a matched game are added too, never removed.
 

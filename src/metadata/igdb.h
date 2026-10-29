@@ -54,7 +54,7 @@ QByteArray gamesQuery(const QList<int> &ids);
 QList<QList<int>> batches(const QList<int> &ids);
 // IGDB members' rating (0-100) as stars to a tenth, pulled toward a typical game's the fewer ratings it has;
 // -1 below kMinRatings.
-constexpr int kMinRatings = 20;
+constexpr int kMinRatings = 5;
 constexpr int kPriorRatings = 30;
 constexpr double kTypicalStars = 3.5;
 double stars(double userRating, int ratingCount);
