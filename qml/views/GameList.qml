@@ -228,6 +228,17 @@ Rectangle {
         syncSelection()
     }
 
+    function revealGame(id) {
+        if (Library.rowOfGame(id) < 0)
+            Library.installedOnly = false
+        if (Library.rowOfGame(id) < 0) {
+            Library.clearFilters()
+            Library.installedOnly = false
+            Library.platformFilter = ""
+        }
+        selectGame(id)
+    }
+
     function selectGames(ids) {
         selectGame(ids[0])
         for (const id of ids.slice(1))

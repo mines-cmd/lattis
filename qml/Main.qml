@@ -840,7 +840,7 @@ ApplicationWindow {
         target: statsPage.item
         function onCloseRequested() { window.setStatsOpen(false) }
         function onGameRequested(id) {
-            gameList.selectGame(id)
+            gameList.revealGame(id)
             window.setStatsOpen(false)
         }
     }
@@ -873,7 +873,7 @@ ApplicationWindow {
                 toast.show(text)
         }
         function onGameRequested(id) {
-            gameList.selectGame(id)
+            gameList.revealGame(id)
             window.setGalleryOpen(false)
         }
     }
