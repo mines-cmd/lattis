@@ -383,7 +383,7 @@ ApplicationWindow {
         hoverEnabled: true
         leftPadding: Theme.layout.spacing
         rightPadding: Theme.layout.spacing * 1.5
-        readonly property bool elided: width < implicitWidth
+        readonly property bool elided: noneText.truncated || replacesText.truncated || changedText.truncated
         readonly property string fullText: [root.artKindNames[kind], !found ? (none ? qsTr("none found") : qsTr("yours")) : "",
                                             found && entry.replaces ? qsTr("replaces yours") : "",
                                             found && entry.changed ? qsTr("changed") : ""].filter(t => t !== "").join(", ")
@@ -410,6 +410,7 @@ ApplicationWindow {
                 color: artCheck.found ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor
             }
             ChipText {
+                id: noneText
                 visible: !artCheck.found
                 text: artCheck.none ? qsTr("none found") : qsTr("yours")
                 elide: Text.ElideRight
@@ -419,6 +420,7 @@ ApplicationWindow {
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
             ChipText {
+                id: replacesText
                 visible: artCheck.found && artCheck.entry.replaces
                 text: qsTr("replaces yours")
                 elide: Text.ElideRight
@@ -428,6 +430,7 @@ ApplicationWindow {
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
             ChipText {
+                id: changedText
                 visible: artCheck.found && artCheck.entry.changed
                 text: qsTr("changed")
                 elide: Text.ElideRight
@@ -1451,6 +1454,9 @@ ApplicationWindow {
                         model: lookupModel.resultModel
                         spacing: Theme.layout.spacing / 2
                         boundsBehavior: Flickable.StopAtBounds
+                        // Rows differ in height, so the list's size is an estimate that is corrected as rows are
+                        // made; made ahead of the view, the correction happens off screen instead of as a jump.
+                        cacheBuffer: height * 3
                         ScrollBar.vertical: SettingsScrollBar { thickness: Theme.gameEditor.bulkScrollbarWidth; trackless: true }
 
                         delegate: Item {
@@ -1816,6 +1822,9 @@ ApplicationWindow {
                                                     color: candidateMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
                                                     border.color: Theme.controls.inputBorder
                                                     border.width: Theme.controls.inputBorderWidth
+                                                    ToolTip.visible: candidateMouse.containsMouse
+                                                    ToolTip.delay: Theme.tooltip.delay
+                                                    ToolTip.text: candidate.modelData.name
                                                     RowLayout {
                                                         id: candidateRow
                                                         anchors.centerIn: parent
