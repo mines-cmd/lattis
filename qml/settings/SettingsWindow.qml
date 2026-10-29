@@ -373,7 +373,7 @@ ApplicationWindow {
 
                                     Icon {
                                         path: category.modelData.icon
-                                        size: 18
+                                        size: Theme.settingsWindow.sidebarIconSize
                                         color: category.selected ? Theme.settingsWindow.sidebarSelectedText
                                              : Theme.settingsWindow.sidebarText
 

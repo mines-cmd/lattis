@@ -45,6 +45,7 @@ Rectangle {
                 Icon {
                     anchors.centerIn: parent
                     size: Theme.windowControls.iconSize
+                    strokeWidth: Theme.windowControls.iconStroke
                     color: button.close && mouse.containsMouse ? Theme.windowControls.closeHoverIcon
                                                                : Theme.windowControls.icon
 

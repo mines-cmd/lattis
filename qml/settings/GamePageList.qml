@@ -126,7 +126,7 @@ Rectangle {
 
                     Icon {
                         path: entry.info.icon
-                        size: Theme.controls.iconSize
+                        size: Theme.settingsWindow.entryIconSize
                         color: Theme.controls.labelColor
                         opacity: entry.on ? 1 : Theme.settingsWindow.offEntryOpacity
 

@@ -10,6 +10,9 @@ Item {
     property real size: 20
     property int fillRule: ShapePath.WindingFill
 
+    property real strokeWidth: Theme.layout.iconStroke
+    readonly property bool stroked: path.startsWith("stroke:")
+
     implicitWidth: size
     implicitHeight: size
 
@@ -21,12 +24,14 @@ Item {
         preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
-            fillColor: root.color
+            fillColor: root.stroked ? "transparent" : root.color
             fillRule: root.fillRule
-            strokeColor: "transparent"
-            strokeWidth: 0
+            strokeColor: root.stroked ? root.color : "transparent"
+            strokeWidth: root.stroked ? root.strokeWidth : 0
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
 
-            PathSvg { path: root.path }
+            PathSvg { path: root.stroked ? root.path.slice(7) : root.path }
         }
     }
 }
