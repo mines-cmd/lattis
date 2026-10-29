@@ -498,7 +498,8 @@ void MetadataTest::igdbStars()
     QCOMPARE(Igdb::stars(84, 309), 4.1);
     QCOMPARE(Igdb::stars(100, 20), 4.1);
     // Too few ratings to say.
-    QCOMPARE(Igdb::stars(100, 19), -1.0);
+    QCOMPARE(Igdb::stars(100, 5), 3.7);
+    QCOMPARE(Igdb::stars(100, 4), -1.0);
 }
 
 void MetadataTest::igdbSearchQuery()
@@ -1883,7 +1884,7 @@ void MetadataTest::bulkApply()
     for (const auto &[id, values] : s.written)
         written.insert(id, values);
     QCOMPARE(written.value(mario), (QVariantMap{{"igdb", 81145}, {"rating", 3.6}, {"rating_source", "igdb"}, {"steamgriddb", 5254520}}));
-    QCOMPARE(written.value("steam-1145360"), (QVariantMap{{"igdb", 113112}, {"steamgriddb", 4997889}}));
+    QCOMPARE(written.value("steam-1145360"), (QVariantMap{{"igdb", 113112}, {"steamgriddb", 4997889}, {"unavailable", QStringList{"rating", "hero", "icon", "logo"}}}));
     QCOMPARE(written.value("switch-homebrew"), (QVariantMap{{"igdb", 0}}));
     QVERIFY(written.contains("switch-metroid-dread"));
 
