@@ -65,7 +65,7 @@ ApplicationWindow {
         { key: "steam", name: qsTr("Steam"), icon: Icons.steam, enabled: true, page: steam },
         { key: "platforms", name: qsTr("Platforms"), icon: Icons.computer, enabled: true,
           page: platforms },
-        { key: "emulators", name: qsTr("Emulators"), icon: Icons.gamepad, enabled: true,
+        { key: "emulators", name: qsTr("Emulators"), icon: Icons.gamepadLine, enabled: true,
           page: emulators },
         { key: "metadata", name: qsTr("Metadata"), icon: Icons.search, enabled: true, page: metadata },
         { key: "appearance", name: qsTr("Appearance"), icon: Icons.brush, enabled: true, page: appearance },
