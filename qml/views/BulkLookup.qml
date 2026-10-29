@@ -1456,7 +1456,7 @@ ApplicationWindow {
                         boundsBehavior: Flickable.StopAtBounds
                         // Rows differ in height, so the list's size is an estimate that is corrected as rows are
                         // made; made ahead of the view, the correction happens off screen instead of as a jump.
-                        cacheBuffer: height * 3
+                        cacheBuffer: Math.max(height * 3, Math.min(count * 300, 30000))
                         ScrollBar.vertical: SettingsScrollBar { thickness: Theme.gameEditor.bulkScrollbarWidth; trackless: true }
 
                         delegate: Item {
