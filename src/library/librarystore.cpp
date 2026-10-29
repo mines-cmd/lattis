@@ -640,6 +640,10 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         s.steam.web = std::move(merged.web);
         s.steam.webNames = std::move(merged.names);
         out.steamWebWrite = merged.changed && s.files.value(kSteamIndex).ok;
+        if (out.steamWebWrite) {
+            for (qint64 appId : std::as_const(merged.added))
+                out.steamWebAdded.append(GameId::forSteamApp(appId));
+        }
         out.steamChanged = s.steam != previous.steam;
     }
     out.changed = out.changed || out.steamChanged || s.content.steam != previous.content.steam;
@@ -865,6 +869,7 @@ void LibraryStore::onScanFinished()
         QStringList added = std::exchange(m_protonAdded, {});
         if (result.changed) {
             added += result.romAdded;
+            added += result.steamWebAdded;
             for (const IndexEntry &e : result.steamWrites)
                 added.append(GameId::forSteamApp(e.appId));
         }

@@ -86,6 +86,8 @@ The review screen reads `stateCounts` (state → results, plus `all`) and filter
 
 A batch runs without user interaction. `ScanLookup` batches the incoming ids to pace the rate-limited queue. Progress and the result message ("3 games filled in; 2 need review") are exposed to QML so the UI can show a toast and a "Look up missing info" prompt.
 
+`SteamArtFetch` fills in the art of Steam games the whole-library import added (they arrive through the same `gamesAdded`, as `steam-<appid>` ids). It only asks for the kinds a game lacks (cover, hero, logo) and doesn't skip, so Steam's own `librarycache` files, which the scan copies first, win. For each game it asks the Steam store (`steamArt`) and downloads the first image of each missing kind, at most 4 games at a time, writing the files in batches through the same art writer as `BulkLookup`; a kind another source filled meanwhile is dropped at write time. A game the store has no art for is skipped without a message. `running`, `progressDone` and `progressTotal` feed the progress bar in Settings → Steam, next to `ScanLookup`'s.
+
 `[metadata] look_up_new_games = false` in settings.toml turns the whole thing off. The setting is re-read from the file each time, so a hand edit applies immediately.
 
 ## API keys
@@ -106,6 +108,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `metadatahttp.*` | `MetadataHttp`: the network layer; IGDB token, rate limit, downloads, fixtures |
 | `bulklookup.*` | `BulkLookup`: "Look up missing info"; the game list, lookup queue, apply |
 | `scanlookup.*` | `ScanLookup`: automatic lookup of newly discovered games |
+| `steamartfetch.*` | `SteamArtFetch`: store art for the Steam games the whole-library import added |
 | `igdb.*` | IGDB search and fetch queries, parsing, platform list, clear-match |
 | `namematch.*` | The name comparison both clear-matches share: the compact key, similarity, the rule |
 | `steamstore.*` | Steam store request paths, art and search parsing, clear-match |

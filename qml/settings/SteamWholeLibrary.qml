@@ -185,6 +185,63 @@ SettingsCard {
 
     Divider { visible: Theme.settingsWindow.rowDividers && root.on }
 
+    component Progress: ColumnLayout {
+        id: progress
+        property string text
+        property int done
+        property int total
+
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing / 2
+
+        Label {
+            Layout.fillWidth: true
+            text: progress.text.arg(progress.done).arg(progress.total)
+            color: Theme.onboarding.descriptionColor
+            font.pixelSize: Theme.controls.labelFontSize
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Theme.gameEditor.progressHeight
+            radius: Theme.gameEditor.progressRadius
+            color: Theme.gameEditor.progressTrack
+            clip: true
+
+            Rectangle {
+                height: parent.height
+                radius: parent.radius
+                color: Theme.gameEditor.progressFill
+                width: progress.total > 0 ? parent.width * Math.min(1, progress.done / progress.total) : 0
+                Behavior on width { enabled: Motion.on; MotionNumber { speed: "normal" } }
+            }
+        }
+    }
+
+    ColumnLayout {
+        id: background
+        readonly property bool art: SteamArtFetch.running
+        readonly property bool lookup: ScanLookup.running
+
+        visible: root.on && (art || lookup)
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        Progress {
+            visible: background.art
+            text: qsTr("Fetching art: %1 of %2")
+            done: SteamArtFetch.progressDone
+            total: SteamArtFetch.progressTotal
+        }
+        Progress {
+            visible: background.lookup
+            text: qsTr("Looking up new games: %1 of %2")
+            done: ScanLookup.progressDone
+            total: ScanLookup.progressTotal
+        }
+    }
+
+    Divider { visible: Theme.settingsWindow.rowDividers && root.on && (SteamArtFetch.running || ScanLookup.running) }
+
     Line {
         visible: root.on
         label: SteamLibrary.syncing ? qsTr("Syncing")

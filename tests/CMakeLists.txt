@@ -334,6 +334,7 @@ lattis_test(metadata_test
             ../src/metadata/idlistmodel.h ../src/metadata/idlistmodel.cpp
             ../src/metadata/bulklookup.h ../src/metadata/bulklookup.cpp
             ../src/metadata/scanlookup.h ../src/metadata/scanlookup.cpp
+            ../src/metadata/steamartfetch.h ../src/metadata/steamartfetch.cpp
             ../src/metadata/metadatasettings.h ../src/metadata/metadatasettings.cpp
             ../src/library/lookupgame.h
             ../src/core/apppaths.h ../src/core/apppaths.cpp

@@ -20,6 +20,7 @@
 #include "metadata/bulklookup.h"
 #include "metadata/metadataclient.h"
 #include "metadata/scanlookup.h"
+#include "metadata/steamartfetch.h"
 #include "metadata/thumbnailcache.h"
 #include "steam/steamlibrarysync.h"
 #include "theme/theme.h"
@@ -165,6 +166,27 @@ int main(int argc, char *argv[])
                           [&library](const auto &art) { return library.setArts(art); },
                           dataDir + QStringLiteral("/settings.toml"), nullptr, nullptr,
                           [&library] { return library.tagMappings(); });
+    SteamArtFetch steamArtFetch(
+        [&library](const QStringList &ids) {
+            const QSet<QString> wanted(ids.cbegin(), ids.cend());
+            const LibraryContent &content = library.store().snapshot().content;
+            QList<SteamArtFetch::Wanted> out;
+            for (const LookupGame &g : library.lookupGames()) {
+                const qint64 appId = GameId::steamAppId(g.id);
+                if (appId <= 0 || g.platform != kSteamPlatform || !wanted.contains(g.id))
+                    continue;
+                const QStringList skip = content.games.value(g.id).skipSteamArt;
+                QStringList kinds;
+                for (const QString &kind : {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo")}) {
+                    if (!g.art.contains(kind) && !skip.contains(kind))
+                        kinds.append(kind);
+                }
+                out.append({g.id, appId, kinds});
+            }
+            return out;
+        },
+        [&library](const auto &art) { return library.setArts(art); });
+    QObject::connect(&library.store(), &LibraryStore::gamesAdded, &steamArtFetch, &SteamArtFetch::add);
     QObject::connect(&library.store(), &LibraryStore::gamesAdded, &scanLookup, &ScanLookup::add);
     Backups::setup({dataDir, AppPaths::stateDir(), AppPaths::dataDirKey(dataDir),
                     [&library] {

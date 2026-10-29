@@ -6,6 +6,7 @@
 #include "metadatahttp.h"
 #include "metadatasettings.h"
 #include "scanlookup.h"
+#include "steamartfetch.h"
 #include "steamgriddb.h"
 #include "steamstore.h"
 
@@ -113,6 +114,7 @@ private slots:
     void bulkIncludeComplete();
     void bulkFetchedAhead();
     void bulkFetchedAheadBatches();
+    void steamArtFetch();
     void scanLookup();
     void metadataSettings();
     void idListModel();
@@ -2266,6 +2268,52 @@ void MetadataTest::idListModel()
     model.setItems({});
     QCOMPARE(model.count(), 0);
     QCOMPARE(reset.size(), 0);
+}
+
+void MetadataTest::steamArtFetch()
+{
+    BulkSetup s;
+    QSet<QString> filled;
+    SteamArtFetch fetch(
+        [&filled](const QStringList &ids) {
+            QList<SteamArtFetch::Wanted> out;
+            for (const QString &id : ids) {
+                QStringList kinds;
+                for (const QString &kind : {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo")}) {
+                    if (!filled.contains(id + u'/' + kind))
+                        kinds.append(kind);
+                }
+                out.append({id, id.mid(6).toLongLong(), kinds});
+            }
+            return out;
+        },
+        [&s, &filled](const QList<std::array<QString, 3>> &a) {
+            s.art += a;
+            for (const auto &r : a)
+                filled.insert(r[0] + u'/' + r[1]);
+            return QHash<QString, QString>();
+        },
+        &s.client);
+    QSignalSpy finished(&fetch, &SteamArtFetch::finished);
+
+    // Hades has art in the store; the other app has none and is skipped without a failure.
+    fetch.add({QStringLiteral("steam-1145360"), QStringLiteral("steam-99999999")});
+    QVERIFY(fetch.running());
+    QCOMPARE(fetch.progressTotal(), 2);
+    QTRY_COMPARE(finished.size(), 1);
+    QVERIFY(!fetch.running());
+    QCOMPARE(fetch.progressDone(), 2);
+    QCOMPARE(finished.first().at(0).toInt(), int(s.art.size()));
+    QVERIFY(!s.art.isEmpty());
+    for (const auto &r : std::as_const(s.art))
+        QCOMPARE(r[0], QStringLiteral("steam-1145360"));
+
+    // What is already there isn't fetched again.
+    s.art.clear();
+    fetch.add({QStringLiteral("steam-1145360")});
+    QCOMPARE(fetch.progressTotal(), 2);
+    QTest::qWait(50);
+    QVERIFY(s.art.isEmpty());
 }
 
 void MetadataTest::scanLookup()

@@ -28,6 +28,8 @@ struct Result
     QHash<qint64, SteamWebApp> web;
     QHash<QString, QString> names;
     bool active = false;
+    // App IDs the merge brought into the index.
+    QList<qint64> added;
 };
 
 Result merge(const Input &input);

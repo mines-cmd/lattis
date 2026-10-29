@@ -343,6 +343,7 @@ qt_add_qml_module(lattis
         src/metadata/idlistmodel.h src/metadata/idlistmodel.cpp
         src/metadata/bulklookup.h src/metadata/bulklookup.cpp
         src/metadata/scanlookup.h src/metadata/scanlookup.cpp
+        src/metadata/steamartfetch.h src/metadata/steamartfetch.cpp
         src/metadata/metadatasettings.h src/metadata/metadatasettings.cpp
         src/steam/vdf.h src/steam/vdf.cpp
         src/steam/steamlocate.h src/steam/steamlocate.cpp

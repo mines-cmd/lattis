@@ -53,6 +53,7 @@ struct ScanResult
 
     QList<IndexEntry> steamWrites;
     bool steamWebWrite = false;
+    QStringList steamWebAdded;
     bool steamChanged = false;
     QStringList steamArtCopied;
 

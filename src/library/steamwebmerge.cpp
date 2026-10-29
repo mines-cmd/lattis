@@ -149,6 +149,8 @@ Result merge(const Input &in)
         kept.append(e);
     }
     out.index = kept + added;
+    for (const IndexEntry &e : std::as_const(added))
+        out.added.append(e.appId);
 
     for (auto it = wanted.cbegin(); it != wanted.cend(); ++it) {
         SteamWebApp app;
