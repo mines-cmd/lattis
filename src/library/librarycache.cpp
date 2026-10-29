@@ -17,7 +17,7 @@ static QDataStream &operator<<(QDataStream &s, const GameFile &g)
 {
     return s << g.title << g.platform << g.description << qint32(g.year) << g.rating << g.tags << g.favorite << g.status
              << qint32(g.igdb) << qint32(g.steamgriddb) << qint32(g.playMinutes) << g.lastPlayed << g.added << g.hidden << g.emulator << g.rom << qint32(g.romLine) << g.args << g.launchOptions << g.proton << g.skipSteamArt
-             << g.exe << g.startDir << g.installDir << g.shortcut << g.installed << g.logoScale << g.logoPosition << g.logoOffsetX << g.logoOffsetY << g.logoScrim << g.logoScrimSide << g.logoScrimStrength << g.ratingSource << g.saveFolder << g.mediaFolders << g.sameAs;
+             << g.exe << g.startDir << g.installDir << g.shortcut << g.installed << g.logoScale << g.logoPosition << g.logoOffsetX << g.logoOffsetY << g.logoScrim << g.logoScrimSide << g.logoScrimStrength << g.ratingSource << g.saveFolder << g.mediaFolders << g.sameAs << qint32(g.steamApp);
 }
 
 static QDataStream &operator>>(QDataStream &s, GameFile &g)
@@ -27,13 +27,15 @@ static QDataStream &operator>>(QDataStream &s, GameFile &g)
     qint32 romLine = 0;
     qint32 igdb = -1;
     qint32 steamgriddb = -1;
+    qint32 steamApp = -1;
     s >> g.title >> g.platform >> g.description >> year >> g.rating >> g.tags >> g.favorite >> g.status >> igdb
         >> steamgriddb >> minutes
         >> g.lastPlayed >> g.added >> g.hidden >> g.emulator >> g.rom >> romLine >> g.args >> g.launchOptions >> g.proton >> g.skipSteamArt
-        >> g.exe >> g.startDir >> g.installDir >> g.shortcut >> g.installed >> g.logoScale >> g.logoPosition >> g.logoOffsetX >> g.logoOffsetY >> g.logoScrim >> g.logoScrimSide >> g.logoScrimStrength >> g.ratingSource >> g.saveFolder >> g.mediaFolders >> g.sameAs;
+        >> g.exe >> g.startDir >> g.installDir >> g.shortcut >> g.installed >> g.logoScale >> g.logoPosition >> g.logoOffsetX >> g.logoOffsetY >> g.logoScrim >> g.logoScrimSide >> g.logoScrimStrength >> g.ratingSource >> g.saveFolder >> g.mediaFolders >> g.sameAs >> steamApp;
     g.romLine = romLine;
     g.igdb = igdb;
     g.steamgriddb = steamgriddb;
+    g.steamApp = steamApp;
     g.year = year;
     g.playMinutes = minutes;
     return s;
