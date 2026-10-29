@@ -387,7 +387,14 @@ FocusScope {
                 Flickable {
                     id: dateFlick
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(contentHeight, Theme.gallery.listHeight)
+                    // Room left once the game section keeps its minimum; summed from parts, not from
+                    // gameSection.implicitHeight, which depends on this list's height.
+                    readonly property real room: flick.height - typeSection.implicitHeight - platformSection.implicitHeight
+                                                 - 3 * sections.spacing - dateSection.headerHeight - dateSection.spacing
+                                                 - dateSection.bodySpacing - gameSection.headerHeight - gameSection.spacing
+                                                 - gameSearch.implicitHeight - gameSearch.Layout.bottomMargin
+                                                 - gameSection.bodySpacing - Theme.gallery.listHeight
+                    Layout.preferredHeight: Math.min(contentHeight, Math.max(Theme.gallery.listHeight, room))
                     contentWidth: width
                     contentHeight: years.implicitHeight
                     clip: true
