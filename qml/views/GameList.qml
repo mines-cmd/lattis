@@ -128,8 +128,10 @@ Rectangle {
         const base = selectedIds()
         if ((modifiers & Qt.ShiftModifier) !== 0) {
             const from = anchorRow()
+            const fromId = Library.gameIdAt(from)
             list.currentIndex = row
             setSelection(idsBetween(from, row).concat(ctrl ? base : []))
+            anchorId = fromId
         } else if (ctrl && base.includes(id)) {
             if (base.length === 1)
                 return
@@ -154,8 +156,10 @@ Rectangle {
         if (to < 0)
             return
         const from = anchorRow()
+        const fromId = Library.gameIdAt(from)
         list.currentIndex = to
         setSelection(idsBetween(from, to))
+        anchorId = fromId
     }
 
     function neighborOutside(ids) {
