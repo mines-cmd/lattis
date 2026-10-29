@@ -182,6 +182,75 @@ ColumnLayout {
         }
     }
 
+    Loader {
+        id: signIn
+        active: false
+        sourceComponent: SteamSignInPopup { scrim: true }
+    }
+
+    SettingsCard {
+        id: wholeCard
+        panel: true
+        property bool open: false
+        opacity: root.steam.found && root.steam.enabled ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+
+        AbstractButton {
+            id: wholeToggle
+            Layout.fillWidth: true
+            implicitHeight: wholeHeader.implicitHeight
+            hoverEnabled: true
+            focusPolicy: Qt.StrongFocus
+            onClicked: wholeCard.open = !wholeCard.open
+
+            contentItem: RowLayout {
+                id: wholeHeader
+                spacing: Theme.layout.spacing
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Import your whole library")
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
+                }
+                SettingsNote { text: qsTr("optional") }
+                Icon {
+                    path: Icons.chevronRight
+                    size: Theme.controls.iconSize
+                    color: wholeToggle.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
+                    rotation: wholeCard.open ? 90 : 0
+                    Behavior on rotation { enabled: Motion.on; MotionNumber {} }
+                }
+            }
+            HoverHandler { cursorShape: Qt.PointingHandCursor }
+        }
+        Row {
+            visible: wholeCard.open
+            label: SteamLibrary.authState === "signed_in" ? qsTr("Signed in as %1").arg(SteamLibrary.accountName)
+                   : qsTr("Games you own and your Steam Family shares")
+            note: SteamLibrary.authState === "signed_in"
+                  ? qsTr("They're added to the library as not installed when you finish. Settings → Steam has the rest.")
+                  : qsTr("Every game on your account, installed or not, shows up in the library. Sign in by "
+                         + "scanning a QR code with the Steam app; Lattis never sees your password.")
+
+            SettingsButton {
+                visible: SteamLibrary.authState !== "signed_in"
+                text: qsTr("Sign in with Steam")
+                onClicked: {
+                    signIn.active = true
+                    signIn.item.ask()
+                }
+            }
+            SettingsButton {
+                visible: SteamLibrary.authState === "signed_in"
+                text: qsTr("Sign out")
+                danger: true
+                onClicked: SteamLibrary.signOut()
+            }
+        }
+    }
+
     SettingsCard {
         panel: true
         opacity: root.steam.found && root.tools.length > 0 ? 1 : 0

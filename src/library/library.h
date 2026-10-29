@@ -52,6 +52,8 @@ class Library : public QAbstractListModel
     Q_PROPERTY(QStringList tagFilter READ tagFilter WRITE setTagFilter NOTIFY filtersChanged)
     Q_PROPERTY(bool tagMatchAll READ tagMatchAll WRITE setTagMatchAll NOTIFY filtersChanged)
     Q_PROPERTY(QStringList statusFilter READ statusFilter WRITE setStatusFilter NOTIFY filtersChanged)
+    // "owned" and/or "family": only Steam games the account owns or borrows. Not saved: it lasts until the app quits.
+    Q_PROPERTY(QStringList steamFilter READ steamFilter WRITE setSteamFilter NOTIFY filtersChanged)
     Q_PROPERTY(QVariantList statuses READ statuses NOTIFY gamesChanged)
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY filtersChanged)
     Q_PROPERTY(bool filtersActive READ filtersActive NOTIFY filtersChanged)
@@ -133,6 +135,8 @@ public:
     void setTagMatchAll(bool all);
     QStringList statusFilter() const { return m_statusFilter; }
     void setStatusFilter(const QStringList &statuses);
+    QStringList steamFilter() const { return m_steamFilter; }
+    void setSteamFilter(const QStringList &kinds);
     QVariantList statuses() const;
     bool showHidden() const { return m_showHidden; }
     void setShowHidden(bool show);
@@ -414,6 +418,7 @@ private:
     QStringList m_tagFilter;
     bool m_tagMatchAll = false;
     QStringList m_statusFilter;
+    QStringList m_steamFilter;
     bool m_showHidden = false;
     int m_allMediaGeneration = 0;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;

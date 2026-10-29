@@ -19,7 +19,8 @@ QtObject {
 
     readonly property var chips: Object.assign({
         steam_waiting: qsTr("Steam changes waiting"),
-        steam_update: qsTr("Steam update")
+        steam_update: qsTr("Steam update"),
+        steam_family: qsTr("Steam Family")
     }, fields)
 
     readonly property var buttons: ({

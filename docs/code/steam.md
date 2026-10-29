@@ -186,7 +186,9 @@ The scan only reads Steam's files on disk. The games the account owns but has no
 
 The outcome (`Synced`, `NotConfigured`, `NoAccount`, `SignInExpired`, `NoGames`, `Failed`), `error()`, `lastFetch()` and `gameCount()` are for the settings page. A fetch that lost a part does not move `last_fetch`, so it is tried again at the next start. When the cache changed, the `changed` callback asks the library to scan again.
 
-**`LATTIS_STEAM_WEB_FIXTURES=<dir>`** answers every request from `<dir>/<Interface>-<Method>-<version>.json` (`IPlayerService-GetOwnedGames-v1.json`; a missing file is `{"response":{}}`) and uses an in-memory secret store, so a run never reaches the network or the keyring. A `signin.json` in it (`{"account_name": "…"}`) stands for a signed-in account.
+**`LATTIS_STEAM_WEB_FIXTURES=<dir>`** answers every request from `<dir>/<Interface>-<Method>-<version>.json` (`IPlayerService-GetOwnedGames-v1.json`; a missing file is `{"response":{}}`) and uses an in-memory secret store, so a run never reaches the network or the keyring. A `signin.json` in it (`{"account_name": "…"}`) stands for a signed-in account; with a `"state"` (`expired`, `again`, `private`) it shows that problem, `signed_out` means no account, and `"keyring": false` pretends there is no keyring. In this mode the QR popup shows a fake code for `https://s.team/q/1/1234567890123456789`.
+
+**`SteamLibrary`** (`steamlibrary.*`) is what QML binds to: `authState` (`signed_out`, `waiting`, `signed_in`; `expired` is a QR code that ran out), `accountName`, `qrPath` and `qrSize` (the code as SVG path data from `core/qrcode`, drawn in a `Shape`), `statusLine` ("N games · synced X ago", refreshed every minute), `messageKind`/`message` (`expired`, `again`, `private`, `empty`, `failed`), `keyringAvailable`, `hasKey`, `webKey`. `signIn()` starts the QR flow and syncs when it ends, unless the setup guide holds the fetch; `setWebKey()` writes `[steam] web_key` to `credentials.toml`. While the setup guide is open, `dailyCheck()` looks again after 60 s instead of waiting a day.
 
 The merge is described in [library.md](library.md#the-whole-steam-library).
 
@@ -196,6 +198,7 @@ The merge is described in [library.md](library.md#the-whole-steam-library).
 |---|---|
 | `steamwebapi.*` | `SteamWebApi`: request builders, parsers, `Cache` and its file |
 | `steamlibrarysync.*` | `SteamLibrarySync`: the daily and manual fetch of the whole library |
+| `steamlibrary.*` | `SteamLibrary`: QML singleton over the sync and the sign-in (state, QR, status line, messages, Sync now, Sign out, API key) |
 | `steamauth.*` | `SteamAuth`: the QR sign-in, the refresh token in `SecretStore`, access tokens; `parseToken()` |
 | `vdf.*` | `Vdf::Document`, `Node`; `parse()`, `setValue()`, `remove()`, `quoted()` |
 | `binaryvdf.*` | `BinaryVdf::Document`, `Node`; `parse()`, `write()` |

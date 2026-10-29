@@ -38,7 +38,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 
 | Key | Meaning |
 |---|---|
-| `chips` | The chips beside Launch, in order: `play_time`, `last_played`, `release_date`, `platform`, `status`, `install_size`, `rating`, `times_played`, `first_played`, `recent_play_time`, `date_added`, and the Steam chips `steam_waiting` and `steam_update`. Default `play_time last_played steam_waiting steam_update` |
+| `chips` | The chips beside Launch, in order: `play_time`, `last_played`, `release_date`, `platform`, `status`, `install_size`, `rating`, `times_played`, `first_played`, `recent_play_time`, `date_added`, and the Steam chips `steam_waiting`, `steam_update` and `steam_family` (Family, Shared by …). Default `play_time last_played steam_waiting steam_update` |
 | `buttons` | The icon buttons at the right of the action row, in order: `favorite`, `open_platform`, `folder`, `settings`, `save_folder`, `gallery` (opens the Gallery on the game), `menu` (⋯, opens the game's menu under it). `open_platform` is left out for Linux games, and `save_folder` for a game with no save folder (`GameRunner.saveFolder()`, looked up only for the shown game and only while the button is in the list). Default `favorite open_platform folder settings` |
 | `info_rows` | The info panel's rows, in order; the same fields as the chips without the Steam chips. Default `release_date rating status install_size platform`. `[]` hides the panel |
 | `sections` | What shows under the action row, in order: `description`, `tags`, `clips` (the Media row of a Steam game's Steam clips and screenshots). Default all three, in the order description, clips, tags |
@@ -117,6 +117,7 @@ The tests (`secretstore_test`) run a fake Secret Service on a private session bu
 | File | Responsibility |
 |---|---|
 | `apppaths.*` | Data, cache and state dir paths; the data dir key |
+| `qrcode.*` | `QrCode`: a QR encoder (byte mode, level M, versions 1–10); `encode()`, `toSvgPath()`, `selfCheck()` |
 | `secretstore.*` | `SecretStore`, `SecretServiceStore`, `MemorySecretStore`: one secret in the Secret Service or in memory |
 | `autostart.*` | XDG autostart entry: read, write, remove, the Exec line |
 | `general.*` | General QML singleton: `[general]` settings, autostart state |

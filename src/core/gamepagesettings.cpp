@@ -63,7 +63,7 @@ bool readNames(const toml::node &node, const QString &key, const QString &place,
 QStringList GamePageSettings::defaultChips()
 {
     return {QStringLiteral("play_time"), QStringLiteral("last_played"), QStringLiteral("steam_waiting"),
-            QStringLiteral("steam_update")};
+            QStringLiteral("steam_update"), QStringLiteral("steam_family")};
 }
 
 QStringList GamePageSettings::defaultButtons()
@@ -89,7 +89,8 @@ const QStringList &gamePageChoices(const QString &place)
     if (place == GamePage::sections)
         return sections;
     // The Steam chips carry their own actions, so they're chips only; the buttons are the action row's.
-    static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update")};
+    static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update"),
+                                                            QStringLiteral("steam_family")};
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
                                         QStringLiteral("save_folder"), QStringLiteral("gallery"),

@@ -14,7 +14,7 @@ Item {
     function focusSearch() {}
     function clearSearch() { return false }
 
-    signal message(string text)
+    signal message(string text, var link)
 
     readonly property var steam: Library.steam
 
@@ -25,6 +25,10 @@ Item {
     function reveal(item) {
         if (item === "shortcuts")
             openPicker()
+        else if (item === "signin")
+            Qt.callLater(openSignIn)
+        else if (item === "whole")
+            Qt.callLater(() => flick.contentY = Math.max(0, Math.min(wholeHeader.y, flick.contentHeight - flick.height)))
         else if (item === "queue")
             Qt.callLater(() => flick.contentY = Math.max(0, Math.min(queueHeader.y, flick.contentHeight - flick.height)))
     }
@@ -38,6 +42,17 @@ Item {
         id: picker
         active: false
         sourceComponent: ShortcutPicker {}
+    }
+
+    Loader {
+        id: signIn
+        active: false
+        sourceComponent: SteamSignInPopup {}
+    }
+
+    function openSignIn() {
+        signIn.active = true
+        signIn.item.ask()
     }
 
     function setDefault(id, on) {
@@ -202,6 +217,23 @@ Item {
                         Layout.fillWidth: true
                         text: qsTr("Play time, launch options and custom art are per account.")
                     }
+                }
+
+                SectionHeader {
+                    id: wholeHeader
+                    text: qsTr("Whole library")
+                }
+                SettingsNote {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Theme.layout.spacing
+                    text: qsTr("Also list the games you own and your Steam Family shares with you that aren't installed. "
+                               + "They show as not installed, and Install hands the download to Steam.")
+                }
+                SteamWholeLibrary {
+                    enabled: root.steam.enabled
+                    onFailed: text => error.text = text
+                    onMessage: (text, link) => root.message(text, link)
+                    onSignInRequested: root.openSignIn()
                 }
 
                 SectionHeader { visible: FfmpegTool.ownCopy; text: qsTr("ffmpeg") }

@@ -641,9 +641,11 @@ Item {
     readonly property bool steamWaitingShown: !Library.readOnly && Library.steamWaiting.length > 0
         && ((root.game.installed ?? true) || (root.game.steamUpdate ?? "none") === "none")
     readonly property bool steamUpdateShown: (root.game.steamUpdate ?? "none") !== "none"
+    readonly property bool steamFamilyShown: (root.game.steamOwnership ?? "") === "family"
     readonly property var shownChips: General.gamePageChips.filter(name =>
         name === "steam_waiting" ? steamWaitingShown
         : name === "steam_update" ? steamUpdateShown
+        : name === "steam_family" ? steamFamilyShown
         : gameFields.shown([name]).length > 0)
 
     // Another game's chips replace these at once: the switch has its own motion. A chip turned on or off,
@@ -723,6 +725,17 @@ Item {
             icon: General.chipsWithoutIcon.includes("steam_update") ? "" : Icons.download
             label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
             value: root.game.steamUpdateText ?? ""
+        }
+    }
+
+    Component {
+        id: steamFamilyChip
+
+        StatChip {
+            icon: General.chipsWithoutIcon.includes("steam_family") ? "" : Icons.steamLine
+            label: qsTr("Family")
+            value: (root.game.sharedBy ?? []).length > 0 ? qsTr("Shared by %1").arg(root.game.sharedBy.join(", "))
+                                                         : qsTr("Shared with you")
         }
     }
 
@@ -998,6 +1011,7 @@ Item {
 
                             sourceComponent: name === "steam_waiting" ? steamWaitingChip
                                            : name === "steam_update" ? steamUpdateChip
+                                           : name === "steam_family" ? steamFamilyChip
                                            : fieldChip
 
                             PopLeave { target: chip; leaving: chip.leaving }

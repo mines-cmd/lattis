@@ -430,6 +430,8 @@ The General, Game page, Library, Steam, Platforms, Emulators, Metadata, Appearan
 | `settings/ShortcutRow.qml` | One action row in the Keyboard page |
 | `settings/SteamAccountBox.qml` | Steam account selector in Steam settings |
 | `settings/SteamPage.qml` | Steam settings: import, presets, queued edits |
+| `settings/SteamWholeLibrary.qml` | The Whole library card: switch, account (Sign in / Sign out), API key, status, Sync now |
+| `settings/SteamSignInPopup.qml` | The QR sign-in popup (also used by the setup guide) |
 
 ## Reference
 

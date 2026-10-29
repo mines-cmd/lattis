@@ -79,7 +79,9 @@ Item {
         steam_waiting: { icon: Icons.informationLine,
                          hint: qsTr("Only while the game's edits wait for Steam to close, with Close Steam and apply, and Undo. Hidden, they still show on Properties and the Launch button.") },
         steam_update: { icon: Icons.download,
-                        hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") }
+                        hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") },
+        steam_family: { icon: Icons.steamLine,
+                        hint: qsTr("Only for a game a member of your Steam Family shares with you: who lends it") }
     }, fieldDefs)
 
     readonly property var buttonDefs: ({

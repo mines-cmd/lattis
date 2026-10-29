@@ -45,6 +45,8 @@ public:
     QString error() const { return m_error; }
     // Whether the refresh token is in the keyring, not only in memory.
     bool keptInKeyring() const { return m_keptInKeyring; }
+    // A Secret Service answers; without one the sign-in lasts until Lattis quits.
+    bool keyringAvailable() const { return m_store->persistent(); }
 
     static TokenClaims parseToken(const QByteArray &jwt);
     static SecretStore::Attributes itemAttributes(const QString &steamId);

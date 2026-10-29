@@ -224,6 +224,8 @@ qt_add_qml_module(lattis
         qml/settings/SteamPage.qml
         qml/settings/ShortcutPicker.qml
         qml/settings/SteamAccountBox.qml
+        qml/settings/SteamSignInPopup.qml
+        qml/settings/SteamWholeLibrary.qml
         qml/settings/BackupDialog.qml
         qml/settings/ImportDialog.qml
         qml/settings/InstallButton.qml
@@ -347,6 +349,8 @@ qt_add_qml_module(lattis
         src/steam/steamauth.h src/steam/steamauth.cpp
         src/steam/steamwebapi.h src/steam/steamwebapi.cpp
         src/steam/steamlibrarysync.h src/steam/steamlibrarysync.cpp
+        src/steam/steamlibrary.h src/steam/steamlibrary.cpp
+        src/core/qrcode.h src/core/qrcode.cpp
         src/library/steamwebmerge.h src/library/steamwebmerge.cpp
         src/core/secretstore.h src/core/secretstore.cpp
         src/steam/steampresets.h src/steam/steampresets.cpp

@@ -138,6 +138,9 @@ if(DBUS_RUN_SESSION)
                 $<TARGET_FILE:secretstore_test>)
     set_tests_properties(secretstore_test PROPERTIES ENVIRONMENT "LATTIS_TEST_PRIVATE_BUS=1;QT_QPA_PLATFORM=offscreen")
 endif()
+lattis_test(qrcode_test
+    SOURCES ../src/core/qrcode.h ../src/core/qrcode.cpp
+    LIBS Qt6::Core)
 lattis_test(steamauth_test
     SOURCES fakehttpserver.h
             ../src/steam/steamauth.h ../src/steam/steamauth.cpp

@@ -761,7 +761,7 @@ ApplicationWindow {
                     source: "SteamPage.qml"
                     Connections {
                         target: steam.item
-                        function onMessage(text) { root.showMessage(text) }
+                        function onMessage(text, link) { root.showMessage(text, link) }
                     }
                 }
             }

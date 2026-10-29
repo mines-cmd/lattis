@@ -60,6 +60,17 @@ public:
     QString accountName();
     bool signedIn();
 
+    QString dataDir() const { return m_setup.dataDir; }
+    QString fixturesDir() const { return m_setup.fixturesDir; }
+    // The setup guide is still open: nothing is fetched.
+    bool isHeld() const { return m_setup.held && m_setup.held(); }
+    // The sign-in object exists (it is made when first needed).
+    bool authStarted() const { return m_auth != nullptr; }
+    // The keyring was asked for the refresh token this run.
+    bool restoreTried() const { return m_restoreTried; }
+    // An account signed in here before; its refresh token may be in the keyring.
+    bool signedInBefore() const { return !m_signedInAs.isEmpty(); }
+
     // The switch in settings.toml ([steam] whole_library), on unless it says false.
     bool enabled() const;
 

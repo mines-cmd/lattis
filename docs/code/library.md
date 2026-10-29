@@ -375,6 +375,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `groupBy` | `"platform"`, `"status"` or `"none"` |
 | `sort`, `sortDescending` | `"title"`, `"last_played"` or `"play_time"`. Choosing an order sets its usual direction: A to Z, most recent first, most played first |
 | `installedOnly`, `favoritesOnly`, `tagFilter`, `tagMatchAll`, `statusFilter`, `showHidden` | The filters. `statusFilter` takes the ids from `statuses`, with `"none"` for games without a status |
+| `steamFilter` | `"owned"`, `"family"` or `""`: only the games of that Steam ownership. Session only; counts as an active filter, and Clear filters resets it. `steam` has `familyGames`, `ownedGames` and `wholeLibrary` for the panel |
 | `showSortValue` | Whether the rows show what they're sorted by (last played, play time); saved as `show_sort_value`. The theme's `list.show_sort_value` can turn it off too |
 | `filtersActive` | A filter differs from its default |
 | `notInstalledHidden` | How many games `installedOnly` is leaving out right now |

@@ -573,6 +573,13 @@ QVariantMap Library::buildSteam() const
         {QStringLiteral("shortcutsOk"), state.shortcutsOk},
         {QStringLiteral("presets"), presets},
         {QStringLiteral("games"), int(steamGames.size())},
+        {QStringLiteral("familyGames"),
+         int(std::count_if(steamGames.cbegin(), steamGames.cend(),
+                           [](const Game *g) { return g->steamOwnership == u"family"; }))},
+        {QStringLiteral("ownedGames"),
+         int(std::count_if(steamGames.cbegin(), steamGames.cend(),
+                           [](const Game *g) { return g->steamOwnership == u"owned"; }))},
+        {QStringLiteral("wholeLibrary"), m_steamSettings.wholeLibrary},
         {QStringLiteral("queue"), queue},
         {QStringLiteral("status"), status},
         {QStringLiteral("problem"), m_steamSettings.enabled && state.enabled
@@ -730,6 +737,9 @@ QString Library::setSteamValue(const QString &key, const QVariant &value)
         const qint64 id = user.toLongLong(&number);
         if (!user.isEmpty())
             formatted = number ? QString::number(id) : tomlString(user);
+    } else if (key == u"whole_library") {
+        if (!value.toBool())
+            formatted = QStringLiteral("false");
     } else if (key == u"default_proton") {
         if (const QString name = value.toString().trimmed(); !name.isEmpty())
             formatted = tomlString(name);
@@ -1338,6 +1348,19 @@ void Library::setStatusFilter(const QStringList &statuses)
     filtersEdited();
 }
 
+void Library::setSteamFilter(const QStringList &kinds)
+{
+    QStringList known;
+    for (const QString &kind : {QStringLiteral("owned"), QStringLiteral("family")}) {
+        if (kinds.contains(kind))
+            known.append(kind);
+    }
+    if (m_steamFilter == known)
+        return;
+    m_steamFilter = known;
+    filtersEdited();
+}
+
 QVariantList Library::statuses() const
 {
     QHash<QString, int> counts;
@@ -1375,13 +1398,13 @@ void Library::setShowSortValue(bool show)
 bool Library::filtersActive() const
 {
     return !m_installedOnly || m_favoritesOnly || m_showHidden || !effectiveTags().isEmpty()
-        || !m_statusFilter.isEmpty();
+        || !m_statusFilter.isEmpty() || !m_steamFilter.isEmpty();
 }
 
 void Library::clearFilters()
 {
     if (m_installedOnly && !m_favoritesOnly && m_tagFilter.isEmpty() && !m_tagMatchAll && m_statusFilter.isEmpty()
-        && !m_showHidden)
+        && m_steamFilter.isEmpty() && !m_showHidden)
         return;
     const bool platformsDiffer = m_showHidden;
     m_installedOnly = true;
@@ -1389,6 +1412,7 @@ void Library::clearFilters()
     m_tagFilter.clear();
     m_tagMatchAll = false;
     m_statusFilter.clear();
+    m_steamFilter.clear();
     m_showHidden = false;
     if (platformsDiffer && updatePlatforms())
         emit platformsChanged();
@@ -1464,6 +1488,8 @@ bool Library::passesFilters(const Game &g, const QStringList &tags) const
     if (m_favoritesOnly && !g.favorite)
         return false;
     if (!m_statusFilter.isEmpty() && !m_statusFilter.contains(statusOf(g)))
+        return false;
+    if (!m_steamFilter.isEmpty() && !m_steamFilter.contains(g.steamOwnership))
         return false;
     if (tags.isEmpty())
         return true;

@@ -62,10 +62,15 @@ SteamLibrarySync::SteamLibrarySync(const Setup &setup, QObject *parent) : QObjec
     connect(&m_daily, &QTimer::timeout, this, &SteamLibrarySync::dailyCheck);
     if (QFileInfo(QDir(m_setup.fixturesDir).filePath(QStringLiteral("signin.json"))).isFile()) {
         QFile file(QDir(m_setup.fixturesDir).filePath(QStringLiteral("signin.json")));
+        QJsonObject fixture;
         if (file.open(QIODevice::ReadOnly))
-            m_fixtureAccount = QJsonDocument::fromJson(file.readAll()).object().value(QLatin1String("account_name")).toString();
-        if (m_fixtureAccount.isEmpty())
-            m_fixtureAccount = QStringLiteral("fixture");
+            fixture = QJsonDocument::fromJson(file.readAll()).object();
+        // A "state" (expired, again) stands for a sign-in that isn't there: no account.
+        if (!fixture.contains(QLatin1String("state"))) {
+            m_fixtureAccount = fixture.value(QLatin1String("account_name")).toString();
+            if (m_fixtureAccount.isEmpty())
+                m_fixtureAccount = QStringLiteral("fixture");
+        }
     }
     readLastFetch();
     if (SteamWebApi::Cache cache; SteamWebApi::loadCache(SteamWebApi::cachePath(m_setup.cacheDir), &cache)) {
@@ -123,7 +128,10 @@ void SteamLibrarySync::startDaily(int delayMs)
 void SteamLibrarySync::dailyCheck()
 {
     qint64 wait = kDaySeconds;
-    if (enabled() && !(m_setup.held && m_setup.held())) {
+    // The setup guide is open: look again soon, so a sign-in made in it fetches once the guide closes.
+    if (isHeld())
+        wait = 60;
+    else if (enabled()) {
         readLastFetch();
         const qint64 age = m_lastFetch.isValid() ? m_lastFetch.secsTo(QDateTime::currentDateTimeUtc()) : kDaySeconds;
         if (age >= kDaySeconds)

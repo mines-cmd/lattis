@@ -45,6 +45,16 @@ MotionPopup {
         Library.statusFilter = statuses
     }
 
+    function toggleSteam(kind) {
+        const kinds = Library.steamFilter.slice()
+        const i = kinds.indexOf(kind)
+        if (i >= 0)
+            kinds.splice(i, 1)
+        else
+            kinds.push(kind)
+        Library.steamFilter = kinds
+    }
+
     width: General.railHidden ? Theme.filters.panelWidthRailHidden : Theme.filters.panelWidth
     readonly property int swellRoom: Math.min(4, Theme.filters.padding)
     padding: Theme.filters.padding - swellRoom
@@ -351,6 +361,33 @@ MotionPopup {
                             selected: Library.platformFilter === modelData.id
                             onClicked: Library.platformFilter = modelData.id
                         }
+                    }
+                }
+            }
+
+            ColumnLayout {
+                visible: Library.steam.familyGames > 0 || Library.steamFilter.length > 0
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacing
+
+                Heading { title: qsTr("Steam") }
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 3
+                    rowSpacing: 4
+                    columnSpacing: 4
+
+                    Segment {
+                        text: qsTr("Owned")
+                        detail: Library.steam.ownedGames
+                        selected: Library.steamFilter.includes("owned")
+                        onClicked: root.toggleSteam("owned")
+                    }
+                    Segment {
+                        text: qsTr("Family")
+                        detail: Library.steam.familyGames
+                        selected: Library.steamFilter.includes("family")
+                        onClicked: root.toggleSteam("family")
                     }
                 }
             }

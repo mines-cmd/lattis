@@ -10,10 +10,20 @@ To turn Steam off in Lattis, switch off **Import Steam games** on Settings → S
 
 ## Your Steam games
 
-- **Installed games are imported**, and games Steam installs or uninstalls later show up without a restart. The rest of your Steam library (games you own but haven't installed) isn't.
+- **Installed games are imported**, and games Steam installs or uninstalls later show up without a restart. The rest of your Steam library (games you own but haven't installed) isn't, unless you turn on **Whole library** (below).
 - **An uninstalled game stays in the library**, dimmed, with **Install** in place of Launch, which hands off to Steam. Its play time, tags and art stay. Hide it if you don't want to see it.
 - **Steam's tools aren't games:** Proton, the Steam Linux Runtimes and the like are left out.
 - **Art:** Steam's own art for the game (your custom art in Steam first) is copied into Lattis once. Art you choose yourself wins. Remove Steam's art in Properties and it isn't copied back; the art browser's Steam tab (see [Game info and art](game-info.md)) brings it back.
+
+## Whole library
+
+**Settings → Steam → Whole library** also lists the games you own but haven't installed, and the games your Steam Family shares with you. They show as not installed, and **Install** starts the download in Steam. Turn the switch off and they leave the library again (the toast has an Undo).
+
+- **Sign in with Steam** shows a QR code: scan it with the Steam app on your phone and approve. It adds a session to your account, like a browser's, and Lattis never sees your password. The sign-in is kept in your keyring (GNOME Keyring, KWallet); without one it lasts until Lattis quits. **Sign out** forgets it here; remove the session from Steam's authorized devices to end it there too.
+- **A Web API key** instead fetches the games you own (not the family's) without signing in. Your Steam profile's Game details must be public.
+- Games are fetched once a day and when you press **Sync now**; the line beside it says how many games and how long ago.
+- **Family games** have a **Family** chip on their page ("Shared by Sam"). The filter panel's **Steam** section shows only **Owned** or only **Family** games. The chip can be removed or moved like the others (Settings → Game page).
+- The setup guide's Steam step has the same sign-in, under **Import your whole library**.
 
 ## Updates
 
