@@ -9,6 +9,7 @@
 #include "core/oldname.h"
 #include "core/restart.h"
 #include "core/singleinstance.h"
+#include "core/uidriver.h"
 #include "core/windowstate.h"
 #include "input/actions.h"
 #include "launch/gamerunner.h"
@@ -297,6 +298,12 @@ int main(int argc, char *argv[])
             window->raise();
             window->requestActivate();
         });
+
+        if (const QString script = qEnvironmentVariable("LATTIS_UI_SCRIPT"); !script.isEmpty()) {
+            auto *driver = new UiDriver(window, script, window);
+            QObject::connect(window, &QQuickWindow::frameSwapped, driver, &UiDriver::start,
+                             Qt::SingleShotConnection);
+        }
 
         const QString screenshot = qEnvironmentVariable("LATTIS_SCREENSHOT");
         if (!screenshot.isEmpty()) {

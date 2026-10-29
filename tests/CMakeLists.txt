@@ -400,3 +400,11 @@ target_link_libraries(qmltest PRIVATE Qt6::QuickTest Qt6::Quick)
 
 add_test(NAME qmltest COMMAND qmltest)
 set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QML_XHR_ALLOW_FILE_READ=1")
+
+# Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
+if(PYTHON3)
+    foreach(area startup onboarding)
+        add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
+        set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600)
+    endforeach()
+endif()

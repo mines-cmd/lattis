@@ -289,6 +289,7 @@ qt_add_qml_module(lattis
         src/core/suggestion.h src/core/suggestion.cpp
         src/core/tomlsection.h src/core/tomlsection.cpp
         src/core/tomlpatch.h src/core/tomlpatch.cpp
+        src/core/uidriver.h src/core/uidriver.cpp
         src/core/windowstate.h src/core/windowstate.cpp
         src/input/actionschema.h src/input/actionschema.cpp
         src/input/actions.h src/input/actions.cpp
