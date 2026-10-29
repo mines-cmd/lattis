@@ -14,9 +14,19 @@ Item {
     implicitWidth: size
     implicitHeight: size
 
+    // Switching platforms reloads every row; without the delay the placeholder flashes for a frame or two.
+    property bool slowLoad: false
+
+    Timer {
+        interval: 150
+        running: icon.status === Image.Loading
+        onRunningChanged: if (running) root.slowLoad = false
+        onTriggered: root.slowLoad = true
+    }
+
     Rectangle {
         anchors.fill: parent
-        visible: icon.status !== Image.Ready || icon.opacity < 1
+        visible: icon.status === Image.Null || icon.status === Image.Error || (root.slowLoad && icon.opacity < 1)
         radius: Theme.list.iconRadius
         color: Qt.hsla(root.hue, Theme.list.iconPlaceholderSaturation, Theme.list.iconPlaceholderLightness, 1)
 
