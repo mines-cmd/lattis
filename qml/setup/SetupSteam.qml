@@ -182,12 +182,6 @@ ColumnLayout {
         }
     }
 
-    Loader {
-        id: signIn
-        active: false
-        sourceComponent: SteamSignInPopup { scrim: true }
-    }
-
     SettingsCard {
         id: wholeCard
         panel: true
@@ -316,6 +310,11 @@ ColumnLayout {
                 addNow: !root.pending
                 onChosen: appIds => root.guide.shortcutsToAdd = appIds
             }
+        }
+        Loader {
+            id: signIn
+            active: false
+            sourceComponent: SteamSignInPopup { scrim: true }
         }
         Loader {
             id: folderDialog
