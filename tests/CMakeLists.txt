@@ -49,10 +49,12 @@ set(STEAM_SOURCES
     ../src/steam/binaryvdf.h ../src/steam/binaryvdf.cpp
     ../src/steam/steamshortcuts.h ../src/steam/steamshortcuts.cpp
     ../src/steam/steamachievements.h ../src/steam/steamachievements.cpp
+    ../src/steam/steamwebapi.h ../src/steam/steamwebapi.cpp
     ${CORE_SOURCES}
 )
 set(LIBRARY_FILE_SOURCES
     ../src/library/libraryfiles.h ../src/library/libraryfiles.cpp
+    ../src/library/steamwebmerge.h ../src/library/steamwebmerge.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
@@ -141,6 +143,21 @@ lattis_test(steamauth_test
             ../src/steam/steamauth.h ../src/steam/steamauth.cpp
             ../src/core/secretstore.h ../src/core/secretstore.cpp
     LIBS Qt6::Network Qt6::DBus Qt6::Concurrent)
+lattis_test(steamlibrarysync_test OFFSCREEN
+    SOURCES fakehttpserver.h
+            ../src/steam/steamlibrarysync.h ../src/steam/steamlibrarysync.cpp
+            ../src/steam/steamwebapi.h ../src/steam/steamwebapi.cpp
+            ../src/steam/steamauth.h ../src/steam/steamauth.cpp
+            ../src/steam/steampresets.h ../src/steam/steampresets.cpp
+            ../src/launch/launchoptions.h ../src/launch/launchoptions.cpp
+            ../src/core/secretstore.h ../src/core/secretstore.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+            ../src/metadata/credentials.h ../src/metadata/credentials.cpp
+            ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
+            ../src/library/gameid.h ../src/library/gameid.cpp
+            ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ${CORE_SOURCES}
+    LIBS Qt6::Network Qt6::DBus Qt6::Concurrent Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(autostart_test OFFSCREEN
     SOURCES ../src/core/autostart.h ../src/core/autostart.cpp
     LIBS Qt6::Gui)
@@ -245,7 +262,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags rom emulators platforms version steamimport steamsync programs uninstall undo hero art media)
+foreach(area list edit tags rom emulators platforms version steamimport steamlibrary steamsync programs uninstall undo hero art media)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects

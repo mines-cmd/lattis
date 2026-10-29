@@ -6,6 +6,7 @@
 #include "romdbfetch.h"
 #include "romscan.h"
 #include "steamart.h"
+#include "steamwebmerge.h"
 #include "vdf.h"
 #include "tomlpatch.h"
 
@@ -619,6 +620,28 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         if (!s.files.value(kSteamIndex).ok)
             out.steamWrites.clear();
     }
+    if (s.steam.install.found() && !options.setup && !options.steamWebCache.isEmpty()) {
+        SteamWebApi::Cache cache;
+        SteamWebMerge::Input in;
+        in.index = s.content.steam;
+        in.steamId = s.steam.install.activeSteamId64();
+        in.wholeLibrary = steamSettings.value.wholeLibrary;
+        for (const SteamManifest &m : std::as_const(s.steam.manifests)) {
+            if (m.ok && m.app.installed)
+                in.installed.insert(m.app.appId);
+        }
+        // A cache of another account says nothing about this one.
+        if (in.wholeLibrary && !in.steamId.isEmpty() && SteamWebApi::loadCache(options.steamWebCache, &cache)
+            && cache.steamId == in.steamId)
+            in.cache = &cache;
+        SteamWebMerge::Result merged = SteamWebMerge::merge(in);
+        s.content.steam = merged.index;
+        s.steam.webActive = merged.active;
+        s.steam.web = std::move(merged.web);
+        s.steam.webNames = std::move(merged.names);
+        out.steamWebWrite = merged.changed && s.files.value(kSteamIndex).ok;
+        out.steamChanged = s.steam != previous.steam;
+    }
     out.changed = out.changed || out.steamChanged || s.content.steam != previous.content.steam;
 
     s.steamQueued.clear();
@@ -736,6 +759,7 @@ void LibraryStore::refresh()
     options.cacheDir = m_cacheDir;
     options.installs = m_installLocations;
     options.steam = m_steamLocations;
+    options.steamWebCache = m_steamWebCache;
     options.copySteamArt = !m_versionStatus.readOnly;
     if (!m_versionStatus.readOnly)
         options.steamSyncRecord = m_steamSyncRecord;
@@ -818,6 +842,8 @@ void LibraryStore::onScanFinished()
             m_snapshot = result.snapshot;
             writeRomIndexes(result.romWrites);
             writeSteamIndex(result.steamWrites);
+            if (result.steamWebWrite)
+                writeSteamWeb(result.snapshot.content.steam);
             addBuiltInPlatforms();
             ++m_generation;
             emit changed();
@@ -1001,6 +1027,20 @@ void LibraryStore::writeSteamIndex(const QList<IndexEntry> &added)
     });
     if (problem.isEmpty())
         qCInfo(lcSteam).noquote() << QStringLiteral("added %1 game(s) to %2").arg(added.size()).arg(kSteamIndex);
+    else
+        qCWarning(lcSteam).noquote() << problem;
+}
+
+void LibraryStore::writeSteamWeb(const QList<IndexEntry> &entries)
+{
+    if (m_versionStatus.readOnly)
+        return;
+    // Every entry again: a library of 1500 games would take minutes to patch one by one.
+    const QString problem = patchAndLoad(kSteamIndex, kSteamIndexHeader, [&](const QString &text) {
+        return TomlPatch::Result{true, formatSteamIndex(steamIndexPrefix(text), entries), {}};
+    });
+    if (problem.isEmpty())
+        qCInfo(lcSteam).noquote() << QStringLiteral("updated %1 from the Steam Web API (%2 games)").arg(kSteamIndex).arg(entries.size());
     else
         qCWarning(lcSteam).noquote() << problem;
 }

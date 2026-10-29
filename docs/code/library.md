@@ -220,12 +220,28 @@ A Steam, Proton or Linux game can list folders in `media_folders` (`~` for the h
 These three kinds of game share a lot of the library's code. Their file formats and the sync are covered in [steam.md](steam.md); here is how the library uses them.
 
 - **Steam games** come from the Steam import during each scan. New ones are added to `steam.toml` (with ids like `steam-<appid>`), and Steam's art is copied into `art/<id>/` unless the game file's `skip_steam_art` lists that kind. A Steam game is installed only when Steam says so. Its play time and last played are Steam's and read-only. A Steam game with an update has `steamUpdate` (`SteamUpdate`), `updateBytes` and `updatePercent` (`-1` unknown), set from its manifest; for a game whose update has started, `Library` overlays what `SteamDownloads` finds (running or paused, the percentage), see [steam.md](steam.md#updates). The selected game's map has `steamUpdate` (`"none"`, `"waiting"`, `"downloading"`, `"paused"`), `steamUpdateText` (the chip's value: "Waiting · 1.2 GB", "Downloading · 45%", "Paused · 45%") and `steamUpdatePercent`; `launchTip` says what the Launch button does in each state. The list model has an `updating` role.
+- **The whole Steam library** (owned games that are not installed, and a Steam Family's) is merged into `steam.toml` by the scan, from the Web API's cache (see [steam.md](steam.md#the-whole-library)); see [below](#the-whole-steam-library).
 - **Proton games** are Windows programs run through a non-Steam shortcut in Steam. Each has a game file with its `exe`, `install_dir` and `shortcut` app ID; `protonPrefix(shortcut)` is its prefix in the first Steam library's `compatdata`, or empty. "+" with an `.exe` creates one and queues its shortcut to be added to Steam. "Add existing shortcuts" brings in Steam's own shortcuts as Proton games. Play time comes from Steam's shortcut.
 - **Linux games** are native programs (an ELF, an AppImage or a script) the launcher runs directly. Each has a game file with its `exe`, and its play time is recorded like a ROM game's. Whether a file is a Linux program is decided by its content, not its name (`linuxProgramKind()`): an ELF for this computer's processor, an AppImage (marked in its ELF header), or a script starting with `#!`. A PS3 ELF, say, is not one. A program picked that isn't executable yet is made executable.
 
 For Proton and Linux games, the **install folder** is the program's folder, climbing out of generic ones like `bin`, `Binaries/Win64` or `x86_64` (never up to the home folder or `/`): `Game/Binaries/Win64/Game.exe` → `Game`. An AppImage is the whole game and often sits in a folder of other AppImages, so its files are the AppImage alone. Each scan stats the programs, and adds up an install folder's size once, while the folder stays the same.
 
 **Edits for Steam** (launch options, Proton versions, a Proton game's shortcut) can only be written while Steam is closed, since Steam overwrites its files on exit. The store queues them. `applySteamQueue()` writes them when Steam isn't running, and otherwise a `SteamExitWatch` writes them when Steam exits. The queue shows in the UI as `Library.steamWaiting`, and `undoSteamQueue()` drops an entry, leaving Steam as it is.
+
+### The whole Steam library
+
+An entry of `steam.toml` is either `<appid> = "Title"` or an inline table: `title`, `owned = true`, `shared_by = ["<steamid64>", …]` (a game both owned and shared is only `owned`), `from_api = true` for a game the manifests never had, and `type` (the store's type, 0 a game). `IndexEntry` has the same fields; the plain form is written when none is set. Ids stay `steam-<appid>`, so a game installed later is the same game, with its edits and history.
+
+When `ScanOptions::steamWebCache` is set (the store's `setSteamWebCache()`), `scanLibrary()` runs `SteamWebMerge::merge()` after the manifests' own additions, on the active user's SteamID64. A cache of another account is ignored. The merge:
+
+- adds an owned app only when its store type is a game (or the store has nothing on it); an owned app whose type is not yet known waits for the next fetch; a family app by `app_type` 2 or less. `SteamScan::isBlocked()` apps never come in. It does not offer the new games to the lookup (`gamesAdded`): that is its own step.
+- sets `owned` or `shared_by` on the entries the API lists, and leaves an installed game's entry as the manifests made it.
+- takes games away only for a part the cache has: an entry marked owned that the owned list no longer has, or a family one the shared list no longer has, is removed when it came from the API alone and is not installed, and otherwise just loses its marks. Its game file, art and history stay. An empty cache (or an empty part) removes nothing.
+- with `[steam] whole_library = false`, removes every `from_api` entry that isn't installed and clears the marks of the rest.
+
+The result is written back as a whole (`formatSteamIndex()`, keeping the comment lines above `[games]`), because patching 1500 lines one at a time re-parses the file for each. `SteamState` carries the merged extras for `buildLibrary()`: `web` (per app: install size, and the play time and last played the API gave, used only for a game this Steam has no record of), `webNames` (account id to name) and `webActive`. While `webActive`, a Steam game that has a game file but no index entry and no manifest is not shown.
+
+A game's map has `steamOwnership` (`"owned"`, `"family"` or `""`) and `sharedBy` (the lenders' names).
 
 ## Play history
 
@@ -323,6 +339,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `libraryundo.*` | `LibraryUndo`: the last change's files, kept to put back |
 | `librarycache.*` | `LibrarySnapshot`, the binary cache, file change detection |
 | `libraryfiles.*` | Parsers for `library.toml`, `platforms.toml`, `tags.toml`, `steam.toml`, ROM indexes; programs' files; `buildLibrary()` |
+| `steamwebmerge.*` | `SteamWebMerge::merge()`: the Web API's cache into the `steam.toml` entries |
 | `gamefile.*` | The game file: `GameFields` (the key table), parsing, validation, formatting |
 | `game.h` | `Game`: a game as the UI shows it |
 | `gameid.*` | Ids: slugs, validation, `steam-<appid>` |

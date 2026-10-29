@@ -32,6 +32,8 @@ struct ScanOptions
     bool steamHistory = false;
     bool steamStartup = false; // no scan has diffed it in this run: changes may span several sessions
     QString cacheDir;
+    // The Web API cache (steamwebapi.h); empty: the whole library is not merged.
+    QString steamWebCache;
 };
 
 struct ScanResult
@@ -50,6 +52,7 @@ struct ScanResult
     QStringList romAdded;
 
     QList<IndexEntry> steamWrites;
+    bool steamWebWrite = false;
     bool steamChanged = false;
     QStringList steamArtCopied;
 
@@ -116,6 +119,7 @@ public:
     void setSteamLocations(const SteamLocations &where) { m_steamLocations = where; }
     const SteamLocations &steamLocations() const { return m_steamLocations; }
     void setStateDir(const QString &stateDir);
+    void setSteamWebCache(const QString &path) { m_steamWebCache = path; }
 
     qint64 steamPid() const;
     QString applySteamQueue();
@@ -217,6 +221,7 @@ private:
     void saveCache();
     void writeRomIndexes(const QMap<QString, QList<RomEntry>> &indexes);
     void writeSteamIndex(const QList<IndexEntry> &added);
+    void writeSteamWeb(const QList<IndexEntry> &entries);
     bool addBuiltInPlatforms();
     void applySteamSync(const ScanResult &result);
     void updateSteamQueue();
@@ -236,6 +241,7 @@ private:
     InstallLocations m_installLocations = InstallLocations::system();
     SteamLocations m_steamLocations = SteamLocations::system();
     QString m_steamSyncRecord;
+    QString m_steamWebCache;
     QString m_steamBackupDir;
     std::optional<SteamSync::Record> m_steamRecord;
     QTimer m_steamApplyTimer;

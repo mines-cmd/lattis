@@ -15,6 +15,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Clips and screenshots](#clips-and-screenshots)
 - [Achievements](#achievements)
 - [Signing in to Steam](#signing-in-to-steam)
+- [The whole library](#the-whole-library)
 - [Files](#files)
 - [Reference](#reference)
 
@@ -159,10 +160,42 @@ The text is in Steam's language (`steamLanguage()` reads `language` from `regist
 
 `tests/steamauth_test.cpp` runs it against a fake server (`FakeHttpServer` with `x-eresult` headers) and an in-memory store.
 
+## The whole library
+
+The scan only reads Steam's files on disk. The games the account owns but has not installed, and the ones a Steam Family shares with it, come from Valve's Web API, fetched on their own schedule into a cache the scan merges.
+
+**`steamwebapi.*`** holds the request paths and the pure parsers, and the cache. A request is a path and a `QUrlQuery`; the access token or the key is in the query, so `MetadataHttp::steamWeb()` logs the path alone (and strips the query from Qt's error text). `Auth` is the access token of a sign-in, or the user's own Web API key (`key=`).
+
+| Request | Used for |
+|---|---|
+| `IPlayerService/GetOwnedGames/v1` (`include_appinfo`, `include_played_free_games`, `skip_unvetted_apps=0`) | the owned games, with play time and last played; works with a token or a key |
+| `IFamilyGroupsService/GetFamilyGroupForUser/v1`, `GetFamilyGroup/v1`, `ISteamUserOAuth/GetUserSummaries/v1` | the family group, its members and their names (token only) |
+| `IFamilyGroupsService/GetSharedLibraryApps/v1` (`include_own=1`) | the apps with `owner_steamids` and `app_type`; an app whose owners include the user is the user's own (token only) |
+| `IClientCommService/GetClientAppList/v1` (`fields=games`) | install sizes (`bytes_required`) (token only) |
+| `IStoreBrowseService/GetItems/v1` | each owned app's store `type`, 100 apps a request; 0 is a game, an app the store no longer shows is `kTypeNoStoreData` and counts as a game |
+
+`parseOwnedGames()` and `parseSharedApps()` return `ok` when the answer has the shape of one. An answer with no games (`{"response":{}}`, which is also what a private Game details profile gives) is `ok` with no items.
+
+**The cache** is `<cache dir>/steam-library.json` (`Cache`: `fetched`, the account, the owned games, the shared apps, the members' names, the sizes and the types). A part that failed or came back empty keeps what the fetch before it brought, so an outage, a privacy setting or an expired sign-in never empties the library; the types are asked once per app.
+
+**`SteamLibrarySync`** (`steamlibrarysync.*`) fetches. `startDaily()` (called from `main.cpp` right after the first frame) checks 10 s later, and then each time a day has passed since `last_fetch` in the state file (`steam-library-<data dir key>.toml`, which also holds `signed_in`, the account that signed in here); `syncNow()` fetches whatever the date says. Nothing is fetched while the setup guide is pending, when `[steam] whole_library` is `false`, or without an account. Which credentials it uses:
+
+1. A signed-in `SteamAuth` (access token from the refresh token): the owned games, the family and the sizes.
+2. Otherwise `steam_web_key` from `credentials.toml`: the owned games only.
+3. Neither: nothing is requested (`Outcome::NotConfigured`). The keyring is read only for an account that signed in here before (`signed_in`) or when `syncNow()` is pressed, so a user who never signs in is never shown an unlock prompt. A refresh token Steam refuses ends in `SignInExpired` (or in the key, if one is set).
+
+The outcome (`Synced`, `NotConfigured`, `NoAccount`, `SignInExpired`, `NoGames`, `Failed`), `error()`, `lastFetch()` and `gameCount()` are for the settings page. A fetch that lost a part does not move `last_fetch`, so it is tried again at the next start. When the cache changed, the `changed` callback asks the library to scan again.
+
+**`LATTIS_STEAM_WEB_FIXTURES=<dir>`** answers every request from `<dir>/<Interface>-<Method>-<version>.json` (`IPlayerService-GetOwnedGames-v1.json`; a missing file is `{"response":{}}`) and uses an in-memory secret store, so a run never reaches the network or the keyring. A `signin.json` in it (`{"account_name": "…"}`) stands for a signed-in account.
+
+The merge is described in [library.md](library.md#the-whole-steam-library).
+
 ## Files
 
 | File | Contents |
 |---|---|
+| `steamwebapi.*` | `SteamWebApi`: request builders, parsers, `Cache` and its file |
+| `steamlibrarysync.*` | `SteamLibrarySync`: the daily and manual fetch of the whole library |
 | `steamauth.*` | `SteamAuth`: the QR sign-in, the refresh token in `SecretStore`, access tokens; `parseToken()` |
 | `vdf.*` | `Vdf::Document`, `Node`; `parse()`, `setValue()`, `remove()`, `quoted()` |
 | `binaryvdf.*` | `BinaryVdf::Document`, `Node`; `parse()`, `write()` |

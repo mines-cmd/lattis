@@ -60,6 +60,9 @@ struct Game
     int updatePercent = -1; // -1: unknown
 
     QString installDir;
+    // "owned" or "family" for a Steam game the Web API listed, else empty; sharedBy is the lenders' names.
+    QString steamOwnership;
+    QStringList sharedBy;
     int steamPlayMinutes = -1; // -1: Steam has none (never played on this account)
     QDateTime steamLastPlayed;
 

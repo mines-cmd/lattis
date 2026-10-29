@@ -64,9 +64,24 @@ struct IndexEntry
 {
     qint64 appId = 0;
     QString title;
+    // What the Steam Web API said (see docs/code/library.md): owned by the user, or shared by these accounts.
+    bool owned = false;
+    QStringList sharedBy;
+    // The manifests never had the game: it came from the API alone.
+    bool fromApi = false;
+    // The store's type of the app; -1 when never asked.
+    int storeType = -1;
 
+    bool hasDetails() const { return owned || !sharedBy.isEmpty() || fromApi || storeType >= 0; }
     bool operator==(const IndexEntry &) const = default;
 };
+
+// An entry's value in steam.toml: just the title, or an inline table when it has more to say.
+QString formatSteamEntry(const IndexEntry &entry);
+// The whole file: `prefix` (the comment lines above [games]) then every entry by app ID.
+QString formatSteamIndex(const QString &prefix, QList<IndexEntry> entries);
+// The text of a steam.toml before its [games] section.
+QString steamIndexPrefix(const QString &text);
 
 struct LibraryInfo
 {

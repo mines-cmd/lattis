@@ -325,14 +325,89 @@ Parsed<QList<IndexEntry>> parseSteamIndex(const QByteArray &bytes, const QString
                                         .arg(at, toQString(appKey.str())));
                 continue;
             }
-            const auto *s = title.as_string();
-            if (!s) {
+            IndexEntry entry;
+            entry.appId = appId;
+            if (const auto *s = title.as_string()) {
+                entry.title = toQString(s->get());
+            } else if (const toml::table *fields = title.as_table()) {
+                const QStringList known = {QStringLiteral("title"), QStringLiteral("owned"), QStringLiteral("shared_by"),
+                                           QStringLiteral("from_api"), QStringLiteral("type")};
+                for (auto &&[fk, value] : *fields) {
+                    const QString name = toQString(fk.str());
+                    if (name == u"title") {
+                        if (const auto *t = value.as_string())
+                            entry.title = toQString(t->get());
+                        else
+                            out.warnings.append(QStringLiteral("%1: title must be text in quotes").arg(where(displayPath, value)));
+                    } else if (name == u"owned" || name == u"from_api") {
+                        if (const auto *b = value.as_boolean())
+                            (name == u"owned" ? entry.owned : entry.fromApi) = b->get();
+                        else
+                            out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(where(displayPath, value), name));
+                    } else if (name == u"shared_by") {
+                        const auto *list = value.as_array();
+                        if (!list || !list->is_homogeneous(toml::node_type::string)) {
+                            out.warnings.append(QStringLiteral("%1: shared_by must be a list of account IDs in quotes")
+                                                    .arg(where(displayPath, value)));
+                            continue;
+                        }
+                        for (const toml::node &id : *list)
+                            entry.sharedBy.append(toQString(id.as_string()->get()));
+                    } else if (name == u"type") {
+                        if (const auto *i = value.as_integer())
+                            entry.storeType = int(i->get());
+                        else
+                            out.warnings.append(QStringLiteral("%1: type must be a whole number").arg(where(displayPath, value)));
+                    } else {
+                        warnUnknownKey(&out.warnings, where(displayPath, value), name, known);
+                    }
+                }
+            } else {
                 out.warnings.append(QStringLiteral("%1: the title of %2 must be text in quotes; skipped").arg(at).arg(appId));
                 continue;
             }
-            out.value.append({appId, toQString(s->get())});
+            out.value.append(entry);
         }
     }
+    return out;
+}
+
+QString formatSteamEntry(const IndexEntry &entry)
+{
+    if (!entry.hasDetails())
+        return tomlString(entry.title);
+    QStringList parts = {QStringLiteral("title = ") + tomlString(entry.title)};
+    if (entry.owned)
+        parts.append(QStringLiteral("owned = true"));
+    if (!entry.sharedBy.isEmpty()) {
+        QStringList ids;
+        for (const QString &id : entry.sharedBy)
+            ids.append(tomlString(id));
+        parts.append(QStringLiteral("shared_by = [%1]").arg(ids.join(QStringLiteral(", "))));
+    }
+    if (entry.fromApi)
+        parts.append(QStringLiteral("from_api = true"));
+    if (entry.storeType >= 0)
+        parts.append(QStringLiteral("type = %1").arg(entry.storeType));
+    return QStringLiteral("{ %1 }").arg(parts.join(QStringLiteral(", ")));
+}
+
+QString steamIndexPrefix(const QString &text)
+{
+    static const QRegularExpression games(QStringLiteral("^\\[games\\]"), QRegularExpression::MultilineOption);
+    const auto m = games.match(text);
+    return m.hasMatch() ? text.left(m.capturedStart()) : text;
+}
+
+QString formatSteamIndex(const QString &prefix, QList<IndexEntry> entries)
+{
+    std::sort(entries.begin(), entries.end(), [](const IndexEntry &a, const IndexEntry &b) { return a.appId < b.appId; });
+    QString out = prefix;
+    if (!out.isEmpty() && !out.endsWith(u'\n'))
+        out += u'\n';
+    out += QStringLiteral("[games]\n");
+    for (const IndexEntry &e : std::as_const(entries))
+        out += QStringLiteral("%1 = %2\n").arg(e.appId).arg(formatSteamEntry(e));
     return out;
 }
 
@@ -713,10 +788,12 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
 
     QMap<QString, GameFile> merged;
     QHash<QString, RomFile> romPaths;
+    QHash<QString, const IndexEntry *> steamEntries;
     for (const IndexEntry &entry : content.steam) {
         // Recorded before the blocklist knew it (a new Steam runtime, say).
         if (SteamScan::isBlocked(entry.appId, entry.title))
             continue;
+        steamEntries.insert(GameId::forSteamApp(entry.appId), &entry);
         GameFile g;
         g.title = entry.title;
         g.platform = kSteamPlatform;
@@ -741,6 +818,11 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
     }
     for (auto it = content.games.cbegin(); it != content.games.cend(); ++it) {
         GameFile g = it.value();
+        // A game the Steam Web API stopped listing keeps its file but is gone from the list until it is back in
+        // the index or installed.
+        if (steam.webActive && g.platform == kSteamPlatform && !merged.contains(it.key())
+            && !steamApps.contains(it.key()))
+            continue;
         if (const auto base = merged.constFind(it.key()); base != merged.cend()) {
             if (g.title.isEmpty())
                 g.title = base->title;
@@ -868,6 +950,24 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
                 g.steamPlayMinutes = config->playMinutes;
                 if (config->lastPlayed > 0)
                     g.steamLastPlayed = QDateTime::fromSecsSinceEpoch(config->lastPlayed);
+            }
+            if (const auto web = steam.web.constFind(appId); web != steam.web.cend()) {
+                // The API's play time only for a game this machine's Steam has no record of.
+                if (g.steamPlayMinutes < 0 && web->playMinutes >= 0)
+                    g.steamPlayMinutes = web->playMinutes;
+                if (!g.steamLastPlayed.isValid() && web->lastPlayed > 0)
+                    g.steamLastPlayed = QDateTime::fromSecsSinceEpoch(web->lastPlayed);
+                if (!app.installed && web->sizeBytes > 0)
+                    g.sizeBytes = web->sizeBytes;
+            }
+            if (const auto entry = steamEntries.constFind(g.id); entry != steamEntries.cend()) {
+                if ((*entry)->owned) {
+                    g.steamOwnership = QStringLiteral("owned");
+                } else if (!(*entry)->sharedBy.isEmpty()) {
+                    g.steamOwnership = QStringLiteral("family");
+                    for (const QString &id : (*entry)->sharedBy)
+                        g.sharedBy.append(steam.webNames.value(id, id));
+                }
             }
             // Steam's, read-only: it keeps them for every game played on this account.
             g.playMinutes = qMax(g.steamPlayMinutes, 0);

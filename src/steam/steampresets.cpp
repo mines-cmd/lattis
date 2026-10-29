@@ -301,7 +301,7 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
     }
 
     const QStringList known = {QStringLiteral("enabled"), QStringLiteral("path"), QStringLiteral("user"),
-                               QStringLiteral("default_presets"), QStringLiteral("default_proton"),
+                               QStringLiteral("default_presets"), QStringLiteral("default_proton"), QStringLiteral("whole_library"),
                                QStringLiteral("presets")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
@@ -312,6 +312,11 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
                 out.value.enabled = b->get();
             else
                 out.warnings.append(QStringLiteral("%1: enabled must be true or false").arg(section.where(node)));
+        } else if (key == u"whole_library") {
+            if (const auto *b = node.as_boolean())
+                out.value.wholeLibrary = b->get();
+            else
+                out.warnings.append(QStringLiteral("%1: whole_library must be true or false").arg(section.where(node)));
         } else if (key == u"path") {
             if (const auto *s = node.as_string())
                 out.value.path = toQString(s->get());

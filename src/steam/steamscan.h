@@ -50,6 +50,16 @@ struct CompatTool
     bool operator==(const CompatTool &) const = default;
 };
 
+// What the Web API's cache knows of an app besides who has it.
+struct SteamWebApp
+{
+    qint64 sizeBytes = 0;
+    int playMinutes = -1;
+    qint64 lastPlayed = 0;
+
+    bool operator==(const SteamWebApp &) const = default;
+};
+
 struct SteamManifest
 {
     SteamStamp stamp;
@@ -90,6 +100,11 @@ struct SteamState
     QList<CompatTool> customTools;
 
     QStringList warnings;
+
+    // The whole-library cache was merged (set by the library scan, not by SteamScan::scan).
+    bool webActive = false;
+    QHash<qint64, SteamWebApp> web;
+    QHash<QString, QString> webNames;
 
     QList<SteamApp> games() const;
     QList<CompatTool> tools() const;

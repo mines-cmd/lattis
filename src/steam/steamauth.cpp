@@ -291,8 +291,12 @@ void SteamAuth::restore(const QString &steamId)
     inBackground<std::optional<QByteArray>>(
         this, [store, steamId] { return store->read(itemAttributes(steamId)); },
         [this, steamId](const std::optional<QByteArray> &secret) {
-            if (m_status != Status::SignedOut || !secret)
+            if (m_status != Status::SignedOut)
                 return;
+            if (!secret) {
+                emit restored();
+                return;
+            }
             const QString token = QString::fromUtf8(*secret);
             const TokenClaims claims = parseToken(*secret);
             m_steamId = steamId;

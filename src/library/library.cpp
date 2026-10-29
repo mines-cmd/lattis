@@ -2659,6 +2659,8 @@ QVariantMap Library::gameAt(int row) const
         {QStringLiteral("logoScrimStrength"), g.logoScrimStrength},
         {QStringLiteral("installed"), g.installed},
         {QStringLiteral("steamUpdate"), updateStateName(g.steamUpdate)},
+        {QStringLiteral("steamOwnership"), g.steamOwnership},
+        {QStringLiteral("sharedBy"), g.sharedBy},
         {QStringLiteral("steamUninstallable"), g.installed || g.steamUpdate == SteamUpdate::Downloading
                                                    || g.steamUpdate == SteamUpdate::Paused},
         {QStringLiteral("steamUpdateText"), updateText(g)},

@@ -18,8 +18,10 @@
 #include "library/romdbfetch.h"
 #include "library/uninstall.h"
 #include "metadata/bulklookup.h"
+#include "metadata/metadataclient.h"
 #include "metadata/scanlookup.h"
 #include "metadata/thumbnailcache.h"
+#include "steam/steamlibrarysync.h"
 #include "theme/theme.h"
 
 #include <QDir>
@@ -135,6 +137,23 @@ int main(int argc, char *argv[])
     library.store().setStateDir(AppPaths::stateDir());
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
+    library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir()));
+    {
+        SteamLibrarySync::Setup web;
+        web.dataDir = dataDir;
+        web.cacheDir = AppPaths::cacheDir();
+        web.stateFile = AppPaths::stateDir() + QStringLiteral("/steam-library-") + AppPaths::dataDirKey(dataDir)
+                        + QStringLiteral(".toml");
+        web.steamId = [&library] { return library.store().snapshot().steam.install.activeSteamId64(); };
+        web.held = [&library] { return library.setupPending(); };
+        web.http = [] { return MetadataClient::instance()->http(); };
+        web.changed = [&library] { library.store().refresh(); };
+        web.fixturesDir = qEnvironmentVariable("LATTIS_STEAM_WEB_FIXTURES");
+        // A fixture run never reaches the real keyring.
+        if (!web.fixturesDir.isEmpty())
+            web.secrets = std::make_shared<MemorySecretStore>();
+        SteamLibrarySync::setup(web);
+    }
     WindowState windowState(AppPaths::stateDir(), AppPaths::dataDirKey(dataDir));
 
     BulkLookup::setLibrary([&library] { return library.lookupGames(); },
@@ -242,6 +261,7 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(0, &general, &General::refreshAutostart);
                 // Not before the first frame, and its own 10 s after it.
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
+                QTimer::singleShot(0, [] { SteamLibrarySync::instance()->startDaily(); });
                 if (!instance.listen())
                     qWarning() << "can't listen for other copies of the app starting";
             },

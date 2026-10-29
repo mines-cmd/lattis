@@ -33,6 +33,15 @@ struct SteamInstall
 
     bool found() const { return kind != Kind::None; }
     QString userDataDir() const;
+    // The active user's SteamID64, or empty.
+    QString activeSteamId64() const
+    {
+        for (const SteamUser &u : users) {
+            if (u.accountId == userId)
+                return u.steamId64;
+        }
+        return {};
+    }
 
     bool operator==(const SteamInstall &) const = default;
 };

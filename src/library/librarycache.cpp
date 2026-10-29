@@ -67,12 +67,15 @@ static QDataStream &operator>>(QDataStream &s, TagDef &t)
 
 static QDataStream &operator<<(QDataStream &s, const IndexEntry &e)
 {
-    return s << e.appId << e.title;
+    return s << e.appId << e.title << e.owned << e.sharedBy << e.fromApi << qint32(e.storeType);
 }
 
 static QDataStream &operator>>(QDataStream &s, IndexEntry &e)
 {
-    return s >> e.appId >> e.title;
+    qint32 type = -1;
+    s >> e.appId >> e.title >> e.owned >> e.sharedBy >> e.fromApi >> type;
+    e.storeType = type;
+    return s;
 }
 
 static QDataStream &operator<<(QDataStream &s, const RomEntry &e)
@@ -217,13 +220,27 @@ static QDataStream &operator>>(QDataStream &s, SteamUser &u)
     return s >> u.accountId >> u.steamId64 >> u.personaName >> u.accountName >> u.mostRecent >> u.timestamp;
 }
 
+static QDataStream &operator<<(QDataStream &s, const SteamWebApp &a)
+{
+    return s << a.sizeBytes << qint32(a.playMinutes) << a.lastPlayed;
+}
+
+static QDataStream &operator>>(QDataStream &s, SteamWebApp &a)
+{
+    qint32 minutes = -1;
+    s >> a.sizeBytes >> minutes >> a.lastPlayed;
+    a.playMinutes = minutes;
+    return s;
+}
+
 static QDataStream &operator<<(QDataStream &s, const SteamState &t)
 {
     return s << t.enabled << qint32(t.install.kind) << t.install.root << t.install.pathMissing << t.install.users
              << t.install.userId << t.install.userMissing << t.libraryFoldersStamp << t.libraries << t.manifests
              << t.localConfigPath << t.localConfigStamp << t.apps << t.localConfigOk << t.shortcutsPath
              << t.shortcutsStamp << t.shortcuts << t.shortcutsOk << t.configStamp << t.configOk
-             << t.compatTools << t.toolDirs << t.toolFiles << t.customTools << t.warnings;
+             << t.compatTools << t.toolDirs << t.toolFiles << t.customTools << t.warnings << t.webActive << t.web
+             << t.webNames;
 }
 
 static QDataStream &operator>>(QDataStream &s, SteamState &t)
@@ -233,7 +250,7 @@ static QDataStream &operator>>(QDataStream &s, SteamState &t)
         >> t.install.userMissing >> t.libraryFoldersStamp >> t.libraries >> t.manifests >> t.localConfigPath
         >> t.localConfigStamp >> t.apps >> t.localConfigOk >> t.shortcutsPath >> t.shortcutsStamp >> t.shortcuts
         >> t.shortcutsOk >> t.configStamp >> t.configOk >> t.compatTools
-        >> t.toolDirs >> t.toolFiles >> t.customTools >> t.warnings;
+        >> t.toolDirs >> t.toolFiles >> t.customTools >> t.warnings >> t.webActive >> t.web >> t.webNames;
     t.install.kind = SteamInstall::Kind(kind);
     return s;
 }

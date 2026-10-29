@@ -27,6 +27,7 @@ struct MetadataEndpoints
     QUrl steamGridDb = QUrl(QStringLiteral("https://www.steamgriddb.com/api/v2"));
     QUrl steamStore = QUrl(QStringLiteral("https://api.steampowered.com"));
     QUrl steamStoreSearch = QUrl(QStringLiteral("https://store.steampowered.com"));
+    QUrl steamWeb = QUrl(QStringLiteral("https://api.steampowered.com"));
 };
 
 struct MetadataReply
@@ -56,6 +57,7 @@ public:
     void steamGridDb(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void steamStore(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void steamStoreSearch(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
+    void steamWeb(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void download(const QUrl &url, const QString &fileName, QObject *context,
                   std::function<void(const QString &path, const QString &error)> done);
     QString downloadsDir() const;
@@ -66,6 +68,7 @@ public:
 
     void setFixturesDir(const QString &dir) { m_fixturesDir = dir; }
     bool usesFixtures() const { return !m_fixturesDir.isEmpty(); }
+    void setSteamWebFixturesDir(const QString &dir) { m_steamWebFixturesDir = dir; }
     QUrl placeholder(const QUrl &url, const QString &kind);
 
     void setTimeout(int ms) { m_timeoutMs = ms; }
@@ -101,6 +104,7 @@ private:
 
     QString m_cacheDir;
     QString m_fixturesDir;
+    QString m_steamWebFixturesDir;
     MetadataEndpoints m_endpoints;
     Credentials m_credentials;
     QNetworkAccessManager *m_network = nullptr;

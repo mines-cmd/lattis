@@ -123,10 +123,13 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
             if (parseError.error != QJsonParseError::NoError)
                 out.error = tr("%1 sent an answer the launcher couldn't read").arg(name);
         }
-        // The path only: a URL's query could hold a key.
-        if (!out.ok())
-            qCWarning(lcMetadata).noquote() << reply->url().path() << out.status << reply->errorString() << "→"
-                                            << out.error;
+        // The path only: a URL's query could hold a key, and Qt's error text quotes the whole URL.
+        if (!out.ok()) {
+            QString detail = reply->errorString();
+            if (const QString query = reply->url().query(QUrl::FullyEncoded); !query.isEmpty())
+                detail.remove(query);
+            qCWarning(lcMetadata).noquote() << reply->url().path() << out.status << detail << "→" << out.error;
+        }
         if (context)
             done(out);
     });
@@ -360,6 +363,26 @@ void MetadataHttp::steamStoreSearch(const QString &path, const QUrlQuery &query,
     QUrl url = m_endpoints.steamStoreSearch;
     url.setPath(url.path() + path, QUrl::TolerantMode);
     url.setQuery(query);
+    send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
+}
+
+void MetadataHttp::steamWeb(const QString &path, const QUrlQuery &query, QObject *context, Callback done)
+{
+    if (!m_steamWebFixturesDir.isEmpty()) {
+        // One file per method, whatever the arguments: <Interface>-<Method>-<version>.json.
+        QString name = path;
+        name.remove(QRegularExpression(QStringLiteral("^/+|/+$"))).replace(u'/', u'-');
+        QByteArray body = R"({"response": {}})";
+        if (QFile file(QDir(m_steamWebFixturesDir).filePath(name + QStringLiteral(".json"))); file.open(QIODevice::ReadOnly))
+            body = file.readAll();
+        const QJsonDocument json = QJsonDocument::fromJson(body);
+        QTimer::singleShot(0, context, [json, done = std::move(done)] { done({json, {}, 200}); });
+        return;
+    }
+    QUrl url = m_endpoints.steamWeb;
+    url.setPath(url.path() + path, QUrl::TolerantMode);
+    url.setQuery(query);
+    // The query holds the access token or the key: send() logs the path only.
     send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
 }
 

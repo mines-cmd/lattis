@@ -345,6 +345,9 @@ qt_add_qml_module(lattis
         src/steam/vdf.h src/steam/vdf.cpp
         src/steam/steamlocate.h src/steam/steamlocate.cpp
         src/steam/steamauth.h src/steam/steamauth.cpp
+        src/steam/steamwebapi.h src/steam/steamwebapi.cpp
+        src/steam/steamlibrarysync.h src/steam/steamlibrarysync.cpp
+        src/library/steamwebmerge.h src/library/steamwebmerge.cpp
         src/core/secretstore.h src/core/secretstore.cpp
         src/steam/steampresets.h src/steam/steampresets.cpp
         src/steam/steamscan.h src/steam/steamscan.cpp
