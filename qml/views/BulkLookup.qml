@@ -143,14 +143,24 @@ ApplicationWindow {
         return Math.max(0, Math.floor(free * parts / 6.6))
     }
 
-    function missingChips(keys) {
-        const fields = { description: qsTr("Description"), year: qsTr("Year"), rating: qsTr("Rating") }
-        const kinds = { cover: qsTr("Cover"), hero: qsTr("Hero"), logo: qsTr("Logo"), icon: qsTr("Icon") }
-        const chips = keys.filter(k => fields[k] !== undefined).map(k => ({ text: fields[k], category: k }))
-        const art = keys.filter(k => kinds[k] !== undefined).map(k => kinds[k])
-        if (art.length > 0)
-            chips.push({ text: qsTr("Art: %1").arg(art.join(", ")), category: "art" })
+    readonly property var fieldNames: ({ description: qsTr("Description"), year: qsTr("Year"), rating: qsTr("Rating") })
+    readonly property var kindNames: ({ cover: qsTr("Cover"), hero: qsTr("Hero"), logo: qsTr("Logo"), icon: qsTr("Icon") })
+
+    // Marked ones (no data in the sources) come after the rest, struck through.
+    function missingChips(keys, marked) {
+        const chips = []
+        for (const unavailable of [false, true]) {
+            const own = keys.filter(k => marked.includes(k) === unavailable)
+            for (const k of own.filter(k => fieldNames[k] !== undefined))
+                chips.push({ text: fieldNames[k], category: k, unavailable: unavailable })
+            const art = own.filter(k => kindNames[k] !== undefined).map(k => kindNames[k])
+            if (art.length > 0)
+                chips.push({ text: qsTr("Art: %1").arg(art.join(", ")), category: "art", unavailable: unavailable })
+        }
         return chips
+    }
+    function keyNames(keys) {
+        return keys.map(k => fieldNames[k] ?? kindNames[k] ?? k).join(", ")
     }
 
     function artSteps() {
@@ -942,6 +952,18 @@ ApplicationWindow {
                                         dimmed: games === 0
                                         onClicked: lookupModel.includeNotOnIgdb = !checked
                                     }
+                                    BulkOption {
+                                        readonly property int games: lookupModel.unavailableCount
+                                        Layout.fillWidth: true
+                                        text: qsTr("No data in sources")
+                                        checked: lookupModel.includeUnavailable
+                                        count: String(games)
+                                        dimmed: games === 0
+                                        onClicked: lookupModel.includeUnavailable = !checked
+                                        ToolTip.visible: hovered
+                                        ToolTip.delay: Theme.tooltip.delay
+                                        ToolTip.text: qsTr("Games whose missing info IGDB and SteamGridDB have nothing for")
+                                    }
                                 }
 
                                 ColumnLayout {
@@ -1194,11 +1216,12 @@ ApplicationWindow {
                                         spacing: Theme.layout.spacing / 2
 
                                         Repeater {
-                                            model: root.missingChips(gameRow.modelData.missing)
+                                            model: root.missingChips(gameRow.modelData.missing, gameRow.modelData.unavailable)
                                             Rectangle {
                                                 required property var modelData
-                                                readonly property bool unwanted: !lookupModel.includeComplete
-                                                                                 && !lookupModel.missing.includes(modelData.category)
+                                                readonly property bool unwanted: modelData.unavailable
+                                                                                 || (!lookupModel.includeComplete
+                                                                                     && !lookupModel.missing.includes(modelData.category))
                                                 width: Math.min(implicitWidth, chipFlow.width)
                                                 implicitWidth: chipLabel.implicitWidth + 2 * Theme.layout.spacing
                                                 implicitHeight: chipLabel.implicitHeight + Theme.layout.spacing
@@ -1214,7 +1237,12 @@ ApplicationWindow {
                                                     text: parent.modelData.text
                                                     elide: Text.ElideRight
                                                     font.pixelSize: Theme.font.size - 1
+                                                    font.strikeout: parent.modelData.unavailable
                                                 }
+                                                HoverHandler { id: chipHover }
+                                                ToolTip.visible: modelData.unavailable && chipHover.hovered
+                                                ToolTip.delay: Theme.tooltip.delay
+                                                ToolTip.text: qsTr("No data in IGDB or SteamGridDB")
                                             }
                                         }
                                         Muted {
@@ -1281,6 +1309,19 @@ ApplicationWindow {
                         Layout.preferredWidth: 1
                         Layout.preferredHeight: Theme.settingsWindow.toolbarHeight / 2
                         color: Theme.controls.inputBorder
+                    }
+                    SettingsButton {
+                        implicitHeight: Theme.controls.buttonHeight
+                        text: lookupModel.includeUnavailable ? qsTr("Unmark") : qsTr("Mark as no data")
+                        tip: lookupModel.includeUnavailable ? qsTr("Look for the checked games' missing info again")
+                                                            : qsTr("IGDB and SteamGridDB have nothing for the checked games' missing info: hide them until No data in sources is on")
+                        enabled: lookupModel.checkedCount > 0
+                        onClicked: {
+                            const marked = !lookupModel.includeUnavailable
+                            const games = lookupModel.markCheckedUnavailable(marked)
+                            appliedLabel.text = marked ? (games === 1 ? qsTr("1 game marked as no data.") : qsTr("%1 games marked as no data.").arg(games))
+                                                       : (games === 1 ? qsTr("1 game unmarked.") : qsTr("%1 games unmarked.").arg(games))
+                        }
                     }
                     SettingsButton {
                         visible: lookupModel.resultModel.count > 0
@@ -1588,6 +1629,13 @@ ApplicationWindow {
                                                         onClicked: lookupModel.markNotOnIgdb(result.r.id)
                                                     }
                                                 }
+                                            }
+
+                                            Muted {
+                                                visible: result.r.unavailable.length > 0
+                                                Layout.fillWidth: true
+                                                wrapMode: Text.WordWrap
+                                                text: qsTr("Nothing in IGDB or SteamGridDB for %1; Apply marks it as no data.").arg(root.keyNames(result.r.unavailable))
                                             }
 
                                             SectionCard {

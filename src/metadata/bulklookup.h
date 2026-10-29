@@ -31,11 +31,13 @@ class BulkLookup : public QObject
     Q_PROPERTY(QStringList allTags READ allTags NOTIFY gamesChanged)
     Q_PROPERTY(QVariantMap tagCounts READ tagCounts NOTIFY gamesChanged)
     Q_PROPERTY(int notOnIgdbCount READ notOnIgdbCount NOTIFY gamesChanged)
+    Q_PROPERTY(int unavailableCount READ unavailableCount NOTIFY gamesChanged)
     Q_PROPERTY(QString platform READ platform WRITE setPlatform NOTIFY filtersChanged)
     Q_PROPERTY(QStringList missing READ missing WRITE setMissing NOTIFY filtersChanged)
     Q_PROPERTY(QStringList tags READ tags WRITE setTags NOTIFY filtersChanged)
     Q_PROPERTY(QString search READ search WRITE setSearch NOTIFY filtersChanged)
     Q_PROPERTY(bool includeNotOnIgdb READ includeNotOnIgdb WRITE setIncludeNotOnIgdb NOTIFY filtersChanged)
+    Q_PROPERTY(bool includeUnavailable READ includeUnavailable WRITE setIncludeUnavailable NOTIFY filtersChanged)
     Q_PROPERTY(bool replaceExisting READ replaceExisting WRITE setReplaceExisting NOTIFY filtersChanged)
     Q_PROPERTY(bool includeComplete READ includeComplete WRITE setIncludeComplete NOTIFY filtersChanged)
     Q_PROPERTY(bool suggestTags READ suggestTags WRITE setSuggestTags NOTIFY filtersChanged)
@@ -73,6 +75,7 @@ public:
     QStringList allTags() const;
     QVariantMap tagCounts() const { return m_tagCounts; }
     int notOnIgdbCount() const { return m_notOnIgdbCount; }
+    int unavailableCount() const { return m_unavailableCount; }
     QString platform() const { return m_platform; }
     void setPlatform(const QString &platform);
     QStringList missing() const { return m_missing; }
@@ -83,6 +86,8 @@ public:
     void setSearch(const QString &search);
     bool includeNotOnIgdb() const { return m_includeNotOnIgdb; }
     void setIncludeNotOnIgdb(bool include);
+    bool includeUnavailable() const { return m_includeUnavailable; }
+    void setIncludeUnavailable(bool include);
     bool replaceExisting() const { return m_replaceExisting; }
     void setReplaceExisting(bool replace);
     bool includeComplete() const { return m_includeComplete; }
@@ -108,6 +113,7 @@ public:
     Q_INVOKABLE void setChecked(const QString &id, bool checked);
     Q_INVOKABLE void setAllChecked(bool checked);
     Q_INVOKABLE void clearFilters();
+    Q_INVOKABLE int markCheckedUnavailable(bool marked);
 
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
@@ -169,6 +175,7 @@ private:
         int steamgriddb = 0;
         int steamApp = 0;
         int pending = 0;
+        bool artFailed = false; // so SteamGridDB isn't taken to have none
         QString applyError;
     };
     enum class Step { Lookup, FindArt, ArtChoices, Download, Prefetch };
@@ -180,10 +187,12 @@ private:
     };
 
     void refilter();
-    enum Section { PlatformSection = 1, TagsSection = 2, NotOnIgdbSection = 4 };
+    enum Section { PlatformSection = 1, TagsSection = 2, NotOnIgdbSection = 4, UnavailableSection = 8 };
     bool listed(const LookupGame &game) const;
     bool matches(const LookupGame &game, int skip) const;
     bool shown(const LookupGame &game) const;
+    QStringList wanted(const LookupGame &game, int skip = 0) const;
+    static QStringList newlyUnavailable(const Row &row);
     QVariantList resultList(const QString &state) const;
     static QString stateName(State state);
     Row *row(const QString &id);
@@ -216,6 +225,7 @@ private:
     QHash<QString, int> m_platformCounts;
     QVariantMap m_tagCounts;
     int m_notOnIgdbCount = 0;
+    int m_unavailableCount = 0;
     QString m_resultFilter;
     IdListModel m_gameModel;
     IdListModel m_resultModel;
@@ -231,6 +241,7 @@ private:
     QStringList m_tags;
     QString m_search;
     bool m_includeNotOnIgdb = false;
+    bool m_includeUnavailable = false;
     bool m_replaceExisting = false;
     bool m_suggestTags = true;
     bool m_includeComplete = false;

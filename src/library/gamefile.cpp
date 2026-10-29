@@ -37,6 +37,7 @@ constexpr Field kFields[] = {
     {"igdb", Integer, 0, 2147483647, "", "The game's IGDB id, set when a lookup matches it; 0 = not on IGDB, so bulk lookups skip it"},
     {"steamgriddb", Integer, 0, 2147483647, "", "The game's SteamGridDB id, set when its art is looked up; 0 = not on SteamGridDB"},
     {"steam_app", Integer, 0, 2147483647, "", "The game's Steam app id, set when a lookup finds it on IGDB; 0 or not set = not known. Steam games don't have it"},
+    {"unavailable", StringList, 0, 0, "[]", "What a lookup found nothing for on IGDB or SteamGridDB (description, year, rating, cover, hero, logo, icon), so Look up missing info leaves it out unless No data in sources is on; set by a lookup or Mark as no data, removed when a value is found"},
     {"play_minutes", Integer, 0, 2147483647, "0", "Total play time in minutes"},
     {"last_played", DateTime, 0, 0, "", "When the last session ended, with its UTC offset"},
     {"added", Date, 0, 0, "", "When the game was added to the library"},
@@ -344,6 +345,8 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.steamgriddb = value.toInt();
     else if (key == QLatin1String("steam_app"))
         game.steamApp = value.toInt();
+    else if (key == QLatin1String("unavailable"))
+        game.unavailable = value.toStringList();
     else if (key == QLatin1String("play_minutes"))
         game.playMinutes = value.toInt();
     else if (key == QLatin1String("last_played"))

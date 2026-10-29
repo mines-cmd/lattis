@@ -3020,6 +3020,7 @@ QList<LookupGame> Library::lookupGames() const
         l.steamgriddb = file.steamgriddb;
         l.steamAppId = g.platform == kSteamPlatform ? GameId::steamAppId(g.id) : 0;
         l.steamApp = g.platform == kSteamPlatform ? 0 : qMax(file.steamApp, 0);
+        l.unavailable = file.unavailable;
         for (const QVariant &id : igdbPlatformIds(g.platform))
             l.igdbPlatforms.append(id.toInt());
         out.append(l);

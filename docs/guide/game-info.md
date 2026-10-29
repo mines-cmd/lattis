@@ -63,12 +63,15 @@ The sidebar's sections narrow the list, and each choice shows how many games it 
 - **Platform** lists one platform, or all of them.
 - **Tags** opens a list of your tags with a box to search them. Check tags there to list the games that have any of them; the checked ones stay in the sidebar, where a click on one unchecks it.
 - **Games not on IGDB** lists the games you've marked as not on IGDB, which are left out otherwise.
+- **No data in sources** lists the games again for what's marked as no data (below), which is left out otherwise. Their marked chips in the **Missing** column are struck through.
 - **Clear filters**, at the bottom, undoes all of it.
 
 Two options in the bottom bar change what's looked up:
 
 - **Replace existing values** also offers IGDB's description, year and rating where they differ from yours ("Year 2020 was 2018"), unchecked, for you to pick. A rating that already matches IGDB's is offered too (as "same, mark as from IGDB") until it is marked as coming from IGDB. With a SteamGridDB key and Art among what's looked for, SteamGridDB's top image is offered for the kinds of art a game already has as well, also unchecked. The sidebar's Missing section becomes **Look for**, since every game can then get them. Titles are never changed in bulk.
 - **Suggest tags** is described [below](#tags-from-igdb).
+
+**No data in IGDB or SteamGridDB.** When a matched game's lookup finds no description, year or rating on IGDB, or no art of a kind on SteamGridDB, its result says so, and Apply marks those as no data: the game stops being listed for them, so a list of missing ratings doesn't keep showing the games IGDB has no rating for. **Mark as no data** in the bottom bar does the same by hand for the checked games, for what's missing among the checked Missing boxes. To look again (IGDB adds ratings over time), check **No data in sources**, check the games and look them up: whatever is found clears its mark. With **No data in sources** on, the button becomes **Unmark**, which clears the checked games' marks. The marks are kept in the game file's `unavailable` list.
 
 ### Reviewing the results
 

@@ -81,7 +81,7 @@ void BulkLookup::reload()
     for (const LookupGame &g : std::as_const(m_games)) {
         if (!m_seen.contains(g.id)) {
             m_seen.insert(g.id);
-            if (!g.missing().isEmpty() && g.igdb != 0)
+            if (!g.missingUnmarked().isEmpty() && g.igdb != 0)
                 m_checked.insert(g.id);
         }
     }
@@ -101,14 +101,20 @@ bool BulkLookup::matches(const LookupGame &g, int skip) const
         return false;
     if (!(skip & PlatformSection) && !m_platform.isEmpty() && g.platform != m_platform)
         return false;
-    QStringList wanted = g.missing();
+    QStringList looked = wanted(g, skip);
     if (m_replaceExisting)
-        wanted += {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating"), QStringLiteral("cover")};
+        looked += {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating"), QStringLiteral("cover")};
     if (!m_includeComplete
-        && std::none_of(wanted.cbegin(), wanted.cend(), [&](const QString &m) { return m_missing.contains(category(m)); }))
+        && std::none_of(looked.cbegin(), looked.cend(), [&](const QString &m) { return m_missing.contains(category(m)); }))
         return false;
     return (skip & TagsSection) || m_tags.isEmpty()
         || std::any_of(m_tags.cbegin(), m_tags.cend(), [&](const QString &t) { return g.tags.contains(t); });
+}
+
+// What the sources had nothing for is left out, unless No data in sources is on.
+QStringList BulkLookup::wanted(const LookupGame &g, int skip) const
+{
+    return m_includeUnavailable || (skip & UnavailableSection) ? g.missing() : g.missingUnmarked();
 }
 
 // The search is left out of the counts: typing would make every choice's number jump.
@@ -125,6 +131,7 @@ void BulkLookup::refilter()
     m_shown.clear();
     m_platformCounts.clear();
     m_notOnIgdbCount = 0;
+    m_unavailableCount = 0;
     QHash<QString, int> tagCounts;
     for (const LookupGame &g : std::as_const(m_games)) {
         if (matches(g, PlatformSection))
@@ -135,6 +142,10 @@ void BulkLookup::refilter()
         }
         if (g.igdb == 0 && matches(g, NotOnIgdbSection))
             ++m_notOnIgdbCount;
+        if (const QStringList marked = g.missingMarked(); matches(g, UnavailableSection)
+            && std::any_of(marked.cbegin(), marked.cend(),
+                           [&](const QString &m) { return m_includeComplete || m_missing.contains(category(m)); }))
+            ++m_unavailableCount;
         if (!shown(g))
             continue;
         m_shown.append(QVariantMap{{QStringLiteral("id"), g.id},
@@ -142,6 +153,7 @@ void BulkLookup::refilter()
                                    {QStringLiteral("platformName"), g.platformName},
                                    {QStringLiteral("icon"), g.icon.toString()},
                                    {QStringLiteral("missing"), g.missing()},
+                                   {QStringLiteral("unavailable"), g.missingMarked()},
                                    {QStringLiteral("checked"), m_checked.contains(g.id)}});
     }
     m_tagCounts.clear();
@@ -153,7 +165,7 @@ void BulkLookup::refilter()
 int BulkLookup::missingCount() const
 {
     return int(std::count_if(m_games.cbegin(), m_games.cend(),
-                             [](const LookupGame &g) { return g.igdb != 0 && !g.missing().isEmpty(); }));
+                             [&](const LookupGame &g) { return g.igdb != 0 && !wanted(g).isEmpty(); }));
 }
 
 QVariantMap BulkLookup::missingCounts() const
@@ -163,7 +175,7 @@ QVariantMap BulkLookup::missingCounts() const
         if (g.igdb == 0)
             continue;
         QSet<QString> categories;
-        for (const QString &m : g.missing())
+        for (const QString &m : wanted(g))
             categories.insert(category(m));
         for (const QString &c : std::as_const(categories))
             ++counts[c];
@@ -252,6 +264,15 @@ void BulkLookup::setIncludeNotOnIgdb(bool include)
     refilter();
 }
 
+void BulkLookup::setIncludeUnavailable(bool include)
+{
+    if (include == m_includeUnavailable)
+        return;
+    m_includeUnavailable = include;
+    emit filtersChanged();
+    refilter();
+}
+
 void BulkLookup::setReplaceExisting(bool replace)
 {
     if (replace == m_replaceExisting)
@@ -285,8 +306,37 @@ void BulkLookup::clearFilters()
     m_tags.clear();
     m_search.clear();
     m_includeNotOnIgdb = false;
+    m_includeUnavailable = false;
     emit filtersChanged();
     refilter();
+}
+
+// The checked games' missing values and art in the chosen categories.
+int BulkLookup::markCheckedUnavailable(bool marked)
+{
+    QList<std::pair<QString, QVariantMap>> writes;
+    for (const LookupGame &g : std::as_const(m_games)) {
+        if (!m_checked.contains(g.id) || !shown(g))
+            continue;
+        QStringList unavailable = g.unavailable;
+        for (const QString &m : g.missing()) {
+            if (!m_includeComplete && !m_missing.contains(category(m)))
+                continue;
+            if (!marked)
+                unavailable.removeAll(m);
+            else if (!unavailable.contains(m))
+                unavailable.append(m);
+        }
+        if (unavailable != g.unavailable)
+            writes.append({g.id, {{QStringLiteral("unavailable"), unavailable}}});
+    }
+    int written = 0;
+    for (qsizetype i = 0; i < writes.size(); i += kWriteBatch) {
+        const qsizetype batch = std::min<qsizetype>(kWriteBatch, writes.size() - i);
+        written += int(batch - m_writeValues(writes.mid(i, batch)).size());
+    }
+    reload();
+    return written;
 }
 
 void BulkLookup::setChecked(const QString &id, bool checked)
@@ -401,6 +451,7 @@ void BulkLookup::lookUp(Row &r)
     r.candidates.clear();
     r.fields.clear();
     r.art.clear();
+    r.artFailed = false;
     r.igdb = -1;
     r.steamgriddb = 0;
     QVariantList platforms;
@@ -433,6 +484,7 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
     r.tags.clear();
     r.uncheckedTags.clear();
     r.art.clear();
+    r.artFailed = false;
     if (m_suggestTags && m_tagMappings)
         r.tags = Igdb::fittingTags(candidate.value(QStringLiteral("facets")).toStringList(), m_tagMappings(), r.game.tags);
     const QStringList missing = r.game.missing();
@@ -554,6 +606,7 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         return resolve(*r, r->candidates.at(match).toMap());
     }
     case Step::FindArt: {
+        r->artFailed = r->artFailed || !error.isEmpty();
         r->steamgriddb = result.value(QStringLiteral("steamgriddb")).toInt();
         const QStringList missing = r->game.missing();
         for (const QString &kind : artKinds(*r)) {
@@ -570,6 +623,7 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         break;
     }
     case Step::ArtChoices: {
+        r->artFailed = r->artFailed || !error.isEmpty();
         const QVariantList images = result.value(QStringLiteral("images")).toList();
         Art &art = r->art[req.kind];
         if (images.isEmpty()) {
@@ -918,6 +972,26 @@ QString BulkLookup::stateName(State state)
     return {};
 }
 
+// What a match leaves missing: the values IGDB has none of, and the art SteamGridDB has none of.
+QStringList BulkLookup::newlyUnavailable(const Row &r)
+{
+    QStringList out;
+    if (r.state != State::Matched)
+        return out;
+    const QStringList missing = r.game.missing();
+    for (const QString &key : {QStringLiteral("description"), QStringLiteral("year"), QStringLiteral("rating")}) {
+        if (missing.contains(key) && std::none_of(r.fields.cbegin(), r.fields.cend(), [&](const auto &f) { return f.first == key; }))
+            out.append(key);
+    }
+    if (r.artFailed)
+        return out;
+    for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
+        if (!it->replaces && it->none && it->byDefault.isEmpty() && missing.contains(it.key()))
+            out.append(it.key());
+    }
+    return out;
+}
+
 QVariantList BulkLookup::results() const
 {
     return resultList({});
@@ -971,6 +1045,7 @@ QVariantList BulkLookup::resultList(const QString &state) const
                                {QStringLiteral("fields"), fields},
                                {QStringLiteral("tags"), tags},
                                {QStringLiteral("art"), art},
+                               {QStringLiteral("unavailable"), newlyUnavailable(r)},
                                {QStringLiteral("ownArt"), r.game.artUrls},
                                {QStringLiteral("applyError"), r.applyError}});
     }
@@ -1055,10 +1130,21 @@ void BulkLookup::apply()
                 values.insert(QStringLiteral("steam_app"), r.steamApp);
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
+            QSet<QString> taken;
             for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
-                if (it->checked && !it->image.isEmpty() && takesArt(it.key()))
+                if (it->checked && !it->image.isEmpty() && takesArt(it.key())) {
                     m_toDownload.append({r.game.id, it.key(), it->image.value(QStringLiteral("url")).toString()});
+                    taken.insert(it.key());
+                }
             }
+            QStringList unavailable = game.unavailable;
+            for (const QString &m : newlyUnavailable(r)) {
+                if (!unavailable.contains(m))
+                    unavailable.append(m);
+            }
+            unavailable.removeIf([&](const QString &m) { return !missing.contains(m) || values.contains(m) || taken.contains(m); });
+            if (unavailable != game.unavailable)
+                values.insert(QStringLiteral("unavailable"), unavailable);
         }
         r.applyError.clear();
         m_applyIds.insert(r.game.id);

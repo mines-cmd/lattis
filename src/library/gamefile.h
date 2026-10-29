@@ -53,6 +53,7 @@ struct GameFile
     int igdb = -1; // 0 = not on IGDB, -1 = not set
     int steamgriddb = -1; // 0 = not on it, -1 = not set
     int steamApp = -1; // 0 or -1 = not known
+    QStringList unavailable;
     int playMinutes = 0;
     QDateTime lastPlayed;
     QDate added;

@@ -29,6 +29,7 @@ struct LookupGame
     qint64 steamAppId = 0;
     int steamApp = 0; // stored from an IGDB lookup, for games not from Steam
     QList<int> igdbPlatforms;
+    QStringList unavailable;
 
     QStringList missing() const
     {
@@ -44,6 +45,20 @@ struct LookupGame
             if (!art.contains(kind))
                 out.append(kind);
         }
+        return out;
+    }
+
+    QStringList missingUnmarked() const
+    {
+        QStringList out = missing();
+        out.removeIf([&](const QString &m) { return unavailable.contains(m); });
+        return out;
+    }
+
+    QStringList missingMarked() const
+    {
+        QStringList out = missing();
+        out.removeIf([&](const QString &m) { return !unavailable.contains(m); });
         return out;
     }
 };
