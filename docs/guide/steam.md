@@ -28,7 +28,7 @@ To turn Steam off in Lattis, switch off **Import Steam games** on Settings → S
 - **What's contacted, and when:** `api.steampowered.com`, only when you're signed in or a key is set, once a day starting 10 seconds after the window appears and on **Sync now**; art for new games comes from Steam's store in the background. The game list never waits for it, and the games from the last fetch show offline or signed out.
 - Games are fetched once a day and when you press **Sync now**; the line beside it says how many games and how long ago.
 - **Family games** have a **Family** chip on their page ("Shared by Sam"). The filter panel's **Steam** section shows only **Owned** or only **Family** games. The chip can be removed or moved like the others (Settings → Game page).
-- The setup guide's Steam step has the same sign-in, under **Import your whole library**.
+- The setup guide's Steam step has the same sign-in, in its **Your whole library** card (always open, optional). Its **Installed on this computer** card above it needs no sign-in and imports only installed games.
 
 ## Updates
 

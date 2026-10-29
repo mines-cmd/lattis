@@ -223,7 +223,6 @@ public:
     QVariantMap groupChange() const { return m_groupChange; }
     Q_INVOKABLE QString setSteamValue(const QString &key, const QVariant &value);
     Q_INVOKABLE QVariantList steamShortcuts() const;
-    Q_INVOKABLE QVariantList steamCovers(int limit) const;
     Q_INVOKABLE QString addSteamShortcuts(const QVariantList &appIds);
     Q_INVOKABLE QString setSteamPresetForAll(const QString &preset, bool on);
     Q_INVOKABLE QString undoSteamEdits(const QString &id);

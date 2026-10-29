@@ -814,28 +814,6 @@ QVariantList Library::steamShortcuts() const
     return out;
 }
 
-QVariantList Library::steamCovers(int limit) const
-{
-    const SteamState &state = m_store.snapshot().steam;
-    QList<SteamApp> games = state.games();
-    games.removeIf([](const SteamApp &a) { return !a.installed; });
-    std::sort(games.begin(), games.end(), [&](const SteamApp &a, const SteamApp &b) {
-        const qint64 pa = state.apps.value(a.appId).lastPlayed;
-        const qint64 pb = state.apps.value(b.appId).lastPlayed;
-        return pa != pb ? pa > pb : a.name.localeAwareCompare(b.name) < 0;
-    });
-    QVariantList out;
-    // Only as many lookups as covers wanted: each one lists a folder of Steam's cache.
-    for (const SteamApp &a : std::as_const(games)) {
-        if (out.size() >= limit)
-            break;
-        const QString cover = SteamArt::find(state.install, a.appId, {QStringLiteral("cover")}).value(QStringLiteral("cover"));
-        if (!cover.isEmpty())
-            out.append(QVariantMap{{QStringLiteral("name"), a.name}, {QStringLiteral("cover"), QUrl::fromLocalFile(cover).toString()}});
-    }
-    return out;
-}
-
 QString Library::addSteamShortcuts(const QVariantList &appIds)
 {
     QList<quint32> ids;

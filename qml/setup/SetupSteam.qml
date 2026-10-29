@@ -10,12 +10,18 @@ ColumnLayout {
     required property var guide
 
     readonly property var steam: Library.steam
+    // Turning the import off resets what Steam's found row shows, which would flash "wasn't found" as it folds.
+    property var held: ({})
+    readonly property bool heldLooking: held.enabled && !held.found && !held.problem
     readonly property bool pending: Library.setupPending
     readonly property bool looking: steam.enabled && !steam.found && !steam.problem
     readonly property int notInLibrary: steam.shortcuts - steam.shortcutsInLibrary
     readonly property var tools: steam.presets.filter(p => p.builtIn && (p.program === "" || p.programFound))
 
     spacing: Theme.onboarding.spacing
+
+    Component.onCompleted: held = steam
+    onSteamChanged: if (steam.enabled) held = steam
 
     function set(key, value) {
         const error = Library.setSteamValue(key, value)
@@ -71,206 +77,240 @@ ColumnLayout {
         }
     }
 
+    component Fold: Unfold {
+        required property real gap
+
+        // Out of the layout when folded; the negative margin hides its spacing until it opens, so
+        // the gap doesn't snap in at the start of the unfold.
+        visible: open || progress > 0
+        spacing: Theme.layout.spacing
+        Layout.fillWidth: true
+        Layout.bottomMargin: -gap * (1 - progress)
+    }
+
+    component CardHeader: ColumnLayout {
+        id: header
+        property string icon
+        property alias title: titleLabel.text
+        property alias tag: tagLabel.text
+        property alias subtitle: subtitleLabel.text
+
+        Layout.fillWidth: true
+        spacing: 2
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
+
+            Icon {
+                path: header.icon
+                size: Theme.controls.iconSize
+                color: Theme.controls.descriptionColor
+            }
+            Label {
+                id: titleLabel
+                Layout.fillWidth: true
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
+                font.weight: Theme.font.strongWeight
+            }
+            SettingsNote { id: tagLabel }
+        }
+        SettingsNote {
+            id: subtitleLabel
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.controls.iconSize + Theme.layout.spacing
+        }
+    }
+
     SettingsCard {
         panel: true
 
-        RowLayout {
-            visible: root.steam.enabled
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing * 1.5
-
-            Rectangle {
-                opacity: root.steam.found ? 1 : 0
-                visible: opacity > 0
-                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                implicitWidth: Theme.onboarding.foundIconSize
-                implicitHeight: Theme.onboarding.foundIconSize
-                radius: width / 2
-                color: Qt.alpha(Theme.onboarding.foundColor, Theme.onboarding.stepDoneOpacity)
-
-                Icon {
-                    anchors.centerIn: parent
-                    path: Icons.check
-                    size: Math.round(Theme.onboarding.foundIconSize / 2)
-                    color: Theme.onboarding.foundColor
-                }
-            }
-            Row {
-                label: root.looking ? qsTr("Looking for Steam…")
-                       : root.steam.found ? qsTr("Steam found") : qsTr("Steam wasn't found")
-                note: root.looking ? ""
-                      : !root.steam.found ? (root.steam.path !== "" ? qsTr("There's no Steam in %1.").arg(root.steam.path)
-                                             : qsTr("Not in ~/.steam/steam or the Flatpak's folder."))
-                      : root.steam.problem ? root.steam.status
-                      : (root.steam.flatpak ? qsTr("%1 · Flatpak") : qsTr("%1 · native")).arg(root.steam.shownRoot)
-                noteColor: root.steam.problem ? Theme.controls.problemsText : Theme.controls.descriptionColor
-
-                SettingsNote {
-                    visible: account.visible
-                    text: qsTr("Account")
-                }
-                SteamAccountBox {
-                    id: account
-                    visible: root.steam.found && root.steam.users.length > 1
-                    Layout.preferredWidth: Theme.settingsWindow.pickerWidth / 3
-                    onFailed: message => root.guide.message(message)
-                }
-                Label {
-                    visible: root.steam.found && root.steam.users.length === 1
-                    text: root.steam.users[0]?.name ?? ""
-                    color: Theme.controls.labelColor
-                    font.pixelSize: Theme.controls.labelFontSize
-                    font.weight: Theme.font.strongWeight
-                }
-                SettingsButton {
-                    visible: !root.steam.found && !root.looking && root.steam.path !== ""
-                    text: qsTr("Find automatically")
-                    tip: qsTr("Look in ~/.steam/steam, then the Flatpak's folder")
-                    onClicked: root.set("path", "")
-                }
-                SettingsButton {
-                    visible: !root.steam.found && !root.looking
-                    text: qsTr("Choose folder")
-                    tip: qsTr("Choose Steam's folder: the one with steamapps in it")
-                    onClicked: folderDialog.active = true
-                }
-            }
+        CardHeader {
+            icon: Icons.computer
+            title: qsTr("Installed on this computer")
+            tag: qsTr("No sign-in needed")
+            subtitle: qsTr("Games Steam has downloaded here.")
         }
-        Divider { visible: Theme.settingsWindow.rowDividers && root.steam.enabled }
+        Fold {
+            open: root.steam.enabled
+            gap: Theme.layout.spacing
+            Divider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacing * 1.5
+
+                Rectangle {
+                    opacity: root.held.found ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                    implicitWidth: Theme.onboarding.foundIconSize
+                    implicitHeight: Theme.onboarding.foundIconSize
+                    radius: width / 2
+                    color: Qt.alpha(Theme.onboarding.foundColor, Theme.onboarding.stepDoneOpacity)
+
+                    Icon {
+                        anchors.centerIn: parent
+                        path: Icons.check
+                        size: Math.round(Theme.onboarding.foundIconSize / 2)
+                        color: Theme.onboarding.foundColor
+                    }
+                }
+                Row {
+                    label: root.heldLooking ? qsTr("Looking for Steam…")
+                           : root.held.found ? qsTr("Steam found") : qsTr("Steam wasn't found")
+                    note: root.heldLooking ? ""
+                          : !root.held.found ? (root.held.path !== "" ? qsTr("There's no Steam in %1.").arg(root.held.path)
+                                                 : qsTr("Not in ~/.steam/steam or the Flatpak's folder."))
+                          : root.held.problem ? root.held.status
+                          : (root.held.flatpak ? qsTr("%1 · Flatpak") : qsTr("%1 · native")).arg(root.held.shownRoot)
+                    noteColor: root.held.problem ? Theme.controls.problemsText : Theme.controls.descriptionColor
+
+                    SettingsNote {
+                        visible: account.visible
+                        text: qsTr("Account")
+                    }
+                    SteamAccountBox {
+                        id: account
+                        visible: root.held.found && root.held.users.length > 1
+                        Layout.preferredWidth: Theme.settingsWindow.pickerWidth / 3
+                        onFailed: message => root.guide.message(message)
+                    }
+                    Label {
+                        visible: root.held.found && root.held.users.length === 1
+                        text: root.held.users[0]?.name ?? ""
+                        color: Theme.controls.labelColor
+                        font.pixelSize: Theme.controls.labelFontSize
+                        font.weight: Theme.font.strongWeight
+                    }
+                    SettingsButton {
+                        visible: !root.held.found && !root.heldLooking && root.held.path !== ""
+                        text: qsTr("Find automatically")
+                        tip: qsTr("Look in ~/.steam/steam, then the Flatpak's folder")
+                        onClicked: root.set("path", "")
+                    }
+                    SettingsButton {
+                        visible: !root.held.found && !root.heldLooking
+                        text: qsTr("Choose folder")
+                        tip: qsTr("Choose Steam's folder: the one with steamapps in it")
+                        onClicked: folderDialog.active = true
+                    }
+                }
+            }
+            Divider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
+        }
 
         Row {
-            label: qsTr("Import Steam games")
-            note: !root.steam.enabled ? qsTr("Off: Steam games won't be imported.")
-                  : !root.steam.found ? ""
-                  : root.steam.installed === 0 ? qsTr("No installed games.")
-                  : root.pending ? (root.steam.installed === 1 ? qsTr("1 installed game will be added when you finish.")
-                                    : qsTr("%1 installed games will be added when you finish.").arg(root.steam.installed))
-                  : root.steam.installed === 1 ? qsTr("1 game installed.")
-                  : qsTr("%1 games installed.").arg(root.steam.installed)
+            label: qsTr("Import installed games")
+            note: !root.held.enabled ? qsTr("Off: installed Steam games won't be imported.")
+                  : !root.held.found ? ""
+                  : root.held.installed === 0 ? qsTr("No installed games.")
+                  : root.pending ? (root.held.installed === 1 ? qsTr("1 installed game will be added when you finish.")
+                                    : qsTr("%1 installed games will be added when you finish.").arg(root.held.installed))
+                  : root.held.installed === 1 ? qsTr("1 installed game.")
+                  : qsTr("%1 installed games.").arg(root.held.installed)
 
             SettingsSwitch {
-                checked: root.steam.enabled
+                checked: root.held.enabled
                 onToggled: root.set("enabled", checked)
             }
         }
 
-        Divider { visible: Theme.settingsWindow.rowDividers && root.steam.found }
-        Row {
-            opacity: root.steam.found ? 1 : 0
-            visible: opacity > 0
-            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-            label: qsTr("Non-Steam games")
-            note: !root.steam.shortcutsOk ? qsTr("Steam's list of non-Steam games couldn't be read.")
-                  : root.steam.shortcuts === 0 ? qsTr("Steam has no non-Steam games.")
-                  : root.notInLibrary === 0 ? qsTr("Every non-Steam game in Steam is in the library.")
-                  : root.pending && root.guide.shortcutsToAdd.length > 0
-                    ? qsTr("%1 of %2 will be added when you finish.").arg(root.guide.shortcutsToAdd.length)
-                          .arg(root.notInLibrary)
-                  : root.notInLibrary === 1 ? qsTr("1 shortcut in Steam isn't in the library yet.")
-                  : qsTr("%1 shortcuts in Steam aren't in the library yet.").arg(root.notInLibrary)
+        Fold {
+            open: root.steam.found
+            gap: Theme.layout.spacing
+            Divider { visible: Theme.settingsWindow.rowDividers && root.steam.found }
+            Row {
+                label: qsTr("Non-Steam games")
+                note: !root.steam.shortcutsOk ? qsTr("Steam's list of non-Steam games couldn't be read.")
+                      : root.steam.shortcuts === 0 ? qsTr("Steam has no non-Steam games.")
+                      : root.notInLibrary === 0 ? qsTr("Every non-Steam game in Steam is in the library.")
+                      : root.pending && root.guide.shortcutsToAdd.length > 0
+                        ? qsTr("%1 of %2 will be added when you finish.").arg(root.guide.shortcutsToAdd.length)
+                              .arg(root.notInLibrary)
+                      : root.notInLibrary === 1 ? qsTr("1 shortcut in Steam isn't in the library yet.")
+                      : qsTr("%1 shortcuts in Steam aren't in the library yet.").arg(root.notInLibrary)
 
-            SettingsButton {
-                text: qsTr("Add existing shortcuts")
-                enabled: root.notInLibrary > 0
-                tip: qsTr("Choose which of Steam's non-Steam games to bring into the library")
-                onClicked: {
-                    picker.active = true
-                    picker.item.openFresh(root.pending && root.guide.shortcutsToAdd.length > 0
-                                          ? root.guide.shortcutsToAdd : undefined)
+                SettingsButton {
+                    text: qsTr("Add existing shortcuts")
+                    enabled: root.notInLibrary > 0
+                    tip: qsTr("Choose which of Steam's non-Steam games to bring into the library")
+                    onClicked: {
+                        picker.active = true
+                        picker.item.openFresh(root.pending && root.guide.shortcutsToAdd.length > 0
+                                              ? root.guide.shortcutsToAdd : undefined)
+                    }
                 }
             }
         }
     }
 
-    SettingsCard {
-        id: wholeCard
-        panel: true
-        property bool open: false
-        opacity: root.steam.found && root.steam.enabled ? 1 : 0
-        visible: opacity > 0
-        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+    Fold {
+        open: root.steam.found && root.steam.enabled
+        gap: Theme.onboarding.spacing
+        SettingsCard {
+            panel: true
 
-        AbstractButton {
-            id: wholeToggle
-            Layout.fillWidth: true
-            implicitHeight: wholeHeader.implicitHeight
-            hoverEnabled: true
-            focusPolicy: Qt.StrongFocus
-            onClicked: wholeCard.open = !wholeCard.open
-
-            contentItem: RowLayout {
-                id: wholeHeader
-                spacing: Theme.layout.spacing
-
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Import your whole library")
-                    color: Theme.controls.labelColor
-                    font.pixelSize: Theme.controls.labelFontSize
-                }
-                SettingsNote { text: qsTr("optional") }
-                Icon {
-                    path: Icons.chevronRight
-                    size: Theme.controls.iconSize
-                    color: wholeToggle.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
-                    rotation: wholeCard.open ? 90 : 0
-                    Behavior on rotation { enabled: Motion.on; MotionNumber {} }
-                }
+            CardHeader {
+                icon: Icons.steamLine
+                title: qsTr("Your whole library")
+                tag: SteamLibrary.authState === "signed_in" ? qsTr("optional") : qsTr("Needs sign-in · optional")
+                subtitle: qsTr("Every game on your account, installed or not, including Steam Family shares.")
             }
-            HoverHandler { cursorShape: Qt.PointingHandCursor }
-        }
-        Row {
-            visible: wholeCard.open
-            label: SteamLibrary.authState === "signed_in" ? qsTr("Signed in as %1").arg(SteamLibrary.accountName)
-                   : qsTr("Games you own and your Steam Family shares")
-            note: SteamLibrary.authState === "signed_in"
-                  ? qsTr("They're added to the library as not installed when you finish. Settings → Steam has the rest.")
-                  : qsTr("Every game on your account, installed or not, shows up in the library. Sign in by "
-                         + "scanning a QR code with the Steam app; Lattis never sees your password.")
+            Divider { visible: Theme.settingsWindow.rowDividers }
+            Row {
+                label: SteamLibrary.authState === "signed_in" ? qsTr("Signed in as %1").arg(SteamLibrary.accountName)
+                       : qsTr("Sign in with a QR code")
+                note: SteamLibrary.authState === "signed_in"
+                      ? qsTr("They're added to the library as not installed when you finish. Settings → Steam has the rest.")
+                      : qsTr("Scan it with the Steam app. Lattis never sees your password.")
 
-            SettingsButton {
-                visible: SteamLibrary.authState !== "signed_in"
-                text: qsTr("Sign in with Steam")
-                onClicked: {
-                    signIn.active = true
-                    signIn.item.ask()
+                SettingsButton {
+                    visible: SteamLibrary.authState !== "signed_in"
+                    text: qsTr("Sign in with Steam")
+                    onClicked: {
+                        signIn.active = true
+                        signIn.item.ask()
+                    }
                 }
-            }
-            SettingsButton {
-                visible: SteamLibrary.authState === "signed_in"
-                text: qsTr("Sign out")
-                danger: true
-                onClicked: SteamLibrary.signOut()
+                SettingsButton {
+                    visible: SteamLibrary.authState === "signed_in"
+                    text: qsTr("Sign out")
+                    danger: true
+                    onClicked: SteamLibrary.signOut()
+                }
             }
         }
     }
 
-    SettingsCard {
-        panel: true
-        opacity: root.steam.found && root.tools.length > 0 ? 1 : 0
-        visible: opacity > 0
-        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+    Fold {
+        open: root.steam.found && root.tools.length > 0
+        gap: Theme.onboarding.spacing
+        SettingsCard {
+            panel: true
 
-        Row {
-            label: qsTr("Start new Steam games with")
-            note: qsTr("Added to a game's launch options when it's first imported. Only tools found on this "
-                       + "computer are listed.")
-        }
-        Repeater {
-            model: root.tools
-            RowLayout {
-                required property var modelData
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-
-                SettingsCheckBox {
-                    text: modelData.name
-                    checked: root.steam.defaultPresets.includes(modelData.id)
-                    onToggled: root.setDefault(modelData.id, checked)
-                }
-                SettingsNote {
+            Row {
+                label: qsTr("Start new Steam games with")
+                note: qsTr("Added to a game's launch options when it's first imported. Only tools found on this "
+                           + "computer are listed.")
+            }
+            Repeater {
+                model: root.tools
+                RowLayout {
+                    required property var modelData
                     Layout.fillWidth: true
-                    text: modelData.note
+                    spacing: Theme.layout.spacing
+
+                    SettingsCheckBox {
+                        text: modelData.name
+                        checked: root.steam.defaultPresets.includes(modelData.id)
+                        onToggled: root.setDefault(modelData.id, checked)
+                    }
+                    SettingsNote {
+                        Layout.fillWidth: true
+                        text: modelData.note
+                    }
                 }
             }
         }
@@ -282,27 +322,12 @@ ColumnLayout {
         text: qsTr("Nothing is imported until you finish, so your games come in with the info from "
                    + "“Game info”.")
     }
+    // The dialogs' loaders live here, not among the page's children: an empty Loader in the layout
+    // still gets a spacing gap, which showed as extra room above the first card.
     Item {
-        id: covers
-        readonly property real tileHeight: Math.min(Theme.onboarding.steamCoverMaxHeight, height)
-        readonly property real tileWidth: Math.round(tileHeight * 2 / 3)
-        readonly property int fit: Math.max(0, Math.floor((width + Theme.onboarding.steamCoverSpacing)
-                                                          / (tileWidth + Theme.onboarding.steamCoverSpacing)))
-        readonly property var all: {
-            root.steam
-            return root.steam.enabled && root.steam.found ? Library.steamCovers(24) : []
-        }
-        readonly property int shown: Math.min(all.length, root.steam.installed > fit ? fit - 1 : fit)
-        readonly property int rest: root.steam.installed - shown
-
-        // Always in the layout: it holds the leftover height (the rest of the page stays at the
-        // top), and hiding it would leave it no height to measure.
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.bottomMargin: Theme.onboarding.spacing
 
-        // Here, not among the page's children: an empty Loader in the layout still gets a
-        // spacing gap, which showed as extra room above the first card.
         Loader {
             id: picker
             active: false
@@ -322,138 +347,6 @@ ColumnLayout {
             sourceComponent: RomFolderDialog {
                 onPicked: path => root.set("path", path)
                 onClosed: folderDialog.active = false
-            }
-        }
-
-        Item {
-            readonly property bool wanted: root.steam.enabled && !root.looking
-                                           && (!root.steam.found || root.steam.installed === 0)
-                                           && covers.tileHeight >= Theme.onboarding.steamCoverMinHeight
-            anchors.fill: parent
-            opacity: wanted ? 1 : 0
-            visible: opacity > 0
-            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-
-            RowLayout {
-                id: ghosts
-                anchors.centerIn: parent
-                spacing: Theme.onboarding.steamCoverSpacing
-
-                Repeater {
-                    model: Math.min(covers.fit, Theme.onboarding.steamGhostTiles)
-
-                    Surface {
-                        required property int index
-                        Layout.preferredWidth: covers.tileWidth
-                        Layout.preferredHeight: covers.tileHeight
-                        opacity: 1 - Math.abs(index - (Math.min(covers.fit, Theme.onboarding.steamGhostTiles) - 1) / 2) * 0.25
-                        radius: Theme.onboarding.steamCoverRadius
-                        fill: Theme.onboarding.panelBackground
-                        fillEnd: Theme.onboarding.panelBackgroundEnd
-                        direction: Theme.onboarding.gradientDirection
-                        border.width: 1
-                        border.color: Theme.onboarding.panelBorder
-                    }
-                }
-            }
-            Label {
-                anchors.centerIn: parent
-                text: qsTr("No installed games")
-                color: Theme.onboarding.descriptionColor
-                font.pixelSize: Theme.controls.labelFontSize
-            }
-        }
-
-        // Not Row: this file's own Row (a setting's row) shadows QtQuick's.
-        RowLayout {
-            anchors.verticalCenter: parent.verticalCenter
-            x: Math.round((covers.width - width) / 2)
-            opacity: covers.all.length > 0 && covers.tileHeight >= Theme.onboarding.steamCoverMinHeight
-                     && covers.shown > 0 ? 1 : 0
-            visible: opacity > 0
-            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-            spacing: Theme.onboarding.steamCoverSpacing
-
-            Repeater {
-                model: covers.all.slice(0, Math.max(0, covers.shown))
-
-                ArtThumb {
-                    required property var modelData
-                    Layout.preferredWidth: covers.tileWidth
-                    Layout.preferredHeight: covers.tileHeight
-                    cornerRadius: Theme.onboarding.steamCoverRadius
-                    source: modelData.cover
-                    Accessible.name: modelData.name
-
-                    HoverHandler { id: coverHover }
-                    ToolTip.visible: coverHover.hovered
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: modelData.name
-                }
-            }
-            Surface {
-                id: moreTile
-                visible: covers.rest > 0
-                Layout.preferredWidth: covers.tileWidth
-                Layout.preferredHeight: covers.tileHeight
-                radius: Theme.onboarding.steamCoverRadius
-                // Nothing of the panel under the picture, or its edge shows as a faint outline.
-                fill: moreArt.visible ? "transparent" : Theme.onboarding.panelBackground
-                fillEnd: moreArt.visible ? "transparent" : Theme.onboarding.panelBackgroundEnd
-                direction: Theme.onboarding.gradientDirection
-                border.width: moreArt.visible ? 0 : 1
-                border.color: Theme.onboarding.panelBorder
-
-                readonly property string next: covers.all[covers.shown]?.cover ?? ""
-
-                Rectangle {
-                    id: moreMask
-                    anchors.fill: parent
-                    radius: parent.radius
-                    visible: false
-                    layer.enabled: true
-                }
-                Item {
-                    id: moreArt
-                    anchors.fill: parent
-                    visible: moreTile.next !== "" && moreImage.status === Image.Ready
-                    layer.enabled: visible
-                    layer.effect: MultiEffect {
-                        maskEnabled: true
-                        maskSource: moreMask
-                        // Without a threshold every half-covered edge pixel counts as inside, which eats the curve of the corner.
-                        maskThresholdMin: 0.5
-                        maskSpreadAtMin: 1.0
-                    }
-
-                    FadeImage {
-                        id: moreImage
-                        // Larger than the tile, so the blur's faded rim falls outside the mask.
-                        anchors.fill: parent
-                        anchors.margins: -Theme.onboarding.steamMoreBlur / 2
-                        source: moreTile.next
-                        sourceSize.height: height
-                        fillMode: Image.PreserveAspectCrop
-                        layer.enabled: status === Image.Ready
-                        layer.effect: MultiEffect {
-                            blurEnabled: true
-                            blur: 1
-                            blurMax: Theme.onboarding.steamMoreBlur
-                        }
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        color: Theme.onboarding.steamMoreDim
-                    }
-                }
-
-                Label {
-                    anchors.centerIn: parent
-                    text: qsTr("+%1").arg(covers.rest)
-                    color: Theme.onboarding.steamMoreColor
-                    font.pixelSize: Theme.onboarding.steamMoreFontSize
-                    font.weight: Theme.font.strongWeight
-                }
             }
         }
     }

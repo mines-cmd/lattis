@@ -18,7 +18,7 @@ FocusScope {
     readonly property var steps: [
         { name: qsTr("Welcome"), title: "", description: "" },
         { name: qsTr("Steam"), title: qsTr("Steam"),
-          description: qsTr("Installed Steam games show up in the library by themselves and launch through Steam.") },
+          description: qsTr("Two ways to bring in Steam games: the ones installed here, or everything you own after signing in.") },
         { name: qsTr("Emulators"), title: qsTr("Emulators and ROM folders"),
           description: qsTr("Install the emulators you need, then add the folders where your ROMs are. Each platform's folders are scanned for new games at every start.") },
         { name: qsTr("Game info"), title: qsTr("Game info"),

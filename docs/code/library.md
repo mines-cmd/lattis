@@ -475,7 +475,6 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `igdbTags(facets, has)` | The tags that fit a game with these IGDB genres, themes and keywords |
 | `setSteamValue(key, value)` | `enabled`, `path`, `user`, `default_presets` or `default_proton` |
 | `steamShortcuts()`, `addSteamShortcuts(appIds)` | "Add existing shortcuts" |
-| `steamCovers(limit)` | Up to `limit` installed Steam games with a cover, most recently played first: `name`, `cover` (a file: URL); for the setup guide's Steam step |
 | `setSteamPresetForAll(preset, on)` | "Apply to all Steam games", "Remove from all" |
 | `undoSteamEdits(id)`, `undoAllSteamEdits()` | Drops edits waiting for Steam |
 | `finishSetup()` | Ends the first-start setup and brings the games in |
