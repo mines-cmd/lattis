@@ -97,12 +97,6 @@ ColumnLayout {
         font.pixelSize: Theme.details.countFontSize
     }
 
-    FfmpegPrompt {
-        visible: !heading.collapsed && root.hasClips && !FfmpegTool.available && (!root.installDismissed || root.installing)
-        Layout.fillWidth: true
-        onNotNow: root.installDismissed = true
-    }
-
     // Each fade grows with how far the row can still scroll that way, so an end at rest stays sharp.
     // Invisible, so the layout leaves it out; the scroll bar under the thumbnails stays unfaded.
     Item {
@@ -219,5 +213,12 @@ ColumnLayout {
                 }
             }
         }
+    }
+
+    FfmpegPrompt {
+        visible: !heading.collapsed && root.hasClips && !FfmpegTool.available && (!root.installDismissed || root.installing)
+        Layout.fillWidth: true
+        buttonsAlignment: Qt.AlignLeft
+        onNotNow: root.installDismissed = true
     }
 }

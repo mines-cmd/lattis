@@ -626,7 +626,7 @@ MotionPopup {
                     visible: root.isClip ? root.error !== "" || root.file === "" && root.needsFfmpeg : shot.status === Image.Error
                     anchors.centerIn: parent
                     width: Math.min(parent.width, Theme.gameEditor.confirmWidth)
-                    height: message.implicitHeight + 2 * Theme.gameEditor.padding
+                    height: message.implicitHeight + 2 * Theme.gameEditor.rowSpacing
                     radius: Theme.gameEditor.radius
                     fill: Theme.gameEditor.background
                     fillEnd: Theme.gameEditor.backgroundEnd
@@ -636,15 +636,15 @@ MotionPopup {
 
                     ColumnLayout {
                         id: message
-                        x: Theme.gameEditor.padding
-                        y: Theme.gameEditor.padding
-                        width: parent.width - 2 * Theme.gameEditor.padding
+                        x: Theme.gameEditor.rowSpacing
+                        y: Theme.gameEditor.rowSpacing
+                        width: parent.width - 2 * Theme.gameEditor.rowSpacing
 
                         FfmpegPrompt {
                             visible: root.needsFfmpeg
                             Layout.fillWidth: true
                             textColor: Theme.gameEditor.labelColor
-                            showNotNow: false
+                            onNotNow: root.close()
                         }
                         Label {
                             visible: !root.isClip || !root.needsFfmpeg

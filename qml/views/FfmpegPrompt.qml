@@ -8,11 +8,12 @@ ColumnLayout {
 
     property color textColor: Theme.details.descriptionColor
     property bool showNotNow: true
+    property int buttonsAlignment: Qt.AlignRight
     readonly property bool busy: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"
 
     signal notNow()
 
-    spacing: Theme.layout.spacing
+    spacing: Theme.gameEditor.rowSpacing
 
     Label {
         Layout.fillWidth: true
@@ -30,14 +31,9 @@ ColumnLayout {
         progress: FfmpegTool.state === "downloading" ? FfmpegTool.progress : -1
     }
     RowLayout {
+        Layout.alignment: root.buttonsAlignment
         spacing: Theme.layout.spacing
 
-        SettingsButton {
-            visible: !root.busy
-            text: qsTr("Install ffmpeg")
-            primary: true
-            onClicked: FfmpegTool.install()
-        }
         SettingsButton {
             visible: !root.busy && root.showNotNow
             text: qsTr("Not now")
@@ -50,6 +46,12 @@ ColumnLayout {
             visible: root.busy
             text: qsTr("Cancel")
             onClicked: FfmpegTool.cancel()
+        }
+        SettingsButton {
+            visible: !root.busy
+            text: qsTr("Install ffmpeg")
+            primary: true
+            onClicked: FfmpegTool.install()
         }
     }
 }
