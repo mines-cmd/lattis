@@ -2,6 +2,7 @@
 #include "searchtext.h"
 
 #include <QHash>
+#include <QRegularExpression>
 
 #include <algorithm>
 
@@ -32,6 +33,8 @@ QStringList normalizedWords(const QString &name)
             continue;
         if (word == QLatin1String("versus"))
             word = QStringLiteral("vs");
+        else if (word == QLatin1String("ep"))
+            word = QStringLiteral("episode");
         else if (const int n = romanValue(word))
             word = QString::number(n);
         out.append(word);
@@ -52,6 +55,7 @@ QStringList numbers(const QString &name)
 }
 
 namespace NameMatch {
+
 QString compactKey(const QString &name)
 {
     return normalizedWords(name).join(QString());
@@ -67,6 +71,18 @@ QString splitCamelCase(const QString &title)
         out += title.at(i);
     }
     return out;
+}
+
+QString withoutTrailingParenthetical(const QString &title)
+{
+    const QString trimmed = title.trimmed();
+    if (!trimmed.endsWith(u')'))
+        return title;
+    const qsizetype open = trimmed.lastIndexOf(u'(');
+    if (open <= 0)
+        return title;
+    const QString head = trimmed.left(open).trimmed();
+    return head.isEmpty() ? title : head;
 }
 
 double similarity(const QString &a, const QString &b)
@@ -86,8 +102,13 @@ double similarity(const QString &a, const QString &b)
     return 2.0 * shared / double((a.size() - 1) + (b.size() - 1));
 }
 
-int clearMatch(const QList<QStringList> &names, const QString &title, const std::function<int(const QList<int> &)> &tieBreak)
+int clearMatch(const QList<QStringList> &names, const QString &fullTitle, const std::function<int(const QList<int> &)> &tieBreak)
 {
+    // A Friend's Pass is the game itself, shared: IGDB lists only the game.
+    static const QRegularExpression friendsPass(QStringLiteral("\\s*[-:–]\\s*friend'?s?\\s+pass$"),
+                                                QRegularExpression::CaseInsensitiveOption);
+    QString title = fullTitle;
+    title.remove(friendsPass);
     const QString key = compactKey(title);
     if (key.isEmpty())
         return -1;
@@ -120,6 +141,33 @@ int clearMatch(const QList<QStringList> &names, const QString &title, const std:
             next = score;
         }
     }
-    return best >= kMinScore && best - next >= kMinGap ? bestIndex : -1;
+    if (best >= kMinScore && best - next >= kMinGap)
+        return bestIndex;
+
+    // Steam's "Back to the Future: Ep 2 - Get Tannen!" is IGDB's "… The Game - Episode 2: Get Tannen!":
+    // the one name that holds all the title's words in order, plus a couple of its own.
+    const QStringList titleWords = normalizedWords(title);
+    if (titleWords.size() < 3 || titleNumbers.isEmpty())
+        return -1;
+    int only = -1;
+    for (int i = 0; i < names.size(); ++i) {
+        const bool fits = std::any_of(names.at(i).cbegin(), names.at(i).cend(), [&](const QString &n) {
+            const QStringList words = normalizedWords(n);
+            if (numbers(n) != titleNumbers || words.size() <= titleWords.size() || words.size() > titleWords.size() + 2)
+                return false;
+            qsizetype at = 0;
+            for (const QString &w : words) {
+                if (at < titleWords.size() && w == titleWords.at(at))
+                    ++at;
+            }
+            return at == titleWords.size();
+        });
+        if (fits) {
+            if (only >= 0)
+                return -1;
+            only = i;
+        }
+    }
+    return only;
 }
 }

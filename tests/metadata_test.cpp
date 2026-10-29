@@ -505,10 +505,15 @@ void MetadataTest::igdbSearchQuery()
 {
     QCOMPARE(Igdb::searchQuery(QStringLiteral("Mario Tennis Aces"), {130}),
              QByteArray("search \"Mario Tennis Aces\"; where platforms = (130) & version_parent = null & game_type = "
-                        "(0,4,8,9,10,11,12); fields name, alternative_names.name, first_release_date, "
+                        "(0,4,6,8,9,10,11,12); fields name, alternative_names.name, first_release_date, "
                         "release_dates.date, release_dates.platform, release_dates.status, platforms, summary, "
                         "rating, rating_count, cover.image_id, external_games.uid, external_games.external_game_source, genres, "
                         "themes, game_modes, keywords.slug; limit 10;"));
+    QVERIFY(Igdb::searchQuery(QStringLiteral("Injustice"), {6}, 10, false, 123)
+                .contains("where (platforms = (6) & version_parent = null & game_type = (0,4,6,8,9,10,11,12)) | "
+                          "(external_games.uid = \"123\" & external_games.external_game_source = 1);"));
+    QVERIFY(Igdb::searchQuery(QStringLiteral("Enslaved Premium Edition"), {})
+                .contains("where game_type = (0,3,4,6,8,9,10,11,12);"));
     const QByteArray any = Igdb::searchQuery(QStringLiteral(" The \"Best\"\\ Game  "), {});
     QVERIFY2(any.startsWith("search \"The Best Game\"; where version_parent = null &"), any.constData());
     QVERIFY(Igdb::searchQuery(QStringLiteral("Pokémon"), {37, 137}).contains("search \"Pokémon\"; where platforms = (37,137) &"));
@@ -605,6 +610,15 @@ void MetadataTest::igdbClearMatch()
     QCOMPARE(Igdb::clearMatch(hades, QStringLiteral("Some other title"), 1145360), indexOfId(hades, 113112));
     QCOMPARE(Igdb::clearMatch(hades, QStringLiteral("Hades 2")), -1); // a name and an alternative name
     QCOMPARE(Igdb::clearMatch(hades, QStringLiteral("Hades"), 999), -1);
+
+    // One IGDB game can carry several Steam apps; each finds it.
+    const QJsonDocument episodes = QJsonDocument::fromJson(
+        "[{\"id\":1,\"name\":\"A\",\"external_games\":[{\"uid\":\"10\",\"external_game_source\":1},"
+        "{\"uid\":\"11\",\"external_game_source\":1}]},{\"id\":2,\"name\":\"B\"}]");
+    const QList<IgdbGame> several = Igdb::parseGames(episodes, {});
+    QCOMPARE(several.first().steamAppId, 10);
+    QCOMPARE(several.first().steamAppIds, (QList<qint64>{10, 11}));
+    QCOMPARE(Igdb::clearMatch(several, QStringLiteral("Some title"), 11), 0);
 
     const QList<IgdbGame> metroid = Igdb::parseGames(fixture("igdb-search-metroid-dread"), {});
     QCOMPARE(Igdb::clearMatch(metroid, QStringLiteral("Metroid Dread")), -1); // three platforms

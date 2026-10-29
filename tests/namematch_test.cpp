@@ -11,6 +11,7 @@ private slots:
     void compactKey();
     void clearMatch_data();
     void clearMatch();
+    void withoutTrailingParenthetical();
     void splitCamelCase();
     void tieBreak();
 };
@@ -67,6 +68,24 @@ void NameMatchTest::clearMatch_data()
     QTest::newRow("empty") << "" << QStringList{"Hades"} << -1;
     QTest::newRow("no candidates") << "Hades" << QStringList{} << -1;
 
+    QTest::newRow("trademark signs") << QString::fromUtf8("ENSLAVED™: Odyssey to the West™")
+                                     << QStringList{"Enslaved: Odyssey to the West"} << 0;
+    QTest::newRow("edition is not the base game")
+        << "Enslaved: Odyssey to the West Premium Edition" << QStringList{"Enslaved: Odyssey to the West"} << -1;
+    QTest::newRow("friend's pass is the game")
+        << "The Dark Pictures Anthology: Little Hope - Friend's Pass"
+        << QStringList{"The Dark Pictures Anthology: Man of Medan", "The Dark Pictures Anthology: Little Hope"} << 1;
+    QTest::newRow("steam episode names")
+        << "Back to the Future: Ep 2 - Get Tannen!"
+        << QStringList{"Back to the Future: The Game - Episode 1: It's About Time",
+                       "Back to the Future: The Game - Episode 2: Get Tannen!", "Back to the Future: The Game"}
+        << 1;
+    QTest::newRow("episode, two names fit")
+        << "Game: Ep 2 - Title"
+        << QStringList{"Game: The Game - Episode 2: Title", "Game: The Demo - Episode 2: Title"} << -1;
+    QTest::newRow("extra words need a number")
+        << "Mega Fun Game" << QStringList{"Mega Super Fun Game"} << -1;
+
     // A sequel number is never nearly another.
     QTest::newRow("pokemon x and y") << "Pokemon X" << QStringList{"Pokemon Y"} << -1;
     QTest::newRow("mario bros 2 and 3") << "Super Mario Bros. 2" << QStringList{"Super Mario Bros. 3"} << -1;
@@ -89,6 +108,14 @@ void NameMatchTest::clearMatch()
     for (const QString &c : candidates)
         names.append({c});
     QCOMPARE(NameMatch::clearMatch(names, title), expected);
+}
+
+void NameMatchTest::withoutTrailingParenthetical()
+{
+    QCOMPARE(NameMatch::withoutTrailingParenthetical("Yakuza Kiwami 2 (Legacy)"), QStringLiteral("Yakuza Kiwami 2"));
+    QCOMPARE(NameMatch::withoutTrailingParenthetical("Yakuza Kiwami 2"), QStringLiteral("Yakuza Kiwami 2"));
+    QCOMPARE(NameMatch::withoutTrailingParenthetical("(Legacy)"), QStringLiteral("(Legacy)"));
+    QCOMPARE(NameMatch::withoutTrailingParenthetical("Game (A) Two"), QStringLiteral("Game (A) Two"));
 }
 
 void NameMatchTest::splitCamelCase()

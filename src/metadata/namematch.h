@@ -16,6 +16,9 @@ QString compactKey(const QString &name);
 // "TriForce Heroes" -> "Tri Force Heroes": a space before each capital that follows a lowercase letter.
 QString splitCamelCase(const QString &title);
 
+// "Yakuza Kiwami 2 (Legacy)" -> "Yakuza Kiwami 2". Unchanged when nothing else would be left.
+QString withoutTrailingParenthetical(const QString &title);
+
 double similarity(const QString &a, const QString &b);
 
 // names[i] is game i's name and alternative names. tieBreak gets the games tied on the same key

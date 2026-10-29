@@ -6,7 +6,10 @@ namespace SearchText {
 QString fold(const QString &text)
 {
     // NFKD splits `é` into `e` + a combining accent, which is then dropped.
-    const QString decomposed = text.normalized(QString::NormalizationForm_KD).toCaseFolded();
+    // NFKD would otherwise turn ™ into the letters "tm".
+    QString plain = text;
+    plain.remove(u'™').remove(u'®').remove(u'©');
+    const QString decomposed = plain.normalized(QString::NormalizationForm_KD).toCaseFolded();
     QString out;
     out.reserve(decomposed.size());
     for (const QChar c : decomposed) {

@@ -21,6 +21,7 @@ struct IgdbGame
     double rating = -1; // members' rating as stars, 0 to 5 to a tenth; -1 = not rated
     QString coverImageId;
     qint64 steamAppId = 0;
+    QList<qint64> steamAppIds; // one IGDB game can cover several Steam apps (episodes)
     QStringList facets;
 
     QUrl coverThumbnail() const;
@@ -39,7 +40,8 @@ namespace Igdb {
 constexpr int kSearchLimit = 10;
 
 // wildcard: IGDB's search only matches whole words, so this matches the text anywhere in the name instead.
-QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit = kSearchLimit, bool wildcard = false);
+QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit = kSearchLimit, bool wildcard = false,
+                      qint64 steamAppId = 0);
 
 const QList<IgdbPlatform> &platforms();
 QString platformName(int id);

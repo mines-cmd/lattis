@@ -142,21 +142,29 @@ QString platformName(int id)
     return {};
 }
 
-QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit, bool wildcard)
+QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit, bool wildcard, qint64 steamAppId)
 {
     // Apicalypse strings have no escapes worth relying on; quotes and backslashes don't help
     // a search anyway.
     QString search = title;
     search.remove(u'"').remove(u'\\');
-    QByteArray where = "version_parent = null & game_type = (0,4,8,9,10,11,12)";
+    // A title that names an edition is looking for that edition's own entry, which IGDB files under its base game.
+    QByteArray where = search.contains(QLatin1String("edition"), Qt::CaseInsensitive)
+                           ? QByteArray("game_type = (0,3,4,6,8,9,10,11,12)")
+                           : QByteArray("version_parent = null & game_type = (0,4,6,8,9,10,11,12)");
     if (!platforms.isEmpty()) {
         QStringList ids;
         for (int id : platforms)
             ids.append(QString::number(id));
         where = "platforms = (" + ids.join(u',').toLatin1() + ") & " + where;
     }
+    // The Steam game may be an edition or bundle on IGDB, which the filters above leave out.
+    if (steamAppId > 0) {
+        where = "(" + where + ") | (external_games.uid = \"" + QByteArray::number(steamAppId)
+                + "\" & external_games.external_game_source = " + QByteArray::number(kSteamSource) + ")";
+    }
     if (wildcard) {
-        return "where name ~ *\"" + search.simplified().toUtf8() + "\"* & " + where + "; " + kFields + " limit "
+        return "where name ~ *\"" + search.simplified().toUtf8() + "\"* & (" + where + "); " + kFields + " limit "
                + QByteArray::number(limit) + ';';
     }
     return "search \"" + search.simplified().toUtf8() + "\"; where " + where + "; " + kFields + " limit "
@@ -211,9 +219,11 @@ QList<IgdbGame> parseGames(const QJsonDocument &json, const QList<int> &platform
         for (const QJsonValue &e : o.value(QLatin1String("external_games")).toArray()) {
             const QJsonObject external = e.toObject();
             if (external.value(QLatin1String("external_game_source")).toInt() == kSteamSource) {
-                g.steamAppId = external.value(QLatin1String("uid")).toString().toLongLong();
-                if (g.steamAppId > 0)
-                    break;
+                if (const qint64 id = external.value(QLatin1String("uid")).toString().toLongLong(); id > 0) {
+                    if (g.steamAppId == 0)
+                        g.steamAppId = id;
+                    g.steamAppIds.append(id);
+                }
             }
         }
         appendFacets(&g.facets, o.value(QLatin1String("genres")), QLatin1String("genre"));
@@ -233,7 +243,7 @@ int clearMatch(const QList<IgdbGame> &games, const QString &title, qint64 steamA
     // A Steam game's app id is surer than its title, which can differ ("… Intergrade").
     QList<int> steam;
     for (qsizetype i = 0; steamAppId > 0 && i < games.size(); ++i) {
-        if (games.at(i).steamAppId == steamAppId)
+        if (games.at(i).steamAppIds.contains(steamAppId))
             steam.append(int(i));
     }
     if (steam.size() == 1)

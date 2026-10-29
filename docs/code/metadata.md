@@ -35,19 +35,22 @@ Neither service is touched before a lookup is actually started. `MetadataClient`
 
 ## Searching and matching
 
-The search for a game title sends an Apicalypse query to IGDB's `/games` endpoint. The query filters by platform when the library knows IGDB platform IDs for it (`Library::igdbPlatformIds()`). Editions, DLC, bundles, mods, episodes, seasons, packs and updates are excluded. Quotes and backslashes are stripped from the title before searching, since Apicalypse strings have no reliable escapes.
+The search for a game title sends an Apicalypse query to IGDB's `/games` endpoint. The query filters by platform when the library knows IGDB platform IDs for it (`Library::igdbPlatformIds()`). Editions, DLC, bundles, mods, seasons, packs and updates are excluded; episodes are kept (IGDB files each episode of a Telltale game as its own entry). A title that contains `edition` drops the edition filter and allows bundles, since IGDB files an edition under its base game. For a Steam game the query also returns any entry that lists its app ID, whatever its type (`searchQuery`'s `steamAppId`); an IGDB game can list several Steam apps (`IgdbGame::steamAppIds`), and each finds it. Quotes and backslashes are stripped from the title before searching, since Apicalypse strings have no reliable escapes.
 
 A **clear match** is an unambiguous result. Both services share `NameMatch::clearMatch` (`namematch.*`, pure functions). It compares names by a **compact key**: folded (`SearchText::fold`), without a leading `the`, `a` or `an`, `and` dropped (so `&` and `and` agree), `versus` as `vs`, Roman numerals II to XX as digits (a lone `X` and `I` stay letters: `Mega Man X`, `Pokémon X`), and then every space and punctuation mark removed, so `TriForce` = `Tri Force` and `Spider-Man` = `Spiderman`. In order:
 
 1. For IGDB (`Igdb::clearMatch`) a Steam game's app ID: the only game that lists it.
 2. The only game with a name or alternative name whose compact key equals the title's. When several do, SteamGridDB's tie-break picks the one released in the right year; IGDB has none (the search is already limited to the game's platforms).
 3. Otherwise the best game by similarity (Sørensen–Dice on the compact keys' character pairs), when it scores at least `kMinScore` (0.92) and leads the next game by at least `kMinGap` (0.08). Only names with the same sequel numbers in the same order are compared, so `Persona 4` never nearly matches `Persona 5`.
+4. Otherwise, for a title with a number, the only game with a name that holds all the title's words in order plus one or two more, with the same numbers (`ep` counts as `episode`): Steam's `Back to the Future: Ep 2 - Get Tannen!` finds IGDB's `Back to the Future: The Game - Episode 2: Get Tannen!`.
+
+A trailing `- Friend's Pass` is dropped from the title first (the pass is the game, shared). Other editions are not matched to their base game: `… Premium Edition` has its own IGDB entry. `™`, `®` and `©` are dropped when folding, since NFKD would turn `™` into the letters `tm`.
 
 Tuned on `tests/namematch_test.cpp`: a one-letter typo (`Mario Tennis Ace` for `Aces`) matches, a missing word (`Mario Tennis`, `Persona 4` for `Persona 4 Golden`) doesn't.
 
 IGDB ranks a search loosely: the right game can be past the first five (`TriForce Heroes` finds `Tri Force Heroes` only far down). When the first search has results but no clear match, `lookupQuery` searches again, 50 results, with camel-case words split (`NameMatch::splitCamelCase`), merges them into the first results, and matches the lot. One extra request per lookup that has no clear match. Every name search's results (Detailed lookup's included) are ranked by `NameMatch::similarity` to the title before they're returned, so the pick lists show the closest names first.
 
-When IGDB finds nothing for the whole title, even as a wildcard, `MetadataClient::lookupQuery` searches the title with camel-case words split (when that changes it; IGDB finds nothing for `The Legend of Zelda: TriForce Heroes` but finds `… Tri Force Heroes`), then the part before the first `:`, 50 results wide (`The Legend of Zelda` ranks the game 12th), and matches those results against the whole title.
+When IGDB finds nothing for the whole title, even as a wildcard, `MetadataClient::lookupQuery` searches the title with camel-case words split (when that changes it; IGDB finds nothing for `The Legend of Zelda: TriForce Heroes` but finds `… Tri Force Heroes`), then the part before the first `:`, 50 results wide (`The Legend of Zelda` ranks the game 12th), and matches those results against the whole title. Last, a title ending in a parenthetical is searched without it (`NameMatch::withoutTrailingParenthetical`: Steam's `Yakuza Kiwami 2 (Legacy)` finds `Yakuza Kiwami 2`), and the results are matched against that bare title.
 
 Without a clear match, the results are offered as a **pick list** for the user to choose from.
 
