@@ -1264,27 +1264,43 @@ Item {
                                                 x: mediaEdit.width - width
                                                 y: mediaEdit.height + 4
                                                 width: Theme.gameEditor.mediaPopupWidth
-                                                height: implicitHeight * reveal
                                                 padding: Theme.menu.padding
-                                                clip: true
-                                                property real reveal: 1
-                                                enter: DropdownEnter {}
-                                                exit: DropdownExit {}
+                                                property real pop: 1
+                                                property real slide: 0
+                                                scale: pop
+                                                transformOrigin: Popup.TopRight
+                                                // Pressing the button must not close it before the click toggles it, or the click reopens it.
+                                                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                                                enter: MenuPopEnter {}
+                                                exit: MenuPopExit {}
+
+                                                // Faded as separate items, the rows would show over what's behind the
+                                                // see-through panel, so it closes as one flattened image.
+                                                function flatten(on) {
+                                                    const popupItem = background?.parent
+                                                    if (popupItem) {
+                                                        popupItem.layer.smooth = true
+                                                        popupItem.layer.enabled = on
+                                                    }
+                                                }
+                                                onAboutToShow: flatten(false)
+                                                onAboutToHide: flatten(true)
+                                                onClosed: flatten(false)
 
                                                 background: Rectangle {
+                                                    transform: Translate { y: mediaMenu.slide }
                                                     radius: Theme.controls.inputRadius
                                                     color: Theme.menu.popupBackground
                                                     border.color: Theme.controls.inputBorder
                                                     border.width: Math.max(1, Theme.controls.inputBorderWidth)
                                                 }
                                                 contentItem: ColumnLayout {
-                                                    y: -(1 - mediaMenu.reveal) * height
+                                                    transform: Translate { y: mediaMenu.slide }
                                                     spacing: 0
 
                                                     MediaFolderRow {
                                                         visible: root.onSteam
                                                         steam: true
-                                                        path: qsTr("Steam's clips and screenshots")
                                                         exists: true
                                                         onOpenClicked: {
                                                             if (!Library.showSteamMediaFolder(root.game.id))
@@ -1307,6 +1323,13 @@ Item {
                                                                 root.mediaFoldersShown.filter(f => f !== modelData)
                                                         }
                                                     }
+                                                    Rectangle {
+                                                        Layout.fillWidth: true
+                                                        Layout.topMargin: Theme.menu.padding
+                                                        Layout.bottomMargin: Theme.menu.padding
+                                                        implicitHeight: 1
+                                                        color: Theme.settingsWindow.rowDivider
+                                                    }
                                                     AbstractButton {
                                                         id: addFolder
                                                         Layout.fillWidth: true
@@ -1323,16 +1346,16 @@ Item {
                                                         contentItem: RowLayout {
                                                             spacing: Theme.controls.controlSpacing
 
-                                                            Item { Layout.preferredWidth: 2 }
+                                                            Item { Layout.preferredWidth: 8 }
                                                             Icon {
                                                                 path: Icons.add
                                                                 size: Theme.controls.iconSize
-                                                                color: Theme.controls.inputText
+                                                                color: Theme.palette.text
                                                             }
                                                             Label {
                                                                 Layout.fillWidth: true
                                                                 text: qsTr("Add folder")
-                                                                color: Theme.controls.inputText
+                                                                color: Theme.palette.text
                                                             }
                                                         }
                                                     }
@@ -1778,7 +1801,7 @@ Item {
         }
     }
 
-    component MediaFolderRow: ColumnLayout {
+    component MediaFolderRow: Rectangle {
         id: folderRow
         property string path
         property bool steam: false
@@ -1786,35 +1809,54 @@ Item {
         signal openClicked()
         signal removeClicked()
 
+        readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+                                           .toString().replace(/^file:\/\//, "")
+        readonly property int slash: path.lastIndexOf("/")
+        readonly property string parentPath: slash <= 0 ? "/" : path.slice(0, slash)
+        readonly property string parentShown: parentPath.startsWith(home + "/") ? "~" + parentPath.slice(home.length)
+                                                                                 : parentPath
+
         Layout.fillWidth: true
-        spacing: 0
+        implicitHeight: rowContent.implicitHeight + Theme.menu.padding * 4
+        radius: Theme.menu.itemRadius
+        color: rowHover.hovered ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
+        Behavior on color { enabled: Motion.fades; MotionColor {} }
+        HoverHandler { id: rowHover }
 
         RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: Theme.menu.padding * 2
-            Layout.bottomMargin: Theme.menu.padding * 2
-            spacing: Theme.layout.spacing
-    
+            id: rowContent
+            anchors.fill: parent
+            anchors.leftMargin: 8
+            anchors.rightMargin: 4
+            spacing: Theme.controls.controlSpacing
+
             Icon {
-                Layout.leftMargin: 8
-                visible: folderRow.steam
-                path: Icons.steam
+                path: folderRow.steam ? Icons.steam : Icons.folder
                 size: Theme.controls.iconSize
                 color: Theme.controls.inputText
                 opacity: folderRow.exists ? 1 : Theme.gameEditor.readOnlyOpacity
             }
-            Label {
+            ColumnLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: folderRow.steam ? 0 : 8
-                readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
-                                                   .toString().replace(/^file:\/\//, "")
-                text: folderRow.steam || !folderRow.path.startsWith(home + "/") ? folderRow.path
-                                                                                : "~" + folderRow.path.slice(home.length)
-                color: Theme.controls.inputText
-                font.family: folderRow.steam ? font.family : Theme.font.monoFamily
-                font.pixelSize: folderRow.steam ? font.pixelSize : Theme.gameEditor.pathFontSize
-                elide: Text.ElideMiddle
+                spacing: 0
                 opacity: folderRow.exists ? 1 : Theme.gameEditor.readOnlyOpacity
+
+                Label {
+                    Layout.fillWidth: true
+                    text: folderRow.steam ? qsTr("Steam")
+                                          : folderRow.path.slice(folderRow.slash + 1) || folderRow.path
+                    color: Theme.controls.inputText
+                    elide: Text.ElideRight
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: folderRow.steam ? qsTr("Built in") : folderRow.parentShown
+                    color: Theme.controls.descriptionColor
+                    font.family: folderRow.steam ? font.family : Theme.font.monoFamily
+                    font.pixelSize: folderRow.steam ? Theme.controls.descriptionFontSize
+                                                    : Theme.gameEditor.pathFontSize
+                    elide: Text.ElideMiddle
+                }
             }
             Label {
                 visible: !folderRow.exists
@@ -1839,11 +1881,6 @@ Item {
                 tip: qsTr("Stop showing this folder")
                 onClicked: folderRow.removeClicked()
             }
-        }
-        Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: Theme.settingsWindow.rowDivider
         }
     }
     component Field: ColumnLayout {
