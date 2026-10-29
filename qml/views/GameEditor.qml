@@ -1,3 +1,4 @@
+import QtCore
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -61,6 +62,9 @@ Item {
     readonly property string saveFolderShown: saveFolderCleared ? "" : newSaveFolder !== "" ? newSaveFolder
                                                                     : (game.saveFolder ?? "")
     property string foundSaveFolder: ""
+    property var newMediaFolders: null
+    readonly property var mediaFoldersShown: newMediaFolders ?? game.mediaFolders ?? []
+    readonly property bool mediaGame: !adding && (onSteam || linuxGame)
     readonly property string exeShown: newExe !== "" ? newExe : (game.exePath || game.exe || "")
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")
     property bool shortcutQueued: false
@@ -118,6 +122,10 @@ Item {
         show(g)
     }
 
+    function openMediaFolders() {
+        mediaMenu.open()
+    }
+
     function openForFile(file) {
         const p = Library.inspectRom(file)
         if (p.existing !== "") {
@@ -160,6 +168,8 @@ Item {
         newInstallDir = ""
         newSaveFolder = ""
         saveFolderCleared = false
+        newMediaFolders = null
+        mediaMenu.close()
         form.scrollRoom = false
         foundSaveFolder = g.id !== undefined && !adding ? GameRunner.foundSaveFolder(g.id) : ""
         titleField.text = g.title
@@ -517,6 +527,8 @@ Item {
         }
         if (!adding && saveFolderShown !== (game.saveFolder ?? ""))
             out.save_folder = saveFolderShown !== "" ? saveFolderShown : null
+        if (mediaGame && newMediaFolders !== null)
+            out.media_folders = newMediaFolders
         return out
     }
 
@@ -1162,41 +1174,177 @@ Item {
                                     }
                                 }
                             }
-                            Field {
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.gameEditor.columnSpacing / 2
                                 visible: !root.adding
-                                label: qsTr("Save folder")
-                                help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
-                                           + "the ROM for an emulator that saves there, the emulator's save folder, or the "
-                                           + "game's Proton prefix.")
 
-                                PathField {
-                                    onCopied: root.message(qsTr("Copied"))
-                                    Layout.fillWidth: true
-                                    Layout.minimumHeight: Theme.controls.inputHeight
-                                    path: root.saveFolderShown !== "" ? root.saveFolderShown : root.foundSaveFolder
-                                    missingText: qsTr("None found")
-                                    missingColor: Theme.gameEditor.hintColor
-                                    fontSize: Theme.gameEditor.pathFontSize
+                                Field {
+                                    Layout.preferredWidth: 1
+                                    Layout.alignment: Qt.AlignTop
+                                    label: qsTr("Save folder")
+                                    help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
+                                               + "the ROM for an emulator that saves there, the emulator's save folder, or the "
+                                               + "game's Proton prefix.")
 
-                                    SettingsButton {
-                                        iconPath: Icons.editLine
-                                        tip: qsTr("Choose the save folder")
-                                        onClicked: folderPicker.pickFor("saves")
-                                    }
-                                    SettingsButton {
-                                        visible: root.saveFolderShown !== ""
-                                        iconPath: Icons.close
-                                        tip: qsTr("Look for the save folder")
-                                        onClicked: {
-                                            root.newSaveFolder = ""
-                                            root.saveFolderCleared = true
+                                    PathField {
+                                        onCopied: root.message(qsTr("Copied"))
+                                        Layout.fillWidth: true
+                                        Layout.minimumHeight: Theme.controls.inputHeight
+                                        path: root.saveFolderShown !== "" ? root.saveFolderShown : root.foundSaveFolder
+                                        missingText: qsTr("None found")
+                                        missingColor: Theme.gameEditor.hintColor
+                                        fontSize: Theme.gameEditor.pathFontSize
+
+                                        SettingsButton {
+                                            iconPath: Icons.editLine
+                                            tip: qsTr("Choose the save folder")
+                                            onClicked: folderPicker.pickFor("saves")
+                                        }
+                                        SettingsButton {
+                                            visible: root.saveFolderShown !== ""
+                                            iconPath: Icons.close
+                                            tip: qsTr("Look for the save folder")
+                                            onClicked: {
+                                                root.newSaveFolder = ""
+                                                root.saveFolderCleared = true
+                                            }
                                         }
                                     }
                                 }
-                                Hint {
-                                    open: root.saveFolderShown === "" && root.foundSaveFolder !== ""
-                                    text: qsTr("Found for you. Choose another folder to open that one instead.")
+                                Field {
+                                    visible: root.mediaGame
+                                    Layout.preferredWidth: 1
+                                    Layout.alignment: Qt.AlignTop
+                                    label: qsTr("Media folders")
+                                    help: root.onSteam
+                                          ? qsTr("Pictures and videos shown in the game's Media row and the Gallery: Steam's own "
+                                                 + "clips and screenshots, plus every picture and video in the folders you add "
+                                                 + "(OBS recordings, a screenshot tool's folder) and their subfolders.")
+                                          : qsTr("Pictures and videos shown in the game's Media row and the Gallery: every "
+                                                 + "picture and video in the folders you add (OBS recordings, a screenshot "
+                                                 + "tool's folder) and their subfolders.")
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Theme.layout.spacing
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            implicitHeight: Theme.controls.inputHeight
+                                            radius: Theme.controls.inputRadius
+                                            color: Theme.controls.inputBackground
+                                            border.color: Theme.controls.inputBorder
+                                            border.width: Theme.controls.inputBorderWidth
+
+                                            Label {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 10
+                                                anchors.rightMargin: 10
+                                                verticalAlignment: Text.AlignVCenter
+                                                readonly property int count: root.mediaFoldersShown.length
+                                                readonly property string folders: count === 1 ? qsTr("1 folder")
+                                                                                              : qsTr("%1 folders").arg(count)
+                                                text: root.onSteam ? (count === 0 ? qsTr("Steam's") : qsTr("Steam's + %1").arg(folders))
+                                                                   : (count === 0 ? qsTr("None") : folders)
+                                                color: Theme.controls.inputText
+                                                font.pixelSize: Theme.gameEditor.pathFontSize
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                        SettingsButton {
+                                            id: mediaEdit
+                                            iconPath: Icons.editLine
+                                            tip: qsTr("Choose the media folders")
+                                            onClicked: mediaMenu.opened ? mediaMenu.close() : mediaMenu.open()
+
+                                            Popup {
+                                                id: mediaMenu
+
+                                                x: mediaEdit.width - width
+                                                y: mediaEdit.height + 4
+                                                width: Theme.gameEditor.mediaPopupWidth
+                                                height: implicitHeight * reveal
+                                                padding: Theme.menu.padding
+                                                clip: true
+                                                property real reveal: 1
+                                                enter: DropdownEnter {}
+                                                exit: DropdownExit {}
+
+                                                background: Rectangle {
+                                                    radius: Theme.controls.inputRadius
+                                                    color: Theme.menu.popupBackground
+                                                    border.color: Theme.controls.inputBorder
+                                                    border.width: Math.max(1, Theme.controls.inputBorderWidth)
+                                                }
+                                                contentItem: ColumnLayout {
+                                                    y: -(1 - mediaMenu.reveal) * height
+                                                    spacing: 0
+
+                                                    MediaFolderRow {
+                                                        visible: root.onSteam
+                                                        steam: true
+                                                        path: qsTr("Steam's clips and screenshots")
+                                                        exists: true
+                                                        onOpenClicked: {
+                                                            if (!Library.showSteamMediaFolder(root.game.id))
+                                                                root.message(qsTr("Steam's folder isn't found"))
+                                                        }
+                                                    }
+                                                    Repeater {
+                                                        model: root.mediaFoldersShown
+
+                                                        MediaFolderRow {
+                                                            required property string modelData
+                                                            path: modelData
+                                                            exists: GameRunner.folderExists(modelData)
+                                                            onOpenClicked: {
+                                                                const e = GameRunner.openPath(modelData)
+                                                                if (e !== "")
+                                                                    root.message(e)
+                                                            }
+                                                            onRemoveClicked: root.newMediaFolders =
+                                                                root.mediaFoldersShown.filter(f => f !== modelData)
+                                                        }
+                                                    }
+                                                    AbstractButton {
+                                                        id: addFolder
+                                                        Layout.fillWidth: true
+                                                        implicitHeight: Theme.menu.itemHeight
+                                                        hoverEnabled: true
+                                                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                                        onClicked: folderPicker.pickFor("media")
+                                                        background: Rectangle {
+                                                            radius: Theme.menu.itemRadius
+                                                            color: addFolder.hovered ? Theme.controls.hover
+                                                                                     : Qt.alpha(Theme.controls.hover, 0)
+                                                            Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                                        }
+                                                        contentItem: RowLayout {
+                                                            spacing: Theme.controls.controlSpacing
+
+                                                            Item { Layout.preferredWidth: 2 }
+                                                            Icon {
+                                                                path: Icons.add
+                                                                size: Theme.controls.iconSize
+                                                                color: Theme.controls.inputText
+                                                            }
+                                                            Label {
+                                                                Layout.fillWidth: true
+                                                                text: qsTr("Add folder")
+                                                                color: Theme.controls.inputText
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+                            }
+                            Hint {
+                                open: !root.adding && root.saveFolderShown === "" && root.foundSaveFolder !== ""
+                                text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
                             }
                             Hint {
                                 open: root.adding && root.pick.platforms.length === 0
@@ -1610,6 +1758,7 @@ Item {
         sourceComponent: RomFolderDialog {
             title: folderPicker.target === "install" ? qsTr("The install folder of %1").arg(root.game.title ?? "")
                  : folderPicker.target === "saves" ? qsTr("The save folder of %1").arg(root.game.title ?? "")
+                 : folderPicker.target === "media" ? qsTr("A media folder of %1").arg(root.game.title ?? "")
                  : qsTr("The folder %1 starts in").arg(root.game.title ?? "")
             onPicked: path => {
                 if (folderPicker.target === "install") {
@@ -1617,6 +1766,9 @@ Item {
                 } else if (folderPicker.target === "saves") {
                     root.newSaveFolder = path
                     root.saveFolderCleared = false
+                } else if (folderPicker.target === "media") {
+                    if (!root.mediaFoldersShown.includes(path))
+                        root.newMediaFolders = root.mediaFoldersShown.concat([path])
                 } else {
                     root.newStartDir = path
                     root.startDirCleared = false
@@ -1626,6 +1778,74 @@ Item {
         }
     }
 
+    component MediaFolderRow: ColumnLayout {
+        id: folderRow
+        property string path
+        property bool steam: false
+        property bool exists: true
+        signal openClicked()
+        signal removeClicked()
+
+        Layout.fillWidth: true
+        spacing: 0
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.menu.padding * 2
+            Layout.bottomMargin: Theme.menu.padding * 2
+            spacing: Theme.layout.spacing
+    
+            Icon {
+                Layout.leftMargin: 8
+                visible: folderRow.steam
+                path: Icons.steam
+                size: Theme.controls.iconSize
+                color: Theme.controls.inputText
+                opacity: folderRow.exists ? 1 : Theme.gameEditor.readOnlyOpacity
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: folderRow.steam ? 0 : 8
+                readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+                                                   .toString().replace(/^file:\/\//, "")
+                text: folderRow.steam || !folderRow.path.startsWith(home + "/") ? folderRow.path
+                                                                                : "~" + folderRow.path.slice(home.length)
+                color: Theme.controls.inputText
+                font.family: folderRow.steam ? font.family : Theme.font.monoFamily
+                font.pixelSize: folderRow.steam ? font.pixelSize : Theme.gameEditor.pathFontSize
+                elide: Text.ElideMiddle
+                opacity: folderRow.exists ? 1 : Theme.gameEditor.readOnlyOpacity
+            }
+            Label {
+                visible: !folderRow.exists
+                text: qsTr("Not found")
+                color: Theme.gameEditor.hintColor
+                font.pixelSize: Theme.gameEditor.hintFontSize
+            }
+            ListButton {
+                flat: true
+                iconPath: Icons.folderOpenLine
+                enabled: folderRow.exists
+                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                tip: qsTr("Open the folder")
+                onClicked: folderRow.openClicked()
+            }
+            ListButton {
+                flat: true
+                enabled: !folderRow.steam
+                opacity: folderRow.steam ? 0 : 1
+                iconPath: Icons.close
+                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                tip: qsTr("Stop showing this folder")
+                onClicked: folderRow.removeClicked()
+            }
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: Theme.settingsWindow.rowDivider
+        }
+    }
     component Field: ColumnLayout {
         id: field
         property alias label: name.text

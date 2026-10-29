@@ -876,6 +876,11 @@ QString GameRunner::openPath(const QString &path)
     return {};
 }
 
+bool GameRunner::folderExists(const QString &path) const
+{
+    return QFileInfo(Emulators::expandHome(path, QDir::homePath())).isDir();
+}
+
 QString GameRunner::problemFile(const QString &message) const
 {
     static const QRegularExpression pattern(QStringLiteral("^(\\S+\\.toml):\\d+:"));

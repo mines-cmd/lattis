@@ -291,6 +291,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "uninstallInEditor");
                 });
             }
+            if (qEnvironmentVariableIntValue("LATTIS_MEDIA_FOLDERS") == 1) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
+                    logHook("mediaFoldersInEditor");
+                    QMetaObject::invokeMethod(window, "mediaFoldersInEditor");
+                });
+            }
             if (qEnvironmentVariableIntValue("LATTIS_LOOK_UP") == 1) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
                     logHook("lookUpInEditor");

@@ -13,7 +13,7 @@ ArtThumb {
     property bool focusRing: false
     property bool showTooltip: true
     readonly property bool hovered: area.containsMouse
-    readonly property bool isClip: media.kind === "clip"
+    readonly property bool isClip: media.kind === "clip" || media.kind === "video"
     property real hoverScale: Theme.media.thumbHoverScale
 
     z: hovered ? 1 : 0
@@ -24,7 +24,26 @@ ArtThumb {
     signal menuRequested(point position)
 
     aspect: 16 / 9
-    source: media.thumbnail ?? ""
+    // A video's thumbnail is made after its item was listed; the tile takes it when it arrives.
+    property string madeThumbnail: ""
+    property string madeLength: ""
+    onMediaChanged: {
+        madeThumbnail = ""
+        madeLength = ""
+    }
+    Connections {
+        target: Library
+        enabled: tile.media.kind === "video"
+        function onVideoThumbnailReady(file, thumbnail, length) {
+            if (file === tile.media.file) {
+                tile.madeThumbnail = thumbnail
+                tile.madeLength = length
+            }
+        }
+    }
+    source: madeThumbnail !== "" ? madeThumbnail : media.thumbnail ?? ""
+    failedIcon: Icons.filmLine
+    iconWhenEmpty: isClip
     fillMode: pictureAspect > 0 && pictureAspect < Theme.media.thumbFitBelow ? Image.PreserveAspectFit : Image.PreserveAspectCrop
 
     RectangularShadow {
@@ -99,7 +118,7 @@ ArtThumb {
             Label {
                 id: lengthLabel
                 anchors.verticalCenter: parent.verticalCenter
-                text: tile.media.length ?? ""
+                text: tile.madeLength !== "" ? tile.madeLength : tile.media.length ?? ""
                 color: Theme.media.badgeText
                 font.pixelSize: Theme.details.headingFontSize
             }

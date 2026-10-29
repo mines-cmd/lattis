@@ -6,6 +6,7 @@
 #include "gameid.h"
 #include "igdb.h"
 #include "launchcommand.h"
+#include "mediafolders.h"
 #include "romfoldermatch.h"
 #include "romscan.h"
 #include "searchtext.h"
@@ -13,6 +14,7 @@
 #include "steamachievements.h"
 #include "steammedia.h"
 #include "tomlpatch.h"
+#include "videothumbnails.h"
 
 #include <QDesktopServices>
 #include <QDir>
@@ -1843,6 +1845,75 @@ QVariantMap screenshotItem(const QString &id, const QString &path, const QDateTi
     return item;
 }
 
+QVariantMap videoItem(const MediaFolders::File &f, const VideoThumbnails::Cached &cached, const QString &gameId = {})
+{
+    QVariantMap item{{QStringLiteral("kind"), QStringLiteral("video")},
+                     {QStringLiteral("id"), f.path},
+                     {QStringLiteral("folder"), f.folder},
+                     {QStringLiteral("file"), QUrl::fromLocalFile(f.path).toString()},
+                     {QStringLiteral("thumbnail"),
+                      cached.thumbnail.isEmpty() ? QString() : QUrl::fromLocalFile(cached.thumbnail).toString()},
+                     {QStringLiteral("length"),
+                      cached.durationMs > 0 ? SteamMedia::lengthText(cached.durationMs) : QString()},
+                     {QStringLiteral("time"), f.time}};
+    if (!gameId.isEmpty())
+        item.insert(QStringLiteral("gameId"), gameId);
+    return item;
+}
+
+// What Steam's own lists show of an app, so a folder that points into Steam's screenshots doesn't show it twice.
+struct SteamShown
+{
+    QSet<QString> files;
+    QSet<QString> thumbnailFolders;
+
+    void add(const QString &path)
+    {
+        const QFileInfo info(path);
+        files.insert(info.canonicalFilePath());
+        thumbnailFolders.insert(info.dir().canonicalPath() + QStringLiteral("/thumbnails"));
+    }
+    bool has(const MediaFolders::File &f) const
+    {
+        return files.contains(f.path) || thumbnailFolders.contains(QFileInfo(f.path).dir().path());
+    }
+};
+
+SteamShown steamShown(const SteamMedia::AppMedia &media)
+{
+    SteamShown shown;
+    for (const SteamMedia::Screenshot &s : media.screenshots)
+        shown.add(s.path);
+    for (const SteamMedia::Clip &c : media.clips) {
+        if (!c.thumbnail.isEmpty())
+            shown.files.insert(QFileInfo(c.thumbnail).canonicalFilePath());
+    }
+    return shown;
+}
+
+QVariantList folderItems(const MediaFolders::Listing &listing, const SteamShown &steam,
+                         const VideoThumbnails::Cache &cache, const QString &gameId = {})
+{
+    QVariantList items;
+    for (const MediaFolders::File &f : listing.files) {
+        if (steam.has(f))
+            continue;
+        if (f.video) {
+            items.append(videoItem(f, cache.find(f.path), gameId));
+            continue;
+        }
+        QVariantMap item = screenshotItem(f.path, f.path, f.time, gameId);
+        item.insert(QStringLiteral("folder"), f.folder);
+        items.append(item);
+    }
+    return items;
+}
+
+QString videoThumbnailFolder()
+{
+    return AppPaths::cacheDir() + QStringLiteral("/videothumbs");
+}
+
 // The app ID Steam knows a library game by (a non-Steam shortcut's is made from its shortcut ID); 0 for none.
 quint64 steamAppIdOf(const Game &g)
 {
@@ -1883,27 +1954,67 @@ void Library::media(const QString &id)
     if (const Game *g = game(id); g && g->shortcut)
         appId = steamAppIdOf(*g);
     const SteamInstall install = m_store.snapshot().steam.install;
-    if (appId == 0 || install.userDataDir().isEmpty()) {
+    const bool steam = appId != 0 && !install.userDataDir().isEmpty();
+    const QStringList folders = m_store.snapshot().content.games.value(id).mediaFolders;
+    if (!steam && folders.isEmpty()) {
         QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
         return;
     }
-    auto *watcher = new QFutureWatcher<QVariantList>(this);
-    connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
-        emit mediaReady(id, watcher->result());
+    struct Result
+    {
+        QVariantList items;
+        bool limited = false;
+    };
+    auto *watcher = new QFutureWatcher<Result>(this);
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, id] {
+        const Result result = watcher->result();
+        requestVideoThumbnails(result.items);
+        if (result.limited)
+            emit mediaLimited(id);
+        emit mediaReady(id, result.items);
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([install, appId] {
-        QVariantList items;
-        for (const SteamMedia::Clip &c : SteamMedia::listClips(install, appId))
-            items.append(clipItem(c));
-        for (const SteamMedia::Screenshot &s : SteamMedia::listScreenshots(install, appId))
-            items.append(screenshotItem(s.id, s.path, s.time));
-        std::stable_sort(items.begin(), items.end(), [](const QVariant &a, const QVariant &b) {
+    watcher->setFuture(QtConcurrent::run([install, appId, steam, folders] {
+        Result result;
+        SteamMedia::AppMedia shown;
+        if (steam) {
+            shown.clips = SteamMedia::listClips(install, appId);
+            shown.screenshots = SteamMedia::listScreenshots(install, appId);
+            for (const SteamMedia::Clip &c : shown.clips)
+                result.items.append(clipItem(c));
+            for (const SteamMedia::Screenshot &s : shown.screenshots)
+                result.items.append(screenshotItem(s.id, s.path, s.time));
+        }
+        if (!folders.isEmpty()) {
+            const MediaFolders::Listing listing = MediaFolders::list(folders, QDir::homePath());
+            result.limited = listing.limited;
+            result.items += folderItems(listing, steamShown(shown), VideoThumbnails::Cache(videoThumbnailFolder()));
+        }
+        std::stable_sort(result.items.begin(), result.items.end(), [](const QVariant &a, const QVariant &b) {
             return a.toMap().value(QStringLiteral("time")).toDateTime()
                    > b.toMap().value(QStringLiteral("time")).toDateTime();
         });
-        return items;
+        return result;
     }));
+}
+
+void Library::requestVideoThumbnails(const QVariantList &items)
+{
+    for (const QVariant &v : items) {
+        const QVariantMap item = v.toMap();
+        if (item.value(QStringLiteral("kind")) != QLatin1String("video") || !item.value(QStringLiteral("thumbnail")).toString().isEmpty())
+            continue;
+        if (!m_videoThumbnails) {
+            m_videoThumbnails = new VideoThumbnailMaker(videoThumbnailFolder(), this);
+            connect(m_videoThumbnails, &VideoThumbnailMaker::made, this,
+                    [this](const QString &path, const QString &thumbnail, qint64 durationMs) {
+                        emit videoThumbnailReady(QUrl::fromLocalFile(path).toString(),
+                                                 QUrl::fromLocalFile(thumbnail).toString(),
+                                                 SteamMedia::lengthText(durationMs));
+                    });
+        }
+        m_videoThumbnails->request(item.value(QStringLiteral("id")).toString());
+    }
 }
 
 void Library::allMedia()
@@ -1918,10 +2029,20 @@ void Library::allMedia()
     };
     QHash<QString, Group> groups;
     QHash<quint64, QString> steamGames;
+    struct FolderGame
+    {
+        QString id;
+        quint64 appId = 0;
+        QStringList folders;
+    };
+    QList<FolderGame> folderGames;
     for (const Game &g : std::as_const(m_games)) {
         if (!g.rom) {
-            if (const quint64 appId = steamAppIdOf(g))
+            const quint64 appId = steamAppIdOf(g);
+            if (appId)
                 steamGames.insert(appId, g.id);
+            if (const QStringList folders = m_store.snapshot().content.games.value(g.id).mediaFolders; !folders.isEmpty())
+                folderGames.append({g.id, appId, folders});
             continue;
         }
         const Platform *p = platform(g.platform);
@@ -1938,21 +2059,27 @@ void Library::allMedia()
     }
 
     // The worker outlives a closed library for as long as a listing takes, so it reaches the library through a QPointer.
-    const auto deliver = [self = QPointer<Library>(this), generation](QVariantList batch, bool done) {
+    const auto deliver = [self = QPointer<Library>(this), generation](QVariantList batch, bool done,
+                                                                       QStringList limited = {}) {
         QMetaObject::invokeMethod(
             self.data(),
-            [self, generation, batch = std::move(batch), done] {
-                if (self && generation == self->m_allMediaGeneration)
-                    emit self->allMediaReady(batch, done);
+            [self, generation, batch = std::move(batch), done, limited = std::move(limited)] {
+                if (!self || generation != self->m_allMediaGeneration)
+                    return;
+                self->requestVideoThumbnails(batch);
+                for (const QString &id : limited)
+                    emit self->mediaLimited(id);
+                emit self->allMediaReady(batch, done);
             },
             Qt::QueuedConnection);
     };
 
-    QThreadPool::globalInstance()->start([deliver, groups = groups.values(), steamGames,
+    QThreadPool::globalInstance()->start([deliver, groups = groups.values(), steamGames, folderGames,
                                           install = m_store.snapshot().steam.install, dataDir = m_store.dataDir()] {
+        QHash<quint64, SteamMedia::AppMedia> all;
         if (!install.userDataDir().isEmpty() && !steamGames.isEmpty()) {
             QVariantList batch;
-            const QHash<quint64, SteamMedia::AppMedia> all = SteamMedia::listAll(install);
+            all = SteamMedia::listAll(install);
             for (auto it = all.cbegin(); it != all.cend(); ++it) {
                 const QString gameId = steamGames.value(it.key());
                 if (gameId.isEmpty())
@@ -1964,6 +2091,15 @@ void Library::allMedia()
             }
             if (!batch.isEmpty())
                 deliver(std::move(batch), false);
+        }
+        if (!folderGames.isEmpty()) {
+            const VideoThumbnails::Cache cache(videoThumbnailFolder());
+            for (const FolderGame &g : folderGames) {
+                const MediaFolders::Listing listing = MediaFolders::list(g.folders, QDir::homePath());
+                const QVariantList batch = folderItems(listing, steamShown(all.value(g.appId)), cache, g.id);
+                if (!batch.isEmpty())
+                    deliver(batch, false, listing.limited ? QStringList{g.id} : QStringList{});
+            }
         }
         for (const Group &group : groups) {
             QHash<QString, RomInfo> infos;
@@ -2061,6 +2197,19 @@ void Library::discardClip(const QString &path)
 bool Library::showClipFolder(const QString &folder)
 {
     return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
+}
+
+bool Library::showSteamMediaFolder(const QString &id)
+{
+    quint64 appId = quint64(qMax<qint64>(GameId::steamAppId(id), 0));
+    if (const Game *g = game(id); g && g->shortcut)
+        appId = steamAppIdOf(*g);
+    const QString user = m_store.snapshot().steam.install.userDataDir();
+    if (appId == 0 || user.isEmpty())
+        return false;
+    const QString screenshots = QStringLiteral("%1/760/remote/%2/screenshots").arg(user).arg(appId);
+    const QString folder = QFileInfo::exists(screenshots) ? screenshots : user + QStringLiteral("/gamerecordings");
+    return QFileInfo::exists(folder) && QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
 }
 
 QString Library::shortPlayTime(int minutes) const
@@ -2963,6 +3112,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("startDir"), file.startDir},
         {QStringLiteral("installDir"), file.installDir},
         {QStringLiteral("saveFolder"), file.saveFolder},
+        {QStringLiteral("mediaFolders"), file.mediaFolders},
         {QStringLiteral("uninstalled"), g->uninstalled},
         {QStringLiteral("gameNotFound"), runsProgram(g->platform) && !g->installed && !g->uninstalled},
         {QStringLiteral("rom"), g->rom},
@@ -3226,8 +3376,14 @@ QString Library::saveGame(const QString &id, const QVariantMap &values)
     for (auto &[key, value] : pairs) {
         if (key == QLatin1String("save_folder") && !value.toString().isEmpty())
             value = m_store.writtenPath(value.toString());
+        if (key == QLatin1String("media_folders")) {
+            QStringList written;
+            for (const QString &folder : value.toStringList())
+                written.append(m_store.writtenPath(folder));
+            value = written;
+        }
     }
-    const auto rom = std::find_if(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("rom"); });
+    const auto rom =std::find_if(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("rom"); });
     const auto exe = std::find_if(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("exe"); });
     const bool newRom = rom != pairs.cend() && rom->second.isValid();
     const bool newProgram = exe != pairs.cend() && !exe->second.toString().isEmpty()

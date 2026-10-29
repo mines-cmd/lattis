@@ -5,7 +5,7 @@ project(Lattis VERSION 1.1.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Concurrent Network ShaderTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Concurrent Network Multimedia ShaderTools)
 find_package(tomlplusplus 3 REQUIRED)
 # Backups (.tar.zst); zstd threads need 3.6.
 find_package(LibArchive 3.6 REQUIRED)
@@ -301,6 +301,8 @@ qt_add_qml_module(lattis
         src/library/libraryversion.h src/library/libraryversion.cpp
         src/library/emulators.h src/library/emulators.cpp
         src/library/emulatorscreenshots.h src/library/emulatorscreenshots.cpp
+        src/library/mediafolders.h src/library/mediafolders.cpp
+        src/library/videothumbnails.h src/library/videothumbnails.cpp
         src/install/releasesource.h src/install/releasesource.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
         src/install/desktopentry.h src/install/desktopentry.cpp
@@ -408,6 +410,7 @@ target_link_libraries(lattis PRIVATE
     Qt6::QuickControls2
     Qt6::Concurrent
     Qt6::Network
+    Qt6::Multimedia
     tomlplusplus::tomlplusplus
     LibArchive::LibArchive
 )

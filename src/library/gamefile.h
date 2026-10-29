@@ -67,6 +67,7 @@ struct GameFile
     QString startDir;
     QString installDir;
     QString saveFolder;
+    QStringList mediaFolders;
     qint64 shortcut = 0;
     bool installed = true;
     QString sameAs;

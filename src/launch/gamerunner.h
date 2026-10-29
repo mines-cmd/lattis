@@ -54,6 +54,7 @@ public:
     Q_INVOKABLE QString shownPath(const QString &path) const;
     Q_INVOKABLE QString openDataFolder();
     Q_INVOKABLE QString openPath(const QString &path);
+    Q_INVOKABLE bool folderExists(const QString &path) const;
     Q_INVOKABLE QString openFile(const QString &path);
     Q_INVOKABLE QString problemFile(const QString &message) const;
     Q_INVOKABLE QString uninstall(const QString &gameId);

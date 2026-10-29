@@ -14,7 +14,9 @@ MotionPopup {
     // Game info by id ({title, platformName, platformIcon}); with it, items that carry a gameId get their game named in the top bar.
     property var games: ({})
     readonly property var game: games[current.gameId ?? ""]
-    readonly property bool isClip: current.kind === "clip"
+    // Steam's clips are joined by ffmpeg first; a folder's video plays as it is.
+    readonly property bool isSteamClip: current.kind === "clip"
+    readonly property bool isClip: isSteamClip || current.kind === "video"
     readonly property rect picture: isClip ? (pictureKnown || lastPicture.width <= 0 ? video.contentRect : lastPicture)
                                            : Qt.rect((shot.width - shot.paintedWidth) / 2, (shot.height - shot.paintedHeight) / 2,
                                                      shot.paintedWidth, shot.paintedHeight)
@@ -44,7 +46,8 @@ MotionPopup {
     readonly property bool barsShown: awake || Theme.media.viewerHideDelay === 0 || topHover.hovered || bottomHover.hovered || zoomHover.hovered
                                       || clipMenu.visible || isClip && (!playing || file === "")
     readonly property bool preparing: token !== "" && file === "" && error === ""
-    readonly property bool needsFfmpeg: !FfmpegTool.available
+    readonly property bool needsFfmpeg: isSteamClip && !FfmpegTool.available
+    property bool tempFile: false
     readonly property bool playing: player.playbackState === MediaPlayer.PlayingState
     readonly property var window: scope.Window.window
     readonly property bool fullscreen: window !== null && window.visibility === Window.FullScreen
@@ -109,7 +112,13 @@ MotionPopup {
 
     function prepare() {
         discard()
-        if (!isClip || !FfmpegTool.available)
+        if (current.kind === "video") {
+            file = current.file
+            player.source = file
+            player.play()
+            return
+        }
+        if (!isSteamClip || !FfmpegTool.available)
             return
         token = current.id + "-" + Date.now()
         Library.prepareClip(token, current.videoDir, FfmpegTool.path)
@@ -120,7 +129,9 @@ MotionPopup {
         player.stop()
         player.source = ""
         ended = false
-        Library.discardClip(file)
+        if (tempFile)
+            Library.discardClip(file)
+        tempFile = false
         file = ""
         token = ""
     }
@@ -271,6 +282,7 @@ MotionPopup {
                 return
             }
             root.file = path
+            root.tempFile = true
             player.source = "file://" + path
             player.play()
         }
@@ -278,7 +290,7 @@ MotionPopup {
     Connections {
         target: FfmpegTool
         function onChanged() {
-            if (root.opened && root.isClip && FfmpegTool.available && root.token === "" && root.error === "")
+            if (root.opened && root.isSteamClip && FfmpegTool.available && root.token === "" && root.error === "")
                 root.prepare()
         }
     }
@@ -611,7 +623,7 @@ MotionPopup {
                 }
 
                 Surface {
-                    visible: root.isClip ? root.file === "" && (root.needsFfmpeg || root.error !== "") : shot.status === Image.Error
+                    visible: root.isClip ? root.error !== "" || root.file === "" && root.needsFfmpeg : shot.status === Image.Error
                     anchors.centerIn: parent
                     width: Math.min(parent.width, Theme.gameEditor.confirmWidth)
                     height: message.implicitHeight + 2 * Theme.gameEditor.padding
@@ -629,7 +641,7 @@ MotionPopup {
                         width: parent.width - 2 * Theme.gameEditor.padding
 
                         FfmpegPrompt {
-                            visible: root.isClip && root.needsFfmpeg
+                            visible: root.needsFfmpeg
                             Layout.fillWidth: true
                             textColor: Theme.gameEditor.labelColor
                             showNotNow: false

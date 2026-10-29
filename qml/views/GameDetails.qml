@@ -560,7 +560,7 @@ Item {
     // "screenshot" opens the first screenshot, "menu" the first tile's menu, anything else plays the first clip.
     function clipForScreenshot(spec) {
         const list = textColumn.mediaRow.shown
-        const item = spec === "menu" ? list[0] : list.find(i => i.kind === (spec === "screenshot" ? "screenshot" : "clip"))
+        const item = spec === "menu" ? list[0] : list.find(i => spec === "screenshot" ? i.kind === "screenshot" : i.kind !== "screenshot")
         if (item === undefined)
             return
         if (spec === "menu")

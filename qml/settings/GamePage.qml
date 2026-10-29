@@ -96,7 +96,7 @@ Item {
     readonly property var sectionDefs: ({
         description: { icon: Icons.fileTextLine, hint: qsTr("The game's text, with Show more when it's cut") },
         tags: { icon: Icons.tagLine, hint: qsTr("Click one to show only the games with it") },
-        clips: { icon: Icons.playLargeLine, hint: qsTr("A Steam game's clips and screenshots, and an emulator's screenshots of a ROM game, as the Media row") }
+        clips: { icon: Icons.playLargeLine, hint: qsTr("A game's clips, screenshots and videos (Steam's, its own media folders, an emulator's screenshots of a ROM game) as the Media row") }
     })
 
     GamePageNames { id: names }

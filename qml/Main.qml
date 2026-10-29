@@ -309,6 +309,10 @@ ApplicationWindow {
         editorLoader.item?.uninstall()
     }
 
+    function mediaFoldersInEditor() {
+        editorLoader.item?.openMediaFolders()
+    }
+
     function installDialogForScreenshot() {
         details.openInstallDialog()
     }

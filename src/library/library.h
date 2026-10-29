@@ -22,6 +22,7 @@
 
 #include <array>
 
+class VideoThumbnailMaker;
 class QJSEngine;
 class QQmlEngine;
 
@@ -165,6 +166,7 @@ public:
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);
     Q_INVOKABLE bool showClipFolder(const QString &folder);
+    Q_INVOKABLE bool showSteamMediaFolder(const QString &id);
     Q_INVOKABLE void monthStats(int year, int month);
     Q_INVOKABLE void yearStats(int year);
     Q_INVOKABLE QString shortPlayTime(int minutes) const;
@@ -306,6 +308,8 @@ signals:
     void yearStatsReady(int year, const QVariantMap &stats);
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
+    void mediaLimited(const QString &id);
+    void videoThumbnailReady(const QString &file, const QString &thumbnail, const QString &length);
     void allMediaReady(const QVariantList &batch, bool done);
     void achievementsReady(const QString &id, const QVariantList &achievements);
     void clipPrepared(const QString &token, const QString &path, const QString &error);
@@ -315,6 +319,7 @@ signals:
     void undoExpired(quint64 token);
 
 private:
+    void requestVideoThumbnails(const QVariantList &items);
     static QString gameFileOf(const QString &id);
     QString editGames(const QStringList &ids, const QString &text, const std::function<QString(const QString &)> &change);
     quint64 commitUndo(const QString &text);
@@ -411,6 +416,7 @@ private:
     QStringList m_statusFilter;
     bool m_showHidden = false;
     int m_allMediaGeneration = 0;
+    VideoThumbnailMaker *m_videoThumbnails = nullptr;
     bool m_showSortValue = true;
     int m_notInstalledHidden = 0;
     QSet<QString> m_tagNames;

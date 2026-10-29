@@ -1178,6 +1178,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "row_spacing", "12", 0, 100, "Space between fields"),
     integer("game_editor", "description_height", "160", 30, 600, "Height of the description box"),
     integer("game_editor", "path_font_size", "12", 6, 48, "Size of the ROM path, in font.mono_family"),
+    integer("game_editor", "media_popup_width", "400", 200, 1000, "Width of the media folders list that opens under its Edit button"),
     integer("game_editor", "platform_field_width", "160", 60, 800, "Width of the platform, beside the ROM"),
     integer("game_editor", "platform_font_size", "@font.heading_size", 6, 48, "Size of the platform's name when it can't be changed"),
     integer("game_editor", "short_field_width", "110", 40, 600, "Width of short fields, like the year"),

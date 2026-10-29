@@ -9,12 +9,14 @@ ColumnLayout {
 
     property var game: ({})
     property var items: []
-    readonly property var shown: items.filter(i => i.kind === "clip" ? General.showVideo : General.showScreenshots)
+    readonly property var shown: items.filter(i => i.kind === "screenshot" ? General.showScreenshots : General.showVideo)
     readonly property bool hasClips: shown.some(i => i.kind === "clip")
+    property bool limited: false
+    property bool limitedNext: false
     property bool installDismissed: false
     readonly property bool installing: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"
     property bool active: true
-    readonly property bool wanted: active && General.showClips && ((game.platform ?? "") === "steam" || (game.platform ?? "") === "proton" || (game.rom ?? false)) && (game.id ?? "") !== ""
+    readonly property bool wanted: active && General.showClips && ((game.platform ?? "") === "steam" || (game.platform ?? "") === "proton" || (game.platform ?? "") === "linux" || (game.rom ?? false)) && (game.id ?? "") !== ""
 
     signal mediaRequested(var item, var list)
     signal menuRequested(var clip, Item tile, point position)
@@ -40,9 +42,16 @@ ColumnLayout {
 
     Connections {
         target: Library
-        function onMediaReady(id, list) {
+        function onMediaLimited(id) {
             if (id === root.game.id)
-                root.items = root.wanted ? list : []
+                root.limitedNext = true
+        }
+        function onMediaReady(id, list) {
+            if (id !== root.game.id)
+                return
+            root.items = root.wanted ? list : []
+            root.limited = root.limitedNext
+            root.limitedNext = false
         }
     }
 
@@ -78,6 +87,14 @@ ColumnLayout {
                 onClicked: root.showAllRequested(root.game.id)
             }
         }
+    }
+
+    Label {
+        visible: root.limited && !heading.collapsed
+        Layout.fillWidth: true
+        text: qsTr("Showing the newest 2000")
+        color: Theme.details.countColor
+        font.pixelSize: Theme.details.countFontSize
     }
 
     FfmpegPrompt {

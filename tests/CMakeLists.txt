@@ -75,6 +75,8 @@ set(LIBRARY_SOURCES
     ../src/library/libraryundo.h ../src/library/libraryundo.cpp
     ../src/library/playhistory.h ../src/library/playhistory.cpp
     ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
+    ../src/library/mediafolders.h ../src/library/mediafolders.cpp
+    ../src/library/videothumbnails.h ../src/library/videothumbnails.cpp
     ../src/library/artimage.h ../src/library/artimage.cpp
     ../src/library/herocache.h ../src/library/herocache.cpp
     ../src/library/libraryversion.h ../src/library/libraryversion.cpp
@@ -99,7 +101,7 @@ set(BACKUP_SOURCES
     ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
     ${LIBRARY_FILE_SOURCES}
 )
-set(LIBRARY_LIBS Qt6::Qml Qt6::Gui Qt6::Concurrent Qt6::Network tomlplusplus::tomlplusplus)
+set(LIBRARY_LIBS Qt6::Qml Qt6::Gui Qt6::Concurrent Qt6::Network Qt6::Multimedia tomlplusplus::tomlplusplus)
 set(STEAM_DATA "STEAM_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/steam\"")
 set(DEMO_DATA "DEMO_DATA_DIR=\"${CMAKE_SOURCE_DIR}/tools/demo-data\"")
 set(DOCS "DOCS_DIR=\"${CMAKE_SOURCE_DIR}/docs\"")
@@ -199,6 +201,15 @@ lattis_test(emulatorscreenshots_test PRESETS
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
+set(MEDIA_HOME "MEDIA_HOME_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/mediahome\"")
+lattis_test(mediafolders_test
+    SOURCES ../src/library/mediafolders.h ../src/library/mediafolders.cpp ${LIBRARY_FILE_SOURCES}
+    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus
+    DEFINES ${MEDIA_HOME})
+lattis_test(videothumbnails_test OFFSCREEN
+    SOURCES ../src/library/videothumbnails.h ../src/library/videothumbnails.cpp
+    LIBS Qt6::Gui Qt6::Multimedia
+    DEFINES ${MEDIA_HOME})
 lattis_test(libraryformat_test PRESETS
     SOURCES ../src/library/game.h ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus
@@ -221,7 +232,7 @@ foreach(area list edit tags rom emulators platforms version steamimport steamsyn
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects
-        DEFINES ${DEMO_DATA} ${STEAM_DATA})
+        DEFINES ${DEMO_DATA} ${STEAM_DATA} ${MEDIA_HOME})
 endforeach()
 lattis_test(play_history_test PRESETS
     SOURCES librarytestbase.h librarytestbase.cpp

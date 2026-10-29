@@ -207,6 +207,14 @@ Launching picks the game's pinned emulator if it's installed, else the first ins
 
 `listAll(emulator, install, games, infos, sessions, home)` is the same for all of one emulator's games in a single pass: the folders are listed once however many games look in them (`DirCache`), and each file goes to the first game it matches. `infos` and `sessions` are keyed by game ID; `usesSessions()` tells whether any pattern needs the sessions, so the play history is read only for such emulators. `readInfoCached(game)` is `readInfo` kept for the session by the ROM's path and modified time (a mutex guards it; the Gallery's worker calls it), so listing again doesn't open every ROM. Times come from the file name (several stamp layouts) or the modified time.
 
+## Media folders
+
+A Steam, Proton or Linux game can list folders in `media_folders` (`~` for the home folder; a ROM game ignores the key, its emulator's screenshot folders are used). `MediaFolders::list(folders, home)` walks each folder and all its subfolders and returns a `Listing`: `files` (path, modified time, whether it is a video), newest first, and `limited`. Pictures are `png`, `jpg`, `jpeg`, `webp`, `bmp`; videos `mp4`, `mkv`, `webm`, `mov`. Whatever the file is called counts: the user chose the folder for this game, so nothing is matched. Hidden files and folders are skipped, and symlinked folders are not followed, which keeps a link back up the tree from looping. A file reached twice (overlapping folders) is listed once, by canonical path; a folder that doesn't exist is skipped. At `kLimit` (2000) files the newest are kept (the whole tree is still walked to know which) and `limited` is true.
+
+`Library::media()` and `allMedia()` call it on their worker threads, never at startup, and there is no watcher. Items that Steam's own lists already hold (a folder pointing into Steam's screenshots, including the `thumbnails/` folder beside them and clip thumbnails) are dropped, then everything is merged newest first. A picture becomes a `screenshot` item with its full path as `id` (the viewer finds an item by `id` and `gameId`, so ids must be unique) and as `thumbnail` and `image`; a video becomes a `video` item with `file` (a file URL the viewer plays as it is, with no ffmpeg step), `thumbnail` and `length`, both "" until known.
+
+`VideoThumbnails` (`videothumbnails.*`) gives video items their thumbnail. `Cache` keeps `<cache>/videothumbs/<key>.<durationMs>.jpg` (the key is a SHA-1 of path, size and modified time, so a changed file is made again) and a `<key>.failed` marker so a file that can't be decoded isn't tried on every open. `VideoThumbnailMaker` makes the missing ones one at a time on the main thread with a `QMediaPlayer` and a `QVideoSink` (Qt Multimedia is now linked into the app for this): a frame about 1 s in, 480 px wide, with a 6 s timeout. `Library` queues them from `media()` and `allMedia()` and announces each with `videoThumbnailReady`; the tile patches itself, so the list isn't rebuilt. Until then (or if it fails) the tile shows a film icon.
+
 ## Steam, Proton and Linux games
 
 These three kinds of game share a lot of the library's code. Their file formats and the sync are covered in [steam.md](steam.md); here is how the library uses them.
@@ -320,6 +328,8 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `gameid.*` | Ids: slugs, validation, `steam-<appid>` |
 | `emulators.*` | Emulator presets, `emulators.toml`, the merge, detection, Flatpak permissions |
 | `emulatorscreenshots.*` | An emulator's screenshots of a game, or of all its games in one pass; ROM info kept for the session |
+| `mediafolders.*` | The pictures and videos in a game's own media folders |
+| `videothumbnails.*` | Thumbnails and lengths of plain video files: the cache and the maker (Qt Multimedia) |
 | `romscan.*` | ROM file names, the ROM index update, the folder scan, "+"'s inspection of a ROM |
 | `romfoldermatch.*` | Matching folder names to platforms |
 | `listsettings.*` | `[list]` in `settings.toml` |
@@ -414,7 +424,9 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `historyFor(id)` | A game's play history for its popup (below); read from its file when asked, or its copies' files for a linked game |
 | `pageHistory(id)` | The game page's history fields (below); a long history comes later through `pageHistoryReady(id, played)` |
 | `achievements(id)` | A Steam game's achievements on a worker thread; `achievementsReady(id, list)` has them unlocked first (newest first), then locked, hidden ones last. Every item has `apiName`, `name`, `description`, `hidden`, `unlocked`, `time` and `icon` (a URL); none for a game that isn't Steam's (see [steam](steam.md#achievements)) |
-| `media(id)` | A Steam game's clips and screenshots, or a ROM game's emulator screenshots, on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip` or `screenshot`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`; none for a game with neither (see [steam](steam.md#clips-and-screenshots)) |
+| `media(id)` | A Steam game's clips and screenshots, or a ROM game's emulator screenshots, plus (for a Steam, Proton or Linux game) the files in its own media folders, on a worker thread; `mediaReady(id, items)` has them in one list, newest first. Every item has `kind` (`clip`, `screenshot` or `video`), `id`, `folder`, `thumbnail` and `time`; a clip adds `videoDir`, `durationMs` and `length`, a screenshot `image`, a video `file` and `length` (see [Media folders](#media-folders) and [steam](steam.md#clips-and-screenshots)). `mediaLimited(id)` is emitted when the folders held more than the limit |
+| `videoThumbnailReady(file, thumbnail, length)` | Signal: a video item's thumbnail was made (or failed: `thumbnail` is ""); `file` is the item's `file` URL. `media()` and `allMedia()` queue every video without one |
+| `showSteamMediaFolder(id)` | Opens the folder Steam keeps the game's screenshots in, else its recordings folder; false when it couldn't |
 | `allMedia()` | Every game's clips and screenshots, for the Gallery, on a worker thread; `allMediaReady(batch, done)` delivers them in batches: Steam's first (one `SteamMedia::listAll` pass, each app ID mapped to its library game; apps the library doesn't have are left out), then each emulator's (one `EmulatorScreenshots::listAll` pass over its games), and a last, usually empty, batch with `done` true. Items are those of `media()` plus `gameId`. Hidden games are included; the page filters them. Calling it again drops what an earlier call still had to deliver |
 | `mediaGames()` | The games `allMedia()`'s items can belong to, for the Gallery: a map from game id to `{title, platform, platformName, platformIcon}`, without the hidden games unless the library shows them |
 | `prepareClip(token, videoDir, ffmpeg)`, `discardClip(path)` | Joins a clip into a temp MP4 for the viewer; `clipPrepared(token, path, error)` answers. `discardClip` deletes it |
@@ -473,6 +485,7 @@ igdb, steamgriddb   the matched ids: 0 = not there, -1 = not looked up
 steamAppId      Steam games, else 0
 steamApp        other games: the `steam_app` IGDB found, else 0 (Steam games: 0)
 saveFolder      the file's `save_folder` as written, or ""; Save writes one in the home folder with ~
+mediaFolders    the file's `media_folders` as written (list); Save writes ones in the home folder with ~
 Steam and Proton games:
   launchOptions, proton, pendingSteamEdits, installPath
   protonTools   [{name, displayName}]

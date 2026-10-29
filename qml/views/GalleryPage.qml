@@ -133,6 +133,7 @@ FocusScope {
         for (const item of batch) {
             if (games[item.gameId] === undefined)
                 continue
+            item.type = item.kind === "video" ? "clip" : item.kind
             item.stamp = item.time.getTime()
             item.platform = games[item.gameId].platform
             item.month = monthKey(item)
@@ -197,7 +198,7 @@ FocusScope {
         const useGame = Object.keys(gameSel).length > 0
         const useMonth = Object.keys(monthSel).length > 0
         for (const item of sorted) {
-            const okType = !useType || typeSel[item.kind] === true
+            const okType = !useType || typeSel[item.type] === true
             const okPlatform = !usePlatform || platformSel[item.platform] === true
             const okGame = !useGame || gameSel[item.gameId] === true
             const okMonth = !useMonth || monthSel[item.month] === true
@@ -205,7 +206,7 @@ FocusScope {
             if (failing === 0)
                 out.push(item)
             if (failing === 0 || (failing === 1 && !okType))
-                tally.type[item.kind] = (tally.type[item.kind] ?? 0) + 1
+                tally.type[item.type] = (tally.type[item.type] ?? 0) + 1
             if (failing === 0 || (failing === 1 && !okPlatform))
                 tally.platform[item.platform] = (tally.platform[item.platform] ?? 0) + 1
             if (failing === 0 || (failing === 1 && !okGame))
@@ -981,7 +982,7 @@ FocusScope {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                text: qsTr("Lattis looks for Steam's clips and screenshots, and in the screenshot folders of the emulators it knows, for the games in your library.")
+                text: qsTr("Lattis looks for Steam's clips and screenshots, the media folders set in a game's Properties, and the screenshot folders of the emulators it knows, for the games in your library.")
                 color: Theme.gallery.countColor
             }
             SettingsButton {
