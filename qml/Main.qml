@@ -269,6 +269,14 @@ ApplicationWindow {
         setupGuide.active = true
         setupGuide.item.goTo(step ?? 0)
         setupGuide.item.forceActiveFocus()
+        setupFocus.restart()
+    }
+
+    // The app menu hands focus back to what it took it from once its exit animation ends, after the guide has asked for it.
+    Timer {
+        id: setupFocus
+        interval: 400
+        onTriggered: setupGuide.item?.forceActiveFocus()
     }
 
     function openSetupAt(n) {
