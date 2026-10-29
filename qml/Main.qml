@@ -795,7 +795,7 @@ ApplicationWindow {
                 tooltipSetup.enabled = false
                 tooltipHost.ToolTip.toolTip.enter = tooltipEnter
                 tooltipHost.ToolTip.toolTip.exit = tooltipExit
-                tooltipHost.ToolTip.toolTip.background = tooltipBackground.createObject(tooltipHost.ToolTip.toolTip)
+                tooltipHost.ToolTip.toolTip.background = tooltipBackground.createObject(tooltipHost)
             }
         }
     }
