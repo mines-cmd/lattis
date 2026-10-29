@@ -31,6 +31,11 @@ QStringList normalizedWords(const QString &name)
     for (QString &word : words) {
         if (word == QLatin1String("and"))
             continue;
+        if (word == QLatin1String("im")) { // "I'm" folded: the same as "I am"
+            out.append(QStringLiteral("i"));
+            out.append(QStringLiteral("am"));
+            continue;
+        }
         if (word == QLatin1String("versus"))
             word = QStringLiteral("vs");
         else if (word == QLatin1String("ep"))
@@ -38,6 +43,12 @@ QStringList normalizedWords(const QString &name)
         else if (const int n = romanValue(word))
             word = QString::number(n);
         out.append(word);
+    }
+    // "Part II" and "2" name the same sequel.
+    for (qsizetype i = out.size() - 2; i >= 0; --i) {
+        if (out.at(i) == QLatin1String("part")
+            && std::all_of(out.at(i + 1).cbegin(), out.at(i + 1).cend(), [](QChar c) { return c.isDigit(); }))
+            out.removeAt(i);
     }
     return out;
 }
@@ -102,13 +113,62 @@ double similarity(const QString &a, const QString &b)
     return 2.0 * shared / double((a.size() - 1) + (b.size() - 1));
 }
 
+QString withoutPartWord(const QString &title)
+{
+    static const QRegularExpression part(QStringLiteral("\\bpart\\s+(?=(?:\\d+|[ivx]+)\\b)"),
+                                         QRegularExpression::CaseInsensitiveOption);
+    QString out = title;
+    out.remove(part);
+    return out;
+}
+
+QString withoutEdition(const QString &title)
+{
+    static const QRegularExpression edition(QStringLiteral("[\\s:\\-–]+(?:[\\w']+\\s+){0,3}edition$"),
+                                            QRegularExpression::CaseInsensitiveOption);
+    QString head = title.trimmed();
+    head.remove(edition);
+    return head.trimmed().isEmpty() ? title : head.trimmed();
+}
+
+// These are the game itself, shared, tested or trimmed down: IGDB lists only the game.
+QString withoutDemoSuffix(const QString &title)
+{
+    static const QRegularExpression suffix(
+        QStringLiteral("(?:\\s*[-:–]\\s*|\\s+)(?:friend'?s?\\s+pass|public\\s+(?:beta|test(?:ing)?)(?:\\s+client)?|beta(?:\\s+client)?|unstable"
+                       "|demo|playtest|single\\s*player|(?:dedicated|test)\\s+server)$"),
+        QRegularExpression::CaseInsensitiveOption);
+    QString head = title.trimmed();
+    head.remove(suffix);
+    return head.trimmed().isEmpty() ? title : head.trimmed();
+}
+
+QString baseTitle(const QString &title)
+{
+    static const QRegularExpression goty(QStringLiteral("\\bgoty\\b"), QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression colon(QStringLiteral(":(?=[^\\s])"));
+    static const QRegularExpression iAm(QStringLiteral("\\bI['’]m\\b"), QRegularExpression::CaseInsensitiveOption);
+    // Steam's regional names ("趣拼拼：肖像画 Pleasure Puzzle:Portrait") carry the native name in front; IGDB has the English one.
+    QString latin;
+    for (const QChar c : title) {
+        const QChar::Script script = c.script();
+        const bool foreign = script == QChar::Script_Han || script == QChar::Script_Hiragana
+            || script == QChar::Script_Katakana || script == QChar::Script_Hangul
+            || (c.unicode() >= 0x3000 && c.unicode() <= 0x303F) || (c.unicode() >= 0xFF00 && c.unicode() <= 0xFFEF);
+        if (!foreign)
+            latin += c;
+    }
+    latin = latin.simplified();
+    QString out = withoutPartWord(withoutDemoSuffix(withoutTrailingParenthetical(latin.isEmpty() ? title : latin)));
+    out.replace(goty, QStringLiteral("Game of the Year"));
+    out.replace(iAm, QStringLiteral("I am"));
+    out.replace(colon, QStringLiteral(": "));
+    return out;
+}
+
 int clearMatch(const QList<QStringList> &names, const QString &fullTitle, const std::function<int(const QList<int> &)> &tieBreak)
 {
-    // A Friend's Pass is the game itself, shared: IGDB lists only the game.
-    static const QRegularExpression friendsPass(QStringLiteral("\\s*[-:–]\\s*friend'?s?\\s+pass$"),
-                                                QRegularExpression::CaseInsensitiveOption);
-    QString title = fullTitle;
-    title.remove(friendsPass);
+    const QString title = withoutDemoSuffix(fullTitle);
     const QString key = compactKey(title);
     if (key.isEmpty())
         return -1;
@@ -120,8 +180,18 @@ int clearMatch(const QList<QStringList> &names, const QString &fullTitle, const 
     }
     if (same.size() == 1)
         return same.first();
-    if (same.size() > 1)
+    if (same.size() > 1) {
+        // "S.P.L.I.C.E.D." and "Spliced" share a key; the one spelled as the title is meant.
+        QList<int> spelled;
+        for (int i : same) {
+            if (std::any_of(names.at(i).cbegin(), names.at(i).cend(),
+                            [&](const QString &n) { return n.compare(title, Qt::CaseInsensitive) == 0; }))
+                spelled.append(i);
+        }
+        if (spelled.size() == 1)
+            return spelled.first();
         return tieBreak ? tieBreak(same) : -1;
+    }
 
     const QStringList titleNumbers = numbers(title);
     double best = 0;

@@ -147,7 +147,7 @@ QByteArray searchQuery(const QString &title, const QList<int> &platforms, int li
     // Apicalypse strings have no escapes worth relying on; quotes and backslashes don't help
     // a search anyway.
     QString search = title;
-    search.remove(u'"').remove(u'\\');
+    search.remove(u'"').remove(u'\\').remove(u'™').remove(u'®').remove(u'©');
     // A title that names an edition is looking for that edition's own entry, which IGDB files under its base game.
     QByteArray where = search.contains(QLatin1String("edition"), Qt::CaseInsensitive)
                            ? QByteArray("game_type = (0,3,4,6,8,9,10,11,12)")

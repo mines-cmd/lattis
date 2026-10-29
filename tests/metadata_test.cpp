@@ -514,6 +514,8 @@ void MetadataTest::igdbSearchQuery()
                           "(external_games.uid = \"123\" & external_games.external_game_source = 1);"));
     QVERIFY(Igdb::searchQuery(QStringLiteral("Enslaved Premium Edition"), {})
                 .contains("where game_type = (0,3,4,6,8,9,10,11,12);"));
+    QVERIFY(Igdb::searchQuery(QString::fromUtf8("Dishonored®: Death of the Outsider™"), {})
+                .startsWith("search \"Dishonored: Death of the Outsider\";"));
     const QByteArray any = Igdb::searchQuery(QStringLiteral(" The \"Best\"\\ Game  "), {});
     QVERIFY2(any.startsWith("search \"The Best Game\"; where version_parent = null &"), any.constData());
     QVERIFY(Igdb::searchQuery(QStringLiteral("Pokémon"), {37, 137}).contains("search \"Pokémon\"; where platforms = (37,137) &"));
@@ -925,10 +927,10 @@ void MetadataTest::clientLookup()
     QVERIFY(hades.value("facets").toStringList().contains(QStringLiteral("keyword:roguelike")));
 
     // Nothing for the whole title: the part before the colon is searched, and the results are
-    // still matched against the whole title.
+    // matched against the whole title first, then against the part before the colon itself.
     r = result(client, client.lookup(QStringLiteral("Mario Tennis Aces: Misspelt Subtitle"), {130}));
     QCOMPARE(r.value("candidates").toList().first().toMap().value("igdb").toInt(), 81145);
-    QCOMPARE(r.value("match").toInt(), -1);
+    QCOMPARE(r.value("match").toInt(), 0);
 
     // A remembered id goes straight to the game.
     r = result(client, client.lookup(QStringLiteral("Whatever the title says"), {130}, 81145));

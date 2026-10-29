@@ -165,14 +165,20 @@ int MetadataClient::lookup(const QString &title, const QVariantList &igdbPlatfor
 void MetadataClient::lookupQuery(int request, QObject *context, const QString &title, const QList<int> &platforms,
                                  int igdbId, qint64 steamAppId, int limit, int stage, const QList<IgdbGame> &earlier)
 {
-    const QString mainTitle = title.left(std::max<qsizetype>(title.indexOf(u':'), 0)).trimmed();
+    const qsizetype colon = title.indexOf(u':');
+    const qsizetype dash = title.indexOf(QLatin1String(" - "));
+    const qsizetype cut = colon >= 0 && dash >= 0 ? std::min(colon, dash) : std::max(colon, dash);
+    const QString mainTitle = cut > 0 ? title.left(cut).trimmed() : QString();
     const QString spaced = NameMatch::splitCamelCase(title);
-    const QString bare = NameMatch::withoutTrailingParenthetical(title);
-    const QString searched = stage == 2 ? mainTitle : stage == 3 ? spaced : stage == 4 ? bare : title;
+    const QString bare = NameMatch::baseTitle(title);
+    const QString plain = NameMatch::withoutEdition(bare);
+    const QStringList words = bare.simplified().split(u' ');
+    const QString shorter = words.size() >= 3 ? words.mid(0, words.size() - 1).join(u' ') : QString();
+    const QString searched = stage == 2 ? mainTitle : stage == 3 ? spaced : stage == 4 ? bare : stage == 5 ? shorter : stage == 6 ? plain : title;
     const QByteArray query =
         igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(searched, platforms, stage >= 2 ? std::max(limit, kWideSearch) : limit, stage == 1, steamAppId);
     m_http.igdb(QStringLiteral("games"), query, context,
-                [this, request, context, title, bare, mainTitle, spaced, platforms, igdbId, steamAppId, limit, stage,
+                [this, request, context, title, bare, plain, shorter, mainTitle, spaced, platforms, igdbId, steamAppId, limit, stage,
                  earlier](const MetadataReply &reply) {
                     if (!reply.ok())
                         return finish(request, failure(reply.error));
@@ -183,16 +189,22 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
                     // IGDB ranks a search loosely (a "TriForce" title doesn't rank "Tri Force Heroes" in the
                     // first five): search wider, with camel-case words split, and rank what comes back
                     // by how close the names are.
-                    if (stage == 0 && igdbId <= 0 && !games.isEmpty() && limit < kWideSearch
+                    if (stage == 0 && igdbId <= 0 && !games.isEmpty() && limit < kWideSearch && bare == title
                         && Igdb::clearMatch(games, title, steamAppId) < 0)
                         return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, 3, games);
-                    if (stage == 3) {
+                    // "Hunt: Showdown 1896 (Test Server)" finds games, none of them clearly; the title without
+                    // its Demo, Beta or "(…)" tag is the game.
+                    if (stage == 0 && igdbId <= 0 && !games.isEmpty() && bare != title
+                        && Igdb::clearMatch(games, title, steamAppId) < 0)
+                        return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, 4, games);
+                    if (stage == 3 || stage == 4) {
+                        const QString searchedAgain = stage == 3 ? spaced : bare;
                         QList<IgdbGame> merged = earlier;
                         for (const IgdbGame &g : std::as_const(games)) {
                             if (std::none_of(merged.cbegin(), merged.cend(), [&](const IgdbGame &e) { return e.id == g.id; }))
                                 merged.append(g);
                         }
-                        qCDebug(lcMetadata).noquote() << "searched" << spaced << "as well:" << games.size()
+                        qCDebug(lcMetadata).noquote() << "searched" << searchedAgain << "as well:" << games.size()
                                                      << "results," << merged.size() << "in all";
                         games = merged;
                     }
@@ -203,21 +215,40 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
                         int next = stage == 0 ? 1 : stage == 1 ? (spaced != title ? 3 : 2) : stage == 3 ? 2 : -1;
                         if (next == 2 && mainTitle.isEmpty())
                             next = -1;
-                        // Steam's "(Legacy)" or "(Classic)" edition tags are not in IGDB's name.
-                        if (next < 0 && stage != 4 && bare != title)
-                            next = 4;
+                        // Then, each only when it changes the title: without Steam's "(Legacy)" or "Demo" tags,
+                        // without "Complete Edition" (IGDB lists that edition on other platforms only), and last
+                        // a suggestion rather than a match: "Big Hops Together" is not on IGDB, "Big Hops" is.
+                        if (next < 0) {
+                            const int order[] = {4, 6, 5};
+                            int from = 0;
+                            for (int i = 0; i < 3; ++i) {
+                                if (order[i] == stage)
+                                    from = i + 1;
+                            }
+                            for (int i = from; i < 3; ++i) {
+                                const int s = order[i];
+                                if (s == 4 ? bare != title : s == 6 ? plain != bare : !shorter.isEmpty()) {
+                                    next = s;
+                                    break;
+                                }
+                            }
+                        }
                         if (next >= 0)
                             return lookupQuery(request, context, title, platforms, igdbId, steamAppId, limit, next);
                     }
+                    const QString matchTitle = stage == 4 ? bare : stage == 6 ? plain : title;
                     // IGDB puts loose matches first ("The Legend of Zelda" before "… Tri Force Heroes"), and the
                     // pick lists show the top of the list: the closest names go there.
                     if (igdbId <= 0)
-                        games = rankedByName(games, stage == 4 ? bare : title);
+                        games = rankedByName(games, matchTitle);
                     QVariantList candidates;
                     for (const IgdbGame &g : games)
                         candidates.append(candidate(g));
                     // A remembered id is the match, whatever its title.
-                    const int match = igdbId > 0 ? (games.isEmpty() ? -1 : 0) : Igdb::clearMatch(games, stage == 4 ? bare : title, steamAppId);
+                    int match = igdbId > 0 ? (games.isEmpty() ? -1 : 0) : Igdb::clearMatch(games, matchTitle, steamAppId);
+                    // Nothing called the whole title: "Business Tour - Online Multiplayer Board Game" is Business Tour.
+                    if (match < 0 && stage == 2 && !mainTitle.isEmpty())
+                        match = Igdb::clearMatch(games, mainTitle, steamAppId);
                     finish(request, {{QStringLiteral("candidates"), candidates}, {QStringLiteral("match"), match}});
                 });
 }

@@ -12,6 +12,8 @@ private slots:
     void clearMatch_data();
     void clearMatch();
     void withoutTrailingParenthetical();
+    void baseTitle();
+    void withoutDemoSuffix();
     void splitCamelCase();
     void tieBreak();
 };
@@ -75,6 +77,19 @@ void NameMatchTest::clearMatch_data()
     QTest::newRow("friend's pass is the game")
         << "The Dark Pictures Anthology: Little Hope - Friend's Pass"
         << QStringList{"The Dark Pictures Anthology: Man of Medan", "The Dark Pictures Anthology: Little Hope"} << 1;
+    QTest::newRow("same key, spelled as the title") << "S.P.L.I.C.E.D." << QStringList{"Spliced", "S.P.L.I.C.E.D."} << 1;
+    QTest::newRow("part ii") << "Welcome Back To 2007 Part II"
+                             << QStringList{"Welcome Back to 2007", "Welcome Back to 2007 2"} << 1;
+    QTest::newRow("i'm is i am") << "I'm not a Monster" << QStringList{"I am not a Monster"} << 0;
+    QTest::newRow("public beta client") << "Conan Exiles - Public Beta Client" << QStringList{"Conan Exiles", "Conan Chop Chop"} << 0;
+    QTest::newRow("demo") << "just volleyball Demo" << QStringList{"Just Volleyball"} << 0;
+    QTest::newRow("single player")
+        << "Dark Messiah of Might & Magic Single Player" << QStringList{"Dark Messiah of Might and Magic"} << 0;
+    QTest::newRow("public test") << "For Honor - Public Test" << QStringList{"For Honor"} << 0;
+    QTest::newRow("public testing") << "Game Public Testing" << QStringList{"Game"} << 0;
+    QTest::newRow("unstable") << "Game - Unstable" << QStringList{"Game"} << 0;
+    QTest::newRow("test server") << "Game Test Server" << QStringList{"Game"} << 0;
+    QTest::newRow("beta") << "Game Beta" << QStringList{"Game"} << 0;
     QTest::newRow("steam episode names")
         << "Back to the Future: Ep 2 - Get Tannen!"
         << QStringList{"Back to the Future: The Game - Episode 1: It's About Time",
@@ -116,6 +131,30 @@ void NameMatchTest::withoutTrailingParenthetical()
     QCOMPARE(NameMatch::withoutTrailingParenthetical("Yakuza Kiwami 2"), QStringLiteral("Yakuza Kiwami 2"));
     QCOMPARE(NameMatch::withoutTrailingParenthetical("(Legacy)"), QStringLiteral("(Legacy)"));
     QCOMPARE(NameMatch::withoutTrailingParenthetical("Game (A) Two"), QStringLiteral("Game (A) Two"));
+}
+
+void NameMatchTest::baseTitle()
+{
+    QCOMPARE(NameMatch::baseTitle("Borderlands GOTY Enhanced"), QStringLiteral("Borderlands Game of the Year Enhanced"));
+    QCOMPARE(NameMatch::baseTitle("Hunt: Showdown 1896 (Test Server)"), QStringLiteral("Hunt: Showdown 1896"));
+    QCOMPARE(NameMatch::baseTitle("Hades"), QStringLiteral("Hades"));
+    QCOMPARE(NameMatch::baseTitle(QString::fromUtf8("趣拼拼：肖像画 Pleasure Puzzle:Portrait")),
+             QStringLiteral("Pleasure Puzzle: Portrait"));
+    QCOMPARE(NameMatch::baseTitle(QString::fromUtf8("進撃")), QString::fromUtf8("進撃"));
+    QCOMPARE(NameMatch::baseTitle("I'm not a Monster"), QStringLiteral("I am not a Monster"));
+    QCOMPARE(NameMatch::baseTitle(QString::fromUtf8("I’m not a Monster")), QStringLiteral("I am not a Monster"));
+    QCOMPARE(NameMatch::withoutEdition("Chernobylite Complete Edition"), QStringLiteral("Chernobylite"));
+    QCOMPARE(NameMatch::withoutEdition("Hades"), QStringLiteral("Hades"));
+}
+
+void NameMatchTest::withoutDemoSuffix()
+{
+    QCOMPARE(NameMatch::withoutPartWord("Welcome Back To 2007 Part II"), QStringLiteral("Welcome Back To 2007 II"));
+    QCOMPARE(NameMatch::withoutPartWord("Part Time Hero"), QStringLiteral("Part Time Hero"));
+    QCOMPARE(NameMatch::withoutDemoSuffix("Conan Exiles - Public Beta Client"), QStringLiteral("Conan Exiles"));
+    QCOMPARE(NameMatch::withoutDemoSuffix("Hunt: Showdown 1896 Test Server"), QStringLiteral("Hunt: Showdown 1896"));
+    QCOMPARE(NameMatch::withoutDemoSuffix("Hades"), QStringLiteral("Hades"));
+    QCOMPARE(NameMatch::withoutDemoSuffix("Demo"), QStringLiteral("Demo"));
 }
 
 void NameMatchTest::splitCamelCase()
