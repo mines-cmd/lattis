@@ -13,7 +13,7 @@ Item {
     // States, not Behaviors: the way in overshoots and the way out doesn't, and a Behavior can't
     // tell which way the value is going.
     property bool ready: false
-    Component.onCompleted: Qt.callLater(() => { ready = true })
+    Timer { running: true; interval: 0; onTriggered: root.ready = true }
 
     visible: opacity > 0
 

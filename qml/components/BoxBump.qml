@@ -8,7 +8,7 @@ Item {
     property var value
 
     property bool ready: false
-    Component.onCompleted: Qt.callLater(() => { ready = true })
+    Timer { running: true; interval: 0; onTriggered: root.ready = true }
 
     onValueChanged: if (ready && Motion.on) bump.restart()
 
