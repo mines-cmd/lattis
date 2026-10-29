@@ -50,6 +50,14 @@ SettingsMenu {
             : qsTr("Apply %1 Steam changes").arg(root.steamWaiting)
     }
     SettingsMenuSeparator { visible: root.steamWaiting > 0 }
+    SettingsMenuItem {
+        iconPath: Icons.download
+        visible: AppUpdate.notify
+        text: AppUpdate.state === "ready" ? qsTr("Restart to update to %1").arg(AppUpdate.latestVersion)
+            : qsTr("Update to %1").arg(AppUpdate.latestVersion)
+        onTriggered: Qt.callLater(() => root.chosen("update_app"))
+    }
+    SettingsMenuSeparator { visible: AppUpdate.notify }
     Instantiator {
         model: General.railButtonOrder
         delegate: Entry {
@@ -61,7 +69,7 @@ SettingsMenu {
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }
-        onObjectAdded: (index, object) => root.insertItem(index + 2, object)
+        onObjectAdded: (index, object) => root.insertItem(index + 4, object)
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
     SettingsMenuSeparator {}

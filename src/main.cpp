@@ -329,6 +329,20 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "mediaFoldersInEditor");
                 });
             }
+            if (const QString mode = qEnvironmentVariable("LATTIS_UPDATE"); !mode.isEmpty()) {
+                QTimer::singleShot(actualDelay / 4, window, [] {
+                    logHook("AppUpdate::check");
+                    AppUpdate::instance()->check();
+                });
+                if (mode == u"update") {
+                    QTimer::singleShot(actualDelay / 2, window, [] {
+                        logHook("AppUpdate::update");
+                        auto *update = AppUpdate::instance();
+                        update->setPace(qMax<qint64>(1, update->size() / 40), 60);
+                        update->update();
+                    });
+                }
+            }
             if (qEnvironmentVariableIntValue("LATTIS_LOOK_UP") == 1) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
                     logHook("lookUpInEditor");

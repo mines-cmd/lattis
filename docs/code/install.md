@@ -158,7 +158,7 @@ Test hooks (set before `install()`): `setReleaseUrl()` answers the release from 
 
 `state` is `idle`, `checking`, `downloading`, `ready` or `failed`; `progress` is 0 to 1 while downloading. `cancel()` also clears a failure.
 
-Test hooks (tests and screenshots): `setReleaseUrl()` answers the release from another address (`file:` or `http:`), `setRelaxed(true)` allows `http:` and `file:` downloads, `setCurrentVersion()`, `setPace()`. With `LATTIS_INSTALL_FIXTURES` set, `LATTIS_UPDATE_RELEASE=<release JSON file or URL>` does the first two and `LATTIS_UPDATE_APPIMAGE=<file>` stands in for `$APPIMAGE` (and makes the feature available); both are ignored otherwise, so nothing can point a real run at them.
+Test hooks (tests and screenshots): `setReleaseUrl()` answers the release from another address (`file:` or `http:`), `setRelaxed(true)` allows `http:` and `file:` downloads, `setCurrentVersion()`, `setPace()`. With `LATTIS_INSTALL_FIXTURES` set, `LATTIS_UPDATE_RELEASE=<release JSON file or URL>` does the first two and `LATTIS_UPDATE_APPIMAGE=<file>` stands in for `$APPIMAGE` (and makes the feature available); both are ignored otherwise, so nothing can point a real run at them. In a screenshot run `LATTIS_UPDATE=check` checks a quarter through the delay and `=update` also starts the download halfway (paced in 40 steps of 60 ms, so give a delay of 7000 or so to see "ready"); `LATTIS_ACTION=update_app` opens the dialog.
 
 ## Testing hooks
 

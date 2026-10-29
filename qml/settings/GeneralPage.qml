@@ -18,6 +18,7 @@ Item {
     onVisibleChanged: if (visible) General.reload()
 
     signal runSetupGuide()
+    signal openUpdate()
     signal message(string text)
 
     component LabeledRow: RowLayout {
@@ -227,9 +228,50 @@ Item {
                     }
                 }
 
+                SectionHeader { visible: AppUpdate.available; text: qsTr("Updates") }
+                SettingsCard {
+                    visible: AppUpdate.available
+                    spacing: Theme.layout.spacing * 2
+                    LabeledRow {
+                        label: qsTr("Check for updates")
+                        note: qsTr("Once a day Lattis asks api.github.com for the latest release. Nothing else is sent.")
+                        SettingsSwitch {
+                            checked: General.checkForUpdates
+                            onToggled: {
+                                const err = General.setCheckForUpdates(checked)
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
+                    LabeledRow {
+                        label: AppUpdate.state === "checking" ? qsTr("Checking")
+                             : AppUpdate.state === "downloading" ? qsTr("Downloading Lattis %1").arg(AppUpdate.latestVersion)
+                             : AppUpdate.state === "ready" ? qsTr("Lattis %1 is ready").arg(AppUpdate.latestVersion)
+                             : AppUpdate.state === "failed" ? AppUpdate.error
+                             : AppUpdate.hasUpdate ? qsTr("Update available: %1").arg(AppUpdate.latestVersion)
+                             : qsTr("Lattis %1 is up to date").arg(Qt.application.version)
+                        note: AppUpdate.hasUpdate && AppUpdate.skipped ? qsTr("You skipped this version.") : ""
+                        SettingsButton {
+                            visible: AppUpdate.hasUpdate || AppUpdate.state === "ready"
+                            text: AppUpdate.state === "ready" ? qsTr("Restart")
+                                : AppUpdate.state === "downloading" ? qsTr("Progress")
+                                : AppUpdate.canReplace ? qsTr("Update") : qsTr("Open release page")
+                            primary: true
+                            onClicked: root.openUpdate()
+                        }
+                        SettingsButton {
+                            visible: !AppUpdate.hasUpdate && AppUpdate.state !== "ready"
+                            enabled: AppUpdate.state !== "checking"
+                            text: qsTr("Check now")
+                            onClicked: AppUpdate.check()
+                        }
+                    }
+                }
+
                 SectionHeader { text: qsTr("About") }
                 SettingsCard {
                     AboutContent {
+                        onUpdateRequested: root.openUpdate()
                         Layout.fillWidth: true
                         logoHeight: Theme.about.pageLogoHeight
                         backgroundColor: Theme.settingsWindow.cardBackground

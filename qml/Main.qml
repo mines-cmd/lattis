@@ -229,6 +229,11 @@ ApplicationWindow {
 
     onStartedUpChanged: if (startedUp && Library.setupPending) openSetup()
 
+    function openUpdate() {
+        updateDialog.active = true
+        updateDialog.item.open()
+    }
+
     function openSetup(step) {
         setupGuide.reopened = !Library.setupPending
         setupGuide.active = true
@@ -439,6 +444,11 @@ ApplicationWindow {
             settingsWindow.game = Qt.binding(() => gameList.currentGame)
             settingsWindow.lookUpMissing.connect(() => openBulkLookup(settingsWindow))
             settingsWindow.suggestTagsFromIgdb.connect(() => openBulkLookup(settingsWindow, true))
+            settingsWindow.openUpdate.connect(() => {
+                raise()
+                requestActivate()
+                openUpdate()
+            })
             settingsWindow.runSetupGuide.connect(() => {
                 settingsWindow.visible = false
                 raise()
@@ -539,6 +549,7 @@ ApplicationWindow {
             aboutDialog.active = true
             aboutDialog.item.open()
             break
+        case "update_app": openUpdate(); break
         case "open_data_folder": {
             const error = GameRunner.openDataFolder()
             if (error !== "")
@@ -637,6 +648,18 @@ ApplicationWindow {
     Connections {
         target: aboutDialog.item
         function onClosed() { gameList.focusList() }
+        function onUpdateRequested() { window.openUpdate() }
+    }
+
+    Loader {
+        id: updateDialog
+        active: false
+        source: "views/UpdateDialog.qml"
+    }
+    Connections {
+        target: updateDialog.item
+        function onClosed() { gameList.focusList() }
+        function onMessage(text) { toast.show(text) }
     }
 
     Loader {
@@ -763,6 +786,7 @@ ApplicationWindow {
             id: rail
             // Above the list, which reaches into the rail's slot while the rail is hidden, so the logo stays on top.
             z: 1
+            startedUp: window.startedUp
             Layout.fillHeight: true
             Layout.preferredWidth: Theme.rail.width
             onAddGame: window.addGame()

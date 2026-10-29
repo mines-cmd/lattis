@@ -200,6 +200,7 @@ ApplicationWindow {
     signal lookUpMissing()
     signal suggestTagsFromIgdb()
     signal runSetupGuide()
+    signal openUpdate()
 
     function run(name) {
         switch (name) {
@@ -681,6 +682,7 @@ ApplicationWindow {
                     Connections {
                         target: general.item
                         function onRunSetupGuide() { root.runSetupGuide() }
+                        function onOpenUpdate() { root.openUpdate() }
                         function onMessage(text) { root.showMessage(text) }
                     }
                 }

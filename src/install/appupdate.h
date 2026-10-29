@@ -38,6 +38,8 @@ class AppUpdate : public QObject
     Q_PROPERTY(bool hasUpdate READ hasUpdate NOTIFY changed)
     // The newer version is the one the user skipped.
     Q_PROPERTY(bool skipped READ skipped NOTIFY changed)
+    // Worth showing in the menu and on the logo: a newer version the user hasn't skipped.
+    Q_PROPERTY(bool notify READ notify NOTIFY changed)
     Q_PROPERTY(qint64 size READ size NOTIFY changed)
     Q_PROPERTY(QString notes READ notes NOTIFY changed)
     Q_PROPERTY(double progress READ progress NOTIFY changed)
@@ -80,6 +82,7 @@ public:
     QString latestVersion() const { return m_hasUpdate ? m_version : QString(); }
     bool hasUpdate() const { return m_hasUpdate; }
     bool skipped() const;
+    bool notify() const { return m_hasUpdate && !skipped(); }
     qint64 size() const { return m_asset.size; }
     QString notes() const { return m_release.notes; }
     double progress() const { return m_progress; }

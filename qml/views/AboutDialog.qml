@@ -20,10 +20,16 @@ MotionPopup {
         border.width: Theme.gameEditor.borderWidth
     }
 
+    signal updateRequested()
+
     contentItem: AboutContent {
         backgroundColor: Theme.gameEditor.background
         labelColor: Theme.gameEditor.labelColor
         linkColor: Theme.gameEditor.linkColor
+        onUpdateRequested: {
+            root.close()
+            root.updateRequested()
+        }
     }
 
     Icon {

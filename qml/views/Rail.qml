@@ -14,6 +14,8 @@ Item {
     signal undoable(string text, var link)
     signal editPlatform(string id)
 
+    // AppUpdate is only touched after the first frame.
+    property bool startedUp: false
     property string dragId: ""
     property int dragFrom: -1
     property int dragTo: -1
@@ -467,9 +469,24 @@ Item {
                 MotionPop { target: logo; property: "scale"; to: 1; speed: "fast" }
             }
 
+            Rectangle {
+                visible: root.startedUp && AppUpdate.notify
+                width: Theme.rail.updateDotSize
+                height: width
+                radius: width / 2
+                color: Theme.rail.updateDot
+                border.color: Theme.rail.updateDotBorder
+                border.width: Theme.rail.updateDotBorderWidth
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.topMargin: -width / 4
+                anchors.rightMargin: -width / 4
+            }
+
             ToolTip.visible: logoMouse.containsMouse && !(appMenu.item?.visible ?? false)
             ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: Actions.tip(qsTr("Menu"), Actions.keys.app_menu)
+            ToolTip.text: root.startedUp && AppUpdate.notify ? qsTr("Menu · Update to %1 available").arg(AppUpdate.latestVersion)
+                          : Actions.tip(qsTr("Menu"), Actions.keys.app_menu)
         }
 
         RailButton {

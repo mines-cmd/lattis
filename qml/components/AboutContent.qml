@@ -13,6 +13,8 @@ Item {
 
     implicitHeight: col.implicitHeight
 
+    signal updateRequested()
+
     readonly property var credits: [
         { label: qsTr("Built with"), links: [["Qt", "https://www.qt.io"],
                                              ["toml++", "https://marzer.github.io/tomlplusplus/"],
@@ -67,6 +69,24 @@ Item {
                 text: qsTr("Version %1").arg(Qt.application.version)
                 color: Theme.about.versionColor
                 font.pixelSize: Theme.about.versionFontSize
+            }
+        }
+
+        RowLayout {
+            visible: AppUpdate.notify
+            Layout.fillWidth: true
+            Layout.bottomMargin: Theme.about.textSpacing
+            spacing: Theme.layout.spacing
+
+            Label {
+                text: qsTr("Update available: %1").arg(AppUpdate.latestVersion)
+                color: Theme.about.updateColor
+                font.pixelSize: Theme.about.versionFontSize
+            }
+            Item { Layout.fillWidth: true }
+            SettingsButton {
+                text: AppUpdate.canReplace ? qsTr("Update") : qsTr("Open release page")
+                onClicked: root.updateRequested()
             }
         }
 
