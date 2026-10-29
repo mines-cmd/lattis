@@ -10,6 +10,8 @@ Item {
     property color labelColor
     property color linkColor
     property int logoHeight: Theme.about.logoHeight
+    property bool showUpdate: true
+    property int noticeRightMargin: 0
 
     implicitHeight: col.implicitHeight
 
@@ -51,6 +53,25 @@ Item {
         anchors.right: parent.right
         spacing: 0
 
+        NoticeBar {
+            visible: root.showUpdate && AppUpdate.notify
+            Layout.fillWidth: true
+            Layout.preferredHeight: Theme.layout.toolbarHeight
+            Layout.bottomMargin: Theme.about.logoSpacing
+            Layout.rightMargin: root.noticeRightMargin
+            parts: [{ text: qsTr("Update available") + "  " },
+                    { text: Qt.application.version + " → " + AppUpdate.latestVersion, chip: true }]
+
+            SettingsButton {
+                Layout.preferredHeight: Theme.notice.buttonHeight
+                text: AppUpdate.canReplace ? qsTr("Update") : qsTr("Open release page")
+                flat: true
+                textColor: Theme.notice.actionText
+                font.weight: Theme.font.emphasisWeight
+                onClicked: root.updateRequested()
+            }
+        }
+
         Item {
             Layout.fillWidth: true
             Layout.bottomMargin: Theme.about.logoSpacing
@@ -69,24 +90,6 @@ Item {
                 text: qsTr("Version %1").arg(Qt.application.version)
                 color: Theme.about.versionColor
                 font.pixelSize: Theme.about.versionFontSize
-            }
-        }
-
-        RowLayout {
-            visible: AppUpdate.notify
-            Layout.fillWidth: true
-            Layout.bottomMargin: Theme.about.textSpacing
-            spacing: Theme.layout.spacing
-
-            Label {
-                text: qsTr("Update available: %1").arg(AppUpdate.latestVersion)
-                color: Theme.about.updateColor
-                font.pixelSize: Theme.about.versionFontSize
-            }
-            Item { Layout.fillWidth: true }
-            SettingsButton {
-                text: AppUpdate.canReplace ? qsTr("Update") : qsTr("Open release page")
-                onClicked: root.updateRequested()
             }
         }
 

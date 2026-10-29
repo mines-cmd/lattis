@@ -23,6 +23,7 @@ MotionPopup {
     signal updateRequested()
 
     contentItem: AboutContent {
+        noticeRightMargin: Math.max(0, 2 * Theme.about.closeMargin + Theme.about.closeSize - root.padding)
         backgroundColor: Theme.gameEditor.background
         labelColor: Theme.gameEditor.labelColor
         linkColor: Theme.gameEditor.linkColor

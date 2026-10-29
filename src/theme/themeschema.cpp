@@ -1473,7 +1473,6 @@ constexpr Setting kSettings[] = {
     integer("about", "row_spacing", "6", 0, 100, "Space between the credits' rows"),
     integer("about", "column_spacing", "32", 0, 200, "Space between the credits' two columns"),
     color("about", "divider", "@border", "Line above the credits"),
-    color("about", "update_color", "@accent", "\"Update available\" under the version"),
 
     heading("settings_window", "Window"),
     integer("settings_window", "content_padding", "24", 0, 100, "Padding around the content area"),

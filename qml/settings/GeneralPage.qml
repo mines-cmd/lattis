@@ -24,6 +24,7 @@ Item {
     component LabeledRow: RowLayout {
         property alias label: name.text
         property alias note: noteLabel.text
+        property alias labelFormat: name.textFormat
 
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
@@ -248,9 +249,16 @@ Item {
                              : AppUpdate.state === "downloading" ? qsTr("Downloading Lattis %1").arg(AppUpdate.latestVersion)
                              : AppUpdate.state === "ready" ? qsTr("Lattis %1 is ready").arg(AppUpdate.latestVersion)
                              : AppUpdate.state === "failed" ? AppUpdate.error
-                             : AppUpdate.hasUpdate ? qsTr("Update available: %1").arg(AppUpdate.latestVersion)
+                             : AppUpdate.hasUpdate ? qsTr("Update available") + " <font color=\"" + Theme.palette.textMuted + "\">"
+                                                   + Qt.application.version + " → " + AppUpdate.latestVersion + "</font>"
                              : qsTr("Lattis %1 is up to date").arg(Qt.application.version)
+                        labelFormat: AppUpdate.state === "failed" ? Text.PlainText : Text.StyledText
                         note: AppUpdate.hasUpdate && AppUpdate.skipped ? qsTr("You skipped this version.") : ""
+                        SettingsButton {
+                            visible: AppUpdate.hasUpdate && AppUpdate.canReplace
+                            text: qsTr("Release page")
+                            onClicked: Qt.openUrlExternally(AppUpdate.releasePage)
+                        }
                         SettingsButton {
                             visible: AppUpdate.hasUpdate || AppUpdate.state === "ready"
                             text: AppUpdate.state === "ready" ? qsTr("Restart")
@@ -271,7 +279,7 @@ Item {
                 SectionHeader { text: qsTr("About") }
                 SettingsCard {
                     AboutContent {
-                        onUpdateRequested: root.openUpdate()
+                        showUpdate: false
                         Layout.fillWidth: true
                         logoHeight: Theme.about.pageLogoHeight
                         backgroundColor: Theme.settingsWindow.cardBackground
