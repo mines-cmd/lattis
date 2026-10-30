@@ -1,5 +1,6 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/applocation.h"
 #include "install/appupdate.h"
 #include "install/desktopentry.h"
 #include "install/ffmpegtool.h"
@@ -287,6 +288,20 @@ int main(int argc, char *argv[])
         });
     };
     QObject::connect(&general, &General::settingsChanged, &app, syncMenuEntry);
+    {
+        AppLocation::Setup location;
+        location.appImage = qEnvironmentVariable("APPIMAGE");
+        location.home = QDir::homePath();
+        location.applicationsDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                                   + QStringLiteral("/applications");
+        location.moved = [&general, syncMenuEntry](const QString &newPath) {
+            qputenv("APPIMAGE", newPath.toUtf8());
+            AppUpdate::instance()->setAppImage(newPath);
+            general.refreshAutostart();
+            syncMenuEntry();
+        };
+        AppLocation::setup(location);
+    }
     FfmpegTool::setup({AppPaths::toolsDir(),
                        [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());

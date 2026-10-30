@@ -168,6 +168,50 @@ ColumnLayout {
     }
 
     SettingsCard {
+        id: moveCard
+        panel: true
+        visible: AppLocation.canMove || movedNote !== ""
+
+        property string movedNote: ""
+        property bool failed: false
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Keep Lattis in %1").arg(AppLocation.folder)
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
+                    font.weight: Theme.font.strongWeight
+                    wrapMode: Text.Wrap
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: moveCard.movedNote !== "" ? moveCard.movedNote
+                                                    : qsTr("Moves the AppImage there and adds it to your applications menu.")
+                    color: moveCard.failed ? Theme.controls.problemsText : Theme.onboarding.descriptionColor
+                    wrapMode: Text.Wrap
+                }
+            }
+            SettingsButton {
+                visible: AppLocation.canMove
+                text: qsTr("Move")
+                onClicked: {
+                    const err = AppLocation.move()
+                    moveCard.failed = err !== ""
+                    moveCard.movedNote = err === "" ? qsTr("Moved.") : err
+                }
+            }
+        }
+    }
+
+    SettingsCard {
         panel: true
         spacing: 0
 

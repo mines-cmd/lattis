@@ -323,6 +323,7 @@ qt_add_qml_module(lattis
         src/install/ffmpegtool.h src/install/ffmpegtool.cpp
         src/install/versions.h src/install/versions.cpp
         src/install/appupdate.h src/install/appupdate.cpp
+        src/install/applocation.h src/install/applocation.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp

@@ -112,6 +112,9 @@ public:
     // The daily check: waits `delayMs`, checks when the last check is over a day old, and again a day after each.
     void startDailyCheck(int delayMs = 10000);
 
+    // The running file was moved.
+    void setAppImage(const QString &appImage);
+
     void setCurrentVersion(const QString &version);
     // http: and file: URLs, and a release answered from another address (tests, screenshots).
     void setReleaseUrl(const QUrl &url) { m_releaseUrl = url; }

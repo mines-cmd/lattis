@@ -75,6 +75,13 @@ QString managedBy(const QString &appImage, const QString &applicationsDir)
 }
 }
 
+void AppUpdate::setAppImage(const QString &appImage)
+{
+    m_setup.appImage = appImage;
+    m_blocker = m_available ? AppUpdates::replaceBlocker(appImage, m_setup.applicationsDir) : QString();
+    emit changed();
+}
+
 AppUpdate *AppUpdate::instance()
 {
     static AppUpdate *update = [] {

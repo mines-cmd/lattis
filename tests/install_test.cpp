@@ -1,3 +1,4 @@
+#include "applocation.h"
 #include "appupdate.h"
 #include "appimageinstall.h"
 #include "desktopentry.h"
@@ -116,6 +117,7 @@ private slots:
 
     void desktopRewrite();
     void ownEntry();
+    void moveAppImage();
     void downloadInstalls();
     void downloadChecksum();
     void downloadCutShort();
@@ -474,6 +476,43 @@ void InstallTest::ownEntry()
     manager.write(("Exec=" + appImage).toUtf8());
     manager.close();
     QCOMPARE(AppUpdates::managedBy(appImage, applications), QStringLiteral("Gear Lever"));
+}
+
+void InstallTest::moveAppImage()
+{
+    QTemporaryDir root;
+    const QString from = root.filePath(QStringLiteral("Downloads"));
+    const QString to = root.filePath(QStringLiteral("Applications"));
+    const QString applications = root.filePath(QStringLiteral("applications"));
+    QDir().mkpath(from);
+    QDir().mkpath(applications);
+    const QString appImage = from + QStringLiteral("/Lattis.AppImage");
+    QFile file(appImage);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("x");
+    file.close();
+
+    QCOMPARE(AppLocations::moveBlocker(appImage, to, applications), QString());
+    QVERIFY(!AppLocations::moveBlocker(from + QStringLiteral("/missing"), to, applications).isEmpty());
+
+    QFile manager(applications + QStringLiteral("/gearlever_lattis.desktop"));
+    QVERIFY(manager.open(QIODevice::WriteOnly));
+    manager.write(("Exec=" + appImage).toUtf8());
+    manager.close();
+    QVERIFY(AppLocations::moveBlocker(appImage, to, applications).contains(QStringLiteral("Gear Lever")));
+    QVERIFY(manager.remove());
+
+    QString moved;
+    QCOMPARE(AppLocations::moveInto(appImage, to, &moved), QString());
+    QCOMPARE(moved, to + QStringLiteral("/Lattis.AppImage"));
+    QVERIFY(QFile::exists(moved));
+    QVERIFY(!QFile::exists(appImage));
+
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.close();
+    QVERIFY(!AppLocations::moveBlocker(appImage, to, applications).isEmpty());
+    QVERIFY(!AppLocations::moveInto(appImage, to, &moved).isEmpty());
+    QVERIFY(QFile::exists(appImage));
 }
 
 void InstallTest::downloadInstalls()

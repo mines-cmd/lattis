@@ -242,6 +242,20 @@ Item {
                             }
                         }
                     }
+                    LabeledRow {
+                        label: qsTr("Move to %1").arg(AppLocation.folder)
+                        note: AppLocation.inFolder ? qsTr("Lattis is already in this folder.")
+                            : AppLocation.blocker !== "" ? AppLocation.blocker
+                            : qsTr("Moves the AppImage there. The menu entry and Start at login follow it; a Steam shortcut to Lattis would need the new path.")
+                        SettingsButton {
+                            visible: AppLocation.canMove
+                            text: qsTr("Move")
+                            onClicked: {
+                                const err = AppLocation.move()
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
                 }
 
                 SectionHeader { visible: AppUpdate.available; text: qsTr("Updates") }

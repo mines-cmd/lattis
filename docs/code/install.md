@@ -68,6 +68,10 @@ After an AppImage is in place, `DesktopEntry::make(id, appImage, dataDir)` (`des
 
 `main.cpp` runs it on a worker thread after the first frame, and again when settings change, when `$APPIMAGE` is set and fixture mode is off. `AppUpdates::managedBy(appImage, applicationsDir)` (also behind `replaceBlocker`) names the Gear Lever or AppImageLauncher entry that already points at the file; then nothing is written. `[general] app_menu_entry = false` (Settings → General) calls `removeOwn` instead. A failure is only a warning.
 
+### Moving Lattis into the applications folder
+
+`AppLocation` (`applocation.*`, a QML singleton) backs the **Move** button in Settings → General and on the setup guide's Done step. `canMove` is true when `$APPIMAGE` is set, the file isn't already in `~/Applications` or `~/AppImages`, and `AppLocations::moveBlocker()` is empty (file missing, folder not writable, a Gear Lever or AppImageLauncher entry names it, or the folder already has a file of that name). `move()` calls `AppLocations::moveInto()`, a rename into `AppImageInstall::targetFolder` that keeps the file name (a copy and delete across filesystems); the running image stays mounted from the old file, so this is safe while Lattis runs. No restart follows: `Setup::moved` (in `main.cpp`) sets `$APPIMAGE` to the new path, calls `AppUpdate::setAppImage()` so updates replace the new file, and then `General::refreshAutostart()` and the menu-entry sync, which rewrite the autostart and menu entries. A Steam shortcut to Lattis is not touched.
+
 ## Flatpak
 
 `flatpakinstall.*`:
@@ -184,6 +188,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 |---|---|
 | `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
+| `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
 | `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`, `ensureOwn()`, `removeOwn()`: the AppImage's menu entry, and Lattis's own |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
