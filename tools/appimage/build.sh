@@ -42,6 +42,12 @@ rm -f "$appdir"/usr/lib/libwayland-*
 # dialog unthemed (light).
 rm -f "$appdir"/usr/lib/libglib-2* "$appdir"/usr/lib/libgio-2* "$appdir"/usr/lib/libgobject-2* \
     "$appdir"/usr/lib/libgmodule-2* "$appdir"/usr/lib/libgthread-2*
+# Qt Multimedia's PulseAudio client comes from the system as well, so it speaks the protocol
+# and reads the config of the sound server there (PipeWire's pulse layer, often). The rest are
+# what only libpulse linked to; ldd lists them as Qt Multimedia's own, hence their exclusions too.
+rm -rf "$appdir"/usr/lib/libpulse* "$appdir"/usr/lib/pulseaudio "$appdir"/usr/lib/libsndfile* \
+    "$appdir"/usr/lib/libFLAC* "$appdir"/usr/lib/libvorbis* "$appdir"/usr/lib/libogg* \
+    "$appdir"/usr/lib/libopus* "$appdir"/usr/lib/libasyncns* "$appdir"/usr/lib/libapparmor*
 # The Qt plugin leaves out the plugins Qt Quick draws on Wayland's GPU surfaces with (wayland-egl);
 # without them the window never renders. The second pass bundles what they link to.
 qt_libs=$("$QMAKE" -query QT_INSTALL_LIBS)
@@ -62,7 +68,10 @@ deploy() {
         --exclude-library 'libatk*' --exclude-library 'libatspi*' --exclude-library 'libepoxy*' \
         --exclude-library 'libcloudproviders*' --exclude-library 'libtinysparql*' --exclude-library 'libharfbuzz*' \
         --exclude-library 'libglib-2*' --exclude-library 'libgio-2*' --exclude-library 'libgobject-2*' \
-        --exclude-library 'libgmodule-2*' --exclude-library 'libgthread-2*'
+        --exclude-library 'libgmodule-2*' --exclude-library 'libgthread-2*' \
+        --exclude-library 'libpulse*' --exclude-library 'libsndfile*' --exclude-library 'libFLAC*' \
+        --exclude-library 'libvorbis*' --exclude-library 'libogg*' --exclude-library 'libopus*' \
+        --exclude-library 'libasyncns*' --exclude-library 'libapparmor*'
 }
 deploy
 

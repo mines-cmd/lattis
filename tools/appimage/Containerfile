@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
         libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 libxcb1 libxcb-cursor0 libxcb-icccm4 \
         libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
         libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 libxcb-glx0 \
-        libwayland-client0 libwayland-cursor0 libwayland-egl1 libgtk-3-0 libssl3 \
+        libwayland-client0 libwayland-cursor0 libwayland-egl1 libgtk-3-0 libssl3 libpulse0 \
     && rm -rf /var/lib/apt/lists/* \
     && locale-gen en_US.UTF-8 \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
