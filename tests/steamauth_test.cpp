@@ -119,7 +119,7 @@ private slots:
         QCOMPARE(m_store->read(SteamAuth::itemAttributes(kSteamId)), std::optional<QByteArray>(refresh));
 
         const QJsonObject begin = inputOf(m_server->requestsTo(kBegin).first());
-        QCOMPARE(begin.value("platform_type").toInt(), 3);
+        QCOMPARE(begin.value("platform_type").toInt(), 1);
         const QJsonObject poll = inputOf(m_server->requestsTo(kPoll).first());
         QCOMPARE(poll.value("client_id").toString(), QStringLiteral("100"));
         QCOMPARE(poll.value("request_id").toString(), QStringLiteral("cmVx"));
