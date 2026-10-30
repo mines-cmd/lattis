@@ -17,7 +17,11 @@ Settings → **Mod managers**, then **+**. The dialog asks for:
 
 A Windows manager is added to Steam as a non-Steam game, kept in step like a [Windows game](windows-games.md)'s, so it waits for Steam to close (see [Changes wait for Steam to close](steam.md#changes-wait-for-steam-to-close)). It stays visible in Steam's library: Steam no longer honors the hidden flag for shortcuts.
 
-If you already added the manager to Steam yourself, use **Add existing shortcuts** on Settings → Steam and choose **Add as mod manager** on its row. It keeps its Steam entry and its own prefix.
+If you already added the manager to Steam yourself, use **From Steam** in the dialog, or **Add existing shortcuts** on Settings → Steam and **Add as mod manager** on its row. It keeps its Steam entry and its own prefix.
+
+## Icons
+
+On Settings → Mod managers each row shows the manager's own icon. A Windows manager's comes from its `.exe`; a native one's from the `.desktop` entry that launches it (an installed app, a Flatpak, or an AppImage you've integrated into your menu). Without one, the row keeps the puzzle-piece icon. Lattis looks again when the program changes, and once an hour for one it couldn't find.
 
 ## Opening a manager
 

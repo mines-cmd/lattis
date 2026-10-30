@@ -77,23 +77,13 @@ Item {
                 width: flick.width - scrollBar.width - 8
                 spacing: 0
 
-                RowLayout {
+                Label {
                     visible: root.managers.length === 0
                     Layout.fillWidth: true
-                    spacing: 10
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: qsTr("No mod managers yet. Point Lattis at one that's already on disk, then link the games it mods.")
-                        color: Theme.controls.descriptionColor
-                        font.pixelSize: Theme.controls.descriptionFontSize
-                        wrapMode: Text.WordWrap
-                    }
-                    SettingsButton {
-                        text: qsTr("Add mod manager")
-                        iconPath: Icons.add
-                        onClicked: dialog.openFor(null, [])
-                    }
+                    text: qsTr("No mod managers yet. Point Lattis at one that's already on disk, then link the games it mods.")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
                 }
 
                 RowCard {
@@ -116,10 +106,28 @@ Item {
                             last: index === root.managers.length - 1
                             implicitHeight: Math.max(Theme.controls.inputHeight, info.implicitHeight + 16)
 
-                            Icon {
-                                path: Icons.puzzle
-                                size: Theme.controls.iconSize * 1.4
-                                color: Theme.controls.descriptionColor
+                            Item {
+                                readonly property real side: Theme.controls.iconSize * 1.4
+                                Layout.preferredWidth: side
+                                Layout.preferredHeight: side
+
+                                Image {
+                                    anchors.fill: parent
+                                    visible: status === Image.Ready
+                                    source: row.modelData.icon
+                                    sourceSize.width: parent.side * 2
+                                    sourceSize.height: parent.side * 2
+                                    fillMode: Image.PreserveAspectFit
+                                    asynchronous: true
+                                    mipmap: true
+                                }
+                                Icon {
+                                    anchors.centerIn: parent
+                                    visible: row.modelData.icon === ""
+                                    path: Icons.puzzle
+                                    size: parent.side
+                                    color: Theme.controls.descriptionColor
+                                }
                             }
                             ColumnLayout {
                                 id: info

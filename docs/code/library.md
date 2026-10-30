@@ -353,6 +353,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `steamwebmerge.*` | `SteamWebMerge::merge()`: the Web API's cache into the `steam.toml` entries |
 | `gamefile.*` | The game file: `GameFields` (the key table), parsing, validation, formatting |
 | `modmanagers.*` | `ModManager`: parsing and formatting `mod-managers/<id>.toml`, and which linked games are missing |
+| `managericon.*` | a manager's icon: the largest image of a Windows program's first icon group (a small PE resource reader, no external tool), or the icon of the `.desktop` entry whose `Exec` starts the program (path, command or Flatpak id); cached as PNG under `<cache>/mod-manager-icons/<id>-<hash of the program>.png`, with a `.none` marker for an hour when there is none |
 | `game.h` | `Game`: a game as the UI shows it |
 | `gameid.*` | Ids: slugs, validation, `steam-<appid>` |
 | `emulators.*` | Emulator presets, `emulators.toml`, the merge, detection, Flatpak permissions |

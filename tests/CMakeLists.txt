@@ -67,6 +67,7 @@ set(LIBRARY_FILE_SOURCES
 )
 set(LIBRARY_SOURCES
     ../src/library/library.h ../src/library/library.cpp
+    ../src/library/managericon.h ../src/library/managericon.cpp
     ../src/library/romdbfetch.h ../src/library/romdbfetch.cpp
     ../src/metadata/metadatasettings.h ../src/metadata/metadatasettings.cpp
     ../src/steam/steamdownloads.h ../src/steam/steamdownloads.cpp
@@ -139,6 +140,9 @@ if(DBUS_RUN_SESSION)
                 $<TARGET_FILE:secretstore_test>)
     set_tests_properties(secretstore_test PROPERTIES ENVIRONMENT "LATTIS_TEST_PRIVATE_BUS=1;QT_QPA_PLATFORM=offscreen")
 endif()
+lattis_test(managericon_test OFFSCREEN
+    SOURCES ../src/library/managericon.h ../src/library/managericon.cpp
+    LIBS Qt6::Gui)
 lattis_test(qrcode_test
     SOURCES ../src/core/qrcode.h ../src/core/qrcode.cpp
     LIBS Qt6::Core)

@@ -6,6 +6,7 @@
 #include "gameid.h"
 #include "igdb.h"
 #include "launchcommand.h"
+#include "managericon.h"
 #include "mediafolders.h"
 #include "romfoldermatch.h"
 #include "romscan.h"
@@ -809,8 +810,8 @@ QVariantList Library::steamShortcuts() const
         out.append(QVariantMap{
             {QStringLiteral("appId"), qint64(s.appId)},
             {QStringLiteral("name"), s.name},
-            {QStringLiteral("target"), s.exeArgs.isEmpty() ? tilde(s.exe) : tilde(s.exe) + u' ' + s.exeArgs},
             {QStringLiteral("exe"), s.exe},
+            {QStringLiteral("target"), s.exeArgs.isEmpty() ? tilde(s.exe) : tilde(s.exe) + u' ' + s.exeArgs},
             {QStringLiteral("tool"), tool.isEmpty() ? QString() : toolNames.value(tool, tool)},
             {QStringLiteral("checked"), !tool.isEmpty()},
             {QStringLiteral("canManage"), s.exe.endsWith(QLatin1String(".exe"), Qt::CaseInsensitive)},
@@ -2488,9 +2489,12 @@ QVariantList Library::buildModManagers() const
             games.append(QVariantMap{{QStringLiteral("id"), g.id}, {QStringLiteral("title"), g.title},
                                      {QStringLiteral("missing"), g.missing}});
         }
+        const QString icon = ManagerIcon::cached(m_cacheDir, m.id, Emulators::expandHome(m.exe, QDir::homePath()),
+                                              m.isProton());
         out.append(QVariantMap{
             {QStringLiteral("id"), m.id},
             {QStringLiteral("name"), m.name},
+            {QStringLiteral("icon"), icon.isEmpty() ? QString() : QUrl::fromLocalFile(icon).toString()},
             {QStringLiteral("exe"), m.exe},
             {QStringLiteral("startDir"), m.startDir},
             {QStringLiteral("launchOptions"), m.launchOptions},
@@ -4035,6 +4039,7 @@ QVariantMap Library::uninstallModManager(const QString &id, bool files, bool pre
         qCInfo(lcLibrary).noquote() << QStringLiteral("%1: removed %2").arg(id, folder);
     }
     // Its folder goes with the program; the shortcut would have nothing to run.
+    ManagerIcon::forget(m_cacheDir, id);
     return withError(m_store.removeModManager(id, manager.isProton() && (shortcut || files)));
 }
 
