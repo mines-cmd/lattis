@@ -108,8 +108,7 @@ SettingsCard {
         note: root.signedIn
               ? (SteamLibrary.keyringAvailable ? qsTr("The sign-in is kept in your keyring.")
                                                 : qsTr("No keyring found: the sign-in lasts until Lattis quits."))
-              : qsTr("Approve a QR code in the Steam app on your phone. It's a session on your account, like a "
-                     + "browser's, and Lattis never sees your password.")
+              : qsTr("Not available for now: Steam can flag a new sign-in as suspicious. Use a Web API key below.")
 
         SettingsButton {
             visible: root.signedIn
@@ -120,8 +119,8 @@ SettingsCard {
         }
         SettingsButton {
             visible: !root.signedIn
+            enabled: false
             text: qsTr("Sign in with Steam")
-            primary: true
             onClicked: root.signInRequested()
         }
     }
@@ -154,14 +153,13 @@ SettingsCard {
 
         Label {
             Layout.fillWidth: true
-            text: qsTr("Or a Web API key")
+            text: qsTr("Web API key")
             color: Theme.controls.labelColor
             font.pixelSize: Theme.controls.labelFontSize
             font.weight: Theme.font.strongWeight
         }
         KeyRow {
             id: keyRow
-            label: qsTr("API key")
             secret: true
             buttonWidth: showMetric.implicitWidth
             Component.onCompleted: field.text = SteamLibrary.webKey

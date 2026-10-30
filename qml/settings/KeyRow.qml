@@ -15,6 +15,7 @@ RowLayout {
 
     Label {
         id: name
+        visible: text !== ""
         Layout.preferredWidth: Theme.settingsWindow.labelMinWidth
         color: Theme.controls.labelColor
         font.pixelSize: Theme.controls.labelFontSize

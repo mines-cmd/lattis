@@ -69,6 +69,8 @@ ColumnLayout {
                 id: noteLabel
                 visible: text !== ""
                 Layout.fillWidth: true
+                linkColor: Theme.gameEditor.linkColor
+                onLinkActivated: link => Qt.openUrlExternally(link)
             }
         }
         RowLayout {
@@ -255,8 +257,8 @@ ColumnLayout {
             CardHeader {
                 icon: Icons.steamLine
                 title: qsTr("Your whole library")
-                tag: SteamLibrary.authState === "signed_in" ? qsTr("optional") : qsTr("Needs sign-in · optional")
-                subtitle: qsTr("Every game on your account, installed or not, including Steam Family shares.")
+                tag: qsTr("optional")
+                subtitle: qsTr("Every game your account owns, installed or not.")
             }
             Divider { visible: Theme.settingsWindow.rowDividers }
             Row {
@@ -264,10 +266,11 @@ ColumnLayout {
                        : qsTr("Sign in with a QR code")
                 note: SteamLibrary.authState === "signed_in"
                       ? qsTr("They're added to the library as not installed when you finish. Settings → Steam has the rest.")
-                      : qsTr("Scan it with the Steam app. Lattis never sees your password.")
+                      : qsTr("Not available for now: Steam can flag a new sign-in as suspicious. Use a Web API key below.")
 
                 SettingsButton {
                     visible: SteamLibrary.authState !== "signed_in"
+                    enabled: false
                     text: qsTr("Sign in with Steam")
                     onClicked: {
                         signIn.active = true
@@ -279,6 +282,38 @@ ColumnLayout {
                     text: qsTr("Sign out")
                     danger: true
                     onClicked: SteamLibrary.signOut()
+                }
+            }
+            Divider { visible: Theme.settingsWindow.rowDividers }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacing
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Web API key")
+                    color: Theme.controls.labelColor
+                    font.pixelSize: Theme.controls.labelFontSize
+                }
+                KeyRow {
+                    secret: true
+                    buttonWidth: showMetric.implicitWidth
+                    Component.onCompleted: field.text = SteamLibrary.webKey
+                    onFinished: {
+                        if (field.text.trim() === SteamLibrary.webKey)
+                            return
+                        const error = SteamLibrary.setWebKey(field.text)
+                        if (error !== "")
+                            root.guide.message(error)
+                    }
+                }
+                SettingsButton { id: showMetric; visible: false; text: qsTr("Show") }
+                SettingsNote {
+                    Layout.fillWidth: true
+                    linkColor: Theme.gameEditor.linkColor
+                    text: qsTr("Fetches the games you own, not the family's, without signing in. Your Game details "
+                               + "must be public. <a href=\"%1\">Get a key</a>").arg(SteamLibrary.keyUrl())
+                    onLinkActivated: link => Qt.openUrlExternally(link)
                 }
             }
         }
