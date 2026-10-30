@@ -17,6 +17,7 @@ struct Achievement
     bool unlocked = false;
     QDateTime unlockTime;
     QString iconUrl; // the colored icon when unlocked, the gray one when locked
+    QString iconFallbackUrl; // the same file on the older host, which some games' icons are only on
 };
 
 // Unlocked first (newest first), then locked in the schema's order. Empty when there is no

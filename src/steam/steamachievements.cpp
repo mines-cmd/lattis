@@ -118,8 +118,11 @@ QList<Achievement> readAchievements(const SteamInstall &install, qint64 appId, c
             }
             const BinaryVdf::Node *icon = display->child(a.unlocked ? "icon" : "icon_gray");
             if (icon && !icon->toString().isEmpty()) {
-                a.iconUrl = u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/%1/%2"_s.arg(appId)
+                a.iconUrl = u"https://shared.fastly.steamstatic.com/community_assets/images/apps/%1/%2"_s.arg(appId)
                                 .arg(icon->toString());
+                a.iconFallbackUrl = u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/%1/%2"_s
+                                        .arg(appId)
+                                        .arg(icon->toString());
             }
             e.order = int(entries.size());
             entries.append(e);

@@ -321,7 +321,12 @@ MotionPopup {
                             color: Theme.achievements.viewerIconPlaceholder
                             failedIcon: Icons.medal
                             iconWhenEmpty: !row.summary
-                            source: row.summary ? "" : row.modelData.icon ?? ""
+                            property bool useFallback: false
+                            source: row.summary ? "" : (useFallback ? row.modelData.iconFallback : row.modelData.icon) ?? ""
+                            onStatusChanged: {
+                                if (status === Image.Error && !useFallback)
+                                    useFallback = true
+                            }
                             opacity: row.modelData.unlocked ? 1 : Theme.achievements.viewerLockedOpacity
 
                             Label {

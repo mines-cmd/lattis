@@ -152,7 +152,7 @@ Surface {
                     property bool started: false
                     failedIcon: Icons.medal
                     iconWhenEmpty: !concealed
-                    source: started && !concealed ? (modelData?.icon ?? "") : ""
+                    source: started && !concealed ? ((tries % 2 ? modelData?.iconFallback : modelData?.icon) ?? "") : ""
 
                     Label {
                         visible: tile.concealed

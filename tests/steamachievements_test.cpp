@@ -100,9 +100,9 @@ void SteamAchievementsTest::descriptionAndIcons()
     QCOMPARE(list[1].description, u"Verlasse das Dorf."_s);
     // Colored when unlocked, gray when locked.
     QCOMPARE(list[1].iconUrl,
-             u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/9001/firststep.jpg"_s);
+             u"https://shared.fastly.steamstatic.com/community_assets/images/apps/9001/firststep.jpg"_s);
     QCOMPARE(list[3].iconUrl,
-             u"https://cdn.fastly.steamstatic.com/steamcommunity/public/images/apps/9001/secretroom_gray.jpg"_s);
+             u"https://shared.fastly.steamstatic.com/community_assets/images/apps/9001/secretroom_gray.jpg"_s);
 }
 
 void SteamAchievementsTest::languageFallsBack()

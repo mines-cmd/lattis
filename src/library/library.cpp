@@ -2200,7 +2200,8 @@ void Library::achievements(const QString &id)
                                      {QStringLiteral("hidden"), a.hidden},
                                      {QStringLiteral("unlocked"), a.unlocked},
                                      {QStringLiteral("time"), a.unlockTime},
-                                     {QStringLiteral("icon"), a.iconUrl}});
+                                     {QStringLiteral("icon"), a.iconUrl},
+                                     {QStringLiteral("iconFallback"), a.iconFallbackUrl}});
         }
         return items;
     }));
