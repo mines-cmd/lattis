@@ -229,8 +229,10 @@ Item {
                     }
                 }
 
+                SectionHeader { visible: General.isAppImage; text: qsTr("AppImage") }
                 SettingsCard {
                     visible: General.isAppImage
+                    spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         label: qsTr("Applications menu entry")
                         note: qsTr("Adds Lattis to your applications menu when it runs from an AppImage, and keeps the entry pointing at the file.")
@@ -258,13 +260,14 @@ Item {
                     }
                 }
 
-                SectionHeader { visible: AppUpdate.available; text: qsTr("Updates") }
+                SectionHeader { text: qsTr("Updates") }
                 SettingsCard {
-                    visible: AppUpdate.available
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         label: qsTr("Check for updates")
-                        note: qsTr("Once a day Lattis asks api.github.com for the latest release. Nothing else is sent.")
+                        note: AppUpdate.available
+                            ? qsTr("Once a day Lattis asks api.github.com for the latest release. Nothing else is sent.")
+                            : qsTr("Updates are only checked by a release AppImage; this build never checks.")
                         SettingsSwitch {
                             checked: General.checkForUpdates
                             onToggled: {
@@ -274,6 +277,7 @@ Item {
                         }
                     }
                     LabeledRow {
+                        visible: AppUpdate.available
                         label: AppUpdate.state === "checking" ? qsTr("Checking")
                              : AppUpdate.state === "downloading" ? qsTr("Downloading Lattis %1").arg(AppUpdate.latestVersion)
                              : AppUpdate.state === "ready" ? qsTr("Lattis %1 is ready").arg(AppUpdate.latestVersion)
