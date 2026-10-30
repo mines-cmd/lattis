@@ -62,6 +62,12 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 
 After an AppImage is in place, `DesktopEntry::make(id, appImage, dataDir)` (`desktopentry.*`) gives it a menu entry, as Gear Lever does: it runs `<appimage> --appimage-extract` (20 s limit, without Lattis's own AppImage variables) for the AppImage's `.desktop` file and its icon, copies the icon to `<data dir>/icons/lattis/<id>.<ext>`, and writes `<data dir>/applications/lattis-<id>.desktop` with `rewrite()`: every `Exec` runs the AppImage (keeping its arguments), `TryExec` and `X-AppImage-*` lines are dropped, and `Icon` is the copied file. `<data dir>` is the `data` XDG folder (`~/.local/share`). It is not made in fixture mode. A failure is only a warning: the install still succeeds. An update rewrites the entry; an uninstall deletes it and the icon.
 
+### Lattis's own menu entry
+
+`DesktopEntry::ensureOwn(appImage, dataDir)` makes the same entry for the running Lattis AppImage (id `lattis`, so `lattis-lattis.desktop` and `icons/lattis/lattis.<ext>`). It does nothing when that file already has an `Exec` running `appImage`, so a moved AppImage gets its entry rewritten on the next start and an in-place update (same path) needs nothing. `removeOwn(dataDir)` deletes the entry and icon.
+
+`main.cpp` runs it on a worker thread after the first frame, and again when settings change, when `$APPIMAGE` is set and fixture mode is off. `AppUpdates::managedBy(appImage, applicationsDir)` (also behind `replaceBlocker`) names the Gear Lever or AppImageLauncher entry that already points at the file; then nothing is written. `[general] app_menu_entry = false` (Settings → General) calls `removeOwn` instead. A failure is only a warning.
+
 ## Flatpak
 
 `flatpakinstall.*`:
@@ -178,7 +184,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 |---|---|
 | `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
-| `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`: the AppImage's menu entry |
+| `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`, `ensureOwn()`, `removeOwn()`: the AppImage's menu entry, and Lattis's own |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
 | `installer.*` | The `Installer` singleton |

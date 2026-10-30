@@ -268,6 +268,8 @@ void GeneralTest::updateSettings()
     QVERIFY(parse("[general]\n").value.checkForUpdates);
     QVERIFY(parse("[general]\n").value.skippedUpdate.isEmpty());
     QVERIFY(!parse("[general]\ncheck_for_updates = false\n").value.checkForUpdates);
+    QVERIFY(parse("[general]\n").value.appMenuEntry);
+    QVERIFY(!parse("[general]\napp_menu_entry = false\n").value.appMenuEntry);
     QCOMPARE(parse("[general]\nskipped_update = \"1.2\"\n").value.skippedUpdate, QStringLiteral("1.2"));
     const auto bad = parse("[general]\nskipped_update = 1.2\ncheck_for_updates = \"no\"\n");
     QVERIFY(bad.value.checkForUpdates);

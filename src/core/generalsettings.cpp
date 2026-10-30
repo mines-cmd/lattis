@@ -32,7 +32,8 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                                  QStringLiteral("system_locale"), QStringLiteral("reduce_motion"),
                                  QStringLiteral("rail_hidden_buttons"), QStringLiteral("rail_button_order"),
                                  QStringLiteral("rail_hidden"), QStringLiteral("clip_volume"),
-                                 QStringLiteral("check_for_updates"), QStringLiteral("skipped_update")};
+                                 QStringLiteral("check_for_updates"), QStringLiteral("skipped_update"),
+                                 QStringLiteral("app_menu_entry")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
         if (key == known.at(9)) {
@@ -77,6 +78,7 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                        : key == known.at(3) ? &out.value.reduceMotion
                        : key == known.at(6) ? &out.value.railHidden
                        : key == known.at(8) ? &out.value.checkForUpdates
+                       : key == known.at(10) ? &out.value.appMenuEntry
                                             : nullptr;
         if (!target) {
             out.warnings.append(

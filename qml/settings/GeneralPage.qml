@@ -229,6 +229,21 @@ Item {
                     }
                 }
 
+                SettingsCard {
+                    visible: General.isAppImage
+                    LabeledRow {
+                        label: qsTr("Applications menu entry")
+                        note: qsTr("Adds Lattis to your applications menu when it runs from an AppImage, and keeps the entry pointing at the file.")
+                        SettingsSwitch {
+                            checked: General.appMenuEntry
+                            onToggled: {
+                                const err = General.setAppMenuEntry(checked)
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
+                }
+
                 SectionHeader { visible: AppUpdate.available; text: qsTr("Updates") }
                 SettingsCard {
                     visible: AppUpdate.available

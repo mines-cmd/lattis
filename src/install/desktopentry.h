@@ -19,4 +19,10 @@ Made make(const QString &id, const QString &appImage, const QString &dataDir, QS
 QByteArray rewrite(const QByteArray &source, const QString &appImage, const QString &icon);
 
 void remove(const Made &made);
+
+// The running Lattis AppImage's own menu entry (`lattis-lattis.desktop`). Written when missing or when its Exec no
+// longer runs `appImage`; nothing happens when it is already right. `made.desktop` is empty when nothing was written.
+Made ensureOwn(const QString &appImage, const QString &dataDir, QString *error);
+
+void removeOwn(const QString &dataDir);
 }

@@ -164,6 +164,23 @@ Made make(const QString &id, const QString &appImage, const QString &dataDir, QS
     return made;
 }
 
+Made ensureOwn(const QString &appImage, const QString &dataDir, QString *error)
+{
+    const QString id = QStringLiteral("lattis");
+    QFile existing(QDir(dataDir).filePath(QStringLiteral("applications/lattis-%1.desktop").arg(id)));
+    if (existing.open(QIODevice::ReadOnly) && existing.readAll().contains(("Exec=" + quoted(appImage)).toUtf8()))
+        return {};
+    return make(id, appImage, dataDir, error);
+}
+
+void removeOwn(const QString &dataDir)
+{
+    QFile::remove(QDir(dataDir).filePath(QStringLiteral("applications/lattis-lattis.desktop")));
+    const QDir icons(QDir(dataDir).filePath(QStringLiteral("icons/lattis")));
+    for (const QString &name : icons.entryList({QStringLiteral("lattis.*")}, QDir::Files))
+        QFile::remove(icons.filePath(name));
+}
+
 void remove(const Made &made)
 {
     if (!made.desktop.isEmpty())

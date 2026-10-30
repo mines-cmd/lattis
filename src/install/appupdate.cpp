@@ -49,17 +49,26 @@ QString replaceBlocker(const QString &appImage, const QString &applicationsDir)
     if (!QFileInfo(file.absolutePath()).isWritable())
         return tr("%1 can't be written to").arg(QDir::toNativeSeparators(file.absolutePath()));
     // The managers keep the file and its menu entry in step, and would put the old one back.
+    const QString manager = managedBy(appImage, applicationsDir);
+    if (!manager.isEmpty())
+        return tr("It is managed by %1, which updates it").arg(manager);
+    return {};
+}
+
+QString managedBy(const QString &appImage, const QString &applicationsDir)
+{
     const struct
     {
         const char *pattern;
         const char *name;
     } managers[] = {{"gearlever_*.desktop", "Gear Lever"}, {"appimagekit_*.desktop", "AppImageLauncher"}};
+    const QByteArray path = QFileInfo(appImage).absoluteFilePath().toUtf8();
     for (const auto &manager : managers) {
         const QDir dir(applicationsDir);
         for (const QString &entry : dir.entryList({QString::fromLatin1(manager.pattern)}, QDir::Files)) {
             QFile f(dir.filePath(entry));
-            if (f.open(QIODevice::ReadOnly) && f.readAll().contains(file.absoluteFilePath().toUtf8()))
-                return tr("It is managed by %1, which updates it").arg(QString::fromLatin1(manager.name));
+            if (f.open(QIODevice::ReadOnly) && f.readAll().contains(path))
+                return QString::fromLatin1(manager.name);
         }
     }
     return {};

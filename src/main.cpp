@@ -1,6 +1,7 @@
 #include "dateformat.h"
 #include "backup/backups.h"
 #include "install/appupdate.h"
+#include "install/desktopentry.h"
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
 #include "core/apppaths.h"
@@ -27,6 +28,7 @@
 #include "theme/theme.h"
 
 #include <QDir>
+#include <QtConcurrent>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFontDatabase>
@@ -38,6 +40,8 @@
 #include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QTimer>
+
+#include <atomic>
 
 namespace {
 void logMemory()
@@ -260,6 +264,29 @@ int main(int argc, char *argv[])
         };
         AppUpdate::setup(update);
     }
+    const auto syncMenuEntry = [&general] {
+        const QString appImage = qEnvironmentVariable("APPIMAGE");
+        if (appImage.isEmpty() || !qEnvironmentVariableIsEmpty("LATTIS_INSTALL_FIXTURES"))
+            return;
+        static std::atomic_bool busy = false;
+        if (busy.exchange(true))
+            return;
+        const bool wanted = general.appMenuEntry();
+        const QString dataHome = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+        // Extracting the AppImage takes a moment; a manager's own entry is left alone.
+        (void)QtConcurrent::run([appImage, wanted, dataHome] {
+            if (!wanted) {
+                DesktopEntry::removeOwn(dataHome);
+            } else if (AppUpdates::managedBy(appImage, dataHome + QStringLiteral("/applications")).isEmpty()) {
+                QString error;
+                DesktopEntry::ensureOwn(appImage, dataHome, &error);
+                if (!error.isEmpty())
+                    qWarning().noquote() << "can't make the applications menu entry:" << error;
+            }
+            busy = false;
+        });
+    };
+    QObject::connect(&general, &General::settingsChanged, &app, syncMenuEntry);
     FfmpegTool::setup({AppPaths::toolsDir(),
                        [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); }});
     ThumbnailCache thumbnails(AppPaths::cacheDir());
@@ -275,12 +302,13 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
         QObject::connect(
             window, &QQuickWindow::frameSwapped, window,
-            [&startup, &library, &runner, &general, &instance, window] {
+            [&startup, &library, &runner, &general, &instance, window, syncMenuEntry] {
                 qInfo() << "first frame after" << startup.elapsed() << "ms";
                 window->setProperty("startedUp", true);
                 QTimer::singleShot(0, &library, &Library::startRefresh);
                 QTimer::singleShot(0, &runner, &GameRunner::start);
                 QTimer::singleShot(0, &general, &General::refreshAutostart);
+                QTimer::singleShot(0, syncMenuEntry);
                 // Not before the first frame, and its own 10 s after it.
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
                 QTimer::singleShot(0, [] { SteamLibrarySync::instance()->startDaily(); });

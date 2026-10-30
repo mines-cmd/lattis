@@ -115,6 +115,7 @@ private slots:
     void extractNoMatch();
 
     void desktopRewrite();
+    void ownEntry();
     void downloadInstalls();
     void downloadChecksum();
     void downloadCutShort();
@@ -440,6 +441,39 @@ void InstallTest::desktopRewrite()
 
     const QByteArray noIcon = DesktopEntry::rewrite("[Desktop Entry]\nName=A\nExec=a\n", "/a.AppImage", "/i.png");
     QCOMPARE(noIcon, QByteArray("[Desktop Entry]\nIcon=/i.png\nName=A\nExec=\"/a.AppImage\"\n"));
+}
+
+void InstallTest::ownEntry()
+{
+    QTemporaryDir data;
+    const QString appImage = data.filePath(QStringLiteral("My Apps/Lattis.AppImage"));
+    QDir().mkpath(data.filePath(QStringLiteral("applications")));
+    QFile entry(data.filePath(QStringLiteral("applications/lattis-lattis.desktop")));
+    QVERIFY(entry.open(QIODevice::WriteOnly));
+    entry.write(("[Desktop Entry]\nName=Lattis\nExec=\"" + appImage + "\"\n").toUtf8());
+    entry.close();
+    QDir().mkpath(data.filePath(QStringLiteral("icons/lattis")));
+    QFile icon(data.filePath(QStringLiteral("icons/lattis/lattis.png")));
+    QVERIFY(icon.open(QIODevice::WriteOnly));
+    icon.close();
+
+    QString error;
+    QVERIFY(DesktopEntry::ensureOwn(appImage, data.path(), &error).desktop.isEmpty());
+    QVERIFY(error.isEmpty());
+
+    DesktopEntry::removeOwn(data.path());
+    QVERIFY(!entry.exists());
+    QVERIFY(!icon.exists());
+
+    const QString applications = data.filePath(QStringLiteral("applications"));
+    QCOMPARE(AppUpdates::managedBy(appImage, applications), QString());
+    QVERIFY(entry.open(QIODevice::WriteOnly));
+    entry.close();
+    QFile manager(applications + QStringLiteral("/gearlever_lattis.desktop"));
+    QVERIFY(manager.open(QIODevice::WriteOnly));
+    manager.write(("Exec=" + appImage).toUtf8());
+    manager.close();
+    QCOMPARE(AppUpdates::managedBy(appImage, applications), QStringLiteral("Gear Lever"));
 }
 
 void InstallTest::downloadInstalls()

@@ -95,6 +95,20 @@ QString General::setCheckForUpdates(bool value)
     return error;
 }
 
+QString General::setAppMenuEntry(bool value)
+{
+    QString error;
+    if (value) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("app_menu_entry"), &error);
+    } else {
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("app_menu_entry"),
+                                  QStringLiteral("false"), &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setSkippedUpdate(const QString &version)
 {
     QString error;

@@ -8,7 +8,7 @@ Lattis comes as an AppImage: one file with everything it needs, which runs on x8
 2. Make it executable: right-click it → Properties → "Allow executing as a program", or run `chmod +x Lattis-*.AppImage`.
 3. Double-click it to start.
 
-Keeping it in `~/Applications` or `~/AppImages` is a good habit; tools like Gear Lever can add it to your app menu. To open Lattis when you log in, turn on **Start at login** in Settings → General.
+Keeping it in `~/Applications` or `~/AppImages` is a good habit. The first time Lattis runs from an AppImage it adds itself to your applications menu, with its icon, so you don't need Gear Lever or AppImageLauncher for that; if you move the file, the entry follows it on the next start. If one of those tools already keeps an entry for the file, Lattis leaves it alone. Turn the entry off, and delete it, with **Applications menu entry** in Settings → General. To open Lattis when you log in, turn on **Start at login** in Settings → General.
 
 To build it yourself instead, see the project's README.
 

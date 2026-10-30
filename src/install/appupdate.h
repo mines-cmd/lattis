@@ -21,6 +21,9 @@ namespace AppUpdates {
 // Why the running AppImage can't be replaced from inside the app (empty: it can). `applicationsDir` is the folder of
 // the menu entries (~/.local/share/applications).
 QString replaceBlocker(const QString &appImage, const QString &applicationsDir);
+
+// The name of the manager (Gear Lever, AppImageLauncher) that keeps a menu entry for `appImage`, or "".
+QString managedBy(const QString &appImage, const QString &applicationsDir);
 }
 
 class AppUpdate : public QObject
