@@ -17,6 +17,7 @@ struct Key
 constexpr Key kKeys[] = {
     {"name", false}, {"exe", false},    {"start_dir", false}, {"launch_options", false},
     {"games", true}, {"prefix", false}, {"proton", false},    {"shortcut", false},
+    {"in_steam", false},
 };
 
 const Key *find(const QString &key)
@@ -48,6 +49,13 @@ QVariant validate(const QString &key, const QVariant &value, QString *error)
     if (!k) {
         *error = QStringLiteral("unknown key %1%2").arg(key, suggestion(key, keys()));
         return {};
+    }
+    if (key == QLatin1String("in_steam")) {
+        if (value.typeId() != QMetaType::Bool) {
+            *error = QStringLiteral("in_steam must be true or false");
+            return {};
+        }
+        return value.toBool();
     }
     if (key == QLatin1String("shortcut")) {
         bool ok = false;
@@ -81,6 +89,8 @@ QString format(const QString &key, const QVariant &value)
 {
     if (key == QLatin1String("shortcut"))
         return QString::number(value.toLongLong());
+    if (key == QLatin1String("in_steam"))
+        return value.toBool() ? QStringLiteral("true") : QStringLiteral("false");
     if (find(key)->list) {
         QStringList items;
         for (const QString &item : value.toStringList())
@@ -108,6 +118,8 @@ void apply(ModManager &m, const QString &key, const QVariant &value)
         m.proton = value.toString();
     else if (key == QLatin1String("shortcut"))
         m.shortcut = quint32(value.toLongLong());
+    else if (key == QLatin1String("in_steam"))
+        m.inSteam = value.toBool();
 }
 
 Parsed<ModManager> parse(const QByteArray &bytes, const QString &displayPath)
@@ -150,6 +162,9 @@ Parsed<ModManager> parse(const QByteArray &bytes, const QString &displayPath)
         } else if (key == QLatin1String("shortcut")) {
             if (const auto *i = node.as_integer())
                 value = qlonglong(i->get());
+        } else if (key == QLatin1String("in_steam")) {
+            if (const auto *b = node.as_boolean())
+                value = b->get();
         } else if (const auto *s = node.as_string()) {
             value = toQString(s->get());
         }
@@ -159,6 +174,7 @@ Parsed<ModManager> parse(const QByteArray &bytes, const QString &displayPath)
         else
             error = key == QLatin1String("shortcut")
                 ? QStringLiteral("shortcut must be a whole number from 1 to 4294967295")
+            : key == QLatin1String("in_steam") ? QStringLiteral("in_steam must be true or false")
                 : known->list ? QStringLiteral("%1 must be a list of names in quotes, like [\"steam-489830\"]").arg(key)
                               : QStringLiteral("%1 must be text in quotes").arg(key);
         if (!value.isValid()) {
@@ -193,7 +209,51 @@ QString formatNew(const ModManager &m)
             add("proton", m.proton);
         if (m.shortcut > 0)
             add("shortcut", qlonglong(m.shortcut));
+        if (!m.inSteam)
+            add("in_steam", false);
     }
+    return text;
+}
+
+namespace {
+const QString kCompatEnv = QStringLiteral("STEAM_COMPAT_DATA_PATH=");
+const QString kCommand = QStringLiteral("%command%");
+}
+
+QString withPrefix(const QString &launchOptions, const QString &compatDataPath)
+{
+    if (compatDataPath.isEmpty())
+        return launchOptions;
+    QString escaped = compatDataPath;
+    escaped.replace(u'\\', QStringLiteral("\\\\")).replace(u'"', QStringLiteral("\\\""));
+    const QString env = kCompatEnv + u'"' + escaped + u'"';
+    const QString rest = launchOptions.trimmed();
+    if (rest.contains(kCommand))
+        return env + u' ' + rest;
+    return rest.isEmpty() ? env + u' ' + kCommand : env + u' ' + kCommand + u' ' + rest;
+}
+
+QString withoutPrefix(const QString &launchOptions)
+{
+    QString text = launchOptions.trimmed();
+    if (!text.startsWith(kCompatEnv))
+        return launchOptions;
+    qsizetype i = kCompatEnv.size();
+    if (i < text.size() && text[i] == u'"') {
+        for (++i; i < text.size() && text[i] != u'"'; ++i) {
+            if (text[i] == u'\\')
+                ++i;
+        }
+        ++i;
+    } else {
+        while (i < text.size() && !text[i].isSpace())
+            ++i;
+    }
+    text = text.mid(std::min(i, text.size())).trimmed();
+    if (text == kCommand)
+        return {};
+    if (text.startsWith(kCommand + u' '))
+        return text.mid(kCommand.size() + 1).trimmed();
     return text;
 }
 

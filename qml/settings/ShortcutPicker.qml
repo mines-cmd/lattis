@@ -144,6 +144,18 @@ MotionPopup {
                         elide: Text.ElideMiddle
                     }
                 }
+                SettingsButton {
+                    visible: row.modelData.canManage
+                    text: qsTr("Add as mod manager")
+                    onClicked: {
+                        const problem = Library.addSteamShortcutAsModManager(row.modelData.appId)
+                        if (problem !== "") {
+                            error.text = problem
+                            return
+                        }
+                        root.openFresh(root.picked.filter(id => id !== row.modelData.appId))
+                    }
+                }
             }
         }
 

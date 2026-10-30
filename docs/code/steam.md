@@ -87,6 +87,8 @@ The `exe` field in shortcuts.vdf stores the program quoted, then any arguments t
 
 `SteamShortcuts::add()`, `update()` and `remove()` each touch only the affected shortcut's bytes and leave the rest of the binary file intact. `remove()` renumbers the remaining shortcuts, as Steam does.
 
+Proton mod managers ([library.md](library.md#mod-managers)) have shortcuts of the same kind and go through the same sync and queue; they differ in two ways. A manager that shares a game's prefix has `STEAM_COMPAT_DATA_PATH="<compatdata>" %command%` in its shortcut's launch options (Steam's copy is read back without it) and the game's Proton version. And the shortcut stays visible in Steam: the current client ignores `IsHidden` and keeps hidden games in a cloud collection the launcher doesn't write. "Add existing shortcuts" skips a manager's shortcut and offers "Add as mod manager" for a Windows program.
+
 ## The launch options sync
 
 Launch options and Proton versions each live in two places: the game file (`launch_options`, `proton`) and Steam's files (localconfig.vdf for launch options, config.vdf's `CompatToolMapping` for Proton). Either side can be changed independently: the user can edit the game file in the launcher, or change settings inside Steam. The sync record (`SteamSync::Record`, stored in the state dir as `steam-sync-<data dir key>.toml`) is what lets the launcher tell which side changed.

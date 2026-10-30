@@ -776,6 +776,10 @@ QVariantList Library::steamShortcuts() const
         if (f.platform == kProtonPlatform && f.shortcut > 0)
             inLibrary.insert(quint32(f.shortcut));
     }
+    for (const ModManager &m : snapshot.content.modManagers) {
+        if (m.shortcut > 0)
+            inLibrary.insert(m.shortcut);
+    }
     QHash<QString, QString> toolNames;
     for (const CompatTool &t : state.tools())
         toolNames.insert(t.name, t.displayName);
@@ -808,6 +812,7 @@ QVariantList Library::steamShortcuts() const
             {QStringLiteral("target"), s.exeArgs.isEmpty() ? tilde(s.exe) : tilde(s.exe) + u' ' + s.exeArgs},
             {QStringLiteral("tool"), tool.isEmpty() ? QString() : toolNames.value(tool, tool)},
             {QStringLiteral("checked"), !tool.isEmpty()},
+            {QStringLiteral("canManage"), s.exe.endsWith(QLatin1String(".exe"), Qt::CaseInsensitive)},
             {QStringLiteral("art"), art.isEmpty() ? QString() : QUrl::fromLocalFile(art).toString()},
         });
     }
@@ -820,6 +825,11 @@ QString Library::addSteamShortcuts(const QVariantList &appIds)
     for (const QVariant &v : appIds)
         ids.append(quint32(v.toLongLong()));
     return m_store.addShortcuts(ids).error;
+}
+
+QString Library::addSteamShortcutAsModManager(qint64 appId)
+{
+    return m_store.addShortcutAsModManager(quint32(appId)).error;
 }
 
 QString Library::setSteamPresetForAll(const QString &preset, bool on)

@@ -171,6 +171,8 @@ public:
         QString error;
     };
     AddedModManager addModManager(const ModManager &manager);
+    // A shortcut already in Steam becomes a manager with its own prefix, keeping its app ID.
+    AddedModManager addShortcutAsModManager(quint32 appId);
     QString setModManagerValues(const QString &id, const QList<std::pair<QString, QVariant>> &values);
     QString removeModManager(const QString &id);
     QString removeProtonGame(const QString &id, bool fromSteam = true);
@@ -233,6 +235,11 @@ private:
     void writeSteamWeb(const QList<IndexEntry> &entries);
     bool addBuiltInPlatforms();
     void applySteamSync(const ScanResult &result);
+    // Steam's values for a manager's shortcut, written into its file.
+    void applyManagerCopies(const QString &id, const QList<std::pair<QString, QVariant>> &copies,
+                            const SteamSync::Record &before);
+    // A Proton manager without a shortcut app ID gets one, so the next sync adds the shortcut.
+    void assignManagerShortcuts();
     void updateSteamQueue();
     // No changedHere().
     QString writeNewGameFile(const QString &id, const QList<std::pair<QString, QVariant>> &values);

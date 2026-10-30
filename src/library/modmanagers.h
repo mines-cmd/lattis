@@ -23,6 +23,8 @@ struct ModManager
     QString prefix;
     QString proton;
     quint32 shortcut = 0;
+    // False once the shortcut was deleted in Steam; the sync stops adding it back.
+    bool inSteam = true;
 
     // A Windows program runs through Proton as a Steam shortcut; anything else is run directly.
     bool isProton() const { return exe.endsWith(QLatin1String(".exe"), Qt::CaseInsensitive); }
@@ -38,6 +40,11 @@ QStringList keys();
 QVariant validate(const QString &key, const QVariant &value, QString *error);
 QString format(const QString &key, const QVariant &value);
 void apply(ModManager &manager, const QString &key, const QVariant &value);
+
+// The Steam shortcut's launch options when the manager runs in a game's prefix: Proton picks the
+// prefix from STEAM_COMPAT_DATA_PATH. withoutPrefix() undoes it, so Steam's edits copy back clean.
+QString withPrefix(const QString &launchOptions, const QString &compatDataPath);
+QString withoutPrefix(const QString &launchOptions);
 
 Parsed<ModManager> parse(const QByteArray &bytes, const QString &displayPath);
 

@@ -433,6 +433,76 @@ QList<SteamSync::ShortcutGame> shortcutSyncGames(const LibraryContent &c, const 
     return out;
 }
 
+const QString kManagerKeyPrefix = QStringLiteral("mod-manager:");
+
+struct SharedPrefix
+{
+    QString path;
+    QString proton;
+};
+
+// The prefix of the one game a Proton manager runs in, if it runs in one. A manager linked to
+// one prefix-bearing game uses it unless prefix = "own"; linked to several, only prefix = "game"
+// shares, and the first one is used.
+std::optional<SharedPrefix> sharedPrefix(const ModManager &m, const LibraryContent &c, const SteamState &steam)
+{
+    if (!m.isProton() || m.prefix == QLatin1String("own") || steam.libraries.isEmpty())
+        return std::nullopt;
+    QStringList candidates;
+    for (const QString &id : m.games) {
+        const GameFile file = c.games.value(id);
+        if ((GameId::steamAppId(id) > 0 && (file.platform.isEmpty() || file.platform == kSteamPlatform))
+            || (file.platform == kProtonPlatform && file.shortcut > 0))
+            candidates.append(id);
+    }
+    const bool explicitGame = m.prefix == QLatin1String("game");
+    if (candidates.isEmpty() || (!explicitGame && (m.games.size() != 1 || candidates.size() != 1)))
+        return std::nullopt;
+
+    const QString id = candidates.first();
+    const GameFile file = c.games.value(id);
+    if (file.platform == kProtonPlatform) {
+        const QString path = steam.libraries.first() + QStringLiteral("/compatdata/%1").arg(file.shortcut);
+        return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(file.shortcut) : file.proton};
+    }
+    const qint64 appId = GameId::steamAppId(id);
+    QString path = steam.libraries.first() + QStringLiteral("/compatdata/%1").arg(appId);
+    for (const QString &library : steam.libraries) {
+        if (const QString candidate = library + QStringLiteral("/compatdata/%1").arg(appId); QFileInfo(candidate).isDir()) {
+            path = candidate;
+            break;
+        }
+    }
+    return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(appId) : file.proton};
+}
+
+QList<SteamSync::ShortcutGame> managerSyncGames(const LibraryContent &c, const SteamState &steam,
+                                                const QString &dataDir, const QString &home,
+                                                const SteamArt::GridFiles &grid, const SteamInstall &install)
+{
+    QList<SteamSync::ShortcutGame> out;
+    for (const ModManager &m : c.modManagers) {
+        if (!m.isProton() || m.shortcut == 0 || m.exe.isEmpty() || !m.inSteam)
+            continue;
+        const std::optional<SharedPrefix> shared = sharedPrefix(m, c, steam);
+        const QString icon = grid.value(m.shortcut).contains(QStringLiteral("icon"))
+            ? SteamArt::gridIconPath(install, m.shortcut)
+            : QString();
+        out.append({kManagerKeyPrefix + m.id, m.shortcut, m.name, resolveRomFolder(m.exe, dataDir, home),
+                    m.startDir.isEmpty() ? QString() : resolveRomFolder(m.startDir, dataDir, home),
+                    ModManagers::withPrefix(m.launchOptions, shared ? shared->path : QString()),
+                    shared && !shared->proton.isEmpty() ? shared->proton : m.proton, true, icon});
+    }
+    return out;
+}
+
+QList<SteamSync::ShortcutGame> allShortcutGames(const LibraryContent &c, const SteamState &steam,
+                                                const QString &dataDir, const QString &home,
+                                                const SteamArt::GridFiles &grid, const SteamInstall &install)
+{
+    return shortcutSyncGames(c, dataDir, home, grid, install) + managerSyncGames(c, steam, dataDir, home, grid, install);
+}
+
 QHash<qint64, QHash<QString, QString>> shortcutArt(const LibrarySnapshot &s)
 {
     QHash<qint64, QHash<QString, QString>> out;
@@ -475,7 +545,7 @@ void syncSteam(LibrarySnapshot &s, ScanResult &out, const SteamSettings &setting
         out.steamGridLog = SteamArt::writeGrid(SteamArt::gridDir(s.steam.install), shortcutArt(s), &record.grid);
 
     SteamSync::Result r = SteamSync::sync(steamSyncGames(s.content, defaults), s.steam, record,
-                                          shortcutSyncGames(s.content, dataDir, home, record.grid, s.steam.install));
+                                          allShortcutGames(s.content, s.steam, dataDir, home, record.grid, s.steam.install));
     for (auto it = defaults.cbegin(); it != defaults.cend(); ++it)
         out.steamGameWrites[it.key()].append({QStringLiteral("launch_options"), it.value()});
     for (auto it = r.copies.cbegin(); it != r.copies.cend(); ++it)
@@ -1162,8 +1232,8 @@ QString LibraryStore::applySteamQueue()
     QList<SteamSync::Edit> edits;
     QList<SteamSync::ShortcutEdit> shortcutEdits;
     QHash<qint64, QString> shortcutGames;
-    const QList<SteamSync::ShortcutGame> protonGames = shortcutSyncGames(
-        m_snapshot.content, m_dataDir, m_installLocations.home, m_steamRecord->grid, steam.install);
+    const QList<SteamSync::ShortcutGame> protonGames = allShortcutGames(
+        m_snapshot.content, steam, m_dataDir, m_installLocations.home, m_steamRecord->grid, steam.install);
     QSet<quint32> removed;
     for (auto it = m_snapshot.steamQueued.cbegin(); it != m_snapshot.steamQueued.cend(); ++it) {
         if (const quint32 appId = SteamSync::removedAppId(it.key())) {
@@ -1178,7 +1248,7 @@ QString LibraryStore::applySteamQueue()
             continue;
         }
         const GameFile file = m_snapshot.content.games.value(it.key());
-        if (file.platform == kProtonPlatform) {
+        if (file.platform == kProtonPlatform || it.key().startsWith(kManagerKeyPrefix)) {
             const auto game = std::find_if(protonGames.cbegin(), protonGames.cend(),
                                            [&](const SteamSync::ShortcutGame &g) { return g.id == it.key(); });
             if (game == protonGames.cend())
@@ -1310,6 +1380,10 @@ void LibraryStore::applySteamSync(const ScanResult &result)
     if (!result.steamGameWrites.isEmpty()) {
         beginBatch();
         for (auto it = result.steamGameWrites.cbegin(); it != result.steamGameWrites.cend(); ++it) {
+            if (it.key().startsWith(kManagerKeyPrefix)) {
+                applyManagerCopies(it.key().mid(kManagerKeyPrefix.size()), it.value(), result.steamRecordBefore);
+                continue;
+            }
             QStringList keys;
             QList<std::pair<QString, QVariant>> values = it.value();
             for (auto &[key, value] : values) {
@@ -1355,6 +1429,87 @@ void LibraryStore::applySteamSync(const ScanResult &result)
         if (!SteamSync::writeRecord(m_steamSyncRecord, *m_steamRecord, m_dataDir, &error))
             qCWarning(lcSteam).noquote() << error;
     }
+    assignManagerShortcuts();
+}
+
+void LibraryStore::applyManagerCopies(const QString &id, const QList<std::pair<QString, QVariant>> &copies,
+                                      const SteamSync::Record &before)
+{
+    const ModManager manager = m_snapshot.content.modManagers.value(id);
+    const bool shared = sharedPrefix(manager, m_snapshot.content, m_snapshot.steam).has_value();
+    QList<std::pair<QString, QVariant>> values;
+    QStringList keys;
+    for (const auto &[key, value] : copies) {
+        if (key == QLatin1String("title")) {
+            values.append({QStringLiteral("name"), value});
+        } else if (key == QLatin1String("installed")) {
+            values.append({QStringLiteral("in_steam"), value});
+        } else if (key == QLatin1String("launch_options")) {
+            values.append({key, ModManagers::withoutPrefix(value.toString())});
+        } else if (key == QLatin1String("proton")) {
+            if (!shared) // while the prefix is the game's, so is its Proton version
+                values.append({key, value});
+            continue;
+        } else if (key == QLatin1String("exe") || key == QLatin1String("start_dir")) {
+            values.append({key, value.toString().isEmpty() ? value : QVariant(writtenPath(value.toString()))});
+        } else {
+            values.append({key, value});
+        }
+        keys.append(values.last().first);
+    }
+    if (values.isEmpty())
+        return;
+    const QString problem = setModManagerValues(id, values);
+    if (problem.isEmpty()) {
+        qCInfo(lcSteam).noquote() << QStringLiteral("%1: wrote %2 to its file")
+                                         .arg(kManagerKeyPrefix + id, keys.join(QStringLiteral(", ")));
+        return;
+    }
+    qCWarning(lcSteam).noquote() << problem;
+    // Not written: the record forgets it matched, so the next scan compares again.
+    if (const auto old = before.shortcuts.constFind(manager.shortcut); old != before.shortcuts.cend())
+        m_steamRecord->shortcuts.insert(manager.shortcut, *old);
+    else
+        m_steamRecord->shortcuts.remove(manager.shortcut);
+}
+
+void LibraryStore::assignManagerShortcuts()
+{
+    const SteamState &steam = m_snapshot.steam;
+    if (m_versionStatus.readOnly || !steam.install.found() || !steam.shortcutsOk)
+        return;
+    QSet<quint32> taken;
+    for (const SteamShortcut &s : steam.shortcuts)
+        taken.insert(s.appId);
+    for (const GameFile &g : std::as_const(m_snapshot.content.games)) {
+        if (g.platform == kProtonPlatform && g.shortcut > 0)
+            taken.insert(quint32(g.shortcut));
+    }
+    for (const ModManager &m : std::as_const(m_snapshot.content.modManagers)) {
+        if (m.shortcut > 0)
+            taken.insert(m.shortcut);
+    }
+    if (m_steamRecord) {
+        for (auto it = m_steamRecord->shortcuts.cbegin(); it != m_steamRecord->shortcuts.cend(); ++it)
+            taken.insert(quint32(it.key()));
+    }
+    const QList<ModManager> managers = m_snapshot.content.modManagers.values();
+    for (const ModManager &m : managers) {
+        if (!m.isProton() || m.shortcut > 0 || m.exe.isEmpty() || m.name.isEmpty())
+            continue;
+        const QString exe = resolveRomFolder(m.exe, m_dataDir, m_installLocations.home);
+        const quint32 appId = SteamShortcuts::newAppId(SteamShortcuts::exeField(exe), m.name, taken);
+        if (const QString problem = setModManagerValues(m.id, {{QStringLiteral("shortcut"), qlonglong(appId)}});
+            !problem.isEmpty()) {
+            qCWarning(lcSteam).noquote() << problem;
+            continue;
+        }
+        taken.insert(appId);
+        qCInfo(lcSteam).noquote() << QStringLiteral("%1: shortcut %2").arg(kManagerKeyPrefix + m.id).arg(appId);
+        updateSteamQueue();
+        if (!m_snapshot.steamQueued.isEmpty())
+            m_steamApplyTimer.start();
+    }
 }
 
 void LibraryStore::applySteamHistory(const ScanResult &result)
@@ -1392,8 +1547,8 @@ void LibraryStore::updateSteamQueue()
         return;
     m_snapshot.steamQueued = m_snapshot.steam.install.found()
         ? SteamSync::sync(steamSyncGames(m_snapshot.content), m_snapshot.steam, *m_steamRecord,
-                          shortcutSyncGames(m_snapshot.content, m_dataDir, m_installLocations.home,
-                                            m_steamRecord->grid, m_snapshot.steam.install))
+                          allShortcutGames(m_snapshot.content, m_snapshot.steam, m_dataDir, m_installLocations.home,
+                                           m_steamRecord->grid, m_snapshot.steam.install))
               .queued
         : QHash<QString, QStringList>();
 }
@@ -2110,6 +2265,10 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
         if (g.platform == kProtonPlatform && g.shortcut > 0)
             inLibrary.insert(quint32(g.shortcut));
     }
+    for (const ModManager &m : std::as_const(m_snapshot.content.modManagers)) {
+        if (m.shortcut > 0)
+            inLibrary.insert(m.shortcut);
+    }
     QSet<QString> taken = takenIds(m_snapshot.content);
     for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
         taken.insert(it.key());
@@ -2176,6 +2335,57 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
     return out;
 }
 
+LibraryStore::AddedModManager LibraryStore::addShortcutAsModManager(quint32 appId)
+{
+    AddedModManager out;
+    if (m_versionStatus.readOnly) {
+        out.error = tr("Not added: %1").arg(m_versionStatus.reason);
+        return out;
+    }
+    const SteamState &steam = m_snapshot.steam;
+    const auto s = std::find_if(steam.shortcuts.cbegin(), steam.shortcuts.cend(),
+                                [&](const SteamShortcut &c) { return c.appId == appId; });
+    if (!steam.install.found() || !steam.shortcutsOk || s == steam.shortcuts.cend()) {
+        out.error = tr("Steam's shortcuts couldn't be read");
+        return out;
+    }
+    ModManager manager;
+    manager.exe = writtenPath(s->exe);
+    if (!manager.isProton()) {
+        out.error = tr("%1 isn't a Windows program").arg(QFileInfo(s->exe).fileName());
+        return out;
+    }
+    manager.name = s->name.trimmed().isEmpty() ? QFileInfo(s->exe).completeBaseName() : s->name.trimmed();
+    manager.launchOptions = s->launchOptions;
+    manager.proton = steam.compatTools.value(appId);
+    manager.shortcut = appId;
+    // What works already stays where it is: the shortcut's own prefix, whatever games are linked.
+    manager.prefix = QStringLiteral("own");
+    QString startDir = s->startDir;
+    while (startDir.size() > 1 && startDir.endsWith(u'/'))
+        startDir.chop(1);
+    if (!startDir.isEmpty() && startDir != QFileInfo(s->exe).absolutePath())
+        manager.startDir = writtenPath(startDir);
+
+    // Recorded as in step with Steam, so nothing is queued for the shortcut.
+    QStringList ignored;
+    SteamSync::Record record =
+        m_steamRecord ? *m_steamRecord : SteamSync::readRecord(m_steamSyncRecord, m_versionStatus.id, &ignored);
+    record.shortcuts.insert(appId, SteamSync::recordOf(*s, manager.proton));
+    if (!m_steamSyncRecord.isEmpty()) {
+        QString error;
+        if (!SteamSync::writeRecord(m_steamSyncRecord, record, m_dataDir, &error)) {
+            out.error = tr("Not added: %1").arg(error);
+            return out;
+        }
+        m_steamRecord = record;
+    }
+    out = addModManager(manager);
+    if (out.error.isEmpty())
+        refresh();
+    return out;
+}
+
 QString LibraryStore::gameWithProgram(const QString &exePath) const
 {
     const QString path = QDir::cleanPath(QFileInfo(exePath).absoluteFilePath());
@@ -2193,6 +2403,10 @@ quint32 LibraryStore::shortcutWithProgram(const QString &exePath) const
     for (const GameFile &g : std::as_const(m_snapshot.content.games)) {
         if (g.platform == kProtonPlatform && g.shortcut > 0)
             inLibrary.insert(g.shortcut);
+    }
+    for (const ModManager &m : std::as_const(m_snapshot.content.modManagers)) {
+        if (m.shortcut > 0)
+            inLibrary.insert(m.shortcut);
     }
     for (const SteamShortcut &s : m_snapshot.steam.shortcuts) {
         if (!inLibrary.contains(s.appId) && !s.exe.isEmpty() && QDir::cleanPath(s.exe) == path)
@@ -2248,6 +2462,10 @@ LibraryStore::AddedGame LibraryStore::addProtonGame(const QString &exePath, cons
     for (const GameFile &g : std::as_const(m_snapshot.content.games)) {
         if (g.platform == kProtonPlatform && g.shortcut > 0)
             appIds.insert(quint32(g.shortcut));
+    }
+    for (const ModManager &m : std::as_const(m_snapshot.content.modManagers)) {
+        if (m.shortcut > 0)
+            appIds.insert(m.shortcut);
     }
     if (m_steamRecord) {
         for (auto it = m_steamRecord->shortcuts.cbegin(); it != m_steamRecord->shortcuts.cend(); ++it)
@@ -2430,6 +2648,7 @@ LibraryStore::AddedModManager LibraryStore::addModManager(const ModManager &mana
     entry.ok = parseInto(m_snapshot, relative, text.toUtf8(), &entry.warnings);
     out.id = id;
     changedHere();
+    assignManagerShortcuts();
     return out;
 }
 
@@ -2572,6 +2791,8 @@ QString LibraryStore::undoSteamQueue(const QString &key)
         record.removed.remove(appId);
         record.shortcuts.remove(appId);
     } else if (queued.contains(SteamSync::kAddShortcut)) {
+        if (key.startsWith(kManagerKeyPrefix))
+            return setModManagerValues(key.mid(kManagerKeyPrefix.size()), {{QStringLiteral("in_steam"), false}});
         return removeProtonGame(key);
     } else if (queued.contains(SteamSync::kRemoveShortcut)) {
         return setGameValues(key, {{QStringLiteral("installed"), QVariant()}});
@@ -2579,9 +2800,10 @@ QString LibraryStore::undoSteamQueue(const QString &key)
         // The record takes the game file's values, so the next scan sees Steam's as changed
         // there and copies them into the game file (see SteamSync).
         const GameFile file = m_snapshot.content.games.value(key);
-        if (file.platform == kProtonPlatform) {
-            const QList<SteamSync::ShortcutGame> games = shortcutSyncGames(
-                m_snapshot.content, m_dataDir, m_installLocations.home, record.grid, m_snapshot.steam.install);
+        if (file.platform == kProtonPlatform || key.startsWith(kManagerKeyPrefix)) {
+            const QList<SteamSync::ShortcutGame> games = allShortcutGames(
+                m_snapshot.content, m_snapshot.steam, m_dataDir, m_installLocations.home, record.grid,
+                m_snapshot.steam.install);
             const auto g = std::find_if(games.cbegin(), games.cend(),
                                         [&](const SteamSync::ShortcutGame &s) { return s.id == key; });
             if (g == games.cend())

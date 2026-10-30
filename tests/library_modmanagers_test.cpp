@@ -1,5 +1,7 @@
 #include "librarytestbase.h"
 
+#include "binaryvdf.h"
+
 class LibraryModManagersTest : public LibraryTestBase
 {
     Q_OBJECT
@@ -15,8 +17,29 @@ private slots:
     void removedGameDropsOut();
     void hiddenGameStaysLinked();
     void survivesTheCache();
+    void prefixOptions();
+    void shortcutInSharedPrefix();
+    void shortcutInOwnPrefix();
+    void deletedInSteam();
+    void adoptedShortcut();
 
 private:
+    QString shortcutsPath(const QString &root) const
+    {
+        return root + QStringLiteral("/userdata/39734273/config/shortcuts.vdf");
+    }
+    QList<SteamShortcut> shortcutsIn(const QString &root) const
+    {
+        return SteamShortcuts::read(BinaryVdf::parse(readFile(shortcutsPath(root))).root);
+    }
+    static std::optional<SteamShortcut> shortcutNamed(const QList<SteamShortcut> &all, const QString &name)
+    {
+        for (const SteamShortcut &s : all) {
+            if (s.name == name)
+                return s;
+        }
+        return std::nullopt;
+    }
     QString managerPath(const QString &id) const
     {
         return m_data + QStringLiteral("/library/mod-managers/") + id + QStringLiteral(".toml");
@@ -141,7 +164,9 @@ void LibraryModManagersTest::addWritesUniqueFiles()
     QCOMPARE(first.value("id").toString(), QStringLiteral("vortex"));
     QCOMPARE(library->addModManager(values).value("id").toString(), QStringLiteral("vortex-2"));
 
-    const QString text = QString::fromUtf8(readFile(managerPath("vortex")));
+    // With Steam found, the launcher also writes the shortcut's app ID.
+    QString text = QString::fromUtf8(readFile(managerPath("vortex")));
+    text.remove(QRegularExpression(QStringLiteral("shortcut = \\d+\n")));
     QCOMPARE(text,
              QStringLiteral("# A mod manager. It's opened from the pages of the games in `games` and from Settings → "
                             "Mod managers.\nname = \"Vortex\"\nexe = \"/mods/Vortex/Vortex.exe\"\n"
@@ -168,10 +193,12 @@ void LibraryModManagersTest::editingKeepsTheRest()
     QVERIFY(library->setModManagerValue("mo2", "name", "Mod Organizer 2").isEmpty());
     QVERIFY(library->setModManagerValue("mo2", "launch_options", "").isEmpty());
     QVERIFY(library->setModManagerValue("mo2", "games", QStringList{"linux-supertuxkart", "linux-factorio"}).isEmpty());
-    QCOMPARE(readFile(managerPath("mo2")),
-             QByteArray("# my notes\nname = \"Mod Organizer 2\"   # the short name\n"
-                        "exe = \"/mods/MO2/ModOrganizer.exe\"\n"
-                        "games = [\"linux-supertuxkart\", \"linux-factorio\"]\n"));
+    QString edited = QString::fromUtf8(readFile(managerPath("mo2")));
+    edited.remove(QRegularExpression(QStringLiteral("shortcut = \\d+\n")));
+    QCOMPARE(edited,
+             QStringLiteral("# my notes\nname = \"Mod Organizer 2\"   # the short name\n"
+                            "exe = \"/mods/MO2/ModOrganizer.exe\"\n"
+                            "games = [\"linux-supertuxkart\", \"linux-factorio\"]\n"));
     QCOMPARE(library->modManagers().first().toMap().value("games").toList().size(), 2);
 
     // An emptied list stays, so the manager stays listed with no games.
@@ -231,6 +258,142 @@ void LibraryModManagersTest::survivesTheCache()
     auto again = openLibrary();
     QCOMPARE(again->modManagers().size(), 1);
     QCOMPARE(again->modManagers().first().toMap().value("shortcut").toUInt(), 3193880877u);
+}
+
+void LibraryModManagersTest::prefixOptions()
+{
+    const QString path = QStringLiteral("/steam/compatdata/8000");
+    const QString env = QStringLiteral("STEAM_COMPAT_DATA_PATH=\"/steam/compatdata/8000\"");
+    QCOMPARE(ModManagers::withPrefix({}, path), env + QStringLiteral(" %command%"));
+    QCOMPARE(ModManagers::withPrefix(QStringLiteral("-x"), path), env + QStringLiteral(" %command% -x"));
+    QCOMPARE(ModManagers::withPrefix(QStringLiteral("A=1 %command%"), path), env + QStringLiteral(" A=1 %command%"));
+    QCOMPARE(ModManagers::withPrefix(QStringLiteral("-x"), {}), QStringLiteral("-x"));
+    for (const QString &user : {QString(), QStringLiteral("-x -y"), QStringLiteral("A=1 %command% -z")})
+        QCOMPARE(ModManagers::withoutPrefix(ModManagers::withPrefix(user, path)), user);
+    // "%command% -q" and "-q" mean the same to Steam, so they come back as the shorter one.
+    QCOMPARE(ModManagers::withoutPrefix(ModManagers::withPrefix(QStringLiteral("%command% -q"), path)),
+             QStringLiteral("-q"));
+    // A path with spaces and quotes survives.
+    QCOMPARE(ModManagers::withoutPrefix(ModManagers::withPrefix(QStringLiteral("-x"), QStringLiteral("/a \"b\"/c"))),
+             QStringLiteral("-x"));
+    QCOMPARE(ModManagers::withoutPrefix(QStringLiteral("STEAM_COMPAT_DATA_PATH=/p %command%")), QString());
+    QCOMPARE(ModManagers::withoutPrefix(QStringLiteral("mangohud %command%")), QStringLiteral("mangohud %command%"));
+}
+
+void LibraryModManagersTest::shortcutInSharedPrefix()
+{
+    const QString root = installFakeSteam();
+    // Tomb Raider's prefix, and its Proton version from Steam.
+    writeFile(managerPath("mo2"), "name = \"Mod Organizer 2\"\nexe = \"/mods/MO2/ModOrganizer.exe\"\n"
+                                  "launch_options = \"-x\"\ngames = [\"steam-8000\"]\n");
+    auto library = openLibrary();
+
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value(), 5000);
+    const SteamShortcut s = *shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2"));
+    // The app ID was made by the launcher and written to the file; the prefix option is Steam's only.
+    QVERIFY2(readFile(managerPath("mo2")).contains(QByteArray("shortcut = ") + QByteArray::number(s.appId)),
+             qPrintable(readFile(managerPath("mo2"))));
+    QVERIFY(!readFile(managerPath("mo2")).contains("STEAM_COMPAT_DATA_PATH"));
+    QCOMPARE(s.launchOptions,
+             QStringLiteral("STEAM_COMPAT_DATA_PATH=\"%1/steamapps/compatdata/8000\" %command% -x").arg(root));
+    QCOMPARE(s.exe, QStringLiteral("/mods/MO2/ModOrganizer.exe"));
+    QVERIFY(readFile(root + QStringLiteral("/config/config.vdf")).contains("GE-Proton10-4"));
+    QTRY_VERIFY_WITH_TIMEOUT(!library->store().snapshot().steamQueued.contains(QStringLiteral("mod-manager:mo2")), 5000);
+
+    // Not a game: nothing in the game list.
+    QCOMPARE(library->rowOfGame(QStringLiteral("mo2")), -1);
+    QVERIFY(!library->store().snapshot().content.games.contains(QStringLiteral("mod-manager:mo2")));
+}
+
+void LibraryModManagersTest::shortcutInOwnPrefix()
+{
+    const QString root = installFakeSteam();
+    writeFile(managerPath("vortex"), "name = \"Vortex\"\nexe = \"/mods/Vortex/Vortex.exe\"\n"
+                                     "games = [\"steam-8000\", \"steam-2231450\"]\nproton = \"GE-Proton10-4\"\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
+    const SteamShortcut s = *shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex"));
+    QVERIFY(s.launchOptions.isEmpty());
+
+    // Linking one more game never changes an own prefix; an explicit "game" shares the first.
+    QCOMPARE(library->setModManagerValue(QStringLiteral("vortex"), QStringLiteral("prefix"), QStringLiteral("game")),
+             QString());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex"))->launchOptions.contains("compatdata/8000"), 5000);
+}
+
+void LibraryModManagersTest::deletedInSteam()
+{
+    const QString root = installFakeSteam();
+    writeFile(managerPath("mo2"), "name = \"Mod Organizer 2\"\nexe = \"/mods/MO2/ModOrganizer.exe\"\n"
+                                  "games = []\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value(), 5000);
+    const quint32 appId = shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2"))->appId;
+
+    BinaryVdf::Document doc = BinaryVdf::parse(readFile(shortcutsPath(root)));
+    QVERIFY(SteamShortcuts::remove(&doc.root, appId));
+    writeFile(shortcutsPath(root), BinaryVdf::write(doc.root));
+    library->store().refresh();
+    library->store().waitForIdle();
+    QCoreApplication::processEvents();
+
+    // Marked, not added back.
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(managerPath("mo2")).contains("in_steam = false"), 5000);
+    library->store().refresh();
+    library->store().waitForIdle();
+    QVERIFY(!shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value());
+    QVERIFY(library->store().snapshot().steamQueued.value(QStringLiteral("mod-manager:mo2")).isEmpty());
+}
+
+void LibraryModManagersTest::adoptedShortcut()
+{
+    const QString root = installFakeSteam();
+    SteamShortcut mo2;
+    mo2.appId = 3193880877u;
+    mo2.name = QStringLiteral("MO2");
+    mo2.exe = QStringLiteral("/mods/MO2/ModOrganizer.exe");
+    mo2.startDir = QStringLiteral("/mods/MO2/");
+    BinaryVdf::Document doc = BinaryVdf::parse(readFile(shortcutsPath(root)));
+    QVERIFY(SteamShortcuts::add(&doc.root, mo2));
+    writeFile(shortcutsPath(root), BinaryVdf::write(doc.root));
+    auto library = openLibrary();
+
+    // Offered as a shortcut to add, a Windows program being what a manager can be.
+    bool offered = false;
+    for (const QVariant &v : library->steamShortcuts()) {
+        if (v.toMap().value("appId").toLongLong() == 3193880877LL) {
+            offered = true;
+            QVERIFY(v.toMap().value("canManage").toBool());
+        }
+    }
+    QVERIFY(offered);
+
+    QCOMPARE(library->addSteamShortcutAsModManager(3193880877LL), QString());
+    QCOMPARE(library->modManagers().size(), 1);
+    const QString file = QString::fromUtf8(readFile(managerPath("mo2")));
+    QVERIFY2(file.contains("shortcut = 3193880877") && file.contains("prefix = \"own\""), qPrintable(file));
+    for (const QVariant &v : library->steamShortcuts())
+        QVERIFY(v.toMap().value("appId").toLongLong() != 3193880877LL);
+    // In step with Steam from the start: nothing queued, nothing rewritten.
+    // The fixture's own Proton games get their shortcuts first; wait for those to settle.
+    QTRY_VERIFY_WITH_TIMEOUT(library->store().snapshot().steamQueued.isEmpty(), 5000);
+    const QByteArray before = readFile(shortcutsPath(root));
+    const QList<SteamShortcut> listBefore = shortcutsIn(root);
+    library->store().refresh();
+    library->store().waitForIdle();
+    QCoreApplication::processEvents();
+    QVERIFY(library->store().snapshot().steamQueued.value(QStringLiteral("mod-manager:mo2")).isEmpty());
+    const QList<SteamShortcut> listAfter = shortcutsIn(root);
+    QCOMPARE(listAfter.size(), listBefore.size());
+    for (int i = 0; i < listAfter.size(); ++i) {
+        QCOMPARE(listAfter.at(i).name, listBefore.at(i).name);
+        QCOMPARE(listAfter.at(i).exe, listBefore.at(i).exe);
+        QCOMPARE(listAfter.at(i).startDir, listBefore.at(i).startDir);
+        QCOMPARE(listAfter.at(i).icon, listBefore.at(i).icon);
+        QCOMPARE(listAfter.at(i).launchOptions, listBefore.at(i).launchOptions);
+    }
+    QCOMPARE(readFile(shortcutsPath(root)), before);
 }
 
 QTEST_GUILESS_MAIN(LibraryModManagersTest)
