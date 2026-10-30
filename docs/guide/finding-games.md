@@ -40,7 +40,7 @@ Also in the filter panel:
 
 Click a group's header to collapse it (or press Left; Right expands). While you search or filter, every group opens, so nothing that matches is out of sight.
 
-Lattis remembers the sort, the grouping and the filters, and opens the way you left it.
+Lattis remembers the sort, the grouping and the filters, the platform you were on and which groups you had collapsed, and opens the way you left it.
 
 ## Selecting several games
 

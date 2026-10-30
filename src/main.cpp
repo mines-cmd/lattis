@@ -138,6 +138,8 @@ int main(int argc, char *argv[])
     Library library(dataDir, AppPaths::cacheDir(), NewLibrary::WithSetup);
     library.store().setStateDir(AppPaths::stateDir());
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));
+    library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
+                             + QStringLiteral(".json"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
     library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir()));
     {

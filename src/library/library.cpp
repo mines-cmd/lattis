@@ -21,9 +21,14 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QJSEngine>
 #include <QLocale>
 #include <QPointer>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QUrl>
 #include <QtConcurrent>
@@ -1212,6 +1217,7 @@ void Library::setPlatformFilter(const QString &platform)
     m_platformFilter = platform;
     emit platformFilterChanged();
     rebuild();
+    m_viewStateTimer.start();
 }
 
 void Library::setSearch(const QString &search)
@@ -1511,6 +1517,14 @@ bool Library::updatePlatforms()
         m_platformFilter.clear();
         emit platformFilterChanged();
     }
+    if (!m_restorePlatform.isEmpty() && !m_platforms.isEmpty()) {
+        const QString wanted = std::exchange(m_restorePlatform, QString());
+        if (m_platformFilter.isEmpty()
+            && std::any_of(m_platforms.cbegin(), m_platforms.cend(), [&](const Platform &p) { return p.id == wanted; })) {
+            m_platformFilter = wanted;
+            emit platformFilterChanged();
+        }
+    }
     return true;
 }
 
@@ -1519,6 +1533,7 @@ void Library::toggleGroup(const QString &group)
     if (!m_collapsed.remove(collapseKey(group)))
         m_collapsed.insert(collapseKey(group));
     rebuildGroup(group);
+    m_viewStateTimer.start();
 }
 
 int Library::nextGameRow(int from, int step) const
@@ -1565,6 +1580,7 @@ int Library::collapseGroupAt(int row)
     const QString group = m_rows.at(row).group;
     m_collapsed.insert(collapseKey(group));
     rebuildGroup(group);
+    m_viewStateTimer.start();
 
     int header = 0;
     while (header < m_rows.size() && !(m_rows.at(header).game < 0 && m_rows.at(header).group == group))
@@ -1599,6 +1615,7 @@ int Library::expandGroupNear(int row)
     const QString group = m_rows.at(header).group;
     m_collapsed.remove(collapseKey(group));
     rebuildGroup(group);
+    m_viewStateTimer.start();
     return nextGameRow(header, 1);
 }
 
@@ -3576,6 +3593,50 @@ void Library::setUndoDir(const QString &dir)
 {
     m_undo.setFolders(m_store.dataDir(), dir);
     connect(&m_undo, &LibraryUndo::expired, this, &Library::undoExpired, Qt::UniqueConnection);
+}
+
+void Library::setViewStateFile(const QString &file)
+{
+    m_viewStateFile = file;
+    m_viewStateTimer.setSingleShot(true);
+    m_viewStateTimer.setInterval(500);
+    connect(&m_viewStateTimer, &QTimer::timeout, this, &Library::saveViewState, Qt::UniqueConnection);
+    if (qGuiApp)
+        connect(qGuiApp, &QGuiApplication::aboutToQuit, this, &Library::saveViewState, Qt::UniqueConnection);
+
+    QFile f(file);
+    if (!f.open(QIODevice::ReadOnly))
+        return;
+    const QJsonObject saved = QJsonDocument::fromJson(f.readAll()).object();
+    m_restorePlatform = saved.value(QLatin1String("platform")).toString();
+    for (const QJsonValue &key : saved.value(QLatin1String("collapsed")).toArray())
+        m_collapsed.insert(key.toString());
+    if (!m_platforms.isEmpty()) {
+        const QString wanted = std::exchange(m_restorePlatform, QString());
+        if (std::any_of(m_platforms.cbegin(), m_platforms.cend(), [&](const Platform &p) { return p.id == wanted; })) {
+            m_platformFilter = wanted;
+            emit platformFilterChanged();
+        }
+    }
+    if (!m_rows.isEmpty())
+        rebuild();
+}
+
+void Library::saveViewState() const
+{
+    if (m_viewStateFile.isEmpty())
+        return;
+    QStringList keys(m_collapsed.cbegin(), m_collapsed.cend());
+    keys.sort();
+    QJsonArray collapsed;
+    for (const QString &key : keys)
+        collapsed.append(key);
+    QSaveFile f(m_viewStateFile);
+    if (!f.open(QIODevice::WriteOnly))
+        return;
+    f.write(QJsonDocument(QJsonObject{{QStringLiteral("platform"), m_platformFilter},
+                                      {QStringLiteral("collapsed"), collapsed}}).toJson());
+    f.commit();
 }
 
 quint64 Library::commitUndo(const QString &text)

@@ -128,7 +128,7 @@ Nothing is written when:
 3. The sort orders them: by title, last played or play time. A stable sort over the title-ordered list keeps ties, and games without the value, in title order. Games without a value always go last.
 4. Grouping puts a header row above each group: one per platform (only in "All games"; with a platform selected the list is flat), one per status, or none.
 
-A group can be collapsed. Collapsed groups are remembered per grouping until the app quits. While searching or filtering, every group shows expanded, so a match is never hidden.
+A group can be collapsed. Collapsed groups are remembered per grouping. They and the selected platform are saved (a moment after a change, and on quit) in `view-<key>.json` in the state dir (`setViewStateFile()`, `saveViewState()`) and restored at the next start; the platform is applied once the platforms are first listed, and dropped if it no longer exists. While searching or filtering, every group shows expanded, so a match is never hidden.
 
 The sort, the filters, the grouping and `show_sort_value` are saved in `[list]` of `settings.toml` (`listsettings.*`), and only the keys that changed are written. The file is watched, so a hand edit applies at once. A tag filter naming a tag that doesn't exist (any more) is ignored, and so is an unknown status.
 

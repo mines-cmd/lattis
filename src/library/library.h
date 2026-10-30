@@ -273,6 +273,7 @@ public:
     Q_INVOKABLE QString retagGames(const QStringList &ids, const QStringList &add, const QStringList &remove);
 
     void setUndoDir(const QString &dir);
+    void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
     Q_INVOKABLE void beginEditUndo(const QString &id);
     Q_INVOKABLE void discardEditUndo();
@@ -391,6 +392,7 @@ private:
     bool expandsGroups() const { return !m_search.isEmpty() || filtersActive(); }
     QList<Row> computeRows(bool *showingGroups, int *notInstalled) const;
     void reloadFromStore();
+    void saveViewState() const;
     QUrl heroDisplayUrl(const Game &game) const;
     void makeNextHeroCopy();
     void heroCopyFinished();
@@ -437,6 +439,9 @@ private:
     QStringList m_problems;
     QSet<QString> m_collapsed;
     QString m_platformFilter;
+    QString m_viewStateFile;
+    QString m_restorePlatform;
+    QTimer m_viewStateTimer;
     QString m_search;
     QStringList m_searchWords;
     QString m_sort = QStringLiteral("title");
