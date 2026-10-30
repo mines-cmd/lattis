@@ -14,6 +14,7 @@ What the files hold is described for users in the guide's [data folder](../guide
 - [ROM folders](#rom-folders)
 - [Emulators](#emulators)
 - [Steam, Proton and Linux games](#steam-proton-and-linux-games)
+- [Mod managers](#mod-managers)
 - [Play history](#play-history)
 - [Tags and art](#tags-and-art)
 - [Uninstalling](#uninstalling)
@@ -243,6 +244,14 @@ The result is written back as a whole (`formatSteamIndex()`, keeping the comment
 
 A game's map has `steamOwnership` (`"owned"`, `"family"` or `""`) and `sharedBy` (the lenders' names).
 
+## Mod managers
+
+A mod manager is not a game: `ModManager` (`modmanagers.*`) is its own struct, read from `library/mod-managers/<id>.toml` into `LibraryContent::modManagers` by the same scan, cache (format version 33) and watcher as game files, and never reaches the game list. `ModManagers::parse()` returns the manager and its warnings (unknown keys with a suggestion, wrong types, a `prefix` other than `game` or `own`); the store sets the id from the file name and uses it as the name when the file has none. `isProton()` is true for an `.exe`, which is what tells a Proton manager (a Steam shortcut) from a native one.
+
+`LibraryStore::addModManager()` writes a new file with `formatNew()` (a native manager gets no Proton keys) and picks an id from the name; `setModManagerValues()` validates and patches only the keys given, so comments and order stay, and refuses a file with a syntax error; an empty list is written, an empty text removes the key. `removeModManager()` deletes the file. `removeGameFile()` drops the removed game's id from every manager's `games`.
+
+`Library.modManagers` lists the managers by name, each with its `games` (`id`, `title`, `missing`). `ModManagers::linkedGames()` marks a game missing when it isn't in the library, is hidden, isn't installed, or isn't a Steam, Proton or Linux game (`linkable()`); the links in the file are never rewritten for a missing game. `modManagersFor(gameId)` returns the managers that serve a game. `addModManager(map)`, `setModManagerValue()` and `removeModManager()` are the writers for QML.
+
 ## Play history
 
 Besides the total in the game file, the library keeps every play session, so the game's page can list them and the statistics page can add them up (`playhistory.*`). The history is separate from the game file: one file per game, `library/history/<id>.toml`, created with its first session. A game file stays small, and a hand edit of it never collides with a session being written.
@@ -341,6 +350,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `libraryfiles.*` | Parsers for `library.toml`, `platforms.toml`, `tags.toml`, `steam.toml`, ROM indexes; programs' files; `buildLibrary()` |
 | `steamwebmerge.*` | `SteamWebMerge::merge()`: the Web API's cache into the `steam.toml` entries |
 | `gamefile.*` | The game file: `GameFields` (the key table), parsing, validation, formatting |
+| `modmanagers.*` | `ModManager`: parsing and formatting `mod-managers/<id>.toml`, and which linked games are missing |
 | `game.h` | `Game`: a game as the UI shows it |
 | `gameid.*` | Ids: slugs, validation, `steam-<appid>` |
 | `emulators.*` | Emulator presets, `emulators.toml`, the merge, detection, Flatpak permissions |

@@ -165,6 +165,14 @@ public:
     QString setRomEntries(const QString &platform, const QList<RomEntry> &entries);
     void reloadFiles(const QStringList &relatives);
     QString removeGameFile(const QString &id, bool withArt);
+    struct AddedModManager
+    {
+        QString id;
+        QString error;
+    };
+    AddedModManager addModManager(const ModManager &manager);
+    QString setModManagerValues(const QString &id, const QList<std::pair<QString, QVariant>> &values);
+    QString removeModManager(const QString &id);
     QString removeProtonGame(const QString &id, bool fromSteam = true);
     QString undoSteamQueue(const QString &key);
 

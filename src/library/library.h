@@ -59,6 +59,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(bool filtersActive READ filtersActive NOTIFY filtersChanged)
     Q_PROPERTY(int notInstalledHidden READ notInstalledHidden NOTIFY notInstalledHiddenChanged)
     Q_PROPERTY(QVariantList emulators READ emulatorList NOTIFY emulatorsChanged)
+    Q_PROPERTY(QVariantList modManagers READ modManagers NOTIFY modManagersChanged)
     Q_PROPERTY(QVariantList platformSettings READ platformSettings NOTIFY platformSettingsChanged)
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool updatingNames READ updatingNames NOTIFY updatingNamesChanged)
@@ -180,6 +181,16 @@ public:
 
     Q_INVOKABLE QVariantMap gameAt(int row) const;
 
+    QVariantList modManagers() const { return m_modManagers; }
+    Q_INVOKABLE QVariantList modManagersFor(const QString &gameId) const;
+    // `values` has the file's keys; the result has the new `id`, or an `error`.
+    Q_INVOKABLE QVariantMap addModManager(const QVariantMap &values);
+    Q_INVOKABLE QString setModManagerValue(const QString &id, const QString &key, const QVariant &value)
+    {
+        return m_store.setModManagerValues(id, {{key, value}});
+    }
+    Q_INVOKABLE QString removeModManager(const QString &id) { return m_store.removeModManager(id); }
+
     QVariantList emulatorList() const { return m_emulatorList; }
     Q_INVOKABLE QString setEmulatorValue(const QString &id, const QString &key, const QVariant &value);
     Q_INVOKABLE QString emulatorIdFor(const QString &name) const { return GameId::slug(name); }
@@ -295,6 +306,7 @@ signals:
     void loadingChanged();
     void problemsChanged();
     void emulatorsChanged();
+    void modManagersChanged();
     void platformSettingsChanged();
     void scanningChanged();
     void updatingNamesChanged();
@@ -374,6 +386,7 @@ private:
     bool applyRowMove(const QList<Row> &rows, const QStringList &oldKeys, const QStringList &newKeys);
     QString launchTip(const Game &game) const;
     QVariantList buildEmulatorList() const;
+    QVariantList buildModManagers() const;
     QVariantList buildPlatformSettings() const;
 
     struct PlatformProblem
@@ -400,6 +413,7 @@ private:
     QList<Platform> m_allPlatforms;
     QList<EmulatorDef> m_emulators;
     QVariantList m_emulatorList;
+    QVariantList m_modManagers;
     QVariantList m_platformSettings;
     QVariantList m_tags;
     QStringList m_missingDefaultTags;

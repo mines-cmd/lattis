@@ -993,6 +993,11 @@ void Library::reloadFromStore()
         m_emulatorList = std::move(emulators);
         emit emulatorsChanged();
     }
+    QVariantList modManagers = buildModManagers();
+    if (modManagers != m_modManagers) {
+        m_modManagers = std::move(modManagers);
+        emit modManagersChanged();
+    }
     QVariantList platformSettings = buildPlatformSettings();
     if (platformSettings != m_platformSettings) {
         m_platformSettings = std::move(platformSettings);
@@ -2442,6 +2447,71 @@ QString Library::launchTip(const Game &g) const
     default: how = tr("installed"); break;
     }
     return tr("Launch with %1 (%2)").arg(emulator->name, how);
+}
+
+QVariantList Library::buildModManagers() const
+{
+    const auto find = [this](const QString &id) { return game(id); };
+    QList<ModManager> managers = m_store.snapshot().content.modManagers.values();
+    const QCollator collator = titleCollator();
+    std::sort(managers.begin(), managers.end(),
+              [&](const ModManager &a, const ModManager &b) { return collator.compare(a.name, b.name) < 0; });
+    QVariantList out;
+    for (const ModManager &m : std::as_const(managers)) {
+        QVariantList games;
+        for (const ModManagers::LinkedGame &g : ModManagers::linkedGames(m, find)) {
+            games.append(QVariantMap{{QStringLiteral("id"), g.id}, {QStringLiteral("title"), g.title},
+                                     {QStringLiteral("missing"), g.missing}});
+        }
+        out.append(QVariantMap{
+            {QStringLiteral("id"), m.id},
+            {QStringLiteral("name"), m.name},
+            {QStringLiteral("exe"), m.exe},
+            {QStringLiteral("startDir"), m.startDir},
+            {QStringLiteral("launchOptions"), m.launchOptions},
+            {QStringLiteral("proton"), m.isProton()},
+            {QStringLiteral("prefix"), m.prefix},
+            {QStringLiteral("protonTool"), m.proton},
+            {QStringLiteral("shortcut"), m.shortcut},
+            {QStringLiteral("games"), games},
+        });
+    }
+    return out;
+}
+
+QVariantList Library::modManagersFor(const QString &gameId) const
+{
+    QVariantList out;
+    for (const QVariant &v : m_modManagers) {
+        const QVariantMap manager = v.toMap();
+        for (const QVariant &g : manager.value(QStringLiteral("games")).toList()) {
+            if (g.toMap().value(QStringLiteral("id")).toString() == gameId) {
+                out.append(manager);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
+QVariantMap Library::addModManager(const QVariantMap &values)
+{
+    ModManager manager;
+    for (auto it = values.cbegin(); it != values.cend(); ++it) {
+        QString error;
+        const QVariant value = ModManagers::validate(it.key(), it.value(), &error);
+        if (!value.isValid())
+            return {{QStringLiteral("error"), error}};
+        ModManagers::apply(manager, it.key(), value);
+    }
+    if (manager.name.trimmed().isEmpty())
+        return {{QStringLiteral("error"), tr("A mod manager needs a name")}};
+    if (manager.exe.isEmpty())
+        return {{QStringLiteral("error"), tr("A mod manager needs a program")}};
+    const LibraryStore::AddedModManager added = m_store.addModManager(manager);
+    if (!added.error.isEmpty())
+        return {{QStringLiteral("error"), added.error}};
+    return {{QStringLiteral("id"), added.id}};
 }
 
 QVariantList Library::buildEmulatorList() const

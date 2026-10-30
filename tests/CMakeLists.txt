@@ -61,6 +61,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/library/rominfo.h ../src/library/rominfo.cpp
     ../src/library/romdb.h ../src/library/romdb.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
+    ../src/library/modmanagers.h ../src/library/modmanagers.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
     ${STEAM_SOURCES}
 )
@@ -265,7 +266,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags rom emulators platforms version steamimport steamlibrary steamsync programs uninstall undo hero art media)
+foreach(area list edit tags rom emulators platforms version steamimport steamlibrary steamsync modmanagers programs uninstall undo hero art media)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects

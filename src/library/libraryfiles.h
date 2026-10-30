@@ -3,6 +3,7 @@
 #include "emulators.h"
 #include "game.h"
 #include "gamefile.h"
+#include "modmanagers.h"
 #include "parsed.h"
 #include "steamscan.h"
 
@@ -163,6 +164,7 @@ struct LibraryContent
     QMap<QString, QList<RomEntry>> roms;
     QList<EmulatorEntry> emulators;
     QMap<QString, GameFile> games;
+    QMap<QString, ModManager> modManagers;
 };
 
 using RomFiles = QHash<QString, QHash<QString, QString>>;

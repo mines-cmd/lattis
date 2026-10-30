@@ -43,6 +43,7 @@ const QString kSteamIndex = QStringLiteral("library/steam.toml");
 const QString kEmulators = QStringLiteral("library/emulators.toml");
 const QString kGamesPrefix = QStringLiteral("library/games/");
 const QString kRomsPrefix = QStringLiteral("library/roms/");
+const QString &kModManagersPrefix = ModManagers::kFolder;
 
 QString defaultPlatforms()
 {
@@ -122,6 +123,13 @@ QString gameIdOf(const QString &relativePath)
     return relativePath.mid(kGamesPrefix.size()).chopped(5);
 }
 
+QString modManagerIdOf(const QString &relativePath)
+{
+    if (!relativePath.startsWith(kModManagersPrefix))
+        return {};
+    return relativePath.mid(kModManagersPrefix.size()).chopped(5);
+}
+
 QString romPlatformOf(const QString &relativePath)
 {
     if (!relativePath.startsWith(kRomsPrefix))
@@ -138,7 +146,7 @@ QHash<QString, FileStamp> listLibraryFiles(const QString &dataDir)
         if (info.isFile())
             out.insert(path, stampOf(info));
     }
-    for (const QString &prefix : {kGamesPrefix, kRomsPrefix}) {
+    for (const QString &prefix : {kGamesPrefix, kRomsPrefix, kModManagersPrefix}) {
         QDirIterator it(root.filePath(prefix), {QStringLiteral("*.toml")}, QDir::Files);
         while (it.hasNext()) {
             const QFileInfo info = it.nextFileInfo();
@@ -246,6 +254,20 @@ bool parseInto(LibrarySnapshot &s, const QString &path, const QByteArray &bytes,
             warnings->append(QStringLiteral("%1: showing the last version that loaded").arg(path));
         return r.ok;
     }
+    if (path.startsWith(kModManagersPrefix)) {
+        auto r = ModManagers::parse(bytes, path);
+        *warnings = r.warnings;
+        const QString id = modManagerIdOf(path);
+        if (r.ok) {
+            r.value.id = id;
+            if (r.value.name.isEmpty())
+                r.value.name = id;
+            s.content.modManagers.insert(id, r.value);
+        } else if (s.content.modManagers.contains(id)) {
+            warnings->append(QStringLiteral("%1: showing the last version that loaded").arg(path));
+        }
+        return r.ok;
+    }
     const auto r = parseGameFile(bytes, path);
     *warnings = r.warnings;
     if (r.ok)
@@ -270,6 +292,8 @@ void forget(LibrarySnapshot &s, const QString &path)
         s.content.emulators.clear();
     else if (path.startsWith(kRomsPrefix))
         s.content.roms.remove(romPlatformOf(path));
+    else if (path.startsWith(kModManagersPrefix))
+        s.content.modManagers.remove(modManagerIdOf(path));
     else
         s.content.games.remove(gameIdOf(path));
 }
@@ -535,6 +559,12 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
             if (path.startsWith(kGamesPrefix) && !GameId::isValid(id)) {
                 entry.warnings.append(
                     QStringLiteral("%1: skipped; game file names may only use lowercase a-z, 0-9 and -").arg(path));
+                continue;
+            }
+            if (path.startsWith(kModManagersPrefix) && !GameId::isValid(modManagerIdOf(path))) {
+                entry.warnings.append(
+                    QStringLiteral("%1: skipped; mod manager file names may only use lowercase a-z, 0-9 and -")
+                        .arg(path));
                 continue;
             }
             if (path.startsWith(kRomsPrefix) && !GameId::isValid(romPlatformOf(path))) {
@@ -945,6 +975,8 @@ void LibraryStore::updateWatches()
     QStringList wanted = {m_dataDir + QStringLiteral("/library"), m_dataDir + QStringLiteral("/library/games")};
     if (QFileInfo::exists(m_dataDir + QStringLiteral("/library/roms")))
         wanted.append(m_dataDir + QStringLiteral("/library/roms"));
+    if (QFileInfo::exists(m_dataDir + QStringLiteral("/library/mod-managers")))
+        wanted.append(m_dataDir + QStringLiteral("/library/mod-managers"));
     const QString art = m_dataDir + QStringLiteral("/art");
     if (QFileInfo::exists(art)) {
         wanted.append(art);
@@ -2358,6 +2390,98 @@ QString LibraryStore::removeGameFile(const QString &id, bool withArt)
         m_snapshot.art.remove(id);
     }
     qCInfo(lcLibrary).noquote() << "removed" << relative;
+    for (const ModManager &manager : m_snapshot.content.modManagers.values()) {
+        if (!manager.games.contains(id))
+            continue;
+        QStringList games = manager.games;
+        games.removeAll(id);
+        if (const QString error = setModManagerValues(manager.id, {{QStringLiteral("games"), games}}); !error.isEmpty())
+            qCWarning(lcLibrary).noquote() << error;
+    }
+    changedHere();
+    return {};
+}
+
+LibraryStore::AddedModManager LibraryStore::addModManager(const ModManager &manager)
+{
+    AddedModManager out;
+    if (m_versionStatus.readOnly) {
+        out.error = tr("Not added: %1").arg(m_versionStatus.reason);
+        return out;
+    }
+    QString base = GameId::slug(manager.name);
+    if (base.isEmpty())
+        base = QStringLiteral("mod-manager");
+    QString id = base;
+    for (int n = 2; m_snapshot.content.modManagers.contains(id); ++n)
+        id = base + u'-' + QString::number(n);
+
+    const QString relative = kModManagersPrefix + id + QStringLiteral(".toml");
+    const QString path = m_dataDir + u'/' + relative;
+    const QString text = ModManagers::formatNew(manager);
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly) || file.write(text.toUtf8()) < 0 || !file.commit()) {
+        out.error = tr("Could not save %1: %2").arg(relative, file.errorString());
+        return out;
+    }
+    CachedFile &entry = m_snapshot.files[relative];
+    entry.stamp = stampOf(QFileInfo(path));
+    entry.ok = parseInto(m_snapshot, relative, text.toUtf8(), &entry.warnings);
+    out.id = id;
+    changedHere();
+    return out;
+}
+
+QString LibraryStore::setModManagerValues(const QString &id, const QList<std::pair<QString, QVariant>> &values)
+{
+    if (m_versionStatus.readOnly)
+        return tr("Not saved: %1").arg(m_versionStatus.reason);
+    if (!m_snapshot.content.modManagers.contains(id))
+        return tr("There's no mod manager with the id %1").arg(id);
+
+    const QString relative = kModManagersPrefix + id + QStringLiteral(".toml");
+    // A file with a syntax error keeps its last good version, which isn't what's on disk.
+    if (!m_snapshot.files.value(relative).ok)
+        return tr("%1 has an error, so the change wasn't saved").arg(relative);
+
+    QList<std::pair<QString, QVariant>> checked;
+    for (const auto &[key, value] : values) {
+        const bool cleared = !value.isValid() || (value.typeId() == QMetaType::QString && value.toString().isEmpty());
+        if (cleared && key != QLatin1String("games")) {
+            checked.append({key, QVariant()});
+            continue;
+        }
+        QString error;
+        const QVariant v = ModManagers::validate(key, value, &error);
+        if (!v.isValid())
+            return error;
+        checked.append({key, v});
+    }
+    const QString error = patchAndLoad(relative, {}, [&](QString text) {
+        for (const auto &[key, value] : std::as_const(checked)) {
+            const TomlPatch::Result r = value.isValid()
+                ? TomlPatch::setValue(text, {}, key, ModManagers::format(key, value))
+                : TomlPatch::removeValue(text, {}, key);
+            if (!r.ok)
+                return r;
+            text = r.text;
+        }
+        return TomlPatch::Result{true, text, {}};
+    });
+    if (error.isEmpty())
+        changedHere();
+    return error;
+}
+
+QString LibraryStore::removeModManager(const QString &id)
+{
+    if (m_versionStatus.readOnly)
+        return tr("Not removed: %1").arg(m_versionStatus.reason);
+    const QString relative = kModManagersPrefix + id + QStringLiteral(".toml");
+    if (QFileInfo::exists(m_dataDir + u'/' + relative) && !QFile::remove(m_dataDir + u'/' + relative))
+        return tr("Could not remove %1").arg(relative);
+    forget(m_snapshot, relative);
     changedHere();
     return {};
 }

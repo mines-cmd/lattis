@@ -41,6 +41,18 @@ static QDataStream &operator>>(QDataStream &s, GameFile &g)
     return s;
 }
 
+static QDataStream &operator<<(QDataStream &s, const ModManager &m)
+{
+    return s << m.id << m.name << m.exe << m.startDir << m.launchOptions << m.games << m.prefix << m.proton
+             << m.shortcut;
+}
+
+static QDataStream &operator>>(QDataStream &s, ModManager &m)
+{
+    return s >> m.id >> m.name >> m.exe >> m.startDir >> m.launchOptions >> m.games >> m.prefix >> m.proton
+        >> m.shortcut;
+}
+
 static QDataStream &operator<<(QDataStream &s, const Platform &p)
 {
     return s << p.id << p.name << p.icon << p.emulators << p.romFolders << p.igdbPlatforms << p.inRail << qint32(p.line);
@@ -306,7 +318,7 @@ std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dat
     LibrarySnapshot s;
     qint32 version = 0;
     in >> version >> s.files >> s.content.platforms >> s.content.tags >> s.content.steam >> s.content.roms
-        >> s.content.emulators >> s.content.games >> s.art >> s.artChecks >> s.romFiles >> s.romWarnings >> s.romMissingFolders
+        >> s.content.emulators >> s.content.games >> s.content.modManagers >> s.art >> s.artChecks >> s.romFiles >> s.romWarnings >> s.romMissingFolders
         >> s.romGameFiles >> s.programFiles >> s.steam >> s.steamQueued;
     s.version = version;
     if (in.status() != QDataStream::Ok || !in.atEnd())
@@ -325,7 +337,7 @@ bool save(const QString &cachePath, const QString &dataDir, const LibrarySnapsho
     out.setVersion(kStreamVersion);
     out << QDir(dataDir).absolutePath();
     out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.steam
-        << s.content.roms << s.content.emulators << s.content.games << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
+        << s.content.roms << s.content.emulators << s.content.games << s.content.modManagers << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
         << s.romGameFiles << s.programFiles << s.steam << s.steamQueued;
     if (out.status() != QDataStream::Ok) {
         file.cancelWriting();

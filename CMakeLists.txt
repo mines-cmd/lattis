@@ -299,6 +299,7 @@ qt_add_qml_module(lattis
         src/library/lookupgame.h
         src/library/gameid.h src/library/gameid.cpp
         src/library/gamefile.h src/library/gamefile.cpp
+        src/library/modmanagers.h src/library/modmanagers.cpp
         src/library/libraryfiles.h src/library/libraryfiles.cpp
         src/library/librarycache.h src/library/librarycache.cpp
         src/library/librarystore.h src/library/librarystore.cpp
