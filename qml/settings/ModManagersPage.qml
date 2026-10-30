@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Window
 
 // See docs/code/qml.md.
 Item {
@@ -28,6 +29,8 @@ Item {
         const err = GameRunner.launchModManager(manager.id)
         if (err !== "")
             message(err)
+        else
+            Window.window.visible = false
     }
 
     ModManagerDialog {
