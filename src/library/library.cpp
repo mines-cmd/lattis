@@ -810,6 +810,7 @@ QVariantList Library::steamShortcuts() const
             {QStringLiteral("appId"), qint64(s.appId)},
             {QStringLiteral("name"), s.name},
             {QStringLiteral("target"), s.exeArgs.isEmpty() ? tilde(s.exe) : tilde(s.exe) + u' ' + s.exeArgs},
+            {QStringLiteral("exe"), s.exe},
             {QStringLiteral("tool"), tool.isEmpty() ? QString() : toolNames.value(tool, tool)},
             {QStringLiteral("checked"), !tool.isEmpty()},
             {QStringLiteral("canManage"), s.exe.endsWith(QLatin1String(".exe"), Qt::CaseInsensitive)},
@@ -827,9 +828,9 @@ QString Library::addSteamShortcuts(const QVariantList &appIds)
     return m_store.addShortcuts(ids).error;
 }
 
-QString Library::addSteamShortcutAsModManager(qint64 appId)
+QString Library::addSteamShortcutAsModManager(qint64 appId, const QStringList &games)
 {
-    return m_store.addShortcutAsModManager(quint32(appId)).error;
+    return m_store.addShortcutAsModManager(quint32(appId), games).error;
 }
 
 QString Library::setSteamPresetForAll(const QString &preset, bool on)

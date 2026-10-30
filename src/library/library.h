@@ -247,7 +247,7 @@ public:
     Q_INVOKABLE QString setSteamValue(const QString &key, const QVariant &value);
     Q_INVOKABLE QVariantList steamShortcuts() const;
     Q_INVOKABLE QString addSteamShortcuts(const QVariantList &appIds);
-    Q_INVOKABLE QString addSteamShortcutAsModManager(qint64 appId);
+    Q_INVOKABLE QString addSteamShortcutAsModManager(qint64 appId, const QStringList &games = {});
     Q_INVOKABLE QString setSteamPresetForAll(const QString &preset, bool on);
     Q_INVOKABLE QString undoSteamEdits(const QString &id);
     Q_INVOKABLE QString undoAllSteamEdits();

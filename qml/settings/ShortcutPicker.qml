@@ -8,12 +8,14 @@ MotionPopup {
     property var shortcuts: []
     property var checked: ({})
     property bool addNow: true
+    property bool choosing: false
 
     signal done()
     signal chosen(var appIds)
+    signal choice(var shortcut)
 
     function openFresh(picked) {
-        shortcuts = Library.steamShortcuts()
+        shortcuts = Library.steamShortcuts().filter(s => !choosing || s.canManage)
         const c = {}
         for (const s of shortcuts)
             c[s.appId] = picked ? picked.includes(s.appId) : s.checked
@@ -59,7 +61,7 @@ MotionPopup {
 
         Label {
             Layout.fillWidth: true
-            text: qsTr("Add existing shortcuts")
+            text: root.choosing ? qsTr("Choose a Steam shortcut") : qsTr("Add existing shortcuts")
             color: Theme.gameEditor.headingColor
             font.weight: Theme.font.strongWeight
         }
@@ -67,7 +69,12 @@ MotionPopup {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             color: Theme.gameEditor.labelColor
-            text: root.shortcuts.length === 0
+            text: root.choosing
+                  ? (root.shortcuts.length === 0
+                     ? qsTr("Steam has no Windows non-Steam games outside the library.")
+                     : qsTr("%n Windows program(s) Steam has as non-Steam games and the library doesn't. "
+                            + "It keeps its shortcut, Proton version and Wine prefix.", "", root.shortcuts.length))
+                  : root.shortcuts.length === 0
                   ? qsTr("Every non-Steam game Steam has is in the library already.")
                   : qsTr("Your non-Steam games in Steam that aren't in the library. They come in as Proton games "
                          + "and keep their shortcut, so their play time, art and Wine prefix stay with them. "
@@ -93,6 +100,7 @@ MotionPopup {
                 spacing: Theme.layout.spacing
 
                 SettingsCheckBox {
+                    visible: !root.choosing
                     checked: root.checked[row.modelData.appId] ?? false
                     onToggled: {
                         const c = Object.assign({}, root.checked)
@@ -146,8 +154,13 @@ MotionPopup {
                 }
                 SettingsButton {
                     visible: row.modelData.canManage
-                    text: qsTr("Add as mod manager")
+                    text: root.choosing ? qsTr("Choose") : qsTr("Add as mod manager")
                     onClicked: {
+                        if (root.choosing) {
+                            root.choice(row.modelData)
+                            root.close()
+                            return
+                        }
                         const problem = Library.addSteamShortcutAsModManager(row.modelData.appId)
                         if (problem !== "") {
                             error.text = problem
@@ -177,7 +190,7 @@ MotionPopup {
                 onClicked: root.close()
             }
             SettingsButton {
-                visible: root.shortcuts.length > 0
+                visible: root.shortcuts.length > 0 && !root.choosing
                 text: root.picked.length === 0 ? qsTr("Add none")
                       : root.picked.length === 1 ? qsTr("Add 1 game") : qsTr("Add %1 games").arg(root.picked.length)
                 primary: true

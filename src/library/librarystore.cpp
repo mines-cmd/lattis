@@ -2347,7 +2347,7 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
     return out;
 }
 
-LibraryStore::AddedModManager LibraryStore::addShortcutAsModManager(quint32 appId)
+LibraryStore::AddedModManager LibraryStore::addShortcutAsModManager(quint32 appId, const QStringList &games)
 {
     AddedModManager out;
     if (m_versionStatus.readOnly) {
@@ -2371,6 +2371,7 @@ LibraryStore::AddedModManager LibraryStore::addShortcutAsModManager(quint32 appI
     manager.launchOptions = s->launchOptions;
     manager.proton = steam.compatTools.value(appId);
     manager.shortcut = appId;
+    manager.games = games;
     // What works already stays where it is: the shortcut's own prefix, whatever games are linked.
     manager.prefix = QStringLiteral("own");
     QString startDir = s->startDir;

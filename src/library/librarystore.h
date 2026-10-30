@@ -172,7 +172,7 @@ public:
     };
     AddedModManager addModManager(const ModManager &manager);
     // A shortcut already in Steam becomes a manager with its own prefix, keeping its app ID.
-    AddedModManager addShortcutAsModManager(quint32 appId);
+    AddedModManager addShortcutAsModManager(quint32 appId, const QStringList &games = {});
     QString setModManagerValues(const QString &id, const QList<std::pair<QString, QVariant>> &values);
     // fromSteam: its shortcut goes from Steam too; otherwise it stays there as it is.
     QString removeModManager(const QString &id, bool fromSteam);

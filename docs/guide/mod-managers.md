@@ -9,7 +9,8 @@ Lattis only points at a manager that is already on your disk. It doesn't downloa
 Settings → **Mod managers**, then **+**. The dialog asks for:
 
 - **Name** and **Program.** A `.exe` makes a Windows manager, run through Proton; anything else (a program, a script, an AppImage, or a Flatpak app id such as `org.example.App`) is a native one that Lattis runs itself.
-- **Games.** The Steam, Windows and Linux games it serves (searchable). A manager can serve several games, and a game can have several managers. Emulator games can't be linked.
+- **From Steam** (next to Browse). Fills Name and Program from a Windows non-Steam game Steam already has and Lattis doesn't. It keeps its Steam entry, Proton version, launch options and its own prefix, so those fields hide.
+- **Games.** The Steam, Windows and Linux games it serves (searchable; the header counts the games and how many you ticked, **Selected** shows only those, and ticked rows are highlighted). A manager can serve several games, and a game can have several managers. Emulator games can't be linked.
 - **Prefix** (a Windows manager linked to exactly one Steam or Windows game): **The game's prefix** or **Its own prefix**. Mod Organizer 2 and Vortex need the game's registry, `Documents/My Games` and `AppData`, so the game's prefix is the default. A manager linked to several games or none has its own.
 - **Proton version** (own prefix only). With the game's prefix, the manager uses the game's version and the field is off: another version would upgrade or downgrade the game's prefix.
 - **Launch options** and **Start in** (the program's folder unless you change it).
