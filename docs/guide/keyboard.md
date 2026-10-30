@@ -50,7 +50,7 @@ Typing in the main window starts a search, so the main window's shortcuts all us
 
 With several games selected, Ctrl+D adds them to favorites, or removes them when every one is a favorite.
 
-Open save folder, Hide and Uninstall have no keys at first; give them some on Settings → Keyboard if you use them often.
+Open save folder, Open mod manager (with several managers it opens a menu of them), Hide and Uninstall have no keys at first; give them some on Settings → Keyboard if you use them often.
 
 ## Main window
 

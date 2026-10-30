@@ -92,6 +92,7 @@ Item {
         save_folder: { icon: Icons.save2Line, hint: qsTr("Hidden when the game has none") },
         settings: { icon: Icons.gear, hint: qsTr("Edit the game") },
         gallery: { icon: Icons.image, hint: qsTr("Open the Gallery on this game") },
+        mod_manager: { icon: Icons.puzzle, hint: qsTr("Hidden when the game has no mod manager") },
         menu: { icon: Icons.more, hint: qsTr("The game's menu, as on right-click") }
     })
 

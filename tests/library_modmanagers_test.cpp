@@ -22,6 +22,10 @@ private slots:
     void shortcutInOwnPrefix();
     void deletedInSteam();
     void adoptedShortcut();
+    void settingsPage();
+    void removeOptions();
+    void removeDeletesWhatIsAsked();
+    void removeLeavesShortcut();
 
 private:
     QString shortcutsPath(const QString &root) const
@@ -394,6 +398,128 @@ void LibraryModManagersTest::adoptedShortcut()
         QCOMPARE(listAfter.at(i).launchOptions, listBefore.at(i).launchOptions);
     }
     QCOMPARE(readFile(shortcutsPath(root)), before);
+}
+
+void LibraryModManagersTest::removeOptions()
+{
+    const QString root = installFakeSteam();
+    const QString mods = m_installs.home + QStringLiteral("/Mods");
+    writeFile(mods + QStringLiteral("/MO2/ModOrganizer.exe"), "MZ");
+    writeFile(mods + QStringLiteral("/Vortex/Vortex.exe"), "MZ");
+    writeFile(managerPath("mo2"), "name = \"Mod Organizer 2\"\nexe = \"" + mods.toUtf8() +
+                                      "/MO2/ModOrganizer.exe\"\ngames = [\"steam-8000\"]\n");
+    writeFile(managerPath("vortex"), "name = \"Vortex\"\nexe = \"" + mods.toUtf8() +
+                                         "/Vortex/Vortex.exe\"\nprefix = \"own\"\ngames = [\"steam-8000\"]\n");
+    writeFile(managerPath("flatpak"), "name = \"Flat\"\nexe = \"com.example.Mods\"\ngames = []\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value(), 5000);
+    const quint32 vortexId = shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex"))->appId;
+    const quint32 mo2Id = shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2"))->appId;
+    QDir().mkpath(root + QStringLiteral("/steamapps/compatdata/%1").arg(vortexId));
+    QDir().mkpath(root + QStringLiteral("/steamapps/compatdata/%1").arg(mo2Id));
+
+    // In the game's prefix: nothing of it is offered.
+    QVariantMap shared = library->modManagerUninstallChoices(QStringLiteral("mo2"));
+    QVERIFY(shared.value("shortcut").toBool());
+    QCOMPARE(shared.value("installDir").toString(), QStringLiteral("~/Mods/MO2"));
+    QCOMPARE(shared.value("prefix").toString(), QString());
+
+    // Its own prefix is.
+    const QVariantMap own = library->modManagerUninstallChoices(QStringLiteral("vortex"));
+    QCOMPARE(own.value("prefix").toString(),
+             QStringLiteral("~/.local/share/Steam/steamapps/compatdata/%1").arg(vortexId));
+
+    // A Flatpak has no shortcut, folder or prefix.
+    const QVariantMap flat = library->modManagerUninstallChoices(QStringLiteral("flatpak"));
+    QVERIFY(!flat.value("shortcut").toBool());
+    QCOMPARE(flat.value("installDir").toString(), QString());
+    QCOMPARE(flat.value("prefix").toString(), QString());
+
+    // Asking for the game's prefix anyway is refused, nothing deleted.
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+    const QVariantMap refused = library->uninstallModManager(QStringLiteral("mo2"), false, true, false, false);
+    QVERIFY(!refused.value("error").toString().isEmpty());
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFileInfo::exists(managerPath("mo2")));
+}
+
+void LibraryModManagersTest::removeDeletesWhatIsAsked()
+{
+    const QString root = installFakeSteam();
+    const QString folder = m_installs.home + QStringLiteral("/Mods/Vortex");
+    writeFile(folder + QStringLiteral("/Vortex.exe"), "MZ");
+    writeFile(managerPath("vortex"), "name = \"Vortex\"\nexe = \"" + folder.toUtf8() +
+                                         "/Vortex.exe\"\nprefix = \"own\"\ngames = []\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
+    const quint32 appId = shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex"))->appId;
+    const QString prefix = root + QStringLiteral("/steamapps/compatdata/%1").arg(appId);
+    QDir().mkpath(prefix);
+    QTRY_VERIFY_WITH_TIMEOUT(library->store().snapshot().steamQueued.isEmpty(), 5000);
+
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+    const QVariantMap r = library->uninstallModManager(QStringLiteral("vortex"), true, true, false, false);
+    QCOMPARE(r.value("error").toString(), QString());
+    QCOMPARE(trashed, (QStringList{folder, prefix}));
+    QVERIFY(!QFileInfo::exists(managerPath("vortex")));
+    // The folder takes the shortcut with it.
+    QTRY_VERIFY_WITH_TIMEOUT(!shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
+    QVERIFY(library->modManagers().isEmpty());
+}
+
+void LibraryModManagersTest::removeLeavesShortcut()
+{
+    const QString root = installFakeSteam();
+    writeFile(managerPath("mo2"), "name = \"Mod Organizer 2\"\nexe = \"/mods/MO2/ModOrganizer.exe\"\ngames = []\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value(), 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(library->store().snapshot().steamQueued.isEmpty(), 5000);
+
+    QCOMPARE(library->uninstallModManager(QStringLiteral("mo2"), false, false, false, false).value("error").toString(),
+             QString());
+    QVERIFY(!QFileInfo::exists(managerPath("mo2")));
+    library->store().refresh();
+    library->store().waitForIdle();
+    QCoreApplication::processEvents();
+    // Forgotten, not removed: it stays in Steam as it is, and nothing is queued for it.
+    QVERIFY(shortcutNamed(shortcutsIn(root), QStringLiteral("Mod Organizer 2")).has_value());
+    QVERIFY(library->store().snapshot().steamQueued.isEmpty());
+}
+
+void LibraryModManagersTest::settingsPage()
+{
+    writeFile(managerPath("mo2"), "name = \"Mod Organizer 2\"\nexe = \"/mods/MO2/ModOrganizer.exe\"\n"
+                                  "games = [\"linux-supertuxkart\"]\nin_steam = false\n");
+    auto library = openLibrary();
+
+    QVariantMap row = library->modManagers().first().toMap();
+    QVERIFY(row.value("proton").toBool());
+    QVERIFY(!row.value("inSteam").toBool());
+
+    // Locate: clearing in_steam removes the key.
+    QVERIFY(library->setModManagerValue("mo2", "in_steam", "").isEmpty());
+    QVERIFY(!readFile(managerPath("mo2")).contains("in_steam"));
+    QVERIFY(library->modManagers().first().toMap().value("inSteam").toBool());
+
+    // The dialog sends QML lists and several keys at once.
+    QVERIFY(library->setModManagerValues("mo2", {{"games", QVariantList{"linux-supertuxkart", "steam-730"}},
+                                                  {"prefix", "own"}, {"start_dir", ""}}).isEmpty());
+    QCOMPARE(library->modManagers().first().toMap().value("games").toList().size(), 2);
+    QVERIFY(readFile(managerPath("mo2")).contains("prefix = \"own\""));
+    const QVariantMap added = library->addModManager({{"name", "Tool"}, {"exe", "/opt/tool.sh"},
+                                                      {"games", QVariantList{"linux-supertuxkart"}}});
+    QVERIFY(added.value("error").toString().isEmpty());
+
+    // Only Steam, Proton and Linux games can be linked.
+    const QVariantList linkable = library->linkableGames();
+    QVERIFY(!linkable.isEmpty());
+    for (const QVariant &v : linkable) {
+        const QString platform = v.toMap().value("platform").toString();
+        QVERIFY2(platform == "steam" || platform == "proton" || platform == "linux", qPrintable(platform));
+    }
 }
 
 QTEST_GUILESS_MAIN(LibraryModManagersTest)

@@ -145,6 +145,7 @@ private slots:
     void manifest();
     void library();
     void libraryKeepsCredentials();
+    void libraryHoldsModManagers();
     void libraryOnNewMachine();
     void savesPartAlone_data();
     void savesPartAlone();
@@ -440,6 +441,22 @@ void RestoreTest::library()
     QVERIFY(!QFile::exists(m_data + kAside + QStringLiteral("/roms/gba")));
     QCOMPARE(QDir(path(QString())).entryList(QDir::Dirs | QDir::NoDotAndDotDot).filter(QStringLiteral("import-")),
              QStringList({QStringLiteral("data") + kAside}));
+}
+
+void RestoreTest::libraryHoldsModManagers()
+{
+    const QString file = QStringLiteral("/library/mod-managers/mo2.toml");
+    const QByteArray content = "name = \"Mod Organizer 2\"\nshortcut = 3193880877\n";
+    writeFile(m_data + file, content);
+    const QString archive = backUpLibrary();
+
+    QVERIFY(QFile::remove(m_data + file));
+    writeFile(m_data + QStringLiteral("/library/mod-managers/vortex.toml"), "name = \"Vortex\"\n");
+    Restore::Plan plan = planFor(archive, sources());
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+    QCOMPARE(readFile(m_data + file), content);
+    QVERIFY(!QFile::exists(m_data + QStringLiteral("/library/mod-managers/vortex.toml")));
 }
 
 void RestoreTest::libraryKeepsCredentials()

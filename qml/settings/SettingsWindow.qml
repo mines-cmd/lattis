@@ -63,6 +63,8 @@ ApplicationWindow {
         { key: "game_page", name: qsTr("Game page"), icon: Icons.layoutMasonryLine, enabled: true, page: gamePage },
         { key: "library", name: qsTr("Library"), icon: Icons.folder, enabled: true, page: library },
         { key: "steam", name: qsTr("Steam"), icon: Icons.steam, enabled: true, page: steam },
+        { key: "mod_managers", name: qsTr("Mod managers"), icon: Icons.puzzle, enabled: true,
+          page: modManagers },
         { key: "platforms", name: qsTr("Platforms"), icon: Icons.computer, enabled: true,
           page: platforms },
         { key: "emulators", name: qsTr("Emulators"), icon: Icons.gamepadLine, enabled: true,
@@ -726,6 +728,15 @@ ApplicationWindow {
                         target: library.item
                         function onSuggestTagsFromIgdb() { root.suggestTagsFromIgdb() }
                         function onShowColors(section) { root.showCategory("colors", section) }
+                    }
+                }
+
+                PageLoader {
+                    id: modManagers
+                    source: "ModManagersPage.qml"
+                    Connections {
+                        target: modManagers.item
+                        function onMessage(text) { root.showMessage(text) }
                     }
                 }
 

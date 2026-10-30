@@ -174,7 +174,15 @@ public:
     // A shortcut already in Steam becomes a manager with its own prefix, keeping its app ID.
     AddedModManager addShortcutAsModManager(quint32 appId);
     QString setModManagerValues(const QString &id, const QList<std::pair<QString, QVariant>> &values);
-    QString removeModManager(const QString &id);
+    // fromSteam: its shortcut goes from Steam too; otherwise it stays there as it is.
+    QString removeModManager(const QString &id, bool fromSteam);
+    struct ManagerPrefix
+    {
+        QString path;
+        QString gameId;
+    };
+    // The game prefix a Proton manager's shortcut points Proton at; none when it has its own.
+    std::optional<ManagerPrefix> modManagerPrefix(const QString &id) const;
     QString removeProtonGame(const QString &id, bool fromSteam = true);
     QString undoSteamQueue(const QString &key);
 

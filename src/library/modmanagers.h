@@ -34,6 +34,8 @@ struct ModManager
 
 namespace ModManagers {
 inline const QString kFolder = QStringLiteral("library/mod-managers/");
+// A manager's key where it shares an id space with games: the Steam sync, the launcher's running list.
+inline const QString kKeyPrefix = QStringLiteral("mod-manager:");
 
 QStringList keys();
 // Returns an invalid QVariant and sets `error` for a value the key doesn't accept.

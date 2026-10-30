@@ -6,6 +6,8 @@ Lattis makes two kinds of backup, each a single `.tar.zst` file: one of your **l
 
 Your whole [data folder](data-folder.md): your games and everything you've set on them (tags, favorites, play time, launch options), their art, your themes, your settings, your platforms and emulators, and your API keys, a Steam Web API key included (uncheck "API keys" to leave them out). Your Steam sign-in is never in a backup: on a new machine, sign in again in Settings → Steam.
 
+Your mod managers come along too. A Windows mod manager's Steam shortcut isn't in the backup: after an Import, Lattis adds it back to Steam the next time it syncs, as soon as Steam is closed. The manager's own Wine prefix and its program files aren't backed up.
+
 ROMs are never included, even ones you keep inside the data folder.
 
 ## Back up saves

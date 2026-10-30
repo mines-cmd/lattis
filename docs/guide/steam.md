@@ -107,6 +107,10 @@ Steam rewrites its settings when it exits, so it would undo any change made whil
 
 Lattis changes only the values you edited in Steam's files, and keeps a copy of each file the first time it writes it, in `~/.local/state/lattis/steam-backup/`.
 
+## Mod managers
+
+Settings → **Add existing shortcuts** leaves out the Steam entries of your [mod managers](mod-managers.md), and offers **Add as mod manager** on a Windows program's row.
+
 ## Presets
 
 Three presets are built in:

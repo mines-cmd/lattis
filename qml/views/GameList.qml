@@ -18,6 +18,7 @@ Rectangle {
     signal message(string text)
     signal gameAction(string name, var game)
     signal gamesAction(string name, var ids)
+    signal modManagerRequested(string id)
 
     property var selection: ({})
     readonly property bool allCollapsed: list.count > 0 && currentGame.id === undefined
@@ -368,6 +369,7 @@ Rectangle {
                 root.gameAction(name, gameMenu.item.game)
         }
         function onFailed(text) { root.message(text) }
+        function onManagerChosen(id) { root.modManagerRequested(id) }
         function onNewTagRequested(ids) { root.askNewTag(ids) }
         function onOpened() { root.placeMenu() }
         function onHeightChanged() { root.placeMenu() }

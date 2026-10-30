@@ -10,6 +10,8 @@ Select a game and click **Launch**, press Enter, or double-click it in the list.
 
 **Open emulator** starts the emulator without a game, and **Open folder** opens the folder the game is in. **Open save folder**, in the game's menu, opens where its saves are (see [Properties](adding-games.md#properties) for how it's found); it's also a button you can add to the game's page in `[game_page] buttons`, shown only when the game has a save folder.
 
+**Open a mod manager** is in the game's menu (one **Open <name>** per manager linked to the game, with **Add a mod manager** under them) and a button you can add to the game's page in `[game_page] buttons` as `mod_manager`: one icon, shown only when the game has a linked manager, with a dot while one runs. With several managers it opens a menu of them. If the manager shares the game's Proton prefix and the game has never run, Lattis says to run the game once first, with a Launch button. Add and link managers on Settings → Mod managers, or under **Mod managers** in the game's Properties (**Link**, **Add**, and × to unlink; Save writes the links).
+
 When a game won't start, its emulator's or program's output is in `~/.cache/lattis/launch/<game id>.log`.
 
 ## While a game runs

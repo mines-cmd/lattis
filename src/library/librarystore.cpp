@@ -433,12 +433,13 @@ QList<SteamSync::ShortcutGame> shortcutSyncGames(const LibraryContent &c, const 
     return out;
 }
 
-const QString kManagerKeyPrefix = QStringLiteral("mod-manager:");
+const QString kManagerKeyPrefix = ModManagers::kKeyPrefix;
 
 struct SharedPrefix
 {
     QString path;
     QString proton;
+    QString gameId;
 };
 
 // The prefix of the one game a Proton manager runs in, if it runs in one. A manager linked to
@@ -463,7 +464,7 @@ std::optional<SharedPrefix> sharedPrefix(const ModManager &m, const LibraryConte
     const GameFile file = c.games.value(id);
     if (file.platform == kProtonPlatform) {
         const QString path = steam.libraries.first() + QStringLiteral("/compatdata/%1").arg(file.shortcut);
-        return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(file.shortcut) : file.proton};
+        return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(file.shortcut) : file.proton, id};
     }
     const qint64 appId = GameId::steamAppId(id);
     QString path = steam.libraries.first() + QStringLiteral("/compatdata/%1").arg(appId);
@@ -473,7 +474,7 @@ std::optional<SharedPrefix> sharedPrefix(const ModManager &m, const LibraryConte
             break;
         }
     }
-    return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(appId) : file.proton};
+    return SharedPrefix{path, file.proton.isEmpty() ? steam.compatTools.value(appId) : file.proton, id};
 }
 
 QList<SteamSync::ShortcutGame> managerSyncGames(const LibraryContent &c, const SteamState &steam,
@@ -1430,6 +1431,17 @@ void LibraryStore::applySteamSync(const ScanResult &result)
             qCWarning(lcSteam).noquote() << error;
     }
     assignManagerShortcuts();
+}
+
+std::optional<LibraryStore::ManagerPrefix> LibraryStore::modManagerPrefix(const QString &id) const
+{
+    const auto it = m_snapshot.content.modManagers.constFind(id);
+    if (it == m_snapshot.content.modManagers.constEnd())
+        return std::nullopt;
+    const std::optional<SharedPrefix> shared = sharedPrefix(*it, m_snapshot.content, m_snapshot.steam);
+    if (!shared)
+        return std::nullopt;
+    return ManagerPrefix{shared->path, shared->gameId};
 }
 
 void LibraryStore::applyManagerCopies(const QString &id, const QList<std::pair<QString, QVariant>> &copies,
@@ -2693,15 +2705,36 @@ QString LibraryStore::setModManagerValues(const QString &id, const QList<std::pa
     return error;
 }
 
-QString LibraryStore::removeModManager(const QString &id)
+QString LibraryStore::removeModManager(const QString &id, bool fromSteam)
 {
     if (m_versionStatus.readOnly)
         return tr("Not removed: %1").arg(m_versionStatus.reason);
+    const ModManager manager = m_snapshot.content.modManagers.value(id);
+    // Recorded before the file goes: should that fail, the sync sees the manager again and forgets it.
+    if (manager.shortcut > 0 && m_steamRecord && !m_steamSyncRecord.isEmpty()) {
+        SteamSync::Record record = *m_steamRecord;
+        if (fromSteam) {
+            record.removed.insert(manager.shortcut, manager.name);
+        } else {
+            record.removed.remove(manager.shortcut);
+            record.shortcuts.remove(manager.shortcut);
+            record.grid.remove(manager.shortcut);
+        }
+        QString error;
+        if (!SteamSync::writeRecord(m_steamSyncRecord, record, m_dataDir, &error)) {
+            qCWarning(lcSteam).noquote() << error;
+            return tr("Not removed: %1").arg(error);
+        }
+        m_steamRecord = record;
+    }
     const QString relative = kModManagersPrefix + id + QStringLiteral(".toml");
     if (QFileInfo::exists(m_dataDir + u'/' + relative) && !QFile::remove(m_dataDir + u'/' + relative))
         return tr("Could not remove %1").arg(relative);
     forget(m_snapshot, relative);
+    updateSteamQueue();
     changedHere();
+    if (!m_snapshot.steamQueued.isEmpty())
+        m_steamApplyTimer.start();
     return {};
 }
 

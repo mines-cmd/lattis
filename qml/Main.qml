@@ -25,6 +25,42 @@ ApplicationWindow {
             showEmulatorMessage(error, game.id)
     }
 
+    function openModManager(id) {
+        const missing = GameRunner.missingPrefixGame(id)
+        if (missing !== "") {
+            toast.show(qsTr("Run %1 once first, so Proton creates its prefix").arg(Library.gameTitle(missing)),
+                       { text: qsTr("Launch"), run: () => {
+                           const row = Library.rowOfGame(missing)
+                           if (row >= 0) {
+                               launch(Library.gameAt(row))
+                               return
+                           }
+                           const error = GameRunner.launch(missing)
+                           if (error !== "")
+                               toast.show(error)
+                       } })
+            return
+        }
+        const error = GameRunner.launchModManager(id)
+        if (error !== "")
+            toast.show(error)
+    }
+
+    function addModManager(gameId) {
+        modManagerDialog.active = true
+        modManagerDialog.item.openFor(null, [gameId])
+    }
+
+    Loader {
+        id: modManagerDialog
+        active: false
+        source: "settings/ModManagerDialog.qml"
+    }
+    Connections {
+        target: modManagerDialog.item
+        function onSaved(name) { toast.show(qsTr("%1 added").arg(name)) }
+    }
+
     function askForceClose(game) {
         forceClosePrompt.active = true
         forceClosePrompt.item.ask(game)
@@ -302,14 +338,16 @@ ApplicationWindow {
     Connections {
         target: GameRunner
         function onMessage(text) { toast.show(text) }
-        function onSessionStarted() {
-            if (GameRunner.minimizeWhileRunning && window.visibility !== Window.Minimized) {
+        function onSessionStarted(id) {
+            if (id.startsWith("mod-manager:"))
+                return
+            if (GameRunner.minimizeWhileRunning &&window.visibility !== Window.Minimized) {
                 window.minimizedForGame = true
                 window.showMinimized()
             }
         }
         function onSessionEnded() {
-            if (window.minimizedForGame && GameRunner.running.length === 0) {
+            if (window.minimizedForGame && GameRunner.running.length === GameRunner.runningManagers.length) {
                 window.minimizedForGame = false
                 window.showNormal()
             }
@@ -425,6 +463,7 @@ ApplicationWindow {
         function onSelectRequested(id) { gameList.selectGame(id) }
         function onRemoved(next) { gameList.selectGame(next) }
         function onMessage(text) { toast.show(text) }
+        function onAddModManagerRequested(gameId) { addModManager(gameId) }
         function onShortcutFound(text) {
             toast.show(text, { text: qsTr("Add existing shortcuts"),
                                run: () => openSettingsAt("steam", "shortcuts") })
@@ -548,6 +587,7 @@ ApplicationWindow {
         case "open_platform":
         case "open_folder":
         case "open_save_folder":
+        case "open_mod_manager":
         case "game_settings":
         case "play_history":
         case "uninstall_game":
@@ -613,6 +653,8 @@ ApplicationWindow {
         case "open_platform": details.activate("open_platform", game); break
         case "open_folder": details.activate("folder", game); break
         case "open_save_folder": details.activate("save_folder", game); break
+        case "open_mod_manager": details.activate("mod_manager", game); break
+        case "add_mod_manager": addModManager(game.id); break
         case "game_settings": editGame(game.id); break
         case "hide_game": hideGame(game); break
         case "play_history": openPlayHistory(game); break
@@ -858,6 +900,7 @@ ApplicationWindow {
             onMessage: text => toast.show(text)
             onGameAction: (name, game) => window.runOn(name, game)
             onGamesAction: (name, ids) => window.runOnMany(name, ids)
+            onModManagerRequested: id => window.openModManager(id)
         }
 
         GameDetails {
@@ -884,6 +927,7 @@ ApplicationWindow {
             onMenuRequested: button => gameList.openMenuBelow(Library.rowOfGame(game.id), button)
             onCustomizeRequested: window.openSettingsAt("game_page")
             onGalleryRequested: id => window.setGalleryOpen(true, id)
+            onModManagerRequested: id => window.openModManager(id)
         }
     }
 

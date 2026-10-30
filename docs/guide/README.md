@@ -12,6 +12,7 @@ Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, 
 - [Steam games](steam.md): installed Steam games, launch options, Proton versions and presets.
 - [Windows games](windows-games.md): Windows games run through Proton as Steam shortcuts.
 - [Linux games](linux-games.md): native programs, scripts and AppImages.
+- [Mod managers](mod-managers.md): Mod Organizer 2, Vortex and others, linked to the games they mod.
 - [Adding and editing games](adding-games.md): the "+" button, Properties, tags, art, hiding.
 - [Game info and art](game-info.md): looking games up on IGDB and SteamGridDB.
 

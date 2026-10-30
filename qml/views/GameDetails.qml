@@ -99,6 +99,7 @@ Item {
     signal menuRequested(Item button)
     signal customizeRequested()
     signal galleryRequested(string id)
+    signal modManagerRequested(string id)
 
     function logoForScreenshot(mode) {
         if (mode === "adjust")
@@ -467,6 +468,10 @@ Item {
     readonly property string saveFolder: General.gamePageButtons.includes("save_folder") && game.id !== undefined
                                          ? GameRunner.saveFolder(game.id) : ""
 
+    readonly property var managers: game.id !== undefined
+        ? Library.modManagers.filter(m => m.games.some(g => g.id === game.id)) : []
+    readonly property bool managerRunning: managers.some(m => GameRunner.runningManagers.includes(m.id))
+
     readonly property var actions: ({
         favorite: {
             icon: Icons.star,
@@ -507,6 +512,14 @@ Item {
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Show in Gallery"), Actions.keys.gallery),
             badge: false
+        },
+        mod_manager: {
+            icon: Icons.puzzle,
+            color: Theme.iconButton.icon,
+            tip: Actions.tip(managers.length === 1 ? (managerRunning ? qsTr("%1 is running") : qsTr("Open %1")).arg(managers[0].name)
+                                                   : qsTr("Mod managers"),
+                             Actions.keys.open_mod_manager),
+            badge: managerRunning
         },
         menu: {
             icon: Icons.more,
@@ -596,10 +609,39 @@ Item {
         }
     }
 
+    Loader {
+        id: modManagerMenu
+        active: false
+        source: "ModManagerMenu.qml"
+    }
+    Connections {
+        target: modManagerMenu.item
+        function onChosen(id) { root.modManagerRequested(id) }
+    }
+    function openModManagerMenu(list) {
+        modManagerMenu.active = true
+        const menu = modManagerMenu.item
+        menu.managers = list
+        let anchor = buttons
+        for (let i = 0; i < buttonRepeater.count; ++i) {
+            if (buttonRepeater.itemAt(i).modelData === "mod_manager")
+                anchor = buttonRepeater.itemAt(i)
+        }
+        menu.popup(anchor, anchor.width - menu.width, anchor.height + Theme.menu.buttonGap)
+    }
+
     function activate(button, other) {
         const g = other ?? game
         if (g.id === undefined)
             return
+        if (button === "mod_manager") {
+            const list = Library.modManagersFor(g.id)
+            if (list.length === 1)
+                modManagerRequested(list[0].id)
+            else if (list.length > 1)
+                openModManagerMenu(list)
+            return
+        }
         if (button === "favorite") {
             const error = Library.setGameValue(g.id, "favorite", !(g.favorite ?? false))
             if (error !== "")
@@ -1080,7 +1122,8 @@ Item {
                         id: buttonRepeater
                         model: General.gamePageButtons.filter(b => root.actions[b] !== undefined
                                                               && (b !== "open_platform" || root.game.platform !== "linux")
-                                                              && (b !== "save_folder" || root.saveFolder !== ""))
+                                                              && (b !== "save_folder" || root.saveFolder !== "")
+                                                              && (b !== "mod_manager" || root.managers.length > 0))
 
                         IconButton {
                             required property string modelData

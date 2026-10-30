@@ -36,9 +36,20 @@ Linux games need special session tracking because launcher scripts are common: a
 
 A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't really start; that's treated differently from a session that runs to completion.
 
+## Mod managers
+
+`launchModManager(id)` opens a mod manager. Its session is keyed `mod-manager:<id>` (`ModManagers::kKeyPrefix`) in the same two maps as games, so `running()`, `forceClose()` and the "a game is running" checks cover it; `runningManagers()` is the ids alone, for the button's and the row's running state. `runningTitle(id)` names any running id (a game's title or a manager's name).
+
+- **Native** managers run as Linux games do, directly and following the session, with the manager's launch options and start folder (else the program's folder). The program can also be a Flatpak app id (`org.example.App`, no `/`), run as `flatpak run <id>`. A missing or non-executable program, a missing start folder or a launch options problem is a message.
+- **Proton** managers go through Steam like a Proton game: `steam://rungameid/` with the shortcut's game ID. A manager whose shortcut was deleted in Steam (`in_steam = false`) or has no ID yet says so. While Steam runs, a shortcut still waiting to be added, or other changes waiting for Steam (its launch options or Proton version decide the prefix), refuse the launch with a message; with Steam closed the queue is written first.
+- **The game's prefix must exist.** For a manager that shares a game's prefix, a missing `compatdata` folder refuses the launch with "Run <game> once first, so Proton creates its prefix"; `missingPrefixGame(id)` is that game's id (or `""`), for a Launch button. Steam may still create an empty `compatdata/<shortcut id>`; that is harmless.
+- **Nothing is recorded:** a manager's session adds no play time, last played or history (`onFinished()` skips it), and the main window isn't minimized for it (`while_running`). `sessionStarted`/`sessionEnded` still carry the key.
+- **Uninstalling a game is refused while one of its managers runs** (`uninstall()` for Steam games, `uninstallProton()`), as it is while the game runs.
+- **Removing a manager** (`removeModManager(id, files, prefix, shortcut, permanent)`) is refused while it runs, then goes to `Library::uninstallModManager()`.
+
 ## Sessions and play time
 
-`GameRunner` has two separate session maps: `m_sessions` for ROM and Linux games (each holds a `DetachedProcess`), and `m_steamSessions` for Steam and Proton games (each holds a `SteamSession`). The union of their keys is `running()`, the QML property.
+`GameRunner` has two separate session maps: `m_sessions` for ROM and Linux games (each holds a `DetachedProcess`), and `m_steamSessions` for Steam and Proton games (each holds a `SteamSession`). Mod managers use the same maps. The union of their keys is `running()`, the QML property.
 
 `forceClose()` kills with SIGKILL, so the usual exit handling follows: a ROM or Linux game's session is recorded as any other. `DetachedProcess::killSession()` kills every process in the session (it was created with `setsid`); `killTree()` kills a process and its descendants, for Steam games, where the launch process is Steam's, not the game's own session. A Steam game whose process hasn't appeared yet has nothing to kill, so `forceClose()` drops its session instead: Steam may never start it (a game borrowed by a family member opens its store page instead), and the button would otherwise stay on Close for the whole `kSteamStartSeconds`.
 
@@ -74,6 +85,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | Property | Type | Description |
 |---|---|---|
 | `running` | `QStringList` | IDs of the games running now |
+| `runningManagers` | `QStringList` | IDs of the mod managers running now (`running` has them as `mod-manager:<id>`) |
 | `minimizeWhileRunning` | `bool` | `while_running = "minimize"` is set |
 | `minSessionSeconds` | `int` | Minimum session length that counts |
 | `problems` | `QStringList` | Settings parse errors |
@@ -97,6 +109,9 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `uninstall(gameId)` | `string` | Uninstall a Steam game through Steam |
 | `forceClose(gameId)` | `string` | End a running game with SIGKILL: its whole session (ROM and Linux games), or the process tree under Steam's launch process (Steam and Proton games). A Steam game with no process yet stops being waited for; `""` or a toast |
 | `uninstallProton(gameId, files, prefix, shortcut, action, permanent)` | `map` | Uninstall a Proton or Linux game; `{error}` or `{trashless}` |
+| `launchModManager(id)` | `string` | Open a mod manager (see Mod managers); toast or `""` |
+| `forceCloseModManager(id)` | `string` | `forceClose()` for a manager's session |
+| `missingPrefixGame(managerId)` | `string` | The game whose prefix a Proton manager shares, if that prefix doesn't exist yet, else `""` |
 | `missingEmulator(gameId)` | `string` | Emulator ID to install for a ROM game with none installed, or `""` |
 | `closeSteamAndApply()` | `string` | Close Steam, apply queued edits, restart it; toast or `""` |
 | `steamRunning()` | `bool` | Whether Steam is running |

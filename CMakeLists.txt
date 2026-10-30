@@ -172,6 +172,7 @@ qt_add_qml_module(lattis
         qml/views/TagsEditor.qml
         qml/views/GameList.qml
         qml/views/GameMenu.qml
+        qml/views/ModManagerMenu.qml
         qml/views/NewTagPrompt.qml
         qml/views/LogoAdjuster.qml
         qml/views/LogoMenu.qml
@@ -216,6 +217,9 @@ qt_add_qml_module(lattis
         qml/settings/ShortcutRow.qml
         qml/settings/KeyChip.qml
         qml/settings/EmulatorsPage.qml
+        qml/settings/ModManagersPage.qml
+        qml/settings/ModManagerDialog.qml
+        qml/settings/ModManagerRemove.qml
         qml/settings/EmulatorRow.qml
         qml/settings/EmulatorProgramField.qml
         qml/settings/ProgramDialog.qml

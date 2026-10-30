@@ -2466,8 +2466,22 @@ QVariantList Library::buildModManagers() const
     const QCollator collator = titleCollator();
     std::sort(managers.begin(), managers.end(),
               [&](const ModManager &a, const ModManager &b) { return collator.compare(a.name, b.name) < 0; });
+    QHash<QString, QString> toolNames;
+    for (const CompatTool &t : m_store.snapshot().steam.tools())
+        toolNames.insert(t.name, t.displayName);
+    const auto toolName = [&](const ModManager &m) {
+        const auto shared = m_store.modManagerPrefix(m.id);
+        const QString name = shared ? m_store.snapshot().content.games.value(shared->gameId).proton : m.proton;
+        return name.isEmpty() ? tr("Steam's default") : toolNames.value(name, name);
+    };
+    const QHash<QString, QStringList> &queued = m_store.snapshot().steamQueued;
     QVariantList out;
     for (const ModManager &m : std::as_const(managers)) {
+        const QStringList queuedKeys = queued.value(ModManagers::kKeyPrefix + m.id);
+        const bool pending = !queuedKeys.isEmpty() && queuedKeys != QStringList{SteamSync::kShortcutIcon};
+        const auto prefix = m_store.modManagerPrefix(m.id);
+        const Game *sharedWith = prefix ? game(prefix->gameId) : nullptr;
+        const QString sharedGame = sharedWith ? sharedWith->title : QString();
         QVariantList games;
         for (const ModManagers::LinkedGame &g : ModManagers::linkedGames(m, find)) {
             games.append(QVariantMap{{QStringLiteral("id"), g.id}, {QStringLiteral("title"), g.title},
@@ -2483,6 +2497,11 @@ QVariantList Library::buildModManagers() const
             {QStringLiteral("prefix"), m.prefix},
             {QStringLiteral("protonTool"), m.proton},
             {QStringLiteral("shortcut"), m.shortcut},
+            {QStringLiteral("inSteam"), m.inSteam},
+            {QStringLiteral("shortcutQueued"), queuedKeys.contains(SteamSync::kAddShortcut)},
+            {QStringLiteral("pendingSteamEdits"), pending},
+            {QStringLiteral("protonName"), m.isProton() ? toolName(m) : QString()},
+            {QStringLiteral("sharedGame"), sharedGame},
             {QStringLiteral("games"), games},
         });
     }
@@ -2504,12 +2523,46 @@ QVariantList Library::modManagersFor(const QString &gameId) const
     return out;
 }
 
+QVariant Library::managerValue(const QString &key, const QVariant &value)
+{
+    if (key == QLatin1String("games") && value.typeId() == QMetaType::QVariantList)
+        return value.toStringList();
+    return value;
+}
+
+QString Library::setModManagerValues(const QString &id, const QVariantMap &values)
+{
+    QList<std::pair<QString, QVariant>> list;
+    for (auto it = values.cbegin(); it != values.cend(); ++it)
+        list.append({it.key(), managerValue(it.key(), it.value())});
+    return m_store.setModManagerValues(id, list);
+}
+
+QVariantList Library::linkableGames() const
+{
+    QList<const Game *> games;
+    for (const Game &g : m_games) {
+        if (!g.hidden && ModManagers::linkable(g.platform))
+            games.append(&g);
+    }
+    const QCollator collator = titleCollator();
+    std::sort(games.begin(), games.end(),
+              [&](const Game *a, const Game *b) { return collator.compare(a->title, b->title) < 0; });
+    QVariantList out;
+    for (const Game *g : std::as_const(games)) {
+        out.append(QVariantMap{{QStringLiteral("id"), g->id}, {QStringLiteral("title"), g->title},
+                               {QStringLiteral("platform"), g->platform},
+                               {QStringLiteral("platformName"), g->platformName}});
+    }
+    return out;
+}
+
 QVariantMap Library::addModManager(const QVariantMap &values)
 {
     ModManager manager;
     for (auto it = values.cbegin(); it != values.cend(); ++it) {
         QString error;
-        const QVariant value = ModManagers::validate(it.key(), it.value(), &error);
+        const QVariant value = ModManagers::validate(it.key(), managerValue(it.key(), it.value()), &error);
         if (!value.isValid())
             return {{QStringLiteral("error"), error}};
         ModManagers::apply(manager, it.key(), value);
@@ -3898,6 +3951,90 @@ QVariantMap Library::uninstallProtonGame(const QString &id, bool files, bool pre
     if (const bool hide = action == QLatin1String("hide"); hide != game.hidden)
         values.append({QStringLiteral("hidden"), hide ? QVariant(true) : QVariant()});
     return withError(values.isEmpty() ? QString() : m_store.setGameValues(id, values));
+}
+
+namespace {
+// A manager's folder is its program's; a Flatpak app id or a bare command has none.
+QString managerFolder(const ModManager &manager)
+{
+    if (!QFileInfo(manager.exe).isAbsolute() || !QFileInfo(manager.exe).isFile())
+        return {};
+    return QFileInfo(manager.exe).absolutePath();
+}
+}
+
+// Never offered while the manager runs in a game's prefix: that one is the game's.
+QVariantMap Library::modManagerUninstallChoices(const QString &id)
+{
+    const auto managers = m_store.snapshot().content.modManagers;
+    const auto it = managers.constFind(id);
+    if (it == managers.constEnd())
+        return {};
+    const bool shortcut = it->isProton() && it->shortcut > 0 && it->inSteam;
+    const QString folder = managerFolder(*it);
+    const QString prefix = it->isProton() && !m_store.modManagerPrefix(id) ? protonPrefix(it->shortcut) : QString();
+    const QString refused = folder.isEmpty() ? QString() : Uninstall::refusal(folder, uninstallPlaces({}));
+
+    const QString files = refused.isEmpty() ? folder : QString();
+    const QString key = ModManagers::kKeyPrefix + id;
+    QtConcurrent::run([files, prefix] {
+        const auto size = [](const QString &path) {
+            return path.isEmpty() ? QString()
+                                  : QLocale().formattedDataSize(folderSize(path), 1, QLocale::DataSizeTraditionalFormat);
+        };
+        return std::pair(size(files), size(prefix));
+    }).then(this, [this, key](const std::pair<QString, QString> &sizes) {
+        emit uninstallSizes(key, sizes.first, sizes.second);
+    });
+    return {{QStringLiteral("shortcut"), shortcut},
+            {QStringLiteral("installDir"), folder.isEmpty() ? QString() : m_store.writtenPath(folder)},
+            {QStringLiteral("installDirRefused"), refused},
+            {QStringLiteral("prefix"), prefix.isEmpty() ? QString() : m_store.writtenPath(prefix)}};
+}
+
+QVariantMap Library::uninstallModManager(const QString &id, bool files, bool prefix, bool shortcut, bool permanent)
+{
+    const auto withError = [](const QString &error) { return QVariantMap{{QStringLiteral("error"), error}}; };
+    const auto managers = m_store.snapshot().content.modManagers;
+    const auto it = managers.constFind(id);
+    if (it == managers.constEnd())
+        return withError(tr("%1 isn't a mod manager").arg(id));
+    const ModManager manager = *it;
+    if (readOnly())
+        return withError(tr("The library is read-only; nothing was deleted"));
+
+    QStringList folders;
+    const Uninstall::Places places = uninstallPlaces({});
+    if (files) {
+        const QString dir = managerFolder(manager);
+        if (dir.isEmpty())
+            return withError(tr("%1's folder is gone already").arg(manager.name));
+        if (const QString why = Uninstall::refusal(dir, places); !why.isEmpty())
+            return withError(tr("The folder can't be deleted: %1").arg(why));
+        folders.append(dir);
+    }
+    if (prefix) {
+        if (m_store.modManagerPrefix(id))
+            return withError(tr("%1 runs in a game's prefix; that one isn't deleted here").arg(manager.name));
+        const QString dir = manager.isProton() ? protonPrefix(manager.shortcut) : QString();
+        if (dir.isEmpty())
+            return withError(tr("%1 has no Wine prefix").arg(manager.name));
+        if (const QString why = Uninstall::refusal(dir, places); !why.isEmpty())
+            return withError(tr("The Wine prefix can't be deleted: %1").arg(why));
+        folders.append(dir);
+    }
+    for (const QString &folder : std::as_const(folders)) {
+        const Uninstall::Removal r = Uninstall::remove(folder, permanent, m_trash);
+        if (r.needsPermanent)
+            return {{QStringLiteral("trashless"), m_store.writtenPath(folder)}};
+        if (!r.error.isEmpty()) {
+            qCWarning(lcLibrary).noquote() << QStringLiteral("%1: not removed: %2").arg(id, r.error);
+            return withError(tr("%1. Nothing after it was done.").arg(r.error));
+        }
+        qCInfo(lcLibrary).noquote() << QStringLiteral("%1: removed %2").arg(id, folder);
+    }
+    // Its folder goes with the program; the shortcut would have nothing to run.
+    return withError(m_store.removeModManager(id, manager.isProton() && (shortcut || files)));
 }
 
 int Library::nextTagColor(int paletteSize) const

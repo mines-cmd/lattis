@@ -112,6 +112,36 @@ Item {
     signal selectRequested(string id)
     signal shortcutFound(string text)
     signal removed(string next)
+    signal addModManagerRequested(string gameId)
+
+    // Links ticked or unticked here (manager id → linked), written with Save.
+    property var managerLinks: ({})
+    readonly property bool managerGame: !adding && ["steam", "proton", "linux"].includes(game.platform ?? "")
+    readonly property var linkedManagers: managerGame ? Library.modManagers.filter(m => managerLinked(m)) : []
+    readonly property var unlinkedManagers: managerGame ? Library.modManagers.filter(m => !managerLinked(m)) : []
+    function managerLinked(m) {
+        return managerLinks[m.id] ?? m.games.some(g => g.id === game.id)
+    }
+    function setManagerLinked(id, linked) {
+        const next = Object.assign({}, managerLinks)
+        next[id] = linked
+        managerLinks = next
+    }
+    function saveManagerLinks() {
+        const errors = []
+        for (const m of Library.modManagers) {
+            if (managerLinks[m.id] === undefined || managerLinks[m.id] === m.games.some(g => g.id === game.id))
+                continue
+            const ids = m.games.map(g => g.id).filter(id => id !== game.id)
+            if (managerLinks[m.id])
+                ids.push(game.id)
+            const e = Library.setModManagerValue(m.id, "games", ids)
+            if (e !== "")
+                errors.push(e)
+        }
+        managerLinks = ({})
+        return errors
+    }
 
     function openFor(id) {
         const g = Library.gameForEditing(id)
@@ -169,6 +199,7 @@ Item {
         newSaveFolder = ""
         saveFolderCleared = false
         newMediaFolders = null
+        managerLinks = ({})
         mediaMenu.close()
         form.scrollRoom = false
         foundSaveFolder = g.id !== undefined && !adding ? GameRunner.foundSaveFolder(g.id) : ""
@@ -596,6 +627,7 @@ Item {
                 error.text = errors.concat([e]).join("\n")
                 return
             }
+            errors.push(...saveManagerLinks())
         }
         saved(id)
         error.text = errors.join("\n")
@@ -1527,6 +1559,71 @@ Item {
                         }
 
                         Card {
+                            title: qsTr("Mod managers")
+                            visible: root.managerGame
+                            actions: Row {
+                                spacing: Theme.layout.spacing
+
+                                TextAction {
+                                    id: linkAction
+                                    visible: root.unlinkedManagers.length > 0
+                                    text: qsTr("Link")
+                                    iconPath: Icons.link
+                                    tip: qsTr("Link a mod manager you already added")
+                                    onClicked: managerMenu.popup(linkAction, 0, linkAction.height)
+                                }
+                                TextAction {
+                                    text: qsTr("Add")
+                                    iconPath: Icons.add
+                                    tip: qsTr("Add a mod manager for this game")
+                                    onClicked: root.addModManagerRequested(root.game.id)
+                                }
+                            }
+
+                            Label {
+                                visible: root.linkedManagers.length === 0
+                                Layout.fillWidth: true
+                                text: qsTr("No mod manager is linked to this game.")
+                                color: Theme.gameEditor.hintColor
+                                wrapMode: Text.WordWrap
+                            }
+                            Repeater {
+                                model: root.linkedManagers
+
+                                RowLayout {
+                                    id: managerRow
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Theme.controls.controlSpacing
+
+                                    Icon {
+                                        path: Icons.puzzle
+                                        size: Theme.controls.iconSize
+                                        color: Theme.controls.inputText
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: managerRow.modelData.name
+                                        color: Theme.controls.inputText
+                                        elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        text: managerRow.modelData.proton ? qsTr("Proton") : qsTr("Native")
+                                        color: Theme.controls.descriptionColor
+                                        font.pixelSize: Theme.controls.descriptionFontSize
+                                    }
+                                    ListButton {
+                                        flat: true
+                                        iconPath: Icons.close
+                                        textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                        tip: qsTr("Unlink from this game")
+                                        onClicked: root.setManagerLinked(managerRow.modelData.id, false)
+                                    }
+                                }
+                            }
+                        }
+
+                        Card {
                             title: qsTr("Images")
                             actions: TextAction {
                                 text: qsTr("Browse SteamGridDB")
@@ -1704,6 +1801,13 @@ Item {
                 }
             }
         }
+    }
+
+    ModManagerMenu {
+        id: managerMenu
+        managers: root.unlinkedManagers
+        popDirection: "right"
+        onChosen: id => root.setManagerLinked(id, true)
     }
 
     SteamUninstallPrompt {

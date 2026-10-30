@@ -12,6 +12,14 @@ def demo(dirs):
     dirs.use_demo()
 
 
+def with_managers(dirs):
+    dirs.use_demo()
+    dirs.write("library/mod-managers/mo2.toml",
+               'name = "Mod Organizer 2"\nexe = "/usr/bin/true"\ngames = ["linux-supertuxkart"]\n')
+    dirs.write("library/mod-managers/vortex.toml",
+               'name = "Vortex"\nexe = "/usr/bin/true"\ngames = ["linux-supertuxkart"]\n')
+
+
 def search(text):
     return "type " + text + "\nwait 400\n"
 
@@ -83,6 +91,10 @@ SCENARIOS = [
     Scenario("Escape closes Properties without saving",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nkey Escape\n"
                + "expect-not Properties\nexpect Mario Kart 8 Deluxe\n", None)], demo),
+    Scenario("a linked game's menu opens its mod managers, another game's only offers to add one",
+             [(FIRST + "click SuperTuxKart\nkey Menu\nwait 400\nexpect Open Mod Organizer 2\nexpect Open Vortex\n"
+               + "expect Add a mod manager\nkey Escape\nwait 400\nclick Hades\nkey Menu\nwait 400\n"
+               + "expect-not Open Vortex\nexpect Add a mod manager\n", None)], with_managers),
 ]
 
 sys.exit(run_scenarios(SCENARIOS))

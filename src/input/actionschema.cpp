@@ -51,6 +51,7 @@ constexpr Action kActions[] = {
     {"game", "open_platform", "Ctrl+O", "Open in Steam or the emulator"},
     {"game", "open_folder", "Ctrl+Shift+O", "Open the game folder"},
     {"game", "open_save_folder", "", "Open the save folder"},
+    {"game", "open_mod_manager", "", "Open the game's mod manager"},
     {"game", "game_settings", "Alt+Return", "Properties"},
     {"game", "play_history", "", "Play history"},
     {"game", "hide_game", "", "Hide / unhide"},

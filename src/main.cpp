@@ -207,10 +207,8 @@ int main(int argc, char *argv[])
                     },
                     [&library, &runner] {
                         QStringList titles;
-                        for (const QString &id : runner.running()) {
-                            const Game *game = library.game(id);
-                            titles.append(game ? game->title : id);
-                        }
+                        for (const QString &id : runner.running())
+                            titles.append(runner.runningTitle(id));
                         return titles;
                     },
                     [&library](bool on) { library.store().hold(on); },
@@ -250,8 +248,7 @@ int main(int argc, char *argv[])
             const QStringList running = runner.running();
             if (running.isEmpty())
                 return QString();
-            const Game *game = library.game(running.first());
-            return game ? game->title : running.first();
+            return runner.runningTitle(running.first());
         };
         update.restart = [arguments](QString *error) {
             if (!Restart::start(arguments, error))

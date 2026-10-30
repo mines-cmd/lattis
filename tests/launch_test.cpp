@@ -5,6 +5,7 @@
 #include "launchsettings.h"
 #include "library.h"
 #include "restart.h"
+#include "steamshortcuts.h"
 
 #include <QDirIterator>
 #include <QProcess>
@@ -172,6 +173,9 @@ private slots:
     void protonGames();
     void protonGameRunning();
     void locateProgram();
+    void nativeModManager();
+    void modManagerRefused();
+    void protonModManager();
     void gameOutlivesTheLauncher();
     void setLaunchValue_data();
     void setLaunchValue();
@@ -974,6 +978,122 @@ void LaunchTest::protonGameRunning()
     QVERIFY(!readFile(m_data + "/library/games/" + ffxiv + ".toml").contains("play_minutes"));
     qunsetenv("FAKE_GAME_SECONDS");
     qunsetenv("FAKE_REAPER_ID");
+}
+
+void LaunchTest::nativeModManager()
+{
+    writeFile(m_data + "/mods/run.sh", kFakeGame, true);
+    writeFile(m_data + "/linux-games/SuperTuxKart/run_game.sh", kFakeGame, true);
+    writeFile(m_data + "/library/mod-managers/tool.toml",
+              "name = \"Tool\"\nexe = \"" + QFile::encodeName(m_data) + "/mods/run.sh\"\n"
+              "launch_options = \"--mods\"\ngames = [\"linux-supertuxkart\"]\n");
+    openLibrary("[launch]\nmin_session_seconds = 0\n");
+    m_runner->setSessionPollInterval(100);
+    qputenv("FAKE_SECONDS", "2");
+    const QByteArray gameFile = readFile(m_data + "/library/games/linux-supertuxkart.toml");
+
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("tool")), QString());
+    QCOMPARE(m_runner->running(), QStringList{QStringLiteral("mod-manager:tool")});
+    QCOMPARE(m_runner->runningManagers(), QStringList{QStringLiteral("tool")});
+    QCOMPARE(m_runner->runningTitle(QStringLiteral("mod-manager:tool")), QStringLiteral("Tool"));
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("tool")), QString()); // not twice
+    QCOMPARE(m_runner->running().size(), 1);
+
+    // Run directly, in its program's folder, with its launch options.
+    QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(m_data + "/mods/cwd.txt"), 5000);
+    QCOMPARE(readFile(m_data + "/mods/args.txt"), QByteArray("--mods\n"));
+    QCOMPARE(readFile(m_data + "/mods/cwd.txt").trimmed(), QFile::encodeName(m_data + "/mods"));
+
+    // A linked game isn't uninstalled while its manager runs; the game itself still launches.
+    bool trashed = false;
+    m_library->setTrash([&trashed](const QString &, QString *) { return trashed = true; });
+    QCOMPARE(m_runner->uninstallProton(kLinuxGame, true, false, false, QStringLiteral("remove"), false)
+                 .value("error").toString(),
+             QStringLiteral("Tool is running; close it first"));
+    QVERIFY(!trashed);
+    QCOMPARE(m_runner->launch(kLinuxGame), QString());
+    QCOMPARE(m_runner->running().size(), 2);
+
+    QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 2, 10000);
+    QVERIFY(m_runner->running().isEmpty());
+
+    // No play time, last played or history for the manager; the game's own run is recorded as usual.
+    QVERIFY(!QFile::exists(m_data + "/library/history/mod-manager:tool.toml"));
+    QVERIFY(!QDir(m_data + "/library/history").entryList({QStringLiteral("*tool*")}).size());
+    QVERIFY(readFile(m_data + "/library/games/linux-supertuxkart.toml") != gameFile);
+    QVERIFY(readFile(m_data + "/library/mod-managers/tool.toml").contains("name = \"Tool\""));
+    QVERIFY(!readFile(m_data + "/library/mod-managers/tool.toml").contains("play"));
+}
+
+void LaunchTest::modManagerRefused()
+{
+    writeFile(m_data + "/mods/plain.sh", "#!/bin/sh\n", false);
+    writeFile(m_data + "/library/mod-managers/gone.toml", "name = \"Gone\"\nexe = \"/nowhere/gone.sh\"\n");
+    writeFile(m_data + "/library/mod-managers/plain.toml",
+              "name = \"Plain\"\nexe = \"" + QFile::encodeName(m_data) + "/mods/plain.sh\"\n");
+    writeFile(m_data + "/library/mod-managers/wrapped.toml",
+              "name = \"Wrapped\"\nexe = \"" + QFile::encodeName(m_data) + "/mods/plain.sh\"\n"
+              "launch_options = \"A=1\"\n");
+    writeFile(m_data + "/library/mod-managers/folder.toml",
+              "name = \"Folder\"\nexe = \"" + QFile::encodeName(m_data) + "/mods/plain.sh\"\nstart_dir = \"/nowhere\"\n");
+    openLibrary();
+
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("nothing")), QString());
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("gone")),
+             QStringLiteral("Gone's program isn't found: /nowhere/gone.sh"));
+    QVERIFY(m_runner->launchModManager(QStringLiteral("plain")).contains("isn't executable"));
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("folder")),
+             QStringLiteral("Folder's start folder isn't found: /nowhere"));
+    QVERIFY(m_runner->running().isEmpty());
+}
+
+void LaunchTest::protonModManager()
+{
+    const QString exe = m_data + "/mods/MO2/ModOrganizer.exe";
+    writeFile(exe, {});
+    const QString ffxiv = QStringLiteral("proton-final-fantasy-xiv-online");
+    writeFile(m_data + "/library/mod-managers/mo2.toml",
+              "name = \"Mod Organizer 2\"\nexe = \"" + QFile::encodeName(exe) + "\"\n"
+              "games = [\"" + ffxiv.toUtf8() + "\"]\nprefix = \"game\"\nshortcut = 3193880877\n");
+    writeFile(m_data + "/library/mod-managers/nosteam.toml",
+              "name = \"Not in Steam\"\nexe = \"" + QFile::encodeName(exe) + "\"\nshortcut = 3193880878\n"
+              "in_steam = false\n");
+    openLibrary();
+    const QString steamLog = fakeDir() + "/steam.txt";
+    const QString compatdata = m_data + "/steam/steamapps/compatdata/2458135266";
+
+    // The game's prefix doesn't exist until the game has run once: never let Proton make one.
+    QCOMPARE(m_runner->missingPrefixGame(QStringLiteral("mo2")), ffxiv);
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("mo2")),
+             QStringLiteral("Run Final Fantasy XIV Online once first, so Proton creates its prefix"));
+    QVERIFY(!QFile::exists(steamLog));
+    QVERIFY(m_runner->running().isEmpty());
+
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("nosteam")),
+             QStringLiteral("Not in Steam isn't in Steam; locate it in Settings → Mod managers"));
+
+    // With the prefix there, it goes through Steam by the shortcut's game ID, as a Proton game does.
+    QVERIFY(QDir().mkpath(compatdata));
+    QCOMPARE(m_runner->missingPrefixGame(QStringLiteral("mo2")), QString());
+    m_runner->launchModManager(QStringLiteral("mo2"));
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(steamLog).contains("-silent steam://rungameid/"
+                                                         + QByteArray::number(SteamShortcuts::gameId(3193880877))),
+                             5000);
+    QCOMPARE(m_runner->running(), QStringList{QStringLiteral("mod-manager:mo2")});
+    QCOMPARE(m_runner->runningManagers(), QStringList{QStringLiteral("mo2")});
+
+    // Its game can't be uninstalled while it runs.
+    bool trashed = false;
+    m_library->setTrash([&trashed](const QString &, QString *) { return trashed = true; });
+    QCOMPARE(m_runner->uninstallProton(ffxiv, true, true, true, QStringLiteral("remove"), false)
+                 .value("error").toString(),
+             QStringLiteral("Mod Organizer 2 is running; close it first"));
+    QVERIFY(!trashed);
+
+    // Closing before Steam ran it stops waiting for it.
+    QCOMPARE(m_runner->forceCloseModManager(QStringLiteral("mo2")), QString());
+    QVERIFY(m_runner->running().isEmpty());
 }
 
 void LaunchTest::locateProgram()

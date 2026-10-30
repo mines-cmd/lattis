@@ -535,12 +535,12 @@ void GeneralTest::gamePageOrderKeepsNewNames()
     s.buttons = {"settings", "favorite"};
     // Without an order, the shown ones come first, in their listed order, then the rest as the catalog has them.
     QCOMPARE(gamePageOrder(s, GamePage::buttons),
-             (QStringList{"settings", "favorite", "open_platform", "folder", "save_folder", "gallery", "menu"}));
+             (QStringList{"settings", "favorite", "open_platform", "folder", "save_folder", "gallery", "mod_manager", "menu"}));
 
     // Hidden ones keep their slots; the shown ones' listed order wins over the order's.
     s.buttonsOrder = {"folder", "favorite", "menu", "settings"};
     QCOMPARE(gamePageOrder(s, GamePage::buttons),
-             (QStringList{"folder", "settings", "menu", "favorite", "open_platform", "save_folder", "gallery"}));
+             (QStringList{"folder", "settings", "menu", "favorite", "open_platform", "save_folder", "gallery", "mod_manager"}));
 
     // A name a later version adds follows the listed ones.
     s.infoRows = {"rating"};
@@ -588,11 +588,11 @@ void GeneralTest::gamePageSettersWrite()
 
     // A new order is written whole, and the shown ones follow it.
     QCOMPARE(general.setGamePageOrder(GamePage::buttons,
-                                      {"menu", "settings", "save_folder", "gallery", "folder", "open_platform", "favorite"}),
+                                      {"menu", "settings", "save_folder", "gallery", "folder", "open_platform", "favorite", "mod_manager"}),
              QString());
     QCOMPARE(general.gamePageButtons(), (QStringList{"menu", "settings", "folder", "open_platform", "favorite"}));
     QCOMPARE(general.gamePageOrder(GamePage::buttons),
-             (QStringList{"menu", "settings", "save_folder", "gallery", "folder", "open_platform", "favorite"}));
+             (QStringList{"menu", "settings", "save_folder", "gallery", "folder", "open_platform", "favorite", "mod_manager"}));
     QVERIFY(fileText().contains("buttons_order"));
     // Not every name, or one that isn't a choice, changes nothing.
     QCOMPARE(general.setGamePageOrder(GamePage::buttons, {"menu"}), QString());
@@ -601,7 +601,7 @@ void GeneralTest::gamePageSettersWrite()
     QCOMPARE(general.gamePageButtons().first(), QStringLiteral("menu"));
 
     // Back to the defaults leaves no keys.
-    QCOMPARE(general.setGamePageOrder(GamePage::buttons, {"favorite", "open_platform", "folder", "settings", "save_folder", "gallery", "menu"}),
+    QCOMPARE(general.setGamePageOrder(GamePage::buttons, {"favorite", "open_platform", "folder", "settings", "save_folder", "gallery", "mod_manager", "menu"}),
              QString());
     QCOMPARE(general.setGamePageShown(GamePage::buttons, QStringLiteral("menu"), false), QString());
     QCOMPARE(general.gamePageButtons(), GamePageSettings::defaultButtons());

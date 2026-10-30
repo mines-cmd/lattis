@@ -7,7 +7,7 @@ The bigger features Lattis doesn't have yet. Nothing here has a date, and the or
 - **Different versions of a game,** and the same game from several sources shown as one entry.
 - **Installing games.** Move an install to another drive and back, run Windows `.exe` installers, and download games from sources you set up through plugins.
 - **Disk usage by platform.** A pie chart of how much space your installed games take, split by platform.
-- **Mod managers.** Working with the tools people use to mod their games.
+- **More for mod managers.** Opening a game through its manager, `nxm://` links from Nexus Mods, and installers that run inside a manager's prefix.
 - **Close to tray.** Keep Lattis running in the background with a tray icon, and hide the window instead of quitting while a game is running or Steam edits are waiting.
 - **Controller support.** Browse and launch your games with a gamepad, and a bigger layout for a TV.
 - **Multi-select.** Pick several games and hide, tag, favorite or change their emulator at once.

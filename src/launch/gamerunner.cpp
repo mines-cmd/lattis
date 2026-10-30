@@ -229,6 +229,8 @@ QString GameRunner::uninstall(const QString &gameId)
     const SteamRef steam = game ? steamRefOf(*game) : SteamRef();
     if (!steam || steam.shortcut)
         return {};
+    if (const QString manager = runningManagerFor(gameId); !manager.isEmpty())
+        return tr("%1 is running; close it first").arg(manager);
     if (!game->installed && game->steamUpdate != SteamUpdate::Downloading && game->steamUpdate != SteamUpdate::Paused)
         return tr("%1 isn't installed").arg(game->title);
     return runSteam({QStringLiteral("steam://uninstall/%1").arg(steam.runId)});
@@ -256,7 +258,19 @@ QVariantMap GameRunner::uninstallProton(const QString &gameId, bool files, bool 
         const Game *game = m_library->game(gameId);
         return {{QStringLiteral("error"), tr("%1 is running; close it first").arg(game ? game->title : gameId)}};
     }
+    if (const QString manager = runningManagerFor(gameId); !manager.isEmpty())
+        return {{QStringLiteral("error"), tr("%1 is running; close it first").arg(manager)}};
     return m_library->uninstallProtonGame(gameId, files, prefix, shortcut, action, permanent);
+}
+
+QVariantMap GameRunner::removeModManager(const QString &id, bool files, bool prefix, bool shortcut,
+                                         bool permanent)
+{
+    if (runningManagers().contains(id)) {
+        return {{QStringLiteral("error"),
+                 tr("%1 is running; close it first").arg(runningTitle(ModManagers::kKeyPrefix + id))}};
+    }
+    return m_library->uninstallModManager(id, files, prefix, shortcut, permanent);
 }
 
 QString GameRunner::closeSteamAndApply()
@@ -677,6 +691,129 @@ QString GameRunner::launchProgram(const Game &game)
     return startSession(game.id, game.title, buildProgramCommand(game.exe, options), workingDir, true);
 }
 
+QStringList GameRunner::runningManagers() const
+{
+    QStringList ids;
+    for (const QString &key : running()) {
+        if (key.startsWith(ModManagers::kKeyPrefix))
+            ids.append(key.mid(ModManagers::kKeyPrefix.size()));
+    }
+    return ids;
+}
+
+QString GameRunner::runningTitle(const QString &id) const
+{
+    if (id.startsWith(ModManagers::kKeyPrefix)) {
+        const auto managers = m_library->store().snapshot().content.modManagers;
+        const auto it = managers.constFind(id.mid(ModManagers::kKeyPrefix.size()));
+        return it == managers.constEnd() ? id : it->name;
+    }
+    const Game *game = m_library->game(id);
+    return game ? game->title : id;
+}
+
+QString GameRunner::runningManagerFor(const QString &gameId) const
+{
+    const QStringList open = runningManagers();
+    if (open.isEmpty())
+        return {};
+    for (const QVariant &v : m_library->modManagersFor(gameId)) {
+        const QVariantMap manager = v.toMap();
+        if (open.contains(manager.value(QStringLiteral("id")).toString()))
+            return manager.value(QStringLiteral("name")).toString();
+    }
+    return {};
+}
+
+QString GameRunner::missingPrefixGame(const QString &managerId) const
+{
+    const auto prefix = m_library->store().modManagerPrefix(managerId);
+    return prefix && !QFileInfo(prefix->path).isDir() ? prefix->gameId : QString();
+}
+
+QString GameRunner::launchModManager(const QString &id)
+{
+    const LibraryStore &store = m_library->store();
+    const auto it = store.snapshot().content.modManagers.constFind(id);
+    if (it == store.snapshot().content.modManagers.constEnd())
+        return {};
+    const ModManager &manager = *it;
+    const QString key = ModManagers::kKeyPrefix + id;
+    if (m_sessions.contains(key) || m_steamSessions.contains(key))
+        return {};
+    if (manager.exe.isEmpty())
+        return tr("%1 has no program; choose it in Settings → Mod managers").arg(manager.name);
+
+    const QString home = store.installLocations().home;
+    const QString exe = resolveRomFolder(manager.exe, m_dataDir, home);
+    const QString startDir = manager.startDir.isEmpty() ? QString() : resolveRomFolder(manager.startDir, m_dataDir, home);
+    if (!startDir.isEmpty() && !QFileInfo(startDir).isDir())
+        return tr("%1's start folder isn't found: %2").arg(manager.name, startDir);
+
+    if (manager.isProton()) {
+        if (!QFileInfo(exe).isFile())
+            return tr("%1's program isn't found: %2").arg(manager.name, exe);
+        return launchProtonManager(manager, key);
+    }
+
+    static const QRegularExpression flatpakId(QStringLiteral("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_-]+)+$"));
+    const bool flatpak = !manager.exe.contains(u'/') && flatpakId.match(manager.exe).hasMatch();
+    const QFileInfo program(exe);
+    if (!flatpak) {
+        if (!program.isFile())
+            return tr("%1's program isn't found: %2").arg(manager.name, exe);
+        if (!program.isExecutable())
+            return tr("%1's program isn't executable; make it executable in its file properties, or with "
+                      "chmod +x \"%2\"")
+                .arg(manager.name, exe);
+    }
+    const LaunchOptions::Parts options = LaunchOptions::parse(manager.launchOptions);
+    if (!options.problem.isEmpty())
+        return tr("Can't launch %1: %2").arg(manager.name, options.problem);
+    const QString workingDir = !startDir.isEmpty() ? startDir : flatpak ? home : program.absolutePath();
+    LaunchCommand command = buildProgramCommand(flatpak ? QStringLiteral("flatpak") : exe, options);
+    if (flatpak) {
+        // The wrapper, if any, goes first; "run <app id>" follows the program name.
+        const qsizetype at = options.wrapper.size();
+        QStringList words = QStringList{command.program} + command.arguments;
+        words.insert(at + 1, QStringLiteral("run"));
+        words.insert(at + 2, manager.exe);
+        command.program = words.first();
+        command.arguments = words.mid(1);
+    }
+    return startSession(key, manager.name, command, workingDir, true);
+}
+
+QString GameRunner::launchProtonManager(const ModManager &manager, const QString &key)
+{
+    if (manager.shortcut == 0 || !manager.inSteam)
+        return tr("%1 isn't in Steam; locate it in Settings → Mod managers").arg(manager.name);
+    LibraryStore &store = m_library->store();
+    QStringList queued = store.snapshot().steamQueued.value(key);
+    const bool running = steamRunning();
+    // A new shortcut waits for Steam to close; until then Steam can't launch it.
+    if (running && queued.contains(SteamSync::kAddShortcut))
+        return tr("%1 isn't in Steam yet; restart Steam to add it").arg(manager.name);
+    queued.removeAll(SteamSync::kShortcutIcon);
+    // Changes to its launch options or Proton version decide which prefix it runs in.
+    if (running && !queued.isEmpty())
+        return tr("%1 has changes waiting for Steam; restart Steam to apply them").arg(manager.name);
+    if (const auto prefix = store.modManagerPrefix(manager.id); prefix && !QFileInfo(prefix->path).isDir()) {
+        const Game *game = m_library->game(prefix->gameId);
+        return tr("Run %1 once first, so Proton creates its prefix").arg(game ? game->title : prefix->gameId);
+    }
+    const QString applied = !queued.isEmpty() && !running ? store.applySteamQueue() : QString();
+    const SteamRef steam{SteamShortcuts::gameId(manager.shortcut), manager.shortcut, true};
+    if (const QString error = startSteamGame(key, steam); !error.isEmpty())
+        return error;
+    return applied;
+}
+
+QString GameRunner::forceCloseModManager(const QString &id)
+{
+    return forceClose(ModManagers::kKeyPrefix + id);
+}
+
 QString GameRunner::startSession(const QString &gameId, const QString &name, const LaunchCommand &command,
                                  const QString &workingDir, bool followSession)
 {
@@ -717,6 +854,8 @@ void GameRunner::onFinished(const QString &gameId, int exitCode, bool crashed)
             qCWarning(lcLaunch).noquote() << QStringLiteral("%1: %2").arg(session.emulatorName, line);
         qCWarning(lcLaunch).noquote() << "full output in" << session.logPath;
         emit message(tr("%1 closed right away; see the log").arg(session.emulatorName));
+    } else if (gameId.startsWith(ModManagers::kKeyPrefix)) {
+        // A manager keeps no play time, last played or history.
     } else if (seconds < m_settings.minSessionSeconds) {
         qCInfo(lcLaunch).noquote() << QStringLiteral("shorter than min_session_seconds (%1); not counted")
                                           .arg(m_settings.minSessionSeconds);

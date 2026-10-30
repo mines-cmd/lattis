@@ -187,9 +187,21 @@ public:
     Q_INVOKABLE QVariantMap addModManager(const QVariantMap &values);
     Q_INVOKABLE QString setModManagerValue(const QString &id, const QString &key, const QVariant &value)
     {
-        return m_store.setModManagerValues(id, {{key, value}});
+        return m_store.setModManagerValues(id, {{key, managerValue(key, value)}});
     }
-    Q_INVOKABLE QString removeModManager(const QString &id) { return m_store.removeModManager(id); }
+    // Several keys written together, one file change.
+    Q_INVOKABLE QString setModManagerValues(const QString &id, const QVariantMap &values);
+    Q_INVOKABLE QString gameTitle(const QString &id) const
+    {
+        const Game *g = game(id);
+        return g ? g->title : id;
+    }
+    // Steam, Proton and Linux games a manager can serve, by title.
+    Q_INVOKABLE QVariantList linkableGames() const;
+    // The Proton versions to choose from (`protonTools`, `protonDefault`).
+    Q_INVOKABLE QVariantMap modManagerChoices() const { return steamChoices(); }
+    Q_INVOKABLE QVariantMap modManagerUninstallChoices(const QString &id);
+    QVariantMap uninstallModManager(const QString &id, bool files, bool prefix, bool shortcut, bool permanent);
 
     QVariantList emulatorList() const { return m_emulatorList; }
     Q_INVOKABLE QString setEmulatorValue(const QString &id, const QString &key, const QVariant &value);
@@ -388,6 +400,8 @@ private:
     QString launchTip(const Game &game) const;
     QVariantList buildEmulatorList() const;
     QVariantList buildModManagers() const;
+    // QML lists arrive as QVariantList; the file's list keys take a QStringList.
+    static QVariant managerValue(const QString &key, const QVariant &value);
     QVariantList buildPlatformSettings() const;
 
     struct PlatformProblem

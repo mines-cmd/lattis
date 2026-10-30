@@ -16,6 +16,7 @@ class DetachedProcess;
 struct LaunchCommand;
 class Library;
 struct Game;
+struct ModManager;
 class QJSEngine;
 class QQmlEngine;
 
@@ -30,6 +31,7 @@ class GameRunner : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(QStringList running READ running NOTIFY runningChanged)
+    Q_PROPERTY(QStringList runningManagers READ runningManagers NOTIFY runningChanged)
     Q_PROPERTY(bool minimizeWhileRunning READ minimizeWhileRunning NOTIFY settingsChanged)
     Q_PROPERTY(int minSessionSeconds READ minSessionSeconds NOTIFY settingsChanged)
     Q_PROPERTY(QStringList problems READ problems NOTIFY settingsChanged)
@@ -62,6 +64,14 @@ public:
     Q_INVOKABLE QString forceClose(const QString &gameId);
     Q_INVOKABLE QVariantMap uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,
                                            const QString &action, bool permanent);
+    Q_INVOKABLE QVariantMap removeModManager(const QString &id, bool files, bool prefix, bool shortcut,
+                                             bool permanent);
+    Q_INVOKABLE QString launchModManager(const QString &id);
+    Q_INVOKABLE QString forceCloseModManager(const QString &id);
+    Q_INVOKABLE QString missingPrefixGame(const QString &managerId) const;
+    QStringList runningManagers() const;
+    // What a running id is called: a game's title or a manager's name.
+    QString runningTitle(const QString &id) const;
     Q_INVOKABLE QString missingEmulator(const QString &gameId) const;
     Q_INVOKABLE QString closeSteamAndApply();
     bool closingSteam() const { return m_steamClosing != nullptr; }
@@ -118,6 +128,9 @@ private:
     QString chooseEmulator(const QString &gameId, QString *emulatorId) const;
     QString findSaveFolder(const QString &gameId, bool ownFirst) const;
     QString launchProgram(const Game &game);
+    QString launchProtonManager(const ModManager &manager, const QString &key);
+    // The name of a manager of the game that is running, or empty.
+    QString runningManagerFor(const QString &gameId) const;
     QString startSession(const QString &gameId, const QString &name, const LaunchCommand &command,
                          const QString &workingDir, bool followSession);
     void onFinished(const QString &gameId, int exitCode, bool crashed);

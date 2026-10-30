@@ -25,9 +25,12 @@ SettingsMenu {
     readonly property var linked: game.linked ?? []
     readonly property var sameGameChoices: !multi && game.id && linked.length === 0
                                            ? Library.sameGameCandidates(game.id) : []
+    readonly property var managers: !multi && game.id ? Library.modManagersFor(game.id) : []
+    readonly property bool linkable: game.platform === "steam" || game.platform === "proton" || game.platform === "linux"
     property var tagStates: ({})
 
     signal chosen(string name)
+    signal managerChosen(string id)
     signal failed(string text)
     signal newTagRequested(var ids)
 
@@ -234,10 +237,36 @@ SettingsMenu {
         text: qsTr("Open game folder")
     }
     Entry {
+        id: saveFolderEntry
         actionName: "open_save_folder"
         iconPath: Icons.save2Line
         visible: !root.multi && GameRunner.saveFolder(root.game.id ?? "") !== ""
         text: qsTr("Open save folder")
+    }
+    Instantiator {
+        model: root.managers
+        delegate: SettingsMenuItem {
+            required property var modelData
+            iconPath: Icons.puzzle
+            text: qsTr("Open %1").arg(modelData.name)
+            keys: root.managers.length === 1 ? Actions.label(Actions.keys.open_mod_manager ?? []) : ""
+            onTriggered: Qt.callLater(() => root.managerChosen(modelData.id))
+        }
+        onObjectAdded: (index, object) => {
+            for (let i = 0; i < root.count; ++i) {
+                if (root.itemAt(i) === saveFolderEntry) {
+                    root.insertItem(i + 1 + index, object)
+                    break
+                }
+            }
+        }
+        onObjectRemoved: (index, object) => root.removeItem(object)
+    }
+    Entry {
+        actionName: "add_mod_manager"
+        iconPath: Icons.puzzle
+        visible: !root.multi && root.linkable
+        text: qsTr("Add a mod manager")
     }
     Entry {
         actionName: "play_history"

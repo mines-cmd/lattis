@@ -30,6 +30,7 @@ QtObject {
         save_folder: qsTr("Save folder"),
         settings: qsTr("Properties"),
         gallery: qsTr("Gallery"),
+        mod_manager: qsTr("Mod manager"),
         menu: qsTr("Menu")
     })
 
