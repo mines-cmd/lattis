@@ -93,7 +93,7 @@ MotionPopup {
             wrapMode: Text.WordWrap
             color: root.auth === "expired" ? Theme.controls.problemsText : Theme.gameEditor.labelColor
             text: root.auth === "expired" ? qsTr("The code ran out.")
-                  : qsTr("Scan with the Steam app on your phone, then approve the sign-in. Lattis never sees your password.")
+                  : qsTr("Scan with the Steam app on your phone, then approve the sign-in. Lattis never sees your password. Steam may mention a new device or location; that is this sign-in.")
         }
 
         RowLayout {

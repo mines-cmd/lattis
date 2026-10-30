@@ -8,7 +8,7 @@
 #include <QtConcurrent>
 
 namespace {
-constexpr int kPlatformMobileApp = 3;
+constexpr int kPlatformSteamClient = 1;
 constexpr int kOk = 1;
 // The QR session ran out: Steam answers Expired, then DuplicateRequest once it's forgotten.
 constexpr int kExpired = 27;
@@ -120,7 +120,7 @@ void SteamAuth::startSignIn()
     const int generation = m_generation;
     QJsonObject input;
     input.insert(QLatin1String("device_friendly_name"), QStringLiteral("Lattis"));
-    input.insert(QLatin1String("platform_type"), kPlatformMobileApp);
+    input.insert(QLatin1String("platform_type"), kPlatformSteamClient);
     post(QStringLiteral("BeginAuthSessionViaQR"), input, [this, generation](const Answer &answer) {
         if (generation != m_generation)
             return;
