@@ -156,6 +156,14 @@ MotionPopup {
                             Layout.fillWidth: true
                             Layout.rightMargin: Math.max(0, closeButton.width + Theme.achievements.viewerCloseGap - Theme.achievements.viewerPadding)
                             spacing: Theme.layout.spacing
+                            layer.enabled: Theme.achievements.viewerTextShadow.a > 0
+                            layer.effect: MultiEffect {
+                                shadowEnabled: true
+                                shadowColor: Theme.achievements.viewerTextShadow
+                                shadowBlur: Theme.achievements.viewerTextShadowBlur
+                                shadowHorizontalOffset: 0
+                                shadowVerticalOffset: Theme.achievements.viewerTextShadowOffset
+                            }
 
                             RowLayout {
                                 Layout.fillWidth: true
