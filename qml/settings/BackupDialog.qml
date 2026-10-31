@@ -237,27 +237,25 @@ MotionPopup {
 
                 Heading { visible: !root.library; text: qsTr("Emulator saves") }
                 Card {
+                    id: savesCard
                     visible: !root.library
+                    readonly property var shown: (root.plan.emulators ?? []).filter(
+                        e => !(e.skipped === "notInstalled" && e.saves.length === 0 && e.besideRoms === 0))
                     Hint {
-                        visible: (root.plan.emulators ?? []).length === 0
-                        text: qsTr("No platform lists an emulator, and no game picks one.")
+                        visible: savesCard.shown.length === 0
+                        text: qsTr("No platform lists an installed emulator, and no game picks one.")
                     }
                     Repeater {
-                        model: root.library ? [] : (root.plan.emulators ?? [])
+                        model: root.library ? [] : savesCard.shown
                         PartRow {
                             required property var modelData
                             readonly property bool nothing: modelData.saves.length === 0 && modelData.besideRoms === 0
                             name: modelData.name
                             skipped: nothing
-                            detail: modelData.skipped === "notInstalled" && nothing ? qsTr("Not installed")
-                                  : modelData.skipped === "noSaves" ? qsTr("Doesn't say where it keeps its saves")
+                            detail: modelData.skipped === "noSaves" ? qsTr("Doesn't say where it keeps its saves")
                                   : nothing && (root.plan.measured ?? false) ? qsTr("No saves yet")
                                   : root.size(modelData.savesBytes < 0 || modelData.besideBytes < 0 ? -1
                                               : modelData.savesBytes + modelData.besideBytes)
-                            Hint {
-                                visible: text !== ""
-                                text: modelData.describe !== qsTr("Not found") ? modelData.describe : ""
-                            }
                             Repeater {
                                 model: modelData.saves
                                 PathHint { required property string modelData; text: modelData }
