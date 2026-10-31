@@ -1,6 +1,6 @@
 # Your data folder
 
-Everything Lattis keeps lives in one folder, `~/.local/share/lattis/`. **Open** beside "Data folder" on Settings → General (or "Open the data folder" in the app menu) opens it. Copy it and you have a complete backup.
+Everything Lattis keeps lives in one folder, `~/.local/share/lattis/`. **Open** beside "Data folder" on Settings → General opens it. Copy it and you have a complete backup.
 
 | Path | What's in it |
 |---|---|

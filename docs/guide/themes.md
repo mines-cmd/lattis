@@ -11,7 +11,7 @@ Any colors go with any style. A **theme** is just a name for a pair of the two, 
 
 ## Picking colors, a style and a theme
 
-Pick on Settings → Appearance, in the app menu's **Theme**, **Colors** and **Style** submenus, or in the setup guide (which picks colors and a style). Lattis comes with these colors:
+Pick on Settings → Appearance, in the app menu's **Theme** submenu (a theme sets both; colors and style on their own are in Settings), or in the setup guide (which picks colors and a style). Lattis comes with these colors:
 
 - **Ember:** dark blue-grey slate, with an ember-orange accent from the logo. The colors a new library starts with.
 - **Moss:** Ember's dark slate with a moss-green accent.

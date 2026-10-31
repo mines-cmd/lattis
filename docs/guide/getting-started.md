@@ -39,7 +39,7 @@ The first time Lattis starts, a setup guide walks you through six short steps. E
 5. **Look.** Pick colors and a style. They apply right away. With many colors, the list scrolls and the styles stay in view below it.
 6. **Done.** Lattis brings your games in and looks them up. You can start using it while that runs.
 
-Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. To run the guide again, use **Setup guide** in the app menu or **Run setup guide** in Settings → General.
+Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. To run the guide again, use **Run setup guide** in Settings → General.
 
 ## The window
 
@@ -49,7 +49,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 
 Two menus hold most of what isn't on screen:
 
-- **The app menu**: click or right-click the logo, or press F10. Add game, play statistics and Settings, in the rail's order (so they stay reachable when you hide their rail buttons), theme, colors and style, fullscreen, hide the rail, backups, scanning ROM folders, looking up missing info, the setup guide, keyboard shortcuts, About and Quit.
+- **The app menu**: click or right-click the logo, or press F10. Add game, play statistics and Settings, in the rail's order (so they stay reachable when you hide their rail buttons), looking up missing info, scanning ROM folders, syncing your Steam library (when you're signed in), theme, fullscreen, hide the rail, backups, keyboard shortcuts, About and Quit.
 - **A game's menu**: right-click a game in the list, press the Menu key, or click ⋯ on its page (add that button in `[game_page] buttons` as `menu`). Launch, favorite, open its folder or its save folder, Properties, Hide, and Uninstall where it applies.
 
 Press F1 at any time for the list of keyboard shortcuts.

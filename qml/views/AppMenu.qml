@@ -16,22 +16,14 @@ SettingsMenu {
     BulkLookupModel { id: missing }
     onAboutToShow: missing.reload()
 
-    function openSubmenu(which) {
-        const submenu = which === "colors" ? colors : which === "style" ? styles : themes
+    function openSubmenu() {
         for (let i = 0; i < count; ++i) {
             const item = itemAt(i)
-            if (item?.subMenu === submenu) {
+            if (item?.subMenu === themes) {
                 currentIndex = i
-                submenu.popup(item, item.width, 0)
+                themes.popup(item, item.width, 0)
             }
         }
-    }
-
-    component PickItem: SettingsMenuItem {
-        required property string modelData
-        property string current
-        text: modelData
-        checked: modelData === current
     }
 
     component Entry: SettingsMenuItem {
@@ -86,6 +78,13 @@ SettingsMenu {
         enabled: !Library.scanning
         text: Library.scanning ? qsTr("Scanning") : qsTr("Scan ROM folders now")
     }
+    Entry {
+        actionName: "sync_steam"
+        iconPath: Icons.steamLine
+        visible: SteamLibrary.configured
+        enabled: !SteamLibrary.syncing
+        text: SteamLibrary.syncing ? qsTr("Syncing Steam library") : qsTr("Sync Steam library")
+    }
     SettingsMenuSeparator {}
     SettingsMenu {
         id: themes
@@ -96,8 +95,10 @@ SettingsMenu {
 
         Instantiator {
             model: Theme.availableThemes
-            delegate: PickItem {
-                current: Theme.activeTheme
+            delegate: SettingsMenuItem {
+                required property string modelData
+                text: modelData
+                checked: modelData === Theme.activeTheme
                 onTriggered: Theme.setTheme(modelData)
             }
             onObjectAdded: (index, object) => themes.insertItem(index, object)
@@ -107,40 +108,6 @@ SettingsMenu {
         SettingsMenuItem {
             text: qsTr("Edit theme")
             onTriggered: Qt.callLater(root.editTheme)
-        }
-    }
-    SettingsMenu {
-        id: colors
-        pops: true
-        title: qsTr("Colors")
-        iconPath: Icons.paletteLine
-        checkColumn: true
-
-        Instantiator {
-            model: Theme.availableColors
-            delegate: PickItem {
-                current: Theme.activeColors
-                onTriggered: Theme.setColors(modelData)
-            }
-            onObjectAdded: (index, object) => colors.insertItem(index, object)
-            onObjectRemoved: (index, object) => colors.removeItem(object)
-        }
-    }
-    SettingsMenu {
-        id: styles
-        pops: true
-        title: qsTr("Style")
-        iconPath: Icons.layoutMasonryLine
-        checkColumn: true
-
-        Instantiator {
-            model: Theme.availableStyles
-            delegate: PickItem {
-                current: Theme.activeStyle
-                onTriggered: Theme.setStyle(modelData)
-            }
-            onObjectAdded: (index, object) => styles.insertItem(index, object)
-            onObjectRemoved: (index, object) => styles.removeItem(object)
         }
     }
     Entry {
@@ -171,19 +138,9 @@ SettingsMenu {
     }
     SettingsMenuSeparator {}
     Entry {
-        actionName: "setup_guide"
-        iconPath: Icons.signpostLine
-        text: qsTr("Setup guide")
-    }
-    Entry {
         actionName: "show_shortcuts"
         iconPath: Icons.commandLine
         text: qsTr("Keyboard shortcuts")
-    }
-    Entry {
-        actionName: "open_data_folder"
-        iconPath: Icons.folderOpenLine
-        text: qsTr("Open data folder")
     }
     Entry {
         actionName: "about"

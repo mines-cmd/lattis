@@ -102,6 +102,21 @@ ApplicationWindow {
         openPlayHistory(gameList.currentGame)
     }
 
+    property bool steamSyncAsked: false
+    function steamSyncResult() {
+        return SteamLibrary.message !== "" ? SteamLibrary.message
+            : SteamLibrary.statusLine !== "" ? SteamLibrary.statusLine : qsTr("Steam library synced")
+    }
+    Connections {
+        target: SteamLibrary
+        function onChanged() {
+            if (window.steamSyncAsked && !SteamLibrary.syncing) {
+                window.steamSyncAsked = false
+                toast.show(window.steamSyncResult())
+            }
+        }
+    }
+
     property bool statsOpen: false
     // The views under the page stay drawn while it fades in and out.
     readonly property bool statsCovering: statsOpen && statsPage.opacity === 1
@@ -615,6 +630,13 @@ ApplicationWindow {
         case "scan_roms":
             if (!Library.scanning)
                 Library.scanNow()
+            break
+        case "sync_steam":
+            if (SteamLibrary.configured && !SteamLibrary.syncing) {
+                SteamLibrary.syncNow()
+                steamSyncAsked = SteamLibrary.syncing
+                toast.show(steamSyncAsked ? qsTr("Syncing Steam library…") : steamSyncResult())
+            }
             break
         case "apply_steam_changes":
             if (Library.steamWaiting.length > 0 && !GameRunner.closingSteam) {

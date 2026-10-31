@@ -198,7 +198,7 @@ void ActionsTest::namesAndTrigger()
     QVERIFY(!main.contains("settings_search"));
     QVERIFY(actions.names("settings").contains("quit"));
     // The app menu's actions: all unbound by default, the data folder everywhere.
-    for (const char *name : {"scan_roms", "apply_steam_changes", "about"}) {
+    for (const char *name : {"scan_roms", "sync_steam", "apply_steam_changes", "about"}) {
         QVERIFY2(main.contains(name), name);
         QVERIFY2(actions.keysOf(name).isEmpty(), name);
     }

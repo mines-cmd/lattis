@@ -315,7 +315,7 @@ The General, Game page, Library, Steam, Mod managers, Platforms, Emulators, Meta
 | `views/AboutDialog.qml` | About dialog (logo, version, credits); lazy |
 | `views/UpdateDialog.qml` | Update Lattis: notes, progress, restart; lazy |
 | `views/WhatsNewDialog.qml` | Release notes after an in-app update; lazy |
-| `views/AppMenu.qml` | Rail logo menu (app-wide actions, theme picker); lazy |
+| `views/AppMenu.qml` | Rail logo menu (app-wide actions, theme picker; Sync Steam library shows only when `SteamLibrary.configured`); lazy |
 | `views/PlatformMenu.qml` | Rail platform button right-click menu (Edit platform, Hide from the rail); lazy |
 | `views/RailMenu.qml` | The rail's empty-space right-click menu: which platforms and bottom buttons it shows; lazy |
 | `views/GamePageMenu.qml` | The game page's right-click menu for its chips, buttons or info rows; lazy |

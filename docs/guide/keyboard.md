@@ -63,7 +63,7 @@ Open save folder, Open mod manager (with several managers it opens a menu of the
 | Ctrl+Shift+L | Look up missing info |
 | F10 | The app menu |
 
-Scan ROM folders now, Close Steam and apply, Setup guide and About have no keys at first.
+Scan ROM folders now, Sync Steam library, Close Steam and apply, Setup guide and About have no keys at first.
 
 ## Everywhere
 
