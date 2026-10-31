@@ -14,6 +14,7 @@ MotionPopup {
     property int filter: 0
     property var recent: ({})
     readonly property int unlocked: items.filter(a => a.unlocked).length
+    readonly property bool complete: items.length > 0 && unlocked === items.length
     readonly property string needle: query.trim().toLowerCase()
     readonly property int concealedCount: items.filter(concealed).length
     readonly property var matches: items
@@ -111,6 +112,8 @@ MotionPopup {
                     width: parent.width
                     height: list.y + Theme.achievements.viewerPadding + list.height * 0.3
                     flat: true
+                    strength: Theme.achievements.viewerBackdropOpacity
+                    saturation: Theme.achievements.viewerBackdropSaturation
                     background: Theme.achievements.viewerBackground
                     game: root.game
                 }
@@ -195,6 +198,67 @@ MotionPopup {
                             radius: Theme.achievements.viewerSummaryRadius
                             fill: Theme.achievements.viewerSummaryBackground
 
+                            Item {
+                                anchors.fill: parent
+                                visible: Theme.achievements.wall && root.complete
+                                layer.enabled: visible
+                                layer.effect: MultiEffect {
+                                    maskEnabled: true
+                                    maskSource: wallMask
+                                }
+
+                            Loader {
+                                anchors.fill: parent
+                                opacity: Theme.achievements.wallOpacity
+                                active: parent.visible
+                                sourceComponent: IconWall {
+                                    active: root.visible
+                                    moving: Theme.achievements.wallMotion
+                                    concurrency: 3
+                                    retries: 5
+                                    tileWidth: Theme.achievements.wallIconSize
+                                    tileHeight: Theme.achievements.wallIconSize
+                                    gap: Theme.achievements.wallIconGap
+                                    tileRadius: Theme.achievements.viewerIconRadius
+                                    rotateX: 0
+                                    rotateY: 0
+                                    rotateZ: -Theme.achievements.wallTilt
+                                    speed: Theme.achievements.wallSpeed
+                                    decodeSize: Qt.size(64, 64)
+                                    tint: Theme.achievements.wallTint
+                                    dim: Theme.achievements.wallDim
+                                    vignette: Theme.achievements.wallVignette
+                                    sources: root.items
+                                        .filter(a => a.unlocked && a.icon)
+                                        .sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
+                                        .slice(0, Theme.achievements.wallIconCount)
+                                        .map(a => a.icon)
+                                }
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                gradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0; color: Theme.achievements.wallGradientLeft }
+                                    GradientStop { position: 1; color: Theme.achievements.wallGradientRight }
+                                }
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Theme.achievements.wallGradientTop }
+                                    GradientStop { position: 1; color: Theme.achievements.wallGradientBottom }
+                                }
+                            }
+                            }
+                            Rectangle {
+                                id: wallMask
+                                anchors.fill: parent
+                                radius: parent.radius
+                                visible: false
+                                layer.enabled: true
+                            }
+
                             RowLayout {
                                 id: summary
                                 anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter
@@ -202,7 +266,7 @@ MotionPopup {
                                 spacing: Theme.layout.spacing
 
                                 Icon {
-                                    visible: root.items.length > 0 && root.unlocked === root.items.length
+                                    visible: root.complete
                                     path: Icons.medal
                                     size: Theme.achievements.viewerTrophySize
                                     color: Theme.achievements.viewerCompleteColor
@@ -240,7 +304,7 @@ MotionPopup {
                                             width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
                                             height: parent.height
                                             radius: parent.radius
-                                            color: Theme.achievements.viewerBarFill
+                                            color: root.complete ? Theme.achievements.viewerCompleteBarFill : Theme.achievements.viewerBarFill
                                         }
                                     }
                                 }

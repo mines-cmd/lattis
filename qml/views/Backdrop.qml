@@ -9,7 +9,9 @@ Item {
     property int current: 0
 
     property color background: Theme.palette.background
-    readonly property real dim: 1 - Theme.backdrop.opacity
+    property real strength: Theme.backdrop.opacity
+    property real saturation: Theme.backdrop.saturation
+    readonly property real dim: 1 - strength
 
     clip: true
 
@@ -91,7 +93,7 @@ Item {
                 blurEnabled: Theme.backdrop.blur > 0
                 blur: Theme.backdrop.blur
                 blurMax: Theme.backdrop.blurMax
-                saturation: Theme.backdrop.saturation
+                saturation: root.saturation
             }
         }
     }
