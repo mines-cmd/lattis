@@ -68,6 +68,8 @@ A Steam game's page shows its achievements in a panel below the info panel: how 
 
 Click the panel or **Show all** to open the full list: your progress, a search box, an All / Unlocked / Locked filter, and the achievements in **Unlocked**, **Locked** and **Hidden** sections with their icons, descriptions and unlock dates. Esc, the close button or a click outside closes it.
 
+Once every achievement is unlocked, the progress card gets a Steam-style medal and blue bar, and a faint, slowly scrolling wall of the game's achievement icons behind it, tinted blue to purple. **Customize** → Achievements → *Complete wall* sets its icon size and gap, tilt, speed, opacity and tint colors, and turns it (or its motion) off. Reduce motion stills it.
+
 When the lookup works, each achievement also shows what share of all players unlocked it (in the list and in the tooltip), highlighted when it is rare, and an unlocked rare achievement's icon glows gold, as in Steam. It needs no Web API key, only a connection; without one the percentages and glows are left out. The highlight color and the rarity threshold (`rare_percent`, 10 by default) are in the theme's `[achievements]` settings, and so is the glow (`rare_glow_*`: color, opacity, size and softness, or off).
 
 - **Where it comes from:** the files Steam keeps on this computer, for the Steam user Lattis found. No API key or public profile is needed, and nothing is changed. If nothing shows for a game, open the game in Steam once so it fetches the list, then select it again here.
