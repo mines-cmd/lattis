@@ -195,32 +195,53 @@ MotionPopup {
                             radius: Theme.achievements.viewerSummaryRadius
                             fill: Theme.achievements.viewerSummaryBackground
 
-                            ColumnLayout {
+                            RowLayout {
                                 id: summary
                                 anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter
                                           margins: Theme.achievements.viewerSummaryPadding }
-                                spacing: Theme.layout.spacing * 2
+                                spacing: Theme.layout.spacing
 
-                                Label {
-                                    readonly property bool complete: root.items.length > 0 && root.unlocked === root.items.length
-                                    textFormat: Text.StyledText
-                                    text: qsTr("%1 / %2 achievements unlocked %3").arg(root.unlocked).arg(root.items.length)
-                                              .arg("<font color=\"" + Theme.achievements.viewerPercentColor + "\">"
-                                                   + qsTr("(%1%)").arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
-                                                   + "</font>")
-                                    color: complete ? Theme.achievements.viewerCompleteColor : Theme.achievements.viewerProgressColor
+                                Icon {
+                                    visible: root.items.length > 0 && root.unlocked === root.items.length
+                                    path: Icons.medal
+                                    size: Theme.achievements.viewerTrophySize
+                                    color: Theme.achievements.viewerCompleteColor
                                 }
-                                Rectangle {
+                                ColumnLayout {
                                     Layout.fillWidth: true
-                                    implicitHeight: Theme.achievements.viewerBarHeight
-                                    radius: height / 2
-                                    color: Theme.achievements.viewerBarColor
+                                    spacing: Theme.layout.spacing * 2
 
+                                    RowLayout {
+                                        Layout.fillWidth: true
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            textFormat: Text.StyledText
+                                            text: qsTr("%1 / %2 achievements unlocked %3").arg(root.unlocked).arg(root.items.length)
+                                                      .arg("<font color=\"" + Theme.achievements.viewerPercentColor + "\">"
+                                                           + qsTr("(%1%)").arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
+                                                           + "</font>")
+                                            color: Theme.achievements.viewerProgressColor
+                                        }
+                                        Label {
+                                            readonly property int count: root.items.filter(a => a.unlocked && (a.percent ?? 100) < Theme.achievements.rarePercent).length
+                                            visible: count > 0
+                                            text: qsTr("%1 rare").arg(count)
+                                            color: Theme.achievements.viewerRareColor
+                                        }
+                                    }
                                     Rectangle {
-                                        width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
-                                        height: parent.height
-                                        radius: parent.radius
-                                        color: Theme.achievements.viewerBarFill
+                                        Layout.fillWidth: true
+                                        implicitHeight: Theme.achievements.viewerBarHeight
+                                        radius: height / 2
+                                        color: Theme.achievements.viewerBarColor
+
+                                        Rectangle {
+                                            width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
+                                            height: parent.height
+                                            radius: parent.radius
+                                            color: Theme.achievements.viewerBarFill
+                                        }
                                     }
                                 }
                             }

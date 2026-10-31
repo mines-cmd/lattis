@@ -104,22 +104,35 @@ Surface {
             }
             Label {
                 text: qsTr("(%1%)").arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
-                color: Theme.achievements.percentColor
+                color: root.complete ? Qt.alpha(Theme.achievements.completeColor, Theme.achievements.completePercentOpacity)
+                                     : Theme.achievements.percentColor
+                Behavior on color { enabled: Motion.fades; MotionColor {} }
             }
         }
 
-        Rectangle {
+        RowLayout {
             Layout.fillWidth: true
-            implicitHeight: Theme.achievements.barHeight
-            radius: height / 2
-            color: Theme.achievements.barColor
+            spacing: Theme.layout.spacing
 
+            Icon {
+                visible: root.complete
+                path: Icons.medal
+                size: Theme.achievements.trophySize
+                color: Theme.achievements.completeColor
+            }
             Rectangle {
-                width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
-                height: parent.height
-                radius: parent.radius
-                color: Theme.achievements.barFill
-                Behavior on width { enabled: Motion.on; MotionNumber {} }
+                Layout.fillWidth: true
+                implicitHeight: Theme.achievements.barHeight
+                radius: height / 2
+                color: Theme.achievements.barColor
+
+                Rectangle {
+                    width: root.items.length > 0 ? parent.width * root.unlocked / root.items.length : 0
+                    height: parent.height
+                    radius: parent.radius
+                    color: Theme.achievements.barFill
+                    Behavior on width { enabled: Motion.on; MotionNumber {} }
+                }
             }
         }
 
