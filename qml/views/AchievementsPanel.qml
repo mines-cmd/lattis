@@ -37,19 +37,19 @@ Surface {
             items = []
     }
 
-    function rarity(a) {
-        return a.percent === undefined ? "" : qsTr("%1% of players").arg(a.percent < 10 ? a.percent.toFixed(1) : Math.round(a.percent))
+    // The tile under the pointer; the tooltip keeps the last one's content while it fades out.
+    property Item tipTile: null
+    onTipTileChanged: {
+        if (!tipTile)
+            return
+        tip.parent = tipTile
+        tip.item = tipTile.modelData
+        tip.icon = tipTile.source
     }
 
-    function tip(a) {
-        if (a.unlocked)
-            return [a.name, a.description,
-                    qsTr("Unlocked %1").arg(a.time.toLocaleDateString(Qt.locale(), General.shortDateFormat)), rarity(a)]
-                .filter(line => line !== "").join("\n")
-        if (a.hidden)
-            return qsTr("Hidden achievement") + "\n"
-                   + qsTr("Details for this achievement will be revealed once you've unlocked it") + "\n" + qsTr("Locked")
-        return [a.name, a.description, qsTr("Locked"), rarity(a)].filter(line => line !== "").join("\n")
+    AchievementTip {
+        id: tip
+        visible: root.tipTile !== null
     }
 
     function openViewer() {
@@ -206,11 +206,13 @@ Surface {
                     opacity: modelData?.unlocked ? 1 : Theme.achievements.lockedOpacity
 
                     HoverHandler {
-                        id: hover
+                        onHoveredChanged: {
+                            if (hovered)
+                                root.tipTile = tile
+                            else if (root.tipTile === tile)
+                                root.tipTile = null
+                        }
                     }
-                    ToolTip.visible: hover.hovered
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: modelData ? root.tip(modelData) : ""
                 }
             }
         }

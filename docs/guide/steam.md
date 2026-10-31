@@ -64,11 +64,11 @@ A Steam game's page (and a Proton game's, once it's added to Steam) shows your o
 
 ## Achievements
 
-A Steam game's page shows its achievements in a panel below the info panel: how many are unlocked, a progress bar and a grid of icons (colored when unlocked, gray when locked). Hover an icon to see its name, description and when you unlocked it. A hidden achievement you haven't unlocked shows a **?** and no details, as in Steam.
+A Steam game's page shows its achievements in a panel below the info panel: how many are unlocked, a progress bar and a grid of icons (colored when unlocked, gray when locked). Hover an icon for a Steam-style tooltip: the icon, name and description, then when you unlocked it and how many players have it. A hidden achievement you haven't unlocked shows a **?** and no details, as in Steam.
 
 Click the panel or **Show all** to open the full list: your progress, a search box, an All / Unlocked / Locked filter, and the achievements in **Unlocked**, **Locked** and **Hidden** sections with their icons, descriptions and unlock dates. Esc, the close button or a click outside closes it.
 
-When the lookup works, each achievement also shows what share of all players unlocked it (in the list and in the icon's tooltip), highlighted when it is rare. It needs no Web API key, only a connection; without one the percentages are left out. The highlight color and the rarity threshold (`rare_percent`, 10 by default) are in the theme's `[achievements]` settings.
+When the lookup works, each achievement also shows what share of all players unlocked it (in the list and in the tooltip), highlighted when it is rare. It needs no Web API key, only a connection; without one the percentages are left out. The highlight color and the rarity threshold (`rare_percent`, 10 by default) are in the theme's `[achievements]` settings.
 
 - **Where it comes from:** the files Steam keeps on this computer, for the Steam user Lattis found. No API key or public profile is needed, and nothing is changed. If nothing shows for a game, open the game in Steam once so it fetches the list, then select it again here.
 - **The only download** is the icons, from Steam's image servers, kept on disk afterwards. Offline, a plain square stands in for an icon not saved yet.
