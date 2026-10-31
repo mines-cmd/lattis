@@ -564,6 +564,7 @@ Item {
     Connections {
         target: mediaViewer.item
         function onMessage(text) { root.message(text) }
+        function onClipGone() { textColumn.mediaRow.reload() }
     }
     function showMedia(item, list) {
         mediaViewer.active = true

@@ -171,6 +171,7 @@ public:
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);
     Q_INVOKABLE bool showClipFolder(const QString &folder);
+    Q_INVOKABLE bool clipExists(const QString &videoDir) const;
     Q_INVOKABLE bool showSteamMediaFolder(const QString &id);
     Q_INVOKABLE void monthStats(int year, int month);
     Q_INVOKABLE void yearStats(int year);

@@ -54,6 +54,7 @@ MotionPopup {
 
     signal message(string text)
     signal gameRequested(string id)
+    signal clipGone()
 
     function show(item, items) {
         list = items
@@ -279,6 +280,8 @@ MotionPopup {
                 return
             if (failure !== "") {
                 root.error = failure
+                if (!Library.clipExists(root.current.videoDir ?? ""))
+                    root.clipGone()
                 return
             }
             root.file = path

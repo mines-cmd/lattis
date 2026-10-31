@@ -2233,6 +2233,12 @@ void Library::discardClip(const QString &path)
         QFile::remove(path);
 }
 
+bool Library::clipExists(const QString &videoDir) const
+{
+    return QFileInfo::exists(videoDir + QStringLiteral("/session.mpd"))
+           && !QDir(videoDir).entryList({QStringLiteral("chunk-stream0-*.m4s")}, QDir::Files).isEmpty();
+}
+
 bool Library::showClipFolder(const QString &folder)
 {
     return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
