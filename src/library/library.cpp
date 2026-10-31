@@ -2186,9 +2186,26 @@ void Library::achievements(const QString &id)
         return;
     }
     auto *watcher = new QFutureWatcher<QVariantList>(this);
-    connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
-        emit achievementsReady(id, watcher->result());
+    connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id, appId] {
+        const QVariantList items = watcher->result();
+        emit achievementsReady(id, items);
         watcher->deleteLater();
+        if (items.isEmpty())
+            return;
+        if (!m_rarityFetcher)
+            return;
+        m_rarityFetcher(appId, this, [this, id, items](const QHash<QString, double> &percents) {
+            if (percents.isEmpty())
+                return;
+            QVariantList merged;
+            for (const QVariant &item : items) {
+                QVariantMap m = item.toMap();
+                if (const auto it = percents.constFind(m.value(QStringLiteral("apiName")).toString()); it != percents.constEnd())
+                    m.insert(QStringLiteral("percent"), *it);
+                merged.append(m);
+            }
+            emit achievementsReady(id, merged);
+        });
     });
     watcher->setFuture(QtConcurrent::run([install, appId] {
         const QString language = SteamAchievements::steamLanguage(install, QDir::homePath());

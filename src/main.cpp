@@ -147,6 +147,16 @@ int main(int argc, char *argv[])
                              + QStringLiteral(".json"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
     library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir()));
+    library.setRarityFetcher([](qint64 appId, QObject *context, auto done) {
+        MetadataHttp *http = MetadataClient::instance()->http();
+        if (!http || http->usesFixtures())
+            return;
+        const SteamWebApi::Request request = SteamWebApi::achievementPercentagesRequest(appId);
+        http->steamWeb(request.path, request.query, context, [done = std::move(done)](const MetadataReply &reply) {
+            if (reply.ok())
+                done(SteamWebApi::parseAchievementPercentages(reply.json));
+        });
+    });
     {
         SteamLibrarySync::Setup web;
         web.dataDir = dataDir;

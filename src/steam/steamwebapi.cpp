@@ -117,6 +117,27 @@ Request clientAppsRequest(const QString &accessToken)
     return {QStringLiteral("/IClientCommService/GetClientAppList/v1/"), query};
 }
 
+Request achievementPercentagesRequest(qint64 appId)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("gameid"), QString::number(appId));
+    return {QStringLiteral("/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/"), query};
+}
+
+QHash<QString, double> parseAchievementPercentages(const QJsonDocument &json)
+{
+    QHash<QString, double> out;
+    const QJsonArray list = json.object().value(QStringLiteral("achievementpercentages")).toObject()
+                                .value(QStringLiteral("achievements")).toArray();
+    for (const QJsonValue &v : list) {
+        const QJsonObject o = v.toObject();
+        const QString name = o.value(QStringLiteral("name")).toString();
+        if (!name.isEmpty())
+            out.insert(name, o.value(QStringLiteral("percent")).toVariant().toDouble());
+    }
+    return out;
+}
+
 Request itemsRequest(const QList<qint64> &appIds)
 {
     const QJsonObject input{

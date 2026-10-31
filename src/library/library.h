@@ -168,6 +168,11 @@ public:
     Q_INVOKABLE void allMedia();
     Q_INVOKABLE QVariantMap mediaGames() const;
     Q_INVOKABLE void achievements(const QString &id);
+    // Looks up how many percent of all players unlocked each achievement of an app, by API name; never called back
+    // when the lookup fails.
+    using RarityFetcher = std::function<void(qint64 appId, QObject *context,
+                                             std::function<void(const QHash<QString, double> &)> done)>;
+    void setRarityFetcher(RarityFetcher fetcher) { m_rarityFetcher = std::move(fetcher); }
     Q_INVOKABLE void prepareClip(const QString &token, const QString &videoDir, const QString &ffmpeg);
     Q_INVOKABLE void discardClip(const QString &path);
     Q_INVOKABLE bool showClipFolder(const QString &folder);
@@ -349,6 +354,7 @@ signals:
     void undoExpired(quint64 token);
 
 private:
+    RarityFetcher m_rarityFetcher;
     void requestVideoThumbnails(const QVariantList &items);
     static QString gameFileOf(const QString &id);
     QString editGames(const QStringList &ids, const QString &text, const std::function<QString(const QString &)> &change);

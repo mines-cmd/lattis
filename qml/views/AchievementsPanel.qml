@@ -37,15 +37,19 @@ Surface {
             items = []
     }
 
+    function rarity(a) {
+        return a.percent === undefined ? "" : qsTr("%1% of players").arg(a.percent < 10 ? a.percent.toFixed(1) : Math.round(a.percent))
+    }
+
     function tip(a) {
         if (a.unlocked)
             return [a.name, a.description,
-                    qsTr("Unlocked %1").arg(a.time.toLocaleDateString(Qt.locale(), General.shortDateFormat))]
+                    qsTr("Unlocked %1").arg(a.time.toLocaleDateString(Qt.locale(), General.shortDateFormat)), rarity(a)]
                 .filter(line => line !== "").join("\n")
         if (a.hidden)
             return qsTr("Hidden achievement") + "\n"
                    + qsTr("Details for this achievement will be revealed once you've unlocked it") + "\n" + qsTr("Locked")
-        return [a.name, a.description, qsTr("Locked")].filter(line => line !== "").join("\n")
+        return [a.name, a.description, qsTr("Locked"), rarity(a)].filter(line => line !== "").join("\n")
     }
 
     function openViewer() {
@@ -97,6 +101,10 @@ Surface {
                 text: qsTr("%1 / %2").arg(root.unlocked).arg(root.items.length)
                 color: root.complete ? Theme.achievements.completeColor : Theme.achievements.countColor
                 Behavior on color { enabled: Motion.fades; MotionColor {} }
+            }
+            Label {
+                text: qsTr("(%1%)").arg(root.items.length > 0 ? Math.round(100 * root.unlocked / root.items.length) : 0)
+                color: Theme.achievements.percentColor
             }
         }
 

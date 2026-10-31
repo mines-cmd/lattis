@@ -358,14 +358,28 @@ MotionPopup {
                                 color: Theme.achievements.viewerDescriptionColor
                             }
                         }
-                        Label {
+                        ColumnLayout {
                             id: stamp
                             anchors { right: parent.right; verticalCenter: parent.verticalCenter
                                       rightMargin: Theme.layout.spacing * 2 }
-                            text: row.modelData.unlocked
-                                  ? qsTr("Unlocked %1").arg(row.modelData.time.toLocaleString(Qt.locale(), General.shortDateFormat + ", HH:mm"))
-                                  : ""
-                            color: Theme.achievements.viewerDateColor
+                            spacing: 0
+
+                            Label {
+                                Layout.alignment: Qt.AlignRight
+                                visible: text !== ""
+                                text: row.modelData.unlocked
+                                      ? qsTr("Unlocked %1").arg(row.modelData.time.toLocaleString(Qt.locale(), General.shortDateFormat + ", HH:mm"))
+                                      : ""
+                                color: Theme.achievements.viewerDateColor
+                            }
+                            Label {
+                                readonly property real percent: row.modelData.percent ?? -1
+                                Layout.alignment: Qt.AlignRight
+                                visible: !row.summary && percent >= 0
+                                text: qsTr("%1% of players").arg(percent < 10 ? percent.toFixed(1) : Math.round(percent))
+                                color: percent < Theme.achievements.rarePercent ? Theme.achievements.viewerRareColor
+                                                                                : Theme.achievements.viewerRarityColor
+                            }
                         }
                     }
                 }

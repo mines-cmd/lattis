@@ -78,6 +78,8 @@ Request clientAppsRequest(const QString &accessToken);
 // `appIds` is at most itemsBatch() long.
 Request itemsRequest(const QList<qint64> &appIds);
 constexpr int itemsBatch() { return 100; }
+// Needs no key.
+Request achievementPercentagesRequest(qint64 appId);
 
 // An answer with no games (`{"response":{}}`) is ok with no items: it can't be told from a private profile.
 Parsed<OwnedGame> parseOwnedGames(const QJsonDocument &json);
@@ -86,6 +88,8 @@ QStringList parseFamilyMembers(const QJsonDocument &json);
 QHash<QString, QString> parseUserNames(const QJsonDocument &json);
 Parsed<SharedApp> parseSharedApps(const QJsonDocument &json);
 QHash<qint64, qint64> parseClientApps(const QJsonDocument &json);
+// The share of all players (0–100) that unlocked each achievement, by API name.
+QHash<QString, double> parseAchievementPercentages(const QJsonDocument &json);
 // The store's type of each requested app; one the answer doesn't show is kTypeNoStoreData.
 QHash<qint64, int> parseItemTypes(const QJsonDocument &json, const QList<qint64> &requested);
 
