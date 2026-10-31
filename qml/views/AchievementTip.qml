@@ -70,6 +70,10 @@ ToolTip {
                     iconWhenEmpty: !root.concealed
                     source: root.concealed ? "" : root.icon
 
+                    RareGlow {
+                        anchors.fill: parent
+                        active: (root.item?.unlocked ?? false) && root.percent >= 0 && root.percent < Theme.achievements.rarePercent
+                    }
                     Label {
                         visible: root.concealed
                         anchors.centerIn: parent

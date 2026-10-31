@@ -350,6 +350,12 @@ MotionPopup {
                             }
                             opacity: row.modelData.unlocked ? 1 : Theme.achievements.viewerLockedOpacity
 
+                            RareGlow {
+                                anchors.fill: parent
+                                active: !row.summary && row.modelData.unlocked
+                                        && (row.modelData.percent ?? 100) < Theme.achievements.rarePercent
+                            }
+
                             Label {
                                 visible: row.summary
                                 anchors.centerIn: parent

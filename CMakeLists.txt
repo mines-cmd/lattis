@@ -78,6 +78,7 @@ qt_add_qml_module(lattis
         qml/components/AppLogo.qml
         qml/components/ArtPlaceholder.qml
         qml/components/FadeImage.qml
+        qml/components/RareGlow.qml
         qml/components/GameIcon.qml
         qml/components/CollapseHeading.qml
         qml/components/Icon.qml

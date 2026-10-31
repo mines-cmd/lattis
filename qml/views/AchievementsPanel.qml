@@ -218,6 +218,11 @@ Surface {
                     }
                     opacity: modelData?.unlocked ? 1 : Theme.achievements.lockedOpacity
 
+                    RareGlow {
+                        anchors.fill: parent
+                        active: (modelData?.unlocked ?? false) && (modelData.percent ?? 100) < Theme.achievements.rarePercent
+                    }
+
                     HoverHandler {
                         onHoveredChanged: {
                             if (hovered)
