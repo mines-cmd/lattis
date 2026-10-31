@@ -14,6 +14,10 @@ EMPTY_LIBRARY = "expect-not Skip setup\nexpect-not You're all set\nexpect No gam
 NO_GUIDE_AFTER = "expect No games yet\nexpect-not Skip setup\nexpect-not Set up a new library\n"
 
 
+def guide_on_f7(dirs):
+    dirs.write("settings.toml", "[shortcuts]\nsetup_guide = \"F7\"\n")
+
+
 def empty(dirs):
     pass
 
@@ -66,21 +70,21 @@ SCENARIOS = [
              empty),
     Scenario("a guide left open without finishing comes back on the next start",
              [(WELCOME + "click Next\n" + STEAM, None), (WELCOME, None)], empty),
-    Scenario("the app menu reopens the guide as Close, not Skip setup",
-             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F10\nclick Setup guide\n"
+    Scenario("a shortcut reopens the guide as Close, not Skip setup",
+             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F7\n"
                + "expect Close\nexpect-not Skip setup\nexpect Set up a new library\nclick Close\n"
                + "expect-not Set up a new library\n", None)],
-             empty),
+             guide_on_f7),
     Scenario("Escape closes a reopened guide but not the first-start guide",
              [(WELCOME + "key Escape\n" + WELCOME + "click Skip setup\n" + EMPTY_LIBRARY
-               + "key F10\nclick Setup guide\nexpect Set up a new library\nwait 600\nkey Escape\n"
+               + "key F7\nexpect Set up a new library\nwait 600\nkey Escape\n"
                + "expect-not Set up a new library\n", None)],
-             empty),
+             guide_on_f7),
     Scenario("a reopened guide can be walked through to the end",
-             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F10\nclick Setup guide\n"
+             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F7\n"
                + "click Next\n" + STEAM + "click Next\n" + EMULATORS + "click Next\n" + GAME_INFO
                + "click Next\n" + LOOK + "click Finish\n" + DONE + "click Start\n" + EMPTY_LIBRARY, None)],
-             empty),
+             guide_on_f7),
 ]
 
 sys.exit(run_scenarios(SCENARIOS))
