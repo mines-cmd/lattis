@@ -247,7 +247,7 @@ constexpr Setting kSettings[] = {
     color("controls", "problems_background", "#3a2410", "Problems panel background"),
     color("controls", "problems_text", "#f2c14e", "Problems panel text"),
 
-    integer("menu", "dialog_padding", "16", 0, 100, "Space inside the small dialogs (New theme, Add platform, Find from one folder)"),
+    integer("menu", "dialog_padding", "12", 0, 100, "Space inside the small dialogs (New theme, Add platform, Find from one folder)"),
     integer("menu", "item_height", "30", 16, 100, "Height of each entry in a dropdown list"),
     integer("menu", "item_radius", "@radius.tiny", 0, 100, "Corner radius of the highlight on a menu entry (about the panel radius minus its padding, so the corners line up)"),
     integer("menu", "padding", "4", 0, 50, "Space between a menu's edge and its entries"),
@@ -1143,7 +1143,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "install_width", "720", 400, 2000, "Width of the dialog that installs a game's emulator, at most the window's"),
     real("game_editor", "max_height", "0.95", 0.3, 1, "Tallest the dialog gets, as a share of the window's height; "
          "taller forms scroll"),
-    integer("game_editor", "padding", "24", 0, 100, "Space between the dialog's edge and its content"),
+    integer("game_editor", "padding", "12", 0, 100, "Space between the dialog's edge and its content"),
     integer("game_editor", "radius", "@radius.large", 0, 100, "Corner radius"),
     color("game_editor", "background", "@settings_window.background", "Background, behind the cards"),
     color("game_editor", "background_end", "@game_editor.background", "Gradient end; game editor background = flat"),
