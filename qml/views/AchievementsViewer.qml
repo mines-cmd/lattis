@@ -19,9 +19,9 @@ MotionPopup {
     readonly property var matches: items
         .filter(a => !concealed(a) && wanted(a.unlocked)
                      && (needle === "" || a.name.toLowerCase().includes(needle) || a.description.toLowerCase().includes(needle)))
-        .map(a => Object.assign({ group: a.unlocked ? 0 : a.hidden ? 2 : 1 }, a))
+        .map((a, i) => Object.assign({ group: a.unlocked ? 0 : a.hidden ? 2 : 1, order: i }, a))
         .concat(needle === "" && concealedCount > 0 && wanted(false) ? [{ group: 2, summary: true, count: concealedCount }] : [])
-        .sort((a, b) => a.group - b.group)
+        .sort((a, b) => a.group - b.group || (a.order ?? 0) - (b.order ?? 0))
     readonly property var groupNames: [qsTr("Unlocked"), qsTr("Locked"), qsTr("Hidden")]
 
     function show(g, list) {
@@ -279,8 +279,12 @@ MotionPopup {
 
                 ListView {
                     id: list
+                    // The list clips, so it reaches into the card's padding by what a rare glow spills past the icon.
+                    readonly property real glowPad: Theme.achievements.rareGlowEnabled
+                                                    ? Math.min(Theme.achievements.viewerPadding, Math.round(Theme.achievements.viewerIconSize * 0.4)) : 0
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.leftMargin: -glowPad
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     model: root.matches
@@ -289,7 +293,8 @@ MotionPopup {
                     section.property: "group"
                     section.delegate: Label {
                         required property string section
-                        width: ListView.view.width
+                        x: list.glowPad
+                        width: ListView.view.width - list.glowPad
                         height: implicitHeight + Theme.layout.spacing
                         verticalAlignment: Text.AlignBottom
                         text: root.groupNames[Number(section)].toUpperCase()
@@ -300,112 +305,121 @@ MotionPopup {
                     }
 
                     delegate: Item {
-                        id: row
+                        id: slot
                         required property var modelData
                         required property int index
-                        readonly property bool summary: modelData.summary === true
                         width: ListView.view.width
-                        height: Theme.achievements.viewerIconSize + 2 * Theme.layout.spacing * 2
+                        height: row.height
 
-                        TapHandler {
-                            enabled: row.summary
-                            onTapped: root.hiddenShown = true
-                        }
-                        HoverHandler {
-                            id: rowHover
-                            cursorShape: row.summary ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        }
+                        Item {
+                            id: row
+                            readonly property var modelData: slot.modelData
+                            readonly property int index: slot.index
+                            readonly property bool summary: modelData.summary === true
+                            x: list.glowPad
+                            width: slot.width - list.glowPad
+                            height: Theme.achievements.viewerIconSize + 2 * Theme.layout.spacing * 2
 
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Theme.achievements.viewerRowRadius
-                            color: Theme.achievements.viewerRowHover
-                            opacity: rowHover.hovered ? 1 : 0
-                            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
-                        }
-
-                        Rectangle {
-                            visible: row.index > 0 && root.matches[row.index - 1].group === row.modelData.group
-                            anchors { left: parent.left; right: parent.right; top: parent.top }
-                            height: 1
-                            color: Theme.achievements.viewerDivider
-                        }
-
-                        ArtThumb {
-                            id: icon
-                            anchors { left: parent.left; verticalCenter: parent.verticalCenter
-                                      leftMargin: Theme.layout.spacing * 2 }
-                            width: Theme.achievements.viewerIconSize
-                            height: Theme.achievements.viewerIconSize
-                            aspect: 1
-                            cornerRadius: Theme.achievements.viewerIconRadius
-                            color: Theme.achievements.viewerIconPlaceholder
-                            failedIcon: Icons.medal
-                            iconWhenEmpty: !row.summary
-                            property bool useFallback: false
-                            source: row.summary ? "" : (useFallback ? row.modelData.iconFallback : row.modelData.icon) ?? ""
-                            onStatusChanged: {
-                                if (status === Image.Error && !useFallback)
-                                    useFallback = true
+                            TapHandler {
+                                enabled: row.summary
+                                onTapped: root.hiddenShown = true
                             }
-                            opacity: row.modelData.unlocked ? 1 : Theme.achievements.viewerLockedOpacity
+                            HoverHandler {
+                                id: rowHover
+                                cursorShape: row.summary ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            }
 
-                            RareGlow {
+                            Rectangle {
                                 anchors.fill: parent
-                                active: !row.summary && row.modelData.unlocked
-                                        && (row.modelData.percent ?? 100) < Theme.achievements.rarePercent
+                                radius: Theme.achievements.viewerRowRadius
+                                color: Theme.achievements.viewerRowHover
+                                opacity: rowHover.hovered ? 1 : 0
+                                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
                             }
 
-                            Label {
-                                visible: row.summary
-                                anchors.centerIn: parent
-                                text: "?"
-                                color: Theme.achievements.viewerHiddenMarkColor
-                                font.pixelSize: parent.height * 0.5
+                            Rectangle {
+                                visible: row.index > 0 && root.matches[row.index - 1].group === row.modelData.group
+                                anchors { left: parent.left; right: parent.right; top: parent.top }
+                                height: 1
+                                color: Theme.achievements.viewerDivider
                             }
-                        }
-                        ColumnLayout {
-                            anchors { left: icon.right; right: stamp.left; verticalCenter: parent.verticalCenter
-                                      leftMargin: Theme.layout.spacing * 3; rightMargin: Theme.layout.spacing * 3 }
-                            spacing: 0
 
-                            Label {
-                                Layout.fillWidth: true
-                                text: row.summary ? qsTr("%n hidden achievement(s)", "", row.modelData.count) : row.modelData.name
-                                elide: Text.ElideRight
-                                color: Theme.achievements.viewerNameColor
-                                font.weight: Theme.achievements.viewerNameWeight
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                visible: text !== ""
-                                text: row.summary ? qsTr("Details for each will be revealed once you've unlocked it. Click to show them anyway.")
-                                                  : row.modelData.description
-                                elide: Text.ElideRight
-                                color: Theme.achievements.viewerDescriptionColor
-                            }
-                        }
-                        ColumnLayout {
-                            id: stamp
-                            anchors { right: parent.right; verticalCenter: parent.verticalCenter
-                                      rightMargin: Theme.layout.spacing * 2 }
-                            spacing: 0
+                            ArtThumb {
+                                id: icon
+                                anchors { left: parent.left; verticalCenter: parent.verticalCenter
+                                          leftMargin: Theme.layout.spacing * 2 }
+                                width: Theme.achievements.viewerIconSize
+                                height: Theme.achievements.viewerIconSize
+                                aspect: 1
+                                cornerRadius: Theme.achievements.viewerIconRadius
+                                color: Theme.achievements.viewerIconPlaceholder
+                                failedIcon: Icons.medal
+                                iconWhenEmpty: !row.summary
+                                property bool useFallback: false
+                                source: row.summary ? "" : (useFallback ? row.modelData.iconFallback : row.modelData.icon) ?? ""
+                                onStatusChanged: {
+                                    if (status === Image.Error && !useFallback)
+                                        useFallback = true
+                                }
+                                opacity: row.modelData.unlocked ? 1 : Theme.achievements.viewerLockedOpacity
 
-                            Label {
-                                Layout.alignment: Qt.AlignRight
-                                visible: text !== ""
-                                text: row.modelData.unlocked
-                                      ? qsTr("Unlocked %1").arg(row.modelData.time.toLocaleString(Qt.locale(), General.shortDateFormat + ", HH:mm"))
-                                      : ""
-                                color: Theme.achievements.viewerDateColor
+                                RareGlow {
+                                    anchors.fill: parent
+                                    active: !row.summary && row.modelData.unlocked
+                                            && (row.modelData.percent ?? 100) < Theme.achievements.rarePercent
+                                }
+
+                                Label {
+                                    visible: row.summary
+                                    anchors.centerIn: parent
+                                    text: "?"
+                                    color: Theme.achievements.viewerHiddenMarkColor
+                                    font.pixelSize: parent.height * 0.5
+                                }
                             }
-                            Label {
-                                readonly property real percent: row.modelData.percent ?? -1
-                                Layout.alignment: Qt.AlignRight
-                                visible: !row.summary && percent >= 0
-                                text: qsTr("%1% of players").arg(percent < 10 ? percent.toFixed(1) : Math.round(percent))
-                                color: percent < Theme.achievements.rarePercent ? Theme.achievements.viewerRareColor
-                                                                                : Theme.achievements.viewerRarityColor
+                            ColumnLayout {
+                                anchors { left: icon.right; right: stamp.left; verticalCenter: parent.verticalCenter
+                                          leftMargin: Theme.layout.spacing * 3; rightMargin: Theme.layout.spacing * 3 }
+                                spacing: 0
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: row.summary ? qsTr("%n hidden achievement(s)", "", row.modelData.count) : row.modelData.name
+                                    elide: Text.ElideRight
+                                    color: Theme.achievements.viewerNameColor
+                                    font.weight: Theme.achievements.viewerNameWeight
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    visible: text !== ""
+                                    text: row.summary ? qsTr("Details for each will be revealed once you've unlocked it. Click to show them anyway.")
+                                                      : row.modelData.description
+                                    elide: Text.ElideRight
+                                    color: Theme.achievements.viewerDescriptionColor
+                                }
+                            }
+                            ColumnLayout {
+                                id: stamp
+                                anchors { right: parent.right; verticalCenter: parent.verticalCenter
+                                          rightMargin: Theme.layout.spacing * 2 }
+                                spacing: 0
+
+                                Label {
+                                    Layout.alignment: Qt.AlignRight
+                                    visible: text !== ""
+                                    text: row.modelData.unlocked
+                                          ? qsTr("Unlocked %1").arg(row.modelData.time.toLocaleString(Qt.locale(), General.shortDateFormat + ", HH:mm"))
+                                          : ""
+                                    color: Theme.achievements.viewerDateColor
+                                }
+                                Label {
+                                    readonly property real percent: row.modelData.percent ?? -1
+                                    Layout.alignment: Qt.AlignRight
+                                    visible: !row.summary && percent >= 0
+                                    text: qsTr("%1% of players").arg(percent < 10 ? percent.toFixed(1) : Math.round(percent))
+                                    color: percent < Theme.achievements.rarePercent ? Theme.achievements.viewerRareColor
+                                                                                    : Theme.achievements.viewerRarityColor
+                                }
                             }
                         }
                     }
