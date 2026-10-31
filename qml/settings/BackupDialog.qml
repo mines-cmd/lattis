@@ -50,11 +50,26 @@ MotionPopup {
             return p.dataBytes + (choices.credentials && p.credentials.exists ? p.credentials.bytes : 0)
         let total = 0
         for (const e of p.emulators)
-            total += Math.max(0, e.savesBytes) + Math.max(0, e.besideBytes) + (choices.keys ? Math.max(0, e.keysBytes) : 0)
-        if (choices.proton)
-            for (const g of p.proton)
-                total += g.skipped === "" ? Math.max(0, g.bytes) : 0
+            total += (e.takeSaves ? Math.max(0, e.savesBytes) + Math.max(0, e.besideBytes) : 0)
+                     + (e.takeKeys ? Math.max(0, e.keysBytes) : 0)
+        for (const g of p.proton)
+            total += g.take && g.skipped === "" ? Math.max(0, g.bytes) : 0
         return total
+    }
+
+    readonly property var saveRows: library ? [] : (plan.emulators ?? []).filter(e => e.skipped !== "noSaves" && !(e.skipped === "notInstalled"
+        && e.saves.length === 0 && e.besideRoms === 0)).map(e => ({ id: "saves:" + e.id, on: e.takeSaves }))
+    readonly property var keyRows: library ? [] : (plan.emulators ?? []).filter(e => e.keys.length > 0).map(e => ({ id: "keys:" + e.id, on: e.takeKeys }))
+    readonly property var protonRows: library ? [] : (plan.proton ?? []).filter(g => g.skipped === "").map(g => ({ id: "proton:" + g.id, on: g.take }))
+    readonly property int selectedRows: [saveRows, keyRows, protonRows].reduce((n, rows) => n + rows.filter(r => r.on).length, 0)
+    readonly property int allRows: saveRows.length + keyRows.length + protonRows.length
+
+    function rowsState(rows) {
+        const on = rows.filter(r => r.on).length
+        return on === 0 ? Qt.Unchecked : on === rows.length ? Qt.Checked : Qt.PartiallyChecked
+    }
+    function setRows(rows, taken) {
+        error.text = Backups.setTaken(rows.map(r => r.id), taken)
     }
 
     parent: Overlay.overlay
@@ -135,36 +150,94 @@ MotionPopup {
             spacing: Theme.gameEditor.rowSpacing
         }
     }
-    component PartRow: ColumnLayout {
+    component PartRow: Item {
         id: partRow
         property string name
         property string detail
         property bool skipped: false
+        property bool toggleable: false
+        property bool reserve: false
+        property bool taken: true
+        readonly property bool off: toggleable && !taken
+        signal toggled(bool taken)
         default property alias notes: notesColumn.data
 
         Layout.fillWidth: true
-        spacing: 2
-        opacity: skipped ? Theme.gameEditor.readOnlyOpacity : 1
+        implicitHeight: content.implicitHeight + Theme.layout.spacing
+        opacity: skipped ? Theme.gameEditor.readOnlyOpacity : off ? Theme.gameEditor.readOnlyOpacity : 1
+        activeFocusOnTab: toggleable
+        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+
+        Keys.onSpacePressed: if (toggleable) toggled(!taken)
+
+        TapHandler {
+            enabled: partRow.toggleable
+            onTapped: partRow.toggled(!partRow.taken)
+        }
+        HoverHandler { id: rowHover; enabled: partRow.toggleable; cursorShape: Qt.PointingHandCursor }
+
+        Rectangle {
+            z: -1
+            anchors.fill: parent
+            radius: Theme.radius.small
+            color: Theme.controls.buttonHoverBackground
+            opacity: rowHover.hovered ? 1 : 0
+            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+        }
 
         RowLayout {
-            Layout.fillWidth: true
+            id: content
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.layout.spacing
+            anchors.top: parent.top
+            anchors.topMargin: Theme.layout.spacing / 2
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.layout.spacing
             spacing: Theme.layout.spacing
-            Label {
+
+            Item {
+                visible: partRow.toggleable
+                Layout.alignment: Qt.AlignTop
+                implicitWidth: Theme.controls.checkboxSize
+                implicitHeight: nameLabel.implicitHeight
+                SettingsCheckBox {
+                    anchors.centerIn: parent
+                    enabled: false
+                    checked: partRow.taken
+                    focusPolicy: Qt.NoFocus
+                }
+            }
+            Item {
+                visible: !partRow.toggleable && partRow.reserve
+                implicitWidth: Theme.controls.checkboxSize
+            }
+
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: partRow.name
-                color: Theme.gameEditor.labelColor
-                elide: Text.ElideRight
+                spacing: 2
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.layout.spacing
+                    Label {
+                        id: nameLabel
+                        Layout.fillWidth: true
+                        text: partRow.name
+                        color: Theme.controls.labelColor
+                        elide: Text.ElideRight
+                    }
+                    Label {
+                        text: partRow.off ? qsTr("Skipped") : partRow.detail
+                        color: Theme.gameEditor.hintColor
+                        font.pixelSize: Theme.gameEditor.hintFontSize
+                    }
+                }
+                ColumnLayout {
+                    id: notesColumn
+                    Layout.fillWidth: true
+                    spacing: 2
+                }
             }
-            Label {
-                text: partRow.detail
-                color: Theme.gameEditor.hintColor
-                font.pixelSize: Theme.gameEditor.hintFontSize
-            }
-        }
-        ColumnLayout {
-            id: notesColumn
-            Layout.fillWidth: true
-            spacing: 2
         }
     }
 
@@ -235,7 +308,20 @@ MotionPopup {
                     }
                 }
 
-                Heading { visible: !root.library; text: qsTr("Emulator saves") }
+                RowLayout {
+                    visible: !root.library
+                    Layout.fillWidth: true
+                    SettingsCheckBox {
+                        Layout.fillWidth: true
+                        visible: root.saveRows.length > 0
+                        text: qsTr("Emulator saves")
+                        checkState: root.rowsState(root.saveRows)
+                        partial: checkState === Qt.PartiallyChecked
+                        checked: checkState === Qt.Checked
+                        onToggled: root.setRows(root.saveRows, root.rowsState(root.saveRows) !== Qt.Checked)
+                    }
+                    Heading { visible: root.saveRows.length === 0; text: qsTr("Emulator saves") }
+                }
                 Card {
                     id: savesCard
                     visible: !root.library
@@ -252,6 +338,10 @@ MotionPopup {
                             readonly property bool nothing: modelData.saves.length === 0 && modelData.besideRoms === 0
                             name: modelData.name
                             skipped: nothing
+                            reserve: true
+                            toggleable: !nothing && modelData.skipped !== "noSaves"
+                            taken: modelData.takeSaves
+                            onToggled: taken => root.setRows([{ id: "saves:" + modelData.id }], taken)
                             detail: modelData.skipped === "noSaves" ? qsTr("Doesn't say where it keeps its saves")
                                   : nothing && (root.plan.measured ?? false) ? qsTr("No saves yet")
                                   : root.size(modelData.savesBytes < 0 || modelData.besideBytes < 0 ? -1
@@ -278,8 +368,11 @@ MotionPopup {
                     SettingsCheckBox {
                         Layout.fillWidth: true
                         text: qsTr("Keys and firmware")
-                        checked: root.choices.keys
-                        onToggled: error.text = Backups.setChoice("keys", checked)
+                        enabled: root.keyRows.length > 0
+                        checkState: root.rowsState(root.keyRows)
+                        partial: checkState === Qt.PartiallyChecked
+                        checked: checkState === Qt.Checked
+                        onToggled: root.setRows(root.keyRows, root.rowsState(root.keyRows) !== Qt.Checked)
                     }
                 }
                 Hint {
@@ -290,13 +383,14 @@ MotionPopup {
                     id: keysCard
                     readonly property var withKeys: (root.plan.emulators ?? []).filter(e => e.keys.length > 0)
                     visible: !root.library && withKeys.length > 0
-                    enabled: root.choices.keys
-                    opacity: enabled ? 1 : Theme.gameEditor.readOnlyOpacity
                     Repeater {
                         model: keysCard.withKeys
                         PartRow {
                             required property var modelData
                             name: modelData.name
+                            toggleable: true
+                            taken: modelData.takeKeys
+                            onToggled: taken => root.setRows([{ id: "keys:" + modelData.id }], taken)
                             detail: root.size(modelData.keysBytes)
                             Repeater {
                                 model: modelData.keys
@@ -312,8 +406,11 @@ MotionPopup {
                     SettingsCheckBox {
                         Layout.fillWidth: true
                         text: qsTr("Proton games' saves")
-                        checked: root.choices.proton
-                        onToggled: error.text = Backups.setChoice("proton", checked)
+                        enabled: root.protonRows.length > 0
+                        checkState: root.rowsState(root.protonRows)
+                        partial: checkState === Qt.PartiallyChecked
+                        checked: checkState === Qt.Checked
+                        onToggled: root.setRows(root.protonRows, root.rowsState(root.protonRows) !== Qt.Checked)
                     }
                 }
                 Hint {
@@ -322,14 +419,16 @@ MotionPopup {
                 }
                 Card {
                     visible: !root.library && (root.plan.proton ?? []).length > 0
-                    enabled: root.choices.proton
-                    opacity: enabled ? 1 : Theme.gameEditor.readOnlyOpacity
                     Repeater {
                         model: root.library ? [] : (root.plan.proton ?? [])
                         PartRow {
                             required property var modelData
                             name: modelData.title
                             skipped: modelData.skipped !== ""
+                            reserve: true
+                            toggleable: modelData.skipped === ""
+                            taken: modelData.take
+                            onToggled: taken => root.setRows([{ id: "proton:" + modelData.id }], taken)
                             detail: modelData.skipped === "neverLaunched" ? qsTr("Never launched")
                                   : modelData.skipped === "uninstalled" ? qsTr("Not installed")
                                   : modelData.skipped === "unlisted" ? qsTr("Its Proton doesn't list its files")
@@ -421,7 +520,9 @@ MotionPopup {
                 Layout.fillWidth: true
                 visible: !root.busy && root.done === null
                 text: root.totalBytes < 0 ? qsTr("Adding up…")
-                                          : qsTr("%1 before compression").arg(Backups.sizeText(root.totalBytes))
+                                          : root.library ? qsTr("%1 before compression").arg(Backups.sizeText(root.totalBytes))
+                                          : qsTr("%1 before compression · %2 of %3 selected").arg(Backups.sizeText(root.totalBytes))
+                                                .arg(root.selectedRows).arg(root.allRows)
                 color: Theme.gameEditor.hintColor
                 font.pixelSize: Theme.gameEditor.hintFontSize
             }
@@ -439,7 +540,7 @@ MotionPopup {
                 visible: !root.busy && root.done === null
                 primary: true
                 text: qsTr("Back up")
-                enabled: root.blocked === "" && !Backups.running
+                enabled: root.blocked === "" && !Backups.running && (root.library || root.selectedRows > 0)
                 onClicked: {
                     const file = Backups.defaultFile(root.kind)
                     saveDialog.currentFolder = file.toString().substring(0, file.toString().lastIndexOf("/"))

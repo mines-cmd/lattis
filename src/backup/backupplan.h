@@ -25,6 +25,8 @@ struct Settings
     bool credentials = true;
     bool keys = true;
     bool proton = true;
+    // Rows the user unchecked: "saves:<emulator>", "keys:<emulator>", "proton:<game>".
+    QStringList ignored;
 
     bool operator==(const Settings &) const = default;
 };
@@ -32,6 +34,7 @@ struct Settings
 Parsed<Settings> parseSettings(const QByteArray &bytes, const QString &displayPath);
 
 bool saveSetting(const QString &settingsFile, const QString &key, bool value, QString *error = nullptr);
+bool saveIgnored(const QString &settingsFile, const QStringList &ignored, QString *error = nullptr);
 
 // `bytes` is -1 until measure().
 struct Place
@@ -93,6 +96,8 @@ struct EmulatorPart
     QList<BesideRom::GameSaves> besideRoms;
     bool besideRomSaves = false;
     bool measured = false;
+    bool takeSaves = true;
+    bool takeKeys = true;
 
     // What the backup takes of it with keys chosen or not; -1 until measured.
     qint64 bytes(bool withKeys) const;
@@ -106,6 +111,7 @@ struct ProtonPart
     ProtonSaves::GameSaves saves;
     QString proton;
     bool measured = false;
+    bool take = true;
 };
 
 struct SavesPlan
@@ -126,6 +132,8 @@ struct SavesPlan
 };
 
 SavesPlan planSaves(const Sources &sources, const Settings &settings);
+// Sets keys, proton and each row's take flags from the choices.
+void applyChoices(SavesPlan &plan, const Settings &settings);
 void measure(SavesPlan &plan);
 
 QByteArray manifest(const LibraryPlan &plan, const QDateTime &created, const QString &appVersion);

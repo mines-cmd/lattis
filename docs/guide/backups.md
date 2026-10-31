@@ -15,8 +15,10 @@ ROMs are never included, even ones you keep inside the data folder.
 Your games' saves, which live outside the data folder:
 
 - **Every configured emulator's saves**, from wherever that emulator keeps them (save states included), and saves kept next to the ROM, as mGBA and melonDS do.
-- **Keys and firmware** for the emulators that need them (uncheck to leave them out).
+- **Keys and firmware** for the emulators that need them.
 - **Windows games' saves**: each game's Wine prefix, without the files Proton itself put there, about 8 MB a game.
+
+Each emulator and each Windows game has its own checkbox: uncheck a row to leave it out. The checkbox on a section's heading checks or unchecks all its rows, and shows a dash when only some are checked. What you uncheck is remembered for the next backup; emulators and games added later start checked.
 
 An emulator that isn't installed, or one Lattis doesn't know where it keeps saves, is skipped and named in the dialog.
 

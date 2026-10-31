@@ -84,6 +84,7 @@ private slots:
     void settingsParsed();
     void settingsWarnings();
     void saveSetting();
+    void ignoredRows();
 
     void libraryExclusions();
     void libraryRomFolders();
@@ -179,6 +180,35 @@ void BackupPlanTest::saveSetting()
     QVERIFY(!readFile(file).contains("keys"));
     QCOMPARE(BackupPlan::parseSettings(readFile(file), "settings.toml").value,
              (BackupPlan::Settings{true, true, false}));
+}
+
+void BackupPlanTest::ignoredRows()
+{
+    const QString file = path(QStringLiteral("settings.toml"));
+    QVERIFY(BackupPlan::saveIgnored(file, {QStringLiteral("saves:ryubing"), QStringLiteral("proton:a")}));
+    QVERIFY(readFile(file).contains("ignored = [\"saves:ryubing\", \"proton:a\"]"));
+    const Parsed<BackupPlan::Settings> parsed = BackupPlan::parseSettings(readFile(file), "settings.toml");
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.ignored, QStringList({QStringLiteral("saves:ryubing"), QStringLiteral("proton:a")}));
+
+    QVERIFY(BackupPlan::saveIgnored(file, {}));
+    QVERIFY(!readFile(file).contains("ignored"));
+
+    QCOMPARE(BackupPlan::parseSettings("[backup]\nignored = \"x\"\n", "settings.toml").warnings,
+             QStringList(QStringLiteral("settings.toml:2: ignored must be a list of strings")));
+
+    BackupPlan::Settings settings;
+    settings.ignored = {QStringLiteral("saves:ryubing")};
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(savesSources(), settings);
+    BackupPlan::measure(plan);
+    const auto ryubing = std::find_if(plan.emulators.cbegin(), plan.emulators.cend(),
+                                      [](const BackupPlan::EmulatorPart &p) { return p.id == QLatin1String("ryubing"); });
+    QVERIFY(ryubing != plan.emulators.cend());
+    QVERIFY(!ryubing->takeSaves);
+    QVERIFY(ryubing->takeKeys);
+    QVERIFY(ryubing->takesAnything(true));
+    QVERIFY(!ryubing->takesAnything(false));
+    QCOMPARE(ryubing->bytes(true), 7);
 }
 
 // ---- The library backup ----

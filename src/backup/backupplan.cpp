@@ -113,13 +113,27 @@ Parsed<Settings> parseSettings(const QByteArray &bytes, const QString &displayPa
         return out;
     }
 
-    const QStringList known = {QStringLiteral("credentials"), QStringLiteral("keys"), QStringLiteral("proton")};
+    const QStringList known = {QStringLiteral("credentials"), QStringLiteral("keys"), QStringLiteral("proton"),
+                               QStringLiteral("ignored")};
     bool *const values[] = {&out.value.credentials, &out.value.keys, &out.value.proton};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
         const qsizetype index = known.indexOf(key);
         if (index < 0) {
             out.warnings.append(QStringLiteral("%1: unknown key %2%3").arg(where(node), key, suggestion(key, known)));
+        } else if (key == QLatin1String("ignored")) {
+            const toml::array *array = node.as_array();
+            bool ok = array;
+            if (array) {
+                for (const toml::node &item : *array) {
+                    if (const auto *text = item.as_string())
+                        out.value.ignored.append(toQString(text->get()));
+                    else
+                        ok = false;
+                }
+            }
+            if (!ok)
+                out.warnings.append(QStringLiteral("%1: ignored must be a list of strings").arg(where(node)));
         } else if (const auto *b = node.as_boolean()) {
             *values[index] = b->get();
         } else {
@@ -142,6 +156,22 @@ bool saveSetting(const QString &settingsFile, const QString &key, bool value, QS
     }
     return value ? TomlPatch::removeValueInFile(settingsFile, kSection, key, error)
                  : TomlPatch::setValueInFile(settingsFile, kSection, key, QStringLiteral("false"), error);
+}
+
+bool saveIgnored(const QString &settingsFile, const QStringList &ignored, QString *error)
+{
+    if (ignored.isEmpty() && !QFile::exists(settingsFile))
+        return true;
+    if (ignored.isEmpty())
+        return TomlPatch::removeValueInFile(settingsFile, kSection, QStringLiteral("ignored"), error);
+    if (!QFile::exists(settingsFile)) {
+        if (QFile file(settingsFile); !file.open(QIODevice::WriteOnly)) {
+            if (error)
+                *error = file.errorString();
+            return false;
+        }
+    }
+    return TomlPatch::setValueInFile(settingsFile, kSection, QStringLiteral("ignored"), list(ignored), error);
 }
 
 QString tilde(const QString &path, const QString &home)
@@ -235,10 +265,14 @@ qint64 EmulatorPart::bytes(bool withKeys) const
 {
     if (!measured)
         return -1;
-    qint64 total = sum(saves) + (withKeys ? sum(keys) : 0);
-    for (const BesideRom::GameSaves &game : besideRoms) {
-        for (const BesideRom::SaveFile &file : game.files)
-            total += file.size;
+    qint64 total = takeSaves ? sum(saves) : 0;
+    if (withKeys && takeKeys)
+        total += sum(keys);
+    if (takeSaves) {
+        for (const BesideRom::GameSaves &game : besideRoms) {
+            for (const BesideRom::SaveFile &file : game.files)
+                total += file.size;
+        }
     }
     return total;
 }
@@ -248,7 +282,7 @@ bool EmulatorPart::takesAnything(bool withKeys) const
     const auto found = [](const QList<Place> &places) {
         return std::any_of(places.cbegin(), places.cend(), [](const Place &p) { return p.exists; });
     };
-    return found(saves) || (withKeys && found(keys)) || !besideRoms.isEmpty();
+    return (takeSaves && (found(saves) || !besideRoms.isEmpty())) || (withKeys && takeKeys && found(keys));
 }
 
 qint64 SavesPlan::bytes() const
@@ -260,7 +294,7 @@ qint64 SavesPlan::bytes() const
         total += part.bytes(keys);
     if (proton) {
         for (const ProtonPart &part : protonGames)
-            total += part.saves.bytes;
+            total += part.take ? part.saves.bytes : 0;
     }
     return total;
 }
@@ -270,8 +304,6 @@ SavesPlan planSaves(const Sources &sources, const Settings &settings)
     SavesPlan plan;
     plan.home = sources.home;
     plan.library = sources.library;
-    plan.keys = settings.keys;
-    plan.proton = settings.proton;
     plan.platforms = sources.platforms;
     plan.games = sources.games;
     plan.definitions = sources.emulators;
@@ -320,7 +352,21 @@ SavesPlan planSaves(const Sources &sources, const Settings &settings)
             part.proton = firstLine(part.saves.prefix + QStringLiteral("/version"));
         plan.protonGames.append(part);
     }
+    applyChoices(plan, settings);
     return plan;
+}
+
+void applyChoices(SavesPlan &plan, const Settings &settings)
+{
+    plan.keys = settings.keys;
+    plan.proton = settings.proton;
+    const QSet<QString> ignored(settings.ignored.cbegin(), settings.ignored.cend());
+    for (EmulatorPart &part : plan.emulators) {
+        part.takeSaves = !ignored.contains(QStringLiteral("saves:") + part.id);
+        part.takeKeys = !ignored.contains(QStringLiteral("keys:") + part.id);
+    }
+    for (ProtonPart &part : plan.protonGames)
+        part.take = !ignored.contains(QStringLiteral("proton:") + part.gameId);
 }
 
 void measure(SavesPlan &plan)
@@ -397,11 +443,11 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
         out += QStringLiteral("\n[[emulator]]\nid = %1\nname = %2\n").arg(tomlString(part.id), tomlString(part.name));
         if (!part.install.isEmpty())
             out += QStringLiteral("install = %1\n").arg(tomlString(part.install));
-        if (!part.saves.isEmpty())
+        if (part.takeSaves && !part.saves.isEmpty())
             out += QStringLiteral("saves = %1   # where they came from\n").arg(list(paths(part.saves)));
-        if (plan.keys && !part.keys.isEmpty())
+        if (plan.keys && part.takeKeys && !part.keys.isEmpty())
             out += QStringLiteral("keys = %1\n").arg(list(paths(part.keys)));
-        if (!part.besideRoms.isEmpty()) {
+        if (part.takeSaves && !part.besideRoms.isEmpty()) {
             QStringList ids;
             for (const BesideRom::GameSaves &game : part.besideRoms)
                 ids.append(game.gameId);
@@ -413,7 +459,7 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
 
     if (plan.proton) {
         for (const ProtonPart &part : plan.protonGames) {
-            if (part.saves.skipped != ProtonSaves::Skipped::No)
+            if (!part.take || part.saves.skipped != ProtonSaves::Skipped::No)
                 continue;
             out += QStringLiteral("\n[[game]]\nid = %1\ntitle = %2\n").arg(tomlString(part.gameId), tomlString(part.title));
             out += QStringLiteral("shortcut = %1   # its prefix's folder when it was backed up\n").arg(part.saves.shortcut);

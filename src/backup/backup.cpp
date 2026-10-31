@@ -145,13 +145,14 @@ QString write(BackupPlan::SavesPlan plan, const QString &path, const QDateTime &
     for (const BackupPlan::EmulatorPart &part : std::as_const(plan.emulators)) {
         if (!part.takesAnything(plan.keys))
             continue;
-        if (std::any_of(part.saves.cbegin(), part.saves.cend(), [](const BackupPlan::Place &p) { return p.exists; }))
+        if (part.takeSaves
+            && std::any_of(part.saves.cbegin(), part.saves.cend(), [](const BackupPlan::Place &p) { return p.exists; }))
             w.setPart(tr("%1's saves").arg(part.name));
-        for (qsizetype i = 0; i < part.saves.size(); ++i) {
+        for (qsizetype i = 0; part.takeSaves && i < part.saves.size(); ++i) {
             if (!w.addPlace(part.saves.at(i), placeName(part.id, QStringLiteral("saves"), int(i + 1))))
                 return w.writer.error();
         }
-        if (plan.keys
+        if (plan.keys && part.takeKeys
             && std::any_of(part.keys.cbegin(), part.keys.cend(), [](const BackupPlan::Place &p) { return p.exists; })) {
             w.setPart(tr("%1's keys and firmware").arg(part.name));
             for (qsizetype i = 0; i < part.keys.size(); ++i) {
@@ -159,9 +160,9 @@ QString write(BackupPlan::SavesPlan plan, const QString &path, const QDateTime &
                     return w.writer.error();
             }
         }
-        if (!part.besideRoms.isEmpty())
+        if (part.takeSaves && !part.besideRoms.isEmpty())
             w.setPart(tr("%1's saves next to ROMs").arg(part.name));
-        for (const BesideRom::GameSaves &game : part.besideRoms) {
+        for (const BesideRom::GameSaves &game : part.takeSaves ? part.besideRoms : QList<BesideRom::GameSaves>()) {
             for (const BesideRom::SaveFile &file : game.files) {
                 const QFileInfo info(file.path);
                 if (!info.exists())
@@ -176,7 +177,7 @@ QString write(BackupPlan::SavesPlan plan, const QString &path, const QDateTime &
 
     if (plan.proton) {
         for (const BackupPlan::ProtonPart &part : std::as_const(plan.protonGames)) {
-            if (part.saves.skipped != ProtonSaves::Skipped::No)
+            if (!part.take || part.saves.skipped != ProtonSaves::Skipped::No)
                 continue;
             const std::optional<ProtonSaves::Prefix> prefix = ProtonSaves::Prefix::read(part.saves.prefix);
             if (!prefix) {

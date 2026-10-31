@@ -104,11 +104,8 @@ Backups::Backups(const Setup &setup, QObject *parent)
         updateLibraryMap();
     });
     connect(&m_measureSaves, &QFutureWatcher<BackupPlan::SavesPlan>::finished, this, [this] {
-        const bool keys = m_saves.keys;
-        const bool proton = m_saves.proton;
         m_saves = m_measureSaves.result();
-        m_saves.keys = keys;
-        m_saves.proton = proton;
+        BackupPlan::applyChoices(m_saves, readSettings());
         updateSavesMap();
     });
 }
@@ -140,6 +137,42 @@ QVariantMap Backups::choices() const
     return {{QStringLiteral("credentials"), s.credentials},
             {QStringLiteral("keys"), s.keys},
             {QStringLiteral("proton"), s.proton}};
+}
+
+QString Backups::setTaken(const QStringList &rows, bool taken)
+{
+    const QString file = m_setup.dataDir + QStringLiteral("/settings.toml");
+    BackupPlan::Settings settings = readSettings();
+    QString error;
+    // The old section switches are superseded by the rows: carry an off switch over as its rows being off.
+    if (!settings.keys || !settings.proton) {
+        for (const BackupPlan::EmulatorPart &part : std::as_const(m_saves.emulators)) {
+            if (!settings.keys && !part.keys.isEmpty())
+                settings.ignored.append(QStringLiteral("keys:") + part.id);
+        }
+        if (!settings.proton) {
+            for (const BackupPlan::ProtonPart &part : std::as_const(m_saves.protonGames))
+                settings.ignored.append(QStringLiteral("proton:") + part.gameId);
+        }
+        if ((!settings.keys && !BackupPlan::saveSetting(file, QStringLiteral("keys"), true, &error))
+            || (!settings.proton && !BackupPlan::saveSetting(file, QStringLiteral("proton"), true, &error)))
+            return tr("Couldn't save settings.toml: %1").arg(error);
+        settings.keys = true;
+        settings.proton = true;
+    }
+    for (const QString &row : rows) {
+        if (taken)
+            settings.ignored.removeAll(row);
+        else if (!settings.ignored.contains(row))
+            settings.ignored.append(row);
+    }
+    settings.ignored.removeDuplicates();
+    if (!BackupPlan::saveIgnored(file, settings.ignored, &error))
+        return tr("Couldn't save settings.toml: %1").arg(error);
+    BackupPlan::applyChoices(m_saves, settings);
+    emit choicesChanged();
+    updateSavesMap();
+    return {};
 }
 
 QString Backups::setChoice(const QString &key, bool value)
@@ -224,6 +257,8 @@ void Backups::updateSavesMap()
             {QStringLiteral("besideRomSaves"), part.besideRomSaves},
             {QStringLiteral("besideRoms"), part.besideRoms.size()},
             {QStringLiteral("besideBytes"), besideBytes},
+            {QStringLiteral("takeSaves"), part.takeSaves},
+            {QStringLiteral("takeKeys"), part.takeKeys && m_saves.keys},
         });
     }
     QVariantList proton;
@@ -233,6 +268,7 @@ void Backups::updateSavesMap()
             {QStringLiteral("title"), part.title},
             {QStringLiteral("skipped"), skippedName(part.saves.skipped)},
             {QStringLiteral("bytes"), part.measured ? part.saves.bytes : -1},
+            {QStringLiteral("take"), part.take && m_saves.proton},
         });
     }
     m_savesMap = {

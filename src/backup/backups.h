@@ -92,6 +92,8 @@ public:
     Q_INVOKABLE void planLibrary();
     Q_INVOKABLE void planSaves();
     Q_INVOKABLE QString setChoice(const QString &key, bool value);
+    // Checks or unchecks rows of the saves backup: "saves:<emulator>", "keys:<emulator>", "proton:<game>".
+    Q_INVOKABLE QString setTaken(const QStringList &rows, bool taken);
     Q_INVOKABLE QUrl defaultFile(const QString &kind) const;
     Q_INVOKABLE QString start(const QString &kind, const QUrl &file);
     Q_INVOKABLE void cancel() { m_job.cancel(); }

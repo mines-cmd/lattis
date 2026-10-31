@@ -39,7 +39,7 @@ Planning is a two-step process: make the plan (cheap), then measure it (slow, of
 
 `BackupPlan::measure()` then adds up the sizes. It walks each folder, follows no symlinks, and fills in each `Place::bytes`. It runs on a worker thread. `Backups` drives both steps from QML and exposes the in-progress plan as `libraryPlan` and `savesPlan`, so the dialog can show sizes as they arrive. The `bytes` fields start at −1 and become non-negative as each part is measured.
 
-`BackupPlan::Settings` (`[backup]` in `settings.toml`) remembers the user's choices for credentials, emulator keys and Proton saves. `saveSetting()` edits the file in place; a key is removed when it's restored to its default (`true`), so the file only records opt-outs.
+`BackupPlan::Settings` (`[backup]` in `settings.toml`) remembers the user's choices for credentials, and the saves backup's unchecked rows in `ignored`: `"saves:<emulator id>"`, `"keys:<emulator id>"` and `"proton:<game id>"`. `saveSetting()` and `saveIgnored()` edit the file in place; a key is removed when it's restored to its default (`true`, or an empty list), so the file only records opt-outs. The older `keys` and `proton` switches are still read: `Backups::setTaken()` turns an off switch into its rows in `ignored` the first time a row is toggled. `applyChoices()` sets each part's `takeSaves`, `takeKeys` and `take` from them; `bytes()`, `takesAnything()`, the manifest and the archive all follow those flags.
 
 ## Writing the archive
 
@@ -177,6 +177,7 @@ A failed or cancelled extract removes the folders it created.
 | `planLibrary()` | Builds the library plan and measures it in the background |
 | `planSaves()` | Builds the saves plan and measures it in the background |
 | `setChoice(key, value)` | Saves `credentials`, `keys` or `proton` to `[backup]` |
+| `setTaken(rows, taken)` | Checks or unchecks saves-backup rows by id (`saves:<id>`, `keys:<id>`, `proton:<id>`) and saves `ignored` |
 | `defaultFile(kind)` | The save dialog's starting URL: last backup's folder + default name, else home |
 | `start(kind, file)` | Writes the plan of `kind` to `file`; refused if already running or (for saves) a game runs |
 | `cancel()` | Cancels the running backup |
