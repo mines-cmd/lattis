@@ -282,8 +282,25 @@ void SteamLibrarySync::fetch(const std::shared_ptr<Job> &job)
             fetchTypes(job);
         }
     });
-    if (!job->token)
+    if (!job->token) {
+        // The family list is only fetched with the sign-in; the key still names the lenders already cached.
+        QSet<QString> unknown;
+        for (const SteamWebApi::SharedApp &a : std::as_const(job->cache.shared)) {
+            for (const QString &owner : a.owners) {
+                if (owner != job->steamId && !job->cache.names.contains(owner))
+                    unknown.insert(owner);
+            }
+        }
+        if (!unknown.isEmpty() && !job->auth.key.isEmpty()) {
+            request(job, SteamWebApi::playerSummariesRequest(unknown.values().mid(0, 100), job->auth.key),
+                    [job](const QJsonDocument &names) {
+                        const auto parsed = SteamWebApi::parseUserNames(names);
+                        for (auto it = parsed.cbegin(); it != parsed.cend(); ++it)
+                            job->cache.names.insert(it.key(), it.value());
+                    });
+        }
         return;
+    }
     fetchFamily(job);
     request(job, SteamWebApi::clientAppsRequest(job->auth.accessToken), [job](const QJsonDocument &json) {
         const auto sizes = SteamWebApi::parseClientApps(json);
@@ -320,13 +337,11 @@ void SteamLibrarySync::fetchFamily(const std::shared_ptr<Job> &job)
                     return;
                 request(job, SteamWebApi::familyGroupRequest(group.groupId, job->auth.accessToken),
                         [this, job](const QJsonDocument &members) {
-                            const QStringList ids = SteamWebApi::parseFamilyMembers(members);
-                            if (ids.isEmpty())
+                            const QStringList ids = SteamWebApi::parseFamilyMembers(members);                            if (ids.isEmpty())
                                 return;
                             request(job, SteamWebApi::userSummariesRequest(ids, job->auth.accessToken),
                                     [job](const QJsonDocument &names) {
-                                        const auto parsed = SteamWebApi::parseUserNames(names);
-                                        for (auto it = parsed.cbegin(); it != parsed.cend(); ++it)
+                                        const auto parsed = SteamWebApi::parseUserNames(names);                                        for (auto it = parsed.cbegin(); it != parsed.cend(); ++it)
                                             job->cache.names.insert(it.key(), it.value());
                                     });
                         });

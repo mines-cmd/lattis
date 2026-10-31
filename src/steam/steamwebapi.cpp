@@ -89,6 +89,14 @@ Request userSummariesRequest(const QStringList &steamIds, const QString &accessT
     return {QStringLiteral("/ISteamUserOAuth/GetUserSummaries/v1/"), query};
 }
 
+Request playerSummariesRequest(const QStringList &steamIds, const QString &key)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("key"), key);
+    query.addQueryItem(QStringLiteral("steamids"), steamIds.join(u','));
+    return {QStringLiteral("/ISteamUser/GetPlayerSummaries/v2/"), query};
+}
+
 Request sharedAppsRequest(const QString &steamId, const QString &groupId, const QString &accessToken)
 {
     QUrlQuery query;
@@ -168,7 +176,9 @@ QStringList parseFamilyMembers(const QJsonDocument &json)
 QHash<QString, QString> parseUserNames(const QJsonDocument &json)
 {
     QHash<QString, QString> out;
-    for (const QJsonValue &v : responseOf(json).value(QLatin1String("players")).toArray()) {
+    // ISteamUserOAuth puts players at the top level; newer services wrap them in "response".
+    const QJsonObject root = json.object().contains(QLatin1String("players")) ? json.object() : responseOf(json);
+    for (const QJsonValue &v : root.value(QLatin1String("players")).toArray()) {
         const QJsonObject player = v.toObject();
         const QString id = asText(player.value(QLatin1String("steamid")));
         const QString name = player.value(QLatin1String("personaname")).toString();

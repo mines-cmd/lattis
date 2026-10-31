@@ -172,6 +172,7 @@ The scan only reads Steam's files on disk. The games the account owns but has no
 |---|---|
 | `IPlayerService/GetOwnedGames/v1` (`include_appinfo`, `include_played_free_games`, `skip_unvetted_apps=0`) | the owned games, with play time and last played; works with a token or a key |
 | `IFamilyGroupsService/GetFamilyGroupForUser/v1`, `GetFamilyGroup/v1`, `ISteamUserOAuth/GetUserSummaries/v1` | the family group, its members and their names (token only) |
+| `ISteamUser/GetPlayerSummaries/v2` | names of cached lenders still unnamed, on a sync with the web key only |
 | `IFamilyGroupsService/GetSharedLibraryApps/v1` (`include_own=1`) | the apps with `owner_steamids` and `app_type`; an app whose owners include the user is the user's own (token only) |
 | `IClientCommService/GetClientAppList/v1` (`fields=games`) | install sizes (`bytes_required`) (token only) |
 | `IStoreBrowseService/GetItems/v1` | each owned app's store `type`, 100 apps a request; 0 is a game, an app the store no longer shows is `kTypeNoStoreData` and counts as a game |

@@ -72,6 +72,7 @@ Request ownedGamesRequest(const QString &steamId, const Auth &auth);
 Request familyGroupForUserRequest(const QString &steamId, const QString &accessToken);
 Request familyGroupRequest(const QString &groupId, const QString &accessToken);
 Request userSummariesRequest(const QStringList &steamIds, const QString &accessToken);
+Request playerSummariesRequest(const QStringList &steamIds, const QString &key);
 Request sharedAppsRequest(const QString &steamId, const QString &groupId, const QString &accessToken);
 Request clientAppsRequest(const QString &accessToken);
 // `appIds` is at most itemsBatch() long.
