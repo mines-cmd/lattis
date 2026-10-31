@@ -8,7 +8,7 @@ Start typing anywhere in the main window, or press Ctrl+F or /, to search. The s
 - with every word in any order: `zelda tears` finds "The Legend of Zelda: Tears of the Kingdom";
 - while you're still typing a word: `zel` already finds it.
 
-Press Enter to launch the first match. Escape leaves the search box and keeps the results; Escape again clears the search.
+Press Enter to launch the first match. Escape leaves the search box and keeps the results; Escape again clears the search, as does the × at the end of the box while it has text.
 
 ## The rail
 

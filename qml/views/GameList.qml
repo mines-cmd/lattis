@@ -557,6 +557,7 @@ Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: Theme.search.height
                 leftPadding: Theme.search.iconSize + 19
+                rightPadding: Theme.search.iconSize + 19
                 placeholderText: Theme.search.placeholder
                 placeholderTextColor: Theme.search.placeholderColor
                 color: Theme.search.text
@@ -592,6 +593,32 @@ Rectangle {
                     size: Theme.search.iconSize
                     path: Icons.search
                     color: Theme.search.icon
+                }
+
+                Icon {
+                    visible: search.text.length > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    anchors.rightMargin: 11
+                    size: Theme.search.iconSize
+                    path: Icons.close
+                    color: searchClearMouse.containsMouse ? Theme.palette.text : Theme.search.icon
+
+                    MouseArea {
+                        id: searchClearMouse
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            search.clear()
+                            search.forceActiveFocus()
+                        }
+                    }
+
+                    ToolTip.visible: searchClearMouse.containsMouse
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: qsTr("Clear search")
                 }
             }
 
