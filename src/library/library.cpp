@@ -1963,46 +1963,69 @@ quint64 steamAppIdOf(const Game &g)
 
 void Library::media(const QString &id)
 {
-    if (const Game *g = game(id); g && g->rom) {
-        const Platform *p = platform(g->platform);
-        const QString chosen = Emulators::choose(g->emulator, p ? p->emulators : QStringList(), installs());
-        const EmulatorDef *def = Emulators::find(m_emulators, chosen);
-        if (!def || (def->screenshots.isEmpty() && !def->screenshotFoldersSet) || g->romPath.isEmpty()) {
-            QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
-            return;
-        }
-        auto *watcher = new QFutureWatcher<QVariantList>(this);
-        connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, id] {
-            emit mediaReady(id, watcher->result());
-            watcher->deleteLater();
-        });
-        watcher->setFuture(QtConcurrent::run([emulator = *def, install = installs().value(chosen), game = *g,
-                                              dataDir = m_store.dataDir()] {
-            const RomInfo info = EmulatorScreenshots::readInfo(game);
-            const QList<PlayHistory::Session> sessions = PlayHistory::read(dataDir, game.id).value.sessions;
-            QVariantList items;
-            for (const EmulatorScreenshots::Shot &s :
-                 EmulatorScreenshots::list(emulator, install, game, info, sessions, QDir::homePath()))
-                items.append(screenshotItem(s.id, s.path, s.time));
-            return items;
-        }));
-        return;
-    }
-    quint64 appId = quint64(qMax<qint64>(GameId::steamAppId(id), 0));
-    if (const Game *g = game(id); g && g->shortcut)
-        appId = steamAppIdOf(*g);
-    const SteamInstall install = m_store.snapshot().steam.install;
-    const bool steam = appId != 0 && !install.userDataDir().isEmpty();
-    const QStringList folders = m_store.snapshot().content.games.value(id).mediaFolders;
-    if (!steam && folders.isEmpty()) {
-        QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
-        return;
-    }
     struct Result
     {
         QVariantList items;
         bool limited = false;
     };
+    using Job = std::function<Result()>;
+
+    const auto jobFor = [this](const QString &copyId) -> Job {
+        const Game *g = game(copyId);
+        if (g && g->rom) {
+            const Platform *p = platform(g->platform);
+            const QString chosen = Emulators::choose(g->emulator, p ? p->emulators : QStringList(), installs());
+            const EmulatorDef *def = Emulators::find(m_emulators, chosen);
+            if (!def || (def->screenshots.isEmpty() && !def->screenshotFoldersSet) || g->romPath.isEmpty())
+                return {};
+            return [emulator = *def, install = installs().value(chosen), game = *g, dataDir = m_store.dataDir()] {
+                const RomInfo info = EmulatorScreenshots::readInfo(game);
+                const QList<PlayHistory::Session> sessions = PlayHistory::read(dataDir, game.id).value.sessions;
+                Result result;
+                for (const EmulatorScreenshots::Shot &s :
+                     EmulatorScreenshots::list(emulator, install, game, info, sessions, QDir::homePath()))
+                    result.items.append(screenshotItem(s.id, s.path, s.time));
+                return result;
+            };
+        }
+        quint64 appId = quint64(qMax<qint64>(GameId::steamAppId(copyId), 0));
+        if (g && g->shortcut)
+            appId = steamAppIdOf(*g);
+        const SteamInstall install = m_store.snapshot().steam.install;
+        const bool steam = appId != 0 && !install.userDataDir().isEmpty();
+        const QStringList folders = m_store.snapshot().content.games.value(copyId).mediaFolders;
+        if (!steam && folders.isEmpty())
+            return {};
+        return [install, appId, steam, folders] {
+            Result result;
+            SteamMedia::AppMedia shown;
+            if (steam) {
+                shown.clips = SteamMedia::listClips(install, appId);
+                shown.screenshots = SteamMedia::listScreenshots(install, appId);
+                for (const SteamMedia::Clip &c : shown.clips)
+                    result.items.append(clipItem(c));
+                for (const SteamMedia::Screenshot &s : shown.screenshots)
+                    result.items.append(screenshotItem(s.id, s.path, s.time));
+            }
+            if (!folders.isEmpty()) {
+                const MediaFolders::Listing listing = MediaFolders::list(folders, QDir::homePath());
+                result.limited = listing.limited;
+                result.items += folderItems(listing, steamShown(shown), VideoThumbnails::Cache(videoThumbnailFolder()));
+            }
+            return result;
+        };
+    };
+
+    const Game *g = game(id);
+    QList<Job> jobs;
+    for (const QString &copyId : g ? copiesOf(*g) : QStringList{id}) {
+        if (Job job = jobFor(copyId))
+            jobs.append(std::move(job));
+    }
+    if (jobs.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, id] { emit mediaReady(id, {}); }, Qt::QueuedConnection);
+        return;
+    }
     auto *watcher = new QFutureWatcher<Result>(this);
     connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, id] {
         const Result result = watcher->result();
@@ -2012,28 +2035,40 @@ void Library::media(const QString &id)
         emit mediaReady(id, result.items);
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([install, appId, steam, folders] {
-        Result result;
-        SteamMedia::AppMedia shown;
-        if (steam) {
-            shown.clips = SteamMedia::listClips(install, appId);
-            shown.screenshots = SteamMedia::listScreenshots(install, appId);
-            for (const SteamMedia::Clip &c : shown.clips)
-                result.items.append(clipItem(c));
-            for (const SteamMedia::Screenshot &s : shown.screenshots)
-                result.items.append(screenshotItem(s.id, s.path, s.time));
+    watcher->setFuture(QtConcurrent::run([jobs = std::move(jobs)] {
+        Result merged;
+        QSet<QString> seen;
+        for (const Job &job : jobs) {
+            const Result part = job();
+            merged.limited = merged.limited || part.limited;
+            for (const QVariant &item : part.items) {
+                if (seen.contains(item.toMap().value(QStringLiteral("id")).toString()))
+                    continue;
+                seen.insert(item.toMap().value(QStringLiteral("id")).toString());
+                merged.items.append(item);
+            }
         }
-        if (!folders.isEmpty()) {
-            const MediaFolders::Listing listing = MediaFolders::list(folders, QDir::homePath());
-            result.limited = listing.limited;
-            result.items += folderItems(listing, steamShown(shown), VideoThumbnails::Cache(videoThumbnailFolder()));
-        }
-        std::stable_sort(result.items.begin(), result.items.end(), [](const QVariant &a, const QVariant &b) {
+        std::stable_sort(merged.items.begin(), merged.items.end(), [](const QVariant &a, const QVariant &b) {
             return a.toMap().value(QStringLiteral("time")).toDateTime()
                    > b.toMap().value(QStringLiteral("time")).toDateTime();
         });
-        return result;
+        return merged;
     }));
+}
+
+QString Library::mediaKey(const QString &id) const
+{
+    const Game *g = game(id);
+    if (!g || g->groupId.isEmpty())
+        return id;
+    const auto shown = [this](const Game &copy) { return !copy.hidden || m_showHidden; };
+    if (const Game *main = game(g->groupId); main && shown(*main))
+        return main->id;
+    for (const QString &copyId : copiesOf(*g)) {
+        if (const Game *copy = game(copyId); copy && shown(*copy))
+            return copy->id;
+    }
+    return g->groupId;
 }
 
 void Library::requestVideoThumbnails(const QVariantList &items)
@@ -2097,17 +2132,34 @@ void Library::allMedia()
     }
 
     // The worker outlives a closed library for as long as a listing takes, so it reaches the library through a QPointer.
-    const auto deliver = [self = QPointer<Library>(this), generation](QVariantList batch, bool done,
-                                                                       QStringList limited = {}) {
+    // Copies of one game list under one id (mediaKey), and a file two copies both reach shows once.
+    QHash<QString, QString> keys;
+    for (const Game &g : std::as_const(m_games)) {
+        if (!g.groupId.isEmpty())
+            keys.insert(g.id, mediaKey(g.id));
+    }
+    const auto seen = QSharedPointer<QSet<QString>>::create();
+    const auto deliver = [self = QPointer<Library>(this), generation, keys, seen](QVariantList batch, bool done,
+                                                                                  QStringList limited = {}) {
         QMetaObject::invokeMethod(
             self.data(),
-            [self, generation, batch = std::move(batch), done, limited = std::move(limited)] {
+            [self, generation, keys, seen, batch = std::move(batch), done, limited = std::move(limited)]() mutable {
                 if (!self || generation != self->m_allMediaGeneration)
                     return;
-                self->requestVideoThumbnails(batch);
+                QVariantList kept;
+                for (const QVariant &v : std::as_const(batch)) {
+                    QVariantMap item = v.toMap();
+                    const QString gameId = item.value(QStringLiteral("gameId")).toString();
+                    item.insert(QStringLiteral("gameId"), keys.value(gameId, gameId));
+                    if (seen->contains(item.value(QStringLiteral("id")).toString()))
+                        continue;
+                    seen->insert(item.value(QStringLiteral("id")).toString());
+                    kept.append(item);
+                }
+                self->requestVideoThumbnails(kept);
                 for (const QString &id : limited)
-                    emit self->mediaLimited(id);
-                emit self->allMediaReady(batch, done);
+                    emit self->mediaLimited(keys.value(id, id));
+                emit self->allMediaReady(kept, done);
             },
             Qt::QueuedConnection);
     };
@@ -2166,7 +2218,7 @@ QVariantMap Library::mediaGames() const
         platforms.insert(p.id, &p);
     QVariantMap out;
     for (const Game &g : m_games) {
-        if (g.hidden && !m_showHidden)
+        if ((g.hidden && !m_showHidden) || mediaKey(g.id) != g.id)
             continue;
         const Platform *p = platforms.value(g.platform);
         out.insert(g.id, QVariantMap{{QStringLiteral("title"), g.title},

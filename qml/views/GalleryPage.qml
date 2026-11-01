@@ -86,7 +86,7 @@ FocusScope {
         rows = []
         typeSel = ({})
         platformSel = ({})
-        gameSel = gameId === "" ? ({}) : ({ [gameId]: true })
+        gameSel = gameId === "" ? ({}) : ({ [Library.mediaKey(gameId)]: true })
         monthSel = ({})
         counts = { type: {}, platform: {}, game: {}, month: {} }
         platformList = []
