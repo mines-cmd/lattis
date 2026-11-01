@@ -39,6 +39,7 @@ When you have one game twice, for example bought on Steam and also added as a Wi
 
 - Both show the combined play time and last played, and their play history lists the sessions of both, each marked with the platform it was played on.
 - The statistics count the game once in Most played, under the Steam copy (between two copies not from Steam, under the one you picked in the menu); each copy's hours still go to its own platform.
+- Their media is shared: each copy's page shows the clips and screenshots of both, and the Gallery lists the game once.
 - Nothing is moved between the copies: each keeps its own play time, and Steam's own numbers stay separate. **Unlink** in the right-click menu (Undo is offered) puts each copy back on its own time. Unlinking the copy the others point at unlinks them all.
 
 You can hide one of the copies and keep the other on the list; the hidden copy's sessions still count.
