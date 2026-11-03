@@ -261,8 +261,23 @@ void Backups::updateSavesMap()
             {QStringLiteral("takeKeys"), part.takeKeys && m_saves.keys},
         });
     }
+    QVariantList games;
+    for (const BackupPlan::GamePart &part : std::as_const(m_saves.savedGames)) {
+        const auto [paths, bytes] = found(part.places, home);
+        games.append(QVariantMap{
+            {QStringLiteral("id"), part.gameId},
+            {QStringLiteral("title"), part.title},
+            {QStringLiteral("matched"), part.matched},
+            {QStringLiteral("paths"), paths},
+            {QStringLiteral("tooBig"), part.tooBig},
+            {QStringLiteral("bytes"), part.measured ? bytes : -1},
+            {QStringLiteral("take"), part.take},
+        });
+    }
     QVariantList proton;
     for (const BackupPlan::ProtonPart &part : std::as_const(m_saves.protonGames)) {
+        if (part.superseded)
+            continue;
         proton.append(QVariantMap{
             {QStringLiteral("id"), part.gameId},
             {QStringLiteral("title"), part.title},
@@ -274,6 +289,8 @@ void Backups::updateSavesMap()
     m_savesMap = {
         {QStringLiteral("measured"), m_saves.measured},
         {QStringLiteral("emulators"), emulators},
+        {QStringLiteral("games"), games},
+        {QStringLiteral("hasManifest"), m_saves.hasManifest},
         {QStringLiteral("proton"), proton},
     };
     emit savesPlanChanged();

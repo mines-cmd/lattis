@@ -54,6 +54,8 @@ MotionPopup {
                      + (e.takeKeys ? Math.max(0, e.keysBytes) : 0)
         for (const g of p.proton)
             total += g.take && g.skipped === "" ? Math.max(0, g.bytes) : 0
+        for (const g of p.games ?? [])
+            total += g.take && !g.tooBig ? Math.max(0, g.bytes) : 0
         return total
     }
 
@@ -61,8 +63,12 @@ MotionPopup {
         && e.saves.length === 0 && e.besideRoms === 0)).map(e => ({ id: "saves:" + e.id, on: e.takeSaves }))
     readonly property var keyRows: library ? [] : (plan.emulators ?? []).filter(e => e.keys.length > 0).map(e => ({ id: "keys:" + e.id, on: e.takeKeys }))
     readonly property var protonRows: library ? [] : (plan.proton ?? []).filter(g => g.skipped === "").map(g => ({ id: "proton:" + g.id, on: g.take }))
-    readonly property int selectedRows: [saveRows, keyRows, protonRows].reduce((n, rows) => n + rows.filter(r => r.on).length, 0)
-    readonly property int allRows: saveRows.length + keyRows.length + protonRows.length
+    readonly property var gameRows: library ? [] : (plan.games ?? []).filter(g => !g.tooBig).map(g => ({ id: "game:" + g.id, on: g.take }))
+    readonly property int selectedRows: [saveRows, keyRows, protonRows, gameRows].reduce((n, rows) => n + rows.filter(r => r.on).length, 0)
+    readonly property int allRows: saveRows.length + keyRows.length + protonRows.length + gameRows.length
+    // Read only while this page of the dialog is up: SavesSettings is made on first use.
+    readonly property bool listUpdating: !library && visible && SavesSettings.updating
+    readonly property bool listMissing: !library && (plan.measured ?? false) && !(plan.hasManifest ?? true)
 
     function rowsState(rows) {
         const on = rows.filter(r => r.on).length
@@ -99,6 +105,14 @@ MotionPopup {
                 root.done = Backups.last[kind]
             else if (message !== qsTr("Cancelled"))
                 error.text = message
+        }
+    }
+
+    Connections {
+        target: root.library ? null : SavesSettings
+        function onUpdatingChanged() {
+            if (!SavesSettings.updating && root.visible)
+                Backups.planSaves()
         }
     }
 
@@ -405,6 +419,59 @@ MotionPopup {
                     Layout.fillWidth: true
                     SettingsCheckBox {
                         Layout.fillWidth: true
+                        text: qsTr("Games' saves")
+                        enabled: root.gameRows.length > 0
+                        checkState: root.rowsState(root.gameRows)
+                        partial: checkState === Qt.PartiallyChecked
+                        checked: checkState === Qt.Checked
+                        onToggled: root.setRows(root.gameRows, root.rowsState(root.gameRows) !== Qt.Checked)
+                    }
+                }
+                Hint {
+                    visible: !root.library
+                    text: qsTr("Just the saves of each Linux, Steam and Proton game that the saves list knows, or that you gave a save folder.")
+                }
+                RowLayout {
+                    visible: root.listMissing
+                    Layout.fillWidth: true
+                    spacing: Theme.layout.spacing
+                    Hint {
+                        text: root.listUpdating ? qsTr("Downloading the saves list…")
+                              : qsTr("Update the saves list to include Linux and Steam games.")
+                    }
+                    SettingsButton {
+                        text: qsTr("Update the saves list")
+                        enabled: !root.listUpdating
+                        onClicked: SavesSettings.ensureManifest()
+                    }
+                }
+                Card {
+                    visible: !root.library && (root.plan.games ?? []).length > 0
+                    Repeater {
+                        model: root.library ? [] : (root.plan.games ?? [])
+                        PartRow {
+                            required property var modelData
+                            name: modelData.title
+                            skipped: modelData.tooBig
+                            reserve: true
+                            toggleable: !modelData.tooBig
+                            taken: modelData.take
+                            onToggled: taken => root.setRows([{ id: "game:" + modelData.id }], taken)
+                            detail: modelData.tooBig ? qsTr("Too big, skipped (%1)").arg(root.size(modelData.bytes))
+                                                     : root.size(modelData.bytes)
+                            Repeater {
+                                model: modelData.paths
+                                PathHint { required property string modelData; text: modelData }
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    visible: !root.library
+                    Layout.fillWidth: true
+                    SettingsCheckBox {
+                        Layout.fillWidth: true
                         text: qsTr("Proton games' saves")
                         enabled: root.protonRows.length > 0
                         checkState: root.rowsState(root.protonRows)
@@ -415,7 +482,7 @@ MotionPopup {
                 }
                 Hint {
                     visible: !root.library
-                    text: qsTr("What each game keeps in its Wine prefix, without the files Proton put there.")
+                    text: qsTr("For a launcher Proton game the saves list doesn't know: what it keeps in its Wine prefix, without the files Proton put there.")
                 }
                 Card {
                     visible: !root.library && (root.plan.proton ?? []).length > 0
@@ -441,8 +508,8 @@ MotionPopup {
                 Hint {
                     text: (root.library ? qsTr("Saves: they're in their own backup.") + "\n" : qsTr("The library: it's in its own backup.") + "\n")
                           + qsTr("ROMs.") + "\n"
-                          + qsTr("Steam games (Steam Cloud and Steam keep those), and their Proton prefixes.") + "\n"
-                          + qsTr("Linux games' saves, wherever each game keeps them.") + "\n"
+                          + qsTr("Steam games' Proton prefixes, and what Steam Cloud keeps.") + "\n"
+                          + qsTr("Saves of games the saves list doesn't know, unless you gave them a save folder.") + "\n"
                           + qsTr("The cache, window sizes and the Steam sync record.")
                     opacity: Theme.gameEditor.readOnlyOpacity
                 }

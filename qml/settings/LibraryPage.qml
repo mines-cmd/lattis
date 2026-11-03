@@ -355,7 +355,7 @@ Item {
                             { kind: "library", name: qsTr("Library"), button: qsTr("Back up library"),
                               what: qsTr("Games, art, themes, settings and the API keys. Never ROMs.") },
                             { kind: "saves", name: qsTr("Saves"), button: qsTr("Back up saves"),
-                              what: qsTr("Emulator saves, keys and firmware, saves next to ROMs, and Proton games' saves.") },
+                              what: qsTr("Emulator saves, keys and firmware, saves next to ROMs, and the saves of Linux, Steam and Proton games.") },
                         ]
 
                         ColumnLayout {

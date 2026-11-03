@@ -150,7 +150,7 @@ MotionPopup {
                 onToggled: Backups.checkImportPart(partRow.part.index, checked)
             }
             Label {
-                visible: partRow.part.kind === "proton" && partRow.part.bytes >= 0
+                visible: (partRow.part.kind === "proton" || partRow.part.kind === "gameSaves") && partRow.part.bytes >= 0
                 text: Backups.sizeText(partRow.part.bytes)
                 color: Theme.gameEditor.hintColor
                 font.pixelSize: Theme.gameEditor.hintFontSize
