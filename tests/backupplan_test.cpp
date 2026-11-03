@@ -1,5 +1,6 @@
 #include "backupplan.h"
 #include "libraryfiles.h"
+#include "savesindex.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -102,8 +103,13 @@ private slots:
     void protonGames();
     void protonChoice();
     void savesManifest();
+    void savedGames();
+    void savedGamesWithoutManifest();
+    void savedGamesChoice();
+    void savedGamesTooBig();
 
 private:
+    BackupPlan::Sources savedSources(bool withManifest = true) const;
     QString path(const QString &relative) const { return m_dir->filePath(relative); }
     BackupPlan::Sources librarySources() const;
     BackupPlan::Sources savesSources() const;
@@ -668,6 +674,101 @@ void BackupPlanTest::savesManifest()
         "bytes = "
         + QByteArray::number(plan.protonGames.first().saves.bytes) + "\n";
     QCOMPARE(BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")), expected);
+}
+
+// savesSources() plus two games the finder takes: Celeste (Linux, from the manifest) and Cave Story
+// (a launcher Proton game with an own save path, so no manifest match).
+BackupPlan::Sources BackupPlanTest::savedSources(bool withManifest) const
+{
+    BackupPlan::Sources s = savesSources();
+    s.manifestDir = path(QStringLiteral("manifest"));
+    if (withManifest) {
+        QFile fixture(QStringLiteral(SAVES_FIXTURE "/manifest.yaml"));
+        if (!fixture.open(QIODevice::ReadOnly))
+            qFatal("the saves fixture is missing");
+        const Parsed<SavesIndex> parsed = SavesIndexFile::parse(fixture.readAll());
+        if (!parsed.ok)
+            qFatal("the saves fixture doesn't parse");
+        QDir().mkpath(s.manifestDir);
+        if (!SavesIndexFile::save(s.manifestDir + QStringLiteral("/index.bin"), parsed.value))
+            qFatal("the saves index didn't save");
+    }
+    s.savesEnv.home = m_home;
+    s.savesEnv.xdgData = m_home + QStringLiteral("/.local/share");
+    s.savesEnv.xdgConfig = m_home + QStringLiteral("/.config");
+    s.savesEnv.user = QStringLiteral("someone");
+
+    SavesFinder::Query celeste;
+    celeste.id = QStringLiteral("linux-celeste");
+    celeste.title = QStringLiteral("Celeste");
+    SavesFinder::Query cave;
+    cave.id = QStringLiteral("proton-cave-story");
+    cave.title = QStringLiteral("Cave Story");
+    cave.savePaths = {m_home + QStringLiteral("/cave/save.dat")};
+    s.saveGames = {{celeste.id, celeste.title, {celeste}}, {cave.id, cave.title, {cave}}};
+
+    writeFile(m_home + QStringLiteral("/.local/share/Celeste/Saves/0.celeste"), 7);
+    writeFile(m_home + QStringLiteral("/cave/save.dat"), 11);
+    return s;
+}
+
+void BackupPlanTest::savedGames()
+{
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(savedSources(), {});
+    QVERIFY(plan.savedGames.isEmpty()); // until measured
+    BackupPlan::measure(plan);
+
+    QVERIFY(plan.hasManifest);
+    QCOMPARE(plan.savedGames.size(), 2);
+    const BackupPlan::GamePart &celeste = plan.savedGames.at(0);
+    QCOMPARE(celeste.gameId, QStringLiteral("linux-celeste"));
+    QCOMPARE(celeste.matched, QStringLiteral("Celeste"));
+    QCOMPARE(celeste.match, SavesFinder::Match::Title);
+    QCOMPARE(celeste.bytes(), 7);
+    const BackupPlan::GamePart &cave = plan.savedGames.at(1);
+    QCOMPARE(cave.match, SavesFinder::Match::None);
+    QCOMPARE(cave.bytes(), 11);
+
+    // Its slim prefix is left out: the archive never holds a game twice.
+    QVERIFY(plan.protonGames.at(0).superseded);
+    QVERIFY(!plan.protonGames.at(1).superseded);
+    QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 7 + 11);
+    QVERIFY(!BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")).contains("proton-cave-story"));
+}
+
+void BackupPlanTest::savedGamesWithoutManifest()
+{
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(savedSources(false), {});
+    BackupPlan::measure(plan);
+    QVERIFY(!plan.hasManifest);
+    QCOMPARE(plan.savedGames.size(), 1); // its own path needs no manifest; Celeste isn't found
+    QCOMPARE(plan.savedGames.first().gameId, QStringLiteral("proton-cave-story"));
+}
+
+void BackupPlanTest::savedGamesChoice()
+{
+    BackupPlan::Settings settings;
+    settings.ignored = {QStringLiteral("game:linux-celeste")};
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(savedSources(), settings);
+    BackupPlan::measure(plan);
+    QVERIFY(!plan.savedGames.at(0).take);
+    QVERIFY(plan.savedGames.at(1).take);
+    QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 11);
+
+    BackupPlan::applyChoices(plan, {});
+    QVERIFY(plan.savedGames.at(0).take);
+    QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 7 + 11);
+}
+
+void BackupPlanTest::savedGamesTooBig()
+{
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(savedSources(), {});
+    plan.maxBytes = 8;
+    BackupPlan::measure(plan);
+    QVERIFY(!plan.savedGames.at(0).tooBig);
+    QVERIFY(plan.savedGames.at(1).tooBig);
+    QCOMPARE(plan.savedGames.at(1).bytes(), 0);
+    QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 7);
 }
 
 QTEST_GUILESS_MAIN(BackupPlanTest)

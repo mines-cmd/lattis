@@ -97,6 +97,11 @@ set(LIBRARY_SOURCES
     ${LIBRARY_FILE_SOURCES}
 )
 set(BACKUP_SOURCES
+    ../src/saves/savesindex.h ../src/saves/savesindex.cpp
+    ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+    ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
+    ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
+    ../src/core/apppaths.h ../src/core/apppaths.cpp
     ../src/backup/backupplan.h ../src/backup/backupplan.cpp
     ../src/backup/besiderom.h ../src/backup/besiderom.cpp
     ../src/backup/protonsaves.h ../src/backup/protonsaves.cpp
@@ -409,11 +414,11 @@ lattis_test(movedaside_test
     LIBS LibArchive::LibArchive tomlplusplus::tomlplusplus)
 lattis_test(backupplan_test
     SOURCES ${BACKUP_SOURCES}
-    LIBS LibArchive::LibArchive tomlplusplus::tomlplusplus
-    DEFINES ${STEAM_DATA})
+    LIBS Qt6::Network LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp
+    DEFINES ${STEAM_DATA} ${SAVES_FIXTURE})
 lattis_test(backup_test
     SOURCES ../src/backup/backup.h ../src/backup/backup.cpp ${BACKUP_SOURCES}
-    LIBS Qt6::Concurrent LibArchive::LibArchive tomlplusplus::tomlplusplus
+    LIBS Qt6::Concurrent Qt6::Network LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp
     DEFINES ${STEAM_DATA})
 lattis_test(restore_test
     SOURCES ../src/backup/restore.h ../src/backup/restore.cpp
@@ -422,7 +427,7 @@ lattis_test(restore_test
             ../src/core/dateformat.h ../src/core/dateformat.cpp
             ../src/backup/backup.h ../src/backup/backup.cpp
             ${BACKUP_SOURCES}
-    LIBS Qt6::Qml Qt6::Concurrent LibArchive::LibArchive tomlplusplus::tomlplusplus
+    LIBS Qt6::Qml Qt6::Concurrent Qt6::Network LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp
     DEFINES ${STEAM_DATA})
 
 # QML and JavaScript tests (tests/qml/tst_*.qml), run from the source folder.

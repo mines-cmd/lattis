@@ -221,6 +221,10 @@ int main(int argc, char *argv[])
                         s.games = library.allGames();
                         s.emulators = library.emulators();
                         s.installs = library.installs();
+                        s.saveGames = SavesBackup::queriesFor(library);
+                        s.savesEnv = SavesFinder::Env::system();
+                        s.savesEnv.home = s.home;
+                        s.manifestDir = SavesManifest::defaultDir();
                         if (!snapshot.steam.libraries.isEmpty())
                             s.compatdata = snapshot.steam.libraries.first() + QStringLiteral("/compatdata");
                         return s;

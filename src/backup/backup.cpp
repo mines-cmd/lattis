@@ -177,7 +177,7 @@ QString write(BackupPlan::SavesPlan plan, const QString &path, const QDateTime &
 
     if (plan.proton) {
         for (const BackupPlan::ProtonPart &part : std::as_const(plan.protonGames)) {
-            if (!part.take || part.saves.skipped != ProtonSaves::Skipped::No)
+            if (!part.take || part.superseded || part.saves.skipped != ProtonSaves::Skipped::No)
                 continue;
             const std::optional<ProtonSaves::Prefix> prefix = ProtonSaves::Prefix::read(part.saves.prefix);
             if (!prefix) {

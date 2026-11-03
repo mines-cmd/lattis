@@ -7,6 +7,7 @@
 #include "libraryfiles.h"
 #include "parsed.h"
 #include "protonsaves.h"
+#include "savesfinder.h"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -53,6 +54,14 @@ struct Place
     bool operator==(const Place &) const = default;
 };
 
+// A game's copies for the saves finder; the first is the group's main one.
+struct GameQueries
+{
+    QString id;
+    QString title;
+    QList<SavesFinder::Query> copies;
+};
+
 struct Sources
 {
     QString dataDir;
@@ -63,6 +72,9 @@ struct Sources
     QList<EmulatorDef> emulators;
     QHash<QString, EmulatorInstall> installs;
     QString compatdata;
+    QList<GameQueries> saveGames;
+    SavesFinder::Env savesEnv;
+    QString manifestDir;
 };
 
 struct LibraryPlan
@@ -119,6 +131,24 @@ struct ProtonPart
     QString proton;
     bool measured = false;
     bool take = true;
+    // Taken as the game's matched saves instead (a GamePart), so the archive never holds it twice.
+    bool superseded = false;
+};
+
+// A game whose saves the manifest or its own paths found.
+struct GamePart
+{
+    QString gameId;
+    QString title;
+    QString matched;
+    SavesFinder::Match match = SavesFinder::Match::None;
+    QList<Place> places;
+    bool measured = false;
+    bool take = true;
+    bool tooBig = false;
+
+    // What the backup takes of it; -1 until measured.
+    qint64 bytes() const;
 };
 
 struct SavesPlan
@@ -129,6 +159,15 @@ struct SavesPlan
     bool proton = true;
     QList<EmulatorPart> emulators;
     QList<ProtonPart> protonGames;
+    QList<GamePart> savedGames; // found by measure()
+    // Whether the saves manifest was there when measure() looked for them.
+    bool hasManifest = false;
+    QStringList ignored;
+    qint64 maxBytes = qint64(1024) << 20;
+
+    QList<GameQueries> findGames;
+    SavesFinder::Env savesEnv;
+    QString manifestDir;
 
     QList<Platform> platforms;
     QList<Game> games;

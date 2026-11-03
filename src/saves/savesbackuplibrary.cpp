@@ -31,6 +31,57 @@ QString steamPrefix(const QStringList &libraries, int appId)
     }
     return {};
 }
+
+bool eligible(const Game &game)
+{
+    return !game.rom
+           && (game.platform == kSteamPlatform || game.platform == kProtonPlatform
+               || game.platform == kLinuxPlatform);
+}
+
+QList<SavesFinder::Query> copiesOf(const Library &library, const LibrarySnapshot &snapshot, const QString &main)
+{
+    QList<SavesFinder::Query> out;
+    QStringList ids{main};
+    if (const Game *mainGame = library.game(main))
+        ids += mainGame->linked;
+    for (const QString &id : ids) {
+        const Game *copy = library.game(id);
+        if (!copy)
+            continue;
+        const GameFile gameFile = snapshot.content.games.value(id);
+        SavesFinder::Query query;
+        query.id = copy->id;
+        query.title = copy->title;
+        query.steamAppId = copy->platform == kSteamPlatform ? int(GameId::steamAppId(copy->id)) : 0;
+        query.savesGame = gameFile.savesGame;
+        query.baseDir = copy->installDir;
+        query.saveFolder = gameFile.saveFolder;
+        query.savePaths = gameFile.savePaths;
+        if (copy->platform == kProtonPlatform && copy->shortcut != 0) {
+            if (const QString prefix = library.protonPrefix(copy->shortcut); !prefix.isEmpty())
+                query.prefix = prefix + QStringLiteral("/pfx");
+        } else if (query.steamAppId > 0) {
+            query.prefix = steamPrefix(snapshot.steam.libraries, query.steamAppId);
+        }
+        out.append(query);
+    }
+    return out;
+}
+}
+
+QList<BackupPlan::GameQueries> queriesFor(const Library &library)
+{
+    const LibrarySnapshot &snapshot = library.store().snapshot();
+    QList<BackupPlan::GameQueries> out;
+    for (const Game &game : library.allGames()) {
+        if (!eligible(game) || (!game.groupId.isEmpty() && game.groupId != game.id))
+            continue;
+        QList<SavesFinder::Query> copies = copiesOf(library, snapshot, game.id);
+        if (!copies.isEmpty())
+            out.append({game.id, game.title, std::move(copies)});
+    }
+    return out;
 }
 
 bool anyOn(const Library &library)
@@ -71,30 +122,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
     input.gameId = main;
     input.title = mainGame ? mainGame->title : game->title;
 
-    QStringList ids{main};
-    if (mainGame)
-        ids += mainGame->linked;
-    for (const QString &id : ids) {
-        const Game *copy = library.game(id);
-        if (!copy)
-            continue;
-        const GameFile gameFile = snapshot.content.games.value(id);
-        SavesFinder::Query query;
-        query.id = copy->id;
-        query.title = copy->title;
-        query.steamAppId = copy->platform == kSteamPlatform ? int(GameId::steamAppId(copy->id)) : 0;
-        query.savesGame = gameFile.savesGame;
-        query.baseDir = copy->installDir;
-        query.saveFolder = gameFile.saveFolder;
-        query.savePaths = gameFile.savePaths;
-        if (copy->platform == kProtonPlatform && copy->shortcut != 0) {
-            if (const QString prefix = library.protonPrefix(copy->shortcut); !prefix.isEmpty())
-                query.prefix = prefix + QStringLiteral("/pfx");
-        } else if (query.steamAppId > 0) {
-            query.prefix = steamPrefix(snapshot.steam.libraries, query.steamAppId);
-        }
-        input.copies.append(query);
-    }
+    input.copies = copiesOf(library, snapshot, main);
     if (input.copies.isEmpty())
         return std::nullopt;
 

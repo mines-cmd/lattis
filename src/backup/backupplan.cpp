@@ -2,6 +2,7 @@
 #include "tomlsection.h"
 #include "credentials.h"
 #include "gamefile.h"
+#include "savesmanifest.h"
 #include "suggestion.h"
 #include "tomlpatch.h"
 
@@ -325,6 +326,13 @@ bool EmulatorPart::takesAnything(bool withKeys) const
     return (takeSaves && (found(saves) || !besideRoms.isEmpty())) || (withKeys && takeKeys && found(keys));
 }
 
+qint64 GamePart::bytes() const
+{
+    if (!measured)
+        return -1;
+    return tooBig ? 0 : sum(places);
+}
+
 qint64 SavesPlan::bytes() const
 {
     if (!measured)
@@ -334,8 +342,10 @@ qint64 SavesPlan::bytes() const
         total += part.bytes(keys);
     if (proton) {
         for (const ProtonPart &part : protonGames)
-            total += part.take ? part.saves.bytes : 0;
+            total += part.take && !part.superseded ? part.saves.bytes : 0;
     }
+    for (const GamePart &part : savedGames)
+        total += part.take ? part.bytes() : 0;
     return total;
 }
 
@@ -347,6 +357,9 @@ SavesPlan planSaves(const Sources &sources, const Settings &settings)
     plan.platforms = sources.platforms;
     plan.games = sources.games;
     plan.definitions = sources.emulators;
+    plan.findGames = sources.saveGames;
+    plan.savesEnv = sources.savesEnv;
+    plan.manifestDir = sources.manifestDir;
 
     QSet<QString> configured;
     for (const Platform &platform : sources.platforms) {
@@ -400,6 +413,8 @@ void applyChoices(SavesPlan &plan, const Settings &settings)
 {
     plan.keys = settings.keys;
     plan.proton = settings.proton;
+    plan.ignored = settings.ignored;
+    plan.maxBytes = qint64(settings.autoMaxMb) << 20;
     const QSet<QString> ignored(settings.ignored.cbegin(), settings.ignored.cend());
     for (EmulatorPart &part : plan.emulators) {
         part.takeSaves = !ignored.contains(QStringLiteral("saves:") + part.id);
@@ -407,6 +422,49 @@ void applyChoices(SavesPlan &plan, const Settings &settings)
     }
     for (ProtonPart &part : plan.protonGames)
         part.take = !ignored.contains(QStringLiteral("proton:") + part.gameId);
+    for (GamePart &part : plan.savedGames)
+        part.take = !ignored.contains(QStringLiteral("game:") + part.gameId);
+}
+
+namespace {
+void findSavedGames(SavesPlan &plan)
+{
+    plan.savedGames.clear();
+    plan.hasManifest = false;
+    if (plan.findGames.isEmpty())
+        return;
+    // Own save paths need no manifest, so a missing one only means fewer games are found.
+    SavesIndex index;
+    if (std::optional<SavesIndex> loaded = SavesManifest::loadIndex(plan.manifestDir))
+        index = std::move(*loaded);
+    plan.hasManifest = !index.games.isEmpty();
+    const SavesFinder::Matcher matcher(index);
+    const QSet<QString> ignored(plan.ignored.cbegin(), plan.ignored.cend());
+    for (const GameQueries &game : std::as_const(plan.findGames)) {
+        const SavesFinder::Found found = SavesFinder::find(matcher, game.copies, plan.savesEnv);
+        if (found.paths.isEmpty())
+            continue;
+        GamePart part;
+        part.gameId = game.id;
+        part.title = game.title;
+        part.matched = found.matched;
+        part.match = found.match;
+        for (const QString &path : found.paths)
+            part.places.append(place(path));
+        measure(part.places);
+        part.tooBig = sum(part.places) > plan.maxBytes;
+        part.take = !ignored.contains(QStringLiteral("game:") + part.gameId);
+        part.measured = true;
+        plan.savedGames.append(part);
+        for (const SavesFinder::Query &copy : game.copies) {
+            for (ProtonPart &proton : plan.protonGames) {
+                if (proton.gameId == copy.id)
+                    proton.superseded = true;
+            }
+        }
+    }
+}
+
 }
 
 void measure(SavesPlan &plan)
@@ -426,8 +484,10 @@ void measure(SavesPlan &plan)
         }
         part.measured = true;
     }
+    findSavedGames(plan);
     for (ProtonPart &part : plan.protonGames) {
-        ProtonSaves::addFiles(part.saves);
+        if (!part.superseded)
+            ProtonSaves::addFiles(part.saves);
         part.measured = true;
     }
     plan.measured = true;
@@ -499,7 +559,7 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
 
     if (plan.proton) {
         for (const ProtonPart &part : plan.protonGames) {
-            if (!part.take || part.saves.skipped != ProtonSaves::Skipped::No)
+            if (!part.take || part.superseded || part.saves.skipped != ProtonSaves::Skipped::No)
                 continue;
             out += QStringLiteral("\n[[game]]\nid = %1\ntitle = %2\n").arg(tomlString(part.gameId), tomlString(part.title));
             out += QStringLiteral("shortcut = %1   # its prefix's folder when it was backed up\n").arg(part.saves.shortcut);
