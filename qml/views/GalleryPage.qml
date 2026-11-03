@@ -918,6 +918,20 @@ FocusScope {
                     info: row.isHeader ? root.groupInfo[row.rowData.key] : null
                 }
 
+                // Not in the Loader below: the grid's shape shows in the first frame the row exists.
+                Repeater {
+                    model: row.isHeader ? 0 : row.rowData.items.length
+
+                    Rectangle {
+                        required property int index
+                        x: root.cardPad + index * (root.tileWidth + Theme.gallery.tileGap)
+                        width: root.tileWidth
+                        height: root.tileHeight
+                        radius: Theme.gallery.tileRadius
+                        color: Theme.gallery.placeholderColor
+                    }
+                }
+
                 // Made in one go, the first screen of tiles stalled a frame of the opening animation by ~20 ms.
                 Loader {
                     active: !row.isHeader
@@ -943,6 +957,7 @@ FocusScope {
                                 width: root.tileWidth
                                 height: root.tileHeight
                                 media: cell.modelData.item
+                                color: "transparent"
                                 showTooltip: false
                                 cornerRadius: Theme.gallery.tileRadius
                                 shadowSize: Theme.gallery.tileShadowSize

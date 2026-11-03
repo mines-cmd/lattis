@@ -1164,6 +1164,7 @@ constexpr Setting kSettings[] = {
     integer("gallery", "tile_shadow_size", "@media.thumb_shadow_size", 0, 100, "How far that shadow spreads; 0 = none"),
     real("gallery", "tile_hover_scale", "@media.thumb_hover_scale", 1, 1.5, "Size a tile grows to under the pointer; 1 = no growing"),
     color("gallery", "tile_border_color", "@media.thumb_border_color", "Tile outline"),
+    color("gallery", "placeholder_color", "@surface_raised", "What a tile shows until its picture arrives"),
     integer("gallery", "game_name_size", "13", 6, 48, "The game's name and the date under a tile"),
     color("gallery", "game_name_color", "@text_muted", "The game's name under a tile"),
     color("gallery", "date_color", "@gallery.count_color", "The date and time under a tile"),
