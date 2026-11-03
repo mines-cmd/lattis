@@ -1046,7 +1046,7 @@ ApplicationWindow {
                                                             : window.width - Theme.layout.margin
         x: high - low < width ? low + (high - low - width) / 2
                               : Math.max(low, Math.min(high - width, (window.width - width) / 2))
-        y: Theme.layout.margin + (Theme.layout.toolbarHeight - height) / 2
+        y: Theme.toolbar.marginTop
         checkedButton: window.statsOpen ? "play_statistics" : window.galleryOpen ? "gallery" : ""
         onTriggered: name => window.run(name)
         onMessage: text => toast.show(text)

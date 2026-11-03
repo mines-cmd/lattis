@@ -1032,6 +1032,7 @@ constexpr Setting kSettings[] = {
     integer("window_controls", "resize_border", "6", 0, 50,
             "Width of the window edges you drag to resize the window; 0 = off"),
 
+    integer("toolbar", "margin_top", "@layout.margin", 0, 200, "Distance from the top of the window to the toolbar"),
     integer("toolbar", "size", "32", 16, 100, "Button size"),
     integer("toolbar", "icon_size", "16", 8, 64, "Icon size"),
     integer("toolbar", "spacing", "2", 0, 50, "Space between the buttons"),
