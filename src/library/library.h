@@ -166,7 +166,7 @@ public:
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
     Q_INVOKABLE void allMedia();
-    Q_INVOKABLE QVariantMap mediaGames() const;
+    Q_INVOKABLE QVariantMap mediaGames(const QStringList &ids) const;
     Q_INVOKABLE QString mediaKey(const QString &id) const;
     Q_INVOKABLE void achievements(const QString &id);
     // Looks up how many percent of all players unlocked each achievement of an app, by API name; never called back

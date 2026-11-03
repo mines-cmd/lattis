@@ -2255,16 +2255,15 @@ void Library::allMedia()
     });
 }
 
-QVariantMap Library::mediaGames() const
+QVariantMap Library::mediaGames(const QStringList &ids) const
 {
-    QHash<QString, const Platform *> platforms;
-    for (const Platform &p : m_platforms)
-        platforms.insert(p.id, &p);
     QVariantMap out;
-    for (const Game &g : m_games) {
-        if ((g.hidden && !m_showHidden) || mediaKey(g.id) != g.id)
+    for (const QString &id : ids) {
+        const Game *found = game(id);
+        if (!found || mediaKey(id) != id)
             continue;
-        const Platform *p = platforms.value(g.platform);
+        const Game &g = *found;
+        const Platform *p = platform(g.platform);
         out.insert(g.id, QVariantMap{{QStringLiteral("title"), g.title},
                                      {QStringLiteral("platform"), g.platform},
                                      {QStringLiteral("platformName"), g.platformName},

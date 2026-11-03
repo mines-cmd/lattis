@@ -73,6 +73,7 @@ FocusScope {
     }
     readonly property real contentTotal: rowTops[rowTops.length - 1]
     readonly property bool viewerOpen: viewer.item !== null && viewer.item.opened
+    readonly property bool opening: riseIn.running
 
     signal closeRequested()
     signal gameRequested(string id)
@@ -98,45 +99,13 @@ FocusScope {
         keyboardFocus = false
         games = ({})
         loading = true
-        settling = true
-        queued = []
-        fetch.restart()
         Library.allMedia()
         sinkOut.stop()
         riseIn.restart()
         forceActiveFocus()
     }
 
-    // The search runs while the page opens, but listing the games and laying out the first batch stall
-    // the window for tens of ms, which in the middle of the opening animation showed as a fade followed
-    // by a jump; so what it finds is held until the animation ends.
-    property bool settling: false
-    property var queued: []
-
-    Timer {
-        id: fetch
-        interval: riseIn.duration + 30
-        onTriggered: {
-            root.games = Library.mediaGames()
-            root.settling = false
-            const held = root.queued
-            root.queued = []
-            for (const b of held)
-                root.receive(b.batch, b.done)
-        }
-    }
-
-    function receive(batch: var, done: bool) {
-        take(batch)
-        if (done) {
-            loading = false
-            rebuild()
-            openForScreenshot()
-        }
-    }
-
     function leave() {
-        fetch.stop()
         riseIn.stop()
         sinkOut.restart()
     }
@@ -148,6 +117,9 @@ FocusScope {
         from: Theme.gallery.pageOffset
         to: 0
         speed: "slow"
+        // Making the filter lists stalls a frame by ~30 ms, which showed as a jump in the rise; the grid fills
+        // during it, the lists once it ends.
+        onFinished: if (root.listsStale) root.buildLists()
     }
 
     // Not riseIn reversed: that saves its movement for the end, when the page has all but faded,
@@ -160,10 +132,25 @@ FocusScope {
         speed: "normal"
     }
 
+    // Listing the whole library's games took ~50 ms on a large library, so only the games the batches name are
+    // looked up; a game the library doesn't show is kept as null so it isn't looked up again.
     function take(batch: var) {
-        const added = []
+        const unknown = new Set()
         for (const item of batch) {
             if (games[item.gameId] === undefined)
+                unknown.add(item.gameId)
+        }
+        if (unknown.size > 0) {
+            const ids = [...unknown]
+            const found = Library.mediaGames(ids)
+            const merged = Object.assign({}, games)
+            for (const id of ids)
+                merged[id] = found[id] ?? null
+            games = merged
+        }
+        const added = []
+        for (const item of batch) {
+            if (!games[item.gameId])
                 continue
             item.type = item.kind === "video" ? "clip" : item.kind
             item.stamp = item.time.getTime()
@@ -174,7 +161,9 @@ FocusScope {
         if (added.length > 0) {
             all = all.concat(added)
             listsStale = true
-            refresh.restart()
+            // Not restart(): batches that keep coming would push the first layout back until the search ends.
+            if (!refresh.running)
+                refresh.start()
         }
     }
 
@@ -191,7 +180,7 @@ FocusScope {
         const list = all.slice()
         list.sort((a, b) => (a.stamp - b.stamp) * sign || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
         sorted = list
-        if (listsStale)
+        if (listsStale && !opening)
             buildLists()
         applyFilters()
     }
@@ -542,10 +531,12 @@ FocusScope {
         function onAllMediaReady(batch, done) {
             if (!root.loading)
                 return
-            if (root.settling)
-                root.queued.push({ batch: batch, done: done })
-            else
-                root.receive(batch, done)
+            root.take(batch)
+            if (done) {
+                root.loading = false
+                root.rebuild()
+                root.openForScreenshot()
+            }
         }
     }
 
@@ -857,58 +848,63 @@ FocusScope {
                     info: row.isHeader ? root.groupInfo[row.rowData.key] : null
                 }
 
-                Repeater {
-                    model: row.isHeader ? [] : row.rowData.items
+                // Made in one go, the first screen of tiles stalled a frame of the opening animation by ~20 ms.
+                Loader {
+                    active: !row.isHeader
+                    asynchronous: root.opening
+                    sourceComponent: Repeater {
+                        model: row.rowData.items
 
-                    Item {
-                        id: cell
-                        required property var modelData
-                        required property int index
+                        Item {
+                            id: cell
+                            required property var modelData
+                            required property int index
 
-                        readonly property bool hot: tile.hovered
+                            readonly property bool hot: tile.hovered
 
-                        x: root.cardPad + index * (root.tileWidth + Theme.gallery.tileGap)
-                        width: root.tileWidth
-                        height: root.rowHeight
-                        z: hot ? 1 : 0
-                        onHotChanged: row.hotCount += hot ? 1 : -1
-
-                        MediaTile {
-                            id: tile
+                            x: root.cardPad + index * (root.tileWidth + Theme.gallery.tileGap)
                             width: root.tileWidth
-                            height: root.tileHeight
-                            media: cell.modelData.item
-                            showTooltip: false
-                            cornerRadius: Theme.gallery.tileRadius
-                            shadowSize: Theme.gallery.tileShadowSize
-                            shadowColor: Theme.gallery.tileShadowColor
-                            hoverScale: Theme.gallery.tileHoverScale
-                            borderColor: Theme.gallery.tileBorderColor
-                            focusRing: root.keyboardFocus && root.activeFocus && root.focusIndex === cell.modelData.n
-                            onClicked: {
-                                root.keyboardFocus = false
-                                root.forceActiveFocus()
-                                root.open(cell.modelData.n)
-                            }
-                            onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
-                        }
-                        Row {
-                            visible: root.captions
-                            y: root.tileHeight + Theme.layout.spacing / 2
+                            height: root.rowHeight
+                            z: hot ? 1 : 0
+                            onHotChanged: row.hotCount += hot ? 1 : -1
 
-                            Label {
-                                visible: root.showNames
-                                width: Math.max(0, Math.min(implicitWidth, cell.width - dateLabel.implicitWidth))
-                                elide: Text.ElideRight
-                                text: root.games[cell.modelData.item.gameId]?.title ?? ""
-                                color: Theme.gallery.gameNameColor
-                                font.pixelSize: Theme.gallery.gameNameSize
+                            MediaTile {
+                                id: tile
+                                width: root.tileWidth
+                                height: root.tileHeight
+                                media: cell.modelData.item
+                                showTooltip: false
+                                cornerRadius: Theme.gallery.tileRadius
+                                shadowSize: Theme.gallery.tileShadowSize
+                                shadowColor: Theme.gallery.tileShadowColor
+                                hoverScale: Theme.gallery.tileHoverScale
+                                borderColor: Theme.gallery.tileBorderColor
+                                focusRing: root.keyboardFocus && root.activeFocus && root.focusIndex === cell.modelData.n
+                                onClicked: {
+                                    root.keyboardFocus = false
+                                    root.forceActiveFocus()
+                                    root.open(cell.modelData.n)
+                                }
+                                onMenuRequested: position => root.openMenu(cell.modelData.item, tile, position)
                             }
-                            Label {
-                                id: dateLabel
-                                text: (root.showNames ? "  ·  " : "") + root.whenText(cell.modelData.item)
-                                color: Theme.gallery.dateColor
-                                font.pixelSize: Theme.gallery.gameNameSize
+                            Row {
+                                visible: root.captions
+                                y: root.tileHeight + Theme.layout.spacing / 2
+
+                                Label {
+                                    visible: root.showNames
+                                    width: Math.max(0, Math.min(implicitWidth, cell.width - dateLabel.implicitWidth))
+                                    elide: Text.ElideRight
+                                    text: root.games[cell.modelData.item.gameId]?.title ?? ""
+                                    color: Theme.gallery.gameNameColor
+                                    font.pixelSize: Theme.gallery.gameNameSize
+                                }
+                                Label {
+                                    id: dateLabel
+                                    text: (root.showNames ? "  ·  " : "") + root.whenText(cell.modelData.item)
+                                    color: Theme.gallery.dateColor
+                                    font.pixelSize: Theme.gallery.gameNameSize
+                                }
                             }
                         }
                     }
