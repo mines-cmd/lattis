@@ -126,17 +126,30 @@ ApplicationWindow {
     // The views under the page stay drawn while it fades in and out.
     readonly property bool statsCovering: statsOpen && statsPage.opacity === 1
 
-    function setStatsOpen(open) {
+    // Switching between the pages keeps the old one drawn under the new one until the new one
+    // covers it, so they crossfade instead of both fading through the game page.
+    property string pageBelow: ""
+    // Kept after the switch ends, so the old page fades out under the new one rather than over it.
+    property string pageOnTop: ""
+
+    function setStatsOpen(open, switching = false) {
         if (open === statsOpen)
             return
         if (open) {
-            setGalleryOpen(false)
+            const below = galleryOpen ? "gallery" : ""
+            setGalleryOpen(false, "", true)
+            pageBelow = below
+            pageOnTop = "stats"
             statsPage.active = true
             statsOpen = true
             statsPage.item.start()
+            if (statsPage.opacity === 1)
+                pageBelow = ""
         } else {
             statsOpen = false
-            statsPage.item.leave()
+            pageBelow = ""
+            if (!switching)
+                statsPage.item.leave()
             gameList.focusList()
         }
     }
@@ -152,17 +165,24 @@ ApplicationWindow {
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
     readonly property bool pageCovering: statsCovering || galleryCovering
 
-    function setGalleryOpen(open, gameId = "") {
+    function setGalleryOpen(open, gameId = "", switching = false) {
         if (open === galleryOpen)
             return
         if (open) {
-            setStatsOpen(false)
+            const below = statsOpen ? "stats" : ""
+            setStatsOpen(false, true)
+            pageBelow = below
+            pageOnTop = "gallery"
             galleryPage.active = true
             galleryOpen = true
             galleryPage.item.start(gameId)
+            if (galleryPage.opacity === 1)
+                pageBelow = ""
         } else {
             galleryOpen = false
-            galleryPage.item.leave()
+            pageBelow = ""
+            if (!switching)
+                galleryPage.item.leave()
             gameList.focusList()
         }
     }
@@ -969,67 +989,78 @@ ApplicationWindow {
         }
     }
 
-    Loader {
-        id: statsPage
+    // Its own stacking context, so a page can drop below the other without going under the game page.
+    Item {
         anchors.fill: parent
-        active: false
-        visible: opacity > 0
-        opacity: window.statsOpen ? 1 : 0
-        // Without a layer each card fades on its own over the fading background, so the cards
-        // stack to look more solid and the background seems to go first.
-        layer.enabled: opacity > 0 && opacity < 1
-        enabled: window.statsOpen && !setupGuide.active
-        source: "views/StatsPage.qml"
 
-        Behavior on opacity {
-            enabled: Motion.fades
-            MotionNumber { fade: true; speed: "normal"; linear: true }
-        }
-    }
-    Binding {
-        target: statsPage.item
-        property: "dragReserve"
-        value: windowControls.width + 2 * Theme.windowControls.margin
-    }
-    Connections {
-        target: statsPage.item
-        function onCloseRequested() { window.setStatsOpen(false) }
-        function onGameRequested(id) {
-            gameList.revealGame(id)
-            window.setStatsOpen(false)
-        }
-    }
+        Loader {
+            id: statsPage
+            anchors.fill: parent
+            active: false
+            z: window.pageOnTop === "stats" ? 1 : 0
+            visible: opacity > 0
+            opacity: window.statsOpen || window.pageBelow === "stats" ? 1 : 0
+            onOpacityChanged: if (opacity === 1 && window.statsOpen) window.pageBelow = ""
+            // Without a layer each card fades on its own over the fading background, so the cards
+            // stack to look more solid and the background seems to go first.
+            layer.enabled: opacity > 0 && opacity < 1
+            // Hidden pages get no input anyway; staying enabled keeps their buttons from fading up from the
+            // disabled look as the page fades in, or dimming on the page left below during a switch.
+            enabled: (window.statsOpen || window.pageBelow === "stats" || opacity === 0) && !setupGuide.active
+            source: "views/StatsPage.qml"
 
-    Loader {
-        id: galleryPage
-        anchors.fill: parent
-        active: false
-        visible: opacity > 0
-        opacity: window.galleryOpen ? 1 : 0
-        layer.enabled: opacity > 0 && opacity < 1
-        enabled: window.galleryOpen && !setupGuide.active
-        source: "views/GalleryPage.qml"
+            Behavior on opacity {
+                enabled: Motion.fades
+                MotionNumber { fade: true; speed: "normal"; linear: true }
+            }
+        }
+        Binding {
+            target: statsPage.item
+            property: "dragReserve"
+            value: windowControls.width + 2 * Theme.windowControls.margin
+        }
+        Connections {
+            target: statsPage.item
+            function onCloseRequested() { window.setStatsOpen(false) }
+            function onGameRequested(id) {
+                gameList.revealGame(id)
+                window.setStatsOpen(false)
+            }
+        }
 
-        Behavior on opacity {
-            enabled: Motion.fades
-            MotionNumber { fade: true; speed: "normal"; linear: true }
+        Loader {
+            id: galleryPage
+            anchors.fill: parent
+            active: false
+            z: window.pageOnTop === "gallery" ? 1 : 0
+            visible: opacity > 0
+            opacity: window.galleryOpen || window.pageBelow === "gallery" ? 1 : 0
+            onOpacityChanged: if (opacity === 1 && window.galleryOpen) window.pageBelow = ""
+            layer.enabled: opacity > 0 && opacity < 1
+            enabled: (window.galleryOpen || window.pageBelow === "gallery" || opacity === 0) && !setupGuide.active
+            source: "views/GalleryPage.qml"
+
+            Behavior on opacity {
+                enabled: Motion.fades
+                MotionNumber { fade: true; speed: "normal"; linear: true }
+            }
         }
-    }
-    Binding {
-        target: galleryPage.item
-        property: "dragReserve"
-        value: windowControls.width + 2 * Theme.windowControls.margin
-    }
-    Connections {
-        target: galleryPage.item
-        function onCloseRequested() { window.setGalleryOpen(false) }
-        function onMessage(text) {
-            if (text !== "")
-                toast.show(text)
+        Binding {
+            target: galleryPage.item
+            property: "dragReserve"
+            value: windowControls.width + 2 * Theme.windowControls.margin
         }
-        function onGameRequested(id) {
-            gameList.revealGame(id)
-            window.setGalleryOpen(false)
+        Connections {
+            target: galleryPage.item
+            function onCloseRequested() { window.setGalleryOpen(false) }
+            function onMessage(text) {
+                if (text !== "")
+                    toast.show(text)
+            }
+            function onGameRequested(id) {
+                gameList.revealGame(id)
+                window.setGalleryOpen(false)
+            }
         }
     }
 
