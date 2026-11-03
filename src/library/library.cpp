@@ -20,6 +20,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
+#include <QImageReader>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -1868,14 +1869,48 @@ QVariantMap clipItem(const SteamMedia::Clip &c, const QString &gameId = {})
     return item;
 }
 
+constexpr int kScreenshotThumbnailWidth = 640;
+
+QString screenshotThumbnailPath(const QString &path)
+{
+    return QStringLiteral("%1/shotthumbs/%2.jpg").arg(AppPaths::cacheDir(), VideoThumbnails::key(QFileInfo(path)));
+}
+
+// Full-size screenshots decode one at a time and fill the Gallery's grid over seconds; a small copy is quick.
+void makeScreenshotThumbnails(QList<std::pair<QDateTime, QString>> missing)
+{
+    std::sort(missing.begin(), missing.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    for (const auto &[time, path] : std::as_const(missing)) {
+        const QString out = screenshotThumbnailPath(path);
+        if (QFileInfo::exists(out))
+            continue;
+        QImageReader reader(path);
+        reader.setAutoTransform(true);
+        const QSize size = reader.size();
+        if (!size.isValid())
+            continue;
+        if (size.width() > kScreenshotThumbnailWidth)
+            reader.setScaledSize(QSize(kScreenshotThumbnailWidth,
+                                       qMax(1, qRound(size.height() * double(kScreenshotThumbnailWidth) / size.width()))));
+        const QImage image = reader.read();
+        if (image.isNull())
+            continue;
+        QDir().mkpath(QFileInfo(out).absolutePath());
+        const QString partial = out + QStringLiteral(".partial");
+        if (image.save(partial, "JPG", 85) && !QFile::rename(partial, out))
+            QFile::remove(partial);
+    }
+}
+
 QVariantMap screenshotItem(const QString &id, const QString &path, const QDateTime &time,
                            const QString &gameId = {})
 {
     const QString url = QUrl::fromLocalFile(path).toString();
+    const QString cached = screenshotThumbnailPath(path);
     QVariantMap item{{QStringLiteral("kind"), QStringLiteral("screenshot")},
                      {QStringLiteral("id"), id},
                      {QStringLiteral("folder"), QFileInfo(path).absolutePath()},
-                     {QStringLiteral("thumbnail"), url},
+                     {QStringLiteral("thumbnail"), QFileInfo::exists(cached) ? QUrl::fromLocalFile(cached).toString() : url},
                      {QStringLiteral("image"), url},
                      {QStringLiteral("time"), time}};
     if (!gameId.isEmpty())
@@ -2139,8 +2174,16 @@ void Library::allMedia()
             keys.insert(g.id, mediaKey(g.id));
     }
     const auto seen = QSharedPointer<QSet<QString>>::create();
-    const auto deliver = [self = QPointer<Library>(this), generation, keys, seen](QVariantList batch, bool done,
-                                                                                  QStringList limited = {}) {
+    const auto missing = QSharedPointer<QList<std::pair<QDateTime, QString>>>::create();
+    const auto deliver = [self = QPointer<Library>(this), generation, keys, seen,
+                          missing](QVariantList batch, bool done, QStringList limited = {}) {
+        for (const QVariant &v : std::as_const(batch)) {
+            const QVariantMap item = v.toMap();
+            if (item.value(QStringLiteral("kind")) == QLatin1String("screenshot")
+                && item.value(QStringLiteral("thumbnail")) == item.value(QStringLiteral("image")))
+                missing->append({item.value(QStringLiteral("time")).toDateTime(),
+                                 QUrl(item.value(QStringLiteral("image")).toString()).toLocalFile()});
+        }
         QMetaObject::invokeMethod(
             self.data(),
             [self, generation, keys, seen, batch = std::move(batch), done, limited = std::move(limited)]() mutable {
@@ -2164,7 +2207,7 @@ void Library::allMedia()
             Qt::QueuedConnection);
     };
 
-    QThreadPool::globalInstance()->start([deliver, groups = groups.values(), steamGames, folderGames,
+    QThreadPool::globalInstance()->start([deliver, missing, groups = groups.values(), steamGames, folderGames,
                                           install = m_store.snapshot().steam.install, dataDir = m_store.dataDir()] {
         QHash<quint64, SteamMedia::AppMedia> all;
         if (!install.userDataDir().isEmpty() && !steamGames.isEmpty()) {
@@ -2208,6 +2251,7 @@ void Library::allMedia()
                 deliver(std::move(batch), false);
         }
         deliver({}, true);
+        makeScreenshotThumbnails(*missing);
     });
 }
 

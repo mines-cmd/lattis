@@ -216,6 +216,8 @@ A Steam, Proton or Linux game can list folders in `media_folders` (`~` for the h
 
 `VideoThumbnails` (`videothumbnails.*`) gives video items their thumbnail. `Cache` keeps `<cache>/videothumbs/<key>.<durationMs>.jpg` (the key is a SHA-1 of path, size and modified time, so a changed file is made again) and a `<key>.failed` marker so a file that can't be decoded isn't tried on every open. `VideoThumbnailMaker` makes the missing ones one at a time on the main thread with a `QMediaPlayer` and a `QVideoSink` (Qt Multimedia is now linked into the app for this): a frame about 1 s in, 480 px wide, with a 6 s timeout. `Library` queues them from `media()` and `allMedia()` and announces each with `videoThumbnailReady`; the tile patches itself, so the list isn't rebuilt. Until then (or if it fails) the tile shows a film icon.
 
+Screenshots get a thumbnail the same way, without a player: `screenshotItem()` points `thumbnail` at `<cache>/shotthumbs/<key>.jpg` (the same key) when it exists and at the full file otherwise, and after `allMedia()` has delivered everything, its worker thread writes the missing ones, newest first, 640 px wide (scaled while decoding), through a `.partial` file. So the first Gallery opening still decodes full-size files; later ones read the small copies. Nothing prunes the folder yet.
+
 ## Steam, Proton and Linux games
 
 These three kinds of game share a lot of the library's code. Their file formats and the sync are covered in [steam.md](steam.md); here is how the library uses them.
