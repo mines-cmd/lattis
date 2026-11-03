@@ -96,15 +96,47 @@ FocusScope {
         started()
         focusIndex = 0
         keyboardFocus = false
-        games = Library.mediaGames()
+        games = ({})
         loading = true
+        settling = true
+        queued = []
+        fetch.restart()
         Library.allMedia()
         sinkOut.stop()
         riseIn.restart()
         forceActiveFocus()
     }
 
+    // The search runs while the page opens, but listing the games and laying out the first batch stall
+    // the window for tens of ms, which in the middle of the opening animation showed as a fade followed
+    // by a jump; so what it finds is held until the animation ends.
+    property bool settling: false
+    property var queued: []
+
+    Timer {
+        id: fetch
+        interval: riseIn.duration + 30
+        onTriggered: {
+            root.games = Library.mediaGames()
+            root.settling = false
+            const held = root.queued
+            root.queued = []
+            for (const b of held)
+                root.receive(b.batch, b.done)
+        }
+    }
+
+    function receive(batch: var, done: bool) {
+        take(batch)
+        if (done) {
+            loading = false
+            rebuild()
+            openForScreenshot()
+        }
+    }
+
     function leave() {
+        fetch.stop()
         riseIn.stop()
         sinkOut.restart()
     }
@@ -510,12 +542,10 @@ FocusScope {
         function onAllMediaReady(batch, done) {
             if (!root.loading)
                 return
-            root.take(batch)
-            if (done) {
-                root.loading = false
-                root.rebuild()
-                root.openForScreenshot()
-            }
+            if (root.settling)
+                root.queued.push({ batch: batch, done: done })
+            else
+                root.receive(batch, done)
         }
     }
 
@@ -795,21 +825,22 @@ FocusScope {
             width: root.gridWidth
             height: parent.height - y
             clip: true
-            model: root.rows
+            // A count, not the rows: a JS array model is copied whole (every item's map) on each change.
+            model: root.rows.length
             boundsBehavior: Flickable.StopAtBounds
             cacheBuffer: Math.max(root.rowHeight * 2, height)
 
             delegate: Item {
                 id: row
-                required property var modelData
                 required property int index
-                readonly property bool isHeader: modelData.header
-                readonly property bool isLast: modelData.last === true
+                readonly property var rowData: root.rows[index]
+                readonly property bool isHeader: rowData.header
+                readonly property bool isLast: rowData.last === true
                 property int hotCount: 0
 
                 z: hotCount > 0 ? 2 : 1
                 width: list.width
-                height: root.rowSpan(modelData)
+                height: root.rowSpan(rowData)
 
                 CardSlice {
                     visible: root.grouped
@@ -823,11 +854,11 @@ FocusScope {
                     x: root.cardPad
                     width: parent.width - 2 * root.cardPad
                     height: parent.height
-                    info: row.isHeader ? root.groupInfo[row.modelData.key] : null
+                    info: row.isHeader ? root.groupInfo[row.rowData.key] : null
                 }
 
                 Repeater {
-                    model: row.isHeader ? [] : row.modelData.items
+                    model: row.isHeader ? [] : row.rowData.items
 
                     Item {
                         id: cell
