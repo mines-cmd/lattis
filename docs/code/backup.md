@@ -1,6 +1,6 @@
 # Backups (`src/backup/`)
 
-The backup code creates and restores the two `.tar.zst` archives the user reaches from Settings → Library: a **library backup** of the data dir and a **saves backup** of every emulator's and Proton game's saves. It owns the archive format, the manifest that names what's inside, and Import, which reads a backup's manifest, plans what each part replaces, and applies the restore atomically. The library's files and the emulator definitions are in `src/library/`; the Proton shortcut data a restore carries over is in `src/steam/`.
+The backup code creates and restores the two `.tar.zst` archives the user reaches from Settings → Library: a **library backup** of the data dir and a **saves backup** of every emulator's and Proton game's saves. A game's automatic save backup (`src/saves/`, see [saves](saves.md)) reuses its `Archive` code and `Restore`. It owns the archive format, the manifest that names what's inside, and Import, which reads a backup's manifest, plans what each part replaces, and applies the restore atomically. The library's files and the emulator definitions are in `src/library/`; the Proton shortcut data a restore carries over is in `src/steam/`.
 
 ## Contents
 

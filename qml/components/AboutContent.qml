@@ -20,9 +20,12 @@ Item {
     readonly property var credits: [
         { label: qsTr("Built with"), links: [["Qt", "https://www.qt.io"],
                                              ["toml++", "https://marzer.github.io/tomlplusplus/"],
-                                             ["libarchive", "https://www.libarchive.org"]] },
+                                             ["libarchive", "https://www.libarchive.org"],
+                                             ["yaml-cpp", "https://github.com/jbeder/yaml-cpp"]] },
         { label: qsTr("Game info"), links: [["IGDB", "https://www.igdb.com"]] },
         { label: qsTr("Artwork"), links: [["SteamGridDB", "https://www.steamgriddb.com"]] },
+        { label: qsTr("Game saves"), links: [["Ludusavi manifest", "https://github.com/mtkennerly/ludusavi-manifest"],
+                                             ["PCGamingWiki", "https://www.pcgamingwiki.com"]] },
         { label: qsTr("Icons"), links: [["Tabler Icons", "https://tabler.io/icons"], ["Remix Icon", "https://remixicon.com"]].concat(LicensedIcons.credits) },
         { label: qsTr("Covers"), text: qsTr("Game covers © their respective owners.") },
     ]

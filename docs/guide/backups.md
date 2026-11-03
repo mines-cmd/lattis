@@ -1,6 +1,6 @@
 # Backups
 
-Lattis makes two kinds of backup, each a single `.tar.zst` file: one of your **library**, and one of your **saves**. One **Import** restores either. All three are on Settings → Library and in the app menu.
+Lattis makes two kinds of backup by hand, each a single `.tar.zst` file: one of your **library**, and one of your **saves**. One **Import** restores either. All three are on Settings → Library and in the app menu. Lattis can also back up a game's saves by itself when the game closes: see [Automatic save backups](#automatic-save-backups).
 
 ## Back up library
 
@@ -27,17 +27,40 @@ Each dialog shows how big the backup will be, what the other backup covers, and 
 ## What isn't backed up
 
 - ROMs.
-- Steam itself and Steam games' saves (Steam Cloud keeps those).
-- Linux games' saves: each game keeps them in its own place.
-- Steam games' own Proton prefixes.
+- Steam itself. Steam Cloud keeps many Steam games' saves; the saves backup doesn't include them, but [automatic save backups](#automatic-save-backups) can cover a Steam game.
+- Linux games' saves, in the saves backup: [automatic save backups](#automatic-save-backups) cover them.
+- Steam games' own Proton prefixes, whole.
+- Registry saves of Windows games, cloud saves (Steam Cloud, GOG, Epic), and emulator platforms in automatic backups (use Back up saves for those).
 
 A backup can't be made while a game you launched from Lattis is running, since it may be writing its saves.
+
+## Automatic save backups
+
+Games keep their saves in their own places, so Lattis finds them from the [Ludusavi manifest](https://github.com/mtkennerly/ludusavi-manifest), a list of where thousands of games keep their saves (its data comes from PCGamingWiki). With a game's backup on, closing the game makes a backup of its saves: a small `.tar.zst` in a folder you pick, the last few kept.
+
+It covers Steam, Proton and Linux games. It's off until you turn it on, and nothing is downloaded before that.
+
+**Turning it on**
+
+- **For a platform:** the **Back up saves** switch on its row in Settings → Platforms (Steam, Proton and Linux have it).
+- **For one game:** Properties → **Back up saves when it closes**: Platform default, On or Off. On or Off wins over the platform.
+
+The first time you turn it on, Lattis downloads the manifest. Settings → Library → **Game saves** shows its state and has **Update now**; while backup is on, Lattis checks for a newer list about once a day. That section also holds the backup folder (default `~/.local/share/lattis-saves/`, outside the data folder so a library backup stays small; point it at a synced folder to share saves between computers) and how many backups to keep (default 5; older ones go to the trash).
+
+**What is backed up.** Lattis matches a game to the list by its Steam ID, or else by its title. Linux games' save paths are expanded from your home and the game's folder; Steam and Proton games' Windows save paths are looked for inside the game's Proton prefix. What isn't on disk is skipped. A game's own save folder from Properties is backed up too. A launcher Proton game with no match gets the slim whole-prefix copy instead. Nothing is written for a game with no match and no save folder.
+
+A game played for less than the minimum session length makes no backup, and neither does one whose saves haven't changed since the last. A game whose saves come to over 1 GB is skipped, with a notice naming it. A failure shows a notice and never stops the next launch.
+
+**On the game's page,** **Save backups** shows the matched game, the save paths found now, and the newest backup. **Back up now** makes one at once, **Choose game** picks the right game from the list when the match is missing or wrong (Lattis remembers it), and each backup in the list has **Restore**.
+
+**Restore** puts the files back where they came from, after moving the ones there now aside to `<name>.before-import-<date>` (a notice names them). It won't run while the game is running. Import opens these backups too, so one copied to another computer restores there.
 
 ## Restoring
 
 **Import** opens a backup and shows what's in it, when it was made, and what it will replace.
 
 - **A library backup** replaces your whole data folder, then restarts Lattis.
+- **A game's saves backup** (from automatic backup) restores that game's files, as above.
 - **A saves backup** lets you pick what to restore, part by part (an emulator's saves, its keys, a game's saves), each with where it'll go. Saves go into each emulator as it's installed now, even if it's installed differently than when you backed up (a Flatpak instead of an AppImage). Saves kept next to a ROM follow the ROM to wherever it is now.
 
 **Nothing is overwritten.** What a restore replaces is moved aside, to a folder named `<folder>.before-import-<date>`, and a notice names each one. When you're happy with the result, delete them from Settings → Library's Backup section.

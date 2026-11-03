@@ -34,7 +34,7 @@ If the program is moved or deleted, the game shows "Game not found" with **Locat
 
 ## Saves
 
-Each Linux game keeps its saves in its own place (`~/.local/share`, `~/.config`, or its own folder), so Lattis's backups don't include them yet. Back them up yourself, or with a tool like Ludusavi.
+Each Linux game keeps its saves in its own place (`~/.local/share`, `~/.config`, or its own folder). Lattis can find them and back them up when the game closes: turn on **Back up saves** for the Linux platform, or **Back up saves when it closes** in the game's Properties. See [Automatic save backups](backups.md#automatic-save-backups). Set the game's **Save folder** in Properties if it isn't in the list.
 
 ## Uninstalling
 

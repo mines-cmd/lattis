@@ -12,6 +12,6 @@ The bigger features Lattis doesn't have yet. Nothing here has a date, and the or
 - **Controller support.** Browse and launch your games with a gamepad, and a bigger layout for a TV.
 - **Multi-select.** Pick several games and hide, tag, favorite or change their emulator at once.
 - **Collections.** Saved filters, plus a "Continue playing" row.
-- **Ludusavi.** Back up saves before a game starts or after it closes, keeping the last few.
+- **More save backups.** Back up before a game starts, and back up emulator platforms' saves automatically. Saves are already backed up when a game closes.
 - **A command palette and drag and drop.** Jump to any game, setting or action from the keyboard, and drop ROMs or images onto the window.
 - **A command line.** Launch or add a game from a script, and make desktop shortcuts for games.

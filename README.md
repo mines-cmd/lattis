@@ -36,7 +36,7 @@ Lattis brings every game you own on Linux into a single, fast library: games for
 - **Art and metadata.** Hero art, covers, logos and icons from SteamGridDB, and descriptions, release years, ratings and tags from IGDB, one game at a time or in bulk, reviewed before anything is saved.
 - **Find anything.** Search that ignores accents and word order; filters for installed, favorites, status, tags and hidden games; sorting by title, last played or play time, grouped by platform or status.
 - **Make it yours.** Pick colors and a style separately, mix any with any, and save the pair as a theme. Edit them live in Settings with undo, or in plain TOML files that apply the moment you save.
-- **One folder to back up.** Your library, settings, themes and art live in a single data folder. Copy it, or use the built-in backup and import of your library and saves.
+- **One folder to back up.** Your library, settings, themes and art live in a single data folder. Copy it, or use the built-in backup and import of your library and saves, and back up a game's saves automatically when it closes.
 - **Guided first start.** A short setup guide imports Steam, finds your emulators and ROM folders, and sets up art lookups and your look.
 
 ## Screenshots
@@ -72,11 +72,12 @@ Keeping it in `~/Applications` is a good habit; tools like [Gear Lever](https://
 - Qt 6.8+ (Quick, QuickControls2, ShaderTools)
 - toml++ 3
 - libarchive 3.6+
+- yaml-cpp
 
 On Fedora:
 
 ```sh
-sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtshadertools-devel tomlplusplus-devel libarchive-devel cmake ninja-build
+sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtshadertools-devel tomlplusplus-devel libarchive-devel yaml-cpp-devel cmake ninja-build
 ```
 
 ### Build and run
@@ -136,4 +137,5 @@ Lattis is free software: you can redistribute it and/or modify it under the term
 - The gamepad icon is "game controller" by Milinda Courey from [Noun Project](https://thenounproject.com/browse/icons/term/game-controller/), licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) (scaled; face buttons spaced apart).
 - The Wii U, Wii, GameCube, Linux and home icons are redrawn or traced from the "Nintendo Wii U", "Wii", "Nintendo GameCube", "Penguin" and "Home" icons by [Icons8](https://icons8.com). They're part of the release builds only; built from source, Lattis shows stand-ins for them.
 - Game names for Switch, 3DS, DS, Wii, GameCube, PS1, PS2, GBA and Nintendo 64 files come from [titledb](https://github.com/blawar/titledb) (MIT), [GameTDB](https://www.gametdb.com) (add missing games and artwork there), and [libretro-database](https://github.com/libretro/libretro-database)'s lists of [No-Intro](https://no-intro.org) and [Redump](http://redump.org) (CC BY-SA 4.0). Lattis downloads the lists it needs from `data/romdb/` in this repository (made by `tools/romdb.py`) the first time a scan needs them.
+- Where games keep their saves comes from the [Ludusavi manifest](https://github.com/mtkennerly/ludusavi-manifest) (MIT; its data is from [PCGamingWiki](https://www.pcgamingwiki.com)). Lattis downloads it only after you turn on automatic save backups and ships no copy.
 - Game metadata from [IGDB](https://www.igdb.com) and art from [SteamGridDB](https://www.steamgriddb.com), using your own API keys.
