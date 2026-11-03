@@ -399,6 +399,28 @@ QString Backups::openImport(const QUrl &file)
     return {};
 }
 
+QString Backups::restoreGameSaves(const QString &archive)
+{
+    QString error = openImport(QUrl::fromLocalFile(archive));
+    if (error.isEmpty()) {
+        if (m_import->manifest.kind != Backup::kGameSaves)
+            error = tr("%1 isn't a game saves backup.").arg(QFileInfo(archive).fileName());
+        else if (std::none_of(m_import->parts.cbegin(), m_import->parts.cend(),
+                              [](const Restore::Part &p) { return p.checked; }))
+            error = m_import->parts.isEmpty() || m_import->parts.first().problem.isEmpty()
+                        ? tr("Its saves can't go back where they came from.")
+                        : m_import->parts.first().problem;
+        else
+            error = startImport(*m_import);
+    }
+    if (!error.isEmpty()) {
+        m_import.reset();
+        m_importNow.clear();
+        updateImportMap();
+    }
+    return error;
+}
+
 void Backups::checkImportPart(int index, bool checked)
 {
     if (!m_import || index < 0 || index >= m_import->parts.size() || !m_import->parts[index].restorable())
@@ -416,6 +438,7 @@ QString partKind(Restore::Part::Kind kind)
     case Restore::Part::Kind::Keys: return QStringLiteral("keys");
     case Restore::Part::Kind::BesideRoms: return QStringLiteral("besideRoms");
     case Restore::Part::Kind::Proton: return QStringLiteral("proton");
+    case Restore::Part::Kind::GameSaves: return QStringLiteral("gameSaves");
     }
     return {};
 }

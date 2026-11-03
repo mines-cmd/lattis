@@ -48,7 +48,7 @@ bool anyOn(const Library &library)
 }
 
 std::optional<Input> inputFor(const Library &library, const QString &gameId, const QString &dataDir,
-                              const QString &appVersion)
+                              const QString &appVersion, bool ignoreChoice)
 {
     const Game *game = library.game(gameId);
     if (!game || game->rom
@@ -56,7 +56,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
         return std::nullopt;
     const LibraryStore &store = library.store();
     const LibrarySnapshot &snapshot = store.snapshot();
-    if (!autoBackupOn(snapshot, *game))
+    if (!ignoreChoice && !autoBackupOn(snapshot, *game))
         return std::nullopt;
 
     QFile file(dataDir + QStringLiteral("/settings.toml"));

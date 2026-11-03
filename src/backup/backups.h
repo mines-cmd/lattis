@@ -80,6 +80,8 @@ public:
     Q_INVOKABLE QString openImport(const QUrl &file);
     Q_INVOKABLE void checkImportPart(int index, bool checked);
     Q_INVOKABLE QString startImport();
+    // A game's page restoring one of its own backups: no dialog, the notice says where what was there went.
+    Q_INVOKABLE QString restoreGameSaves(const QString &archive);
     Q_INVOKABLE void cancelImport() { m_restore.cancel(); }
     Q_INVOKABLE QUrl importFolder() const;
     Q_INVOKABLE QVariantMap screenshotImport() const;

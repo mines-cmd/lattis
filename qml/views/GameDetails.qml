@@ -1246,6 +1246,14 @@ Item {
                     }
                 }
             }
+
+            SavesRow {
+                id: savesRow
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.details.spacing
+                game: root.game
+                onFailed: text => root.message(text)
+            }
         }
 
         Item {

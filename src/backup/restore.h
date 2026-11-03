@@ -37,6 +37,14 @@ struct Manifest
         qint64 bytes = -1;
     };
 
+    struct SavePath
+    {
+        int n = 0;
+        QString from; // with `~` for the home
+        bool folder = true;
+        bool prefix = false;
+    };
+
     QString kind;
     int format = 0;
     QString appVersion;
@@ -50,6 +58,10 @@ struct Manifest
     bool proton = false;
     QList<Emulator> emulators;
     QList<ProtonGame> protonGames;
+    QString gameId;
+    QString gameTitle;
+    QString matched;
+    QList<SavePath> savePaths;
 };
 
 struct Opened
@@ -70,11 +82,16 @@ struct Target
     QString path;
     bool exists = false;
     QString problem;
+    bool wholePrefix = false;
 };
+
+// Why a save path from a backup can't be written, or nothing. `roots` are where it may lead besides
+// the home; `absolute` is the path with the home filled in.
+QString checkSavePath(const QString &from, const QString &home, const QStringList &roots, QString *absolute);
 
 struct Part
 {
-    enum class Kind { Library, Saves, Keys, BesideRoms, Proton };
+    enum class Kind { Library, Saves, Keys, BesideRoms, Proton, GameSaves };
 
     Kind kind = Kind::Library;
     QString id;

@@ -172,8 +172,16 @@ private slots:
     void importDialogRefuses();
     void importDialogRuns();
     void backupDialogs();
+    void gameSavesPaths();
+    void gameSavesRestore();
+    void gameSavesRefusedPaths();
+    void gameSavesWhileRunning();
+    void gameSavesPrefix();
+    void gameSavesImportDialog();
 
 private:
+    // A game-saves archive as the saves backup writes it: the folder as files/0, the file as files/1.
+    QString gameSavesArchive(const QString &from0, const QString &from1);
     // Backups as main.cpp sets it up, noting the hold and restart calls.
     Backups::Setup backupsSetup(QStringList *calls, const QStringList &running = {});
     QString path(const QString &relative) const { return m_dir->filePath(relative); }
@@ -1191,6 +1199,219 @@ void RestoreTest::importDialogRuns()
     QVERIFY(!backups.importing());
     QVERIFY(backups.importPlan().isEmpty());
     QCOMPARE(readFile(m_home + QStringLiteral("/.config/Ryujinx/bis/user/save/0001/0/data.bin")), "user save");
+}
+
+QString RestoreTest::gameSavesArchive(const QString &from0, const QString &from1)
+{
+    writeFile(path(QStringLiteral("made/Saves/slot1.sav")), "backed up slot 1");
+    writeFile(path(QStringLiteral("made/Saves/sub/slot2.sav")), "backed up slot 2");
+    writeFile(path(QStringLiteral("made/profile.sav")), "backed up profile");
+    const QString archive = path(QStringLiteral("game.tar.zst"));
+    const QString manifest = QStringLiteral(
+                                 "kind = \"game-saves\"\nformat = 1\napp_version = \"0.1\"\n"
+                                 "created = 2026-09-28T21:04:00-03:00\ngame = \"linux-game\"\ntitle = \"Game\"\n"
+                                 "matched = \"Game\"\nfiles = 3\nbytes = 50\nsignature = \"abc\"\n"
+                                 "[[path]]\nn = 0\nfrom = \"%1\"\ntype = \"folder\"\n"
+                                 "[[path]]\nn = 1\nfrom = \"%2\"\ntype = \"file\"\n")
+                                 .arg(from0, from1);
+    Archive::Writer writer;
+    if (!writer.open(archive) || !writer.addData(QStringLiteral("manifest.toml"), manifest.toUtf8())
+        || !writer.addTree(path(QStringLiteral("made/Saves")), QStringLiteral("files/0"))
+        || !writer.addPath(path(QStringLiteral("made/profile.sav")), QStringLiteral("files/1/profile.sav"))
+        || !writer.finish())
+        qWarning() << writer.error();
+    return archive;
+}
+
+void RestoreTest::gameSavesPaths()
+{
+    QString absolute;
+    const auto check = [&](const QString &from, const QStringList &roots = {}) {
+        return Restore::checkSavePath(from, m_home, roots, &absolute);
+    };
+    QCOMPARE(check(QStringLiteral("~/.config/Game/saves")), QString());
+    QCOMPARE(absolute, m_home + QStringLiteral("/.config/Game/saves"));
+    QCOMPARE(check(m_home + QStringLiteral("/Documents/x.sav")), QString());
+
+    QVERIFY(!check(QStringLiteral("~")).isEmpty());
+    QVERIFY(!check(m_home).isEmpty());
+    QVERIFY(!check(QStringLiteral("~/../etc/passwd")).isEmpty());
+    QVERIFY(!check(QStringLiteral("~/a/../../b")).isEmpty());
+    QVERIFY(!check(QStringLiteral("/etc/passwd")).isEmpty());
+    QVERIFY(!check(QStringLiteral("saves/x")).isEmpty());
+    QVERIFY(!check(QString()).isEmpty());
+    // A sibling whose name starts like the home's.
+    QVERIFY(!check(m_home + QStringLiteral("-other/x")).isEmpty());
+
+    // A game's prefix is an allowed root, the folder itself included.
+    QVERIFY(!check(m_prefix + QStringLiteral("/pfx/drive_c/x")).isEmpty());
+    QCOMPARE(check(m_prefix + QStringLiteral("/pfx/drive_c/x"), {m_prefix}), QString());
+    QCOMPARE(check(m_prefix, {m_prefix}), QString());
+
+    // A link inside the home that leads out of it.
+    QVERIFY(QDir().mkpath(path(QStringLiteral("elsewhere"))));
+    QVERIFY(QDir().mkpath(m_home));
+    QVERIFY(QFile::link(path(QStringLiteral("elsewhere")), m_home + QStringLiteral("/out")));
+    QVERIFY(!check(QStringLiteral("~/out/Game/saves")).isEmpty());
+    QVERIFY(QFile::link(m_home + QStringLiteral("/Games"), m_home + QStringLiteral("/inside")));
+    QCOMPARE(check(QStringLiteral("~/inside/Game/saves")), QString());
+}
+
+void RestoreTest::gameSavesRestore()
+{
+    const QString archive = gameSavesArchive(QStringLiteral("~/.config/Game/saves"), QStringLiteral("~/Documents/Game/profile.sav"));
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/extra.sav"), "now extra");
+    writeFile(m_home + QStringLiteral("/Documents/Game/profile.sav"), "now profile");
+
+    const Restore::Opened opened = Restore::open(archive);
+    QVERIFY2(opened.manifest, qPrintable(opened.error));
+    QCOMPARE(opened.manifest->kind, Backup::kGameSaves);
+    QCOMPARE(opened.manifest->gameId, QStringLiteral("linux-game"));
+    QCOMPARE(opened.manifest->savePaths.size(), 2);
+
+    Restore::Plan plan = planFor(archive, sources());
+    QCOMPARE(plan.parts.size(), 1);
+    const Part &part = plan.parts.first();
+    QCOMPARE(part.kind, Part::Kind::GameSaves);
+    QVERIFY(part.restorable());
+    QVERIFY(part.checked);
+    QCOMPARE(part.targets.size(), 2);
+    QCOMPARE(part.targets.at(0).path, m_home + QStringLiteral("/.config/Game/saves"));
+    QVERIFY(part.targets.at(0).exists);
+
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QCOMPARE(result.error, QString());
+    QCOMPARE(result.restored, 2);
+    QCOMPARE(result.movedAside.size(), 2);
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/sub/slot2.sav")), QByteArray("backed up slot 2"));
+    QVERIFY(!QFileInfo::exists(m_home + QStringLiteral("/.config/Game/saves/extra.sav")));
+    QCOMPARE(readFile(m_home + QStringLiteral("/Documents/Game/profile.sav")), QByteArray("backed up profile"));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves") + kAside + QStringLiteral("/extra.sav")),
+             QByteArray("now extra"));
+    QCOMPARE(readFile(m_home + QStringLiteral("/Documents/Game/profile.sav") + kAside), QByteArray("now profile"));
+
+    // Nothing there now: nothing is moved aside, the places are made.
+    QVERIFY(QDir(m_home + QStringLiteral("/.config/Game")).removeRecursively());
+    const Restore::Result fresh = Restore::apply(plan, QDate(2026, 10, 1));
+    QCOMPARE(fresh.error, QString());
+    QCOMPARE(fresh.movedAside.size(), 1);
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+}
+
+void RestoreTest::gameSavesRefusedPaths()
+{
+    writeFile(m_home + QStringLiteral("/Documents/Game/profile.sav"), "now profile");
+    const QString outside = path(QStringLiteral("outside"));
+    writeFile(outside + QStringLiteral("/keep.sav"), "keep");
+    const QString archive = gameSavesArchive(QStringLiteral("~/../outside"), QStringLiteral("/etc/lattis-test.sav"));
+    Restore::Plan plan = planFor(archive, sources());
+    QCOMPARE(plan.parts.size(), 1);
+    QVERIFY(!plan.parts.first().restorable());
+    QVERIFY(!plan.parts.first().checked);
+    QCOMPARE(plan.parts.first().targets.size(), 2);
+    for (const Restore::Target &target : plan.parts.first().targets)
+        QVERIFY2(!target.problem.isEmpty(), qPrintable(target.label));
+
+    // Even asked to, nothing is written.
+    plan.parts.first().checked = true;
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QCOMPARE(result.restored, 0);
+    QCOMPARE(readFile(outside + QStringLiteral("/keep.sav")), QByteArray("keep"));
+    QVERIFY(!QFileInfo::exists(QStringLiteral("/etc/lattis-test.sav")));
+
+    // One good path restores; the refused one stays in the backup.
+    const QString mixed = gameSavesArchive(QStringLiteral("~/.config/Game/saves"), QStringLiteral("/etc/lattis-test.sav"));
+    Restore::Plan partial = planFor(mixed, sources());
+    QVERIFY(partial.parts.first().restorable());
+    QVERIFY(partial.parts.first().targets.at(1).path.isEmpty());
+    const Restore::Result done = Restore::apply(partial, kToday);
+    QCOMPARE(done.error, QString());
+    QCOMPARE(done.restored, 1);
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+    QVERIFY(!QFileInfo::exists(QStringLiteral("/etc/lattis-test.sav")));
+}
+
+void RestoreTest::gameSavesWhileRunning()
+{
+    const QString archive = gameSavesArchive(QStringLiteral("~/.config/Game/saves"), QStringLiteral("~/Documents/Game/profile.sav"));
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    QStringList calls;
+    Backups backups(backupsSetup(&calls, {QStringLiteral("Game")}));
+    QVERIFY(!backups.restoreGameSaves(archive).isEmpty());
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("now slot 1"));
+    QVERIFY(backups.importPlan().isEmpty());
+
+    Backups idle(backupsSetup(&calls));
+    QSignalSpy finished(&idle, &Backups::importFinished);
+    QCOMPARE(idle.restoreGameSaves(archive), QString());
+    QVERIFY(finished.wait());
+    QCOMPARE(finished.first().at(0).toString(), Backup::kGameSaves);
+    QCOMPARE(finished.first().at(1).toString(), QString());
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+    QVERIFY(calls.isEmpty());
+    QVERIFY(idle.notice().value(QStringLiteral("text")).toString().contains(QStringLiteral("What you had is")));
+
+    // A library backup isn't a game's.
+    QVERIFY(!idle.restoreGameSaves(backUpLibrary()).isEmpty());
+}
+
+void RestoreTest::gameSavesPrefix()
+{
+    // A whole prefix goes back over the game's own, which keeps Proton's files.
+    const QString archive = path(QStringLiteral("prefix.tar.zst"));
+    writeFile(path(QStringLiteral("made-prefix/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory/Profile.dat")), "backed up");
+    const QString manifest = QStringLiteral(
+                                 "kind = \"game-saves\"\nformat = 1\napp_version = \"0.1\"\n"
+                                 "created = 2026-09-28T21:04:00-03:00\ngame = \"proton-cave-story\"\ntitle = \"Cave Story\"\n"
+                                 "files = 1\nbytes = 9\nsignature = \"abc\"\n"
+                                 "[[path]]\nn = 0\nfrom = \"%1\"\ntype = \"folder\"\nprefix = true\n")
+                                 .arg(m_prefix);
+    Archive::Writer writer;
+    QVERIFY(writer.open(archive));
+    QVERIFY(writer.addData(QStringLiteral("manifest.toml"), manifest.toUtf8()));
+    QVERIFY(writer.addTree(path(QStringLiteral("made-prefix")), QStringLiteral("files/0")));
+    QVERIFY(writer.finish());
+
+    const QString profile = m_prefix + QStringLiteral("/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory/Profile.dat");
+    writeFile(profile, "now");
+    const QByteArray tracked = readFile(m_prefix + QStringLiteral("/tracked_files"));
+    Restore::Plan plan = planFor(archive, sources());
+    QCOMPARE(plan.parts.size(), 1);
+    QVERIFY2(plan.parts.first().restorable(), qPrintable(plan.parts.first().targets.first().problem));
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QCOMPARE(result.error, QString());
+    QCOMPARE(readFile(profile), QByteArray("backed up"));
+    QCOMPARE(readFile(m_prefix + QStringLiteral("/tracked_files")), tracked);
+    QVERIFY(QFileInfo::exists(m_prefix + kAside));
+}
+
+void RestoreTest::gameSavesImportDialog()
+{
+    const QString archive = gameSavesArchive(QStringLiteral("~/.config/Game/saves"), QStringLiteral("~/Documents/Game/profile.sav"));
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    QStringList calls;
+    Backups backups(backupsSetup(&calls));
+    QCOMPARE(backups.openImport(QUrl::fromLocalFile(archive)), QString());
+    const QVariantMap plan = backups.importPlan();
+    QCOMPARE(plan.value(QStringLiteral("kind")).toString(), Backup::kGameSaves);
+    const QVariantList parts = plan.value(QStringLiteral("parts")).toList();
+    QCOMPARE(parts.size(), 1);
+    const QVariantMap part = parts.first().toMap();
+    QCOMPARE(part.value(QStringLiteral("kind")).toString(), QStringLiteral("gameSaves"));
+    QCOMPARE(part.value(QStringLiteral("name")).toString(), QStringLiteral("Game"));
+    QVERIFY(part.value(QStringLiteral("checked")).toBool());
+    const QVariantList targets = part.value(QStringLiteral("targets")).toList();
+    QCOMPARE(targets.size(), 2);
+    QCOMPARE(targets.first().toMap().value(QStringLiteral("label")).toString(), QStringLiteral("~/.config/Game/saves"));
+    QVERIFY(targets.first().toMap().value(QStringLiteral("exists")).toBool());
+    QVERIFY(!targets.last().toMap().value(QStringLiteral("exists")).toBool());
+
+    QSignalSpy finished(&backups, &Backups::importFinished);
+    QCOMPARE(backups.startImport(), QString());
+    QVERIFY(finished.wait());
+    QCOMPARE(readFile(m_home + QStringLiteral("/Documents/Game/profile.sav")), QByteArray("backed up profile"));
 }
 
 void RestoreTest::backupDialogs()

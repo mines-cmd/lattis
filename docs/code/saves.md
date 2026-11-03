@@ -55,3 +55,13 @@ How a path is found:
 - `startDailyCheck(anyOn)` (main.cpp, after the first frame): ten seconds later, then every six hours, it updates the manifest when `anyOn()` (`SavesBackup::anyOn`: a platform or game has it on) and the last check is over a day old.
 
 The choices: a platform's `auto_backup` is written by `Library.setPlatformValue(id, "auto_backup", on)` (absent = off; `platformSettings()` returns it as `autoBackup`). Steam, Proton and Linux show a switch on their row, which first adds the platform to `platforms.toml` when it only exists as a built-in. A game's is `auto_backup` in its file, set through `saveGame` (`true`, `false`, or cleared to follow the platform); `gameForEditing()` returns `autoBackup` (-1, 0, 1) and `platformAutoBackup`. `SavesBackup::autoBackupResolved(own, platformOn)` is the rule.
+
+## gamesaves
+
+`GameSaves` (QML singleton, made on first use; `setup({input, choose})` at startup) is what a game's page reads. `input(gameId)` is `SavesBackup::inputFor(…, ignoreChoice = true)`: the backup input whatever the automatic setting, or nothing for a game that is no Steam, Proton or Linux game (or a ROM game). `choose(gameId, name)` writes `saves_game` through `Library.saveGame` (an empty name clears it).
+
+- `load(gameId)` reads on a worker thread (the index once, kept for the session; the finder; the backups folder) and fills `state`: `requested` (the game asked for), `eligible`, `id` (the group's main copy, whose folder holds the backups), `title`, `hasManifest`, `matched` (the manifest name) and `match` (`steam`, `title`, `chosen`), `paths` (found now, `~` for the home), `fallback` (nothing found, so a launcher Proton game's whole prefix is what is backed up), `backups` (`[{path, when, size}]`, newest first), `folder`, `keep`. A later `load` wins over an earlier one still running.
+- `backUpNow(gameId)` runs `SavesBackup::run` on a worker thread; `working` is true meanwhile and `message` says what came of it (written, unchanged, too big, nothing found, failed). It reloads the state afterwards.
+- `search(text)` is the names in the loaded index that contain every word of `text` (folded like the library search; at most 30), for the "Choose game" popup; `choose(gameId, name)` saves the choice and reloads.
+
+The page's **Restore** is `Backups.restoreGameSaves(path)`; see [backup](backup.md#import-reading-and-planning). The `game-saves` kind is read by `Restore` and the Import dialog the same way, so a backup copied to another machine restores there.

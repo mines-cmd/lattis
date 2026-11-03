@@ -15,6 +15,7 @@
 namespace Backup {
 inline const QString kLibrary = QStringLiteral("library");
 inline const QString kSaves = QStringLiteral("saves");
+inline const QString kGameSaves = QStringLiteral("game-saves");
 
 struct Control
 {

@@ -2,6 +2,7 @@
 #include "tomlsection.h"
 #include "backup.h"
 #include "credentials.h"
+#include "gameid.h"
 #include "libraryversion.h"
 
 #include <QCoreApplication>
@@ -205,7 +206,7 @@ Opened parseManifest(const QByteArray &text, const QString &display)
     Manifest m;
     m.kind = string(root, "kind");
     m.format = int(integer(root, "format", 0));
-    if ((m.kind != Backup::kLibrary && m.kind != Backup::kSaves) || m.format < 1) {
+    if ((m.kind != Backup::kLibrary && m.kind != Backup::kSaves && m.kind != Backup::kGameSaves) || m.format < 1) {
         out.error = notABackup;
         return out;
     }
@@ -227,6 +228,24 @@ Opened parseManifest(const QByteArray &text, const QString &display)
             out.warning = tr("Its library is from a newer version of Lattis (%1): it opens read-only until "
                              "you update the app.")
                               .arg(m.appVersion);
+    } else if (m.kind == Backup::kGameSaves) {
+        m.gameId = string(root, "game");
+        m.gameTitle = string(root, "title");
+        m.matched = string(root, "matched");
+        m.bytes = integer(root, "bytes", -1);
+        if (const toml::array *paths = root.get_as<toml::array>("path")) {
+            for (const toml::node &node : *paths) {
+                const toml::table *t = node.as_table();
+                if (!t || string(*t, "from").isEmpty())
+                    continue;
+                m.savePaths.append({int(integer(*t, "n", -1)), string(*t, "from"),
+                                    string(*t, "type") != QLatin1String("file"), boolean(*t, "prefix")});
+            }
+        }
+        if (m.gameId.isEmpty() || m.savePaths.isEmpty()) {
+            out.error = notABackup;
+            return out;
+        }
     } else {
         m.keys = boolean(root, "keys");
         m.proton = boolean(root, "proton");
@@ -270,6 +289,51 @@ bool Part::restorable() const
 {
     return problem.isEmpty()
            && std::any_of(targets.cbegin(), targets.cend(), [](const Target &t) { return t.problem.isEmpty(); });
+}
+
+QString checkSavePath(const QString &from, const QString &home, const QStringList &roots, QString *absolute)
+{
+    QString path = from;
+    if (!home.isEmpty() && path == QLatin1String("~"))
+        path = home;
+    else if (!home.isEmpty() && path.startsWith(QLatin1String("~/")))
+        path = home + path.mid(1);
+    if (path.isEmpty() || !QDir::isAbsolutePath(path))
+        return tr("%1 isn't a full path").arg(from);
+    if (path.split(u'/').contains(QLatin1String("..")))
+        return tr("%1 goes up with \"..\"").arg(from);
+    path = QDir::cleanPath(path);
+    *absolute = path;
+
+    // The home only holds what's inside it; a root is the place itself or inside it.
+    const auto within = [](const QString &p, const QString &root, bool itself) {
+        return (itself && p == root) || p.startsWith(root + u'/');
+    };
+    const auto allowed = [&](const QString &p, bool canonical) {
+        const auto resolve = [&](const QString &root) {
+            return canonical ? QFileInfo(root).canonicalFilePath() : QDir::cleanPath(root);
+        };
+        if (!home.isEmpty() && within(p, resolve(home), canonical))
+            return true;
+        return std::any_of(roots.cbegin(), roots.cend(), [&](const QString &root) {
+            const QString resolved = resolve(root);
+            return !resolved.isEmpty() && within(p, resolved, true);
+        });
+    };
+    if (!allowed(path, false))
+        return tr("%1 isn't inside your home folder").arg(from);
+
+    // A link on the way may lead out of it.
+    // The place itself is moved aside, not followed, so a link there doesn't count.
+    QString ancestor = path;
+    if (QFileInfo(ancestor).isSymLink())
+        ancestor = QFileInfo(ancestor).path();
+    while (ancestor != QLatin1String("/") && !QFileInfo::exists(ancestor))
+        ancestor = QFileInfo(ancestor).path();
+    const QString real = QFileInfo(ancestor).canonicalFilePath();
+    if (real.isEmpty() || !allowed(real, true))
+        return tr("%1 leads out of your home folder through a link").arg(from);
+    return {};
 }
 
 qint64 Plan::bytes() const
@@ -317,6 +381,40 @@ Plan plan(const QString &archive, const Manifest &manifest, const BackupPlan::So
         }
         if (!manifest.credentials && current.credentialsFile.exists)
             p.carriedOver.append(libraryRelative(p.dataDir, current.credentialsFile.path));
+    }
+
+    if (manifest.kind == Backup::kGameSaves) {
+        const Game *game = findGame(manifest.gameId);
+        Part part;
+        part.kind = Part::Kind::GameSaves;
+        part.id = manifest.gameId;
+        part.name = game ? game->title : manifest.gameTitle.isEmpty() ? manifest.gameId : manifest.gameTitle;
+        part.bytes = manifest.bytes;
+        QStringList roots;
+        if (game && !now.compatdata.isEmpty()) {
+            if (game->platform == kProtonPlatform && game->shortcut != 0)
+                roots.append(now.compatdata + u'/' + QString::number(game->shortcut));
+            else if (game->platform == kSteamPlatform && GameId::steamAppId(game->id) > 0)
+                roots.append(now.compatdata + u'/' + QString::number(GameId::steamAppId(game->id)));
+        }
+        for (const Manifest::SavePath &saved : manifest.savePaths) {
+            Target t;
+            t.source = QStringLiteral("files/%1").arg(saved.n);
+            t.gameId = manifest.gameId;
+            t.label = saved.from;
+            t.wholePrefix = saved.prefix;
+            QString absolute;
+            t.problem = checkSavePath(saved.from, now.home, roots, &absolute);
+            if (t.problem.isEmpty()) {
+                t.path = absolute;
+                t.label = tilde(absolute);
+                t.exists = present(absolute);
+                if (saved.prefix && !ProtonSaves::Prefix::read(absolute))
+                    t.problem = tr("Launch %1 once first; its saves stay in the backup").arg(part.name);
+            }
+            part.targets.append(t);
+        }
+        p.parts.append(part);
     }
 
     for (const Manifest::Emulator &e : manifest.emulators) {
@@ -550,6 +648,8 @@ Result apply(const Plan &plan, const QDate &date, const Archive::Control &contro
     }
     const QStringList allowed = plan.manifest.kind == Backup::kLibrary
                                     ? QStringList{kManifest, QStringLiteral("data")}
+                                : plan.manifest.kind == Backup::kGameSaves
+                                    ? QStringList{kManifest, QStringLiteral("files")}
                                     : QStringList{kManifest, QStringLiteral("emulators"), QStringLiteral("proton")};
     QString error;
     QHash<QString, Archive::Seen> seen;
@@ -562,7 +662,7 @@ Result apply(const Plan &plan, const QDate &date, const Archive::Control &contro
         step.seen = seen.value(step.target.source);
         if (step.seen == Archive::Seen::Nothing)
             continue;
-        if (step.kind == Part::Kind::Proton) {
+        if (step.kind == Part::Kind::Proton || step.target.wholePrefix) {
             const std::optional<ProtonSaves::Prefix> prefix = ProtonSaves::Prefix::read(step.target.path);
             if (!prefix)
                 return fail(tr("%1 doesn't list Proton's files now").arg(step.target.path));
@@ -578,7 +678,7 @@ Result apply(const Plan &plan, const QDate &date, const Archive::Control &contro
             if (plan.carriedOver.contains(credentials)
                 && !copyMissing(plan.dataDir + u'/' + credentials, step.staging + u'/' + credentials, nullptr, &error))
                 return fail(error);
-        } else if ((step.kind == Part::Kind::Saves || step.kind == Part::Kind::Keys)
+        } else if ((step.kind == Part::Kind::Saves || step.kind == Part::Kind::Keys || step.kind == Part::Kind::GameSaves)
                    && step.seen == Archive::Seen::Entries
                    && QDir(step.staging).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System)
                               .size() != 1) {
@@ -616,7 +716,8 @@ Result apply(const Plan &plan, const QDate &date, const Archive::Control &contro
             }
             [[fallthrough]];
         case Part::Kind::Saves:
-        case Part::Kind::Keys: {
+        case Part::Kind::Keys:
+        case Part::Kind::GameSaves: {
             if (step.seen == Archive::Seen::Nothing) {
                 leftovers.append(step.staging);
                 break;

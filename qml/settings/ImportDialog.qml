@@ -9,6 +9,7 @@ MotionPopup {
 
     readonly property var plan: Backups.importPlan
     readonly property bool library: plan.kind === "library"
+    readonly property bool gameSaves: plan.kind === "game-saves"
     readonly property var parts: plan.parts ?? []
     readonly property bool busy: Backups.importing
     property string done: ""
@@ -164,7 +165,7 @@ MotionPopup {
             text: partRow.part.installText
         }
         Repeater {
-            model: partRow.part.problem === "" && (partRow.part.kind === "saves" || partRow.part.kind === "keys") ? partRow.fine : []
+            model: partRow.part.problem === "" && (partRow.part.kind === "saves" || partRow.part.kind === "keys" || partRow.part.kind === "gameSaves") ? partRow.fine : []
             PathHint {
                 required property var modelData
                 text: modelData.label + (root.now(modelData) === "" ? "" : "  (" + root.now(modelData) + ")")
@@ -214,7 +215,8 @@ MotionPopup {
             Layout.fillWidth: true
             // The plan is gone once done: what was imported names it then.
             readonly property string kind: root.done !== "" ? root.done : (root.plan.kind ?? "")
-            text: kind === "library" ? qsTr("Import library") : kind === "saves" ? qsTr("Import saves") : qsTr("Import")
+            text: kind === "library" ? qsTr("Import library") : kind === "saves" ? qsTr("Import saves")
+                : kind === "game-saves" ? qsTr("Import game saves") : qsTr("Import")
             color: Theme.gameEditor.headingColor
             font.weight: Theme.font.strongWeight
         }
@@ -258,6 +260,7 @@ MotionPopup {
                               : qsTr("Made %1").arg(root.plan.made ?? "")
                     }
                     Hint {
+                        visible: !root.gameSaves
                         text: root.plan.sameLibrary ? qsTr("From this library.")
                             : root.library ? qsTr("From another library.")
                             : qsTr("From another library: saves of games that aren't in yours stay in the backup. Import its library first to restore them.")
@@ -301,6 +304,11 @@ MotionPopup {
                     }
                 }
 
+                PartGroup {
+                    visible: members.length > 0
+                    title: qsTr("Game saves")
+                    kinds: ["gameSaves"]
+                }
                 PartGroup {
                     visible: !root.library && members.length > 0
                     title: qsTr("Emulator saves")
@@ -379,7 +387,7 @@ MotionPopup {
         }
         Hint {
             visible: !root.library && root.plan.kind !== undefined && !root.busy && root.done === ""
-            text: qsTr("Close any emulator you started outside the launcher first.")
+            text: root.gameSaves ? qsTr("Close the game first.") : qsTr("Close any emulator you started outside the launcher first.")
         }
 
         RowLayout {

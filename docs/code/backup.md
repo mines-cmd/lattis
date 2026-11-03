@@ -92,6 +92,8 @@ A game whose prefix folder doesn't exist yet (`Skipped::NeverLaunched`), isn't i
 - Saves beside ROMs map to each game's ROM's current location.
 - Each Proton game's prefix maps to its shortcut's `compatdata` folder now.
 
+- A `game-saves` archive (see [saves](saves.md#savesbackup)) is one part, `Part::Kind::GameSaves`, named after the game in the library (else the manifest's title). Each `[[path]]` is a target: its `from` with `~` filled in with the home, and its `files/<n>` source in the archive. `Restore::checkSavePath(from, home, roots, &absolute)` checks each one first and puts a `problem` on a target that fails: not a full path, a `..` in it, outside the home (and outside `roots`, the game's own `compatdata/<shortcut or app ID>` folder), or leading out of them through a link on the way (the place itself is moved aside, never followed). The home itself is refused. A `prefix = true` path (a launcher Proton game's whole prefix, backed up without Proton's files) needs a prefix that lists its own files, and gets the current prefix's Proton files carried over like a Proton part. The other paths of the part still restore when one fails.
+
 Each mapping produces a `Target` with where the restored content goes (`path`) and whether something is already there (`exists`). A target that can't be restored — because its path is missing, or a link is in the way — gets a `problem` string explaining why.
 
 `Backups::openImport()` calls `plan()` then measures what each target holds now, in the background, so the Import dialog can show "Replaces 1.2 GB" for each part before the user clicks Import. The measuring runs in a `QFutureWatcher`; the `importPlan` property updates when it finishes.
@@ -185,6 +187,7 @@ A failed or cancelled extract removes the folders it created.
 | `openImport(file)` | Reads the manifest and plans the Import; measures what it replaces |
 | `checkImportPart(index, checked)` | Checks or unchecks a restorable part |
 | `startImport()` | Restores the checked parts; refused if a game runs |
+| `restoreGameSaves(archive)` | A game page's Restore: opens a `game-saves` archive and restores it at once, with no dialog (the notice says where what was there went). Returns an error, or `""`; a library or saves backup is refused |
 | `cancelImport()` | Cancels the running Import |
 | `importFolder()` | Where the Import file picker starts |
 | `dismissNotice()` | Hides the after-Import notice |

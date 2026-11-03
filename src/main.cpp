@@ -5,6 +5,7 @@
 #include "install/desktopentry.h"
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
+#include "saves/gamesaves.h"
 #include "saves/savesbackuplibrary.h"
 #include "saves/savessettings.h"
 #include "core/apppaths.h"
@@ -256,6 +257,13 @@ int main(int argc, char *argv[])
         },
         [&runner] { return runner.minSessionSeconds(); });
     SavesSettings::setup({dataDir, SavesManifest::defaultDir()});
+    GameSaves::setup(
+        {[&library, &dataDir](const QString &id) {
+             return SavesBackup::inputFor(library, id, dataDir, QStringLiteral(LATTIS_VERSION), true);
+         },
+         [&library](const QString &id, const QString &name) {
+             return library.saveGame(id, {{QStringLiteral("saves_game"), name.isEmpty() ? QVariant() : QVariant(name)}});
+         }});
     QObject::connect(&runner, &GameRunner::sessionStarted, &savesBackup, &SavesBackup::Service::started);
     QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
     QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);
