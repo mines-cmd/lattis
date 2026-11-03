@@ -44,6 +44,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 ## The window
 
 - **The rail**, on the left: the logo, **All games**, one button per platform that has games, then **+** (add a game) and the settings button at the bottom.
+- **The toolbar** (off by default): a pill of icon buttons above the game's page with Add game, Play statistics, Gallery and Settings. Turn it on with **Show toolbar** in Settings → General, in the setup guide's Look step, or in the rail's right-click menu. Right-click it to tick the buttons you want, or to hide it; drag a button sideways to reorder it. The rail keeps its own list, so a button can be in both, one or neither.
 - **The game list**: the search box and the filter button above your games, grouped by platform.
 - **The game's page**: its art, the **Launch** button, play time and last played ("None" and "Never" until you've played it), buttons to favorite it, open its emulator or Steam page, open its folder, and open its **Properties**; then its description, tags and an info panel (click its **Platform** to show only that platform's games). Click the **Description**, **Tags** or **Media** heading to fold that section away on every game's page; click it again to unfold it. What it shows is yours to change: right-click the chips beside Launch, the buttons or the info panel to tick what shows, or choose **Customize game page** for the full list with the order (see Game page under Settings below). Add a save folder button or a ⋯ menu button there too.
 
@@ -60,7 +61,7 @@ Open Settings with the button at the bottom of the rail, or Ctrl+,. Its pages:
 
 | Page | What's on it |
 |---|---|
-| General | Start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, updates (the daily check, Check now), the setup guide, About |
+| General | Show toolbar, start in fullscreen, use the system locale (or English, with dates as DD/MM/YY), start at login, Reduce motion, what the launcher does while a game runs, the data folder, updates (the daily check, Check now), the setup guide, About |
 | Game page | What the game's page shows and in what order: the chips beside Launch (the eye beside a chip hides or shows its icon), the buttons, the info panel rows (drag a row by its dots to move it; holding it near the top or bottom of the page scrolls it), how play time is written ("206,7 hours" or "206h 42m"), the period Recent play time counts, and which of the description, tags and media (Steam clips and screenshots, an emulator's screenshots) show and in what order, and whether the media shows screenshots and video |
 | Appearance | The theme in use: pick one, or mix colors and a style, and save the pair as a theme |
 | Customize | Every color and style setting, by part of the window, with the colors and style in use |
