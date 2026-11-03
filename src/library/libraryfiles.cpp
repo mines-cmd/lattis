@@ -124,7 +124,8 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
 
     const QStringList known = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("icon"),
                                QStringLiteral("emulators"), QStringLiteral("rom_folders"),
-                               QStringLiteral("igdb_platforms"), QStringLiteral("in_rail")};
+                               QStringLiteral("igdb_platforms"), QStringLiteral("in_rail"),
+                               QStringLiteral("auto_backup")};
     QSet<QString> ids;
     for (const toml::table *entry : arrayOfTables(root, "platform", displayPath, &out.warnings)) {
         const QString at = where(displayPath, *entry);
@@ -140,6 +141,11 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
                     p.inRail = b->get();
                 else
                     out.warnings.append(QStringLiteral("%1: in_rail must be true or false").arg(where(displayPath, node)));
+            } else if (key == QLatin1String("auto_backup")) {
+                if (const auto *b = node.as_boolean())
+                    p.autoBackup = b->get();
+                else
+                    out.warnings.append(QStringLiteral("%1: auto_backup must be true or false").arg(where(displayPath, node)));
             } else if (key == QLatin1String("igdb_platforms")) {
                 QList<int> list;
                 bool ok = node.is_array();

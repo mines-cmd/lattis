@@ -5,6 +5,7 @@
 #include "install/desktopentry.h"
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
+#include "saves/savesbackuplibrary.h"
 #include "core/apppaths.h"
 #include "core/gamepagemigration.h"
 #include "core/general.h"
@@ -238,6 +239,24 @@ int main(int argc, char *argv[])
                             qCritical().noquote() << "can't start the app again after the import:" << error;
                         QCoreApplication::quit();
                     }});
+    SavesBackup::Service savesBackup(
+        [&library, &dataDir](const QString &id) {
+            return SavesBackup::inputFor(library, id, dataDir, QStringLiteral(LATTIS_VERSION));
+        },
+        [&library, &runner](const QString &id) {
+            if (runner.running().contains(id))
+                return true;
+            const QStringList open = runner.runningManagers();
+            for (const QVariant &manager : library.modManagersFor(id)) {
+                if (open.contains(manager.toMap().value(QStringLiteral("id")).toString()))
+                    return true;
+            }
+            return false;
+        },
+        [&runner] { return runner.minSessionSeconds(); });
+    QObject::connect(&runner, &GameRunner::sessionStarted, &savesBackup, &SavesBackup::Service::started);
+    QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
+    QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);
     Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
                       [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); },
                       [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); },

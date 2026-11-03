@@ -27,6 +27,10 @@ struct Settings
     bool proton = true;
     // Rows the user unchecked: "saves:<emulator>", "keys:<emulator>", "proton:<game>".
     QStringList ignored;
+    // Automatic save backups; an empty folder is the default one.
+    QString autoFolder;
+    int autoKeep = 5;
+    int autoMaxMb = 1024;
 
     bool operator==(const Settings &) const = default;
 };

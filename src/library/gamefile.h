@@ -71,6 +71,7 @@ struct GameFile
     QStringList mediaFolders;
     QStringList savePaths;
     QString savesGame;
+    int autoBackup = -1; // -1 = follow the platform, 0 = off, 1 = on
     qint64 shortcut = 0;
     bool installed = true;
     QString sameAs;

@@ -384,6 +384,8 @@ qt_add_qml_module(lattis
         src/saves/savesindex.h src/saves/savesindex.cpp
         src/saves/savesfinder.h src/saves/savesfinder.cpp
         src/saves/savesmanifest.h src/saves/savesmanifest.cpp
+        src/saves/savesbackup.h src/saves/savesbackup.cpp
+        src/saves/savesbackuplibrary.h src/saves/savesbackuplibrary.cpp
         src/backup/backuparchive.h src/backup/backuparchive.cpp
         src/backup/besiderom.h src/backup/besiderom.cpp
         src/backup/protonsaves.h src/backup/protonsaves.cpp

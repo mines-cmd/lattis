@@ -381,6 +381,17 @@ lattis_test(savesfinder_test
             ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
     LIBS yaml-cpp::yaml-cpp
     DEFINES ${SAVES_FIXTURE})
+lattis_test(savesbackup_test
+    SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
+            ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+            ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
+            ../src/saves/savesbackup.h ../src/saves/savesbackup.cpp
+            ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
+            ../src/core/apppaths.h ../src/core/apppaths.cpp
+            ../src/backup/backuparchive.h ../src/backup/backuparchive.cpp
+            ../src/backup/protonsaves.h ../src/backup/protonsaves.cpp
+            ../src/backup/movedaside.h ../src/backup/movedaside.cpp
+    LIBS Qt6::Network Qt6::Concurrent LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp)
 
 # Backups
 lattis_test(archive_test

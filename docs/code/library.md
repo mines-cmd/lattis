@@ -569,6 +569,7 @@ id, name, icon, games
 defined         it's in platforms.toml
 emulators, emulatorNames, romFolders
 inRail           false hides its rail button (`in_rail = false`)
+autoBackup       true backs up the saves of its Steam, Proton or Linux games when they close (`auto_backup = true`)
 problems        [{text, command}]: a missing ROM folder, no emulator installed, a Flatpak
                 that can't read a ROM folder; `command` fixes it, or is ""
 ```

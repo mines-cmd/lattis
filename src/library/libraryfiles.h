@@ -25,6 +25,7 @@ struct Platform
     int line = 0;
     QList<int> igdbPlatforms;
     bool inRail = true;
+    bool autoBackup = false;
 
     bool operator==(const Platform &) const = default;
 };

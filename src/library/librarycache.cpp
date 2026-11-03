@@ -17,7 +17,7 @@ static QDataStream &operator<<(QDataStream &s, const GameFile &g)
 {
     return s << g.title << g.platform << g.description << qint32(g.year) << g.rating << g.tags << g.favorite << g.status
              << qint32(g.igdb) << qint32(g.steamgriddb) << qint32(g.playMinutes) << g.lastPlayed << g.added << g.hidden << g.emulator << g.rom << qint32(g.romLine) << g.args << g.launchOptions << g.proton << g.skipSteamArt
-             << g.exe << g.startDir << g.installDir << g.shortcut << g.installed << g.logoScale << g.logoPosition << g.logoOffsetX << g.logoOffsetY << g.logoScrim << g.logoScrimSide << g.logoScrimStrength << g.ratingSource << g.saveFolder << g.savePaths << g.savesGame << g.mediaFolders << g.sameAs << g.unavailable << qint32(g.steamApp);
+             << g.exe << g.startDir << g.installDir << g.shortcut << g.installed << g.logoScale << g.logoPosition << g.logoOffsetX << g.logoOffsetY << g.logoScrim << g.logoScrimSide << g.logoScrimStrength << g.ratingSource << g.saveFolder << g.savePaths << g.savesGame << g.autoBackup << g.mediaFolders << g.sameAs << g.unavailable << qint32(g.steamApp);
 }
 
 static QDataStream &operator>>(QDataStream &s, GameFile &g)
@@ -31,7 +31,7 @@ static QDataStream &operator>>(QDataStream &s, GameFile &g)
     s >> g.title >> g.platform >> g.description >> year >> g.rating >> g.tags >> g.favorite >> g.status >> igdb
         >> steamgriddb >> minutes
         >> g.lastPlayed >> g.added >> g.hidden >> g.emulator >> g.rom >> romLine >> g.args >> g.launchOptions >> g.proton >> g.skipSteamArt
-        >> g.exe >> g.startDir >> g.installDir >> g.shortcut >> g.installed >> g.logoScale >> g.logoPosition >> g.logoOffsetX >> g.logoOffsetY >> g.logoScrim >> g.logoScrimSide >> g.logoScrimStrength >> g.ratingSource >> g.saveFolder >> g.savePaths >> g.savesGame >> g.mediaFolders >> g.sameAs >> g.unavailable >> steamApp;
+        >> g.exe >> g.startDir >> g.installDir >> g.shortcut >> g.installed >> g.logoScale >> g.logoPosition >> g.logoOffsetX >> g.logoOffsetY >> g.logoScrim >> g.logoScrimSide >> g.logoScrimStrength >> g.ratingSource >> g.saveFolder >> g.savePaths >> g.savesGame >> g.autoBackup >> g.mediaFolders >> g.sameAs >> g.unavailable >> steamApp;
     g.romLine = romLine;
     g.igdb = igdb;
     g.steamgriddb = steamgriddb;
@@ -55,13 +55,13 @@ static QDataStream &operator>>(QDataStream &s, ModManager &m)
 
 static QDataStream &operator<<(QDataStream &s, const Platform &p)
 {
-    return s << p.id << p.name << p.icon << p.emulators << p.romFolders << p.igdbPlatforms << p.inRail << qint32(p.line);
+    return s << p.id << p.name << p.icon << p.emulators << p.romFolders << p.igdbPlatforms << p.inRail << p.autoBackup << qint32(p.line);
 }
 
 static QDataStream &operator>>(QDataStream &s, Platform &p)
 {
     qint32 line = 0;
-    s >> p.id >> p.name >> p.icon >> p.emulators >> p.romFolders >> p.igdbPlatforms >> p.inRail >> line;
+    s >> p.id >> p.name >> p.icon >> p.emulators >> p.romFolders >> p.igdbPlatforms >> p.inRail >> p.autoBackup >> line;
     p.line = line;
     return s;
 }

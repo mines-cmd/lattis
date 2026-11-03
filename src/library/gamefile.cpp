@@ -53,6 +53,7 @@ constexpr Field kFields[] = {
     {"save_folder", String, 0, 0, "", "The folder Open save folder opens (`~` for the home folder); when not set, or not found, it's looked for: the ROM's folder for an emulator that saves next to it, the emulator's save folder, or the Proton prefix's user folder"},
     {"save_paths", StringList, 0, 0, "[]", "Steam, Proton and Linux games: more folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game"},
     {"saves_game", String, 0, 0, "", "Steam, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
+    {"auto_backup", Bool, 0, 0, "", "Steam, Proton and Linux games: back up the game's saves when it closes (true), never (false), or, when not set, as its platform does"},
     {"media_folders", StringList, 0, 0, "[]", "Steam, Proton and Linux games: folders of pictures and videos (OBS recordings, a screenshot tool's folder; `~` for the home folder) shown in the game's Media row and the Gallery; every picture and video in them and their subfolders counts"},
     {"shortcut", Integer, 1, 4294967295.0, "", "Proton games: the Steam shortcut's app ID; it names the prefix and the grid art. Don't change it by hand"},
     {"installed", Bool, 0, 0, "true", "Proton and Linux games: false after Uninstall removed its files (or a Proton game's shortcut) and kept it in the library, until it's located again"},
@@ -299,7 +300,9 @@ bool isCleared(const QString &key, const QVariant &value)
         return (value.typeId() == QMetaType::QStringList || value.typeId() == QMetaType::QVariantList)
             && value.toList().isEmpty();
     case Bool:
-        return value.typeId() == QMetaType::Bool && value.toBool() == (qstrcmp(field->defaultText, "true") == 0);
+        // No default (auto_backup): false is a choice, only an absent value clears it.
+        return *field->defaultText && value.typeId() == QMetaType::Bool
+            && value.toBool() == (qstrcmp(field->defaultText, "true") == 0);
     default:
         return false;
     }
@@ -377,6 +380,8 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.saveFolder = value.toString();
     else if (key == QLatin1String("save_paths"))
         game.savePaths = value.toStringList();
+    else if (key == QLatin1String("auto_backup"))
+        game.autoBackup = value.toBool() ? 1 : 0;
     else if (key == QLatin1String("saves_game"))
         game.savesGame = value.toString();
     else if (key == QLatin1String("media_folders"))

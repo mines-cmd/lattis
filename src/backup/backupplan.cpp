@@ -114,7 +114,8 @@ Parsed<Settings> parseSettings(const QByteArray &bytes, const QString &displayPa
     }
 
     const QStringList known = {QStringLiteral("credentials"), QStringLiteral("keys"), QStringLiteral("proton"),
-                               QStringLiteral("ignored")};
+                               QStringLiteral("ignored"), QStringLiteral("auto_folder"),
+                               QStringLiteral("auto_keep"), QStringLiteral("auto_max_mb")};
     bool *const values[] = {&out.value.credentials, &out.value.keys, &out.value.proton};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
@@ -134,6 +135,17 @@ Parsed<Settings> parseSettings(const QByteArray &bytes, const QString &displayPa
             }
             if (!ok)
                 out.warnings.append(QStringLiteral("%1: ignored must be a list of strings").arg(where(node)));
+        } else if (key == QLatin1String("auto_folder")) {
+            if (const auto *text = node.as_string())
+                out.value.autoFolder = toQString(text->get());
+            else
+                out.warnings.append(QStringLiteral("%1: auto_folder must be text").arg(where(node)));
+        } else if (key == QLatin1String("auto_keep") || key == QLatin1String("auto_max_mb")) {
+            const auto *number = node.as_integer();
+            if (number && number->get() >= 1 && number->get() <= 1000000)
+                (key == QLatin1String("auto_keep") ? out.value.autoKeep : out.value.autoMaxMb) = int(number->get());
+            else
+                out.warnings.append(QStringLiteral("%1: %2 must be a whole number of at least 1").arg(where(node), key));
         } else if (const auto *b = node.as_boolean()) {
             *values[index] = b->get();
         } else {

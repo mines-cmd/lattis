@@ -83,6 +83,7 @@ private slots:
     void settingsDefaults();
     void settingsParsed();
     void settingsWarnings();
+    void autoBackupSettingsParsed();
     void saveSetting();
     void ignoredRows();
 
@@ -140,6 +141,22 @@ void BackupPlanTest::settingsParsed()
     QVERIFY(!parsed.value.credentials);
     QVERIFY(!parsed.value.keys);
     QVERIFY(!parsed.value.proton);
+}
+
+void BackupPlanTest::autoBackupSettingsParsed()
+{
+    Parsed<BackupPlan::Settings> parsed = BackupPlan::parseSettings(
+        "[backup]\nauto_folder = \"~/Sync/saves\"\nauto_keep = 3\nauto_max_mb = 50\n", "settings.toml");
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.autoFolder, QStringLiteral("~/Sync/saves"));
+    QCOMPARE(parsed.value.autoKeep, 3);
+    QCOMPARE(parsed.value.autoMaxMb, 50);
+
+    parsed = BackupPlan::parseSettings("[backup]\nauto_keep = 0\nauto_max_mb = \"big\"\nauto_folder = 4\n", "settings.toml");
+    QCOMPARE(parsed.warnings.size(), 3);
+    QCOMPARE(parsed.value.autoKeep, 5);
+    QCOMPARE(parsed.value.autoMaxMb, 1024);
+    QVERIFY(parsed.value.autoFolder.isEmpty());
 }
 
 void BackupPlanTest::settingsWarnings()
