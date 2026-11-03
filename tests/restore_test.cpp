@@ -360,7 +360,12 @@ void RestoreTest::refusals()
     QCOMPARE(opened.error, QStringLiteral("made.tar.zst isn't a Lattis backup."));
     opened = withManifest("kind = \"saves\nformat = 1\n");
     QCOMPARE(opened.error, QStringLiteral("made.tar.zst isn't a Lattis backup."));
+    // An archive from before games/ parts (format 1) still opens, and so does one with them.
+    opened = withManifest("kind = \"saves\"\nformat = 1\napp_version = \"0.3\"\n");
+    QVERIFY2(opened.manifest, qPrintable(opened.error));
     opened = withManifest("kind = \"saves\"\nformat = 2\napp_version = \"0.3\"\n");
+    QVERIFY2(opened.manifest, qPrintable(opened.error));
+    opened = withManifest("kind = \"saves\"\nformat = 3\napp_version = \"0.3\"\n");
     QVERIFY(!opened.manifest);
     QCOMPARE(opened.error,
              QStringLiteral("made.tar.zst was made by a newer version of Lattis (0.3). Update the app to import it."));

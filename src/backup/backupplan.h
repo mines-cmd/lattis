@@ -19,7 +19,10 @@
 // See docs/code/backup.md.
 namespace BackupPlan {
 // Bumped when an archive's layout changes in a way an older app can't restore.
-constexpr int kFormat = 1;
+// 2: a saves archive can hold games/<id>/ parts. A library archive has no such parts, so older apps
+// still open it: it stays at 1.
+constexpr int kFormat = 2;
+constexpr int kLibraryFormat = 1;
 
 struct Settings
 {
@@ -149,6 +152,7 @@ struct GamePart
 
     // What the backup takes of it; -1 until measured.
     qint64 bytes() const;
+    bool taken() const { return take && !tooBig; }
 };
 
 struct SavesPlan

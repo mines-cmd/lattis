@@ -628,9 +628,10 @@ void BackupPlanTest::savesManifest()
     const QByteArray expected =
         "# A Lattis saves backup. Restore it with Import in the app, or by hand:\n"
         "# tar --zstd -xf <this file>, then copy each emulators/<id>/saves/<n>/ to the n-th\n"
-        "# folder listed below, and each proton/<game>/ over compatdata/<shortcut>/ in Steam.\n"
+        "# folder listed below, each proton/<game>/ over compatdata/<shortcut>/ in Steam, and each\n"
+        "# games/<game>/files/<n>/ to the place its [[saved.path]] says it came from.\n"
         "kind = \"saves\"\n"
-        "format = 1\n"
+        "format = 2\n"
         "app_version = \"0.1\"\n"
         "library_id = \"ea9d5f1e-9ab9-42f0-b1b6-fba7c0552362\"   # the library it was made with\n"
         "created = 2026-09-28T21:04:00-03:00\n"
@@ -733,7 +734,7 @@ void BackupPlanTest::savedGames()
     QVERIFY(plan.protonGames.at(0).superseded);
     QVERIFY(!plan.protonGames.at(1).superseded);
     QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 7 + 11);
-    QVERIFY(!BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")).contains("proton-cave-story"));
+    QVERIFY(!BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")).contains("[[game]]"));
 }
 
 void BackupPlanTest::savedGamesWithoutManifest()

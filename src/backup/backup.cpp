@@ -189,6 +189,15 @@ QString write(BackupPlan::SavesPlan plan, const QString &path, const QDateTime &
                 return w.writer.error();
         }
     }
+    for (const BackupPlan::GamePart &part : std::as_const(plan.savedGames)) {
+        if (!part.taken())
+            continue;
+        w.setPart(part.title);
+        for (qsizetype n = 0; n < part.places.size(); ++n) {
+            if (!w.addPlace(part.places.at(n), QStringLiteral("games/%1/files/%2").arg(part.gameId).arg(n)))
+                return w.writer.error();
+        }
+    }
     return finish(w, partial, path);
 }
 

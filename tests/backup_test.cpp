@@ -10,6 +10,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+#include <toml++/toml.hpp>
+
 #include <memory>
 
 namespace {
@@ -89,6 +91,7 @@ private slots:
     void libraryWithoutCredentials();
     void libraryInsideDataDir();
     void saves();
+    void savesWithFoundGames();
     void savesWithoutKeysAndProton();
     void cancel();
     void readOnlyTarget();
@@ -300,6 +303,91 @@ void BackupTest::saves()
 
     const QByteArray manifest = *Archive::readFirst(archive, QStringLiteral("manifest.toml"), &extractError);
     QCOMPARE(manifest, BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")));
+}
+
+void BackupTest::savesWithFoundGames()
+{
+    // Own save paths need no manifest: a Linux game, a too big one, an unchecked one, and Cave Story,
+    // whose slim prefix is then left out.
+    writeFile(m_home + QStringLiteral("/a/saves/slot1.sav"), 30);
+    writeFile(m_home + QStringLiteral("/a/saves/deep/slot2.sav"), 12);
+    writeFile(m_home + QStringLiteral("/b/huge.bin"), 5000);
+    writeFile(m_home + QStringLiteral("/c/keep.sav"), 4);
+    writeFile(m_home + QStringLiteral("/cave/save.dat"), 9);
+    writeFile(path(QStringLiteral("elsewhere/outside.sav")), 3);
+    const auto entry = [&](const QString &id, const QStringList &savePaths) {
+        SavesFinder::Query query;
+        query.id = id;
+        query.title = id;
+        query.savePaths = savePaths;
+        return BackupPlan::GameQueries{id, id, {query}};
+    };
+    BackupPlan::Sources s = sources();
+    s.savesEnv.home = m_home;
+    s.manifestDir = path(QStringLiteral("no-manifest"));
+    s.saveGames = {entry(QStringLiteral("linux-a"), {m_home + QStringLiteral("/a/saves"), m_home + QStringLiteral("/nowhere")}),
+                   entry(QStringLiteral("linux-b"), {m_home + QStringLiteral("/b/huge.bin")}),
+                   entry(QStringLiteral("linux-c"), {m_home + QStringLiteral("/c")}),
+                   entry(QStringLiteral("proton-cave-story"), {m_home + QStringLiteral("/cave/save.dat")}),
+                   entry(QStringLiteral("linux-out"), {path(QStringLiteral("elsewhere/outside.sav"))})};
+
+    BackupPlan::Settings settings;
+    settings.ignored = {QStringLiteral("game:linux-c")};
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(s, settings);
+    plan.maxBytes = 1000;
+    BackupPlan::measure(plan);
+    QCOMPARE(plan.savedGames.size(), 4); // what a restore would refuse isn't taken at all
+    const QString archive = path(QStringLiteral("games.tar.zst"));
+    QCOMPARE(Backup::write(plan, archive, kCreated, QStringLiteral("0.1")), QString());
+
+    const QStringList all = files(entries(archive));
+    const QStringList games = all.filter(QStringLiteral("games/"));
+    QCOMPARE(games,
+             QStringList({QStringLiteral("games/linux-a/files/0/deep/slot2.sav"),
+                          QStringLiteral("games/linux-a/files/0/slot1.sav"),
+                          QStringLiteral("games/proton-cave-story/files/0/save.dat")}));
+    QVERIFY(all.filter(QStringLiteral("proton/")).isEmpty());
+    QVERIFY(!all.join(u'\n').contains(QStringLiteral("linux-b")));
+    QVERIFY(!all.join(u'\n').contains(QStringLiteral("linux-c")));
+
+    // Read by hand: the files extract where the manifest sends them.
+    const QString out = path(QStringLiteral("extracted"));
+    QString extractError;
+    QVERIFY2(Archive::extract(archive, {{QStringLiteral("games"), out}},
+                              {QStringLiteral("manifest.toml"), QStringLiteral("emulators"), QStringLiteral("proton")}, &extractError),
+             qPrintable(extractError));
+    QCOMPARE(QFileInfo(out + QStringLiteral("/linux-a/files/0/slot1.sav")).size(), 30);
+    QCOMPARE(QFileInfo(out + QStringLiteral("/proton-cave-story/files/0/save.dat")).size(), 9);
+
+    const QByteArray manifest = *Archive::readFirst(archive, QStringLiteral("manifest.toml"), &extractError);
+    QCOMPARE(manifest, BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1")));
+    const toml::table root = toml::parse(std::string_view(manifest.constData(), size_t(manifest.size())));
+    QCOMPARE(root["format"].value_or(0), 2);
+    const toml::array *saved = root["saved"].as_array();
+    QVERIFY(saved);
+    QCOMPARE(int(saved->size()), 2);
+    const toml::table *first = saved->get(0)->as_table();
+    QCOMPARE(QString::fromStdString((*first)["id"].value_or(std::string())), QStringLiteral("linux-a"));
+    QCOMPARE((*first)["bytes"].value_or(int64_t(0)), int64_t(42));
+    const toml::array *paths = (*first)["path"].as_array();
+    QVERIFY(paths);
+    QCOMPARE(int(paths->size()), 1); // the missing path isn't listed
+    const toml::table *path0 = paths->get(0)->as_table();
+    QCOMPARE((*path0)["n"].value_or(-1), 0);
+    QCOMPARE(QString::fromStdString((*path0)["from"].value_or(std::string())), QStringLiteral("~/a/saves"));
+    QCOMPARE(QString::fromStdString((*path0)["type"].value_or(std::string())), QStringLiteral("folder"));
+
+    // The slim prefix comes back when nothing else is found for it.
+    BackupPlan::Sources plain = sources();
+    plain.manifestDir = s.manifestDir;
+    plain.savesEnv.home = m_home;
+    plain.saveGames = {entry(QStringLiteral("proton-cave-story"), {m_home + QStringLiteral("/missing")})};
+    const BackupPlan::SavesPlan fallback = BackupPlan::planSaves(plain, {});
+    const QString second = path(QStringLiteral("fallback.tar.zst"));
+    QCOMPARE(Backup::write(fallback, second, kCreated, QStringLiteral("0.1")), QString());
+    const QStringList fallbackFiles = files(entries(second));
+    QVERIFY(fallbackFiles.join(u'\n').contains(QStringLiteral("proton/proton-cave-story/")));
+    QVERIFY(files(fallbackFiles).filter(QStringLiteral("games/")).isEmpty());
 }
 
 void BackupTest::savesWithoutKeysAndProton()

@@ -427,6 +427,15 @@ void applyChoices(SavesPlan &plan, const Settings &settings)
 }
 
 namespace {
+// What a restore would accept back (`checkSavePath`): inside the home or a game's prefix, no "..".
+bool restorable(const QString &path, const QString &home, const QStringList &prefixes)
+{
+    if (!QDir::isAbsolutePath(path) || path.split(u'/').contains(QLatin1String("..")))
+        return false;
+    const auto inside = [&](const QString &root) { return !root.isEmpty() && path.startsWith(root + u'/'); };
+    return inside(home) || std::any_of(prefixes.cbegin(), prefixes.cend(), inside);
+}
+
 void findSavedGames(SavesPlan &plan)
 {
     plan.savedGames.clear();
@@ -449,8 +458,17 @@ void findSavedGames(SavesPlan &plan)
         part.title = game.title;
         part.matched = found.matched;
         part.match = found.match;
-        for (const QString &path : found.paths)
-            part.places.append(place(path));
+        QStringList prefixes;
+        for (const SavesFinder::Query &copy : game.copies)
+            prefixes.append(copy.prefix);
+        for (const QString &path : found.paths) {
+            if (restorable(path, plan.savesEnv.home, prefixes))
+                part.places.append(place(path));
+            else
+                qCInfo(lcBackup).noquote() << path << "is outside the home and the game's prefix; not backed up";
+        }
+        if (part.places.isEmpty())
+            continue;
         measure(part.places);
         part.tooBig = sum(part.places) > plan.maxBytes;
         part.take = !ignored.contains(QStringLiteral("game:") + part.gameId);
@@ -500,7 +518,7 @@ QByteArray manifest(const LibraryPlan &plan, const QDateTime &created, const QSt
         "# Import in the app, or by hand: tar --zstd -xf <this file>, then copy data/ to\n"
         "# ~/.local/share/lattis/.\n");
     out += QStringLiteral("kind = \"library\"\n");
-    out += QStringLiteral("format = %1\n").arg(kFormat);
+    out += QStringLiteral("format = %1\n").arg(kLibraryFormat);
     out += QStringLiteral("app_version = %1\n").arg(tomlString(appVersion));
     out += QStringLiteral("library_version = %1\n").arg(plan.library.version);
     if (!plan.library.id.isEmpty())
@@ -527,7 +545,8 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
     QString out = QStringLiteral(
         "# A Lattis saves backup. Restore it with Import in the app, or by hand:\n"
         "# tar --zstd -xf <this file>, then copy each emulators/<id>/saves/<n>/ to the n-th\n"
-        "# folder listed below, and each proton/<game>/ over compatdata/<shortcut>/ in Steam.\n");
+        "# folder listed below, each proton/<game>/ over compatdata/<shortcut>/ in Steam, and each\n"
+        "# games/<game>/files/<n>/ to the place its [[saved.path]] says it came from.\n");
     out += QStringLiteral("kind = \"saves\"\n");
     out += QStringLiteral("format = %1\n").arg(kFormat);
     out += QStringLiteral("app_version = %1\n").arg(tomlString(appVersion));
@@ -567,6 +586,27 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
                 out += QStringLiteral("proton = %1   # the prefix's version file\n").arg(tomlString(part.proton));
             if (part.measured)
                 out += QStringLiteral("bytes = %1\n").arg(part.saves.bytes);
+        }
+    }
+
+    for (const GamePart &part : plan.savedGames) {
+        if (!part.taken())
+            continue;
+        out += QStringLiteral("\n[[saved]]\nid = %1\ntitle = %2\n").arg(tomlString(part.gameId), tomlString(part.title));
+        if (!part.matched.isEmpty())
+            out += QStringLiteral("matched = %1   # the game in the Ludusavi manifest\n").arg(tomlString(part.matched));
+        if (part.measured)
+            out += QStringLiteral("bytes = %1\n").arg(part.bytes());
+        for (qsizetype n = 0; n < part.places.size(); ++n) {
+            const Place &p = part.places.at(n);
+            if (!p.exists)
+                continue;
+            const QFileInfo info(p.path);
+            out += QStringLiteral("\n[[saved.path]]\nn = %1\nfrom = %2\ntype = %3\n")
+                       .arg(n)
+                       .arg(tomlString(tilde(p.path, plan.home)),
+                            tomlString(!info.isSymLink() && info.isDir() ? QStringLiteral("folder")
+                                                                        : QStringLiteral("file")));
         }
     }
     return out.toUtf8();
