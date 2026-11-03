@@ -65,6 +65,8 @@ public:
     void refreshLast();
     // Empty `name` clears it; returns an error or nothing. Reloads.
     Q_INVOKABLE QString rename(const QString &gameId, const QString &archive, const QString &name);
+    // Moves one of the game's backups (and its name) to the trash; returns an error or nothing. Reloads.
+    Q_INVOKABLE QString remove(const QString &gameId, const QString &archive);
     Q_INVOKABLE void backUpNow(const QString &gameId);
     Q_INVOKABLE QVariantList search(const QString &text) const;
     Q_INVOKABLE QString choose(const QString &gameId, const QString &name);

@@ -1,11 +1,13 @@
 #include "gamesaves.h"
 #include "backupplan.h"
 #include "dateformat.h"
+#include "movedaside.h"
 #include "savesmanifest.h"
 #include "searchtext.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QFile>
 #include <QFileInfo>
 #include <QJSEngine>
 #include <QLocale>
@@ -33,7 +35,11 @@ QString whenText(const QString &archive)
     const QDateTime when = QDateTime::fromString(stamp, QStringLiteral("yyyy-MM-dd-HHmmss"));
     if (!when.isValid())
         return QFileInfo(archive).fileName();
-    return QStringLiteral("%1, %2").arg(DateFormat::shortDate(when.date()), QLocale().toString(when.time(), QLocale::ShortFormat));
+    const QDate today = QDate::currentDate();
+    const QString day = when.date() == today ? QObject::tr("Today")
+                      : when.date() == today.addDays(-1) ? QObject::tr("Yesterday")
+                      : DateFormat::shortDate(when.date());
+    return QStringLiteral("%1, %2").arg(day, QLocale().toString(when.time(), QLocale::ShortFormat));
 }
 
 QString sizeText(qint64 bytes)
@@ -176,6 +182,23 @@ QString GameSaves::rename(const QString &gameId, const QString &archive, const Q
     load(gameId);
     refreshLast();
     return error;
+}
+
+QString GameSaves::remove(const QString &gameId, const QString &archive)
+{
+    const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
+    if (!input)
+        return {};
+    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    if (!SavesBackup::backups(input->options.folder, id).contains(archive))
+        return tr("That backup is gone.");
+    QString error;
+    if (!MovedAside::moveToTrash(archive, &error))
+        return tr("Couldn't delete the backup: %1").arg(error);
+    QFile::remove(archive + QStringLiteral(".name"));
+    load(gameId);
+    refreshLast();
+    return {};
 }
 
 void GameSaves::backUpNow(const QString &gameId)

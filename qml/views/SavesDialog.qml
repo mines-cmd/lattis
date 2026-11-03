@@ -12,10 +12,10 @@ MotionPopup {
     readonly property var paths: saves.paths ?? []
     readonly property bool matched: (saves.matched ?? "") !== ""
     readonly property bool fallback: saves.fallback ?? false
-    readonly property int shownPaths: 3
     readonly property bool restoring: Backups.importing
 
     signal message(string text)
+    signal chooseRequested()
 
     function matchText() {
         switch (saves.match) {
@@ -24,14 +24,6 @@ MotionPopup {
         case "chosen": return qsTr("The game you chose")
         }
         return ""
-    }
-
-    function chooseGame() {
-        picker.active = true
-        picker.item.gameId = game.id
-        picker.item.gameTitle = game.title ?? ""
-        picker.item.chosen = saves.match === "chosen" ? (saves.matched ?? "") : ""
-        picker.item.open()
     }
 
     function restore(archive) {
@@ -72,51 +64,35 @@ MotionPopup {
         }
     }
 
-    Loader {
-        id: picker
-        active: false
-        source: "SavesGamePicker.qml"
-        onLoaded: item.message.connect(text => root.message(text))
-    }
-
     contentItem: ColumnLayout {
         spacing: Theme.gameEditor.rowSpacing
 
-        Label {
+        RowLayout {
             Layout.fillWidth: true
-            text: qsTr("Save backups of %1").arg(root.game.title ?? "")
-            color: Theme.gameEditor.headingColor
-            font.weight: Theme.font.strongWeight
-            wrapMode: Text.WordWrap
+            spacing: Theme.layout.spacing
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Save backups of %1").arg(root.game.title ?? "")
+                color: Theme.gameEditor.headingColor
+                font.weight: Theme.font.strongWeight
+                wrapMode: Text.WordWrap
+            }
+            WindowControls {
+                Layout.alignment: Qt.AlignTop
+                dialog: root
+            }
         }
 
         Label {
             Layout.fillWidth: true
+            Layout.topMargin: -Theme.gameEditor.rowSpacing / 2
             wrapMode: Text.WordWrap
             color: Theme.gameEditor.labelColor
             text: root.fallback ? qsTr("No save folders are known for this game, so its whole Proton prefix is backed up, without Proton's own files.")
                 : root.matched ? qsTr("Saves of %1 (%2)").arg(root.saves.matched).arg(root.matchText())
                 : root.paths.length > 0 ? qsTr("Your own save folders")
                 : qsTr("No saves found for this game. Choose the game it is in the Ludusavi list, or set its save folder in Properties.")
-        }
-        Repeater {
-            model: root.paths.slice(0, root.shownPaths)
-
-            Label {
-                required property string modelData
-                Layout.fillWidth: true
-                text: modelData
-                color: Theme.gameEditor.hintColor
-                font.family: Theme.font.monoFamily
-                font.pixelSize: Theme.gameEditor.hintFontSize
-                elide: Text.ElideMiddle
-            }
-        }
-        Label {
-            visible: root.paths.length > root.shownPaths
-            text: qsTr("and %n more", "", root.paths.length - root.shownPaths)
-            color: Theme.gameEditor.hintColor
-            font.pixelSize: Theme.gameEditor.hintFontSize
         }
         Label {
             visible: root.matched && !root.fallback && root.paths.length === 0
@@ -127,103 +103,207 @@ MotionPopup {
             font.pixelSize: Theme.gameEditor.hintFontSize
         }
 
-        RowLayout {
+        Label {
+            visible: GameSaves.message !== ""
             Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            SettingsButton {
-                text: qsTr("Back up now")
-                enabled: root.paths.length > 0 && !GameSaves.working
-                onClicked: GameSaves.backUpNow(root.game.id)
-            }
-            SettingsButton {
-                text: qsTr("Choose game")
-                visible: root.saves.hasManifest ?? false
-                onClicked: root.chooseGame()
-            }
-            Label {
-                Layout.fillWidth: true
-                text: GameSaves.working ? qsTr("Backing up") : GameSaves.message
-                color: Theme.gameEditor.hintColor
-                font.pixelSize: Theme.gameEditor.hintFontSize
-                elide: Text.ElideRight
-            }
+            text: GameSaves.message
+            color: Theme.gameEditor.hintColor
+            font.pixelSize: Theme.gameEditor.hintFontSize
+            elide: Text.ElideRight
         }
 
         Label {
             visible: root.backups.length === 0
-            text: qsTr("No backups yet.")
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: qsTr("No backups yet. Back up now, or one is made when the game closes.")
             color: Theme.gameEditor.labelColor
         }
 
-        ListView {
-            id: list
+        Rectangle {
             visible: root.backups.length > 0
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(contentHeight, 6 * Theme.controls.buttonHeight + 5 * spacing)
-            spacing: Theme.layout.spacing
+            Layout.preferredHeight: Math.min(list.contentHeight, 4 * (Theme.controls.buttonHeight + 2 * Theme.gameEditor.rowSpacing))
+            radius: Theme.controls.inputRadius
+            color: Theme.gameEditor.cardBackground
+            border.color: Theme.gameEditor.cardBorder
+            border.width: Theme.gameEditor.cardBorderWidth
+            clip: true
+
+        ListView {
+            id: list
+            anchors.fill: parent
+            spacing: 0
             clip: true
             model: root.backups
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: SettingsScrollBar {}
 
-            delegate: RowLayout {
-                id: backupRow
-                required property var modelData
-                width: ListView.view.width
+            delegate: Item {
+              id: backupRow
+              required property var modelData
+              required property int index
+              width: ListView.view.width
+              implicitHeight: rowContent.implicitHeight + 2 * Theme.gameEditor.rowSpacing
+              height: implicitHeight
+
+              property bool renaming: false
+              property bool confirming: false
+              readonly property bool named: modelData.name !== ""
+
+              Rectangle {
+                  visible: backupRow.index > 0
+                  width: parent.width
+                  height: 1
+                  color: Theme.settingsWindow.rowDivider
+              }
+              RowLayout {
+                id: rowContent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: Theme.gameEditor.cardPadding
+                anchors.rightMargin: Theme.gameEditor.cardPadding
                 spacing: Theme.layout.spacing
 
                 ColumnLayout {
-                    Layout.preferredWidth: 150
+                    Layout.fillWidth: true
+                    visible: !backupRow.renaming && !backupRow.confirming
                     spacing: 0
 
-                    Label {
+                    RowLayout {
                         Layout.fillWidth: true
-                        text: backupRow.modelData.when
-                        color: Theme.gameEditor.labelColor
-                        elide: Text.ElideRight
+                        spacing: Theme.layout.spacing
+
+                        Label {
+                            Layout.maximumWidth: parent.width - 2 * Theme.controls.iconSize
+                            text: backupRow.named ? backupRow.modelData.name : qsTr("Unnamed")
+                            color: Theme.palette.text
+                            elide: Text.ElideRight
+                        }
+                        Icon {
+                            visible: backupRow.named
+                            path: Icons.save2Line
+                            size: Theme.controls.iconSize
+                            color: Theme.gameEditor.hintColor
+                            ToolTip.visible: pinHover.hovered
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: qsTr("A backup with a name is always kept")
+                            HoverHandler { id: pinHover }
+                        }
+                        Item { Layout.fillWidth: true }
                     }
                     Label {
                         Layout.fillWidth: true
-                        text: backupRow.modelData.size
+                        text: qsTr("%1 · %2").arg(backupRow.modelData.when).arg(backupRow.modelData.size)
                         color: Theme.gameEditor.hintColor
                         font.pixelSize: Theme.gameEditor.hintFontSize
+                        elide: Text.ElideRight
                     }
                 }
                 SettingsTextField {
+                    id: nameField
+                    visible: backupRow.renaming
                     Layout.fillWidth: true
                     placeholderText: qsTr("Name")
                     text: backupRow.modelData.name
+                    onVisibleChanged: if (visible) forceActiveFocus()
+                    onAccepted: backupRow.renaming = false
+                    Keys.onEscapePressed: {
+                        text = backupRow.modelData.name
+                        backupRow.renaming = false
+                    }
+                    onActiveFocusChanged: if (!activeFocus && backupRow.renaming) backupRow.renaming = false
                     onEditingFinished: {
                         if (text.trim() !== backupRow.modelData.name)
                             root.rename(backupRow.modelData.path, text)
                     }
                 }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: backupRow.confirming
+                    spacing: 0
+
+                    Label {
+                        text: qsTr("Replace your current saves?")
+                        color: Theme.gameEditor.labelColor
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: qsTr("They're moved aside next to where they are first.")
+                        color: Theme.gameEditor.hintColor
+                        font.pixelSize: Theme.gameEditor.hintFontSize
+                    }
+                }
                 SettingsButton {
+                    visible: !backupRow.confirming && !backupRow.renaming
+                    iconPath: Icons.editLine
+                    flat: true
+                    tip: qsTr("Rename")
+                    onClicked: backupRow.renaming = true
+                }
+                SettingsButton {
+                    visible: !backupRow.confirming && !backupRow.renaming
+                    iconPath: Icons.deleteBin6Line
+                    flat: true
+                    tip: qsTr("Delete")
+                    onClicked: {
+                        const error = GameSaves.remove(root.game.id, backupRow.modelData.path)
+                        if (error !== "")
+                            root.message(error)
+                    }
+                }
+                SettingsButton {
+                    visible: !backupRow.confirming && !backupRow.renaming
                     text: qsTr("Restore")
                     enabled: !root.restoring
-                    onClicked: root.restore(backupRow.modelData.path)
+                    onClicked: backupRow.confirming = true
                 }
+                SettingsButton {
+                    visible: backupRow.confirming
+                    text: qsTr("Cancel")
+                    flat: true
+                    onClicked: backupRow.confirming = false
+                }
+                SettingsButton {
+                    visible: backupRow.confirming
+                    text: qsTr("Restore")
+                    primary: true
+                    enabled: !root.restoring
+                    onClicked: {
+                        backupRow.confirming = false
+                        root.restore(backupRow.modelData.path)
+                    }
+                }
+              }
             }
-        }
-
-        Label {
-            visible: root.backups.length > 0
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            text: qsTr("Restoring moves the saves you have now aside, next to where they are. The last %1 backups are kept in %2; a backup with a name is always kept.")
-                      .arg(root.saves.keep ?? 0).arg(root.saves.folder ?? "")
-            color: Theme.gameEditor.hintColor
-            font.pixelSize: Theme.gameEditor.hintFontSize
+            }
         }
 
         RowLayout {
             Layout.fillWidth: true
+            spacing: Theme.layout.spacing
 
-            Item { Layout.fillWidth: true }
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Keeps the last %1 backups in %2. A backup with a name is always kept.")
+                          .arg(root.saves.keep ?? 0).arg(root.saves.folder ?? "")
+                color: Theme.gameEditor.hintColor
+                font.pixelSize: Theme.gameEditor.hintFontSize
+            }
             SettingsButton {
-                text: qsTr("Close")
-                onClicked: root.close()
+                text: qsTr("Change match")
+                visible: root.saves.hasManifest ?? false
+                tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
+                onClicked: root.chooseRequested()
+            }
+            SettingsButton {
+                text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
+                primary: true
+                enabled: root.paths.length > 0 && !GameSaves.working
+                onClicked: GameSaves.backUpNow(root.game.id)
             }
         }
     }

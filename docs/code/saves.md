@@ -64,6 +64,7 @@ The choices: a platform's `auto_backup` is written by `Library.setPlatformValue(
 - `backUpNow(gameId)` runs `SavesBackup::run` on a worker thread; `working` is true meanwhile and `message` says what came of it (written, unchanged, too big, nothing found, failed). It reloads the state afterwards.
 - `loadLast(gameId)` fills `last` (`requested`, and `when`, `size`, `name` of the newest backup; nothing else when there is none) from a directory listing only, for the Last backup chip. `refreshLast()` reads it again for the same game, and runs after a backup from the popup, a rename, and any automatic backup (`Service::finished`).
 - `rename(gameId, archive, name)` names (or, empty, unnames) one of the game's backups, refusing a path that isn't one, and reloads.
+- `remove(gameId, archive)` moves one of the game's backups and its name file to the trash (same check as `rename`), reloads and returns an error or nothing. A backup's `when` reads "Today, 15:59" or "Yesterday, 22:10" for those days.
 - `search(text)` is the names in the loaded index that contain every word of `text` (folded like the library search; at most 30), for the "Choose game" popup; `choose(gameId, name)` saves the choice and reloads.
 
 The page's **Restore** is `Backups.restoreGameSaves(path)`; see [backup](backup.md#import-reading-and-planning). The `game-saves` kind is read by `Restore` and the Import dialog the same way, so a backup copied to another machine restores there.

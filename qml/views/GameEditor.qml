@@ -116,20 +116,38 @@ Item {
     signal addModManagerRequested(string gameId)
 
     readonly property var saves: GameSaves.state.requested === game.id ? GameSaves.state : ({})
+    readonly property var backups: saves.backups ?? []
+    readonly property string homePath: StandardPaths.writableLocation(StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")
 
-    function openSaves(choose = false) {
+    function openSaves() {
         savesDialog.active = true
         savesDialog.item.game = game
-        if (choose)
-            savesDialog.item.chooseGame()
-        else
-            savesDialog.item.open()
+        savesDialog.item.open()
+    }
+
+    function chooseSavesGame() {
+        savesPicker.active = true
+        const picker = savesPicker.item
+        picker.gameId = game.id
+        picker.gameTitle = game.title ?? ""
+        picker.chosen = saves.match === "chosen" ? (saves.matched ?? "") : ""
+        picker.open()
     }
 
     Loader {
         id: savesDialog
         active: false
         source: "SavesDialog.qml"
+        onLoaded: {
+            item.message.connect(text => root.message(text))
+            item.chooseRequested.connect(() => root.chooseSavesGame())
+        }
+    }
+
+    Loader {
+        id: savesPicker
+        active: false
+        source: "SavesGamePicker.qml"
         onLoaded: item.message.connect(text => root.message(text))
     }
 
@@ -1243,7 +1261,7 @@ Item {
                                 Field {
                                     Layout.preferredWidth: 1
                                     Layout.alignment: Qt.AlignTop
-                                    label: qsTr("Save folder")
+                                    label: qsTr("Prefix folder")
                                     help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
                                                + "the ROM for an emulator that saves there, the emulator's save folder, or the "
                                                + "game's Proton prefix.")
@@ -1430,51 +1448,6 @@ Item {
                                 open: !root.adding && root.saveFolderShown === "" && root.foundSaveFolder !== ""
                                 text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
                             }
-                            Field {
-                                visible: root.backupGame
-                                label: qsTr("Back up saves when it closes")
-                                help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
-                                           + "backed up to the folder in Settings, Library, Game saves.")
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Theme.layout.spacing
-
-                                    SettingsComboBox {
-                                        id: autoBackupBox
-                                        Layout.fillWidth: true
-                                        model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
-                                                qsTr("On"), qsTr("Off")]
-                                    }
-                                    SettingsButton {
-                                        text: qsTr("Manage backups")
-                                        onClicked: root.openSaves()
-                                    }
-                                }
-                            }
-                            RowLayout {
-                                visible: root.backupGame
-                                Layout.fillWidth: true
-                                spacing: Theme.layout.spacing
-
-                                SettingsButton {
-                                    text: qsTr("Back up now")
-                                    enabled: (root.saves.paths ?? []).length > 0 && !GameSaves.working
-                                    onClicked: GameSaves.backUpNow(root.game.id)
-                                }
-                                SettingsButton {
-                                    text: qsTr("Choose game")
-                                    visible: root.saves.hasManifest ?? false
-                                    onClicked: root.openSaves(true)
-                                }
-                                Label {
-                                    Layout.fillWidth: true
-                                    text: GameSaves.working ? qsTr("Backing up") : GameSaves.message
-                                    color: Theme.gameEditor.hintColor
-                                    font.pixelSize: Theme.gameEditor.hintFontSize
-                                    elide: Text.ElideRight
-                                }
-                            }
                             Hint {
                                 open: root.adding && root.pick.platforms.length === 0
                                 text: qsTr("None of your platforms' emulators run %1 files. They take:")
@@ -1487,6 +1460,85 @@ Item {
                                 text: qsTr("This file is also %1 in your library. Saving merges it into this game: its play "
                                            + "time, favorite, tags and missing art come over, and it's removed.")
                                           .arg(root.newRomOwner?.title ?? "")
+                            }
+                        }
+
+                        Card {
+                            title: qsTr("Saves")
+                            visible: root.backupGame
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: root.backups.length > 0 ? qsTr("Last backup %1").arg(root.backups[0].when.toLowerCase())
+                                                                      : qsTr("No backups yet")
+                                        color: Theme.gameEditor.headingColor
+                                        font.weight: Theme.font.strongWeight
+                                        elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: GameSaves.working ? qsTr("Backing up")
+                                            : GameSaves.message !== "" ? GameSaves.message
+                                            : root.backups.length > 0 ? qsTr("%n backup(s), %1", "", root.backups.length).arg(root.backups[0].size)
+                                            : qsTr("Made when the game closes, or with Back up now.")
+                                        color: Theme.gameEditor.hintColor
+                                        font.pixelSize: Theme.gameEditor.hintFontSize
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                SettingsButton {
+                                    text: qsTr("Manage backups")
+                                    flat: true
+                                    onClicked: root.openSaves()
+                                }
+                                SettingsButton {
+                                    text: qsTr("Back up now")
+                                    primary: true
+                                    enabled: (root.saves.paths ?? []).length > 0 && !GameSaves.working
+                                    onClicked: GameSaves.backUpNow(root.game.id)
+                                }
+                            }
+                            Field {
+                                visible: (root.saves.paths ?? []).length > 0
+                                label: (root.saves.paths ?? []).length > 1 ? qsTr("Save files") : qsTr("Save folder")
+                                help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the folder in Platform and install.")
+
+                                Repeater {
+                                    model: (root.saves.paths ?? []).slice(0, 3)
+
+                                    PathField {
+                                        required property string modelData
+                                        Layout.fillWidth: true
+                                        Layout.minimumHeight: Theme.controls.inputHeight
+                                        path: modelData.startsWith("~/") ? root.homePath + modelData.slice(1) : modelData
+                                        fontSize: Theme.gameEditor.pathFontSize
+                                        onCopied: root.message(qsTr("Copied"))
+                                    }
+                                }
+                                Hint {
+                                    open: (root.saves.paths ?? []).length > 3
+                                    text: qsTr("and %n more", "", (root.saves.paths ?? []).length - 3)
+                                }
+                            }
+                            Field {
+                                label: qsTr("Back up saves when it closes")
+                                help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
+                                           + "backed up to the folder in Settings, Library, Game saves.")
+
+                                SettingsComboBox {
+                                    id: autoBackupBox
+                                    Layout.fillWidth: true
+                                    model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                                            qsTr("On"), qsTr("Off")]
+                                }
                             }
                         }
 
