@@ -14,58 +14,7 @@ SettingsMenu {
 
     readonly property var platforms: Library.platformSettings.filter(p => p.games > 0)
 
-    component CheckRow: Item {
-        id: row
-
-        property string text
-        property bool checked
-        signal toggled()
-
-        implicitHeight: Theme.menu.itemHeight
-        implicitWidth: content.implicitWidth + 20
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.menu.itemRadius
-            color: hover.hovered ? Theme.controls.hover : "transparent"
-        }
-        RowLayout {
-            id: content
-            anchors.fill: parent
-            anchors.leftMargin: Theme.menu.itemPadding
-            anchors.rightMargin: Theme.menu.itemPadding
-            spacing: Theme.menu.itemSpacing
-
-            Item {
-                implicitWidth: 16
-                Layout.fillHeight: true
-                Icon {
-                    anchors.centerIn: parent
-                    visible: row.checked
-                    path: Icons.check
-                    size: 16
-                    color: Theme.controls.inputText
-                }
-            }
-            Label {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                text: row.text
-                color: Theme.controls.inputText
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-            }
-        }
-        HoverHandler {
-            id: hover
-            cursorShape: Qt.PointingHandCursor
-        }
-        TapHandler {
-            onTapped: row.toggled()
-        }
-    }
-
-    component ButtonRow: CheckRow {
+    component ButtonRow: MenuCheckRow {
         property string name
         checked: !General.railHiddenButtons.includes(name)
         onToggled: {
@@ -79,7 +28,7 @@ SettingsMenu {
         // A count, not the list: a toggle reloads the platforms, and rebuilding the rows under the
         // pointer would drop the hover.
         model: root.platforms.length
-        delegate: CheckRow {
+        delegate: MenuCheckRow {
             required property int index
             readonly property var platform: root.platforms[index]
             text: platform.name

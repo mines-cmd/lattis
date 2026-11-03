@@ -76,6 +76,11 @@ ApplicationWindow {
         rail.dragForScreenshot(id, parseInt(offset))
     }
 
+    function dragToolbarForScreenshot(spec) {
+        const [name, offset] = spec.split(":")
+        toolbar.dragForScreenshot(name, parseInt(offset))
+    }
+
     function dragPlatformInSettings(spec) {
         const [id, offset] = spec.split(":")
         settingsWindow.dragPlatformForScreenshot(id, parseInt(offset))
@@ -446,6 +451,10 @@ ApplicationWindow {
 
     function railMenuForScreenshot() {
         rail.openRailMenu(rail.height / 2)
+    }
+
+    function toolbarMenuForScreenshot() {
+        toolbar.openMenu(toolbar.width / 2, toolbar.height)
     }
 
     function appMenuForScreenshot(mode) {
@@ -1040,6 +1049,7 @@ ApplicationWindow {
         y: Theme.layout.margin + (Theme.layout.toolbarHeight - height) / 2
         checkedButton: window.statsOpen ? "play_statistics" : window.galleryOpen ? "gallery" : ""
         onTriggered: name => window.run(name)
+        onMessage: text => toast.show(text)
     }
 
     Loader {

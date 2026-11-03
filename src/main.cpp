@@ -403,6 +403,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "dragPlatformForScreenshot", Q_ARG(QVariant, spec));
                 });
             }
+            if (const QString spec = qEnvironmentVariable("LATTIS_DRAG_TOOLBAR"); !spec.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, spec] {
+                    logHook("dragToolbarForScreenshot", spec);
+                    QMetaObject::invokeMethod(window, "dragToolbarForScreenshot", Q_ARG(QVariant, spec));
+                });
+            }
             if (const QString spec = qEnvironmentVariable("LATTIS_INSTALL"); !spec.isEmpty()) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [spec] {
                     logHook("install", spec);
@@ -560,6 +566,12 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
                     logHook("railMenuForScreenshot", {});
                     QMetaObject::invokeMethod(window, "railMenuForScreenshot");
+                });
+            }
+            if (qEnvironmentVariableIntValue("LATTIS_TOOLBAR_MENU") == 1) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
+                    logHook("toolbarMenuForScreenshot", {});
+                    QMetaObject::invokeMethod(window, "toolbarMenuForScreenshot");
                 });
             }
             if (const QString action = qEnvironmentVariable("LATTIS_ACTION"); !action.isEmpty()) {
