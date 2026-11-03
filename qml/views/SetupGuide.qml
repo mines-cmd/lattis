@@ -27,7 +27,7 @@ FocusScope {
                             + "“Look up missing info” fills them in later.") },
         { name: qsTr("Look"), title: qsTr("Look"),
           description: qsTr("Pick colors and a style; they apply right away. Everything is yours to change in "
-                            + "Settings → Colors and Style.") },
+                            + "Settings → Colors and Style, and the toolbar can be turned on or off in Settings → General.") },
         { name: qsTr("Done"), title: qsTr("You're all set"), description: "" },
     ]
     readonly property var page: pages.count > current ? pages.itemAt(current)?.item ?? null : null

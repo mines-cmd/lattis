@@ -59,4 +59,14 @@ SettingsMenu {
         onObjectAdded: (index, object) => root.addItem(object)
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
+    SettingsMenuSeparator {}
+    MenuCheckRow {
+        text: qsTr("Show toolbar")
+        checked: General.toolbar
+        onToggled: {
+            const error = General.setToolbar(!checked)
+            if (error !== "")
+                root.message(error)
+        }
+    }
 }

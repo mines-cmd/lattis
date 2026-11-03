@@ -121,6 +121,22 @@ Item {
                     }
                 }
 
+                SectionHeader { text: qsTr("Window") }
+                SettingsCard {
+                    spacing: Theme.layout.spacing * 2
+                    LabeledRow {
+                        label: qsTr("Show toolbar")
+                        note: qsTr("Add game, statistics, gallery and settings above the game's page. Right-click it to choose the buttons.")
+                        SettingsSwitch {
+                            checked: General.toolbar
+                            onToggled: {
+                                const err = General.setToolbar(checked)
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
+                }
+
                 SectionHeader { text: qsTr("Motion") }
                 SettingsCard {
                     spacing: Theme.layout.spacing * 2

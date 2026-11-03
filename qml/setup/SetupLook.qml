@@ -342,4 +342,27 @@ ColumnLayout {
             }
         }
     }
+
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.bottomMargin: Theme.onboarding.spacing
+        spacing: Theme.onboarding.spacing
+
+        Label {
+            text: qsTr("Show toolbar")
+            color: Theme.palette.text
+            font.pixelSize: Theme.onboarding.themeNameSize
+            font.weight: Theme.font.strongWeight
+        }
+        SettingsSwitch {
+            checked: General.toolbar
+            onToggled: General.setToolbar(checked)
+        }
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("Add game, statistics, gallery and settings above the game's page")
+            color: Theme.onboarding.descriptionColor
+            wrapMode: Text.Wrap
+        }
+    }
 }
