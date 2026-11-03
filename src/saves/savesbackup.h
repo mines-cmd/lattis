@@ -22,6 +22,12 @@ inline const QString kKind = QStringLiteral("game-saves");
 
 using Trash = std::function<bool(const QString &path, QString *error)>;
 
+// A game's own auto_backup (-1 = follow its platform, 0 = off, 1 = on) over its platform's.
+inline bool autoBackupResolved(int own, bool platformOn)
+{
+    return own >= 0 ? own == 1 : platformOn;
+}
+
 struct Options
 {
     QString folder; // absolute

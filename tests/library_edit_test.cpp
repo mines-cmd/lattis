@@ -10,6 +10,7 @@ private slots:
     void favoriteOnIndexOnlyGameCreatesFile();
     void logoPlacementIsOneWrite();
     void resetScrimIsOneWrite();
+    void autoBackupIsAThreeWayChoice();
     void clearingRemovesKeys();
     void unchangedValuesWriteNothing();
     void lookupGames();
@@ -130,6 +131,29 @@ void LibraryEditTest::resetScrimIsOneWrite()
     QVERIFY(logo().logoScrimSide.isEmpty());
     QCOMPARE(logo().logoScrimStrength, 1.0);
     QVERIFY(!readFile(gamePath(id)).contains("logo_scrim"));
+}
+
+void LibraryEditTest::autoBackupIsAThreeWayChoice()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("proton-final-fantasy-xiv-online");
+    const auto choice = [&] { return library->gameForEditing(id).value("autoBackup").toInt(); };
+
+    QCOMPARE(choice(), -1);
+    QVERIFY(!readFile(gamePath(id)).contains("auto_backup"));
+
+    QCOMPARE(library->saveGame(id, {{"auto_backup", true}}), QString());
+    QCOMPARE(choice(), 1);
+    QVERIFY(readFile(gamePath(id)).contains("auto_backup = true"));
+
+    // Off is a choice that wins over a platform that has it on, so it's written.
+    QCOMPARE(library->saveGame(id, {{"auto_backup", false}}), QString());
+    QCOMPARE(choice(), 0);
+    QVERIFY(readFile(gamePath(id)).contains("auto_backup = false"));
+
+    QCOMPARE(library->saveGame(id, {{"auto_backup", QVariant()}}), QString());
+    QCOMPARE(choice(), -1);
+    QVERIFY(!readFile(gamePath(id)).contains("auto_backup"));
 }
 
 void LibraryEditTest::clearingRemovesKeys()

@@ -38,6 +38,9 @@ struct Settings
 Parsed<Settings> parseSettings(const QByteArray &bytes, const QString &displayPath);
 
 bool saveSetting(const QString &settingsFile, const QString &key, bool value, QString *error = nullptr);
+// [backup] auto_folder and auto_keep: the default (an empty folder, 5) is the key's absence.
+bool saveAutoFolder(const QString &settingsFile, const QString &folder, QString *error = nullptr);
+bool saveAutoKeep(const QString &settingsFile, int keep, QString *error = nullptr);
 bool saveIgnored(const QString &settingsFile, const QStringList &ignored, QString *error = nullptr);
 
 // `bytes` is -1 until measure().

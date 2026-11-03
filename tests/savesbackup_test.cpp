@@ -91,6 +91,13 @@ private slots:
         QVERIFY(SavesIndexFile::save(m_manifestDir + "/index.bin", index));
     }
 
+    void aGameOwnChoiceWinsOverItsPlatform()
+    {
+        QVERIFY(SavesBackup::autoBackupResolved(-1, true));
+        QVERIFY(!SavesBackup::autoBackupResolved(-1, false));
+        QVERIFY(SavesBackup::autoBackupResolved(1, false));
+        QVERIFY(!SavesBackup::autoBackupResolved(0, true));
+    }
     void writesTheSavesAndAManifest();
     void unchangedSavesMakeNoNewBackup();
     void keepsTheLastFewAndTrashesTheRest();

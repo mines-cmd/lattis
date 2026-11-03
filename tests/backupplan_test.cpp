@@ -84,6 +84,7 @@ private slots:
     void settingsParsed();
     void settingsWarnings();
     void autoBackupSettingsParsed();
+    void autoBackupSettingsSaved();
     void saveSetting();
     void ignoredRows();
 
@@ -141,6 +142,25 @@ void BackupPlanTest::settingsParsed()
     QVERIFY(!parsed.value.credentials);
     QVERIFY(!parsed.value.keys);
     QVERIFY(!parsed.value.proton);
+}
+
+void BackupPlanTest::autoBackupSettingsSaved()
+{
+    const QString file = path(QStringLiteral("settings.toml"));
+    QVERIFY(BackupPlan::saveAutoKeep(file, 5));
+    QVERIFY(BackupPlan::saveAutoFolder(file, QString()));
+    QVERIFY(!QFile::exists(file));
+
+    QVERIFY(BackupPlan::saveAutoKeep(file, 3));
+    QVERIFY(BackupPlan::saveAutoFolder(file, QStringLiteral(" ~/Sync/saves ")));
+    Parsed<BackupPlan::Settings> parsed = BackupPlan::parseSettings(readFile(file), "settings.toml");
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.autoKeep, 3);
+    QCOMPARE(parsed.value.autoFolder, QStringLiteral("~/Sync/saves"));
+
+    QVERIFY(BackupPlan::saveAutoKeep(file, 5));
+    QVERIFY(BackupPlan::saveAutoFolder(file, QString()));
+    QVERIFY(!readFile(file).contains("auto_"));
 }
 
 void BackupPlanTest::autoBackupSettingsParsed()

@@ -36,6 +36,19 @@ ColumnLayout {
         root.error = Library.setPlatformValue(root.platform.id, key, value)
     }
 
+    readonly property bool savesBackup: ["steam", "proton", "linux"].includes(platform.id)
+
+    function setAutoBackup(on) {
+        let e = ""
+        if (!root.editable)
+            e = Library.addPlatform(root.platform.id, root.platform.name)
+        if (e === "")
+            e = Library.setPlatformValue(root.platform.id, "auto_backup", on)
+        root.error = e
+        if (e === "" && on)
+            SavesSettings.ensureManifest()
+    }
+
     function emulatorInfo(id) {
         return Library.emulators.find(e => e.id === id)
     }
@@ -184,6 +197,24 @@ ColumnLayout {
                     color: Theme.controls.descriptionColor
                     font.pixelSize: Theme.controls.descriptionFontSize
                     elide: Text.ElideRight
+                }
+            }
+
+            RowLayout {
+                visible: root.savesBackup
+                spacing: Theme.controls.controlSpacing
+
+                Label {
+                    text: qsTr("Back up saves")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                }
+                SettingsSwitch {
+                    checked: root.platform.autoBackup
+                    onToggled: root.setAutoBackup(checked)
+                    ToolTip.visible: hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: qsTr("Back up each game's saves when it closes. A game's Properties can override this.")
                 }
             }
 

@@ -6,6 +6,7 @@
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
 #include "saves/savesbackuplibrary.h"
+#include "saves/savessettings.h"
 #include "core/apppaths.h"
 #include "core/gamepagemigration.h"
 #include "core/general.h"
@@ -254,6 +255,7 @@ int main(int argc, char *argv[])
             return false;
         },
         [&runner] { return runner.minSessionSeconds(); });
+    SavesSettings::setup({dataDir, SavesManifest::defaultDir()});
     QObject::connect(&runner, &GameRunner::sessionStarted, &savesBackup, &SavesBackup::Service::started);
     QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
     QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);
@@ -355,6 +357,7 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(0, syncMenuEntry);
                 // Not before the first frame, and its own 10 s after it.
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
+                QTimer::singleShot(0, [&library] { SavesSettings::startDailyCheck([&library] { return SavesBackup::anyOn(library); }); });
                 QTimer::singleShot(0, [] { SteamLibrarySync::instance()->startDaily(); });
                 if (!instance.listen())
                     qWarning() << "can't listen for other copies of the app starting";

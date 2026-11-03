@@ -65,6 +65,7 @@ Item {
     property var newMediaFolders: null
     readonly property var mediaFoldersShown: newMediaFolders ?? game.mediaFolders ?? []
     readonly property bool mediaGame: !adding && (onSteam || linuxGame)
+    readonly property bool backupGame: !adding && (onSteam || linuxGame)
     readonly property string exeShown: newExe !== "" ? newExe : (game.exePath || game.exe || "")
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")
     property bool shortcutQueued: false
@@ -213,6 +214,7 @@ Item {
         statusBox.currentIndex = Math.max(0, statuses.findIndex(s => s.id === g.status))
         tagsEditor.reset(g.tags)
         emulatorBox.currentIndex = Math.max(0, emulators.choices.findIndex(c => c.id === g.emulator) + 1)
+        autoBackupBox.currentIndex = g.autoBackup === 1 ? 1 : g.autoBackup === 0 ? 2 : 0
         argsField.text = Args.join(g.args)
         protonBox.currentIndex = Math.max(0, protonChoices.findIndex(c => c.name === (g.proton ?? "")))
         launchOptionsField.text = g.launchOptions ?? ""
@@ -558,6 +560,11 @@ Item {
         }
         if (!adding && saveFolderShown !== (game.saveFolder ?? ""))
             out.save_folder = saveFolderShown !== "" ? saveFolderShown : null
+        if (backupGame) {
+            const choice = [-1, 1, 0][autoBackupBox.currentIndex]
+            if (choice !== (game.autoBackup ?? -1))
+                out.auto_backup = choice < 0 ? null : choice === 1
+        }
         if (mediaGame && newMediaFolders !== null)
             out.media_folders = newMediaFolders
         return out
@@ -629,6 +636,8 @@ Item {
             }
             errors.push(...saveManagerLinks())
         }
+        if (values.auto_backup === true)
+            SavesSettings.ensureManifest()
         saved(id)
         error.text = errors.join("\n")
         if (errors.length === 0)
@@ -1400,6 +1409,19 @@ Item {
                             Hint {
                                 open: !root.adding && root.saveFolderShown === "" && root.foundSaveFolder !== ""
                                 text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
+                            }
+                            Field {
+                                visible: root.backupGame
+                                label: qsTr("Back up saves when it closes")
+                                help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
+                                           + "backed up to the folder in Settings, Library, Game saves.")
+
+                                SettingsComboBox {
+                                    id: autoBackupBox
+                                    Layout.fillWidth: true
+                                    model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                                            qsTr("On"), qsTr("Off")]
+                                }
                             }
                             Hint {
                                 open: root.adding && root.pick.platforms.length === 0

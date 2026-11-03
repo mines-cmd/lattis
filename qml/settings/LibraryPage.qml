@@ -47,6 +47,24 @@ Item {
     readonly property var lastBackups: visible ? Backups.last : ({})
     readonly property var movedAside: visible ? Backups.movedAside : []
 
+    readonly property bool gameSavesShown: matches(qsTr("Game saves"), qsTr("Ludusavi manifest"), qsTr("Update now"),
+                                                   qsTr("Backup folder"), qsTr("Backups kept per game"))
+    // SavesSettings is made on first use: not before this page is shown.
+    readonly property string savesStatus: visible ? SavesSettings.status : ""
+    readonly property bool savesUpdating: visible && SavesSettings.updating
+    readonly property string savesFolder: visible ? SavesSettings.folder : ""
+    readonly property int savesKeep: visible ? SavesSettings.keep : 5
+
+    Loader {
+        id: savesFolderDialog
+        active: false
+        sourceComponent: RomFolderDialog {
+            title: qsTr("Choose the folder for game save backups")
+            onPicked: path => error.text = SavesSettings.setFolder(path)
+            onClosed: savesFolderDialog.active = false
+        }
+    }
+
     function backUp(kind) {
         backupDialog.active = true
         backupDialog.item.ask(kind)
@@ -463,6 +481,114 @@ Item {
                                         trashDialog.entry = asideRow.modelData
                                         trashDialog.open()
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SectionHeader { id: gameSavesHeader; visible: root.gameSavesShown; text: qsTr("Game saves") }
+                Card {
+                    visible: root.gameSavesShown
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: Theme.settingsWindow.rowPadding
+                        spacing: Theme.layout.spacing
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            Label {
+                                text: qsTr("Ludusavi manifest")
+                                color: Theme.controls.labelColor
+                                font.pixelSize: Theme.controls.labelFontSize
+                            }
+                            Muted {
+                                Layout.fillWidth: true
+                                text: qsTr("Where games keep their saves, from the Ludusavi project (data from PCGamingWiki). "
+                                           + "Downloaded the first time automatic backup is turned on, then checked once a day "
+                                           + "while it is on.")
+                            }
+                            Muted {
+                                Layout.fillWidth: true
+                                text: root.savesStatus
+                            }
+                        }
+                        SettingsButton {
+                            text: qsTr("Update now")
+                            iconPath: Icons.download
+                            enabled: !root.savesUpdating
+                            onClicked: SavesSettings.update()
+                        }
+                    }
+
+                    Divider {}
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: Theme.settingsWindow.rowPadding
+                        spacing: Theme.layout.spacing
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            Label {
+                                text: qsTr("Backup folder")
+                                color: Theme.controls.labelColor
+                                font.pixelSize: Theme.controls.labelFontSize
+                            }
+                            Muted {
+                                Layout.fillWidth: true
+                                text: qsTr("Each game gets a folder here. Point it at a synced folder to share saves between computers.")
+                            }
+                            Muted {
+                                Layout.fillWidth: true
+                                text: root.savesFolder
+                                wrapMode: Text.NoWrap
+                                elide: Text.ElideMiddle
+                            }
+                        }
+                        SettingsButton {
+                            visible: root.savesFolder !== SavesSettings.defaultFolder
+                            text: qsTr("Default")
+                            onClicked: error.text = SavesSettings.setFolder("")
+                        }
+                        SettingsButton {
+                            text: qsTr("Change")
+                            iconPath: Icons.folder
+                            onClicked: savesFolderDialog.active = true
+                        }
+                    }
+
+                    Divider {}
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.margins: Theme.settingsWindow.rowPadding
+                        spacing: Theme.layout.spacing
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            Label {
+                                text: qsTr("Backups kept per game")
+                                color: Theme.controls.labelColor
+                                font.pixelSize: Theme.controls.labelFontSize
+                            }
+                            Muted {
+                                Layout.fillWidth: true
+                                text: qsTr("Older ones go to the trash.")
+                            }
+                        }
+                        SettingsTextField {
+                            Layout.preferredWidth: Theme.settingsWindow.toolbarHeight + 12
+                            implicitHeight: Theme.controls.inputHeight
+                            horizontalAlignment: TextInput.AlignHCenter
+                            validator: IntValidator { bottom: 1; top: 100 }
+                            text: root.savesKeep
+                            onEditingFinished: {
+                                if (parseInt(text) !== root.savesKeep) {
+                                    error.text = SavesSettings.setKeep(parseInt(text))
+                                    text = Qt.binding(() => root.savesKeep)
                                 }
                             }
                         }

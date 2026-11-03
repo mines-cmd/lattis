@@ -170,6 +170,34 @@ bool saveSetting(const QString &settingsFile, const QString &key, bool value, QS
                  : TomlPatch::setValueInFile(settingsFile, kSection, key, QStringLiteral("false"), error);
 }
 
+namespace {
+bool saveValue(const QString &settingsFile, const QString &key, const QString &text, QString *error)
+{
+    if (!QFile::exists(settingsFile)) {
+        if (text.isEmpty())
+            return true;
+        if (QFile file(settingsFile); !file.open(QIODevice::WriteOnly)) {
+            if (error)
+                *error = file.errorString();
+            return false;
+        }
+    }
+    return text.isEmpty() ? TomlPatch::removeValueInFile(settingsFile, kSection, key, error)
+                          : TomlPatch::setValueInFile(settingsFile, kSection, key, text, error);
+}
+}
+
+bool saveAutoFolder(const QString &settingsFile, const QString &folder, QString *error)
+{
+    const QString trimmed = folder.trimmed();
+    return saveValue(settingsFile, QStringLiteral("auto_folder"), trimmed.isEmpty() ? QString() : tomlString(trimmed), error);
+}
+
+bool saveAutoKeep(const QString &settingsFile, int keep, QString *error)
+{
+    return saveValue(settingsFile, QStringLiteral("auto_keep"), keep == 5 ? QString() : QString::number(keep), error);
+}
+
 bool saveIgnored(const QString &settingsFile, const QStringList &ignored, QString *error)
 {
     if (ignored.isEmpty() && !QFile::exists(settingsFile))

@@ -2825,6 +2825,7 @@ QVariantList Library::buildPlatformSettings() const
             {QStringLiteral("emulatorNames"), emulatorNames},
             {QStringLiteral("romFolders"), p.romFolders},
             {QStringLiteral("inRail"), written != defined.cend() ? written->inRail : p.inRail},
+            {QStringLiteral("autoBackup"), written != defined.cend() && written->autoBackup},
             {QStringLiteral("problems"), problems},
         });
     }
@@ -3353,6 +3354,11 @@ QVariantMap Library::gameForEditing(const QString &id) const
     const auto url = [](const QUrl &u) { return u.isEmpty() ? QString() : u.toString(); };
     const QVariantMap emulators = emulatorChoices(g->platform);
     QString platformIcon;
+    bool platformAutoBackup = false;
+    for (const Platform &p : m_store.snapshot().content.platforms) {
+        if (p.id == g->platform)
+            platformAutoBackup = p.autoBackup;
+    }
     for (const Platform &p : m_platforms) {
         if (p.id == g->platform)
             platformIcon = p.icon;
@@ -3393,6 +3399,8 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("startDir"), file.startDir},
         {QStringLiteral("installDir"), file.installDir},
         {QStringLiteral("saveFolder"), file.saveFolder},
+        {QStringLiteral("autoBackup"), file.autoBackup},
+        {QStringLiteral("platformAutoBackup"), platformAutoBackup},
         {QStringLiteral("mediaFolders"), file.mediaFolders},
         {QStringLiteral("uninstalled"), g->uninstalled},
         {QStringLiteral("gameNotFound"), runsProgram(g->platform) && !g->installed && !g->uninstalled},

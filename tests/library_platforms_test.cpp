@@ -95,6 +95,14 @@ void LibraryPlatformsTest::platformValues()
     QCOMPARE(library->setPlatformValue("switch", "in_rail", true), QString());
     QVERIFY(!readFile(file).contains("in_rail"));
     QTRY_VERIFY(library->platformSettings().at(0).toMap().value("inRail").toBool());
+
+    QVERIFY(!library->platformSettings().at(0).toMap().value("autoBackup").toBool());
+    QCOMPARE(library->setPlatformValue("switch", "auto_backup", true), QString());
+    QVERIFY(readFile(file).contains("auto_backup = true"));
+    QTRY_VERIFY(library->platformSettings().at(0).toMap().value("autoBackup").toBool());
+    QCOMPARE(library->setPlatformValue("switch", "auto_backup", false), QString());
+    QVERIFY(!readFile(file).contains("auto_backup"));
+    QTRY_VERIFY(!library->platformSettings().at(0).toMap().value("autoBackup").toBool());
 }
 
 void LibraryPlatformsTest::movePlatforms()

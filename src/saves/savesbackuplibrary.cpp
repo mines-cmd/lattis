@@ -14,13 +14,12 @@ namespace {
 bool autoBackupOn(const LibrarySnapshot &snapshot, const Game &game)
 {
     const int own = snapshot.content.games.value(game.id).autoBackup;
-    if (own >= 0)
-        return own == 1;
+    bool platformOn = false;
     for (const Platform &platform : snapshot.content.platforms) {
         if (platform.id == game.platform)
-            return platform.autoBackup;
+            platformOn = platform.autoBackup;
     }
-    return false;
+    return autoBackupResolved(own, platformOn);
 }
 
 QString steamPrefix(const QStringList &libraries, int appId)
@@ -32,6 +31,20 @@ QString steamPrefix(const QStringList &libraries, int appId)
     }
     return {};
 }
+}
+
+bool anyOn(const Library &library)
+{
+    const LibraryContent &content = library.store().snapshot().content;
+    for (const Platform &platform : content.platforms) {
+        if (platform.autoBackup)
+            return true;
+    }
+    for (const GameFile &file : content.games) {
+        if (file.autoBackup == 1)
+            return true;
+    }
+    return false;
 }
 
 std::optional<Input> inputFor(const Library &library, const QString &gameId, const QString &dataDir,

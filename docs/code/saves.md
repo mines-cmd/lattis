@@ -45,3 +45,13 @@ How a path is found:
 - `backups(folder, gameId)` lists a game's archives, newest first.
 
 `SavesBackup::Service` is the glue: it counts a session from `started()` to `ended()`, and one shorter than `minSessionSeconds` makes no backup. The game is queued then and starts once `busy` (the game or one of its mod managers still running) says no, which `ended()` of any session re-checks. `gather` (main thread) returns the `Input` or nothing when automatic backup is off for the game; `savesbackuplibrary.cpp` builds it from the library: the game's `auto_backup` (`true`/`false`; absent = its platform's `auto_backup` in `platforms.toml`, off by default), its copies, Proton and Steam prefixes, and `[backup]` `auto_folder` (default `~/.local/share/lattis-saves`), `auto_keep` (5) and `auto_max_mb` (1024). Only Steam, Proton and Linux games are considered. The work runs with `QtConcurrent`; `message` carries a failure or a skipped-for-size notice (main.cpp forwards it to `GameRunner::message`, the toast), and `finished` every result. The destructor waits for running backups.
+
+## savessettings
+
+`SavesSettings` (QML singleton, made on first use; `setup({dataDir, manifestDir})` at startup) is what Settings → Library → Game saves and the choices read and write.
+
+- `status`, `downloaded`, `updating`: the manifest's state from `meta.json`. `update()` forces a download on a worker thread; `ensureManifest()` downloads only when there is none, and is what turning automatic backup on (a platform's switch, a game's "On") calls, so the manifest is never fetched before that.
+- `folder` (the default `~/.local/share/lattis-saves` when unset) and `keep`; `setFolder()` and `setKeep()` write `[backup]` `auto_folder` and `auto_keep` through `BackupPlan::saveAutoFolder` and `saveAutoKeep` (the default is the key's absence) and return an error or nothing.
+- `startDailyCheck(anyOn)` (main.cpp, after the first frame): ten seconds later, then every six hours, it updates the manifest when `anyOn()` (`SavesBackup::anyOn`: a platform or game has it on) and the last check is over a day old.
+
+The choices: a platform's `auto_backup` is written by `Library.setPlatformValue(id, "auto_backup", on)` (absent = off; `platformSettings()` returns it as `autoBackup`). Steam, Proton and Linux show a switch on their row, which first adds the platform to `platforms.toml` when it only exists as a built-in. A game's is `auto_backup` in its file, set through `saveGame` (`true`, `false`, or cleared to follow the platform); `gameForEditing()` returns `autoBackup` (-1, 0, 1) and `platformAutoBackup`. `SavesBackup::autoBackupResolved(own, platformOn)` is the rule.

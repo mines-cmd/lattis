@@ -1769,6 +1769,9 @@ QString LibraryStore::setPlatformValue(const QString &id, const QString &key, co
     } else if (key == QLatin1String("in_rail")) {
         if (!value.toBool())
             formatted = QStringLiteral("false"); // true is the default, so it's the key's absence
+    } else if (key == QLatin1String("auto_backup")) {
+        if (value.toBool())
+            formatted = QStringLiteral("true"); // off is the default, so it's the key's absence
     } else {
         return tr("%1 can't be changed here; edit platforms.toml").arg(key);
     }
