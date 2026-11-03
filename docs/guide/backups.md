@@ -16,9 +16,14 @@ Your games' saves, which live outside the data folder:
 
 - **Every configured emulator's saves**, from wherever that emulator keeps them (save states included), and saves kept next to the ROM, as mGBA and melonDS do.
 - **Keys and firmware** for the emulators that need them.
-- **Windows games' saves**: each game's Wine prefix, without the files Proton itself put there, about 8 MB a game.
+- **Games' saves**: for each Linux, Steam and Proton game that the [saves list](#automatic-save-backups) knows (or that you gave a save folder in Properties), just that game's saves, wherever it keeps them. This is the same search automatic save backups use, whether or not automatic backup is on for the game.
+- **Windows games' saves the saves list doesn't know**: for a launcher Proton game, its Wine prefix without the files Proton itself put there, about 8 MB a game.
 
-Each emulator and each Windows game has its own checkbox: uncheck a row to leave it out. The checkbox on a section's heading checks or unchecks all its rows, and shows a dash when only some are checked. What you uncheck is remembered for the next backup; emulators and games added later start checked.
+Each emulator and each game has its own checkbox: uncheck a row to leave it out. The checkbox on a section's heading checks or unchecks all its rows, and shows a dash when only some are checked. What you uncheck is remembered for the next backup; emulators and games added later start checked.
+
+Each game row shows its size and where its saves were found. A game whose saves come to more than the automatic backups' size limit (1 GB unless you changed it) is listed as "Too big, skipped" and left out, so a wrong match never fills your disk.
+
+The games are found with the saves list, which is only downloaded once you turn on automatic backup for something. Until then the dialog says "Update the saves list to include Linux and Steam games" with a button that downloads it; nothing is downloaded without that click. Without the list, a game with its own save folder is still found, and launcher Proton games still get the whole-prefix copy.
 
 An emulator that isn't installed, or one Lattis doesn't know where it keeps saves, is skipped and named in the dialog.
 
@@ -27,9 +32,9 @@ Each dialog shows how big the backup will be, what the other backup covers, and 
 ## What isn't backed up
 
 - ROMs.
-- Steam itself. Steam Cloud keeps many Steam games' saves; the saves backup doesn't include them, but [automatic save backups](#automatic-save-backups) can cover a Steam game.
-- Linux games' saves, in the saves backup: [automatic save backups](#automatic-save-backups) cover them.
+- Steam itself. Steam Cloud keeps many Steam games' saves; the saves backup takes only what is on your disk.
 - Steam games' own Proton prefixes, whole.
+- Saves of games the saves list doesn't know, unless you gave them a save folder (a launcher Proton game still gets the whole-prefix copy).
 - Registry saves of Windows games, cloud saves (Steam Cloud, GOG, Epic), and emulator platforms in automatic backups (use Back up saves for those).
 
 A backup can't be made while a game you launched from Lattis is running, since it may be writing its saves.

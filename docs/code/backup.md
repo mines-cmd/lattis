@@ -1,6 +1,6 @@
 # Backups (`src/backup/`)
 
-The backup code creates and restores the two `.tar.zst` archives the user reaches from Settings → Library: a **library backup** of the data dir and a **saves backup** of every emulator's and Proton game's saves. A game's automatic save backup (`src/saves/`, see [saves](saves.md)) reuses its `Archive` code and `Restore`. It owns the archive format, the manifest that names what's inside, and Import, which reads a backup's manifest, plans what each part replaces, and applies the restore atomically. The library's files and the emulator definitions are in `src/library/`; the Proton shortcut data a restore carries over is in `src/steam/`.
+The backup code creates and restores the two `.tar.zst` archives the user reaches from Settings → Library: a **library backup** of the data dir and a **saves backup** of every emulator's saves and of the saves of the Linux, Steam and Proton games the saves finder knows (a launcher Proton game it doesn't know gets its slim prefix). A game's automatic save backup (`src/saves/`, see [saves](saves.md)) reuses its `Archive` code and `Restore`. It owns the archive format, the manifest that names what's inside, and Import, which reads a backup's manifest, plans what each part replaces, and applies the restore atomically. The library's files and the emulator definitions are in `src/library/`; the Proton shortcut data a restore carries over is in `src/steam/`.
 
 ## Contents
 
@@ -27,7 +27,9 @@ A **library backup** takes the data dir with three categories of content left ou
 - **Mod managers are in the library backup with no special case.** `library/mod-managers/<id>.toml` is part of the data dir. A restored Proton manager keeps its `shortcut` app ID; Steam's shortcut isn't backed up, so the next Steam sync finds it missing with no record and adds it back (queued until Steam closes). Programs and prefixes aren't backed up. `RestoreTest::libraryHoldsModManagers` covers the round trip.
 - **The Steam sign-in is never in a backup.** Its refresh token lives only in the Secret Service (or in memory), outside the data dir. The fetched whole-library answers (`steam-library.json`) are in the cache dir and are not backed up either; `steam.toml` (with its `owned`, `shared_by` and `from_api` keys) is, so a restored library shows the games again until the next sync.
 
-A **saves backup** takes three things per configured emulator: its save folders, its key and firmware folders (optional, on by default), and the saves each game's emulator writes next to the ROM. It also takes every Proton game's saves from its Wine prefix, also optional.
+A **saves backup** takes three things per configured emulator: its save folders, its key and firmware folders (optional, on by default), and the saves each game's emulator writes next to the ROM. It also takes, per game, the saves the finder (`src/saves/`, see [saves](saves.md#savesfinder)) found for every Steam, Proton and Linux game, whatever its `auto_backup`, and for a launcher Proton game with no found saves its Wine prefix without Proton's files; both are optional rows.
+
+`BackupPlan::GamePart` is a found game: `gameId` (the group's main copy), `title`, the manifest game it `matched` and how (`match`), its `places` (the found paths, measured like an emulator's), `take`, `tooBig` and `taken()` (`take && !tooBig`). `planSaves()` only copies the library's side into the plan (`Sources::saveGames`, one `GameQueries` per `same_as` group from `SavesBackup::queriesFor()`, plus `savesEnv` and `manifestDir`); the finding runs in `measure()` (`findSavedGames()`, on the worker thread, so the manifest's index is never loaded on the main thread) and fills `savedGames` and `hasManifest`. A missing index only means fewer games are found: a game's own save paths need no manifest. A game found with no existing path is not a part. A launcher Proton game that has a `GamePart` gets `ProtonPart::superseded`, so the archive never holds it twice; one without keeps its `proton:` row. A part whose saves total more than `maxBytes` (`auto_max_mb`) is `tooBig`: shown, not taken, counted as 0.
 
 Both backups land in a single `.tar.zst` file chosen by the user (a `QUrl` from a save dialog). The default name is `lattis-library-<date>.tar.zst` or `lattis-saves-<date>.tar.zst`.
 
@@ -39,7 +41,7 @@ Planning is a two-step process: make the plan (cheap), then measure it (slow, of
 
 `BackupPlan::measure()` then adds up the sizes. It walks each folder, follows no symlinks, and fills in each `Place::bytes`. It runs on a worker thread. `Backups` drives both steps from QML and exposes the in-progress plan as `libraryPlan` and `savesPlan`, so the dialog can show sizes as they arrive. The `bytes` fields start at −1 and become non-negative as each part is measured.
 
-`BackupPlan::Settings` (`[backup]` in `settings.toml`) remembers the user's choices for credentials, and the saves backup's unchecked rows in `ignored`: `"saves:<emulator id>"`, `"keys:<emulator id>"` and `"proton:<game id>"`. `saveSetting()` and `saveIgnored()` edit the file in place; a key is removed when it's restored to its default (`true`, or an empty list), so the file only records opt-outs. The older `keys` and `proton` switches are still read: `Backups::setTaken()` turns an off switch into its rows in `ignored` the first time a row is toggled. `applyChoices()` sets each part's `takeSaves`, `takeKeys` and `take` from them; `bytes()`, `takesAnything()`, the manifest and the archive all follow those flags.
+`BackupPlan::Settings` (`[backup]` in `settings.toml`) remembers the user's choices for credentials, and the saves backup's unchecked rows in `ignored`: `"saves:<emulator id>"`, `"keys:<emulator id>"`, `"proton:<game id>"` and `"game:<game id>"` (a found game). `saveSetting()` and `saveIgnored()` edit the file in place; a key is removed when it's restored to its default (`true`, or an empty list), so the file only records opt-outs. The older `keys` and `proton` switches are still read: `Backups::setTaken()` turns an off switch into its rows in `ignored` the first time a row is toggled. `applyChoices()` sets each part's `takeSaves`, `takeKeys` and `take` from them; `bytes()`, `takesAnything()`, the manifest and the archive all follow those flags.
 
 ## Writing the archive
 
@@ -48,7 +50,7 @@ Planning is a two-step process: make the plan (cheap), then measure it (slow, of
 1. Measures the plan if it hasn't been yet (the dialog always measures first, but the function is self-contained).
 2. Opens a `<path>.partial` file. A failed or cancelled write removes it; only once everything is in does `finish()` rename it into place. No half-written archive is ever left behind.
 3. Writes `manifest.toml` as the first entry (so `Restore::open()` can read it without extracting the rest).
-4. Adds the content: for a library backup, the data dir under `data/`; for a saves backup, each emulator's save and key folders under `emulators/<id>/saves/<n>/` and `keys/<n>/` (one number per folder in the definition's order, found or not), saves next to ROMs under `emulators/<id>/beside-roms/<game id>/`, and each Proton game's saves under `proton/<game id>/`.
+4. Adds the content: for a library backup, the data dir under `data/`; for a saves backup, each emulator's save and key folders under `emulators/<id>/saves/<n>/` and `keys/<n>/` (one number per folder in the definition's order, found or not), saves next to ROMs under `emulators/<id>/beside-roms/<game id>/`, each Proton game's saves under `proton/<game id>/` (not for a superseded one), and each found game's places under `games/<game id>/files/<n>/` (one number per place, in `GamePart::places` order).
 
 The archive skips entries via `Archive::Skip` — a callback that returns true for paths to leave out. The library's skip function (from `LibraryPlan::skip()`) uses the plan's `excluded()` list. Proton's skip function (`ProtonSaves::skip()`) leaves out everything in the prefix that Proton itself owns.
 
@@ -58,10 +60,10 @@ The archive skips entries via `Archive::Skip` — a callback that returns true f
 
 Every archive starts with a `manifest.toml` entry written by `BackupPlan::manifest()`. It records:
 
-- the format version (`BackupPlan::kFormat`), bumped when an older app can't restore the archive,
+- the format version, bumped when an older app can't restore the archive: `BackupPlan::kFormat` is 2 for a saves backup (it can hold `games/<id>/` parts), `kLibraryFormat` stays 1 for a library backup, which an older app still opens,
 - the library id (so Import can tell whether the backup came from this library or another),
 - the library format version,
-- for saves: which emulators were included, with their install type at backup, their save and key source folders, and how many bytes each part held; which Proton games, with their shortcut app ID and Proton version.
+- for saves: which emulators were included, with their install type at backup, their save and key source folders, and how many bytes each part held; which Proton games, with their shortcut app ID and Proton version; and a `[[saved]]` per found game (`id`, `title`, `matched`, `bytes`) with a `[[saved.path]]` per place that existed (`n`, `from` with `~` for the home, `type` `folder` or `file`), the same fields as a `game-saves` archive's `[[path]]`.
 
 `Restore::open()` reads only this first entry — cheap — and hands back a `Manifest`. It returns an error for a file that isn't a backup or a newer format, and a warning for a library backup whose format version is newer than this app can read (it opens, but only for viewing; writes stay blocked).
 
@@ -92,6 +94,7 @@ A game whose prefix folder doesn't exist yet (`Skipped::NeverLaunched`), isn't i
 - Saves beside ROMs map to each game's ROM's current location.
 - Each Proton game's prefix maps to its shortcut's `compatdata` folder now.
 
+- Each `[[saved]]` of a saves backup is a `Part::Kind::GameSaves` part like the one below, read from `games/<id>/files/<n>` (`Manifest::SavedGame`), checked by default. It needs neither the saves manifest nor the game in the library: a path inside a `compatdata/<id>/pfx` is moved to the prefix the game has now (its shortcut's or Steam app ID's folder, so a changed shortcut still works), "Launch X once first; its saves stay in the backup" is the `problem` while that prefix has no `drive_c` yet, and a game not in the library gets "not in your library" for those paths. A format-1 saves backup, with `proton/<id>` parts, restores as before.
 - A `game-saves` archive (see [saves](saves.md#savesbackup)) is one part, `Part::Kind::GameSaves`, named after the game in the library (else the manifest's title). Each `[[path]]` is a target: its `from` with `~` filled in with the home, and its `files/<n>` source in the archive. `Restore::checkSavePath(from, home, roots, &absolute)` checks each one first and puts a `problem` on a target that fails: not a full path, a `..` in it, outside the home (and outside `roots`, the game's own `compatdata/<shortcut or app ID>` folder), or leading out of them through a link on the way (the place itself is moved aside, never followed). The home itself is refused. A `prefix = true` path (a launcher Proton game's whole prefix, backed up without Proton's files) needs a prefix that lists its own files, and gets the current prefix's Proton files carried over like a Proton part. The other paths of the part still restore when one fails.
 
 Each mapping produces a `Target` with where the restored content goes (`path`) and whether something is already there (`exists`). A target that can't be restored — because its path is missing, or a link is in the way — gets a `problem` string explaining why.
@@ -179,7 +182,7 @@ A failed or cancelled extract removes the folders it created.
 | `planLibrary()` | Builds the library plan and measures it in the background |
 | `planSaves()` | Builds the saves plan and measures it in the background |
 | `setChoice(key, value)` | Saves `credentials`, `keys` or `proton` to `[backup]` |
-| `setTaken(rows, taken)` | Checks or unchecks saves-backup rows by id (`saves:<id>`, `keys:<id>`, `proton:<id>`) and saves `ignored` |
+| `setTaken(rows, taken)` | Checks or unchecks saves-backup rows by id (`saves:<id>`, `keys:<id>`, `proton:<id>`, `game:<id>`) and saves `ignored` |
 | `defaultFile(kind)` | The save dialog's starting URL: last backup's folder + default name, else home |
 | `start(kind, file)` | Writes the plan of `kind` to `file`; refused if already running or (for saves) a game runs |
 | `cancel()` | Cancels the running backup |
@@ -214,7 +217,9 @@ measured
 emulators   [{id, name, describe, skipped ("", "notInstalled", "noSaves"),
               saves: [path], keys: [path],
               savesBytes, keysBytes, besideRoms (count), besideBytes}]
-proton      [{id, title, skipped ("", "neverLaunched", "uninstalled", "unlisted"), bytes}]
+proton      [{id, title, skipped ("", "neverLaunched", "uninstalled", "unlisted"), bytes}]   superseded games are left out
+games       [{id, title, matched, paths: [path], tooBig, bytes, take}]   empty until measured
+hasManifest false once measured when the saves list isn't downloaded (the dialog offers to download it)
 ```
 
 `importPlan`:
@@ -232,7 +237,7 @@ aside         the name the data dir gets when moved aside
 carriedOver   paths moved or copied from the current data dir into the restored one
 bytes         the checked parts' bytes (from the manifest)
 anyChecked
-parts   [{index, kind ("library", "saves", "keys", "besideRoms", "proton"),
+parts   [{index, kind ("library", "saves", "keys", "besideRoms", "proton", "gameSaves"),
           id, name, installText, bytes, problem, restorable, checked,
           targets: [{label, problem, exists,
                      bytes (what's there now; -1 until measured or not measured)}]}]
