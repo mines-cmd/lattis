@@ -71,6 +71,7 @@ private slots:
     void protonPrefixFindsPathsWhateverTheirCase();
     void missingPathsAreSkipped();
     void globsExpandWithoutFollowingLinks();
+    void doubleStarMatchesZeroOrMoreFolders();
     void parentTraversalAndBroadPathsAreRefused();
     void ownPathsStandAloneAndAddToAMatch();
     void copiesAreOneGame();
@@ -247,6 +248,21 @@ void SavesFinderTest::globsExpandWithoutFollowingLinks()
     QCOMPARE(find(matcher, {q}, m_env).paths,
              (QStringList{m_env.home + "/saves/one/slot1.sav", m_env.home + "/saves/three/profile",
                           m_env.home + "/saves/two/slot2.sav"}));
+}
+
+void SavesFinderTest::doubleStarMatchesZeroOrMoreFolders()
+{
+    SavesIndex index;
+    index.games << game("Deep", {"<home>/saves/*/**/*.sav"});
+    const Matcher matcher(index);
+    touch(m_env.home + "/saves/id1/a.sav");
+    touch(m_env.home + "/saves/id1/sub/deeper/b.sav");
+    touch(m_env.home + "/saves/id1/c.txt");
+
+    Query q;
+    q.title = "Deep";
+    QCOMPARE(find(matcher, {q}, m_env).paths,
+             (QStringList{m_env.home + "/saves/id1/a.sav", m_env.home + "/saves/id1/sub/deeper/b.sav"}));
 }
 
 void SavesFinderTest::parentTraversalAndBroadPathsAreRefused()

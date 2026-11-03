@@ -105,6 +105,14 @@ ColumnLayout {
                 }
             }
             Label {
+                visible: root.matched && !root.fallback && root.paths.length === 0
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("None of its save files exist on this computer yet, or the list has none for it. Set a save folder in Properties to back up your own.")
+                color: Theme.details.countColor
+                font.pixelSize: Theme.details.countFontSize
+            }
+            Label {
                 visible: root.paths.length > root.shownPaths
                 text: qsTr("and %n more", "", root.paths.length - root.shownPaths)
                 color: Theme.details.countColor

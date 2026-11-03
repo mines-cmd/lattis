@@ -3,6 +3,7 @@
 #include "searchtext.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QSet>
@@ -148,6 +149,18 @@ QStringList expandGlob(const QString &pattern, bool caseBlind)
             if (viaLink)
                 continue;
             const QString prefix = dir == QLatin1String("/") ? QString() : dir;
+            if (segment == QLatin1String("**")) {
+                if (!QFileInfo(dir).isDir())
+                    continue;
+                next.append({dir, false});
+                QDirIterator it(dir, QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden, QDirIterator::Subdirectories);
+                while (it.hasNext()) {
+                    const QString sub = it.next();
+                    if (!QFileInfo(sub).isSymLink())
+                        next.append({sub, false});
+                }
+                continue;
+            }
             if (!hasWildcard(segment)) {
                 QString child = prefix + u'/' + segment;
                 if (!exists(child) && caseBlind) {
