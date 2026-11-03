@@ -53,7 +53,7 @@ struct LibrarySnapshot
 
 namespace LibraryCache {
 // Bump whenever what's stored (or how) changes.
-constexpr quint32 kFormatVersion = 33;
+constexpr quint32 kFormatVersion = 34;
 
 QString pathFor(const QString &cacheDir, const QString &dataDir);
 

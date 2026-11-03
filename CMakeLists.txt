@@ -382,6 +382,7 @@ qt_add_qml_module(lattis
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp
         src/saves/savesindex.h src/saves/savesindex.cpp
+        src/saves/savesfinder.h src/saves/savesfinder.cpp
         src/saves/savesmanifest.h src/saves/savesmanifest.cpp
         src/backup/backuparchive.h src/backup/backuparchive.cpp
         src/backup/besiderom.h src/backup/besiderom.cpp

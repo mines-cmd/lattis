@@ -519,6 +519,7 @@ steamAppId      Steam games, else 0
 steamApp        other games: the `steam_app` IGDB found, else 0 (Steam games: 0)
 saveFolder      the file's `save_folder` as written, or ""; Save writes one in the home folder with ~
 mediaFolders    the file's `media_folders` as written (list); Save writes ones in the home folder with ~
+savePaths       the file's `save_paths` as written (list); savesGame, the file's `saves_game` (the manifest name chosen for automatic save backups)
 Steam and Proton games:
   launchOptions, proton, pendingSteamEdits, installPath
   protonTools   [{name, displayName}]

@@ -375,6 +375,12 @@ lattis_test(savesmanifest_test
             ../src/core/apppaths.h ../src/core/apppaths.cpp ../src/library/parsed.h
     LIBS Qt6::Network yaml-cpp::yaml-cpp
     DEFINES ${SAVES_FIXTURE})
+lattis_test(savesfinder_test
+    SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
+            ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+            ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
+    LIBS yaml-cpp::yaml-cpp
+    DEFINES ${SAVES_FIXTURE})
 
 # Backups
 lattis_test(archive_test
