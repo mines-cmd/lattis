@@ -56,7 +56,7 @@ Keyboard shortcuts and menu entries go through **named actions** rather than har
 
 ## Lazy loading
 
-Startup must reach the first frame quickly (the target is 300 ms), so secondary views are loaded on demand via `Loader`. Nothing is created until it's first needed:
+Startup must reach the first frame quickly (the target is 400 ms), so secondary views are loaded on demand via `Loader`. Nothing is created until it's first needed:
 
 - The game editor, detailed lookup, art browser, game menu, app menu, about dialog, filter panel, Steam prompts, locate picker, setup guide, play history popup and statistics page are all `Loader { active: false }` in Main.qml, activated the first time their function is called.
 - SettingsWindow is created the first time `openSettings()` runs, and BulkLookup the first time `openBulkLookup()` runs, each with `createWindow(url)` (`Qt.createComponent()` and `createObject()`). Nothing keeps the `Component`, so Qt can drop the compiled file later.
