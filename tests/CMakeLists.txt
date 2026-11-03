@@ -5,7 +5,7 @@ find_package(Qt6 REQUIRED COMPONENTS Test Qml Gui Concurrent Network DBus)
 
 # Every source folder, as the app has them; no two headers share a name.
 set(TEST_INCLUDES ../src/core ../src/input ../src/launch ../src/library ../src/metadata ../src/steam ../src/theme
-    ../src/backup ../src/install)
+    ../src/backup ../src/install ../src/saves)
 
 # A test <name> from <name>.cpp and SOURCES, linked to Qt Test and LIBS. PRESETS embeds the default
 # platforms.toml and the emulator presets under the app's resource path; OFFSCREEN runs it without a
@@ -365,6 +365,16 @@ lattis_test(install_test
             ../src/install/applocation.h ../src/install/applocation.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
+
+# Saves manifest
+find_package(yaml-cpp REQUIRED)
+set(SAVES_FIXTURE "SAVES_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/saves\"")
+lattis_test(savesmanifest_test
+    SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
+            ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
+            ../src/core/apppaths.h ../src/core/apppaths.cpp ../src/library/parsed.h
+    LIBS Qt6::Network yaml-cpp::yaml-cpp
+    DEFINES ${SAVES_FIXTURE})
 
 # Backups
 lattis_test(archive_test

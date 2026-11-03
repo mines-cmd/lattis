@@ -1,0 +1,68 @@
+---
+Celeste:
+  files:
+    "<winAppData>/Celeste/Saves":
+      tags:
+        - save
+      when:
+        - os: windows
+    "<xdgData>/Celeste/Saves":
+      tags:
+        - save
+      when:
+        - os: linux
+    "<home>/Library/Application Support/Celeste/Saves":
+      tags:
+        - save
+      when:
+        - os: mac
+    "<xdgConfig>/Celeste/settings.celeste":
+      tags:
+        - config
+  installDir:
+    Celeste: {}
+  registry:
+    HKEY_CURRENT_USER/Software/Celeste:
+      tags:
+        - save
+  steam:
+    id: 504230
+  gog:
+    id: 1100000001
+Hades:
+  files:
+    "<base>/Saves":
+      tags:
+        - save
+      when:
+        - os: windows
+          store: steam
+        - os: linux
+    "<winDocuments>/Saved Games/Hades":
+      when:
+        - os: windows
+  installDir:
+    Hades: {}
+    "Hades II": {}
+  steam:
+    id: 1145360
+Hades Demo:
+  alias: Hades
+The Celeste Game:
+  alias: Celeste
+Menu Only:
+  files:
+    "<home>/Library/Menu":
+      tags:
+        - save
+      when:
+        - os: mac
+No Files:
+  steam:
+    id: 7
+Everywhere:
+  files:
+    "<home>/.everywhere":
+      tags:
+        - save
+        - config

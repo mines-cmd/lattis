@@ -9,6 +9,8 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Concurrent Network
 find_package(tomlplusplus 3 REQUIRED)
 # Backups (.tar.zst); zstd threads need 3.6.
 find_package(LibArchive 3.6 REQUIRED)
+# The Ludusavi manifest (save locations of games), parsed once per download.
+find_package(yaml-cpp REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -379,6 +381,8 @@ qt_add_qml_module(lattis
         src/theme/theme.h src/theme/theme.cpp
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp
+        src/saves/savesindex.h src/saves/savesindex.cpp
+        src/saves/savesmanifest.h src/saves/savesmanifest.cpp
         src/backup/backuparchive.h src/backup/backuparchive.cpp
         src/backup/besiderom.h src/backup/besiderom.cpp
         src/backup/protonsaves.h src/backup/protonsaves.cpp
@@ -428,7 +432,7 @@ qt_add_shaders(lattis "shaders"
 
 # The subfolders are listed too: Qt's generated type registration includes QML_ELEMENT
 # headers by file name only.
-target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup src/install)
+target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup src/install src/saves)
 # Shown in About.
 target_compile_definitions(lattis PRIVATE LATTIS_VERSION="${PROJECT_VERSION}")
 # Only the AppImage built for a release (tools/appimage.sh --update-info) checks for a newer one: a local
@@ -447,6 +451,7 @@ target_link_libraries(lattis PRIVATE
     Qt6::Multimedia
     tomlplusplus::tomlplusplus
     LibArchive::LibArchive
+    yaml-cpp::yaml-cpp
 )
 
 enable_testing()
