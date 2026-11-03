@@ -12,8 +12,8 @@ Rectangle {
 
     readonly property var known: ({
         add_game: { icon: Icons.add, tip: qsTr("Add game"), action: "add_game" },
-        play_statistics: { icon: Icons.barChartLine, tip: qsTr("Play statistics"), action: "play_statistics" },
-        gallery: { icon: Icons.image, tip: qsTr("Gallery"), action: "gallery" },
+        play_statistics: { icon: Icons.barChartFill, tip: qsTr("Play statistics"), action: "play_statistics" },
+        gallery: { icon: Icons.image, checkedIcon: Icons.imageFill, tip: qsTr("Gallery"), action: "gallery" },
         open_settings: { icon: Icons.gear, tip: qsTr("Settings"), action: "open_settings" }
     })
     readonly property var buttons: General.toolbar
@@ -215,7 +215,7 @@ Rectangle {
                     anchors.centerIn: parent
                     size: Theme.toolbar.iconSize
                     color: button.checked ? Theme.toolbar.checkedIcon : Theme.toolbar.icon
-                    path: button.info.icon
+                    path: button.checked && button.info.checkedIcon ? button.info.checkedIcon : button.info.icon
 
                     Behavior on color { enabled: Motion.fades; MotionColor {} }
                 }

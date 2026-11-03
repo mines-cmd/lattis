@@ -319,13 +319,13 @@ FocusScope {
                     label: qsTr("Change"),
                     amount: diff, kind: "change",
                     color: diff > 0 ? Theme.stats.deltaUp : diff < 0 ? Theme.stats.deltaDown : Theme.palette.text,
-                    icon: Icons.barChartLine,
+                    icon: Icons.barChartFill,
                     sub: s.comparedThroughMonth > 0
                          ? qsTr("vs %1 %2").arg(spanText(1, 1, s.comparedThroughMonth, s.comparedThroughDay)).arg(shownYear - 1)
                          : qsTr("vs %1").arg(shownYear - 1)
                 })
             } else {
-                list.push({ label: qsTr("Change"), amount: 0, kind: "none", color: Theme.stats.textMuted, icon: Icons.barChartLine,
+                list.push({ label: qsTr("Change"), amount: 0, kind: "none", color: Theme.stats.textMuted, icon: Icons.barChartFill,
                             sub: qsTr("No history before %1").arg(shownYear) })
             }
         } else if (s.previousHasHistory) {
@@ -334,13 +334,13 @@ FocusScope {
                 label: qsTr("Change"),
                 amount: diff, kind: "change",
                 color: diff > 0 ? Theme.stats.deltaUp : diff < 0 ? Theme.stats.deltaDown : Theme.palette.text,
-                icon: Icons.barChartLine,
+                icon: Icons.barChartFill,
                 sub: s.comparedThrough > 0
                      ? qsTr("vs 1–%1 %2").arg(s.comparedThrough).arg(longMonth(previousMonth))
                      : qsTr("vs %1").arg(longMonth(previousMonth))
             })
         } else {
-            list.push({ label: qsTr("Change"), amount: 0, kind: "none", color: Theme.stats.textMuted, icon: Icons.barChartLine,
+            list.push({ label: qsTr("Change"), amount: 0, kind: "none", color: Theme.stats.textMuted, icon: Icons.barChartFill,
                         sub: qsTr("No history before %1").arg(longMonth(shownMonth)) })
         }
         return list

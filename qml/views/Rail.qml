@@ -157,7 +157,7 @@ Item {
 
     readonly property var bottomDefs: ({
         add_game: { icon: Icons.add, tip: Actions.tip(qsTr("Add game"), Actions.keys.add_game), run: () => root.addGame() },
-        play_statistics: { icon: Icons.barChartLine, tip: Actions.tip(qsTr("Play statistics"), Actions.keys.play_statistics),
+        play_statistics: { icon: Icons.barChartFill, tip: Actions.tip(qsTr("Play statistics"), Actions.keys.play_statistics),
                            run: () => root.action("play_statistics") },
         gallery: { icon: Icons.image, tip: Actions.tip(qsTr("Gallery"), Actions.keys.gallery),
                    run: () => root.action("gallery") },
