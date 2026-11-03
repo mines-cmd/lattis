@@ -16,6 +16,9 @@ struct GeneralSettings
     bool railHidden = false;
     QStringList railHiddenButtons;
     QStringList railButtonOrder;   // of railButtons(), as written: see orderedRailButtons()
+    bool toolbar = false;
+    QStringList toolbarHiddenButtons;
+    QStringList toolbarButtonOrder;   // of toolbarButtons(), as written: see orderedToolbarButtons()
     double clipVolume = 1.0;
     bool checkForUpdates = true;
     bool appMenuEntry = true;
@@ -27,5 +30,9 @@ struct GeneralSettings
 const QStringList &railButtons();
 
 QStringList orderedRailButtons(const QStringList &order);
+
+const QStringList &toolbarButtons();
+
+QStringList orderedToolbarButtons(const QStringList &order);
 
 Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QString &displayPath);

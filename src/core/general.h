@@ -26,6 +26,7 @@ class General : public QObject
     Q_PROPERTY(bool systemLocale READ systemLocale NOTIFY systemLocaleChanged)
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY reduceMotionChanged)
     Q_PROPERTY(bool railHidden READ railHidden NOTIFY railHiddenChanged)
+    Q_PROPERTY(bool toolbar READ toolbar NOTIFY toolbarChanged)
     Q_PROPERTY(double clipVolume READ clipVolume NOTIFY clipVolumeChanged)
     Q_PROPERTY(bool checkForUpdates READ checkForUpdates NOTIFY settingsChanged)
     Q_PROPERTY(bool appMenuEntry READ appMenuEntry NOTIFY settingsChanged)
@@ -33,6 +34,8 @@ class General : public QObject
     Q_PROPERTY(QString skippedUpdate READ skippedUpdate NOTIFY settingsChanged)
     Q_PROPERTY(QStringList railHiddenButtons READ railHiddenButtons NOTIFY railHiddenButtonsChanged)
     Q_PROPERTY(QStringList railButtonOrder READ railButtonOrder NOTIFY railButtonOrderChanged)
+    Q_PROPERTY(QStringList toolbarHiddenButtons READ toolbarHiddenButtons NOTIFY toolbarHiddenButtonsChanged)
+    Q_PROPERTY(QStringList toolbarButtonOrder READ toolbarButtonOrder NOTIFY toolbarButtonOrderChanged)
     Q_PROPERTY(QStringList gamePageChips READ gamePageChips NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageButtons READ gamePageButtons NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageInfoRows READ gamePageInfoRows NOTIFY gamePageChanged)
@@ -72,6 +75,7 @@ public:
     bool systemLocale() const { return m_settings.systemLocale; }
     bool reduceMotion() const { return m_settings.reduceMotion; }
     bool railHidden() const { return m_settings.railHidden; }
+    bool toolbar() const { return m_settings.toolbar; }
     double clipVolume() const { return m_settings.clipVolume; }
     bool checkForUpdates() const { return m_settings.checkForUpdates; }
     bool appMenuEntry() const { return m_settings.appMenuEntry; }
@@ -79,6 +83,8 @@ public:
     QString skippedUpdate() const { return m_settings.skippedUpdate; }
     QStringList railHiddenButtons() const { return m_settings.railHiddenButtons; }
     QStringList railButtonOrder() const { return orderedRailButtons(m_settings.railButtonOrder); }
+    QStringList toolbarHiddenButtons() const { return m_settings.toolbarHiddenButtons; }
+    QStringList toolbarButtonOrder() const { return orderedToolbarButtons(m_settings.toolbarButtonOrder); }
     QStringList gamePageChips() const { return m_gamePage.chips; }
     QStringList gamePageButtons() const { return m_gamePage.buttons; }
     QStringList gamePageInfoRows() const { return m_gamePage.infoRows; }
@@ -111,12 +117,15 @@ public:
     Q_INVOKABLE QString setSystemLocale(bool value);
     Q_INVOKABLE QString setReduceMotion(bool value);
     Q_INVOKABLE QString setRailHidden(bool value);
+    Q_INVOKABLE QString setToolbar(bool value);
     Q_INVOKABLE QString setClipVolume(double value);
     Q_INVOKABLE QString setCheckForUpdates(bool value);
     Q_INVOKABLE QString setAppMenuEntry(bool value);
     Q_INVOKABLE QString setSkippedUpdate(const QString &version);
     Q_INVOKABLE QString setRailButtonShown(const QString &name, bool shown);
     Q_INVOKABLE QString setRailButtonOrder(const QStringList &order);
+    Q_INVOKABLE QString setToolbarButtonShown(const QString &name, bool shown);
+    Q_INVOKABLE QString setToolbarButtonOrder(const QStringList &order);
     Q_INVOKABLE QStringList gamePageOrder(const QString &place) const;
     Q_INVOKABLE QString setGamePageShown(const QString &place, const QString &name, bool shown);
     Q_INVOKABLE QString setGamePageOrder(const QString &place, const QStringList &order);
@@ -141,9 +150,12 @@ signals:
     void systemLocaleChanged();
     void reduceMotionChanged();
     void railHiddenChanged();
+    void toolbarChanged();
     void clipVolumeChanged();
     void railHiddenButtonsChanged();
     void railButtonOrderChanged();
+    void toolbarHiddenButtonsChanged();
+    void toolbarButtonOrderChanged();
     void gamePageChanged();
     void galleryChanged();
     void loginChanged();

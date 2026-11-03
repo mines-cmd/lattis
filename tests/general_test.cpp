@@ -30,6 +30,7 @@ private slots:
     void reduceMotionSetting();
     void railHiddenButtonsSetting();
     void railButtonOrderSetting();
+    void toolbarSettings();
     void gallerySettings();
     void gamePageDefaults();
     void gamePageParser();
@@ -461,6 +462,71 @@ void GeneralTest::railButtonOrderSetting()
     QVERIFY(!settings.readAll().contains("rail_button_order"));
 }
 
+
+void GeneralTest::toolbarSettings()
+{
+    QTemporaryDir data;
+    General general(data.path());
+    QVERIFY(!general.toolbar());
+    QVERIFY(general.toolbarHiddenButtons().isEmpty());
+    QCOMPARE(general.toolbarButtonOrder(), toolbarButtons());
+    QCOMPARE(toolbarButtons(), (QStringList{"add_game", "play_statistics", "gallery", "open_settings"}));
+
+    const auto bad = parseGeneralSettings(
+        "[general]\ntoolbar = true\ntoolbar_hidden_buttons = [\"settings\", \"gallery\"]\n"
+        "toolbar_button_order = [\"open_settings\", \"nope\"]\n",
+        QStringLiteral("settings.toml"));
+    QVERIFY(bad.value.toolbar);
+    QCOMPARE(bad.value.toolbarHiddenButtons, QStringList{"gallery"});
+    QCOMPARE(bad.warnings.size(), 2);
+    const QString warnings = bad.warnings.join(u'\n');
+    QVERIFY(warnings.contains(QLatin1String("unknown toolbar button \"settings\"")));
+    QVERIFY(warnings.contains(QLatin1String("\"open_settings\"")));
+    QCOMPARE(orderedToolbarButtons(bad.value.toolbarButtonOrder),
+             (QStringList{"open_settings", "add_game", "play_statistics", "gallery"}));
+
+    const auto wrongType = parseGeneralSettings("[general]\ntoolbar = \"yes\"\ntoolbar_button_order = 3\n",
+                                                QStringLiteral("settings.toml"));
+    QCOMPARE(wrongType.warnings.size(), 2);
+    QVERIFY(!wrongType.value.toolbar);
+
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.close();
+    QSignalSpy changed(&general, &General::settingsChanged);
+    QSignalSpy toolbarChanged(&general, &General::toolbarChanged);
+    QSignalSpy hiddenChanged(&general, &General::toolbarHiddenButtonsChanged);
+    QSignalSpy orderChanged(&general, &General::toolbarButtonOrderChanged);
+
+    QCOMPARE(general.setToolbar(true), QString());
+    QVERIFY(general.toolbar());
+    QCOMPARE(toolbarChanged.size(), 1);
+
+    QCOMPARE(general.setToolbarButtonShown(QStringLiteral("open_settings"), false), QString());
+    QCOMPARE(general.setToolbarButtonShown(QStringLiteral("add_game"), false), QString());
+    QCOMPARE(general.toolbarHiddenButtons(), (QStringList{"add_game", "open_settings"}));
+    QCOMPARE(hiddenChanged.size(), 2);
+    QCOMPARE(general.setToolbarButtonShown(QStringLiteral("nope"), false), QString());
+    QCOMPARE(hiddenChanged.size(), 2);
+
+    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game"};
+    QCOMPARE(general.setToolbarButtonOrder(moved), QString());
+    QCOMPARE(general.toolbarButtonOrder(), moved);
+    QCOMPARE(orderChanged.size(), 1);
+    general.setToolbarButtonOrder({"add_game"});
+    QCOMPARE(general.toolbarButtonOrder(), moved);
+    QCOMPARE(changed.size(), 0);
+
+    QCOMPARE(general.setToolbarButtonShown(QStringLiteral("add_game"), true), QString());
+    QCOMPARE(general.setToolbarButtonShown(QStringLiteral("open_settings"), true), QString());
+    QCOMPARE(general.setToolbarButtonOrder(toolbarButtons()), QString());
+    QCOMPARE(general.setToolbar(false), QString());
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray text = settings.readAll();
+    QVERIFY(!text.contains("toolbar_hidden_buttons"));
+    QVERIFY(!text.contains("toolbar_button_order"));
+    QVERIFY(!text.contains("toolbar"));
+}
 
 void GeneralTest::gamePageDefaults()
 {

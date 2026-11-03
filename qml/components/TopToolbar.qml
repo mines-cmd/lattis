@@ -10,10 +10,11 @@ Rectangle {
     signal triggered(string name)
 
     readonly property var known: ({
-        stats: { icon: Icons.barChartLine, tip: qsTr("Play statistics"), action: "play_statistics" },
+        play_statistics: { icon: Icons.barChartLine, tip: qsTr("Play statistics"), action: "play_statistics" },
         gallery: { icon: Icons.image, tip: qsTr("Gallery"), action: "gallery" }
     })
-    readonly property var buttons: Theme.toolbar.buttons.filter(b => known[b] !== undefined)
+    readonly property var buttons: General.toolbar
+        ? General.toolbarButtonOrder.filter(b => known[b] !== undefined && !General.toolbarHiddenButtons.includes(b)) : []
 
     visible: buttons.length > 0
     implicitWidth: row.implicitWidth + 2 * Theme.toolbar.padding

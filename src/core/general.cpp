@@ -81,6 +81,11 @@ QString General::setRailHidden(bool value)
     return setFlag(QStringLiteral("rail_hidden"), value);
 }
 
+QString General::setToolbar(bool value)
+{
+    return setFlag(QStringLiteral("toolbar"), value);
+}
+
 QString General::setCheckForUpdates(bool value)
 {
     QString error;
@@ -179,6 +184,50 @@ QString General::setRailButtonOrder(const QStringList &order)
         for (const QString &button : order)
             quoted.append(u'"' + button + u'"');
         TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("rail_button_order"),
+                                  u'[' + quoted.join(QLatin1String(", ")) + u']', &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setToolbarButtonShown(const QString &name, bool shown)
+{
+    if (!toolbarButtons().contains(name))
+        return {};
+    QStringList hidden;
+    for (const QString &button : toolbarButtons()) {
+        const bool isHidden = button == name ? !shown : m_settings.toolbarHiddenButtons.contains(button);
+        if (isHidden)
+            hidden.append(u'"' + button + u'"');
+    }
+    QString error;
+    if (hidden.isEmpty())
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("toolbar_hidden_buttons"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("toolbar_hidden_buttons"),
+                                  u'[' + hidden.join(QLatin1String(", ")) + u']', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setToolbarButtonOrder(const QStringList &order)
+{
+    QStringList sorted = order;
+    QStringList known = toolbarButtons();
+    sorted.sort();
+    known.sort();
+    if (sorted != known)
+        return {};
+    QString error;
+    if (order == toolbarButtons()) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("toolbar_button_order"), &error);
+    } else {
+        QStringList quoted;
+        for (const QString &button : order)
+            quoted.append(u'"' + button + u'"');
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("toolbar_button_order"),
                                   u'[' + quoted.join(QLatin1String(", ")) + u']', &error);
     }
     if (error.isEmpty())
@@ -454,7 +503,7 @@ void General::load()
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
-    // systemLocale, reduceMotion, railHidden and railHiddenButtons, railButtonOrder and clipVolume have their own signals so that
+    // systemLocale, reduceMotion, railHidden, railHiddenButtons, railButtonOrder, the toolbar's three keys and clipVolume have their own signals so that
     // flipping them leaves the window alone.
     GeneralSettings prevWindow = prev;
     prevWindow.clipVolume = m_settings.clipVolume;
@@ -463,6 +512,9 @@ void General::load()
     prevWindow.railHidden = m_settings.railHidden;
     prevWindow.railHiddenButtons = m_settings.railHiddenButtons;
     prevWindow.railButtonOrder = m_settings.railButtonOrder;
+    prevWindow.toolbar = m_settings.toolbar;
+    prevWindow.toolbarHiddenButtons = m_settings.toolbarHiddenButtons;
+    prevWindow.toolbarButtonOrder = m_settings.toolbarButtonOrder;
     if (m_settings != prevWindow || m_problems != prevProblems)
         emit settingsChanged();
     if (m_gamePage != prevPage || m_gamePageProblems != prevPageProblems)
@@ -479,6 +531,12 @@ void General::load()
         emit railHiddenButtonsChanged();
     if (orderedRailButtons(m_settings.railButtonOrder) != orderedRailButtons(prev.railButtonOrder))
         emit railButtonOrderChanged();
+    if (m_settings.toolbar != prev.toolbar)
+        emit toolbarChanged();
+    if (m_settings.toolbarHiddenButtons != prev.toolbarHiddenButtons)
+        emit toolbarHiddenButtonsChanged();
+    if (orderedToolbarButtons(m_settings.toolbarButtonOrder) != orderedToolbarButtons(prev.toolbarButtonOrder))
+        emit toolbarButtonOrderChanged();
     if (m_settings.clipVolume != prev.clipVolume)
         emit clipVolumeChanged();
     for (const QString &w : std::as_const(m_problems))

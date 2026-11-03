@@ -20,6 +20,22 @@ QStringList orderedRailButtons(const QStringList &order)
     return out;
 }
 
+const QStringList &toolbarButtons()
+{
+    static const QStringList buttons = {QStringLiteral("add_game"), QStringLiteral("play_statistics"),
+                                        QStringLiteral("gallery"), QStringLiteral("open_settings")};
+    return buttons;
+}
+
+QStringList orderedToolbarButtons(const QStringList &order)
+{
+    QStringList out = order;
+    for (const QString &button : toolbarButtons())
+        if (!out.contains(button))
+            out.append(button);
+    return out;
+}
+
 Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QString &displayPath)
 {
     const TomlSection section(bytes, displayPath, "general");
@@ -33,7 +49,8 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                                  QStringLiteral("rail_hidden_buttons"), QStringLiteral("rail_button_order"),
                                  QStringLiteral("rail_hidden"), QStringLiteral("clip_volume"),
                                  QStringLiteral("check_for_updates"), QStringLiteral("skipped_update"),
-                                 QStringLiteral("app_menu_entry")};
+                                 QStringLiteral("app_menu_entry"), QStringLiteral("toolbar"),
+                                 QStringLiteral("toolbar_hidden_buttons"), QStringLiteral("toolbar_button_order")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
         if (key == known.at(9)) {
@@ -52,21 +69,27 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                 out.value.clipVolume = *volume;
             continue;
         }
-        if (key == known.at(4) || key == known.at(5)) {
+        const bool isToolbarList = key == known.at(12) || key == known.at(13);
+        if (key == known.at(4) || key == known.at(5) || isToolbarList) {
             const auto *array = node.as_array();
             if (!array || (!array->empty() && !array->is_homogeneous(toml::node_type::string))) {
                 out.warnings.append(QStringLiteral("%1: %2 must be a list, like [\"add_game\"]")
                                         .arg(section.where(node), key));
                 continue;
             }
-            QStringList &names = key == known.at(4) ? out.value.railHiddenButtons : out.value.railButtonOrder;
+            QStringList &names = key == known.at(4)    ? out.value.railHiddenButtons
+                                 : key == known.at(5)  ? out.value.railButtonOrder
+                                 : key == known.at(12) ? out.value.toolbarHiddenButtons
+                                                       : out.value.toolbarButtonOrder;
+            const QStringList &valid = isToolbarList ? toolbarButtons() : railButtons();
             for (const toml::node &item : *array) {
                 const QString name = toQString(item.as_string()->get());
-                if (!railButtons().contains(name))
-                    out.warnings.append(QStringLiteral("%1: unknown rail button \"%2\": they're %3%4")
-                                            .arg(section.where(item), name,
+                if (!valid.contains(name))
+                    out.warnings.append(QStringLiteral("%1: unknown %2 button \"%3\": they're %4%5")
+                                            .arg(section.where(item),
+                                                 isToolbarList ? QStringLiteral("toolbar") : QStringLiteral("rail"), name,
                                                  QStringLiteral("\"add_game\", \"play_statistics\", \"gallery\", \"open_settings\""),
-                                                 suggestion(name, railButtons())));
+                                                 suggestion(name, valid)));
                 else if (!names.contains(name))
                     names.append(name);
             }
@@ -79,6 +102,7 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                        : key == known.at(6) ? &out.value.railHidden
                        : key == known.at(8) ? &out.value.checkForUpdates
                        : key == known.at(10) ? &out.value.appMenuEntry
+                       : key == known.at(11) ? &out.value.toolbar
                                             : nullptr;
         if (!target) {
             out.warnings.append(

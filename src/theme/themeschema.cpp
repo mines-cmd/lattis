@@ -89,7 +89,7 @@ constexpr Section kSections[] = {
     {"media", "The row of Steam clips and screenshots on a Steam game's page, and the viewer that shows them."},
     {"window_controls", "The minimize, maximize and close buttons at the top right of each window, and the "
                         "edges you drag to resize it."},
-    {"toolbar", "The row of view buttons above the details, centered on the window; empty by default (stats is on the rail)."},
+    {"toolbar", "The row of buttons above the details, centered on the window; which buttons show is in Settings → General."},
     {"segmented", "Toggles that pick one of a few choices side by side, like Month | Year on the Play statistics "
                   "page and Missing info | All games in \"Look up missing info\"."},
     {"stats", "The Play statistics page: its tiles, charts and rankings."},
@@ -1032,7 +1032,6 @@ constexpr Setting kSettings[] = {
     integer("window_controls", "resize_border", "6", 0, 50,
             "Width of the window edges you drag to resize the window; 0 = off"),
 
-    list("toolbar", "buttons", "", "stats gallery", "Buttons, in order; [] hides the toolbar"),
     integer("toolbar", "size", "32", 16, 100, "Button size"),
     integer("toolbar", "icon_size", "16", 8, 64, "Icon size"),
     integer("toolbar", "spacing", "2", 0, 50, "Space between the buttons"),
