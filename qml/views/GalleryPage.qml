@@ -17,6 +17,14 @@ FocusScope {
     property bool quiet: false
     property var pending: []
     property bool isOpen: false
+    // True from a cold open until its rows are made; those rows fade in one after another.
+    property bool entrance: false
+
+    Timer {
+        id: entranceEnd
+        interval: 100
+        onTriggered: root.entrance = false
+    }
     // `all` filtered and sorted: what the grid shows and the viewer steps through.
     property var shown: []
     // The grid as rows: a group heading ({header, key, ...}) or a row of tiles ({items: [{item, n}]}).
@@ -104,6 +112,7 @@ FocusScope {
         focusIndex = 0
         keyboardFocus = false
         if (warm) {
+            entrance = false
             list.positionViewAtBeginning()
             applyFilters()
             startQuiet()
@@ -119,6 +128,7 @@ FocusScope {
             games = ({})
             quiet = false
             loading = true
+            entrance = true
             Library.allMedia()
         }
         sinkOut.stop()
@@ -605,6 +615,7 @@ FocusScope {
                 root.loading = false
                 root.warm = true
                 root.rebuild()
+                entranceEnd.restart()
                 root.openForScreenshot()
             }
         }
@@ -898,6 +909,14 @@ FocusScope {
                 readonly property bool isHeader: rowData.header
                 readonly property bool isLast: rowData.last === true
                 property int hotCount: 0
+                // Starts as root.entrance, then keeps its own value: only the rows made while a cold open fills in fade.
+                property bool entering: !isHeader && root.entrance && Theme.gallery.rowStagger > 0 && Motion.fades
+                Component.onCompleted: {
+                    const value = entering
+                    entering = value
+                    if (value)
+                        Qt.callLater(() => row.entering = false)
+                }
 
                 z: hotCount > 0 ? 2 : 1
                 width: list.width
@@ -936,6 +955,14 @@ FocusScope {
                 Loader {
                     active: !row.isHeader
                     asynchronous: root.opening
+                    opacity: row.entering ? 0 : 1
+                    Behavior on opacity {
+                        enabled: Motion.fades
+                        SequentialAnimation {
+                            PauseAnimation { duration: Motion.duration(row.index * Theme.gallery.rowStagger) }
+                            MotionNumber { fade: true; speed: "normal" }
+                        }
+                    }
                     sourceComponent: Repeater {
                         model: row.rowData.items
 
