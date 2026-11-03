@@ -160,7 +160,10 @@ ApplicationWindow {
     Timer {
         running: true
         interval: 2000
-        onTriggered: galleryPage.active = true
+        onTriggered: {
+            galleryPage.active = true
+            galleryPage.item.warmUp()
+        }
     }
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
     readonly property bool pageCovering: statsCovering || galleryCovering

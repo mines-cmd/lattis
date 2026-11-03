@@ -12,6 +12,11 @@ FocusScope {
     property var all: []
     property var games: ({})
     property bool loading: false
+    // `all` holds a finished search, so opening shows it at once; `quiet` is the search that checks it again.
+    property bool warm: false
+    property bool quiet: false
+    property var pending: []
+    property bool isOpen: false
     // `all` filtered and sorted: what the grid shows and the viewer steps through.
     property var shown: []
     // The grid as rows: a group heading ({header, key, ...}) or a row of tiles ({items: [{item, n}]}).
@@ -80,32 +85,84 @@ FocusScope {
     signal message(string text)
     signal started()
 
+    // Runs the first search while the page is hidden, so the first opening has results to show.
+    function warmUp() {
+        if (isOpen || loading || warm || quiet)
+            return
+        loading = true
+        Library.allMedia()
+    }
+
     function start(gameId = "") {
-        all = []
-        sorted = []
-        shown = []
-        rows = []
+        isOpen = true
         typeSel = ({})
         platformSel = ({})
         gameSel = gameId === "" ? ({}) : ({ [Library.mediaKey(gameId)]: true })
         monthSel = ({})
-        counts = { type: {}, platform: {}, game: {}, month: {} }
-        platformList = []
-        gameList = []
-        yearList = []
         panelOpen = false
         started()
         focusIndex = 0
         keyboardFocus = false
-        games = ({})
-        loading = true
-        Library.allMedia()
+        if (warm) {
+            list.positionViewAtBeginning()
+            applyFilters()
+            startQuiet()
+        } else {
+            all = []
+            sorted = []
+            shown = []
+            rows = []
+            counts = { type: {}, platform: {}, game: {}, month: {} }
+            platformList = []
+            gameList = []
+            yearList = []
+            games = ({})
+            quiet = false
+            loading = true
+            Library.allMedia()
+        }
         sinkOut.stop()
         riseIn.restart()
         forceActiveFocus()
     }
 
+    // Searches again behind the results on screen; they change only if the items found differ.
+    function startQuiet() {
+        quiet = true
+        pending = []
+        Library.allMedia()
+    }
+
+    function applyFresh() {
+        quiet = false
+        const fresh = pending
+        pending = []
+        const before = all.map(keyOf).sort()
+        const after = fresh.map(keyOf).sort()
+        if (before.length !== after.length || before.some((key, n) => key !== after[n])) {
+            all = fresh
+            listsStale = true
+            rebuild()
+        }
+        openForScreenshot()
+    }
+
+    // A game that left the library would leave a tile that opens nothing: an open page searches again,
+    // a hidden one drops its results.
+    function checkWarm() {
+        if (!warm || loading || quiet)
+            return
+        const ids = Object.keys(games).filter(id => games[id])
+        if (Object.keys(Library.mediaGames(ids)).length === ids.length)
+            return
+        if (isOpen)
+            startQuiet()
+        else
+            warm = false
+    }
+
     function leave() {
+        isOpen = false
         riseIn.stop()
         sinkOut.restart()
     }
@@ -134,7 +191,7 @@ FocusScope {
 
     // Listing the whole library's games took ~50 ms on a large library, so only the games the batches name are
     // looked up; a game the library doesn't show is kept as null so it isn't looked up again.
-    function take(batch: var) {
+    function prepare(batch: var): var {
         const unknown = new Set()
         for (const item of batch) {
             if (games[item.gameId] === undefined)
@@ -158,6 +215,11 @@ FocusScope {
             item.month = monthKey(item)
             added.push(item)
         }
+        return added
+    }
+
+    function take(batch: var) {
+        const added = prepare(batch)
         if (added.length > 0) {
             all = all.concat(added)
             listsStale = true
@@ -528,12 +590,20 @@ FocusScope {
 
     Connections {
         target: Library
+        function onGamesChanged() { root.checkWarm() }
         function onAllMediaReady(batch, done) {
+            if (root.quiet) {
+                root.pending = root.pending.concat(root.prepare(batch))
+                if (done)
+                    root.applyFresh()
+                return
+            }
             if (!root.loading)
                 return
             root.take(batch)
             if (done) {
                 root.loading = false
+                root.warm = true
                 root.rebuild()
                 root.openForScreenshot()
             }
