@@ -90,7 +90,7 @@ const QStringList &gamePageChoices(const QString &place)
         return sections;
     // The Steam chips carry their own actions, so they're chips only; the buttons are the action row's.
     static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update"),
-                                                            QStringLiteral("steam_family")};
+                                                            QStringLiteral("steam_family"), QStringLiteral("last_backup")};
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
                                         QStringLiteral("save_folder"), QStringLiteral("gallery"), QStringLiteral("mod_manager"),

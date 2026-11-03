@@ -25,6 +25,7 @@ class GameSaves : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
+    Q_PROPERTY(QVariantMap last READ last NOTIFY lastChanged)
     Q_PROPERTY(bool working READ working NOTIFY workingChanged)
     Q_PROPERTY(QString message READ message NOTIFY messageChanged)
 
@@ -53,16 +54,24 @@ public:
     ~GameSaves() override;
 
     QVariantMap state() const { return m_state; }
+    QVariantMap last() const { return m_last; }
     bool working() const { return m_working; }
     QString message() const { return m_message; }
 
     Q_INVOKABLE void load(const QString &gameId);
+    // Only the newest backup (`requested`, `when`, `size`, `name`), for the page's chip: no index is read.
+    Q_INVOKABLE void loadLast(const QString &gameId);
+    // Reads `last` again for the game it was last read for; for a backup made while its page is open.
+    void refreshLast();
+    // Empty `name` clears it; returns an error or nothing. Reloads.
+    Q_INVOKABLE QString rename(const QString &gameId, const QString &archive, const QString &name);
     Q_INVOKABLE void backUpNow(const QString &gameId);
     Q_INVOKABLE QVariantList search(const QString &text) const;
     Q_INVOKABLE QString choose(const QString &gameId, const QString &name);
 
 signals:
     void stateChanged();
+    void lastChanged();
     void workingChanged();
     void messageChanged();
 
@@ -75,6 +84,8 @@ private:
     mutable QStringList m_folded;
     mutable const SavesIndex *m_foldedFor = nullptr;
     QVariantMap m_state;
+    QVariantMap m_last;
+    int m_lastToken = 0;
     QString m_message;
     bool m_working = false;
     int m_token = 0;

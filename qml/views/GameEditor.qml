@@ -115,6 +115,24 @@ Item {
     signal removed(string next)
     signal addModManagerRequested(string gameId)
 
+    readonly property var saves: GameSaves.state.requested === game.id ? GameSaves.state : ({})
+
+    function openSaves(choose = false) {
+        savesDialog.active = true
+        savesDialog.item.game = game
+        if (choose)
+            savesDialog.item.chooseGame()
+        else
+            savesDialog.item.open()
+    }
+
+    Loader {
+        id: savesDialog
+        active: false
+        source: "SavesDialog.qml"
+        onLoaded: item.message.connect(text => root.message(text))
+    }
+
     // Links ticked or unticked here (manager id → linked), written with Save.
     property var managerLinks: ({})
     readonly property bool managerGame: !adding && ["steam", "proton", "linux"].includes(game.platform ?? "")
@@ -215,6 +233,8 @@ Item {
         tagsEditor.reset(g.tags)
         emulatorBox.currentIndex = Math.max(0, emulators.choices.findIndex(c => c.id === g.emulator) + 1)
         autoBackupBox.currentIndex = g.autoBackup === 1 ? 1 : g.autoBackup === 0 ? 2 : 0
+        if (backupGame)
+            GameSaves.load(g.id)
         argsField.text = Args.join(g.args)
         protonBox.currentIndex = Math.max(0, protonChoices.findIndex(c => c.name === (g.proton ?? "")))
         launchOptionsField.text = g.launchOptions ?? ""
@@ -1416,11 +1436,43 @@ Item {
                                 help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
                                            + "backed up to the folder in Settings, Library, Game saves.")
 
-                                SettingsComboBox {
-                                    id: autoBackupBox
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
-                                            qsTr("On"), qsTr("Off")]
+                                    spacing: Theme.layout.spacing
+
+                                    SettingsComboBox {
+                                        id: autoBackupBox
+                                        Layout.fillWidth: true
+                                        model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                                                qsTr("On"), qsTr("Off")]
+                                    }
+                                    SettingsButton {
+                                        text: qsTr("Manage backups")
+                                        onClicked: root.openSaves()
+                                    }
+                                }
+                            }
+                            RowLayout {
+                                visible: root.backupGame
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing
+
+                                SettingsButton {
+                                    text: qsTr("Back up now")
+                                    enabled: (root.saves.paths ?? []).length > 0 && !GameSaves.working
+                                    onClicked: GameSaves.backUpNow(root.game.id)
+                                }
+                                SettingsButton {
+                                    text: qsTr("Choose game")
+                                    visible: root.saves.hasManifest ?? false
+                                    onClicked: root.openSaves(true)
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: GameSaves.working ? qsTr("Backing up") : GameSaves.message
+                                    color: Theme.gameEditor.hintColor
+                                    font.pixelSize: Theme.gameEditor.hintFontSize
+                                    elide: Text.ElideRight
                                 }
                             }
                             Hint {

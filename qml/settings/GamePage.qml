@@ -81,7 +81,9 @@ Item {
         steam_update: { icon: Icons.download,
                         hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") },
         steam_family: { icon: Icons.steamLine,
-                        hint: qsTr("Only for a game a member of your Steam Family shares with you: who lends it") }
+                        hint: qsTr("Only for a game a member of your Steam Family shares with you: who lends it") },
+        last_backup: { icon: Icons.save2Line,
+                       hint: qsTr("Only for a game with a save backup: when the newest was made, and its name") }
     }, fieldDefs)
 
     readonly property var buttonDefs: ({

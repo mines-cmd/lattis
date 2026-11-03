@@ -71,6 +71,11 @@ QStringList backups(const QString &folder, const QString &gameId);
 
 QString archiveName(const QDateTime &when);
 
+// A name the user gave an archive, kept beside it as `<archive>.name`; empty = none.
+QString backupName(const QString &archive);
+// Empty `name` clears it; returns an error or nothing.
+QString setBackupName(const QString &archive, const QString &name);
+
 class Service : public QObject
 {
     Q_OBJECT

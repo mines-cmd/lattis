@@ -685,10 +685,18 @@ Item {
         && ((root.game.installed ?? true) || (root.game.steamUpdate ?? "none") === "none")
     readonly property bool steamUpdateShown: (root.game.steamUpdate ?? "none") !== "none"
     readonly property bool steamFamilyShown: (root.game.steamOwnership ?? "") === "family"
+    readonly property bool lastBackupShown: GameSaves.last.requested === root.game.id && (GameSaves.last.when ?? "") !== ""
+    readonly property bool wantsLastBackup: General.gamePageChips.includes("last_backup")
+    onWantsLastBackupChanged: loadLastBackup()
+    function loadLastBackup() {
+        if (wantsLastBackup && (root.game.id ?? "") !== "")
+            GameSaves.loadLast(root.game.id)
+    }
     readonly property var shownChips: General.gamePageChips.filter(name =>
         name === "steam_waiting" ? steamWaitingShown
         : name === "steam_update" ? steamUpdateShown
         : name === "steam_family" ? steamFamilyShown
+        : name === "last_backup" ? lastBackupShown
         : gameFields.shown([name]).length > 0)
 
     // Another game's chips replace these at once: the switch has its own motion. A chip turned on or off,
@@ -702,7 +710,11 @@ Item {
         chipModel.source = shownChips.map(name => ({ key: name }))
     }
     onShownChipsChanged: showChips()
-    Component.onCompleted: showChips()
+    Component.onCompleted: { showChips(); loadLastBackup() }
+    Connections {
+        target: root
+        function onGameChanged() { root.loadLastBackup() }
+    }
 
     Component {
         id: steamWaitingChip
@@ -779,6 +791,17 @@ Item {
             label: qsTr("Family")
             value: (root.game.sharedBy ?? []).length > 0 ? qsTr("Shared by %1").arg(root.game.sharedBy.join(", "))
                                                          : qsTr("Shared with you")
+        }
+    }
+
+    Component {
+        id: lastBackupChip
+
+        StatChip {
+            icon: General.chipsWithoutIcon.includes("last_backup") ? "" : Icons.save2Line
+            label: qsTr("Last backup")
+            value: GameSaves.last.name ? qsTr("%1, %2").arg(GameSaves.last.when).arg(GameSaves.last.name)
+                                       : GameSaves.last.when ?? ""
         }
     }
 
@@ -1055,6 +1078,7 @@ Item {
                             sourceComponent: name === "steam_waiting" ? steamWaitingChip
                                            : name === "steam_update" ? steamUpdateChip
                                            : name === "steam_family" ? steamFamilyChip
+                                           : name === "last_backup" ? lastBackupChip
                                            : fieldChip
 
                             PopLeave { target: chip; leaving: chip.leaving }
@@ -1247,13 +1271,6 @@ Item {
                 }
             }
 
-            SavesRow {
-                id: savesRow
-                Layout.fillWidth: true
-                Layout.topMargin: Theme.details.spacing
-                game: root.game
-                onFailed: text => root.message(text)
-            }
         }
 
         Item {

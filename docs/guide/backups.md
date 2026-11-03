@@ -51,7 +51,7 @@ The first time you turn it on, Lattis downloads the manifest. Settings → Libra
 
 A game played for less than the minimum session length makes no backup, and neither does one whose saves haven't changed since the last. A game whose saves come to over 1 GB is skipped, with a notice naming it. A failure shows a notice and never stops the next launch.
 
-**On the game's page,** **Save backups** shows the matched game, the save paths found now, and the newest backup. **Back up now** makes one at once, **Choose game** picks the right game from the list when the match is missing or wrong (Lattis remembers it), and each backup in the list has **Restore**.
+**In a game's Properties,** under **Back up saves when it closes**, **Back up now** makes a backup at once and **Choose game** picks the right game from the list when the match is missing or wrong (Lattis remembers it). **Manage backups** opens a window with the matched game, the save paths found now and every backup: type a name beside one to keep it (a named backup is never deleted to make room, and doesn't count toward the number kept), and **Restore** puts it back. To see the newest one on the game's page, tick the **Last backup** chip in Settings → Game page; it is off by default.
 
 **Restore** puts the files back where they came from, after moving the ones there now aside to `<name>.before-import-<date>` (a notice names them). It won't run while the game is running. Import opens these backups too, so one copied to another computer restores there.
 

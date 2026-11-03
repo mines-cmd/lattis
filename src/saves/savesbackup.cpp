@@ -200,6 +200,26 @@ QStringList backups(const QString &folder, const QString &gameId)
     return out;
 }
 
+QString backupName(const QString &archive)
+{
+    QFile file(archive + QStringLiteral(".name"));
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    return QString::fromUtf8(file.readAll()).trimmed();
+}
+
+QString setBackupName(const QString &archive, const QString &name)
+{
+    const QString path = archive + QStringLiteral(".name");
+    const QString text = name.simplified();
+    if (text.isEmpty())
+        return !QFile::exists(path) || QFile::remove(path) ? QString() : QObject::tr("Can't remove %1").arg(path);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(text.toUtf8()) < 0)
+        return QObject::tr("Can't write %1").arg(path);
+    return {};
+}
+
 Result run(const Input &input)
 {
     Result result;
@@ -268,10 +288,14 @@ Result run(const Input &input)
 
     const Trash trash = input.trash ? input.trash : Trash(MovedAside::moveToTrash);
     const QStringList all = backups(input.options.folder, result.gameId);
-    for (qsizetype i = qMax(input.options.keep, 1); i < all.size(); ++i) {
+    // A backup the user named is one they chose to keep, so it neither counts toward `keep` nor goes.
+    int kept = 0;
+    for (const QString &archive : all) {
+        if (!backupName(archive).isEmpty() || ++kept <= qMax(input.options.keep, 1))
+            continue;
         QString trashError;
-        if (!trash(all.at(i), &trashError))
-            qCWarning(lcBackup).noquote() << QStringLiteral("Can't trash the old backup %1: %2").arg(all.at(i), trashError);
+        if (!trash(archive, &trashError))
+            qCWarning(lcBackup).noquote() << QStringLiteral("Can't trash the old backup %1: %2").arg(archive, trashError);
     }
     return result;
 }

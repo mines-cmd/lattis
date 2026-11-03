@@ -267,6 +267,7 @@ int main(int argc, char *argv[])
     QObject::connect(&runner, &GameRunner::sessionStarted, &savesBackup, &SavesBackup::Service::started);
     QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
     QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);
+    QObject::connect(&savesBackup, &SavesBackup::Service::finished, GameSaves::instance(), &GameSaves::refreshLast);
     Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
                       [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); },
                       [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); },

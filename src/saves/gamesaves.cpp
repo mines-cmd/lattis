@@ -81,6 +81,7 @@ GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_p
     for (const QString &archive : SavesBackup::backups(input.options.folder, id)) {
         backups.append(QVariantMap{{QStringLiteral("path"), archive},
                                    {QStringLiteral("when"), whenText(archive)},
+                                   {QStringLiteral("name"), SavesBackup::backupName(archive)},
                                    {QStringLiteral("size"), sizeText(QFileInfo(archive).size())}});
     }
     out.state = {
@@ -123,6 +124,60 @@ void GameSaves::load(const QString &gameId)
     watcher->setFuture(QtConcurrent::run([in = *input, index = m_index] { return read(in, index); }));
 }
 
+void GameSaves::loadLast(const QString &gameId)
+{
+    const int token = ++m_lastToken;
+    const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
+    auto set = [this, gameId](QVariantMap last) {
+        last.insert(QStringLiteral("requested"), gameId);
+        if (last == m_last)
+            return;
+        m_last = last;
+        emit lastChanged();
+    };
+    if (!input) {
+        set({});
+        return;
+    }
+    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher, token, set] {
+        const QVariantMap last = watcher->result();
+        watcher->deleteLater();
+        if (token == m_lastToken)
+            set(last);
+    });
+    watcher->setFuture(QtConcurrent::run([folder = input->options.folder, id] {
+        const QStringList all = SavesBackup::backups(folder, id);
+        if (all.isEmpty())
+            return QVariantMap();
+        return QVariantMap{{QStringLiteral("when"), whenText(all.first())},
+                           {QStringLiteral("size"), sizeText(QFileInfo(all.first()).size())},
+                           {QStringLiteral("name"), SavesBackup::backupName(all.first())}};
+    }));
+}
+
+void GameSaves::refreshLast()
+{
+    const QString id = m_last.value(QStringLiteral("requested")).toString();
+    if (!id.isEmpty())
+        loadLast(id);
+}
+
+QString GameSaves::rename(const QString &gameId, const QString &archive, const QString &name)
+{
+    const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
+    if (!input)
+        return {};
+    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    if (!SavesBackup::backups(input->options.folder, id).contains(archive))
+        return tr("That backup is gone.");
+    const QString error = SavesBackup::setBackupName(archive, name);
+    load(gameId);
+    refreshLast();
+    return error;
+}
+
 void GameSaves::backUpNow(const QString &gameId)
 {
     if (m_working)
@@ -157,6 +212,7 @@ void GameSaves::backUpNow(const QString &gameId)
         }
         emit workingChanged();
         load(gameId);
+        refreshLast();
     });
     watcher->setFuture(QtConcurrent::run([in = std::move(*input)] { return SavesBackup::run(in); }));
 }
