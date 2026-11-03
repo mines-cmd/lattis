@@ -45,6 +45,16 @@ struct Manifest
         bool prefix = false;
     };
 
+    // A game's saves in a saves backup: games/<id>/files/<n>.
+    struct SavedGame
+    {
+        QString id;
+        QString title;
+        QString matched;
+        qint64 bytes = -1;
+        QList<SavePath> paths;
+    };
+
     QString kind;
     int format = 0;
     QString appVersion;
@@ -58,6 +68,7 @@ struct Manifest
     bool proton = false;
     QList<Emulator> emulators;
     QList<ProtonGame> protonGames;
+    QList<SavedGame> savedGames;
     QString gameId;
     QString gameTitle;
     QString matched;

@@ -178,8 +178,17 @@ private slots:
     void gameSavesWhileRunning();
     void gameSavesPrefix();
     void gameSavesImportDialog();
+    void savedGamesRestore();
+    void savedGamesLaunchFirst();
+    void savedGamesNotInLibrary();
+    void savedGamesRefusedPaths();
+    void savedGamesRunning();
+    void savedGamesOldArchive();
 
 private:
+    // A saves backup holding two games: a Linux one (a folder in the home) and Cave Story (its
+    // saves in the fake Steam's prefix 2900000001), found by their own paths.
+    QString backUpSavedGames();
     // A game-saves archive as the saves backup writes it: the folder as files/0, the file as files/1.
     QString gameSavesArchive(const QString &from0, const QString &from1);
     // Backups as main.cpp sets it up, noting the hold and restart calls.
@@ -1226,6 +1235,225 @@ QString RestoreTest::gameSavesArchive(const QString &from0, const QString &from1
         || !writer.finish())
         qWarning() << writer.error();
     return archive;
+}
+
+QString RestoreTest::backUpSavedGames()
+{
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "backed up slot 1");
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/sub/slot2.sav"), "backed up slot 2");
+
+    BackupPlan::Sources now = sources();
+    now.savesEnv.home = m_home;
+    SavesFinder::Query linuxGame;
+    linuxGame.id = QStringLiteral("linux-game");
+    linuxGame.title = QStringLiteral("Game");
+    linuxGame.savePaths = {m_home + QStringLiteral("/.config/Game/saves")};
+    SavesFinder::Query cave;
+    cave.id = QStringLiteral("proton-cave-story");
+    cave.title = QStringLiteral("Cave Story");
+    cave.prefix = m_prefix + QStringLiteral("/pfx");
+    cave.savePaths = {m_prefix + QStringLiteral("/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory")};
+    now.saveGames = {{linuxGame.id, linuxGame.title, {linuxGame}}, {cave.id, cave.title, {cave}}};
+
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(now, {});
+    BackupPlan::measure(plan);
+    if (plan.savedGames.size() != 2)
+        qWarning() << "found" << plan.savedGames.size() << "games";
+    const QString archive = path(QStringLiteral("games.tar.zst"));
+    const QString error = Backup::write(plan, archive, kCreated, QStringLiteral("0.1"));
+    if (!error.isEmpty())
+        qWarning() << error;
+    return archive;
+}
+
+void RestoreTest::savedGamesRestore()
+{
+    const QString archive = backUpSavedGames();
+    const QString profile = QStringLiteral("/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory/Profile.dat");
+    const QByteArray backedUp = readFile(m_prefix + profile);
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/extra.sav"), "now extra");
+    // Its shortcut was made again since: a new app id, and a prefix Proton made for it.
+    const QString newPrefix = m_compatdata + QStringLiteral("/2900000002");
+    QVERIFY(QDir().rename(m_prefix, newPrefix));
+    writeFile(newPrefix + profile, "now profile");
+    BackupPlan::Sources now = sources();
+    for (Game &g : now.games) {
+        if (g.id == QLatin1String("proton-cave-story"))
+            g.shortcut = 2900000002u;
+    }
+    Game linuxGame = game(QStringLiteral("linux-game"), kLinuxPlatform);
+    linuxGame.title = QStringLiteral("Game");
+    now.games.append(linuxGame);
+
+    const Restore::Opened opened = Restore::open(archive);
+    QVERIFY2(opened.manifest, qPrintable(opened.error));
+    QCOMPARE(opened.manifest->kind, Backup::kSaves);
+    QCOMPARE(opened.manifest->savedGames.size(), 2);
+
+    Restore::Plan plan = planFor(archive, now);
+    const Part *linuxPart = findPart(plan, Part::Kind::GameSaves, QStringLiteral("linux-game"));
+    const Part *cavePart = findPart(plan, Part::Kind::GameSaves, QStringLiteral("proton-cave-story"));
+    QVERIFY(linuxPart && cavePart);
+    QVERIFY(linuxPart->restorable() && linuxPart->checked);
+    QVERIFY(cavePart->restorable() && cavePart->checked);
+    QCOMPARE(linuxPart->name, QStringLiteral("Game"));
+    QCOMPARE(linuxPart->targets.first().path, m_home + QStringLiteral("/.config/Game/saves"));
+    QCOMPARE(linuxPart->targets.first().source, QStringLiteral("games/linux-game/files/0"));
+    QCOMPARE(cavePart->targets.first().path,
+             newPrefix + QStringLiteral("/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory"));
+    // Taken as its saves, not also as the slim prefix.
+    QVERIFY(!findPart(plan, Part::Kind::Proton, QStringLiteral("proton-cave-story")));
+    checkOnly(plan, Part::Kind::GameSaves);
+
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QCOMPARE(result.error, QString());
+    QCOMPARE(result.restored, 2);
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/sub/slot2.sav")), QByteArray("backed up slot 2"));
+    QVERIFY(!QFileInfo::exists(m_home + QStringLiteral("/.config/Game/saves/extra.sav")));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves") + kAside + QStringLiteral("/extra.sav")),
+             QByteArray("now extra"));
+    QCOMPARE(readFile(newPrefix + profile), backedUp);
+    QVERIFY(QFileInfo::exists(newPrefix + QStringLiteral("/pfx/drive_c/users/steamuser/AppData/Roaming/CaveStory") + kAside));
+    QVERIFY(!QFileInfo::exists(m_prefix));
+}
+
+void RestoreTest::savedGamesLaunchFirst()
+{
+    const QString archive = backUpSavedGames();
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    // Its shortcut was made again and Proton hasn't made the prefix yet.
+    QVERIFY(QDir(m_prefix).removeRecursively());
+    BackupPlan::Sources now = sources();
+    for (Game &g : now.games) {
+        if (g.id == QLatin1String("proton-cave-story"))
+            g.shortcut = 2900000009u;
+    }
+
+    Restore::Plan plan = planFor(archive, now);
+    const Part *cave = findPart(plan, Part::Kind::GameSaves, QStringLiteral("proton-cave-story"));
+    QVERIFY(cave);
+    QVERIFY(!cave->restorable());
+    QVERIFY(!cave->checked);
+    QCOMPARE(cave->targets.first().problem, QStringLiteral("Launch Cave Story once first; its saves stay in the backup"));
+    QVERIFY(findPart(plan, Part::Kind::GameSaves, QStringLiteral("linux-game"))->checked);
+    checkOnly(plan, Part::Kind::GameSaves);
+    QCOMPARE(Restore::apply(plan, kToday).restored, 1);
+
+    // After the first launch, importing the file again restores it.
+    const QString made = m_compatdata + QStringLiteral("/2900000009/pfx/drive_c/users/steamuser");
+    writeFile(made + QStringLiteral("/placeholder"), "proton made this");
+    Restore::Plan again = planFor(archive, now);
+    const Part *later = findPart(again, Part::Kind::GameSaves, QStringLiteral("proton-cave-story"));
+    QVERIFY(later->restorable());
+    QVERIFY(later->checked);
+    checkOnly(again, Part::Kind::GameSaves);
+    const Restore::Result result = Restore::apply(again, QDate(2026, 10, 1));
+    QCOMPARE(result.error, QString());
+    QCOMPARE(result.restored, 2);
+    QVERIFY(QFileInfo::exists(made + QStringLiteral("/AppData/Roaming/CaveStory/Profile.dat")));
+}
+
+void RestoreTest::savedGamesNotInLibrary()
+{
+    const QString archive = backUpSavedGames();
+    // The library has neither game now: a Linux game's saves go back wherever they were, a
+    // prefix's wait for the library.
+    Restore::Plan plan = planFor(archive, sources());
+    const Part *linuxPart = findPart(plan, Part::Kind::GameSaves, QStringLiteral("linux-game"));
+    QVERIFY(linuxPart && linuxPart->restorable());
+    QCOMPARE(linuxPart->name, QStringLiteral("Game"));
+    BackupPlan::Sources none = sources();
+    none.games.removeIf([](const Game &g) { return g.id == QLatin1String("proton-cave-story"); });
+    Restore::Plan without = planFor(archive, none);
+    const Part *cave = findPart(without, Part::Kind::GameSaves, QStringLiteral("proton-cave-story"));
+    QVERIFY(cave);
+    QVERIFY(!cave->restorable());
+    QCOMPARE(cave->targets.first().problem, QStringLiteral("Not in your library; restore the library first"));
+    QVERIFY(findPart(without, Part::Kind::GameSaves, QStringLiteral("linux-game"))->restorable());
+}
+
+void RestoreTest::savedGamesRefusedPaths()
+{
+    const QString outside = path(QStringLiteral("outside"));
+    writeFile(outside + QStringLiteral("/keep.sav"), "keep");
+    writeFile(path(QStringLiteral("made/a.sav")), "from the backup");
+    const QString archive = path(QStringLiteral("refused.tar.zst"));
+    const QString manifest = QStringLiteral(
+        "kind = \"saves\"\nformat = 2\napp_version = \"0.1\"\ncreated = 2026-09-28T21:04:00-03:00\n"
+        "keys = false\nproton = false\n"
+        "[[saved]]\nid = \"bad-game\"\ntitle = \"Bad\"\n"
+        "[[saved.path]]\nn = 0\nfrom = \"~/../outside\"\ntype = \"folder\"\n"
+        "[[saved.path]]\nn = 1\nfrom = \"/etc/lattis-test.sav\"\ntype = \"file\"\n"
+        "[[saved]]\nid = \"good-game\"\ntitle = \"Good\"\n"
+        "[[saved.path]]\nn = 0\nfrom = \"~/.config/Good/a.sav\"\ntype = \"file\"\n");
+    Archive::Writer writer;
+    QVERIFY(writer.open(archive));
+    QVERIFY(writer.addData(QStringLiteral("manifest.toml"), manifest.toUtf8()));
+    QVERIFY(writer.addPath(path(QStringLiteral("made/a.sav")), QStringLiteral("games/bad-game/files/0/a.sav")));
+    QVERIFY(writer.addPath(path(QStringLiteral("made/a.sav")), QStringLiteral("games/bad-game/files/1/a.sav")));
+    QVERIFY(writer.addPath(path(QStringLiteral("made/a.sav")), QStringLiteral("games/good-game/files/0/a.sav")));
+    QVERIFY(writer.finish());
+
+    Restore::Plan plan = planFor(archive, sources());
+    const Part *bad = findPart(plan, Part::Kind::GameSaves, QStringLiteral("bad-game"));
+    QVERIFY(bad);
+    QVERIFY(!bad->restorable());
+    QVERIFY(!bad->checked);
+    for (const Restore::Target &target : bad->targets)
+        QVERIFY2(!target.problem.isEmpty(), qPrintable(target.label));
+    QVERIFY(findPart(plan, Part::Kind::GameSaves, QStringLiteral("good-game"))->checked);
+
+    // Even asked to, the refused paths are not written.
+    for (Part &part : plan.parts)
+        part.checked = true;
+    const Restore::Result result = Restore::apply(plan, kToday);
+    QCOMPARE(result.error, QString());
+    QCOMPARE(result.restored, 1);
+    QCOMPARE(readFile(outside + QStringLiteral("/keep.sav")), QByteArray("keep"));
+    QVERIFY(!QFileInfo::exists(QStringLiteral("/etc/lattis-test.sav")));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Good/a.sav")), QByteArray("from the backup"));
+}
+
+void RestoreTest::savedGamesRunning()
+{
+    const QString archive = backUpSavedGames();
+    writeFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav"), "now slot 1");
+    QStringList calls;
+    Backups backups(backupsSetup(&calls, {QStringLiteral("Game")}));
+    QCOMPARE(backups.openImport(QUrl::fromLocalFile(archive)), QString());
+    QCOMPARE(backups.startImport(), QStringLiteral("Close Game first: it may be writing its saves."));
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("now slot 1"));
+
+    Backups idle(backupsSetup(&calls));
+    QSignalSpy finished(&idle, &Backups::importFinished);
+    QCOMPARE(idle.openImport(QUrl::fromLocalFile(archive)), QString());
+    const QVariantList parts = idle.importPlan().value(QStringLiteral("parts")).toList();
+    QVERIFY(!importPart(idle.importPlan(), QStringLiteral("gameSaves"), QStringLiteral("linux-game")).isEmpty());
+    QCOMPARE(idle.startImport(), QString());
+    QVERIFY(finished.wait());
+    QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
+}
+
+void RestoreTest::savedGamesOldArchive()
+{
+    // What a saves backup was before the games: format 1, a Proton game's prefix.
+    const QString text = QStringLiteral(
+        "kind = \"saves\"\nformat = 1\napp_version = \"0.1\"\ncreated = 2026-09-28T21:04:00-03:00\n"
+        "keys = true\nproton = true\n"
+        "[[game]]\nid = \"proton-cave-story\"\ntitle = \"Cave Story\"\nshortcut = 2900000001\nbytes = 9\n");
+    const Restore::Opened opened = Restore::parseManifest(text.toUtf8(), QStringLiteral("old.tar.zst"));
+    QVERIFY2(opened.manifest, qPrintable(opened.error));
+    QVERIFY(opened.manifest->savedGames.isEmpty());
+    QCOMPARE(opened.manifest->protonGames.size(), 1);
+    const Restore::Plan plan = Restore::plan(QStringLiteral("old.tar.zst"), *opened.manifest, sources());
+    QVERIFY(findPart(plan, Part::Kind::Proton, QStringLiteral("proton-cave-story")));
+    QVERIFY(!findPart(plan, Part::Kind::GameSaves, QStringLiteral("proton-cave-story")));
+
+    // A format newer than this app's is refused.
+    const Restore::Opened newer = Restore::parseManifest(QByteArray("kind = \"saves\"\nformat = 3\n"), QStringLiteral("new"));
+    QVERIFY(!newer.manifest);
 }
 
 void RestoreTest::gameSavesPaths()

@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QSet>
 #include <QTimeZone>
 #include <QtConcurrent/QtConcurrentRun>
@@ -75,6 +76,22 @@ QDateTime dateTime(const toml::table &table, const char *key)
     const QTime time(dt.time.hour, dt.time.minute, dt.time.second);
     return dt.offset ? QDateTime(date, time, QTimeZone::fromSecondsAheadOfUtc(dt.offset->minutes * 60))
                      : QDateTime(date, time);
+}
+
+// The [[path]] array of a game-saves manifest, or [[saved.path]] of a saved game in a saves one.
+QList<Manifest::SavePath> savePathsOf(const toml::table &table)
+{
+    QList<Manifest::SavePath> out;
+    if (const toml::array *paths = table.get_as<toml::array>("path")) {
+        for (const toml::node &node : *paths) {
+            const toml::table *t = node.as_table();
+            if (!t || string(*t, "from").isEmpty())
+                continue;
+            out.append({int(integer(*t, "n", -1)), string(*t, "from"), string(*t, "type") != QLatin1String("file"),
+                        boolean(*t, "prefix")});
+        }
+    }
+    return out;
 }
 
 bool present(const QString &path)
@@ -233,15 +250,7 @@ Opened parseManifest(const QByteArray &text, const QString &display)
         m.gameTitle = string(root, "title");
         m.matched = string(root, "matched");
         m.bytes = integer(root, "bytes", -1);
-        if (const toml::array *paths = root.get_as<toml::array>("path")) {
-            for (const toml::node &node : *paths) {
-                const toml::table *t = node.as_table();
-                if (!t || string(*t, "from").isEmpty())
-                    continue;
-                m.savePaths.append({int(integer(*t, "n", -1)), string(*t, "from"),
-                                    string(*t, "type") != QLatin1String("file"), boolean(*t, "prefix")});
-            }
-        }
+        m.savePaths = savePathsOf(root);
         if (m.gameId.isEmpty() || m.savePaths.isEmpty()) {
             out.error = notABackup;
             return out;
@@ -266,6 +275,18 @@ Opened parseManifest(const QByteArray &text, const QString &display)
                     continue;
                 m.protonGames.append({string(*t, "id"), string(*t, "title"), quint32(integer(*t, "shortcut", 0)),
                                       string(*t, "proton"), integer(*t, "bytes", -1)});
+            }
+        }
+        if (const toml::array *saved = root.get_as<toml::array>("saved")) {
+            for (const toml::node &node : *saved) {
+                const toml::table *t = node.as_table();
+                if (!t || string(*t, "id").isEmpty())
+                    continue;
+                const QList<Manifest::SavePath> paths = savePathsOf(*t);
+                if (paths.isEmpty())
+                    continue;
+                m.savedGames.append({string(*t, "id"), string(*t, "title"), string(*t, "matched"),
+                                     integer(*t, "bytes", -1), paths});
             }
         }
     }
@@ -383,39 +404,68 @@ Plan plan(const QString &archive, const Manifest &manifest, const BackupPlan::So
             p.carriedOver.append(libraryRelative(p.dataDir, current.credentialsFile.path));
     }
 
-    if (manifest.kind == Backup::kGameSaves) {
-        const Game *game = findGame(manifest.gameId);
+    // One game's saves: a game-saves archive holds files/<n>, a saves one games/<id>/files/<n>.
+    const auto gameSaves = [&](const QString &id, const QString &title, qint64 bytes,
+                               const QList<Manifest::SavePath> &saves, const QString &sourceFolder) {
+        const Game *game = findGame(id);
         Part part;
         part.kind = Part::Kind::GameSaves;
-        part.id = manifest.gameId;
-        part.name = game ? game->title : manifest.gameTitle.isEmpty() ? manifest.gameId : manifest.gameTitle;
-        part.bytes = manifest.bytes;
-        QStringList roots;
+        part.id = id;
+        part.name = game ? game->title : title.isEmpty() ? id : title;
+        part.bytes = bytes;
+        // The prefix the game has now: its saves were found under compatdata/<id>/pfx, and the
+        // id changes with the shortcut.
+        QString prefixId;
         if (game && !now.compatdata.isEmpty()) {
             if (game->platform == kProtonPlatform && game->shortcut != 0)
-                roots.append(now.compatdata + u'/' + QString::number(game->shortcut));
+                prefixId = QString::number(game->shortcut);
             else if (game->platform == kSteamPlatform && GameId::steamAppId(game->id) > 0)
-                roots.append(now.compatdata + u'/' + QString::number(GameId::steamAppId(game->id)));
+                prefixId = QString::number(GameId::steamAppId(game->id));
         }
-        for (const Manifest::SavePath &saved : manifest.savePaths) {
+        const QStringList roots = prefixId.isEmpty() ? QStringList() : QStringList{now.compatdata + u'/' + prefixId};
+        static const QRegularExpression inPrefix(QStringLiteral("^.*/compatdata/\\d+/(pfx(?:/.*)?)$"));
+        for (const Manifest::SavePath &saved : saves) {
             Target t;
-            t.source = QStringLiteral("files/%1").arg(saved.n);
-            t.gameId = manifest.gameId;
+            t.source = QStringLiteral("%1/%2").arg(sourceFolder).arg(saved.n);
+            t.gameId = id;
             t.label = saved.from;
             t.wholePrefix = saved.prefix;
-            QString absolute;
-            t.problem = checkSavePath(saved.from, now.home, roots, &absolute);
+            QString from = saved.from;
+            if (!saved.prefix) {
+                const QString expanded = from.startsWith(QLatin1String("~/")) ? now.home + from.mid(1) : from;
+                if (const QRegularExpressionMatch inside = inPrefix.match(expanded); inside.hasMatch()) {
+                    if (!game) {
+                        t.problem = notInLibrary;
+                    } else if (prefixId.isEmpty()) {
+                        t.problem = tr("%1 isn't a Steam or Proton game in your library now").arg(part.name);
+                    } else {
+                        from = now.compatdata + u'/' + prefixId + u'/' + inside.captured(1);
+                        if (!QFileInfo(now.compatdata + u'/' + prefixId + QStringLiteral("/pfx/drive_c")).isDir())
+                            t.problem = tr("Launch %1 once first; its saves stay in the backup").arg(part.name);
+                    }
+                }
+            }
             if (t.problem.isEmpty()) {
-                t.path = absolute;
-                t.label = tilde(absolute);
-                t.exists = present(absolute);
-                if (saved.prefix && !ProtonSaves::Prefix::read(absolute))
-                    t.problem = tr("Launch %1 once first; its saves stay in the backup").arg(part.name);
+                QString absolute;
+                t.problem = checkSavePath(from, now.home, roots, &absolute);
+                if (t.problem.isEmpty()) {
+                    t.path = absolute;
+                    t.label = tilde(absolute);
+                    t.exists = present(absolute);
+                    if (saved.prefix && !ProtonSaves::Prefix::read(absolute))
+                        t.problem = tr("Launch %1 once first; its saves stay in the backup").arg(part.name);
+                }
             }
             part.targets.append(t);
         }
         p.parts.append(part);
-    }
+    };
+
+    if (manifest.kind == Backup::kGameSaves)
+        gameSaves(manifest.gameId, manifest.gameTitle, manifest.bytes, manifest.savePaths, QStringLiteral("files"));
+
+    for (const Manifest::SavedGame &g : manifest.savedGames)
+        gameSaves(g.id, g.title, g.bytes, g.paths, QStringLiteral("games/%1/files").arg(g.id));
 
     for (const Manifest::Emulator &e : manifest.emulators) {
         const EmulatorDef *def = Emulators::find(now.emulators, e.id);
@@ -650,7 +700,8 @@ Result apply(const Plan &plan, const QDate &date, const Archive::Control &contro
                                     ? QStringList{kManifest, QStringLiteral("data")}
                                 : plan.manifest.kind == Backup::kGameSaves
                                     ? QStringList{kManifest, QStringLiteral("files")}
-                                    : QStringList{kManifest, QStringLiteral("emulators"), QStringLiteral("proton")};
+                                    : QStringList{kManifest, QStringLiteral("emulators"), QStringLiteral("proton"),
+                                                  QStringLiteral("games")};
     QString error;
     QHash<QString, Archive::Seen> seen;
     if (!Archive::extract(plan.archive, destinations, allowed, &error, control, &seen))
