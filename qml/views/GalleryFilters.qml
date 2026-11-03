@@ -243,7 +243,7 @@ FocusScope {
         Unfold {
             id: unfold
             Layout.fillWidth: true
-            open: !section.folded
+            open: !section.folded && root.page.listsReady
             spacing: 0
         }
     }
@@ -368,7 +368,7 @@ FocusScope {
                     }
                 }
                 Label {
-                    visible: root.shownGames.length === 0
+                    visible: root.page.listsReady && root.shownGames.length === 0
                     Layout.fillWidth: true
                     leftPadding: Theme.layout.spacing
                     text: qsTr("No game by that name has media")

@@ -52,6 +52,8 @@ FocusScope {
     property var gameList: []
     property var yearList: []
     property bool listsStale: false
+    // The sidebar's lists are built; until then its sections stay folded shut instead of showing a few short ones.
+    property bool listsReady: false
     property bool panelOpen: false
 
     readonly property string grouping: General.galleryGroup
@@ -126,6 +128,7 @@ FocusScope {
             gameList = []
             yearList = []
             games = ({})
+            listsReady = false
             quiet = false
             loading = true
             entrance = true
@@ -279,6 +282,7 @@ FocusScope {
             byYear[year].months.push({ key: key, name: Qt.locale().monthName(n - 1, Locale.LongFormat) })
         }
         yearList = Object.values(byYear).sort((a, b) => b.year - a.year)
+        listsReady = true
     }
 
     // One pass: the items every section lets through, and for each section how many it would show if
