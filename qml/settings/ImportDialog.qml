@@ -234,7 +234,7 @@ MotionPopup {
 
             ColumnLayout {
                 id: content
-                width: flick.width - (scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
+                width: flick.width - scrollBar.width - Theme.layout.spacing
                 spacing: Theme.gameEditor.rowSpacing
 
                 Card {
