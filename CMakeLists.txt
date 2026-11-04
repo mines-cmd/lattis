@@ -145,6 +145,15 @@ qt_add_qml_module(lattis
         qml/views/ClipMenu.qml
         qml/views/FfmpegPrompt.qml
         qml/views/GameEditor.qml
+        qml/views/EditorGeneralPage.qml
+        qml/views/EditorImagesPage.qml
+        qml/views/EditorLaunchPage.qml
+        qml/views/EditorSavesPage.qml
+        qml/views/EditorField.qml
+        qml/views/EditorCard.qml
+        qml/views/EditorHint.qml
+        qml/views/EditorTextAction.qml
+        qml/views/EditorMediaFolderRow.qml
         qml/views/EmulatorInstallDialog.qml
         qml/views/SetupGuide.qml
         qml/setup/SetupBackdrop.qml
