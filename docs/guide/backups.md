@@ -35,7 +35,7 @@ Each dialog shows how big the backup will be, what the other backup covers, and 
 - Steam itself. Steam Cloud keeps many Steam games' saves; the saves backup takes only what is on your disk.
 - Steam games' own Proton prefixes, whole.
 - Saves of games the saves list doesn't know, unless you gave them a save folder (a launcher Proton game still gets the whole-prefix copy).
-- Registry saves of Windows games, cloud saves (Steam Cloud, GOG, Epic), and emulator platforms in automatic backups (use Back up saves for those).
+- Registry saves of Windows games, cloud saves (Steam Cloud, GOG, Epic), and an emulator's keys and firmware in automatic backups (use Back up saves for those).
 
 A backup can't be made while a game you launched from Lattis is running, since it may be writing its saves.
 
@@ -43,11 +43,13 @@ A backup can't be made while a game you launched from Lattis is running, since i
 
 Games keep their saves in their own places, so Lattis finds them from the [Ludusavi manifest](https://github.com/mtkennerly/ludusavi-manifest), a list of where thousands of games keep their saves (its data comes from PCGamingWiki). With a game's backup on, closing the game makes a backup of its saves: a small `.tar.zst` in a folder you pick, the last few kept.
 
-It covers Steam, Proton and Linux games. It's off until you turn it on, and nothing is downloaded before that.
+It covers Steam, Proton, Linux and emulated games. It's off until you turn it on, and nothing is downloaded before that.
+
+**Emulated games** work differently: an emulator keeps every game's saves together, so closing a game backs up all of that emulator's save folders (and the saves it keeps next to ROMs), not keys or firmware. There is one backup per emulator, shared by all its games, in `emulator-<name>` inside the backup folder; it's skipped when nothing changed since the last one, so playing several games in a row makes few. The saves list isn't needed. Turn it on with the **Back up saves** switch of an emulated platform, or per game as below; the game's Properties → Saves shows the emulator's backups and restores them.
 
 **Turning it on**
 
-- **For a platform:** the **Back up saves** switch on its row in Settings → Platforms (Steam, Proton and Linux have it).
+- **For a platform:** the **Back up saves** switch on its row in Settings → Platforms (every platform with an emulator has it, and Steam, Proton and Linux).
 - **For one game:** Properties → **Backup when the game closes**: Platform default, On or Off. On or Off wins over the platform.
 
 The first time you turn it on, Lattis downloads the manifest. Settings → Library → **Game saves** shows its state and has **Update now**; while backup is on, Lattis checks for a newer list about once a day. That section also holds the backup folder (default `~/.local/share/lattis-saves/`, outside the data folder so a library backup stays small; point it at a synced folder to share saves between computers) and how many backups to keep (default 5; older ones go to the trash).
