@@ -36,6 +36,7 @@ class Dirs:
         self.runtime = os.path.join(root, "runtime")
         self.flatpak = os.path.join(root, "flatpak")
         self.bin = os.path.join(root, "bin")
+        self.env = {}
         for path in (self.data, self.home, self.flatpak, self.bin):
             os.makedirs(path)
         os.makedirs(self.runtime, mode=0o700)
@@ -88,6 +89,7 @@ def run_app(binary, dirs, script):
         # No session bus: nothing here may reach the real keyring or other services.
         "DBUS_SESSION_BUS_ADDRESS": "unix:path=/nonexistent",
     }
+    env.update(dirs.env)
     try:
         proc = subprocess.run([binary], env=env, capture_output=True, text=True, timeout=90)
         code, output = proc.returncode, proc.stdout + proc.stderr
