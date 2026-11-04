@@ -6,6 +6,7 @@ Rectangle {
     id: root
 
     property string checkedButton: ""
+    readonly property bool hovered: hover.hovered || dragging
 
     signal triggered(string name)
     signal message(string text)
@@ -148,6 +149,8 @@ Rectangle {
         interval: 800
         onTriggered: root.resetDrag()
     }
+
+    HoverHandler { id: hover }
 
     // Also keeps the strip's drag-to-move zone from starting under the toolbar.
     MouseArea {

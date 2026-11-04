@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 ApplicationWindow {
     id: window
+    property bool toolbarHovered: false
 
     function launch(game) {
         if (!game.installed && (game.platform === "proton" || game.platform === "linux")) {
@@ -1090,6 +1091,7 @@ ApplicationWindow {
 
     TopToolbar {
         id: toolbar
+        Component.onCompleted: window.toolbarHovered = Qt.binding(() => toolbar.hovered)
         readonly property real low: details.x + Theme.details.marginLeft
         readonly property real high: windowControls.visible ? windowControls.x - Theme.layout.spacing
                                                             : window.width - Theme.layout.margin

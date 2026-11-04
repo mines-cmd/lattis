@@ -403,6 +403,7 @@ FocusScope {
 
         DragHandler {
             target: null
+            enabled: !(root.Window.window?.toolbarHovered ?? false)
             grabPermissions: PointerHandler.CanTakeOverFromAnything
             onActiveChanged: if (active) root.Window.window.startSystemMove()
         }

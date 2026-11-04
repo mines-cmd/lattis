@@ -1496,7 +1496,7 @@ Item {
 
         DragHandler {
             target: null
-            enabled: !readOnlyNotice.hovered && !(importNotice.item?.hovered ?? false)
+            enabled: !readOnlyNotice.hovered && !(importNotice.item?.hovered ?? false) && !(root.Window.window?.toolbarHovered ?? false)
             grabPermissions: PointerHandler.CanTakeOverFromAnything
             onActiveChanged: if (active) root.Window.window.startSystemMove()
         }
