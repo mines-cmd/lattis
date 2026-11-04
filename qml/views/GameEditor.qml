@@ -206,6 +206,42 @@ Item {
         return adding ? (n === 0 || n === 2) : tab === n
     }
 
+    readonly property var changeTabs: ({
+        title: 0, description: 0, year: 0, rating: 0, rating_source: 0, favorite: 0, play_minutes: 0, last_played: 0,
+        status: 0, tags: 0, igdb: 0, steamgriddb: 0, steam_app: 0,
+        media_folders: 1,
+        emulator: 2, args: 2, rom: 2, launch_options: 2, proton: 2, exe: 2, installed: 2, start_dir: 2, install_dir: 2,
+        save_folder: 3, auto_backup: 3
+    })
+    // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
+    readonly property var dirtyTabs: {
+        const dirty = [false, false, false, false]
+        if (!dialog.opened || adding || game.id === undefined)
+            return dirty
+        for (const key of Object.keys(changes()))
+            dirty[changeTabs[key] ?? 0] = true
+        if (Object.keys(artEditor.pending).length > 0)
+            dirty[1] = true
+        if (Object.keys(tagsEditor.created).length > 0 || Object.keys(tagsEditor.recolored).length > 0)
+            dirty[0] = true
+        if (Object.keys(managerLinks).length > 0 && Library.modManagers.some(
+                m => managerLinks[m.id] !== undefined && managerLinks[m.id] !== m.games.some(g => g.id === game.id)))
+            dirty[3] = true
+        return dirty
+    }
+
+    function stepTab(by) {
+        if (adding)
+            return
+        for (let n = 1; n <= tabs.length; ++n) {
+            const next = (tab + by * n + tabs.length * n) % tabs.length
+            if (tabs[next].shown) {
+                tab = next
+                return
+            }
+        }
+    }
+
     function openFor(id, tabIndex) {
         const g = Library.gameForEditing(id)
         if (g.id === undefined)
@@ -803,6 +839,17 @@ Item {
             // own handler: the ScrollView takes the clicks inside it.
             TapHandler { onTapped: content.forceActiveFocus() }
 
+            Shortcut {
+                sequence: "Ctrl+Tab"
+                enabled: dialog.opened && !root.adding
+                onActivated: root.stepTab(1)
+            }
+            Shortcut {
+                sequence: "Ctrl+Shift+Tab"
+                enabled: dialog.opened && !root.adding
+                onActivated: root.stepTab(-1)
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing
@@ -871,6 +918,12 @@ Item {
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignTop
                     spacing: Theme.gameEditor.railSpacing
+                    activeFocusOnTab: true
+                    // A click gives the rail focus for the arrow keys but draws no ring.
+                    property bool clicked: false
+                    onActiveFocusChanged: if (!activeFocus) clicked = false
+                    Keys.onUpPressed: { clicked = false; root.stepTab(-1) }
+                    Keys.onDownPressed: { clicked = false; root.stepTab(1) }
 
                     Repeater {
                         model: root.tabs
@@ -892,14 +945,30 @@ Item {
                                    : tabMouse.containsMouse ? Theme.controls.hover
                                    : Qt.alpha(Theme.controls.hover, 0)
                             direction: Theme.controls.gradientDirection
+                            border.color: Theme.gameEditor.railFocusRing
+                            border.width: selected && rail.activeFocus && !rail.clicked
+                                          ? Theme.gameEditor.railFocusRingWidth : 0
 
                             Behavior on fill { enabled: Motion.fades; MotionColor {} }
                             Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
 
+                            Rectangle {
+                                // Its text is what the UI tests find, and the tooltip's.
+                                readonly property string text: qsTr("Unsaved changes in %1").arg(tabItem.modelData.name)
+                                visible: root.dirtyTabs[tabItem.index] ?? false
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                width: Theme.gameEditor.changedDotSize
+                                height: width
+                                radius: width / 2
+                                color: tabItem.selected ? Theme.gameEditor.changedDotSelected : Theme.gameEditor.changedDot
+                            }
+
                             Label {
                                 anchors.fill: parent
                                 anchors.leftMargin: 12
-                                anchors.rightMargin: 12
+                                anchors.rightMargin: 12 + Theme.gameEditor.changedDotSize + 6
                                 verticalAlignment: Text.AlignVCenter
                                 text: tabItem.modelData.name
                                 color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
@@ -916,7 +985,8 @@ Item {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     root.tab = tabItem.index
-                                    content.forceActiveFocus()
+                                    rail.forceActiveFocus()
+                                    rail.clicked = true
                                 }
                             }
                         }

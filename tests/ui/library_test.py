@@ -96,6 +96,24 @@ SCENARIOS = [
                + "expect Diablo IV Remastered\n", None),
               (search("Diablo") + "expect Diablo IV Remastered\nclick Diablo IV Remastered\nkey Alt+Return\n"
                + "expect Properties\nclick Launch\nexpect mangohud %command% --fullscreen\n", None)], demo),
+    Scenario("a tab with unsaved changes shows a dot, and Cancel clears it",
+             [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\n"
+               + "expect-not Unsaved changes in General\nexpect-not Unsaved changes in Launch\n"
+               + "click Diablo IV\ntype X\nexpect Unsaved changes in General\nexpect-not Unsaved changes in Launch\n"
+               + "click Launch\nclick mangohud %command%\nkey Ctrl+A\ntype mangohud\n"
+               + "expect Unsaved changes in General\nexpect Unsaved changes in Launch\n"
+               + "expect-not Unsaved changes in Images\nclick Cancel\nexpect-not Properties\n"
+               + "key Alt+Return\nexpect Properties\nexpect-not Unsaved changes in General\n"
+               + "expect-not Unsaved changes in Launch\n", None)], demo),
+    Scenario("Save clears the dots, and Ctrl+Tab and Ctrl+Shift+Tab go through the tabs",
+             [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\n"
+               + "expect Look up in IGDB\nkey Ctrl+Tab\nexpect Browse SteamGridDB\nexpect-not Look up in IGDB\n"
+               + "key Ctrl+Tab\nexpect Proton version\nkey Ctrl+Tab\nexpect Mod managers\n"
+               + "key Ctrl+Tab\nexpect Look up in IGDB\nkey Ctrl+Shift+Tab\nexpect Mod managers\n"
+               + "key Ctrl+Shift+Tab\nexpect Proton version\nclick Images\nkey Down\nexpect Proton version\n"
+               + "key Up\nexpect Browse SteamGridDB\nclick General\nclick Diablo IV\ntype X\n"
+               + "expect Unsaved changes in General\nclick Save\nexpect-not Properties\nkey Alt+Return\n"
+               + "expect Properties\nexpect-not Unsaved changes in General\n", None)], demo),
     Scenario("Properties opens on General each time, and Save jumps to the tab of a field in error",
              [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\nclick Launch\n"
                + "expect Proton version\nclick General\nclick Diablo IV\nkey Ctrl+A\nkey Delete\nclick Launch\n"
