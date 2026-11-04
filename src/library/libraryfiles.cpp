@@ -932,7 +932,6 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         g.pendingSteamEdits = queued.size() > int(queued.contains(QStringLiteral("icon")));
         if (const auto rom = romPaths.constFind(g.id); rom != romPaths.cend()) {
             g.rom = true;
-            ignoredKeys(QStringLiteral("Steam, Proton and Linux"), {{"media_folders", !f.mediaFolders.isEmpty()}});
             g.romKey = !f.rom.isEmpty();
             g.romPath = rom->path;
             g.installed = !rom->path.isEmpty();

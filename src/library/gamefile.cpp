@@ -54,7 +54,7 @@ constexpr Field kFields[] = {
     {"save_paths", StringList, 0, 0, "[]", "Steam, Proton and Linux games: more folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game"},
     {"saves_game", String, 0, 0, "", "Steam, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
     {"auto_backup", Bool, 0, 0, "", "Steam, Proton and Linux games: back up the game's saves when it closes (true), never (false), or, when not set, as its platform does"},
-    {"media_folders", StringList, 0, 0, "[]", "Steam, Proton and Linux games: folders of pictures and videos (OBS recordings, a screenshot tool's folder; `~` for the home folder) shown in the game's Media row and the Gallery; every picture and video in them and their subfolders counts"},
+    {"media_folders", StringList, 0, 0, "[]", "Folders of pictures and videos (OBS recordings, a screenshot tool's folder; `~` for the home folder) shown in the game's Media row and the Gallery; every picture and video in them and their subfolders counts"},
     {"shortcut", Integer, 1, 4294967295.0, "", "Proton games: the Steam shortcut's app ID; it names the prefix and the grid art. Don't change it by hand"},
     {"installed", Bool, 0, 0, "true", "Proton and Linux games: false after Uninstall removed its files (or a Proton game's shortcut) and kept it in the library, until it's located again"},
     {"same_as", String, 0, 0, "", "The id of another copy of this game (on another platform); their play time, history and statistics count as one game's. Point every copy at the same one, which has no same_as itself"},

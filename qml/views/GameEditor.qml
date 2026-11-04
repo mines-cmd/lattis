@@ -64,7 +64,7 @@ Item {
     property string foundSaveFolder: ""
     property var newMediaFolders: null
     readonly property var mediaFoldersShown: newMediaFolders ?? game.mediaFolders ?? []
-    readonly property bool mediaGame: !adding && (onSteam || linuxGame)
+    readonly property bool mediaGame: !adding && (onSteam || linuxGame || romGame)
     readonly property bool backupGame: !adding && (onSteam || linuxGame)
     readonly property string exeShown: newExe !== "" ? newExe : (game.exePath || game.exe || "")
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")

@@ -2011,15 +2011,28 @@ void Library::media(const QString &id)
             const Platform *p = platform(g->platform);
             const QString chosen = Emulators::choose(g->emulator, p ? p->emulators : QStringList(), installs());
             const EmulatorDef *def = Emulators::find(m_emulators, chosen);
-            if (!def || (def->screenshots.isEmpty() && !def->screenshotFoldersSet) || g->romPath.isEmpty())
+            const bool shots = def && (!def->screenshots.isEmpty() || def->screenshotFoldersSet) && !g->romPath.isEmpty();
+            const QStringList folders = m_store.snapshot().content.games.value(copyId).mediaFolders;
+            if (!shots && folders.isEmpty())
                 return {};
-            return [emulator = *def, install = installs().value(chosen), game = *g, dataDir = m_store.dataDir()] {
-                const RomInfo info = EmulatorScreenshots::readInfo(game);
-                const QList<PlayHistory::Session> sessions = PlayHistory::read(dataDir, game.id).value.sessions;
+            return [emulator = def ? *def : EmulatorDef(), install = installs().value(chosen), game = *g, shots, folders,
+                    dataDir = m_store.dataDir()] {
                 Result result;
-                for (const EmulatorScreenshots::Shot &s :
-                     EmulatorScreenshots::list(emulator, install, game, info, sessions, QDir::homePath()))
-                    result.items.append(screenshotItem(s.id, s.path, s.time));
+                SteamShown shown;
+                if (shots) {
+                    const RomInfo info = EmulatorScreenshots::readInfo(game);
+                    const QList<PlayHistory::Session> sessions = PlayHistory::read(dataDir, game.id).value.sessions;
+                    for (const EmulatorScreenshots::Shot &s :
+                         EmulatorScreenshots::list(emulator, install, game, info, sessions, QDir::homePath())) {
+                        result.items.append(screenshotItem(s.id, s.path, s.time));
+                        shown.add(s.path);
+                    }
+                }
+                if (!folders.isEmpty()) {
+                    const MediaFolders::Listing listing = MediaFolders::list(folders, QDir::homePath());
+                    result.limited = listing.limited;
+                    result.items += folderItems(listing, shown, VideoThumbnails::Cache(videoThumbnailFolder()));
+                }
                 return result;
             };
         }
@@ -2153,6 +2166,8 @@ void Library::allMedia()
                 folderGames.append({g.id, appId, folders});
             continue;
         }
+        if (const QStringList folders = m_store.snapshot().content.games.value(g.id).mediaFolders; !folders.isEmpty())
+            folderGames.append({g.id, 0, folders});
         const Platform *p = platform(g.platform);
         const QString chosen = Emulators::choose(g.emulator, p ? p->emulators : QStringList(), installs());
         const EmulatorDef *def = Emulators::find(m_emulators, chosen);

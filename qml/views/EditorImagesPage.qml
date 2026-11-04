@@ -62,7 +62,8 @@ ColumnLayout {
                     readonly property string folders: count === 1 ? qsTr("1 folder")
                                                                   : qsTr("%1 folders").arg(count)
                     text: editor.onSteam ? (count === 0 ? qsTr("Steam's") : qsTr("Steam's + %1").arg(folders))
-                                       : (count === 0 ? qsTr("None") : folders)
+                        : editor.romGame ? (count === 0 ? qsTr("Emulator's") : qsTr("Emulator's + %1").arg(folders))
+                                         : (count === 0 ? qsTr("None") : folders)
                     color: Theme.controls.inputText
                     font.pixelSize: Theme.gameEditor.pathFontSize
                     elide: Text.ElideRight
@@ -140,6 +141,7 @@ ColumnLayout {
                             }
                         }
                         Rectangle {
+                            visible: editor.onSteam || editor.mediaFoldersShown.length > 0
                             Layout.fillWidth: true
                             Layout.topMargin: Theme.menu.padding
                             Layout.bottomMargin: Theme.menu.padding

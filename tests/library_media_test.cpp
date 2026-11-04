@@ -271,8 +271,15 @@ void LibraryMediaTest::romGamesKeepTheirEmulatorsScreenshots()
     auto library = openLibrary();
     setMediaFolders(*library, QStringLiteral("switch-pikmin-4"), {QStringLiteral("~/Videos/OBS")});
     const QVariantList items = media(*library, QStringLiteral("switch-pikmin-4"));
-    QCOMPARE(items.size(), 1);
-    QVERIFY(items.at(0).toMap().value("id").toString().startsWith(u"Pikmin 4"_s));
+    QCOMPARE(items.size(), 2);
+    QStringList names;
+    for (const QVariant &v : items)
+        names.append(QFileInfo(v.toMap().value("id").toString()).fileName());
+    QVERIFY2(names.contains(u"pikmin.png"_s) && names.contains(u"Pikmin 4_20260104_100000.png"_s),
+             qPrintable(names.join(u' ')));
+
+    setMediaFolders(*library, QStringLiteral("switch-pikmin-4"), {QStringLiteral("~/Videos/OBS"), ryubing});
+    QCOMPARE(media(*library, QStringLiteral("switch-pikmin-4")).size(), 2);
 }
 
 void LibraryMediaTest::aHugeFolderIsLimited()
