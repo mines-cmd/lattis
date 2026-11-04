@@ -39,7 +39,7 @@ QString whenText(const QString &archive)
     const QString day = when.date() == today ? QObject::tr("Today")
                       : when.date() == today.addDays(-1) ? QObject::tr("Yesterday")
                       : DateFormat::shortDate(when.date());
-    return QStringLiteral("%1, %2").arg(day, QLocale().toString(when.time(), QLocale::ShortFormat));
+    return QStringLiteral("%1, %2").arg(day, DateFormat::shortTime(when.time()));
 }
 
 QString sizeText(qint64 bytes)

@@ -375,6 +375,7 @@ void Service::start(const QString &gameId)
             break;
         case Status::Written:
             qCInfo(lcBackup).noquote() << QStringLiteral("Backed up %1's saves (%2 files) to %3").arg(result.gameId).arg(result.files).arg(result.archive);
+            emit message(tr("Backed up %1's saves").arg(result.title));
             break;
         case Status::Unchanged:
             qCInfo(lcBackup).noquote() << QStringLiteral("%1's saves haven't changed since the last backup").arg(result.gameId);

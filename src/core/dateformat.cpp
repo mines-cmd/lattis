@@ -20,3 +20,8 @@ QString DateFormat::shortDate(const QDate &date)
 {
     return QLocale().toString(date, shortFormat());
 }
+
+QString DateFormat::shortTime(const QTime &time)
+{
+    return g_systemLocale ? QLocale().toString(time, QLocale::ShortFormat) : time.toString(QStringLiteral("HH:mm"));
+}

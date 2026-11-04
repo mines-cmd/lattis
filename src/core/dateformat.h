@@ -2,6 +2,7 @@
 
 #include <QDate>
 #include <QString>
+#include <QTime>
 
 namespace DateFormat {
 // Set once at start, from the same setting that picks the default QLocale: that locale doesn't
@@ -10,4 +11,5 @@ void setSystemLocale(bool system);
 
 QString shortFormat();
 QString shortDate(const QDate &date);
+QString shortTime(const QTime &time);
 }
