@@ -145,14 +145,7 @@ Item {
     signal addModManagerRequested(string gameId)
 
     readonly property var saves: GameSaves.state.requested === game.id ? GameSaves.state : ({})
-    readonly property var backups: saves.backups ?? []
     readonly property string homePath: StandardPaths.writableLocation(StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")
-
-    function openSaves() {
-        savesDialog.active = true
-        savesDialog.item.game = game
-        savesDialog.item.open()
-    }
 
     function chooseSavesGame() {
         savesPicker.active = true
@@ -161,16 +154,6 @@ Item {
         picker.gameTitle = game.title ?? ""
         picker.chosen = saves.match === "chosen" ? (saves.matched ?? "") : ""
         picker.open()
-    }
-
-    Loader {
-        id: savesDialog
-        active: false
-        source: "SavesDialog.qml"
-        onLoaded: {
-            item.message.connect(text => root.message(text))
-            item.chooseRequested.connect(() => root.chooseSavesGame())
-        }
     }
 
     Loader {

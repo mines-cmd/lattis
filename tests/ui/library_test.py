@@ -108,7 +108,9 @@ SCENARIOS = [
                + "expect-not Backed up\nexpect-not Mod managers\nexpect-not Prefix folder\n", None)], demo),
     Scenario("a Linux game's Saves & mods tab has the save folder and the mod managers",
              [(FIRST + "click SuperTuxKart\nkey Alt+Return\nexpect Properties\nclick Saves & mods\n"
-               + "expect Save folder\nexpect Mod managers\nexpect Mod Organizer 2\n", None)], with_managers),
+               + "expect Save folder\nexpect Mod managers\nexpect Mod Organizer 2\n"
+               + "expect Back up now\nexpect-has No backups yet\nexpect-has Backing up, renaming\n"
+               + "expect-not Manage backups\n", None)], with_managers),
     Scenario("Properties adds an existing tag and a new one from the Add tag list, and Save keeps both",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nexpect Add tag\n"
                + "expect Racing\nexpect Party\nexpect-not Adventure\nclick Add tag\nwait 400\n"

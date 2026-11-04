@@ -139,7 +139,7 @@ qt_add_qml_module(lattis
         qml/views/DownloadBar.qml
         qml/views/DownloadPill.qml
         qml/views/MediaRow.qml
-        qml/views/SavesDialog.qml
+        qml/views/SavesPanel.qml
         qml/views/SavesGamePicker.qml
         qml/views/MediaViewer.qml
         qml/views/ClipMenu.qml

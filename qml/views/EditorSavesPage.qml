@@ -15,6 +15,12 @@ ColumnLayout {
     EditorCard {
         title: qsTr("Saves")
         visible: !editor.adding
+        actions: SettingsButton {
+            visible: editor.backupGame
+            text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
+            enabled: (editor.saves.paths ?? []).length > 0 && !GameSaves.working
+            onClicked: GameSaves.backUpNow(editor.game.id)
+        }
 
         EditorField {
             label: qsTr("Save folder")
@@ -52,46 +58,6 @@ ColumnLayout {
             text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
         }
 
-        RowLayout {
-            visible: editor.backupGame
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                Label {
-                    Layout.fillWidth: true
-                    text: editor.backups.length > 0 ? qsTr("Last backup %1").arg(editor.backups[0].when.toLowerCase())
-                                                  : qsTr("No backups yet")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                    elide: Text.ElideRight
-                }
-                Label {
-                    Layout.fillWidth: true
-                    text: GameSaves.working ? qsTr("Backing up")
-                        : GameSaves.message !== "" ? GameSaves.message
-                        : editor.backups.length > 0 ? qsTr("%n backup(s), %1", "", editor.backups.length).arg(editor.backups[0].size)
-                        : qsTr("Made when the game closes, or with Back up now.")
-                    color: Theme.gameEditor.hintColor
-                    font.pixelSize: Theme.gameEditor.hintFontSize
-                    elide: Text.ElideRight
-                }
-            }
-            SettingsButton {
-                text: qsTr("Manage backups")
-                flat: true
-                onClicked: editor.openSaves()
-            }
-            SettingsButton {
-                text: qsTr("Back up now")
-                primary: true
-                enabled: (editor.saves.paths ?? []).length > 0 && !GameSaves.working
-                onClicked: GameSaves.backUpNow(editor.game.id)
-            }
-        }
         EditorField {
             visible: editor.backupGame && (editor.saves.paths ?? []).length > 0
             label: qsTr("Backed up")
@@ -111,7 +77,8 @@ ColumnLayout {
             }
             EditorHint {
                 open: (editor.saves.paths ?? []).length > 3
-                text: qsTr("and %n more", "", (editor.saves.paths ?? []).length - 3)
+                text: (editor.saves.paths ?? []).length === 4 ? qsTr("and 1 more")
+                    : qsTr("and %1 more").arg((editor.saves.paths ?? []).length - 3)
             }
         }
         EditorField {
@@ -126,6 +93,12 @@ ColumnLayout {
                 model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
                         qsTr("On"), qsTr("Off")]
             }
+        }
+        SavesPanel {
+            visible: editor.backupGame
+            game: editor.game
+            onMessage: text => editor.message(text)
+            onChooseRequested: editor.chooseSavesGame()
         }
     }
 
