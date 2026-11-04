@@ -218,10 +218,27 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: Theme.controls.controlSpacing
 
-                Icon {
-                    path: Icons.puzzle
-                    size: Theme.controls.iconSize
-                    color: Theme.controls.inputText
+                Item {
+                    Layout.preferredWidth: Theme.controls.iconSize
+                    Layout.preferredHeight: Theme.controls.iconSize
+
+                    Image {
+                        anchors.fill: parent
+                        visible: status === Image.Ready
+                        source: managerRow.modelData.icon
+                        sourceSize.width: parent.width * 2
+                        sourceSize.height: parent.height * 2
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        mipmap: true
+                    }
+                    Icon {
+                        anchors.centerIn: parent
+                        visible: managerRow.modelData.icon === ""
+                        path: Icons.puzzle
+                        size: parent.width
+                        color: Theme.controls.inputText
+                    }
                 }
                 Label {
                     Layout.fillWidth: true
