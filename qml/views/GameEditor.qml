@@ -196,10 +196,10 @@ Item {
     property int tab: 0
     readonly property bool savesTabUsed: !adding
     readonly property var tabs: [
-        { name: qsTr("General"), shown: true },
-        { name: qsTr("Images"), shown: true },
-        { name: qsTr("Launch"), shown: true },
-        { name: managerGame ? qsTr("Saves & mods") : qsTr("Saves"), shown: savesTabUsed }
+        { name: qsTr("General"), icon: Icons.informationLine, shown: true },
+        { name: qsTr("Images"), icon: Icons.image, shown: true },
+        { name: qsTr("Launch"), icon: Icons.playLargeLine, shown: true },
+        { name: managerGame ? qsTr("Saves & mods") : qsTr("Saves"), icon: Icons.archiveLine, shown: savesTabUsed }
     ]
 
     function pageShown(n) {
@@ -911,13 +911,11 @@ Item {
                 Layout.fillHeight: true
                 spacing: Theme.gameEditor.railGap
 
-                ColumnLayout {
+                Item {
                     id: rail
                     visible: !root.adding
                     Layout.preferredWidth: Theme.gameEditor.railWidth
                     Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignTop
-                    spacing: Theme.gameEditor.railSpacing
                     activeFocusOnTab: true
                     // A click gives the rail focus for the arrow keys but draws no ring.
                     property bool clicked: false
@@ -925,71 +923,102 @@ Item {
                     Keys.onUpPressed: { clicked = false; root.stepTab(-1) }
                     Keys.onDownPressed: { clicked = false; root.stepTab(1) }
 
-                    Repeater {
-                        model: root.tabs
+                    Surface {
+                        anchors.fill: parent
+                        radius: Theme.gameEditor.railRadius
+                        fill: Theme.gameEditor.railBackground
+                        fillEnd: Theme.gameEditor.railBackgroundEnd
+                        direction: Theme.controls.gradientDirection
+                        border.color: Theme.gameEditor.railBorder
+                        border.width: Theme.gameEditor.railBorderWidth
+                    }
 
-                        Surface {
-                            id: tabItem
-                            required property var modelData
-                            required property int index
-                            readonly property bool selected: root.tab === index
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Theme.gameEditor.railPadding
+                        spacing: Theme.gameEditor.railSpacing
 
-                            visible: modelData.shown
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Theme.gameEditor.railItemHeight
-                            radius: Theme.gameEditor.railItemRadius
-                            fill: selected ? Theme.gameEditor.railSelectedBackground
-                                : tabMouse.containsMouse ? Theme.controls.hover
-                                : Qt.alpha(Theme.controls.hover, 0)
-                            fillEnd: selected ? Theme.gameEditor.railSelectedBackgroundEnd
-                                   : tabMouse.containsMouse ? Theme.controls.hover
-                                   : Qt.alpha(Theme.controls.hover, 0)
-                            direction: Theme.controls.gradientDirection
-                            border.color: Theme.gameEditor.railFocusRing
-                            border.width: selected && rail.activeFocus && !rail.clicked
-                                          ? Theme.gameEditor.railFocusRingWidth : 0
+                        Repeater {
+                            model: root.tabs
 
-                            Behavior on fill { enabled: Motion.fades; MotionColor {} }
-                            Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
+                            Surface {
+                                id: tabItem
+                                required property var modelData
+                                required property int index
+                                readonly property bool selected: root.tab === index
 
-                            Rectangle {
-                                // Its text is what the UI tests find, and the tooltip's.
-                                readonly property string text: qsTr("Unsaved changes in %1").arg(tabItem.modelData.name)
-                                visible: root.dirtyTabs[tabItem.index] ?? false
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                width: Theme.gameEditor.changedDotSize
-                                height: width
-                                radius: width / 2
-                                color: tabItem.selected ? Theme.gameEditor.changedDotSelected : Theme.gameEditor.changedDot
-                            }
+                                visible: modelData.shown
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignTop
+                                Layout.preferredHeight: Theme.gameEditor.railItemHeight
+                                radius: Theme.gameEditor.railItemRadius
+                                fill: selected ? Theme.gameEditor.railSelectedBackground
+                                    : tabMouse.containsMouse ? Theme.controls.hover
+                                    : Qt.alpha(Theme.controls.hover, 0)
+                                fillEnd: selected ? Theme.gameEditor.railSelectedBackgroundEnd
+                                       : tabMouse.containsMouse ? Theme.controls.hover
+                                       : Qt.alpha(Theme.controls.hover, 0)
+                                direction: Theme.controls.gradientDirection
+                                border.color: Theme.gameEditor.railFocusRing
+                                border.width: selected && rail.activeFocus && !rail.clicked
+                                              ? Theme.gameEditor.railFocusRingWidth : 0
 
-                            Label {
-                                anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 12 + Theme.gameEditor.changedDotSize + 6
-                                verticalAlignment: Text.AlignVCenter
-                                text: tabItem.modelData.name
-                                color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
-                                elide: Text.ElideRight
-                                font.weight: tabItem.selected ? Theme.font.onAccentWeight : Font.Normal
+                                Behavior on fill { enabled: Motion.fades; MotionColor {} }
+                                Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
 
-                                Behavior on color { enabled: Motion.fades; MotionColor {} }
-                            }
+                                Rectangle {
+                                    // Its text is what the UI tests find, and the tooltip's.
+                                    readonly property string text: qsTr("Unsaved changes in %1").arg(tabItem.modelData.name)
+                                    visible: root.dirtyTabs[tabItem.index] ?? false
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    width: Theme.gameEditor.changedDotSize
+                                    height: width
+                                    radius: width / 2
+                                    color: tabItem.selected ? Theme.gameEditor.changedDotSelected : Theme.gameEditor.changedDot
+                                }
 
-                            MouseArea {
-                                id: tabMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.tab = tabItem.index
-                                    rail.forceActiveFocus()
-                                    rail.clicked = true
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 10
+                                    anchors.rightMargin: (root.dirtyTabs[tabItem.index] ?? false) ? 12 + Theme.gameEditor.changedDotSize + 6 : 10
+                                    spacing: 10
+
+                                    Icon {
+                                        path: tabItem.modelData.icon
+                                        size: Theme.gameEditor.railIconSize
+                                        color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
+
+                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                    }
+
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: tabItem.modelData.name
+                                        color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
+                                        elide: Text.ElideRight
+                                        font.weight: tabItem.selected ? Theme.font.onAccentWeight : Font.Normal
+
+                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: tabMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.tab = tabItem.index
+                                        rail.forceActiveFocus()
+                                        rail.clicked = true
+                                    }
                                 }
                             }
                         }
+
+                        Item { Layout.fillHeight: true }
                     }
                 }
 

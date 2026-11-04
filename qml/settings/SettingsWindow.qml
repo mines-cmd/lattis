@@ -313,7 +313,7 @@ ApplicationWindow {
                 anchors.fill: sidebarPanel
                 anchors.margins: sidebarPanel.border.width
                 anchors.rightMargin: parent.container ? sidebarPanel.border.width : Theme.settingsWindow.sidebarBorderWidth
-                contentHeight: sidebarColumn.implicitHeight + 20
+                contentHeight: sidebarColumn.implicitHeight + 2 * Theme.settingsWindow.sidebarPadding
                 interactive: contentHeight > height
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -321,8 +321,8 @@ ApplicationWindow {
                 ScrollIndicator.vertical: ScrollIndicator {}
 
                 function ensureVisible(item) {
-                    const top = item.mapToItem(sidebar.contentItem, 0, 0).y - 10
-                    const bottom = top + item.height + 20
+                    const top = item.mapToItem(sidebar.contentItem, 0, 0).y - Theme.settingsWindow.sidebarPadding
+                    const bottom = top + item.height + 2 * Theme.settingsWindow.sidebarPadding
                     let y = contentY
                     if (top < y)
                         y = top
@@ -333,9 +333,9 @@ ApplicationWindow {
 
                 ColumnLayout {
                     id: sidebarColumn
-                    x: 10
-                    y: 10
-                    width: sidebar.width - 20
+                    x: Theme.settingsWindow.sidebarPadding
+                    y: Theme.settingsWindow.sidebarPadding
+                    width: sidebar.width - 2 * Theme.settingsWindow.sidebarPadding
                     spacing: 4
 
                     Repeater {
