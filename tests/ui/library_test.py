@@ -102,6 +102,13 @@ SCENARIOS = [
                + "expect Proton version\nclick Save\nexpect A game needs a title\nexpect Look up in IGDB\nexpect-not Proton version\n"
                + "key Escape\nexpect-not Properties\nkey Alt+Return\nexpect Properties\nexpect Look up in IGDB\n"
                + "expect-not Proton version\n", None)], demo),
+    Scenario("the Saves tab shows the save folder for an emulator game, and the Launch tab no longer does",
+             [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Launch\n"
+               + "expect-not Prefix folder\nexpect-not Save folder\nclick Saves\nexpect Save folder\n"
+               + "expect-not Backed up\nexpect-not Mod managers\nexpect-not Prefix folder\n", None)], demo),
+    Scenario("a Linux game's Saves & mods tab has the save folder and the mod managers",
+             [(FIRST + "click SuperTuxKart\nkey Alt+Return\nexpect Properties\nclick Saves & mods\n"
+               + "expect Save folder\nexpect Mod managers\nexpect Mod Organizer 2\n", None)], with_managers),
     Scenario("Hide game in Properties removes the game from the list",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Hide game\n"
                + "wait 400\nclick Hide\nwait 600\nexpect-not Mario Kart 8 Deluxe\nexpect Pikmin 4\n", None)], demo),

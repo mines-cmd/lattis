@@ -14,9 +14,46 @@ ColumnLayout {
 
     EditorCard {
         title: qsTr("Saves")
-        visible: editor.backupGame
+        visible: !editor.adding
+
+        EditorField {
+            label: qsTr("Save folder")
+            help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
+                       + "the ROM for an emulator that saves there, the emulator's save folder, or the "
+                       + "game's Proton prefix.")
+
+            PathField {
+                onCopied: editor.message(qsTr("Copied"))
+                Layout.fillWidth: true
+                Layout.minimumHeight: Theme.controls.inputHeight
+                path: editor.saveFolderShown !== "" ? editor.saveFolderShown : editor.foundSaveFolder
+                missingText: qsTr("None found")
+                missingColor: Theme.gameEditor.hintColor
+                fontSize: Theme.gameEditor.pathFontSize
+
+                SettingsButton {
+                    iconPath: Icons.editLine
+                    tip: qsTr("Choose the save folder")
+                    onClicked: editor.folderPickerLoader.pickFor("saves")
+                }
+                SettingsButton {
+                    visible: editor.saveFolderShown !== ""
+                    iconPath: Icons.close
+                    tip: qsTr("Look for the save folder")
+                    onClicked: {
+                        editor.newSaveFolder = ""
+                        editor.saveFolderCleared = true
+                    }
+                }
+            }
+        }
+        EditorHint {
+            open: editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
+            text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
+        }
 
         RowLayout {
+            visible: editor.backupGame
             Layout.fillWidth: true
             spacing: Theme.layout.spacing
 
@@ -56,9 +93,9 @@ ColumnLayout {
             }
         }
         EditorField {
-            visible: (editor.saves.paths ?? []).length > 0
-            label: (editor.saves.paths ?? []).length > 1 ? qsTr("Save files") : qsTr("Save folder")
-            help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder on the Launch tab.")
+            visible: editor.backupGame && (editor.saves.paths ?? []).length > 0
+            label: qsTr("Backed up")
+            help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
 
             Repeater {
                 model: (editor.saves.paths ?? []).slice(0, 3)
@@ -78,8 +115,9 @@ ColumnLayout {
             }
         }
         EditorField {
+            visible: editor.backupGame
             label: qsTr("Back up saves when it closes")
-            help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder on the Launch tab, and "
+            help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
                        + "backed up to the folder in Settings, Library, Game saves.")
 
             SettingsComboBox {

@@ -211,7 +211,7 @@ Item {
 
     // 0 General, 1 Images, 2 Launch, 3 Saves & mods. Adding a game has no tabs: General and Launch show together.
     property int tab: 0
-    readonly property bool savesTabUsed: backupGame || managerGame
+    readonly property bool savesTabUsed: !adding
     readonly property var tabs: [
         { name: qsTr("General"), shown: true },
         { name: qsTr("Images"), shown: true },

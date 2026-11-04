@@ -215,49 +215,6 @@ ColumnLayout {
                 }
             }
         }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.gameEditor.columnSpacing / 2
-            visible: !editor.adding
-
-            EditorField {
-                Layout.preferredWidth: 1
-                Layout.alignment: Qt.AlignTop
-                label: qsTr("Prefix folder")
-                help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
-                           + "the ROM for an emulator that saves there, the emulator's save folder, or the "
-                           + "game's Proton prefix.")
-
-                PathField {
-                    onCopied: editor.message(qsTr("Copied"))
-                    Layout.fillWidth: true
-                    Layout.minimumHeight: Theme.controls.inputHeight
-                    path: editor.saveFolderShown !== "" ? editor.saveFolderShown : editor.foundSaveFolder
-                    missingText: qsTr("None found")
-                    missingColor: Theme.gameEditor.hintColor
-                    fontSize: Theme.gameEditor.pathFontSize
-
-                    SettingsButton {
-                        iconPath: Icons.editLine
-                        tip: qsTr("Choose the save folder")
-                        onClicked: editor.folderPickerLoader.pickFor("saves")
-                    }
-                    SettingsButton {
-                        visible: editor.saveFolderShown !== ""
-                        iconPath: Icons.close
-                        tip: qsTr("Look for the save folder")
-                        onClicked: {
-                            editor.newSaveFolder = ""
-                            editor.saveFolderCleared = true
-                        }
-                    }
-                }
-            }
-        }
-        EditorHint {
-            open: !editor.adding && editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
-            text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
-        }
         EditorHint {
             open: editor.adding && editor.pick.platforms.length === 0
             text: qsTr("None of your platforms' emulators run %1 files. They take:")
