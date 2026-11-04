@@ -148,10 +148,12 @@ Only created when `LATTIS_UI_SCRIPT=<file>` is set (main.cpp); it starts after t
 | `type <text>` | A key press and release per character, as typing; goes to whatever has focus (the list starts a search). |
 | `expect <text>` / `expect-not <text>` | An item with exactly this text is / isn't visible. |
 | `expect-has <text>` / `expect-not-has <text>` | The same for text that contains `<text>`. |
+| `toggle <label>` | Clicks the switch or check box (it has no text) in the row of the visible item with that text. |
+| `expect-on <label>` / `expect-off <label>` | That switch or check box is / isn't checked. |
 | `shot <png>` | Saves the window. |
 | `quit` | Ends the script. |
 
-`click`, `expect` and `expect-not` retry every 50 ms for 2 s; `click`, `key` and `type` then pause 250 ms so the page can settle. A command that can't succeed logs `uitest: FAIL …` with the texts on screen and exits with 1; a finished script logs `uitest: done` and exits with 0. The whole script may take 60 s.
+Items are found in the main window and in any other visible window (Settings); the last window opened gets the keys, and `shot` saves it. `click`, `expect` and `expect-not` retry every 50 ms for 2 s; `click`, `key` and `type` then pause 250 ms so the page can settle. A command that can't succeed logs `uitest: FAIL …` with the texts on screen and exits with 1; a finished script logs `uitest: done` and exits with 0. The whole script may take 60 s.
 
 ### AppPaths
 
