@@ -14,9 +14,11 @@ ColumnLayout {
     readonly property bool fallback: saves.fallback ?? false
     readonly property bool restoring: Backups.importing
     readonly property int keep: saves.keep ?? 0
+    readonly property bool empty: !fallback && paths.length === 0 && backups.length === 0
 
     signal message(string text)
     signal chooseRequested()
+    signal chooseFolderRequested()
 
     function matchText() {
         switch (saves.match) {
@@ -50,22 +52,63 @@ ColumnLayout {
         }
     }
 
-    Label {
+    ColumnLayout {
+        visible: root.empty
         Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.labelColor
-        text: root.fallback ? qsTr("No save folders are known for this game, so its whole Proton prefix is backed up, without Proton's own files.")
-            : root.matched ? qsTr("Saves of %1 (%2)").arg(root.saves.matched).arg(root.matchText())
-            : root.paths.length > 0 ? qsTr("Your own save folders")
-            : qsTr("No saves found for this game. Choose the game it is in the Ludusavi list, or set its save folder above.")
+        Layout.topMargin: Theme.gameEditor.rowSpacing
+        Layout.bottomMargin: Theme.gameEditor.rowSpacing
+        spacing: Theme.gameEditor.rowSpacing
+
+        Icon {
+            Layout.alignment: Qt.AlignHCenter
+            path: Icons.save2Line
+            size: Theme.controls.iconSize
+            color: Theme.gameEditor.hintColor
+        }
+        Label {
+            Layout.alignment: Qt.AlignHCenter
+            text: qsTr("No saves found")
+            color: Theme.gameEditor.labelColor
+        }
+        Label {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.hintColor
+            font.pixelSize: Theme.gameEditor.hintFontSize
+            text: root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
+                : qsTr("Pick this game from the Ludusavi list, or choose its save folder.")
+        }
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: Theme.layout.spacing
+
+            SettingsButton {
+                text: qsTr("Change match")
+                visible: root.saves.hasManifest ?? false
+                tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
+                onClicked: root.chooseRequested()
+            }
+            SettingsButton {
+                text: qsTr("Choose folder")
+                onClicked: root.chooseFolderRequested()
+            }
+        }
+    }
+    EditorField {
+        visible: !root.empty
+        label: qsTr("Backups")
+        help: qsTr("Keeps the last %1 backups in %2. A backup with a name is always kept. Backing up, "
+                   + "renaming, deleting and restoring happen at once, and Cancel doesn't undo them. "
+                   + "Mod manager links wait for Save.").arg(root.keep).arg(root.saves.folder ?? "")
     }
     Label {
-        visible: root.matched && !root.fallback && root.paths.length === 0
+        visible: root.fallback
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
-        text: qsTr("None of its save files exist on this computer yet, or the list has none for it. Set a save folder above to back up your own.")
         color: Theme.gameEditor.hintColor
         font.pixelSize: Theme.gameEditor.hintFontSize
+        text: qsTr("No save folders are known for this game, so its whole Proton prefix is backed up, without Proton's own files.")
     }
 
     Label {
@@ -78,11 +121,11 @@ ColumnLayout {
     }
 
     Label {
-        visible: root.backups.length === 0
+        visible: root.backups.length === 0 && (root.paths.length > 0 || root.fallback)
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         text: qsTr("No backups yet. Back up now, or one is made when the game closes.")
-        color: Theme.gameEditor.labelColor
+        color: Theme.gameEditor.hintColor
     }
 
     Rectangle {
@@ -141,7 +184,7 @@ ColumnLayout {
                             spacing: Theme.layout.spacing
 
                             Label {
-                                Layout.maximumWidth: parent.width - 2 * Theme.controls.iconSize
+                                Layout.maximumWidth: backupRow.width / 2
                                 text: backupRow.named ? backupRow.modelData.name : qsTr("Unnamed")
                                 color: Theme.palette.text
                                 elide: Text.ElideRight
@@ -248,30 +291,35 @@ ColumnLayout {
     }
 
     RowLayout {
+        visible: !root.empty
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
 
         Label {
             Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            text: root.keep === 1 ? qsTr("Keeps the last backup in %1. A backup with a name is always kept.").arg(root.saves.folder ?? "")
-                : qsTr("Keeps the last %1 backups in %2. A backup with a name is always kept.").arg(root.keep).arg(root.saves.folder ?? "")
+            visible: root.matched && !root.fallback
+            text: qsTr("%1 (%2)").arg(root.saves.matched).arg(root.matchText())
             color: Theme.gameEditor.hintColor
             font.pixelSize: Theme.gameEditor.hintFontSize
+            elide: Text.ElideRight
+        }
+        Item {
+            Layout.fillWidth: true
+            visible: !(root.matched && !root.fallback)
         }
         SettingsButton {
             text: qsTr("Change match")
+            flat: true
             visible: root.saves.hasManifest ?? false
             tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
             onClicked: root.chooseRequested()
         }
-    }
-    Label {
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        text: qsTr("Backing up, renaming, deleting and restoring happen at once, and Cancel doesn't undo them. "
-                   + "Mod manager links wait for Save.")
-        color: Theme.gameEditor.hintColor
-        font.pixelSize: Theme.gameEditor.hintFontSize
+        SettingsButton {
+            iconPath: Icons.folderOpenLine
+            flat: true
+            visible: (root.saves.folder ?? "") !== ""
+            tip: qsTr("Open the backups folder")
+            onClicked: Qt.openUrlExternally("file://" + root.saves.folder)
+        }
     }
 }

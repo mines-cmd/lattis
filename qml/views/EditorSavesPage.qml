@@ -24,9 +24,11 @@ ColumnLayout {
 
         EditorField {
             label: qsTr("Save folder")
+            marked: editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
+            markerText: qsTr("found for you")
             help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
                        + "the ROM for an emulator that saves there, the emulator's save folder, or the "
-                       + "game's Proton prefix.")
+                       + "game's Proton prefix. Choose another folder to open that one instead.")
 
             PathField {
                 onCopied: editor.message(qsTr("Copied"))
@@ -53,43 +55,87 @@ ColumnLayout {
                 }
             }
         }
-        EditorHint {
-            open: editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
-            text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
-        }
 
-        EditorField {
+        ColumnLayout {
             visible: editor.backupGame && (editor.saves.paths ?? []).length > 0
-            label: qsTr("Backed up")
-            help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
+            Layout.fillWidth: true
+            spacing: Theme.gameEditor.labelSpacing
 
-            Repeater {
-                model: (editor.saves.paths ?? []).slice(0, 3)
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.minimumHeight: Theme.controls.inputHeight
+                spacing: Theme.layout.spacing
 
-                PathField {
-                    required property string modelData
+                Label {
                     Layout.fillWidth: true
-                    Layout.minimumHeight: Theme.controls.inputHeight
-                    path: modelData.startsWith("~/") ? editor.homePath + modelData.slice(1) : modelData
-                    fontSize: Theme.gameEditor.pathFontSize
-                    onCopied: editor.message(qsTr("Copied"))
+                    text: qsTr("Backed up")
+                    color: Theme.gameEditor.labelColor
+                    elide: Text.ElideRight
+
+                    HoverHandler { id: backedUpHover }
+                    ToolTip.visible: backedUpHover.hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
+                }
+                SettingsButton {
+                    flat: true
+                    text: (editor.saves.paths ?? []).length === 1 ? qsTr("1 save file")
+                        : qsTr("%1 save files").arg((editor.saves.paths ?? []).length)
+                    iconPath: filesFold.open ? Icons.arrowUp : Icons.arrowDown
+                    onClicked: filesFold.open = !filesFold.open
                 }
             }
-            EditorHint {
-                open: (editor.saves.paths ?? []).length > 3
-                text: (editor.saves.paths ?? []).length === 4 ? qsTr("and 1 more")
-                    : qsTr("and %1 more").arg((editor.saves.paths ?? []).length - 3)
+            Unfold {
+                id: filesFold
+                visible: open || progress > 0
+                Layout.fillWidth: true
+
+                Repeater {
+                    model: (editor.saves.paths ?? []).slice(0, 3)
+
+                    PathField {
+                        required property string modelData
+                        Layout.fillWidth: true
+                        Layout.minimumHeight: Theme.controls.inputHeight
+                        path: modelData.startsWith("~/") ? editor.homePath + modelData.slice(1) : modelData
+                        fontSize: Theme.gameEditor.pathFontSize
+                        onCopied: editor.message(qsTr("Copied"))
+                    }
+                }
+                EditorHint {
+                    open: (editor.saves.paths ?? []).length > 3
+                    text: (editor.saves.paths ?? []).length === 4 ? qsTr("and 1 more")
+                        : qsTr("and %1 more").arg((editor.saves.paths ?? []).length - 3)
+                }
             }
         }
-        EditorField {
+        RowLayout {
             visible: editor.backupGame
-            label: qsTr("Back up saves when it closes")
-            help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
-                       + "backed up to the folder in Settings, Library, Game saves.")
+            Layout.fillWidth: true
+            Layout.minimumHeight: Theme.controls.inputHeight
+            spacing: Theme.layout.spacing
 
+            Label {
+                id: autoLabel
+                Layout.fillWidth: true
+                text: qsTr("Back up saves when it closes")
+                color: Theme.gameEditor.labelColor
+                elide: Text.ElideRight
+
+                HoverHandler { id: autoHover }
+                ToolTip.visible: autoHover.hovered
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
+                                   + "backed up to the folder in Settings, Library, Game saves.")
+            }
+            Label {
+                id: widest
+                visible: false
+                text: qsTr("Platform default (%1)").arg(qsTr("off"))
+            }
             SettingsComboBox {
                 id: autoBackupBox
-                Layout.fillWidth: true
+                Layout.preferredWidth: autoBackupBox.leftPadding + autoBackupBox.rightPadding + Math.ceil(widest.implicitWidth)
                 model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
                         qsTr("On"), qsTr("Off")]
             }
@@ -99,6 +145,7 @@ ColumnLayout {
             game: editor.game
             onMessage: text => editor.message(text)
             onChooseRequested: editor.chooseSavesGame()
+            onChooseFolderRequested: editor.folderPickerLoader.pickFor("saves")
         }
     }
 
