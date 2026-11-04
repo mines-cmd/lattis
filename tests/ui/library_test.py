@@ -85,6 +85,23 @@ SCENARIOS = [
                + "click Description\nclick Kart racing across 48 tracks, with items, gliders and underwater "
                + "sections. Up to four players on one screen.\nkey Ctrl+A\ntype Only turtle shells\n"
                + "click Save\nexpect-not Properties\nexpect-has Only turtle shells\n", None)], demo),
+    Scenario("Properties tabs show one job each, and Save persists edits made on two of them",
+             [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\n"
+               + "expect General\nexpect Images\nexpect Launch\nexpect Look up in IGDB\nexpect-not Proton version\n"
+               + "click Images\nexpect Browse SteamGridDB\nexpect Media folders\nexpect-not Look up in IGDB\n"
+               + "click Launch\nexpect Proton version\nexpect-not Media folders\nexpect-not Look up in IGDB\n"
+               + "click mangohud %command%\nkey Ctrl+A\ntype mangohud %command% --fullscreen\n"
+               + "click General\nexpect Look up in IGDB\nexpect-not Proton version\n"
+               + "click Diablo IV\nkey Ctrl+A\ntype Diablo IV Remastered\nclick Save\nexpect-not Properties\n"
+               + "expect Diablo IV Remastered\n", None),
+              (search("Diablo") + "expect Diablo IV Remastered\nclick Diablo IV Remastered\nkey Alt+Return\n"
+               + "expect Properties\nclick Launch\nexpect mangohud %command% --fullscreen\n", None)], demo),
+    Scenario("Properties opens on General each time, and Save jumps to the tab of a field in error",
+             [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\nclick Launch\n"
+               + "expect Proton version\nclick General\nclick Diablo IV\nkey Ctrl+A\nkey Delete\nclick Launch\n"
+               + "expect Proton version\nclick Save\nexpect A game needs a title\nexpect Look up in IGDB\nexpect-not Proton version\n"
+               + "key Escape\nexpect-not Properties\nkey Alt+Return\nexpect Properties\nexpect Look up in IGDB\n"
+               + "expect-not Proton version\n", None)], demo),
     Scenario("Hide game in Properties removes the game from the list",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Hide game\n"
                + "wait 400\nclick Hide\nwait 600\nexpect-not Mario Kart 8 Deluxe\nexpect Pikmin 4\n", None)], demo),

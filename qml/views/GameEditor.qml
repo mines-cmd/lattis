@@ -180,16 +180,32 @@ Item {
         return errors
     }
 
-    function openFor(id) {
+    // 0 General, 1 Images, 2 Launch, 3 Saves & mods. Adding a game has no tabs: General and Launch show together.
+    property int tab: 0
+    readonly property bool savesTabUsed: backupGame || managerGame
+    readonly property var tabs: [
+        { name: qsTr("General"), shown: true },
+        { name: qsTr("Images"), shown: true },
+        { name: qsTr("Launch"), shown: true },
+        { name: managerGame ? qsTr("Saves & mods") : qsTr("Saves"), shown: savesTabUsed }
+    ]
+
+    function pageShown(n) {
+        return adding ? (n === 0 || n === 2) : tab === n
+    }
+
+    function openFor(id, tabIndex) {
         const g = Library.gameForEditing(id)
         if (g.id === undefined)
             return
         adding = false
         pick = ({})
+        tab = tabIndex ?? 0
         show(g)
     }
 
     function openMediaFolders() {
+        tab = 1
         mediaMenu.open()
     }
 
@@ -209,6 +225,7 @@ Item {
             return
         }
         adding = true
+        tab = 0
         pick = p
         platformBox.currentIndex = p.platforms.length > 0 ? 0 : -1
         const blank = { title: p.title, description: "", year: 0, rating: -1, favorite: false, status: "", tags: [],
@@ -239,6 +256,8 @@ Item {
         managerLinks = ({})
         mediaMenu.close()
         form.scrollRoom = false
+        if (!tabs[tab]?.shown)
+            tab = 0
         foundSaveFolder = g.id !== undefined && !adding ? GameRunner.foundSaveFolder(g.id) : ""
         titleField.text = g.title
         descriptionArea.text = g.description
@@ -458,6 +477,8 @@ Item {
     function browseArt(kind) {
         if (!Metadata.hasSteamGridDbKey)
             return
+        if (!adding)
+            tab = 1
         if (steamGridDbId() > 0) {
             artBrowser.active = true
             artBrowser.item.openFor(steamGridDbId(), titleField.text.trim(), kind, {}, steamAppForArt())
@@ -620,6 +641,7 @@ Item {
     function save() {
         if (titleField.text.trim() === "") {
             error.text = qsTr("A game needs a title")
+            tab = 0
             titleField.forceActiveFocus()
             return
         }
@@ -627,11 +649,13 @@ Item {
         if (!onSteam && (played === undefined || played > new Date())) {
             error.text = played === undefined ? qsTr("Last played needs a day, a month and a four-digit year, or none of them")
                                               : qsTr("Last played can't be in the future")
+            tab = 0
             lastPlayedEditor.edit()
             return
         }
         if (adding && platformId === "") {
             error.text = qsTr("Choose the game's platform")
+            tab = 2
             platformBox.forceActiveFocus()
             return
         }
@@ -733,7 +757,7 @@ Item {
         parent: Overlay.overlay
         anchors.centerIn: parent
         width: Math.min(Theme.gameEditor.width, parent.width - 2 * Theme.layout.margin)
-        height: Math.min(implicitHeight, parent.height * Theme.gameEditor.maxHeight)
+        height: Math.min(root.adding ? implicitHeight : Theme.gameEditor.height, parent.height * Theme.gameEditor.maxHeight)
         modal: true
         focus: true
         padding: Theme.gameEditor.padding
@@ -823,953 +847,1035 @@ Item {
                 onDismissed: phase = ""
             }
 
-            ScrollView {
-                id: scroll
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                implicitHeight: form.implicitHeight
-                contentWidth: availableWidth
-                clip: true
+                spacing: Theme.gameEditor.railGap
 
-                // Beside the cards, not over them: the form makes room while it shows, so the
-                // cards line up with the buttons below when nothing scrolls.
-                ScrollBar.vertical: SettingsScrollBar {
-                    id: scrollBar
-                    parent: scroll
-                    x: scroll.width - width
-                    y: scroll.topPadding
-                    height: scroll.availableHeight
+                ColumnLayout {
+                    id: rail
+                    visible: !root.adding
+                    Layout.preferredWidth: Theme.gameEditor.railWidth
+                    Layout.fillHeight: true
+                    Layout.alignment: Qt.AlignTop
+                    spacing: Theme.gameEditor.railSpacing
+
+                    Repeater {
+                        model: root.tabs
+
+                        Surface {
+                            id: tabItem
+                            required property var modelData
+                            required property int index
+                            readonly property bool selected: root.tab === index
+
+                            visible: modelData.shown
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: Theme.gameEditor.railItemHeight
+                            radius: Theme.gameEditor.railItemRadius
+                            fill: selected ? Theme.gameEditor.railSelectedBackground
+                                : tabMouse.containsMouse ? Theme.controls.hover
+                                : Qt.alpha(Theme.controls.hover, 0)
+                            fillEnd: selected ? Theme.gameEditor.railSelectedBackgroundEnd
+                                   : tabMouse.containsMouse ? Theme.controls.hover
+                                   : Qt.alpha(Theme.controls.hover, 0)
+                            direction: Theme.controls.gradientDirection
+
+                            Behavior on fill { enabled: Motion.fades; MotionColor {} }
+                            Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
+
+                            Label {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                verticalAlignment: Text.AlignVCenter
+                                text: tabItem.modelData.name
+                                color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
+                                elide: Text.ElideRight
+                                font.weight: tabItem.selected ? Theme.font.onAccentWeight : Font.Normal
+
+                                Behavior on color { enabled: Motion.fades; MotionColor {} }
+                            }
+
+                            MouseArea {
+                                id: tabMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.tab = tabItem.index
+                                    content.forceActiveFocus()
+                                }
+                            }
+                        }
+                    }
                 }
 
-                GridLayout {
-                    id: form
+                ScrollView {
+                    id: scroll
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    implicitHeight: form.implicitHeight
+                    contentWidth: availableWidth
+                    clip: true
 
-                    readonly property bool twoColumns: width >= Theme.gameEditor.twoColumnsMinWidth
-
-                    // Kept once the scroll bar has shown: content that only overflows at the narrower
-                    // width would otherwise hide the bar, widen, fit, and show it again, without end.
-                    property bool scrollRoom: false
-                    Connections {
-                        target: scrollBar
-                        function onVisibleChanged() { if (scrollBar.visible) form.scrollRoom = true }
+                    // Beside the cards, not over them: the form makes room while it shows, so the
+                    // cards line up with the buttons below when nothing scrolls.
+                    ScrollBar.vertical: SettingsScrollBar {
+                        id: scrollBar
+                        parent: scroll
+                        x: scroll.width - width
+                        y: scroll.topPadding
+                        height: scroll.availableHeight
                     }
 
-                    width: scroll.availableWidth - (scrollRoom || scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
-                    columns: twoColumns ? 2 : 1
-                    columnSpacing: Theme.gameEditor.columnSpacing
-                    rowSpacing: Theme.gameEditor.rowSpacing
-
-                    TapHandler { onTapped: content.forceActiveFocus() }
-
                     ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        Layout.fillHeight: false // as tall as its cards; layouts fill by default
-                        Layout.alignment: Qt.AlignTop
-                        spacing: Theme.gameEditor.cardSpacing
+                        id: form
 
-                        Card {
-                            title: qsTr("About")
-                            actions: TextAction {
-                                text: lookupRow.phase === "running" ? qsTr("Cancel lookup") : qsTr("Look up in IGDB")
-                                iconPath: Icons.search
-                                clickable: Metadata.hasIgdbKeys && titleField.text.trim() !== ""
-                                tip: qsTr("Fill in the title, description and year from IGDB, and add the tags that fit")
-                                disabledTip: Metadata.hasIgdbKeys ? "" : qsTr("Add your API keys in Settings → Metadata")
-                                onClicked: root.lookUp()
-                            }
-
-                            Field {
-                                label: qsTr("Title")
-                                marked: root.fromLookup("title", titleField.text)
-
-                                SettingsTextField {
-                                    id: titleField
-                                    Layout.fillWidth: true
-                                    onAccepted: root.save()
-                                }
-                            }
-
-                            Field {
-                                label: qsTr("Description")
-                                marked: root.fromLookup("description", descriptionArea.text)
-
-                                ScrollView {
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: Theme.gameEditor.descriptionHeight
-
-                                    TextArea {
-                                        id: descriptionArea
-                                        wrapMode: TextEdit.Wrap
-                                        selectByMouse: true
-                                        color: Theme.controls.inputText
-                                        placeholderText: qsTr("A paragraph or two about the game")
-                                        placeholderTextColor: Theme.controls.placeholderColor
-                                        // Tab moves on, as in the other fields, instead of typing a tab.
-                                        KeyNavigation.tab: yearField
-                                        KeyNavigation.backtab: titleField
-                                        HoverHandler { id: descriptionPointer }
-                                        ContextMenu.menu: TextContextMenu { field: descriptionArea; pointer: descriptionPointer }
-                                        background: Rectangle {
-                                            radius: Theme.controls.inputRadius
-                                            color: Theme.controls.inputBackground
-                                            border.color: descriptionArea.activeFocus ? Theme.controls.inputBorderFocus
-                                                                                      : Theme.controls.inputBorder
-                                            border.width: descriptionArea.activeFocus ? Theme.controls.inputBorderFocusWidth
-                                                                                      : Theme.controls.inputBorderWidth
-                                        }
-                                    }
-                                }
-                            }
+                        // Kept once the scroll bar has shown: content that only overflows at the narrower
+                        // width would otherwise hide the bar, widen, fit, and show it again, without end.
+                        property bool scrollRoom: false
+                        Connections {
+                            target: scrollBar
+                            function onVisibleChanged() { if (scrollBar.visible) form.scrollRoom = true }
                         }
 
-                        Card {
-                            title: qsTr("Details")
+                        width: scroll.availableWidth - (scrollRoom || scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
+                        spacing: Theme.gameEditor.cardSpacing
 
-                            GridLayout {
-                                Layout.fillWidth: true
-                                columns: 3
-                                columnSpacing: Theme.gameEditor.detailsColumnSpacing
-                                rowSpacing: Theme.gameEditor.rowSpacing
+                        TapHandler { onTapped: content.forceActiveFocus() }
+
+                        ColumnLayout {
+                            id: generalPage
+                            visible: root.pageShown(0)
+                            Layout.fillWidth: true
+                            Layout.fillHeight: false // as tall as its cards; layouts fill by default
+                            Layout.alignment: Qt.AlignTop
+                            spacing: Theme.gameEditor.cardSpacing
+
+                            Card {
+                                title: qsTr("About")
+                                actions: TextAction {
+                                    text: lookupRow.phase === "running" ? qsTr("Cancel lookup") : qsTr("Look up in IGDB")
+                                    iconPath: Icons.search
+                                    clickable: Metadata.hasIgdbKeys && titleField.text.trim() !== ""
+                                    tip: qsTr("Fill in the title, description and year from IGDB, and add the tags that fit")
+                                    disabledTip: Metadata.hasIgdbKeys ? "" : qsTr("Add your API keys in Settings → Metadata")
+                                    onClicked: root.lookUp()
+                                }
 
                                 Field {
-                                    Layout.fillWidth: false
-                                    label: qsTr("Year")
-                                    marked: root.fromLookup("year", yearField.text)
+                                    label: qsTr("Title")
+                                    marked: root.fromLookup("title", titleField.text)
 
                                     SettingsTextField {
-                                        id: yearField
-                                        Layout.preferredWidth: Theme.gameEditor.shortFieldWidth
-                                        placeholderText: qsTr("Unknown")
-                                        validator: IntValidator { bottom: 1; top: 9999 }
-                                        onAccepted: root.save()
-                                    }
-                                }
-                                Field {
-                                    Layout.fillWidth: false
-                                    label: qsTr("Rating")
-                                    labelTip: qsTr("Double-click the stars to clear the rating")
-                                    marked: root.fromLookup("rating", root.ratingText(rating.value))
-                                        || (!root.adding && root.game.ratingSource === "igdb" && rating.value === root.game.rating)
-
-                                    RatingEditor {
-                                        id: rating
-                                        Layout.preferredHeight: yearField.implicitHeight
-                                    }
-                                }
-                                Field {
-                                    label: qsTr("Favorite")
-
-                                    SettingsSwitch {
-                                        id: favoriteSwitch
-                                        Layout.preferredHeight: yearField.implicitHeight
-                                    }
-                                }
-
-                                Field {
-                                    Layout.fillWidth: false
-                                    label: qsTr("Play time")
-                                    marked: root.onSteam
-                                    markerText: qsTr("from Steam")
-
-                                    RowLayout {
-                                        spacing: Theme.layout.spacing
-                                        enabled: !root.onSteam
-                                        opacity: root.onSteam ? Theme.gameEditor.readOnlyOpacity : 1
-
-                                        StepField {
-                                            id: hoursField
-                                            minDigits: 4
-                                            placeholderText: "0"
-                                            // The most that still fits play_minutes with 59 minutes.
-                                            validator: IntValidator { bottom: 0; top: 35791393 }
-                                            onStepped: direction => root.setPlayMinutes(root.playMinutes() + 60 * direction)
-                                            onEditingFinished: root.setPlayMinutes(root.playMinutes())
-                                            onAccepted: root.save()
-                                        }
-                                        Label {
-                                            text: qsTr("h")
-                                            color: Theme.gameEditor.labelColor
-                                        }
-                                        StepField {
-                                            id: minutesField
-                                            Layout.leftMargin: Theme.layout.spacing
-                                            placeholderText: "00"
-                                            validator: IntValidator { bottom: 0; top: 59 }
-                                            onStepped: direction => root.setPlayMinutes(root.playMinutes() + direction)
-                                            onEditingFinished: root.setPlayMinutes(root.playMinutes())
-                                            onAccepted: root.save()
-                                        }
-                                        Label {
-                                            text: qsTr("m")
-                                            color: Theme.gameEditor.labelColor
-                                        }
-                                    }
-                                }
-                                Field {
-                                    Layout.fillWidth: false
-                                    label: qsTr("Last played")
-                                    marked: root.onSteam
-                                    markerText: qsTr("from Steam")
-
-                                    DateEditor {
-                                        id: lastPlayedEditor
-                                        enabled: !root.onSteam
-                                        opacity: root.onSteam ? Theme.gameEditor.readOnlyOpacity : 1
-                                        Layout.preferredHeight: yearField.implicitHeight
-                                        onAccepted: root.save()
-                                    }
-                                }
-                                Field {
-                                    label: qsTr("Status")
-
-                                    SettingsComboBox {
-                                        id: statusBox
-                                        Layout.preferredHeight: yearField.implicitHeight
+                                        id: titleField
                                         Layout.fillWidth: true
-                                        model: root.statuses.map(s => s.name)
+                                        onAccepted: root.save()
                                     }
+                                }
+
+                                Field {
+                                    label: qsTr("Description")
+                                    marked: root.fromLookup("description", descriptionArea.text)
+
+                                    ScrollView {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: Theme.gameEditor.descriptionHeight
+
+                                        TextArea {
+                                            id: descriptionArea
+                                            wrapMode: TextEdit.Wrap
+                                            selectByMouse: true
+                                            color: Theme.controls.inputText
+                                            placeholderText: qsTr("A paragraph or two about the game")
+                                            placeholderTextColor: Theme.controls.placeholderColor
+                                            // Tab moves on, as in the other fields, instead of typing a tab.
+                                            KeyNavigation.tab: yearField
+                                            KeyNavigation.backtab: titleField
+                                            HoverHandler { id: descriptionPointer }
+                                            ContextMenu.menu: TextContextMenu { field: descriptionArea; pointer: descriptionPointer }
+                                            background: Rectangle {
+                                                radius: Theme.controls.inputRadius
+                                                color: Theme.controls.inputBackground
+                                                border.color: descriptionArea.activeFocus ? Theme.controls.inputBorderFocus
+                                                                                          : Theme.controls.inputBorder
+                                                border.width: descriptionArea.activeFocus ? Theme.controls.inputBorderFocusWidth
+                                                                                          : Theme.controls.inputBorderWidth
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Details")
+
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: 3
+                                    columnSpacing: Theme.gameEditor.detailsColumnSpacing
+                                    rowSpacing: Theme.gameEditor.rowSpacing
+
+                                    Field {
+                                        Layout.fillWidth: false
+                                        label: qsTr("Year")
+                                        marked: root.fromLookup("year", yearField.text)
+
+                                        SettingsTextField {
+                                            id: yearField
+                                            Layout.preferredWidth: Theme.gameEditor.shortFieldWidth
+                                            placeholderText: qsTr("Unknown")
+                                            validator: IntValidator { bottom: 1; top: 9999 }
+                                            onAccepted: root.save()
+                                        }
+                                    }
+                                    Field {
+                                        Layout.fillWidth: false
+                                        label: qsTr("Rating")
+                                        labelTip: qsTr("Double-click the stars to clear the rating")
+                                        marked: root.fromLookup("rating", root.ratingText(rating.value))
+                                            || (!root.adding && root.game.ratingSource === "igdb" && rating.value === root.game.rating)
+
+                                        RatingEditor {
+                                            id: rating
+                                            Layout.preferredHeight: yearField.implicitHeight
+                                        }
+                                    }
+                                    Field {
+                                        label: qsTr("Favorite")
+
+                                        SettingsSwitch {
+                                            id: favoriteSwitch
+                                            Layout.preferredHeight: yearField.implicitHeight
+                                        }
+                                    }
+
+                                    Field {
+                                        Layout.fillWidth: false
+                                        label: qsTr("Play time")
+                                        marked: root.onSteam
+                                        markerText: qsTr("from Steam")
+
+                                        RowLayout {
+                                            spacing: Theme.layout.spacing
+                                            enabled: !root.onSteam
+                                            opacity: root.onSteam ? Theme.gameEditor.readOnlyOpacity : 1
+
+                                            StepField {
+                                                id: hoursField
+                                                minDigits: 4
+                                                placeholderText: "0"
+                                                // The most that still fits play_minutes with 59 minutes.
+                                                validator: IntValidator { bottom: 0; top: 35791393 }
+                                                onStepped: direction => root.setPlayMinutes(root.playMinutes() + 60 * direction)
+                                                onEditingFinished: root.setPlayMinutes(root.playMinutes())
+                                                onAccepted: root.save()
+                                            }
+                                            Label {
+                                                text: qsTr("h")
+                                                color: Theme.gameEditor.labelColor
+                                            }
+                                            StepField {
+                                                id: minutesField
+                                                Layout.leftMargin: Theme.layout.spacing
+                                                placeholderText: "00"
+                                                validator: IntValidator { bottom: 0; top: 59 }
+                                                onStepped: direction => root.setPlayMinutes(root.playMinutes() + direction)
+                                                onEditingFinished: root.setPlayMinutes(root.playMinutes())
+                                                onAccepted: root.save()
+                                            }
+                                            Label {
+                                                text: qsTr("m")
+                                                color: Theme.gameEditor.labelColor
+                                            }
+                                        }
+                                    }
+                                    Field {
+                                        Layout.fillWidth: false
+                                        label: qsTr("Last played")
+                                        marked: root.onSteam
+                                        markerText: qsTr("from Steam")
+
+                                        DateEditor {
+                                            id: lastPlayedEditor
+                                            enabled: !root.onSteam
+                                            opacity: root.onSteam ? Theme.gameEditor.readOnlyOpacity : 1
+                                            Layout.preferredHeight: yearField.implicitHeight
+                                            onAccepted: root.save()
+                                        }
+                                    }
+                                    Field {
+                                        label: qsTr("Status")
+
+                                        SettingsComboBox {
+                                            id: statusBox
+                                            Layout.preferredHeight: yearField.implicitHeight
+                                            Layout.fillWidth: true
+                                            model: root.statuses.map(s => s.name)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Tags")
+                                actions: TextAction {
+                                    text: qsTr("New tag")
+                                    iconPath: Icons.add
+                                    tip: qsTr("Create a tag and add it to this game")
+                                    onClicked: tagsEditor.newTag()
+                                }
+
+                                TagsEditor {
+                                    id: tagsEditor
+                                    Layout.fillWidth: true
                                 }
                             }
                         }
 
-                        Card {
-                            title: qsTr("Tags")
-                            actions: TextAction {
-                                text: qsTr("New tag")
-                                iconPath: Icons.add
-                                tip: qsTr("Create a tag and add it to this game")
-                                onClicked: tagsEditor.newTag()
-                            }
+                        ColumnLayout {
+                            id: launchPage
+                            visible: root.pageShown(2)
+                            Layout.fillWidth: true
+                            Layout.fillHeight: false // as tall as its cards; layouts fill by default
+                            Layout.alignment: Qt.AlignTop
+                            spacing: Theme.gameEditor.cardSpacing
 
-                            TagsEditor {
-                                id: tagsEditor
-                                Layout.fillWidth: true
-                            }
-                        }
-                    }
+                            Card {
+                                title: qsTr("Install")
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 1
-                        Layout.fillHeight: false
-                        Layout.alignment: Qt.AlignTop
-                        spacing: Theme.gameEditor.cardSpacing
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Theme.gameEditor.columnSpacing
 
-                        Card {
-                            title: root.romGame ? qsTr("Platform and ROM") : qsTr("Platform and install")
+                                    Field {
+                                        Layout.fillWidth: false
+                                        Layout.preferredWidth: platformBox.visible ? Theme.gameEditor.platformFieldWidth : -1
+                                        Layout.alignment: Qt.AlignTop
+                                        label: qsTr("Platform")
 
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Theme.gameEditor.columnSpacing
+                                        RowLayout {
+                                            visible: !platformBox.visible
+                                            Layout.fillWidth: true
+                                            Layout.minimumHeight: Theme.controls.inputHeight
+                                            spacing: Theme.layout.spacing
+
+                                            Icon {
+                                                path: Icons.forPlatform(root.adding ? (root.platformChoices[platformBox.currentIndex]?.icon ?? "")
+                                                                                    : (root.game.platformIcon ?? ""))
+                                                size: Theme.controls.iconSize
+                                                color: Theme.controls.inputText
+                                            }
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: root.adding ? (root.platformChoices[platformBox.currentIndex]?.name ?? "")
+                                                                  : (root.game.platformName ?? "")
+                                                color: Theme.controls.inputText
+                                                font.pixelSize: Theme.gameEditor.platformFontSize
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                        SettingsComboBox {
+                                            id: platformBox
+                                            visible: root.adding && root.pick.platforms.length !== 1
+                                            Layout.fillWidth: true
+                                            model: root.platformChoices.map(c => c.name)
+                                            displayText: currentIndex < 0 ? qsTr("Choose a platform") : currentText
+                                            onActivated: {
+                                                error.text = ""
+                                                emulatorBox.currentIndex = 0
+                                            }
+                                        }
+                                    }
+
+                                    Field {
+                                        visible: root.romGame
+                                        Layout.alignment: Qt.AlignTop
+                                        label: qsTr("ROM")
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Layout.minimumHeight: Theme.controls.inputHeight
+                                            spacing: Theme.layout.spacing
+
+                                            PathField {
+                                                onCopied: root.message(qsTr("Copied"))
+                                                Layout.fillWidth: true
+                                                path: root.romShown
+                                                missingText: qsTr("ROM not found")
+                                                missingColor: Theme.gameEditor.warningColor
+                                                fontSize: Theme.gameEditor.pathFontSize
+                                            }
+                                            SettingsButton {
+                                                visible: !root.adding && ((root.game.romKey ?? false) || root.locating)
+                                                text: root.locating ? qsTr("Locate") : qsTr("Change")
+                                                onClicked: romPicker.active = true
+                                            }
+                                        }
+                                    }
+
+                                    Field {
+                                        visible: !root.romGame
+                                        Layout.alignment: Qt.AlignTop
+                                        label: qsTr("Install location")
+                                        help: root.programGame
+                                              ? qsTr("The game's whole folder, with the program somewhere inside. Open folder "
+                                                     + "opens it, and the game's size is this folder's.")
+                                              : qsTr("Where Steam installed the game.")
+
+                                        PathField {
+                                            id: installField
+                                            onCopied: root.message(qsTr("Copied"))
+                                            Layout.fillWidth: true
+                                            Layout.minimumHeight: Theme.controls.inputHeight
+                                            path: root.newInstallDir !== "" ? root.newInstallDir : (root.game.installPath ?? "")
+                                            missingText: root.programGame ? qsTr("Not set") : qsTr("Not installed")
+                                            missingColor: Theme.gameEditor.hintColor
+                                            fontSize: Theme.gameEditor.pathFontSize
+
+                                            SettingsButton {
+                                                visible: !root.adding && installField.path !== "" && root.newInstallDir === ""
+                                                iconPath: Icons.folder
+                                                tip: qsTr("Open the install folder")
+                                                onClicked: root.openFolder()
+                                            }
+                                            SettingsButton {
+                                                visible: root.programGame
+                                                iconPath: Icons.editLine
+                                                tip: qsTr("Change the install folder")
+                                                onClicked: folderPicker.pickFor("install")
+                                            }
+                                        }
+                                    }
+                                }
 
                                 Field {
-                                    Layout.fillWidth: false
-                                    Layout.preferredWidth: platformBox.visible ? Theme.gameEditor.platformFieldWidth : -1
-                                    Layout.alignment: Qt.AlignTop
-                                    label: qsTr("Platform")
+                                    visible: root.programGame
+                                    label: qsTr("Program")
+                                    help: root.linuxGame
+                                          ? qsTr("The program or script the launcher runs, with the launch options below. "
+                                                 + "It counts as running until every process it started has ended.")
+                                          : qsTr("The .exe Steam runs, the target of the game's shortcut in Steam. Changing it "
+                                                 + "here changes the shortcut, and the other way around.")
 
-                                    RowLayout {
-                                        visible: !platformBox.visible
+                                    PathField {
+                                        onCopied: root.message(qsTr("Copied"))
                                         Layout.fillWidth: true
                                         Layout.minimumHeight: Theme.controls.inputHeight
+                                        path: root.exeShown
+                                        missingText: qsTr("Not set")
+                                        missingColor: Theme.gameEditor.warningColor
+                                        fontSize: Theme.gameEditor.pathFontSize
+
+                                        SettingsButton {
+                                            visible: !root.adding
+                                            readonly property bool locating: root.newExe === ""
+                                                && ((root.game.gameNotFound ?? false) || (root.game.uninstalled ?? false))
+                                            text: locating ? qsTr("Locate") : ""
+                                            iconPath: locating ? "" : Icons.editLine
+                                            tip: locating ? "" : qsTr("Change the program")
+                                            onClicked: exePicker.active = true
+                                        }
+                                    }
+                                    Hint {
+                                        open: root.newExe === "" && (root.game.gameNotFound ?? false)
+                                        color: Theme.gameEditor.warningColor
+                                        text: root.linuxGame
+                                              ? qsTr("Game not found: there's no program there, or it isn't executable. "
+                                                     + "Locate it if the game moved; picking it makes it executable.")
+                                              : qsTr("Game not found: there's no program there, so Steam can't start it. "
+                                                     + "Locate it if the game moved.")
+                                    }
+                                    Hint {
+                                        open: root.newExe === "" && (root.game.uninstalled ?? false)
+                                        text: root.linuxGame
+                                              ? qsTr("Uninstalled: its files were deleted. Locating the program brings it "
+                                                     + "back, with the same play time.")
+                                              : qsTr("Uninstalled: it has no shortcut in Steam. Locating the program adds one "
+                                                     + "again, with the same prefix and play time.")
+                                    }
+                                    SettingsCheckBox {
+                                        id: makeExecutableBox
+                                        visible: root.addingLinux && !(root.pick.executable ?? true)
+                                        text: qsTr("Make it executable")
+                                        ToolTip.visible: hovered
+                                        ToolTip.delay: Theme.tooltip.delay
+                                        ToolTip.text: qsTr("It isn't marked as a program yet (chmod +x); without that, "
+                                                           + "it can't be launched")
+                                    }
+                                    TextAction {
+                                        visible: root.startDirShown === ""
+                                        text: qsTr("Start in another folder")
+                                        iconPath: Icons.folder
+                                        tip: root.linuxGame ? qsTr("The folder the program starts in: by default, its own")
+                                                            : qsTr("Steam's \"Start in\": by default, the program's own folder")
+                                        onClicked: folderPicker.pickFor("start")
+                                    }
+                                }
+                                Field {
+                                    visible: root.programGame && root.startDirShown !== ""
+                                    label: qsTr("Start in")
+
+                                    PathField {
+                                        onCopied: root.message(qsTr("Copied"))
+                                        Layout.fillWidth: true
+                                        Layout.minimumHeight: Theme.controls.inputHeight
+                                        path: root.startDirShown
+                                        fontSize: Theme.gameEditor.pathFontSize
+
+                                        SettingsButton {
+                                            iconPath: Icons.editLine
+                                            tip: qsTr("Change the start folder")
+                                            onClicked: folderPicker.pickFor("start")
+                                        }
+                                        SettingsButton {
+                                            iconPath: Icons.close
+                                            tip: qsTr("Start in the program's own folder")
+                                            onClicked: {
+                                                root.newStartDir = ""
+                                                root.startDirCleared = true
+                                            }
+                                        }
+                                    }
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Theme.gameEditor.columnSpacing / 2
+                                    visible: !root.adding
+
+                                    Field {
+                                        Layout.preferredWidth: 1
+                                        Layout.alignment: Qt.AlignTop
+                                        label: qsTr("Prefix folder")
+                                        help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
+                                                   + "the ROM for an emulator that saves there, the emulator's save folder, or the "
+                                                   + "game's Proton prefix.")
+
+                                        PathField {
+                                            onCopied: root.message(qsTr("Copied"))
+                                            Layout.fillWidth: true
+                                            Layout.minimumHeight: Theme.controls.inputHeight
+                                            path: root.saveFolderShown !== "" ? root.saveFolderShown : root.foundSaveFolder
+                                            missingText: qsTr("None found")
+                                            missingColor: Theme.gameEditor.hintColor
+                                            fontSize: Theme.gameEditor.pathFontSize
+
+                                            SettingsButton {
+                                                iconPath: Icons.editLine
+                                                tip: qsTr("Choose the save folder")
+                                                onClicked: folderPicker.pickFor("saves")
+                                            }
+                                            SettingsButton {
+                                                visible: root.saveFolderShown !== ""
+                                                iconPath: Icons.close
+                                                tip: qsTr("Look for the save folder")
+                                                onClicked: {
+                                                    root.newSaveFolder = ""
+                                                    root.saveFolderCleared = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Hint {
+                                    open: !root.adding && root.saveFolderShown === "" && root.foundSaveFolder !== ""
+                                    text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
+                                }
+                                Hint {
+                                    open: root.adding && root.pick.platforms.length === 0
+                                    text: qsTr("None of your platforms' emulators run %1 files. They take:")
+                                              .arg(root.pick.fileName?.includes(".") ? "." + root.pick.fileName.split(".").pop()
+                                                                                       : root.pick.fileName ?? "")
+                                          + root.platformChoices.map(c => "\n" + c.name + ": " + c.takes).join("")
+                                }
+                                Hint {
+                                    open: root.newRomOwner !== null
+                                    text: qsTr("This file is also %1 in your library. Saving merges it into this game: its play "
+                                               + "time, favorite, tags and missing art come over, and it's removed.")
+                                              .arg(root.newRomOwner?.title ?? "")
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Run")
+                                visible: root.romGame
+
+                                Field {
+                                    label: qsTr("Emulator")
+
+                                    SettingsComboBox {
+                                        id: emulatorBox
+                                        Layout.fillWidth: true
+                                        model: [qsTr("Platform default (%1)").arg(root.emulators.defaultEmulator || qsTr("none"))]
+                                               .concat(root.emulators.choices.map(c => c.installed ? c.name
+                                                                                                   : qsTr("%1 (not installed)").arg(c.name)))
+                                    }
+                                    Hint {
+                                        readonly property string before: root.emulators.choices.find(c => c.id === root.game.emulator)?.name
+                                                                         ?? root.emulators.defaultEmulator
+                                        readonly property string after: root.emulator?.name ?? root.emulators.defaultEmulator
+                                        open: (root.game.playMinutes ?? 0) > 0 && before !== after
+                                        color: Theme.gameEditor.warningColor
+                                        text: qsTr("Saves stay in each emulator's own folders; your progress in %1 won't be in %2.")
+                                                  .arg(before).arg(after)
+                                    }
+                                }
+
+                                Field {
+                                    label: qsTr("Launch arguments")
+
+                                    SettingsTextField {
+                                        id: argsField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("None")
+                                        onAccepted: root.save()
+                                    }
+                                    Hint {
+                                        readonly property var shown: root.emulator ?? root.emulators.choices.find(
+                                                                         c => c.name === root.emulators.defaultEmulator) ?? null
+                                        open: shown !== null
+                                        text: shown === null ? ""
+                                            : shown.args.length > 0 ? qsTr("Added after %1's own: %2").arg(shown.name).arg(Args.join(shown.args))
+                                            : qsTr("%1 has no arguments of its own").arg(shown.name)
+                                    }
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Run")
+                                visible: !root.romGame
+
+                                Field {
+                                    visible: root.onSteam
+                                    label: qsTr("Proton version")
+                                    help: root.protonGame
+                                          ? qsTr("The compatibility tool Steam runs the program with, as in its Properties. "
+                                                 + "None for a Linux program.")
+                                          : qsTr("The compatibility tool that runs the game, as in Steam's Properties.")
+
+                                    SettingsComboBox {
+                                        id: protonBox
+                                        Layout.fillWidth: true
+                                        model: root.protonChoices.map(c => c.displayName)
+                                    }
+                                }
+
+                                Field {
+                                    visible: (root.game.steamPresets ?? []).length > 0
+                                    label: qsTr("Presets")
+
+                                    Flow {
+                                        Layout.fillWidth: true
+                                        spacing: Theme.gameEditor.presetSpacing
+
+                                        Repeater {
+                                            model: root.game.steamPresets ?? []
+
+                                            SettingsCheckBox {
+                                                id: presetBox
+                                                required property var modelData
+                                                text: modelData.name
+                                                checked: Library.steamPresetOn(launchOptionsField.text, modelData.id)
+                                                ToolTip.visible: hovered
+                                                ToolTip.delay: Theme.tooltip.delay
+                                                ToolTip.text: qsTr("Adds %1").arg(modelData.adds)
+                                                onToggled: {
+                                                    launchOptionsField.text = Library.setSteamPreset(launchOptionsField.text,
+                                                                                                     modelData.id, checked)
+                                                    // Clicking broke the binding; the text says what's on.
+                                                    checked = Qt.binding(() => Library.steamPresetOn(launchOptionsField.text,
+                                                                                                     presetBox.modelData.id))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Field {
+                                    label: qsTr("Launch options")
+
+                                    SettingsTextField {
+                                        id: launchOptionsField
+                                        Layout.fillWidth: true
+                                        placeholderText: qsTr("None")
+                                        onAccepted: root.save()
+                                    }
+                                    Hint {
+                                        text: root.linuxGame
+                                              ? qsTr("Written like Steam's: variables, then a wrapper before %command%, "
+                                                     + "arguments after it, e.g. mangohud %command% --fullscreen")
+                                              : qsTr("Same as Steam's launch options, e.g. mangohud %command%")
+                                    }
+                                }
+
+                                Unfold {
+                                    open: root.onSteam && (root.adding ? root.steamRunning
+                                                                       : root.steamPending || (root.steamEdited && root.steamRunning))
+                                    visible: open || progress > 0
+                                    Layout.fillWidth: true
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
                                         spacing: Theme.layout.spacing
 
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: root.adding ? qsTr("Steam is running: the game is added to it when it closes")
+                                                : root.steamEdited ? qsTr("Steam is running: saving applies this when it closes")
+                                                : root.shortcutQueued ? qsTr("Waiting for Steam to close to add this game to it")
+                                                : qsTr("Waiting for Steam to close to apply this")
+                                            color: Theme.gameEditor.pendingColor
+                                            font.pixelSize: Theme.gameEditor.hintFontSize
+                                            wrapMode: Text.WordWrap
+                                        }
+                                        SettingsButton {
+                                            text: GameRunner.closingSteam ? qsTr("Closing Steam") : qsTr("Close Steam and apply")
+                                            enabled: !GameRunner.closingSteam
+                                            tip: qsTr("Saves, closes Steam, writes the changes and starts Steam again")
+                                            onClicked: root.closeSteamAndApply()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            id: savesPage
+                            visible: root.pageShown(3)
+                            Layout.fillWidth: true
+                            Layout.fillHeight: false // as tall as its cards; layouts fill by default
+                            Layout.alignment: Qt.AlignTop
+                            spacing: Theme.gameEditor.cardSpacing
+
+                            Card {
+                                title: qsTr("Saves")
+                                visible: root.backupGame
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Theme.layout.spacing
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 0
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: root.backups.length > 0 ? qsTr("Last backup %1").arg(root.backups[0].when.toLowerCase())
+                                                                          : qsTr("No backups yet")
+                                            color: Theme.gameEditor.headingColor
+                                            font.weight: Theme.font.strongWeight
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: GameSaves.working ? qsTr("Backing up")
+                                                : GameSaves.message !== "" ? GameSaves.message
+                                                : root.backups.length > 0 ? qsTr("%n backup(s), %1", "", root.backups.length).arg(root.backups[0].size)
+                                                : qsTr("Made when the game closes, or with Back up now.")
+                                            color: Theme.gameEditor.hintColor
+                                            font.pixelSize: Theme.gameEditor.hintFontSize
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                    SettingsButton {
+                                        text: qsTr("Manage backups")
+                                        flat: true
+                                        onClicked: root.openSaves()
+                                    }
+                                    SettingsButton {
+                                        text: qsTr("Back up now")
+                                        primary: true
+                                        enabled: (root.saves.paths ?? []).length > 0 && !GameSaves.working
+                                        onClicked: GameSaves.backUpNow(root.game.id)
+                                    }
+                                }
+                                Field {
+                                    visible: (root.saves.paths ?? []).length > 0
+                                    label: (root.saves.paths ?? []).length > 1 ? qsTr("Save files") : qsTr("Save folder")
+                                    help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder on the Launch tab.")
+
+                                    Repeater {
+                                        model: (root.saves.paths ?? []).slice(0, 3)
+
+                                        PathField {
+                                            required property string modelData
+                                            Layout.fillWidth: true
+                                            Layout.minimumHeight: Theme.controls.inputHeight
+                                            path: modelData.startsWith("~/") ? root.homePath + modelData.slice(1) : modelData
+                                            fontSize: Theme.gameEditor.pathFontSize
+                                            onCopied: root.message(qsTr("Copied"))
+                                        }
+                                    }
+                                    Hint {
+                                        open: (root.saves.paths ?? []).length > 3
+                                        text: qsTr("and %n more", "", (root.saves.paths ?? []).length - 3)
+                                    }
+                                }
+                                Field {
+                                    label: qsTr("Back up saves when it closes")
+                                    help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder on the Launch tab, and "
+                                               + "backed up to the folder in Settings, Library, Game saves.")
+
+                                    SettingsComboBox {
+                                        id: autoBackupBox
+                                        Layout.fillWidth: true
+                                        model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                                                qsTr("On"), qsTr("Off")]
+                                    }
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Mod managers")
+                                visible: root.managerGame
+                                actions: Row {
+                                    spacing: Theme.layout.spacing
+
+                                    TextAction {
+                                        id: linkAction
+                                        visible: root.unlinkedManagers.length > 0
+                                        text: qsTr("Link")
+                                        iconPath: Icons.link
+                                        tip: qsTr("Link a mod manager you already added")
+                                        onClicked: managerMenu.popup(linkAction, 0, linkAction.height)
+                                    }
+                                    TextAction {
+                                        text: qsTr("Add")
+                                        iconPath: Icons.add
+                                        tip: qsTr("Add a mod manager for this game")
+                                        onClicked: root.addModManagerRequested(root.game.id)
+                                    }
+                                }
+
+                                Label {
+                                    visible: root.linkedManagers.length === 0
+                                    Layout.fillWidth: true
+                                    text: qsTr("No mod manager is linked to this game.")
+                                    color: Theme.gameEditor.hintColor
+                                    wrapMode: Text.WordWrap
+                                }
+                                Repeater {
+                                    model: root.linkedManagers
+
+                                    RowLayout {
+                                        id: managerRow
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: Theme.controls.controlSpacing
+
                                         Icon {
-                                            path: Icons.forPlatform(root.adding ? (root.platformChoices[platformBox.currentIndex]?.icon ?? "")
-                                                                                : (root.game.platformIcon ?? ""))
+                                            path: Icons.puzzle
                                             size: Theme.controls.iconSize
                                             color: Theme.controls.inputText
                                         }
                                         Label {
                                             Layout.fillWidth: true
-                                            text: root.adding ? (root.platformChoices[platformBox.currentIndex]?.name ?? "")
-                                                              : (root.game.platformName ?? "")
+                                            text: managerRow.modelData.name
                                             color: Theme.controls.inputText
-                                            font.pixelSize: Theme.gameEditor.platformFontSize
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: managerRow.modelData.proton ? qsTr("Proton") : qsTr("Native")
+                                            color: Theme.controls.descriptionColor
+                                            font.pixelSize: Theme.controls.descriptionFontSize
+                                        }
+                                        ListButton {
+                                            flat: true
+                                            iconPath: Icons.close
+                                            textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                            tip: qsTr("Unlink from this game")
+                                            onClicked: root.setManagerLinked(managerRow.modelData.id, false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            id: imagesPage
+                            visible: root.pageShown(1)
+                            Layout.fillWidth: true
+                            Layout.fillHeight: false // as tall as its cards; layouts fill by default
+                            Layout.alignment: Qt.AlignTop
+                            spacing: Theme.gameEditor.cardSpacing
+
+                            Card {
+                                title: qsTr("Images")
+                                actions: TextAction {
+                                    text: qsTr("Browse SteamGridDB")
+                                    iconPath: Icons.image
+                                    clickable: Metadata.hasSteamGridDbKey
+                                    tip: qsTr("Pick a hero, cover, logo and icon from SteamGridDB and download them together")
+                                    disabledTip: qsTr("Add your SteamGridDB key in Settings → Metadata")
+                                    onClicked: root.chooseArt()
+                                }
+
+                                ArtEditor {
+                                    id: artEditor
+                                    Layout.fillWidth: true
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    visible: !root.adding
+                                    text: qsTr("Right-click the logo on the game's page to resize or move it.")
+                                    color: Theme.gameEditor.hintColor
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Card {
+                                title: qsTr("Media folders")
+                                visible: root.mediaGame
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Theme.layout.spacing
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: Theme.controls.inputHeight
+                                        radius: Theme.controls.inputRadius
+                                        color: Theme.controls.inputBackground
+                                        border.color: Theme.controls.inputBorder
+                                        border.width: Theme.controls.inputBorderWidth
+
+                                        Label {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 10
+                                            anchors.rightMargin: 10
+                                            verticalAlignment: Text.AlignVCenter
+                                            readonly property int count: root.mediaFoldersShown.length
+                                            readonly property string folders: count === 1 ? qsTr("1 folder")
+                                                                                          : qsTr("%1 folders").arg(count)
+                                            text: root.onSteam ? (count === 0 ? qsTr("Steam's") : qsTr("Steam's + %1").arg(folders))
+                                                               : (count === 0 ? qsTr("None") : folders)
+                                            color: Theme.controls.inputText
+                                            font.pixelSize: Theme.gameEditor.pathFontSize
                                             elide: Text.ElideRight
                                         }
                                     }
-                                    SettingsComboBox {
-                                        id: platformBox
-                                        visible: root.adding && root.pick.platforms.length !== 1
-                                        Layout.fillWidth: true
-                                        model: root.platformChoices.map(c => c.name)
-                                        displayText: currentIndex < 0 ? qsTr("Choose a platform") : currentText
-                                        onActivated: {
-                                            error.text = ""
-                                            emulatorBox.currentIndex = 0
-                                        }
-                                    }
-                                }
-
-                                Field {
-                                    visible: root.romGame
-                                    Layout.alignment: Qt.AlignTop
-                                    label: qsTr("ROM")
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.controls.inputHeight
-                                        spacing: Theme.layout.spacing
-
-                                        PathField {
-                                            onCopied: root.message(qsTr("Copied"))
-                                            Layout.fillWidth: true
-                                            path: root.romShown
-                                            missingText: qsTr("ROM not found")
-                                            missingColor: Theme.gameEditor.warningColor
-                                            fontSize: Theme.gameEditor.pathFontSize
-                                        }
-                                        SettingsButton {
-                                            visible: !root.adding && ((root.game.romKey ?? false) || root.locating)
-                                            text: root.locating ? qsTr("Locate") : qsTr("Change")
-                                            onClicked: romPicker.active = true
-                                        }
-                                    }
-                                }
-
-                                Field {
-                                    visible: !root.romGame
-                                    Layout.alignment: Qt.AlignTop
-                                    label: qsTr("Install location")
-                                    help: root.programGame
-                                          ? qsTr("The game's whole folder, with the program somewhere inside. Open folder "
-                                                 + "opens it, and the game's size is this folder's.")
-                                          : qsTr("Where Steam installed the game.")
-
-                                    PathField {
-                                        id: installField
-                                        onCopied: root.message(qsTr("Copied"))
-                                        Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.controls.inputHeight
-                                        path: root.newInstallDir !== "" ? root.newInstallDir : (root.game.installPath ?? "")
-                                        missingText: root.programGame ? qsTr("Not set") : qsTr("Not installed")
-                                        missingColor: Theme.gameEditor.hintColor
-                                        fontSize: Theme.gameEditor.pathFontSize
-
-                                        SettingsButton {
-                                            visible: !root.adding && installField.path !== "" && root.newInstallDir === ""
-                                            iconPath: Icons.folder
-                                            tip: qsTr("Open the install folder")
-                                            onClicked: root.openFolder()
-                                        }
-                                        SettingsButton {
-                                            visible: root.programGame
-                                            iconPath: Icons.editLine
-                                            tip: qsTr("Change the install folder")
-                                            onClicked: folderPicker.pickFor("install")
-                                        }
-                                    }
-                                }
-                            }
-
-                            Field {
-                                visible: root.programGame
-                                label: qsTr("Program")
-                                help: root.linuxGame
-                                      ? qsTr("The program or script the launcher runs, with the launch options below. "
-                                             + "It counts as running until every process it started has ended.")
-                                      : qsTr("The .exe Steam runs, the target of the game's shortcut in Steam. Changing it "
-                                             + "here changes the shortcut, and the other way around.")
-
-                                PathField {
-                                    onCopied: root.message(qsTr("Copied"))
-                                    Layout.fillWidth: true
-                                    Layout.minimumHeight: Theme.controls.inputHeight
-                                    path: root.exeShown
-                                    missingText: qsTr("Not set")
-                                    missingColor: Theme.gameEditor.warningColor
-                                    fontSize: Theme.gameEditor.pathFontSize
-
                                     SettingsButton {
-                                        visible: !root.adding
-                                        readonly property bool locating: root.newExe === ""
-                                            && ((root.game.gameNotFound ?? false) || (root.game.uninstalled ?? false))
-                                        text: locating ? qsTr("Locate") : ""
-                                        iconPath: locating ? "" : Icons.editLine
-                                        tip: locating ? "" : qsTr("Change the program")
-                                        onClicked: exePicker.active = true
-                                    }
-                                }
-                                Hint {
-                                    open: root.newExe === "" && (root.game.gameNotFound ?? false)
-                                    color: Theme.gameEditor.warningColor
-                                    text: root.linuxGame
-                                          ? qsTr("Game not found: there's no program there, or it isn't executable. "
-                                                 + "Locate it if the game moved; picking it makes it executable.")
-                                          : qsTr("Game not found: there's no program there, so Steam can't start it. "
-                                                 + "Locate it if the game moved.")
-                                }
-                                Hint {
-                                    open: root.newExe === "" && (root.game.uninstalled ?? false)
-                                    text: root.linuxGame
-                                          ? qsTr("Uninstalled: its files were deleted. Locating the program brings it "
-                                                 + "back, with the same play time.")
-                                          : qsTr("Uninstalled: it has no shortcut in Steam. Locating the program adds one "
-                                                 + "again, with the same prefix and play time.")
-                                }
-                                SettingsCheckBox {
-                                    id: makeExecutableBox
-                                    visible: root.addingLinux && !(root.pick.executable ?? true)
-                                    text: qsTr("Make it executable")
-                                    ToolTip.visible: hovered
-                                    ToolTip.delay: Theme.tooltip.delay
-                                    ToolTip.text: qsTr("It isn't marked as a program yet (chmod +x); without that, "
-                                                       + "it can't be launched")
-                                }
-                                TextAction {
-                                    visible: root.startDirShown === ""
-                                    text: qsTr("Start in another folder")
-                                    iconPath: Icons.folder
-                                    tip: root.linuxGame ? qsTr("The folder the program starts in: by default, its own")
-                                                        : qsTr("Steam's \"Start in\": by default, the program's own folder")
-                                    onClicked: folderPicker.pickFor("start")
-                                }
-                            }
-                            Field {
-                                visible: root.programGame && root.startDirShown !== ""
-                                label: qsTr("Start in")
-
-                                PathField {
-                                    onCopied: root.message(qsTr("Copied"))
-                                    Layout.fillWidth: true
-                                    Layout.minimumHeight: Theme.controls.inputHeight
-                                    path: root.startDirShown
-                                    fontSize: Theme.gameEditor.pathFontSize
-
-                                    SettingsButton {
+                                        id: mediaEdit
                                         iconPath: Icons.editLine
-                                        tip: qsTr("Change the start folder")
-                                        onClicked: folderPicker.pickFor("start")
-                                    }
-                                    SettingsButton {
-                                        iconPath: Icons.close
-                                        tip: qsTr("Start in the program's own folder")
-                                        onClicked: {
-                                            root.newStartDir = ""
-                                            root.startDirCleared = true
-                                        }
-                                    }
-                                }
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Theme.gameEditor.columnSpacing / 2
-                                visible: !root.adding
+                                        tip: qsTr("Choose the media folders")
+                                        onClicked: mediaMenu.opened ? mediaMenu.close() : mediaMenu.open()
 
-                                Field {
-                                    Layout.preferredWidth: 1
-                                    Layout.alignment: Qt.AlignTop
-                                    label: qsTr("Prefix folder")
-                                    help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
-                                               + "the ROM for an emulator that saves there, the emulator's save folder, or the "
-                                               + "game's Proton prefix.")
+                                        Popup {
+                                            id: mediaMenu
 
-                                    PathField {
-                                        onCopied: root.message(qsTr("Copied"))
-                                        Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.controls.inputHeight
-                                        path: root.saveFolderShown !== "" ? root.saveFolderShown : root.foundSaveFolder
-                                        missingText: qsTr("None found")
-                                        missingColor: Theme.gameEditor.hintColor
-                                        fontSize: Theme.gameEditor.pathFontSize
+                                            x: mediaEdit.width - width
+                                            y: mediaEdit.height + 4
+                                            width: Theme.gameEditor.mediaPopupWidth
+                                            padding: Theme.menu.padding
+                                            property real pop: 1
+                                            property real slide: 0
+                                            scale: pop
+                                            transformOrigin: Popup.TopRight
+                                            // Pressing the button must not close it before the click toggles it, or the click reopens it.
+                                            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                                            enter: MenuPopEnter {}
+                                            exit: MenuPopExit {}
 
-                                        SettingsButton {
-                                            iconPath: Icons.editLine
-                                            tip: qsTr("Choose the save folder")
-                                            onClicked: folderPicker.pickFor("saves")
-                                        }
-                                        SettingsButton {
-                                            visible: root.saveFolderShown !== ""
-                                            iconPath: Icons.close
-                                            tip: qsTr("Look for the save folder")
-                                            onClicked: {
-                                                root.newSaveFolder = ""
-                                                root.saveFolderCleared = true
+                                            // Faded as separate items, the rows would show over what's behind the
+                                            // see-through panel, so it closes as one flattened image.
+                                            function flatten(on) {
+                                                const popupItem = background?.parent
+                                                if (popupItem) {
+                                                    popupItem.layer.smooth = true
+                                                    popupItem.layer.enabled = on
+                                                }
+                                            }
+                                            onAboutToShow: flatten(false)
+                                            onAboutToHide: flatten(true)
+                                            onClosed: flatten(false)
+
+                                            background: Rectangle {
+                                                transform: Translate { y: mediaMenu.slide }
+                                                radius: Theme.controls.inputRadius
+                                                color: Theme.menu.popupBackground
+                                                border.color: Theme.controls.inputBorder
+                                                border.width: Math.max(1, Theme.controls.inputBorderWidth)
+                                            }
+                                            contentItem: ColumnLayout {
+                                                transform: Translate { y: mediaMenu.slide }
+                                                spacing: 0
+
+                                                MediaFolderRow {
+                                                    visible: root.onSteam
+                                                    steam: true
+                                                    exists: true
+                                                    onOpenClicked: {
+                                                        if (!Library.showSteamMediaFolder(root.game.id))
+                                                            root.message(qsTr("Steam's folder isn't found"))
+                                                    }
+                                                }
+                                                Repeater {
+                                                    model: root.mediaFoldersShown
+
+                                                    MediaFolderRow {
+                                                        required property string modelData
+                                                        path: modelData
+                                                        exists: GameRunner.folderExists(modelData)
+                                                        onOpenClicked: {
+                                                            const e = GameRunner.openPath(modelData)
+                                                            if (e !== "")
+                                                                root.message(e)
+                                                        }
+                                                        onRemoveClicked: root.newMediaFolders =
+                                                            root.mediaFoldersShown.filter(f => f !== modelData)
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true
+                                                    Layout.topMargin: Theme.menu.padding
+                                                    Layout.bottomMargin: Theme.menu.padding
+                                                    implicitHeight: 1
+                                                    color: Theme.settingsWindow.rowDivider
+                                                }
+                                                AbstractButton {
+                                                    id: addFolder
+                                                    Layout.fillWidth: true
+                                                    implicitHeight: Theme.menu.itemHeight
+                                                    hoverEnabled: true
+                                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                                    onClicked: folderPicker.pickFor("media")
+                                                    background: Rectangle {
+                                                        radius: Theme.menu.itemRadius
+                                                        color: addFolder.hovered ? Theme.controls.hover
+                                                                                 : Qt.alpha(Theme.controls.hover, 0)
+                                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                                    }
+                                                    contentItem: RowLayout {
+                                                        spacing: Theme.controls.controlSpacing
+
+                                                        Item { Layout.preferredWidth: 8 }
+                                                        Icon {
+                                                            path: Icons.add
+                                                            size: Theme.controls.iconSize
+                                                            color: Theme.palette.text
+                                                        }
+                                                        Label {
+                                                            Layout.fillWidth: true
+                                                            text: qsTr("Add folder")
+                                                            color: Theme.palette.text
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                                Field {
-                                    visible: root.mediaGame
-                                    Layout.preferredWidth: 1
-                                    Layout.alignment: Qt.AlignTop
-                                    label: qsTr("Media folders")
-                                    help: root.onSteam
+                                Hint {
+                                    text: root.onSteam
                                           ? qsTr("Pictures and videos shown in the game's Media row and the Gallery: Steam's own "
                                                  + "clips and screenshots, plus every picture and video in the folders you add "
                                                  + "(OBS recordings, a screenshot tool's folder) and their subfolders.")
                                           : qsTr("Pictures and videos shown in the game's Media row and the Gallery: every "
                                                  + "picture and video in the folders you add (OBS recordings, a screenshot "
                                                  + "tool's folder) and their subfolders.")
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Theme.layout.spacing
-
-                                        Rectangle {
-                                            Layout.fillWidth: true
-                                            implicitHeight: Theme.controls.inputHeight
-                                            radius: Theme.controls.inputRadius
-                                            color: Theme.controls.inputBackground
-                                            border.color: Theme.controls.inputBorder
-                                            border.width: Theme.controls.inputBorderWidth
-
-                                            Label {
-                                                anchors.fill: parent
-                                                anchors.leftMargin: 10
-                                                anchors.rightMargin: 10
-                                                verticalAlignment: Text.AlignVCenter
-                                                readonly property int count: root.mediaFoldersShown.length
-                                                readonly property string folders: count === 1 ? qsTr("1 folder")
-                                                                                              : qsTr("%1 folders").arg(count)
-                                                text: root.onSteam ? (count === 0 ? qsTr("Steam's") : qsTr("Steam's + %1").arg(folders))
-                                                                   : (count === 0 ? qsTr("None") : folders)
-                                                color: Theme.controls.inputText
-                                                font.pixelSize: Theme.gameEditor.pathFontSize
-                                                elide: Text.ElideRight
-                                            }
-                                        }
-                                        SettingsButton {
-                                            id: mediaEdit
-                                            iconPath: Icons.editLine
-                                            tip: qsTr("Choose the media folders")
-                                            onClicked: mediaMenu.opened ? mediaMenu.close() : mediaMenu.open()
-
-                                            Popup {
-                                                id: mediaMenu
-
-                                                x: mediaEdit.width - width
-                                                y: mediaEdit.height + 4
-                                                width: Theme.gameEditor.mediaPopupWidth
-                                                padding: Theme.menu.padding
-                                                property real pop: 1
-                                                property real slide: 0
-                                                scale: pop
-                                                transformOrigin: Popup.TopRight
-                                                // Pressing the button must not close it before the click toggles it, or the click reopens it.
-                                                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
-                                                enter: MenuPopEnter {}
-                                                exit: MenuPopExit {}
-
-                                                // Faded as separate items, the rows would show over what's behind the
-                                                // see-through panel, so it closes as one flattened image.
-                                                function flatten(on) {
-                                                    const popupItem = background?.parent
-                                                    if (popupItem) {
-                                                        popupItem.layer.smooth = true
-                                                        popupItem.layer.enabled = on
-                                                    }
-                                                }
-                                                onAboutToShow: flatten(false)
-                                                onAboutToHide: flatten(true)
-                                                onClosed: flatten(false)
-
-                                                background: Rectangle {
-                                                    transform: Translate { y: mediaMenu.slide }
-                                                    radius: Theme.controls.inputRadius
-                                                    color: Theme.menu.popupBackground
-                                                    border.color: Theme.controls.inputBorder
-                                                    border.width: Math.max(1, Theme.controls.inputBorderWidth)
-                                                }
-                                                contentItem: ColumnLayout {
-                                                    transform: Translate { y: mediaMenu.slide }
-                                                    spacing: 0
-
-                                                    MediaFolderRow {
-                                                        visible: root.onSteam
-                                                        steam: true
-                                                        exists: true
-                                                        onOpenClicked: {
-                                                            if (!Library.showSteamMediaFolder(root.game.id))
-                                                                root.message(qsTr("Steam's folder isn't found"))
-                                                        }
-                                                    }
-                                                    Repeater {
-                                                        model: root.mediaFoldersShown
-
-                                                        MediaFolderRow {
-                                                            required property string modelData
-                                                            path: modelData
-                                                            exists: GameRunner.folderExists(modelData)
-                                                            onOpenClicked: {
-                                                                const e = GameRunner.openPath(modelData)
-                                                                if (e !== "")
-                                                                    root.message(e)
-                                                            }
-                                                            onRemoveClicked: root.newMediaFolders =
-                                                                root.mediaFoldersShown.filter(f => f !== modelData)
-                                                        }
-                                                    }
-                                                    Rectangle {
-                                                        Layout.fillWidth: true
-                                                        Layout.topMargin: Theme.menu.padding
-                                                        Layout.bottomMargin: Theme.menu.padding
-                                                        implicitHeight: 1
-                                                        color: Theme.settingsWindow.rowDivider
-                                                    }
-                                                    AbstractButton {
-                                                        id: addFolder
-                                                        Layout.fillWidth: true
-                                                        implicitHeight: Theme.menu.itemHeight
-                                                        hoverEnabled: true
-                                                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                                        onClicked: folderPicker.pickFor("media")
-                                                        background: Rectangle {
-                                                            radius: Theme.menu.itemRadius
-                                                            color: addFolder.hovered ? Theme.controls.hover
-                                                                                     : Qt.alpha(Theme.controls.hover, 0)
-                                                            Behavior on color { enabled: Motion.fades; MotionColor {} }
-                                                        }
-                                                        contentItem: RowLayout {
-                                                            spacing: Theme.controls.controlSpacing
-
-                                                            Item { Layout.preferredWidth: 8 }
-                                                            Icon {
-                                                                path: Icons.add
-                                                                size: Theme.controls.iconSize
-                                                                color: Theme.palette.text
-                                                            }
-                                                            Label {
-                                                                Layout.fillWidth: true
-                                                                text: qsTr("Add folder")
-                                                                color: Theme.palette.text
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
                                 }
-                            }
-                            Hint {
-                                open: !root.adding && root.saveFolderShown === "" && root.foundSaveFolder !== ""
-                                text: qsTr("Save folder found for you. Choose another folder to open that one instead.")
-                            }
-                            Hint {
-                                open: root.adding && root.pick.platforms.length === 0
-                                text: qsTr("None of your platforms' emulators run %1 files. They take:")
-                                          .arg(root.pick.fileName?.includes(".") ? "." + root.pick.fileName.split(".").pop()
-                                                                                   : root.pick.fileName ?? "")
-                                      + root.platformChoices.map(c => "\n" + c.name + ": " + c.takes).join("")
-                            }
-                            Hint {
-                                open: root.newRomOwner !== null
-                                text: qsTr("This file is also %1 in your library. Saving merges it into this game: its play "
-                                           + "time, favorite, tags and missing art come over, and it's removed.")
-                                          .arg(root.newRomOwner?.title ?? "")
-                            }
-                        }
-
-                        Card {
-                            title: qsTr("Saves")
-                            visible: root.backupGame
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Theme.layout.spacing
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 0
-
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: root.backups.length > 0 ? qsTr("Last backup %1").arg(root.backups[0].when.toLowerCase())
-                                                                      : qsTr("No backups yet")
-                                        color: Theme.gameEditor.headingColor
-                                        font.weight: Theme.font.strongWeight
-                                        elide: Text.ElideRight
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: GameSaves.working ? qsTr("Backing up")
-                                            : GameSaves.message !== "" ? GameSaves.message
-                                            : root.backups.length > 0 ? qsTr("%n backup(s), %1", "", root.backups.length).arg(root.backups[0].size)
-                                            : qsTr("Made when the game closes, or with Back up now.")
-                                        color: Theme.gameEditor.hintColor
-                                        font.pixelSize: Theme.gameEditor.hintFontSize
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                                SettingsButton {
-                                    text: qsTr("Manage backups")
-                                    flat: true
-                                    onClicked: root.openSaves()
-                                }
-                                SettingsButton {
-                                    text: qsTr("Back up now")
-                                    primary: true
-                                    enabled: (root.saves.paths ?? []).length > 0 && !GameSaves.working
-                                    onClicked: GameSaves.backUpNow(root.game.id)
-                                }
-                            }
-                            Field {
-                                visible: (root.saves.paths ?? []).length > 0
-                                label: (root.saves.paths ?? []).length > 1 ? qsTr("Save files") : qsTr("Save folder")
-                                help: qsTr("What a backup takes now, found from the Ludusavi manifest or from the folder in Platform and install.")
-
-                                Repeater {
-                                    model: (root.saves.paths ?? []).slice(0, 3)
-
-                                    PathField {
-                                        required property string modelData
-                                        Layout.fillWidth: true
-                                        Layout.minimumHeight: Theme.controls.inputHeight
-                                        path: modelData.startsWith("~/") ? root.homePath + modelData.slice(1) : modelData
-                                        fontSize: Theme.gameEditor.pathFontSize
-                                        onCopied: root.message(qsTr("Copied"))
-                                    }
-                                }
-                                Hint {
-                                    open: (root.saves.paths ?? []).length > 3
-                                    text: qsTr("and %n more", "", (root.saves.paths ?? []).length - 3)
-                                }
-                            }
-                            Field {
-                                label: qsTr("Back up saves when it closes")
-                                help: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
-                                           + "backed up to the folder in Settings, Library, Game saves.")
-
-                                SettingsComboBox {
-                                    id: autoBackupBox
-                                    Layout.fillWidth: true
-                                    model: [qsTr("Platform default (%1)").arg(root.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
-                                            qsTr("On"), qsTr("Off")]
-                                }
-                            }
-                        }
-
-                        Card {
-                            title: qsTr("Launch")
-                            visible: root.romGame
-
-                            Field {
-                                label: qsTr("Emulator")
-
-                                SettingsComboBox {
-                                    id: emulatorBox
-                                    Layout.fillWidth: true
-                                    model: [qsTr("Platform default (%1)").arg(root.emulators.defaultEmulator || qsTr("none"))]
-                                           .concat(root.emulators.choices.map(c => c.installed ? c.name
-                                                                                               : qsTr("%1 (not installed)").arg(c.name)))
-                                }
-                                Hint {
-                                    readonly property string before: root.emulators.choices.find(c => c.id === root.game.emulator)?.name
-                                                                     ?? root.emulators.defaultEmulator
-                                    readonly property string after: root.emulator?.name ?? root.emulators.defaultEmulator
-                                    open: (root.game.playMinutes ?? 0) > 0 && before !== after
-                                    color: Theme.gameEditor.warningColor
-                                    text: qsTr("Saves stay in each emulator's own folders; your progress in %1 won't be in %2.")
-                                              .arg(before).arg(after)
-                                }
-                            }
-
-                            Field {
-                                label: qsTr("Launch arguments")
-
-                                SettingsTextField {
-                                    id: argsField
-                                    Layout.fillWidth: true
-                                    placeholderText: qsTr("None")
-                                    onAccepted: root.save()
-                                }
-                                Hint {
-                                    readonly property var shown: root.emulator ?? root.emulators.choices.find(
-                                                                     c => c.name === root.emulators.defaultEmulator) ?? null
-                                    open: shown !== null
-                                    text: shown === null ? ""
-                                        : shown.args.length > 0 ? qsTr("Added after %1's own: %2").arg(shown.name).arg(Args.join(shown.args))
-                                        : qsTr("%1 has no arguments of its own").arg(shown.name)
-                                }
-                            }
-                        }
-
-                        Card {
-                            title: qsTr("Launch")
-                            visible: !root.romGame
-
-                            Field {
-                                visible: root.onSteam
-                                label: qsTr("Proton version")
-                                help: root.protonGame
-                                      ? qsTr("The compatibility tool Steam runs the program with, as in its Properties. "
-                                             + "None for a Linux program.")
-                                      : qsTr("The compatibility tool that runs the game, as in Steam's Properties.")
-
-                                SettingsComboBox {
-                                    id: protonBox
-                                    Layout.fillWidth: true
-                                    model: root.protonChoices.map(c => c.displayName)
-                                }
-                            }
-
-                            Field {
-                                visible: (root.game.steamPresets ?? []).length > 0
-                                label: qsTr("Presets")
-
-                                Flow {
-                                    Layout.fillWidth: true
-                                    spacing: Theme.gameEditor.presetSpacing
-
-                                    Repeater {
-                                        model: root.game.steamPresets ?? []
-
-                                        SettingsCheckBox {
-                                            id: presetBox
-                                            required property var modelData
-                                            text: modelData.name
-                                            checked: Library.steamPresetOn(launchOptionsField.text, modelData.id)
-                                            ToolTip.visible: hovered
-                                            ToolTip.delay: Theme.tooltip.delay
-                                            ToolTip.text: qsTr("Adds %1").arg(modelData.adds)
-                                            onToggled: {
-                                                launchOptionsField.text = Library.setSteamPreset(launchOptionsField.text,
-                                                                                                 modelData.id, checked)
-                                                // Clicking broke the binding; the text says what's on.
-                                                checked = Qt.binding(() => Library.steamPresetOn(launchOptionsField.text,
-                                                                                                 presetBox.modelData.id))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Field {
-                                label: qsTr("Launch options")
-
-                                SettingsTextField {
-                                    id: launchOptionsField
-                                    Layout.fillWidth: true
-                                    placeholderText: qsTr("None")
-                                    onAccepted: root.save()
-                                }
-                                Hint {
-                                    text: root.linuxGame
-                                          ? qsTr("Written like Steam's: variables, then a wrapper before %command%, "
-                                                 + "arguments after it, e.g. mangohud %command% --fullscreen")
-                                          : qsTr("Same as Steam's launch options, e.g. mangohud %command%")
-                                }
-                            }
-
-                            Unfold {
-                                open: root.onSteam && (root.adding ? root.steamRunning
-                                                                   : root.steamPending || (root.steamEdited && root.steamRunning))
-                                visible: open || progress > 0
-                                Layout.fillWidth: true
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Theme.layout.spacing
-
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: root.adding ? qsTr("Steam is running: the game is added to it when it closes")
-                                            : root.steamEdited ? qsTr("Steam is running: saving applies this when it closes")
-                                            : root.shortcutQueued ? qsTr("Waiting for Steam to close to add this game to it")
-                                            : qsTr("Waiting for Steam to close to apply this")
-                                        color: Theme.gameEditor.pendingColor
-                                        font.pixelSize: Theme.gameEditor.hintFontSize
-                                        wrapMode: Text.WordWrap
-                                    }
-                                    SettingsButton {
-                                        text: GameRunner.closingSteam ? qsTr("Closing Steam") : qsTr("Close Steam and apply")
-                                        enabled: !GameRunner.closingSteam
-                                        tip: qsTr("Saves, closes Steam, writes the changes and starts Steam again")
-                                        onClicked: root.closeSteamAndApply()
-                                    }
-                                }
-                            }
-                        }
-
-                        Card {
-                            title: qsTr("Mod managers")
-                            visible: root.managerGame
-                            actions: Row {
-                                spacing: Theme.layout.spacing
-
-                                TextAction {
-                                    id: linkAction
-                                    visible: root.unlinkedManagers.length > 0
-                                    text: qsTr("Link")
-                                    iconPath: Icons.link
-                                    tip: qsTr("Link a mod manager you already added")
-                                    onClicked: managerMenu.popup(linkAction, 0, linkAction.height)
-                                }
-                                TextAction {
-                                    text: qsTr("Add")
-                                    iconPath: Icons.add
-                                    tip: qsTr("Add a mod manager for this game")
-                                    onClicked: root.addModManagerRequested(root.game.id)
-                                }
-                            }
-
-                            Label {
-                                visible: root.linkedManagers.length === 0
-                                Layout.fillWidth: true
-                                text: qsTr("No mod manager is linked to this game.")
-                                color: Theme.gameEditor.hintColor
-                                wrapMode: Text.WordWrap
-                            }
-                            Repeater {
-                                model: root.linkedManagers
-
-                                RowLayout {
-                                    id: managerRow
-                                    required property var modelData
-                                    Layout.fillWidth: true
-                                    spacing: Theme.controls.controlSpacing
-
-                                    Icon {
-                                        path: Icons.puzzle
-                                        size: Theme.controls.iconSize
-                                        color: Theme.controls.inputText
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: managerRow.modelData.name
-                                        color: Theme.controls.inputText
-                                        elide: Text.ElideRight
-                                    }
-                                    Label {
-                                        text: managerRow.modelData.proton ? qsTr("Proton") : qsTr("Native")
-                                        color: Theme.controls.descriptionColor
-                                        font.pixelSize: Theme.controls.descriptionFontSize
-                                    }
-                                    ListButton {
-                                        flat: true
-                                        iconPath: Icons.close
-                                        textColor: hovered ? foreground : Theme.controls.descriptionColor
-                                        tip: qsTr("Unlink from this game")
-                                        onClicked: root.setManagerLinked(managerRow.modelData.id, false)
-                                    }
-                                }
-                            }
-                        }
-
-                        Card {
-                            title: qsTr("Images")
-                            actions: TextAction {
-                                text: qsTr("Browse SteamGridDB")
-                                iconPath: Icons.image
-                                clickable: Metadata.hasSteamGridDbKey
-                                tip: qsTr("Pick a hero, cover, logo and icon from SteamGridDB and download them together")
-                                disabledTip: qsTr("Add your SteamGridDB key in Settings → Metadata")
-                                onClicked: root.chooseArt()
-                            }
-
-                            ArtEditor {
-                                id: artEditor
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                visible: !root.adding
-                                text: qsTr("Right-click the logo on the game's page to resize or move it.")
-                                color: Theme.gameEditor.hintColor
-                                wrapMode: Text.WordWrap
                             }
                         }
                     }

@@ -414,14 +414,16 @@ ApplicationWindow {
         }
     }
 
-    function editGame(id) {
+    function editGame(id, tab) {
         editorLoader.active = true
-        editorLoader.item.openFor(id)
+        editorLoader.item.openFor(id, tab)
     }
 
-    function selectAndEdit(id) {
+    // The screenshot hook's "<game id>[/general|images|launch|saves]".
+    function selectAndEdit(spec) {
+        const [id, tab] = spec.split("/")
         gameList.selectGame(id)
-        editGame(id)
+        editGame(id, Math.max(0, ["general", "images", "launch", "saves"].indexOf(tab)))
     }
 
     function addGame() {
