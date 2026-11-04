@@ -23,7 +23,8 @@ QStringList orderedRailButtons(const QStringList &order)
 const QStringList &toolbarButtons()
 {
     static const QStringList buttons = {QStringLiteral("add_game"), QStringLiteral("play_statistics"),
-                                        QStringLiteral("gallery"), QStringLiteral("open_settings")};
+                                        QStringLiteral("gallery"), QStringLiteral("open_settings"),
+                                        QStringLiteral("steam_friends")};
     return buttons;
 }
 

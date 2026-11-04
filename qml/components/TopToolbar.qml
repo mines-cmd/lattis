@@ -11,12 +11,19 @@ Rectangle {
     signal triggered(string name)
     signal message(string text)
 
-    readonly property var known: ({
+    // Not before the first frame: the friends button reads Steam's files once it exists.
+    property bool started: false
+    readonly property bool steamFound: Library.steam.found === true
+
+    readonly property var fixedButtons: ({
         add_game: { icon: Icons.add, tip: qsTr("Add game"), action: "add_game" },
         play_statistics: { icon: Icons.barChartFill, tip: qsTr("Play statistics"), action: "play_statistics" },
         gallery: { icon: Icons.image, checkedIcon: Icons.imageFill, tip: qsTr("Gallery"), action: "gallery" },
         open_settings: { icon: Icons.gear, tip: qsTr("Settings"), action: "open_settings" }
     })
+    readonly property var known: steamFound
+        ? Object.assign({}, fixedButtons, { steam_friends: { icon: Icons.users, tip: qsTr("Steam friends"), friends: true } })
+        : fixedButtons
     readonly property var buttons: General.toolbar
         ? General.toolbarButtonOrder.filter(b => known[b] !== undefined && !General.toolbarHiddenButtons.includes(b)) : []
 
@@ -124,6 +131,18 @@ Rectangle {
         popup.popup(root, x, y)
     }
 
+    function openStatusMenu(button) {
+        statusMenu.active = true
+        const popup = statusMenu.item
+        if (popup.visible) {
+            popup.close()
+            return
+        }
+        if (Date.now() - statusMenu.closedAt < 200)
+            return
+        popup.popup(button, 0, button.height)
+    }
+
     visible: buttons.length > 0
     implicitWidth: row.implicitWidth + 2 * Theme.toolbar.padding
     implicitHeight: row.implicitHeight + 2 * Theme.toolbar.padding
@@ -214,8 +233,21 @@ Rectangle {
                     Behavior on x { enabled: Motion.on && button.ready && !(button.dragged && !root.dragSettling); MotionSpring {} }
                 }
 
+                Loader {
+                    id: face
+                    anchors.centerIn: parent
+                    active: button.info.friends === true && root.started
+                    source: "SteamFriendsFace.qml"
+                }
+                Binding {
+                    target: face.item
+                    property: "hovered"
+                    value: mouse.containsMouse
+                }
+
                 Icon {
                     anchors.centerIn: parent
+                    visible: !face.item
                     size: Theme.toolbar.iconSize
                     color: button.checked ? Theme.toolbar.checkedIcon : Theme.toolbar.icon
                     path: button.checked && button.info.checkedIcon ? button.info.checkedIcon : button.info.icon
@@ -265,14 +297,20 @@ Rectangle {
                             root.endDrag(false)
                     }
                     onClicked: {
-                        if (!suppressClick)
+                        if (suppressClick)
+                            return
+                        if (button.info.friends)
+                            root.openStatusMenu(button)
+                        else
                             root.triggered(button.info.action)
                     }
                 }
 
                 ToolTip.visible: mouse.containsMouse && !mouse.dragging && !root.dragging
+                    && !(button.info.friends && statusMenu.item?.visible)
                 ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: Actions.tip(button.info.tip, Actions.keys[button.info.action] ?? [])
+                ToolTip.text: button.info.friends ? (face.item?.text ?? button.info.tip)
+                                                  : Actions.tip(button.info.tip, Actions.keys[button.info.action] ?? [])
             }
         }
     }
@@ -291,6 +329,18 @@ Rectangle {
     Connections {
         target: menu.item
         function onClosed() { menu.closedAt = Date.now() }
+        function onMessage(text) { root.message(text) }
+    }
+
+    Loader {
+        id: statusMenu
+        property double closedAt: 0
+        active: false
+        source: "SteamStatusMenu.qml"
+    }
+    Connections {
+        target: statusMenu.item
+        function onClosed() { statusMenu.closedAt = Date.now() }
         function onMessage(text) { root.message(text) }
     }
 }

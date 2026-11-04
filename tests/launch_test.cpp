@@ -162,6 +162,7 @@ private slots:
     void linuxGameRefused();
     void linuxGamePage();
     void steamGames();
+    void openSteamUrl();
     void steamUpdates();
     void downloadBar();
     void steamGameRunning();
@@ -1161,6 +1162,16 @@ void LaunchTest::steamGames()
     m_library->setInstalledOnly(false);
     const QVariantMap elden = m_library->gameAt(m_library->rowOfGame(QStringLiteral("steam-1245620")));
     QCOMPARE(elden.value("launchTip").toString(), QStringLiteral("Install through Steam; it asks where"));
+}
+
+void LaunchTest::openSteamUrl()
+{
+    openLibrary();
+    const QString steamLog = fakeDir() + "/steam.txt";
+    QCOMPARE(m_runner->openSteamUrl(QStringLiteral("steam://friends/status/away")), QString());
+    QCOMPARE(m_runner->openSteamUrl(QStringLiteral("steam://open/friends")), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(steamLog),
+                              QByteArray("--prefix steam://friends/status/away\n--prefix steam://open/friends\n"), 5000);
 }
 
 void LaunchTest::steamUpdates()

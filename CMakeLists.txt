@@ -125,6 +125,8 @@ qt_add_qml_module(lattis
         qml/components/KeyedListModel.qml
         qml/components/MenuCheckRow.qml
         qml/components/ToolbarMenu.qml
+        qml/components/SteamFriendsFace.qml
+        qml/components/SteamStatusMenu.qml
         qml/components/TagPalettePopup.qml
         qml/components/Toast.qml
         qml/components/AboutContent.qml
@@ -384,6 +386,7 @@ qt_add_qml_module(lattis
         src/steam/steampresets.h src/steam/steampresets.cpp
         src/steam/steamscan.h src/steam/steamscan.cpp
         src/steam/steamdownloads.h src/steam/steamdownloads.cpp
+        src/steam/steamstatus.h src/steam/steamstatus.cpp
         src/steam/binaryvdf.h src/steam/binaryvdf.cpp
         src/steam/steamshortcuts.h src/steam/steamshortcuts.cpp
         src/steam/steamachievements.h src/steam/steamachievements.cpp

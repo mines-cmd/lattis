@@ -51,6 +51,7 @@ QtObject {
     readonly property string upload: "stroke:M4 17 L4 19 C4 20.105 4.895 21 6 21 L18 21 C19.105 21 20 20.105 20 19 L20 17 M7 9 L12 4 L17 9 M12 4 L12 16" // upload
     readonly property string search: "stroke:M3 10 C3 13.866 6.134 17 10 17 C13.866 17 17 13.866 17 10 C17 6.134 13.866 3 10 3 C6.134 3 3 6.134 3 10 Z M21 21 L15 15" // search
     readonly property string filter: "stroke:M4 4 L20 4 L20 6.172 C20 6.702 19.789 7.211 19.414 7.586 L15 12 L15 19 L9 21 L9 12.5 L4.52 7.572 C4.185 7.204 4 6.724 4 6.227 L4 4 Z" // filter
+    readonly property string users: "stroke:M5 7 C5 4.791 6.791 3 9 3 C11.209 3 13 4.791 13 7 C13 9.209 11.209 11 9 11 C6.791 11 5 9.209 5 7 Z M3 21 L3 19 C3 16.791 4.791 15 7 15 L11 15 C13.209 15 15 16.791 15 19 L15 21 M16 3.13 C17.72 3.57 19 5.14 19 7 C19 8.86 17.72 10.43 16 10.88 M21 21 L21 19 C21 17.3 19.8 15.9 18 15.15" // users
     readonly property string image: "stroke:M15 8 L15.01 8 M3 6 C3 4.343 4.343 3 6 3 L18 3 C19.657 3 21 4.343 21 6 L21 18 C21 19.657 19.657 21 18 21 L6 21 C4.343 21 3 19.657 3 18 L3 6 Z M3 16 L8 11 C8.928 10.107 10.072 10.107 11 11 L16 16 M14 14 L15 13 C15.928 12.107 17.072 12.107 18 13 L21 16" // photo
     readonly property string chevronRight: "stroke:M9 6 L15 12 L9 18" // chevron-right
     readonly property string chevronLeft: "stroke:M15 6 L9 12 L15 18" // chevron-left

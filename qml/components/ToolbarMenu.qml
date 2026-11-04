@@ -25,7 +25,8 @@ SettingsMenu {
             text: root.known[modelData].tip
             checked: !General.toolbarHiddenButtons.includes(modelData)
             onToggled: {
-                const shown = General.toolbarButtonOrder.filter(name => !General.toolbarHiddenButtons.includes(name))
+                const shown = General.toolbarButtonOrder.filter(name => root.known[name] !== undefined
+                                                                        && !General.toolbarHiddenButtons.includes(name))
                 // The ticks stay as they were, so turning the toolbar on again brings the last button back.
                 if (checked && shown.length === 1)
                     root.report(General.setToolbar(false))

@@ -29,6 +29,7 @@
 #include "metadata/steamartfetch.h"
 #include "metadata/thumbnailcache.h"
 #include "steam/steamlibrarysync.h"
+#include "steam/steamstatus.h"
 #include "theme/theme.h"
 
 #include <QDir>
@@ -176,6 +177,9 @@ int main(int argc, char *argv[])
             web.secrets = std::make_shared<MemorySecretStore>();
         SteamLibrarySync::setup(web);
     }
+    SteamStatus::setup({[&library] { return library.store().snapshot().steam.install; },
+                        [&runner] { return runner.steamRunning(); },
+                        [&runner](const QString &url) { return runner.openSteamUrl(url); }});
     WindowState windowState(AppPaths::stateDir(), AppPaths::dataDirKey(dataDir));
 
     BulkLookup::setLibrary([&library] { return library.lookupGames(); },

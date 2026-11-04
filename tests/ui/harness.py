@@ -35,7 +35,8 @@ class Dirs:
         self.home = os.path.join(root, "home")
         self.runtime = os.path.join(root, "runtime")
         self.flatpak = os.path.join(root, "flatpak")
-        for path in (self.data, self.home, self.flatpak):
+        self.bin = os.path.join(root, "bin")
+        for path in (self.data, self.home, self.flatpak, self.bin):
             os.makedirs(path)
         os.makedirs(self.runtime, mode=0o700)
 
@@ -71,7 +72,8 @@ def run_app(binary, dirs, script):
     with open(script_path, "w") as f:
         f.write(script)
     env = {
-        "PATH": os.environ.get("PATH", "/usr/bin"),
+        # dirs.bin first: a scenario puts its fake programs (a `steam`) there.
+        "PATH": dirs.bin + os.pathsep + os.environ.get("PATH", "/usr/bin"),
         "QT_QPA_PLATFORM": "offscreen",
         "QT_FORCE_STDERR_LOGGING": "1",
         "LATTIS_DATA": dirs.data,

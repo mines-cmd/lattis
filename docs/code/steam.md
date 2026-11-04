@@ -150,6 +150,17 @@ The text is in Steam's language (`steamLanguage()` reads `language` from `regist
 
 `Library::achievements(gameId)` reads the lists on a worker thread when a Steam game's page is shown and answers with `achievementsReady(id, list)`, in the style of `pageHistory`; nothing is read at startup, cached or watched. A game that isn't Steam's gets an empty list. Once the local list is out, the rarity fetcher (`Library::setRarityFetcher`, wired in `main.cpp` to `MetadataHttp::steamWeb`) asks `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2` (no key needed) and the list is emitted again with a `percent` (0–100) on each achievement the answer names; a failed lookup, or a fixture run, leaves the list as it was. `SteamWebApi::parseAchievementPercentages` reads the answer. The fixtures are in `tests/data/steam/appcache/stats/`, written by `make-fixtures.py` beside them.
 
+## Status
+
+`SteamStatus` (`steamstatus.*`, a QML singleton) reads the user's chosen status from Steam's files and sets it through `steam://` URLs. The status is `ePersonaState` in the JSON string `UserLocalConfigStore` → `WebStorage` → `FriendStoreLocalPrefs_<account id>` of `install.userId`'s `userdata/<id>/config/localconfig.vdf` (no sign-in or network needed). `1` is `online`, `7` `invisible`, and `2`–`6` (`3` is Away; the rest are older clients' or other devices' values) `away`; `0`, anything else, a missing file or key, bad JSON or bad VDF is an empty status (no warning).
+
+- **Reading:** `Vdf::parse` on the whole file, about 1 ms for the 170 KB file Steam keeps, so no string search is needed. The file is read once at `start()`, then after each change.
+- **Watching:** Steam replaces the file on each save (the inode changes), which drops a file watch. The watcher holds the file and its `config` folder, events restart a 200 ms debounce, and every refresh adds back whichever of the two is missing (a file or folder that appeared since, too, with a read). A change of `install.userId` moves the watch to the new account's file.
+- **Picture:** `avatar` is the file URL of `<Steam root>/config/avatarcache/<steamid64>.png` (steamid64 is 76561197960265728 + the account id) with a `?v=<inode>-<mtime>-<size>` query, so QML's image cache loads a replaced file again; empty when the file is missing. Its folder and file are watched like the config file's, and `changed` fires when the URL does. Steam may refresh the file only at its start.
+- **Steam closed:** `running` is the `Source`'s `running()`, and `status` is empty while it is false, as the file keeps the last status. Nothing else signals Steam starting or closing, or a change of account, so a 5 s timer rechecks both (without reading the file unless the path or its watch changed).
+- **Setting:** `setStatus("online"|"away"|"invisible")` and `openFriends()` hand `steam://friends/status/<name>` and `steam://open/friends` to the `Source`'s `open`, which `main.cpp` wires to `GameRunner::openSteamUrl` (`runSteam` with the bare URL: neither opens a window, so no `-silent`; it also starts Steam when closed). `busy` doesn't work in Steam and isn't accepted. They return the error text, or empty. `status` changes only when the file does, never on a call.
+- **Startup:** nothing is created or read before the QML singleton is first used; the toolbar's button (when shown) is the first user, after the first frame.
+
 ## Signing in to Steam
 
 `SteamAuth` signs in to the account through Steam's QR flow, so Lattis never sees the password. It talks to `api.steampowered.com` with its own network access manager; every call is a form POST of `input_json={…}` to `/IAuthenticationService/<method>/v1/`, answered in JSON with the result code in the `x-eresult` header (1 is OK, always HTTP 200).
@@ -212,6 +223,7 @@ The merge is described in [library.md](library.md#the-whole-steam-library).
 | `steamscan.*` | `SteamStamp`, `SteamApp`, `SteamAppConfig`, `CompatTool`, `SteamState`; `SteamScan::scan()`, `isBlocked()`, `valveToolName()` |
 | `steamupdate.h` | `SteamUpdate` (`None`, `Waiting`, `Downloading`, `Paused`) |
 | `steamdownloads.*` | `SteamDownloads`: `setApps()`, `progress()`, `changed()`; `parseLog()`, `directorySize()` |
+| `steamstatus.*` | `SteamStatus`: `status`, `running`, `avatar`, `setStatus()`, `openFriends()`, `start()`, `changed()`; `Source` (install, running, open), `setup()`; `parse()` |
 | `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `listAll()`, `AppMedia`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
 | `steamachievements.*` | `SteamAchievements::Achievement`; `readAchievements()`, `steamLanguage()` |
 | `steamsync.*` | `SteamSync::Record`, `Result`, `Edit`, `ShortcutEdit`; `sync()`, `apply()`, `compare()`, `withDefaults()`, `readRecord()`, `writeRecord()` |

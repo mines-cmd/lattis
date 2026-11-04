@@ -115,6 +115,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `missingEmulator(gameId)` | `string` | Emulator ID to install for a ROM game with none installed, or `""` |
 | `closeSteamAndApply()` | `string` | Close Steam, apply queued edits, restart it; toast or `""` |
 | `steamRunning()` | `bool` | Whether Steam is running |
+| `openSteamUrl(url)` | error | C++ only: hands a `steam://` URL to Steam, bare (`SteamStatus` uses it) |
 | `setLaunchValue(key, value)` | `string` | Write a `[launch]` key to settings.toml; error or `""` |
 
 #### `setLaunchValue` keys

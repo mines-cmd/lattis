@@ -76,6 +76,8 @@ public:
     Q_INVOKABLE QString closeSteamAndApply();
     bool closingSteam() const { return m_steamClosing != nullptr; }
     Q_INVOKABLE bool steamRunning() const;
+    // Hands a steam:// URL to Steam, bare; the error, or empty.
+    QString openSteamUrl(const QString &url) { return runSteam({url}); }
 
     Q_INVOKABLE QString setLaunchValue(const QString &key, const QString &value);
 

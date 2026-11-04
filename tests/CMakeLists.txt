@@ -308,6 +308,11 @@ lattis_test(steam_test OFFSCREEN
             ${STEAM_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus
     DEFINES ${STEAM_DATA})
+lattis_test(steamstatus_test
+    SOURCES ../src/steam/steamstatus.h ../src/steam/steamstatus.cpp
+            ../src/steam/vdf.h ../src/steam/vdf.cpp
+            ../src/steam/steamlocate.h ../src/steam/steamlocate.cpp
+    LIBS Qt6::Qml)
 lattis_test(steammedia_test
     SOURCES ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${STEAM_SOURCES}
@@ -441,7 +446,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding library bulk)
+    foreach(area startup onboarding library bulk steamstatus)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()
