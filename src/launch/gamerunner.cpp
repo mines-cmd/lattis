@@ -639,8 +639,9 @@ QString GameRunner::launch(const QString &gameId)
 
 QString GameRunner::forceClose(const QString &gameId)
 {
-    if (const auto session = m_sessions.constFind(gameId); session != m_sessions.constEnd()) {
+    if (const auto session = m_sessions.find(gameId); session != m_sessions.end()) {
         qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1").arg(gameId);
+        session->forceClosed = true;
         session->process->kill();
         return {};
     }
@@ -849,7 +850,7 @@ void GameRunner::onFinished(const QString &gameId, int exitCode, bool crashed)
                                 : QStringLiteral("exited with code %1").arg(exitCode);
     qCInfo(lcLaunch).noquote() << QStringLiteral("%1 (%2) %3 after %4 s").arg(session.emulatorName, gameId, how).arg(seconds);
 
-    if ((crashed || exitCode != 0) && seconds < kQuickExitSeconds) {
+    if (!session.forceClosed && (crashed || exitCode != 0) && seconds < kQuickExitSeconds) {
         for (const QString &line : lastLines(session.logPath, 20))
             qCWarning(lcLaunch).noquote() << QStringLiteral("%1: %2").arg(session.emulatorName, line);
         qCWarning(lcLaunch).noquote() << "full output in" << session.logPath;

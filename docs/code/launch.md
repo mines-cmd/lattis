@@ -34,7 +34,7 @@ A Linux game runs its program directly through `DetachedProcess`, with its launc
 
 Linux games need special session tracking because launcher scripts are common: a script starts the real game binary and exits. `DetachedProcess` can be told to follow the session (`setFollowSession(true)`): after the program exits, it polls `/proc` every `sessionPollInterval()` ms to check whether any non-zombie process is still in the session (which was created with `setsid`). The game is counted as running until the session is empty.
 
-A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't really start; that's treated differently from a session that runs to completion.
+A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't really start; that's treated differently from a session that runs to completion. A session the user ended with Close (`forceClosed`) is never that: it is recorded like any other.
 
 ## Mod managers
 

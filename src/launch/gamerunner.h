@@ -125,6 +125,7 @@ private:
         QString logPath;
         QElapsedTimer timer;
         DetachedProcess *process = nullptr;
+        bool forceClosed = false;
     };
 
     QString chooseEmulator(const QString &gameId, QString *emulatorId) const;
