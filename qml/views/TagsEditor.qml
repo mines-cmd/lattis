@@ -8,20 +8,11 @@ ColumnLayout {
     property var tags: []
     property var created: ({})
     property var recolored: ({})
-    property bool creating: false
     property var marked: []
     // Each reset() starts a new set of chips, which shows at once.
     property int generation: 0
 
     readonly property var libraryTags: Library.tags
-    readonly property string typed: input.text.trim()
-    readonly property var suggestions: libraryTags.filter(t => !tags.some(c => c.name === t.name)
-                                                             && t.name.toLowerCase().includes(typed.toLowerCase()))
-    readonly property string caseTwin: {
-        if (typed === "" || libraryTags.some(t => t.name === typed))
-            return ""
-        return libraryTags.find(t => t.name.toLowerCase() === typed.toLowerCase())?.name ?? ""
-    }
 
     function reset(list) {
         ++generation
@@ -29,13 +20,7 @@ ColumnLayout {
         created = {}
         recolored = {}
         marked = []
-        input.text = ""
-        creating = false
-    }
-
-    function newTag() {
-        creating = true
-        input.forceActiveFocus()
+        addPopup.close()
     }
 
     function names() { return tags.map(t => t.name) }
@@ -62,7 +47,6 @@ ColumnLayout {
             created = c
         }
         tags = tags.concat([{ name: name, color: color }])
-        input.text = ""
     }
 
     function addSuggested(names) {
@@ -118,22 +102,13 @@ ColumnLayout {
 
     spacing: Theme.layout.spacing
 
-    RowLayout {
+    Label {
+        visible: root.marked.length > 0
         Layout.fillWidth: true
-        spacing: Theme.layout.spacing
-
-        Caption {
-            Layout.fillWidth: root.marked.length === 0
-            text: qsTr("On this game")
-        }
-        Label {
-            visible: root.marked.length > 0
-            Layout.fillWidth: true
-            text: qsTr("from IGDB")
-            color: Theme.gameEditor.markerColor
-            font.pixelSize: Theme.gameEditor.markerFontSize
-            elide: Text.ElideRight
-        }
+        text: qsTr("Tags from IGDB are marked with a dot")
+        color: Theme.gameEditor.markerColor
+        font.pixelSize: Theme.gameEditor.markerFontSize
+        elide: Text.ElideRight
     }
     KeyedListModel {
         id: tagModel
@@ -142,7 +117,6 @@ ColumnLayout {
         source: root.tags.map(t => ({ key: t.name, name: t.name, color: t.color }))
     }
     Flow {
-        visible: tagModel.count > 0
         Layout.fillWidth: true
         spacing: Theme.tags.spacing
 
@@ -193,91 +167,59 @@ ColumnLayout {
                               : qsTr("Change the color of %1 on every game").arg(chip.model.name)
             }
         }
-    }
-    Note {
-        visible: tagModel.count === 0
-        text: qsTr("No tags yet")
-    }
 
-    Caption {
-        visible: root.libraryTags.length > root.tags.length
-        Layout.topMargin: Theme.layout.spacing
-        text: qsTr("Your other tags")
-    }
-    Flow {
-        visible: root.suggestions.length > 0
-        Layout.fillWidth: true
-        spacing: Theme.tags.spacing
+        Rectangle {
+            id: addChip
+            implicitWidth: addRow.implicitWidth + 2 * Theme.tags.padding
+            implicitHeight: Theme.tags.height
+            radius: Theme.tags.radius
+            color: addMouse.containsMouse || addPopup.visible ? Theme.gameEditor.addTagHover : "transparent"
+            border.color: Theme.controls.inputBorder
+            border.width: Theme.tags.outlineWidth
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: addLabel.text
+            Keys.onSpacePressed: addPopup.openFor(addChip)
+            Keys.onReturnPressed: addPopup.openFor(addChip)
 
-        Repeater {
-            model: root.suggestions
+            Behavior on color { enabled: Motion.fades; MotionColor {} }
 
-            TagChip {
-                id: suggestion
-                required property var modelData
-                name: modelData.name
-                colorIndex: modelData.color
-                outlined: true
-                outlineWidth: Theme.filters.tagBorderWidth
-                plus: false
-                textColor: Qt.hsla(suggestion.tagColor.hslHue, suggestion.tagColor.hslSaturation, Theme.filters.tagTextLightness, 1)
-                detailColor: Qt.alpha(textColor, Theme.filters.tagCountOpacity)
-                fillOpacity: suggestionMouse.containsMouse ? Theme.gameEditor.suggestionHoverFillOpacity
-                                                           : Theme.gameEditor.suggestionFillOpacity
-                raised: suggestionMouse.containsMouse
-                raiseBy: Theme.gameEditor.tagHoverLift
-                pressed: suggestionMouse.pressed
+            Row {
+                id: addRow
+                anchors.centerIn: parent
+                spacing: Theme.tags.fontSize / 4
 
-                MouseArea {
-                    id: suggestionMouse
-                    anchors.fill: parent
-                    anchors.bottomMargin: -Theme.gameEditor.tagHoverLift
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.add(suggestion.modelData.name)
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    path: Icons.add
+                    size: Theme.tags.fontSize
+                    color: Theme.gameEditor.labelColor
                 }
-                ToolTip.visible: suggestionMouse.containsMouse
-                ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: qsTr("Add %1 to this game").arg(suggestion.modelData.name)
+                Label {
+                    id: addLabel
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTr("Add tag")
+                    color: Theme.gameEditor.labelColor
+                    font.pixelSize: Theme.tags.fontSize
+                    font.weight: Theme.font.emphasisWeight
+                }
             }
-        }
-    }
-    Note {
-        visible: root.typed !== "" && root.suggestions.length === 0 && root.libraryTags.length > root.tags.length
-        text: qsTr("None match \"%1\"").arg(root.typed)
-    }
-
-    SettingsTextField {
-        id: input
-        visible: root.creating
-        Layout.fillWidth: true
-        Layout.topMargin: Theme.layout.spacing
-        placeholderText: qsTr("Name of the new tag")
-        onAccepted: root.add(root.typed)
-        onActiveFocusChanged: {
-            if (!activeFocus && text.trim() === "")
-                root.creating = false
+            MouseArea {
+                id: addMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: addPopup.openFor(addChip)
+            }
+            ToolTip.visible: addMouse.containsMouse && !addPopup.visible
+            ToolTip.delay: Theme.tooltip.delay
+            ToolTip.text: qsTr("Add one of your tags to this game, or create a new one")
         }
     }
 
-    Label {
-        visible: root.caseTwin !== ""
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.warningColor
-        text: qsTr("There's already a tag called %1; tags are case-sensitive, so Enter adds %2 as another one.")
-                  .arg(root.caseTwin).arg(root.typed)
-    }
-
-    component Caption: Label {
-        Layout.fillWidth: true
-        color: Theme.gameEditor.labelColor
-    }
-    component Note: Label {
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.hintColor
-        font.pixelSize: Theme.gameEditor.hintFontSize
+    TagAddPopup {
+        id: addPopup
+        editor: root
     }
 
     TagPalettePopup {

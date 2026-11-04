@@ -188,12 +188,6 @@ ColumnLayout {
 
     EditorCard {
         title: qsTr("Tags")
-        actions: EditorTextAction {
-            text: qsTr("New tag")
-            iconPath: Icons.add
-            tip: qsTr("Create a tag and add it to this game")
-            onClicked: tagsEditor.newTag()
-        }
 
         TagsEditor {
             id: tagsEditor

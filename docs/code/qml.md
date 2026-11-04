@@ -372,7 +372,8 @@ The **Last backup** chip is `GameDetails`' `lastBackupChip`: off by default, sho
 | `components/ChromeButton.qml` | The labelled button in the corner of a full-window page (Back to games) and its header |
 | `views/StatsPeriodPicker.qml` | The stats page's title picker popup; lazy |
 | `views/StepField.qml` | Numeric step field |
-| `views/TagsEditor.qml` | Tag editor section inside the game editor |
+| `views/TagsEditor.qml` | Tag editor section inside the game editor: the game's tags and an Add tag chip |
+| `views/TagAddPopup.qml` | The Add tag chip's `MotionPopup`, growing from the chip: search, the other tags, and `Create "<typed>"` for a name no tag has; adds through `TagsEditor.add()` |
 | `setup/FindRomFoldersDialog.qml` | "Find from one folder" ROM folder matcher |
 | `setup/SetupBackdrop.qml` | Animated backdrop for the setup guide |
 | `setup/SetupDone.qml` | Setup guide: final step (scan progress, tips) |

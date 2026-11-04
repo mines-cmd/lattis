@@ -109,6 +109,14 @@ SCENARIOS = [
     Scenario("a Linux game's Saves & mods tab has the save folder and the mod managers",
              [(FIRST + "click SuperTuxKart\nkey Alt+Return\nexpect Properties\nclick Saves & mods\n"
                + "expect Save folder\nexpect Mod managers\nexpect Mod Organizer 2\n", None)], with_managers),
+    Scenario("Properties adds an existing tag and a new one from the Add tag list, and Save keeps both",
+             [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nexpect Add tag\n"
+               + "expect Racing\nexpect Party\nexpect-not Adventure\nclick Add tag\nwait 400\n"
+               + "expect Search or create a tag\nexpect Adventure\nexpect Co-op\n"
+               + "type Adv\nwait 200\nexpect Adventure\nexpect-not Co-op\nexpect Create \"Adv\"\nclick Adventure\nwait 400\n"
+               + "type Speedrun\nwait 200\nexpect Create \"Speedrun\"\nkey Return\nwait 400\nkey Escape\nwait 400\n"
+               + "expect Properties\nexpect Speedrun\nexpect Adventure\nclick Save\nexpect-not Properties\n", None),
+              (FIRST + "click Mario Kart 8 Deluxe\nexpect Adventure\nexpect Speedrun\nexpect Racing\n", None)], demo),
     Scenario("Hide game in Properties removes the game from the list",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Hide game\n"
                + "wait 400\nclick Hide\nwait 600\nexpect-not Mario Kart 8 Deluxe\nexpect Pikmin 4\n", None)], demo),

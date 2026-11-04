@@ -186,6 +186,7 @@ qt_add_qml_module(lattis
         qml/views/ArtThumb.qml
         qml/views/MediaTile.qml
         qml/views/ImageFileDialog.qml
+        qml/views/TagAddPopup.qml
         qml/views/TagsEditor.qml
         qml/views/GameList.qml
         qml/views/GameMenu.qml

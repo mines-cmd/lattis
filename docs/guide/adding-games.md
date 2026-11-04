@@ -45,7 +45,7 @@ Logos come in all shapes, so each game's logo can be sized and placed on its own
 
 Tags are your own labels, each with a color, for grouping games any way you like and filtering by them.
 
-- In a game's Properties, its tags are filled chips with ×. Your other tags are outlined chips under them: click one to add it. Type in "Create a new tag" to narrow the list, and press Enter to add what you typed, as a new tag if there's none by that name.
+- In a game's Properties, its tags are filled chips with ×, with an **Add tag** chip at the end. It opens a list of your other tags with a search box: click one to add it. Whatever you type that no tag is called also shows as **Create "…"**; click it, or press Enter, to add it as a new tag.
 - To tag many games at once, select them in the list and use the Tags submenu of the right-click menu (see [Finding games](finding-games.md#selecting-several-games)).
 - Click a tag's color to change it for every game.
 - Click a tag under a game's description to filter the list by it, as the filter panel does; click it again to stop.
