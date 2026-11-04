@@ -9,6 +9,8 @@ ColumnLayout {
     property string markerText: qsTr("from IGDB")
     property string help
     property string labelTip
+    property bool heading: false
+    property alias actions: actionsSlot.data
 
     Layout.fillWidth: true
     spacing: Theme.gameEditor.labelSpacing
@@ -20,7 +22,8 @@ ColumnLayout {
         Label {
             id: name
             Layout.fillWidth: !marker.visible
-            color: Theme.gameEditor.labelColor
+            color: field.heading ? Theme.gameEditor.cardTitleColor : Theme.gameEditor.labelColor
+            font.weight: field.heading ? Theme.font.emphasisWeight : Font.Normal
             elide: Text.ElideRight
 
             MouseArea {
@@ -68,6 +71,12 @@ ColumnLayout {
                 x: parent.width - width
                 y: -height - 4
             }
+        }
+        Item {
+            id: actionsSlot
+            visible: children.length > 0
+            implicitWidth: childrenRect.width
+            implicitHeight: childrenRect.height
         }
     }
 }

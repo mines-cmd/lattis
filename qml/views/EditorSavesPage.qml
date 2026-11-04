@@ -4,8 +4,22 @@ import QtQuick.Layouts
 
 // A tab of GameEditor; the editor keeps the state and reads these controls.
 ColumnLayout {
+    id: page
+
     required property var editor
     property alias autoBackupBox: autoBackupBox
+    readonly property var savePaths: editor.saves.paths ?? []
+    readonly property bool matchShown: (editor.saves.matched ?? "") !== "" && !(editor.saves.fallback ?? false)
+    readonly property bool canChangeMatch: editor.saves.hasManifest ?? false
+
+    function matchText() {
+        switch (editor.saves.match) {
+        case "steam": return qsTr("Found by its Steam ID")
+        case "title": return qsTr("Found by its title")
+        case "chosen": return qsTr("The game you chose")
+        }
+        return ""
+    }
 
     Layout.fillWidth: true
     Layout.fillHeight: false // as tall as its cards; layouts fill by default
@@ -15,15 +29,56 @@ ColumnLayout {
     EditorCard {
         title: qsTr("Saves")
         visible: !editor.adding
-        actions: SettingsButton {
+
+        SavesPanel {
+            id: savesPanel
             visible: editor.backupGame
-            text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
-            enabled: (editor.saves.paths ?? []).length > 0 && !GameSaves.working
-            onClicked: GameSaves.backUpNow(editor.game.id)
+            game: editor.game
+            onMessage: text => editor.message(text)
+            onChooseRequested: editor.chooseSavesGame()
+            onChooseFolderRequested: editor.folderPickerLoader.pickFor("saves")
+        }
+        RowLayout {
+            visible: editor.backupGame
+            Layout.fillWidth: true
+            Layout.minimumHeight: Theme.controls.inputHeight
+            spacing: Theme.layout.spacing
+
+            Label {
+                id: autoLabel
+                text: qsTr("Backup when the game closes")
+                color: Theme.gameEditor.labelColor
+                elide: Text.ElideRight
+
+                HoverHandler { id: autoHover }
+                ToolTip.visible: autoHover.hovered
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: qsTr("Saves are found from the Ludusavi manifest, or from the save folder below, and "
+                                   + "backed up to the folder in Settings, Library, Game saves.")
+            }
+            Label {
+                id: widest
+                visible: false
+                text: qsTr("Platform default (%1)").arg(qsTr("off"))
+            }
+            SettingsComboBox {
+                id: autoBackupBox
+                Layout.preferredWidth: autoBackupBox.leftPadding + autoBackupBox.rightPadding + Math.ceil(widest.implicitWidth)
+                model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                        qsTr("On"), qsTr("Off")]
+            }
+            Item { Layout.fillWidth: true }
+        }
+        Rectangle {
+            visible: editor.backupGame
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: Theme.settingsWindow.rowDivider
         }
 
         EditorField {
-            label: qsTr("Save folder")
+            heading: editor.backupGame
+            label: editor.backupGame ? qsTr("Save source") : qsTr("Save folder")
             marked: editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
             markerText: qsTr("found for you")
             help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
@@ -56,96 +111,72 @@ ColumnLayout {
             }
         }
 
-        ColumnLayout {
-            visible: editor.backupGame && (editor.saves.paths ?? []).length > 0
-            Layout.fillWidth: true
-            spacing: Theme.gameEditor.labelSpacing
-
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.minimumHeight: Theme.controls.inputHeight
-                spacing: Theme.layout.spacing
-
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Backed up")
-                    color: Theme.gameEditor.labelColor
-                    elide: Text.ElideRight
-
-                    HoverHandler { id: backedUpHover }
-                    ToolTip.visible: backedUpHover.hovered
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
-                }
-                SettingsButton {
-                    flat: true
-                    text: (editor.saves.paths ?? []).length === 1 ? qsTr("1 save file")
-                        : qsTr("%1 save files").arg((editor.saves.paths ?? []).length)
-                    iconPath: filesFold.open ? Icons.arrowUp : Icons.arrowDown
-                    onClicked: filesFold.open = !filesFold.open
-                }
-            }
-            Unfold {
-                id: filesFold
-                visible: open || progress > 0
-                Layout.fillWidth: true
-
-                Repeater {
-                    model: (editor.saves.paths ?? []).slice(0, 3)
-
-                    PathField {
-                        required property string modelData
-                        Layout.fillWidth: true
-                        Layout.minimumHeight: Theme.controls.inputHeight
-                        path: modelData.startsWith("~/") ? editor.homePath + modelData.slice(1) : modelData
-                        fontSize: Theme.gameEditor.pathFontSize
-                        onCopied: editor.message(qsTr("Copied"))
-                    }
-                }
-                EditorHint {
-                    open: (editor.saves.paths ?? []).length > 3
-                    text: (editor.saves.paths ?? []).length === 4 ? qsTr("and 1 more")
-                        : qsTr("and %1 more").arg((editor.saves.paths ?? []).length - 3)
-                }
-            }
-        }
         RowLayout {
-            visible: editor.backupGame
+            id: matchRow
+            visible: editor.backupGame && !savesPanel.empty
+                && (page.matchShown || page.canChangeMatch || page.savePaths.length > 0)
             Layout.fillWidth: true
-            Layout.minimumHeight: Theme.controls.inputHeight
             spacing: Theme.layout.spacing
 
             Label {
-                id: autoLabel
-                Layout.fillWidth: true
-                text: qsTr("Back up saves when it closes")
-                color: Theme.gameEditor.labelColor
+                visible: page.matchShown
+                Layout.maximumWidth: matchRow.width / 2
+                text: editor.saves.matched ?? ""
+                color: Theme.palette.text
+                font.pixelSize: Theme.gameEditor.hintFontSize
                 elide: Text.ElideRight
-
-                HoverHandler { id: autoHover }
-                ToolTip.visible: autoHover.hovered
-                ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: qsTr("Saves are found from the Ludusavi manifest, or from the save folder above, and "
-                                   + "backed up to the folder in Settings, Library, Game saves.")
             }
             Label {
-                id: widest
-                visible: false
-                text: qsTr("Platform default (%1)").arg(qsTr("off"))
+                visible: page.matchShown
+                Layout.fillWidth: true
+                text: page.matchText()
+                color: Theme.gameEditor.hintColor
+                font.pixelSize: Theme.gameEditor.hintFontSize
+                elide: Text.ElideRight
             }
-            SettingsComboBox {
-                id: autoBackupBox
-                Layout.preferredWidth: autoBackupBox.leftPadding + autoBackupBox.rightPadding + Math.ceil(widest.implicitWidth)
-                model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
-                        qsTr("On"), qsTr("Off")]
+            Item {
+                visible: !page.matchShown
+                Layout.fillWidth: true
+            }
+            SettingsButton {
+                text: qsTr("Change match")
+                flat: true
+                visible: page.canChangeMatch
+                tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
+                onClicked: editor.chooseSavesGame()
+            }
+            SettingsButton {
+                visible: page.savePaths.length > 0
+                flat: true
+                text: page.savePaths.length === 1 ? qsTr("1 save file")
+                    : qsTr("%1 save files").arg(page.savePaths.length)
+                iconPath: filesFold.open ? Icons.arrowUp : Icons.arrowDown
+                tip: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
+                onClicked: filesFold.open = !filesFold.open
             }
         }
-        SavesPanel {
-            visible: editor.backupGame
-            game: editor.game
-            onMessage: text => editor.message(text)
-            onChooseRequested: editor.chooseSavesGame()
-            onChooseFolderRequested: editor.folderPickerLoader.pickFor("saves")
+        Unfold {
+            id: filesFold
+            visible: matchRow.visible && (open || progress > 0)
+            Layout.fillWidth: true
+
+            Repeater {
+                model: page.savePaths.slice(0, 3)
+
+                PathField {
+                    required property string modelData
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: Theme.controls.inputHeight
+                    path: modelData.startsWith("~/") ? editor.homePath + modelData.slice(1) : modelData
+                    fontSize: Theme.gameEditor.pathFontSize
+                    onCopied: editor.message(qsTr("Copied"))
+                }
+            }
+            EditorHint {
+                open: page.savePaths.length > 3
+                text: page.savePaths.length === 4 ? qsTr("and 1 more")
+                    : qsTr("and %1 more").arg(page.savePaths.length - 3)
+            }
         }
     }
 

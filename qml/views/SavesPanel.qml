@@ -20,15 +20,6 @@ ColumnLayout {
     signal chooseRequested()
     signal chooseFolderRequested()
 
-    function matchText() {
-        switch (saves.match) {
-        case "steam": return qsTr("Found by its Steam ID")
-        case "title": return qsTr("Found by its title")
-        case "chosen": return qsTr("The game you chose")
-        }
-        return ""
-    }
-
     function restore(archive) {
         const error = Backups.restoreGameSaves(archive)
         if (error !== "")
@@ -97,10 +88,27 @@ ColumnLayout {
     }
     EditorField {
         visible: !root.empty
+        heading: true
         label: qsTr("Backups")
         help: qsTr("Keeps the last %1 backups in %2. A backup with a name is always kept. Backing up, "
                    + "renaming, deleting and restoring happen at once, and Cancel doesn't undo them. "
                    + "Mod manager links wait for Save.").arg(root.keep).arg(root.saves.folder ?? "")
+        actions: Row {
+            spacing: Theme.layout.spacing
+
+            SettingsButton {
+                iconPath: Icons.folderOpenLine
+                flat: true
+                visible: (root.saves.folder ?? "") !== ""
+                tip: qsTr("Open the backups folder")
+                onClicked: Qt.openUrlExternally("file://" + root.saves.folder)
+            }
+            SettingsButton {
+                text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
+                enabled: root.paths.length > 0 && !GameSaves.working
+                onClicked: GameSaves.backUpNow(root.game.id)
+            }
+        }
     }
     Label {
         visible: root.fallback
@@ -185,7 +193,7 @@ ColumnLayout {
 
                             Label {
                                 Layout.maximumWidth: backupRow.width / 2
-                                text: backupRow.named ? backupRow.modelData.name : qsTr("Unnamed")
+                                text: backupRow.named ? backupRow.modelData.name : backupRow.modelData.when
                                 color: Theme.palette.text
                                 elide: Text.ElideRight
                             }
@@ -203,7 +211,8 @@ ColumnLayout {
                         }
                         Label {
                             Layout.fillWidth: true
-                            text: qsTr("%1 · %2").arg(backupRow.modelData.when).arg(backupRow.modelData.size)
+                            text: backupRow.named ? qsTr("%1 · %2").arg(backupRow.modelData.when).arg(backupRow.modelData.size)
+                                : backupRow.modelData.size
                             color: Theme.gameEditor.hintColor
                             font.pixelSize: Theme.gameEditor.hintFontSize
                             elide: Text.ElideRight
@@ -287,39 +296,6 @@ ColumnLayout {
                     }
                 }
             }
-        }
-    }
-
-    RowLayout {
-        visible: !root.empty
-        Layout.fillWidth: true
-        spacing: Theme.layout.spacing
-
-        Label {
-            Layout.fillWidth: true
-            visible: root.matched && !root.fallback
-            text: qsTr("%1 (%2)").arg(root.saves.matched).arg(root.matchText())
-            color: Theme.gameEditor.hintColor
-            font.pixelSize: Theme.gameEditor.hintFontSize
-            elide: Text.ElideRight
-        }
-        Item {
-            Layout.fillWidth: true
-            visible: !(root.matched && !root.fallback)
-        }
-        SettingsButton {
-            text: qsTr("Change match")
-            flat: true
-            visible: root.saves.hasManifest ?? false
-            tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
-            onClicked: root.chooseRequested()
-        }
-        SettingsButton {
-            iconPath: Icons.folderOpenLine
-            flat: true
-            visible: (root.saves.folder ?? "") !== ""
-            tip: qsTr("Open the backups folder")
-            onClicked: Qt.openUrlExternally("file://" + root.saves.folder)
         }
     }
 }
