@@ -491,7 +491,8 @@ Item {
                 spacing: Theme.layout.spacing
 
                 Label {
-                    Layout.maximumWidth: parent.width - (backLink.visible ? backLink.width + parent.spacing : 0)
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: implicitWidth
                     text: (root.bulk ? qsTr("%1 of %2 · ").arg(root.stepIndex + 1).arg(root.steps.length) : "")
                           + (root.other ? qsTr("Art from %1") : qsTr("Art for %1")).arg(root.gameTitle)
                     color: Theme.gameEditor.headingColor
