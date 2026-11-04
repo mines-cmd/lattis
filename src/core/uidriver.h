@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QList>
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
@@ -30,6 +31,9 @@ private:
     bool tryCommand(const Command &command);
     void fail(const QString &reason);
     void finish(int code);
+    QList<QQuickWindow *> windows() const;
+    QQuickWindow *keyTarget() const;
+    QQuickItem *checkableBeside(const QString &text) const;
     QQuickItem *find(const QString &text, bool contains = false) const;
     QStringList visibleTexts() const;
     void click(QQuickItem *item);

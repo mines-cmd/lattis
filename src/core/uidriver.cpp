@@ -125,6 +125,19 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
+    if (command.name == u"toggle") {
+        QQuickItem *control = checkableBeside(command.argument);
+        if (!control)
+            return false;
+        click(control);
+        qInfo().noquote() << "uitest: toggle" << command.argument;
+        settle();
+        return true;
+    }
+    if (command.name == u"expect-on" || command.name == u"expect-off") {
+        const QQuickItem *control = checkableBeside(command.argument);
+        return control && control->property("checked").toBool() == (command.name == u"expect-on");
+    }
     if (command.name == u"expect")
         return find(command.argument) != nullptr;
     if (command.name == u"expect-not")
@@ -134,7 +147,7 @@ bool UiDriver::tryCommand(const Command &command)
     if (command.name == u"expect-not-has")
         return find(command.argument, true) == nullptr;
     if (command.name == u"shot") {
-        m_window->grabWindow().save(command.argument);
+        keyTarget()->grabWindow().save(command.argument);
         return true;
     }
     if (command.name == u"quit") {
@@ -146,23 +159,59 @@ bool UiDriver::tryCommand(const Command &command)
     return false;
 }
 
+QList<QQuickWindow *> UiDriver::windows() const
+{
+    QList<QQuickWindow *> result{m_window};
+    for (QWindow *window : QGuiApplication::topLevelWindows()) {
+        auto *quick = qobject_cast<QQuickWindow *>(window);
+        if (quick && quick != m_window && quick->isVisible())
+            result.append(quick);
+    }
+    return result;
+}
+
+QQuickWindow *UiDriver::keyTarget() const
+{
+    // A window opened from the main one (Settings) is the one the user is working in.
+    return windows().last();
+}
+
 QQuickItem *UiDriver::find(const QString &text, bool contains) const
 {
     QQuickItem *found = nullptr;
-    // The last match is the one drawn on top.
-    collect(m_window->contentItem(), [&](QQuickItem *item) {
-        const QVariant value = item->property("text");
-        if (value.typeId() == QMetaType::QString
-            && (contains ? value.toString().contains(text) : value.toString() == text) && shownOnScreen(item))
-            found = item;
-    });
+    // The last match is the one drawn on top; a window opened later is above the main one.
+    for (QQuickWindow *window : windows()) {
+        collect(window->contentItem(), [&](QQuickItem *item) {
+            const QVariant value = item->property("text");
+            if (value.typeId() == QMetaType::QString
+                && (contains ? value.toString().contains(text) : value.toString() == text) && shownOnScreen(item))
+                found = item;
+        });
+    }
     return found;
+}
+
+QQuickItem *UiDriver::checkableBeside(const QString &text) const
+{
+    QQuickItem *label = find(text);
+    // A switch or check box has no text of its own: it sits in the same row as its label.
+    QQuickItem *row = label ? label->parentItem() : nullptr;
+    for (int levels = 0; row && levels < 3; ++levels, row = row->parentItem()) {
+        QQuickItem *found = nullptr;
+        collect(row, [&](QQuickItem *item) {
+            if (!found && item->property("checkable").toBool() && shownOnScreen(item))
+                found = item;
+        });
+        if (found)
+            return found;
+    }
+    return nullptr;
 }
 
 QStringList UiDriver::visibleTexts() const
 {
     QStringList texts;
-    collect(m_window->contentItem(), [&](QQuickItem *item) {
+    collect(keyTarget()->contentItem(), [&](QQuickItem *item) {
         const QVariant value = item->property("text");
         if (value.typeId() == QMetaType::QString && !value.toString().isEmpty() && shownOnScreen(item)
             && texts.size() < 120)
@@ -173,12 +222,13 @@ QStringList UiDriver::visibleTexts() const
 
 void UiDriver::click(QQuickItem *item)
 {
+    QQuickWindow *window = item->window();
     const QPointF scene = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
-    const QPointF global = m_window->mapToGlobal(scene.toPoint());
+    const QPointF global = window->mapToGlobal(scene.toPoint());
     const auto send = [&](QEvent::Type type, Qt::MouseButtons buttons) {
         QMouseEvent event(type, scene, scene, global,
                           type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton, buttons, Qt::NoModifier);
-        QCoreApplication::sendEvent(m_window, &event);
+        QCoreApplication::sendEvent(window, &event);
     };
     send(QEvent::MouseMove, Qt::NoButton);
     send(QEvent::MouseButtonPress, Qt::LeftButton);
@@ -204,22 +254,24 @@ bool UiDriver::key(const QString &name)
     const int value = QMetaEnum::fromType<Qt::Key>().keyToValue(("Key_" + keyName.toLatin1()).constData(), &ok);
     if (!ok)
         return false;
+    QQuickWindow *window = keyTarget();
     QKeyEvent press(QEvent::KeyPress, value, modifiers);
-    QCoreApplication::sendEvent(m_window, &press);
+    QCoreApplication::sendEvent(window, &press);
     QKeyEvent release(QEvent::KeyRelease, value, modifiers);
-    QCoreApplication::sendEvent(m_window, &release);
+    QCoreApplication::sendEvent(window, &release);
     return true;
 }
 
 void UiDriver::type(const QString &text)
 {
+    QQuickWindow *window = keyTarget();
     for (const QChar ch : text) {
         const int value = ch.isLetter() && ch.unicode() < 128 ? ch.toUpper().unicode() : ch.unicode();
         const Qt::KeyboardModifiers modifiers = ch.isUpper() ? Qt::ShiftModifier : Qt::NoModifier;
         QKeyEvent press(QEvent::KeyPress, value, modifiers, QString(ch));
-        QCoreApplication::sendEvent(m_window, &press);
+        QCoreApplication::sendEvent(window, &press);
         QKeyEvent release(QEvent::KeyRelease, value, modifiers, QString(ch));
-        QCoreApplication::sendEvent(m_window, &release);
+        QCoreApplication::sendEvent(window, &release);
     }
 }
 
