@@ -27,7 +27,7 @@ If the `.exe` is moved or deleted, the game shows "Game not found" with **Locate
 
 ## Properties
 
-A Windows game's Properties have its install location, the program (the pencil changes it), **Start in another folder** (Steam's "Start in"), and the Launch card with the Proton version, presets and launch options. "None (runs natively)" runs it without Proton.
+A Windows game's Properties have, on the Launch tab, its install location, the program (the pencil changes it), **Start in another folder** (Steam's "Start in"), and the Run card with the Proton version, presets and launch options. "None (runs natively)" runs it without Proton.
 
 The title, program, start folder, launch options and Proton version are kept in step with the shortcut both ways: a change in Lattis waits for Steam to close, and a change in Steam's Properties comes back into Lattis.
 

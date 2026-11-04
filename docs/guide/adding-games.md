@@ -16,15 +16,30 @@ A file that's already in the library isn't added twice: its game is selected ins
 
 ## Properties
 
-The gear button on a game's page (Alt+Return), or **Properties** in its right-click menu, opens its settings:
+The gear button on a game's page (Alt+Return), or **Properties** in its right-click menu, opens its settings. A list of tabs on the left has a page for each job, and one **Save** and **Cancel** at the bottom cover all of them. A dot on a tab means it holds changes you haven't saved. Ctrl+Tab and Ctrl+Shift+Tab step through the tabs, and so do the up and down arrows while the list has focus. It opens on General (or on the tab a button asked for), not on the one you used last.
+
+**General**
 
 - **About:** title, description, release year, rating (in half stars; hovering the stars shows faintly the rating a click would set, and double-clicking them clears it, which hovering the Rating name reminds you of) and favorite.
 - **Details:** the status (Backlog, Playing, Finished, Completed, Dropped), and play time and last played for games whose play time Lattis records.
 - **Tags:** see [Tags](#tags) below.
-- **How it runs:** for a ROM game, its ROM, its emulator and its launch arguments; for Steam, Windows and Linux games, their install folder, program and launch options.
-- **Prefix folder:** the folder **Open save folder** opens. Lattis looks for it: the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`). When it found one, the field shows it and says so. The pencil sets another (a game that keeps its saves in its own folder, say), and × goes back to looking. A Linux game has none until you set one.
-- **Media folders:** for Steam, Windows and Linux games, beside the Prefix folder. The field says what the game page shows ("Steam's", "Steam's + 2 folders", "None"); **Edit** opens a list with Steam's own clips and screenshots at the top (Steam and Windows games in Steam) and your folders under it, each with a button that opens it and ×. **Add folder** picks another, for OBS recordings or a screenshot tool's folder. Every picture and video in them, subfolders included, shows in the game's Media row and the Gallery (see [Steam](steam.md#clips-and-screenshots)). A folder that isn't there (an unplugged drive) is dimmed with "Not found". Changes are saved with the rest, and Cancel drops them.
+
+**Images**
+
 - **Images:** the hero (the wide image at the top of the page), the cover, the logo and the icon, each with **Choose** and a remove button. **Browse SteamGridDB** picks them from SteamGridDB.
+- **Media folders:** for Steam, Windows and Linux games. The field says what the game page shows ("Steam's", "Steam's + 2 folders", "None"); **Edit** opens a list with Steam's own clips and screenshots at the top (Steam and Windows games in Steam) and your folders under it, each with a button that opens it and ×. **Add folder** picks another, for OBS recordings or a screenshot tool's folder. Every picture and video in them, subfolders included, shows in the game's Media row and the Gallery (see [Steam](steam.md#clips-and-screenshots)). A folder that isn't there (an unplugged drive) is dimmed with "Not found". Changes are saved with the rest, and Cancel drops them.
+
+**Launch**
+
+- **Install:** for a ROM game, its platform and ROM; for Steam, Windows and Linux games, their install location, program and start folder.
+- **Run:** for a ROM game, its emulator and launch arguments; for Steam, Windows and Linux games, the Proton version, presets and launch options.
+
+**Saves** (**Saves & mods** for Steam, Windows and Linux games, which can have [mod managers](mod-managers.md))
+
+- **Save folder:** the folder **Open save folder** opens. Lattis looks for it: the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`). When it found one, the field shows it and says so. The pencil sets another (a game that keeps its saves in its own folder, say), and × goes back to looking. A Linux game has none until you set one.
+- The rest of the tab is for [backups](backups.md#automatic-save-backups) and [mod managers](mod-managers.md).
+
+Adding a game (the + button) has no tabs: the General and Launch pages show together, as one short form.
 
 **Save** (or Enter in a one-line field) writes what you changed. **Cancel** or Escape throws everything away, art included.
 

@@ -136,7 +136,11 @@ The `LATTIS_STATS=<yyyy-mm>` hook opens it on a month, `<yyyy>` on a year, or `n
 
 ## The game editor
 
-`GameEditor.qml` is both the game settings dialog (opening a game) and the "+" flow (adding a new one). It opens as a dialog over the main window, created on first use. It handles four game kinds, each with a different set of fields:
+`GameEditor.qml` is both the game settings dialog (opening a game) and the "+" flow (adding a new one). It opens as a dialog over the main window, created on first use. It handles four game kinds, each with a different set of fields.
+
+A game's Properties is four tabs behind a rail on the dialog's left (`tab`, `tabs`): 0 General, 1 Images, 2 Launch, 3 Saves ("Saves & mods" while `managerGame`). Each tab is its own file, `EditorGeneralPage`, `EditorImagesPage`, `EditorLaunchPage` and `EditorSavesPage`, built from `EditorCard`, `EditorField`, `EditorHint`, `EditorTextAction` and `EditorMediaFolderRow`. `GameEditor` keeps the state (`game`, `pick`, `new*`, `changes()`, `save()`) and the pages expose their controls as `property alias`, which `show()`, `changes()` and `save()` read by id; so every page is instantiated and shown by `visible` (`pageShown(n)`), in the one `ScrollView`, and the editor stays behind `editorLoader`. The dialog is `game_editor.width` by `game_editor.height` (capped by `max_height`) so a tab switch doesn't resize it; switching is instant. `openFor(id, tabIndex)` takes an optional tab (General by default, nothing remembered); `openMediaFolders()` and `browseArt(kind)` switch to Images first. `save()` switches to the tab of the field in error before focusing it. `changeTabs` maps `changes()`'s keys to tabs, and with `artEditor`, `tagsEditor` and `managerLinks` decides which rail items show the unsaved dot (`changed_dot`). Ctrl+Tab and Ctrl+Shift+Tab (`stepTab()`) go through the tabs, and the rail takes focus with Up and Down. Adding a game (`adding`) has no rail: the General and Launch pages show together.
+
+The kinds:
 
 - **ROM games**: ROM path, platform, emulator, launch arguments.
 - **Steam games**: launch options, Proton version — both saved to the game file and written into Steam's files; play time and last played are Steam's, shown read-only.
@@ -145,11 +149,11 @@ The `LATTIS_STATS=<yyyy-mm>` hook opens it on a month, `<yyyy>` on a year, or `n
 
 The `pick` object (from `Library.inspectRom()`) drives the "+" flow: it names the platforms the file matches, whether it's a Windows or Linux program, and what the title is. On Save, only the keys that changed from the game's current values are written in one call to `Library.saveGame()`. Cancel and Escape discard everything, including art downloads and tag changes.
 
-Every game has a **Save folder** field under its ROM or program. It shows the game's own `save_folder` (`saveFolder` in `gameForEditing()`), or else the folder `GameRunner.foundSaveFolder()` finds, with a note saying it was found; the pencil picks one and ✕ goes back to looking. Save writes `save_folder` (or removes it).
+Every game has a **Save folder** field at the top of the Saves card, above **Backed up** (`saves.paths`, read-only). It shows the game's own `save_folder` (`saveFolder` in `gameForEditing()`), or else the folder `GameRunner.foundSaveFolder()` finds, with a note saying it was found; the pencil picks one and ✕ goes back to looking. Save writes `save_folder` (or removes it).
 
-Steam, Proton and Linux games (`mediaGame`, not while adding) share that row with **Media folders**, side by side. Its field is a summary ("Steam's", "Steam's + 2 folders", "None", "2 folders"); the Edit button opens a popup (`game_editor.media_popup_width`) under it, anchored to the button's right edge: Steam's clips and screenshots as a fixed first row with the Steam icon and an open button (`Library.showSteamMediaFolder()`; Steam games and Proton games in Steam only), one `MediaFolderRow` per folder (mono path elided in the middle, open, ✕), a divider and **Add folder** (`folderPicker`, target `media`; a folder already listed isn't added twice). A folder `GameRunner.folderExists()` doesn't find is dimmed (`game_editor.read_only_opacity`) with "Not found", and its open button is off. The edits are held in `newMediaFolders` (null means unchanged) and written with the rest on Save as `media_folders`; Cancel drops them. `LATTIS_MEDIA_FOLDERS=1` opens the popup for screenshots.
+Steam, Proton and Linux games (`mediaGame`, not while adding) have a **Media folders** card under Images on the Images tab. Its field is a summary ("Steam's", "Steam's + 2 folders", "None", "2 folders"); the Edit button opens a popup (`game_editor.media_popup_width`) under it, anchored to the button's right edge: Steam's clips and screenshots as a fixed first row with the Steam icon and an open button (`Library.showSteamMediaFolder()`; Steam games and Proton games in Steam only), one `MediaFolderRow` per folder (mono path elided in the middle, open, ✕), a divider and **Add folder** (`folderPicker`, target `media`; a folder already listed isn't added twice). A folder `GameRunner.folderExists()` doesn't find is dimmed (`game_editor.read_only_opacity`) with "Not found", and its open button is off. The edits are held in `newMediaFolders` (null means unchanged) and written with the rest on Save as `media_folders`; Cancel drops them. `LATTIS_MEDIA_FOLDERS=1` opens the popup for screenshots.
 
-Steam, Proton and Linux games get a **Mod managers** card in the right column (`managerGame`): the managers linked to the game (name, Native or Proton, ✕ to unlink), **Link** (a `ModManagerMenu` of the managers not linked yet) and **Add** (`addModManagerRequested(gameId)`, which Main answers with `ModManagerDialog` and the game pre-linked, saved on its own). Links and unlinks are staged in `managerLinks` and written with Save, through `Library.setModManagerValue(id, "games", ids)`.
+Steam, Proton and Linux games get a **Mod managers** card below Saves on the Saves tab (`managerGame`): the managers linked to the game (name, Native or Proton, ✕ to unlink), **Link** (a `ModManagerMenu` of the managers not linked yet) and **Add** (`addModManagerRequested(gameId)`, which Main answers with `ModManagerDialog` and the game pre-linked, saved on its own). Links and unlinks are staged in `managerLinks` and written with Save, through `Library.setModManagerValue(id, "games", ids)`.
 
 The game page's **`mod_manager` button** (GameDetails `managers`, from `Library.modManagers`) shows only while the game has a manager. With one, a click emits `modManagerRequested(id)` and the tooltip is "Open <name>" ("<name> is running" while it runs); with several the tooltip is "Mod managers" and a click opens `ModManagerMenu` under the button. A dot (the badge) shows while any of them runs (`GameRunner.runningManagers`). The `open_mod_manager` action does the same through `GameDetails.activate("mod_manager")`. **GameMenu** (the right-click and ⋯ menu) lists "Open <name>" per manager after Open save folder, and "Add a mod manager" for Steam, Proton and Linux games (`managerChosen(id)`, or `chosen("add_mod_manager")`). Main's `openModManager(id)` is where every route ends: it shows "Run <game> once first, so Proton creates its prefix" with a Launch button when `GameRunner.missingPrefixGame()` names a game, else calls `GameRunner.launchModManager()`; `addModManager(gameId)` loads `ModManagerDialog` lazily.
 
@@ -341,7 +345,9 @@ The **Last backup** chip is `GameDetails`' `lastBackupChip`: off by default, sho
 | `views/FilterPanel.qml` | Sort and filter panel from the filter button; lazy; a Platforms section (All, then each platform with games and its `Library.gameCounts` count) while the rail is hidden, `filters.panel_width_rail_hidden` wide, scrolling when the window is short |
 | `views/GameDetails.qml` | Hero, action row, description, tags, info panel |
 | `views/GameFields.qml` | The catalog of a game's fields that the chips and the info panel show |
-| `views/GameEditor.qml` | Add/edit game dialog; lazy |
+| `views/GameEditor.qml` | Add/edit game dialog: the rail, the state, Save; lazy |
+| `views/EditorGeneralPage.qml` / `EditorImagesPage.qml` / `EditorLaunchPage.qml` / `EditorSavesPage.qml` | The four Properties tabs, one file each (`SavesPanel` ends the Saves one) |
+| `views/EditorCard.qml` / `EditorField.qml` / `EditorHint.qml` / `EditorTextAction.qml` / `EditorMediaFolderRow.qml` | Parts the tabs share: a titled card, a labelled field, a hint line, a small text action, a media folder row |
 | `views/GameList.qml` | Search box and game list |
 | `views/GameMenu.qml` | Game right-click menu; lazy |
 | `views/ModManagerMenu.qml` | The list of a game's mod managers (name, "Running"): under the game page's `mod_manager` button with several, and under Properties' Link; lazy |
@@ -487,7 +493,9 @@ Screenshot hooks (`LATTIS_*` env vars) call private functions (`selectAndLaunch`
 
 | Function | What it does |
 |---|---|
-| `open(id)` | Opens for editing an existing game |
+| `openFor(id, tabIndex)` | Opens for editing an existing game, on a tab (General by default) |
+| `openMediaFolders()` | Opens the Images tab with the media folders list showing |
+| `stepTab(by)` | Moves to the next or previous tab that shows |
 | `openForFile(file)` | Opens for adding: inspects the file, fills the form |
 | `lookUp(search)` | Starts a lookup; `search` forces a search even with a remembered match |
 | `browseArt(kind)` | Opens the art browser on `kind` |

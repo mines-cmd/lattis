@@ -76,6 +76,17 @@ Scan ROM folders now, Sync Steam library, Close Steam and apply, Setup guide and
 
 Open the data folder, Back up the library, Back up saves and Import a backup have no keys at first.
 
+## Properties
+
+| Keys | Action |
+|---|---|
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
+| Up / Down | Previous / next tab, while the tab list has focus |
+| Enter | Save, from a one-line field |
+| Escape | Cancel |
+
+The tabs are General, Images, Launch and Saves (Saves & mods for Steam, Windows and Linux games). Adding a game has no tabs.
+
 ## Settings window
 
 | Keys | Action |

@@ -45,7 +45,7 @@ The setup guide's Emulators step offers the same install. Its **Install an emula
 
 On Settings → Platforms, **Add emulator** gives a platform an emulator. A platform can have several, in order of preference: a game launches in the first one that's installed. So you can list an AppImage first and a Flatpak second, and the Flatpak is used only when the AppImage is gone. One emulator can serve several platforms (Dolphin runs both GameCube and Wii).
 
-A single game can be pinned to another emulator in its Properties. Saves stay in each emulator's own folders, so moving a game you've played to another emulator doesn't bring its saves along; Lattis warns you when you do this.
+A single game can be pinned to another emulator in its Properties (Launch tab). Saves stay in each emulator's own folders, so moving a game you've played to another emulator doesn't bring its saves along; Lattis warns you when you do this.
 
 ### Adding an emulator Lattis doesn't know
 

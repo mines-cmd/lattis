@@ -91,7 +91,7 @@ After **Launch**, the game shows as running while Steam starts it, for up to a m
 
 ## Launch options and Proton version
 
-A Steam game's Properties have a Launch card:
+A Steam game's Properties have a Run card on the Launch tab:
 
 - **Proton version:** "Steam's default" or any installed compatibility tool: Valve's Protons and ones like GE-Proton in `compatibilitytools.d`.
 - **Presets:** a check box per preset. Checking one adds it to the launch options; unchecking takes it back out.

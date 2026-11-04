@@ -36,7 +36,7 @@ Nothing is blocked while a manager runs: the game's Launch still works, since a 
 
 ## Links and missing games
 
-Link games from the manager's dialog, or from the game's **Properties → Mod managers** (**Link** picks an existing manager, **Add** opens the dialog with the game already ticked, × unlinks; Save writes it).
+Link games from the manager's dialog, or from the game's **Properties → Saves & mods → Mod managers** (**Link** picks an existing manager, **Add** opens the dialog with the game already ticked, × unlinks; Save writes it).
 
 If you remove a game from the library, it drops out of every manager. A game that is only hidden, uninstalled or not installed stays linked and the manager's row marks it missing. A manager with no games stays listed.
 
