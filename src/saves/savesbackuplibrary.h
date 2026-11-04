@@ -7,7 +7,8 @@ class Library;
 
 namespace SavesBackup {
 // The backup input for a game that just closed, or nothing when automatic backup is off for it
-// or it is no Steam, Proton or Linux game.
+// or it can't be backed up. A ROM game's input is its emulator's save places, shared by every game
+// that emulator runs.
 // Whether any platform or game has automatic backup on (what the daily manifest check waits for).
 bool anyOn(const Library &library);
 

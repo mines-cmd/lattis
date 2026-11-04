@@ -53,8 +53,10 @@ ColumnLayout {
                 HoverHandler { id: autoHover }
                 ToolTip.visible: autoHover.hovered
                 ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: qsTr("Saves are found from the Ludusavi manifest, or from the save folder below, and "
-                                   + "backed up to the folder in Settings, Library, Game saves.")
+                ToolTip.text: editor.romGame
+                    ? qsTr("The emulator's save folders are backed up to the folder in Settings, Library, Game saves.")
+                    : qsTr("Saves are found from the Ludusavi manifest, or from the save folder below, and "
+                           + "backed up to the folder in Settings, Library, Game saves.")
             }
             Label {
                 id: widest

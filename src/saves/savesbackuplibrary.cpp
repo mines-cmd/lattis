@@ -1,5 +1,7 @@
 #include "savesbackuplibrary.h"
 #include "backupplan.h"
+#include "besiderom.h"
+#include "emulators.h"
 #include "gameid.h"
 #include "library.h"
 #include "protonsaves.h"
@@ -87,12 +89,16 @@ QList<BackupPlan::GameQueries> queriesFor(const Library &library)
 bool anyOn(const Library &library)
 {
     const LibraryContent &content = library.store().snapshot().content;
+    // Emulator backups need no manifest, so only the other games' choices count.
+    const auto usesManifest = [](const QString &platform) {
+        return platform == kSteamPlatform || platform == kProtonPlatform || platform == kLinuxPlatform;
+    };
     for (const Platform &platform : content.platforms) {
-        if (platform.autoBackup)
+        if (platform.autoBackup && usesManifest(platform.id))
             return true;
     }
     for (const GameFile &file : content.games) {
-        if (file.autoBackup == 1)
+        if (file.autoBackup == 1 && usesManifest(file.platform))
             return true;
     }
     return false;
@@ -102,8 +108,8 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
                               const QString &appVersion, bool ignoreChoice)
 {
     const Game *game = library.game(gameId);
-    if (!game || game->rom
-        || (game->platform != kSteamPlatform && game->platform != kProtonPlatform && game->platform != kLinuxPlatform))
+    if (!game || (!game->rom && game->platform != kSteamPlatform && game->platform != kProtonPlatform
+                  && game->platform != kLinuxPlatform))
         return std::nullopt;
     const LibraryStore &store = library.store();
     const LibrarySnapshot &snapshot = store.snapshot();
@@ -117,20 +123,47 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
     Input input;
     input.env = SavesFinder::Env::system();
     input.env.home = store.installLocations().home;
-    const QString main = game->groupId.isEmpty() ? game->id : game->groupId;
-    const Game *mainGame = library.game(main);
-    input.gameId = main;
-    input.title = mainGame ? mainGame->title : game->title;
+    if (game->rom) {
+        const Platform *platform = library.platform(game->platform);
+        const QString chosen =
+            Emulators::choose(game->emulator, platform ? platform->emulators : QStringList(), library.installs());
+        const EmulatorDef *def = Emulators::find(library.emulators(), chosen);
+        const EmulatorInstall install = library.installs().value(chosen);
+        if (!def || !install.found())
+            return std::nullopt;
+        input.emulatorId = def->id;
+        input.gameId = backupKey(input);
+        input.title = def->name.isEmpty() ? def->id : def->name;
+        // Only what a restore accepts back: inside the home.
+        const auto inHome = [&](const QString &path) { return path.startsWith(input.env.home + u'/'); };
+        for (const QString &path : Emulators::installPaths(def->saves, install, input.env.home)) {
+            if (inHome(path) && (QFileInfo(path).exists() || QFileInfo(path).isSymLink()))
+                input.emulatorPaths.append(path);
+        }
+        for (const BesideRom::GameSaves &saves : BesideRom::find(*def, snapshot.content.platforms, library.allGames())) {
+            for (const BesideRom::SaveFile &file : saves.files) {
+                if (inHome(file.path))
+                    input.emulatorPaths.append(file.path);
+            }
+        }
+        if (input.emulatorPaths.isEmpty())
+            return std::nullopt;
+    } else {
+        const QString main = game->groupId.isEmpty() ? game->id : game->groupId;
+        const Game *mainGame = library.game(main);
+        input.gameId = main;
+        input.title = mainGame ? mainGame->title : game->title;
 
-    input.copies = copiesOf(library, snapshot, main);
-    if (input.copies.isEmpty())
-        return std::nullopt;
+        input.copies = copiesOf(library, snapshot, main);
+        if (input.copies.isEmpty())
+            return std::nullopt;
 
-    if (game->platform == kProtonPlatform && !snapshot.steam.libraries.isEmpty()) {
-        const ProtonSaves::GameSaves saves =
-            ProtonSaves::locate(*game, snapshot.steam.libraries.first() + QStringLiteral("/compatdata"));
-        if (saves.skipped == ProtonSaves::Skipped::No)
-            input.protonPrefix = saves.prefix;
+        if (game->platform == kProtonPlatform && !snapshot.steam.libraries.isEmpty()) {
+            const ProtonSaves::GameSaves saves =
+                ProtonSaves::locate(*game, snapshot.steam.libraries.first() + QStringLiteral("/compatdata"));
+            if (saves.skipped == ProtonSaves::Skipped::No)
+                input.protonPrefix = saves.prefix;
+        }
     }
 
     input.manifestDir = SavesManifest::defaultDir();

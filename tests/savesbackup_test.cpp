@@ -106,6 +106,8 @@ private slots:
     void ownPathsBackUpWithoutAMatch();
     void aProtonGameWithNoMatchFallsBackToItsPrefix();
     void aFailureLeavesNoPartialFile();
+    void anEmulatorBacksUpItsWholeSaveFolders();
+    void twoGamesOfOneEmulatorShareOneBackup();
 
     void aSessionEndMakesTheBackup();
     void aSessionShorterThanTheMinimumMakesNone();
@@ -268,6 +270,79 @@ void SavesBackupTest::aFailureLeavesNoPartialFile()
     QCOMPARE(result.status, Status::Failed);
     QVERIFY(!result.error.isEmpty());
     QVERIFY(backups(m_folder, "linux-celeste").isEmpty());
+}
+
+void SavesBackupTest::anEmulatorBacksUpItsWholeSaveFolders()
+{
+    const QString saves = m_home + "/.local/share/ryujinx/saves";
+    write(saves + "/0001/data.sav", "one");
+    write(saves + "/0002/data.sav", "two");
+    write(m_home + "/Roms/Pikmin 4.sav", "beside");
+    const auto emulator = [&] {
+        Input in = input(QStringLiteral("Ryujinx"));
+        in.copies.clear();
+        in.emulatorId = QStringLiteral("ryujinx");
+        in.gameId = backupKey(in);
+        in.emulatorPaths = {saves, m_home + "/Roms/Pikmin 4.sav"};
+        return in;
+    };
+    QCOMPARE(backupKey(emulator()), QStringLiteral("emulator-ryujinx"));
+
+    const Result result = run(emulator());
+    QCOMPARE(result.status, Status::Written);
+    QCOMPARE(result.gameId, QStringLiteral("emulator-ryujinx"));
+    QCOMPARE(result.files, 3);
+    QCOMPARE(backups(m_folder, "emulator-ryujinx").size(), 1);
+
+    QString error;
+    const std::optional<QByteArray> bytes =
+        Archive::readFirst(result.archive, QStringLiteral("manifest.toml"), &error);
+    QVERIFY2(bytes, qPrintable(error));
+    const toml::table manifest = toml::parse(std::string_view(bytes->constData(), size_t(bytes->size())));
+    QCOMPARE(QString::fromStdString(manifest["kind"].value_or(std::string())), kKind);
+    QCOMPARE(QString::fromStdString(manifest["game"].value_or(std::string())), QStringLiteral("emulator-ryujinx"));
+    QCOMPARE(QString::fromStdString(manifest["emulator"].value_or(std::string())), QStringLiteral("ryujinx"));
+    QCOMPARE(manifest["path"].as_array()->size(), size_t(2));
+
+    Input later = emulator();
+    later.now = at(60);
+    QCOMPARE(run(later).status, Status::Unchanged);
+    write(saves + "/0003/data.sav", "three");
+    later.now = at(120);
+    QCOMPARE(run(later).status, Status::Written);
+
+    Input none = emulator();
+    none.emulatorPaths = {m_home + "/gone"};
+    QCOMPARE(run(none).status, Status::Nothing);
+}
+
+void SavesBackupTest::twoGamesOfOneEmulatorShareOneBackup()
+{
+    const QString saves = m_home + "/.local/share/ryujinx/saves";
+    write(saves + "/0001/data.sav", "one");
+    int gathered = 0;
+    Service service(
+        [&](const QString &) -> std::optional<Input> {
+            ++gathered;
+            Input in = input(QStringLiteral("Ryujinx"));
+            in.copies.clear();
+            in.emulatorId = QStringLiteral("ryujinx");
+            in.gameId = backupKey(in);
+            in.emulatorPaths = {saves};
+            return in;
+        },
+        {}, [] { return 0; });
+    QSignalSpy finished(&service, &Service::finished);
+
+    service.started("switch-pikmin-4");
+    service.started("switch-zelda");
+    service.ended("switch-pikmin-4");
+    service.ended("switch-zelda");
+    QVERIFY(finished.wait(10000));
+    QTest::qWait(100);
+    QCOMPARE(gathered, 2);
+    QCOMPARE(finished.size(), 1);
+    QCOMPARE(backups(m_folder, "emulator-ryujinx").size(), 1);
 }
 
 void SavesBackupTest::aSessionEndMakesTheBackup()

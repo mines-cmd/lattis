@@ -66,13 +66,18 @@ GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_p
 {
     Loaded out;
     out.index = std::move(index);
-    if (!out.index) {
+    const bool emulator = !input.emulatorId.isEmpty();
+    if (!out.index && !emulator) {
         if (std::optional<SavesIndex> loaded = SavesManifest::loadIndex(input.manifestDir))
             out.index = std::make_shared<const SavesIndex>(std::move(*loaded));
     }
     const SavesIndex none;
     const SavesFinder::Matcher matcher(out.index ? *out.index : none);
-    const SavesFinder::Found found = SavesFinder::find(matcher, input.copies, input.env);
+    SavesFinder::Found found;
+    if (emulator)
+        found.paths = input.emulatorPaths;
+    else
+        found = SavesFinder::find(matcher, input.copies, input.env);
 
     const QString home = input.env.home;
     QVariantList paths;
@@ -82,7 +87,7 @@ GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_p
     if (fallback)
         paths.append(BackupPlan::tilde(input.protonPrefix, home));
 
-    const QString id = input.copies.isEmpty() ? input.gameId : input.copies.first().id;
+    const QString id = SavesBackup::backupKey(input);
     QVariantList backups;
     for (const QString &archive : SavesBackup::backups(input.options.folder, id)) {
         backups.append(QVariantMap{{QStringLiteral("path"), archive},
@@ -93,6 +98,7 @@ GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_p
     out.state = {
         {QStringLiteral("id"), id},
         {QStringLiteral("eligible"), true},
+        {QStringLiteral("emulator"), emulator ? input.title : QString()},
         {QStringLiteral("title"), input.title},
         {QStringLiteral("hasManifest"), out.index && !out.index->games.isEmpty()},
         {QStringLiteral("matched"), found.matched},
@@ -152,7 +158,7 @@ void GameSaves::loadLast(const QString &gameId)
         set({});
         return;
     }
-    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    const QString id = SavesBackup::backupKey(*input);
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher, token, set] {
         const QVariantMap last = watcher->result();
@@ -182,7 +188,7 @@ QString GameSaves::rename(const QString &gameId, const QString &archive, const Q
     const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
     if (!input)
         return {};
-    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    const QString id = SavesBackup::backupKey(*input);
     if (!SavesBackup::backups(input->options.folder, id).contains(archive))
         return tr("That backup is gone.");
     const QString error = SavesBackup::setBackupName(archive, name);
@@ -196,7 +202,7 @@ QString GameSaves::remove(const QString &gameId, const QString &archive)
     const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
     if (!input)
         return {};
-    const QString id = input->copies.isEmpty() ? input->gameId : input->copies.first().id;
+    const QString id = SavesBackup::backupKey(*input);
     if (!SavesBackup::backups(input->options.folder, id).contains(archive))
         return tr("That backup is gone.");
     QString error;

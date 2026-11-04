@@ -36,7 +36,8 @@ ColumnLayout {
         root.error = Library.setPlatformValue(root.platform.id, key, value)
     }
 
-    readonly property bool savesBackup: ["steam", "proton", "linux"].includes(platform.id)
+    readonly property bool romBackup: (platform.emulators ?? []).length > 0
+    readonly property bool savesBackup: ["steam", "proton", "linux"].includes(platform.id) || romBackup
 
     function setAutoBackup(on) {
         let e = ""
@@ -45,7 +46,7 @@ ColumnLayout {
         if (e === "")
             e = Library.setPlatformValue(root.platform.id, "auto_backup", on)
         root.error = e
-        if (e === "" && on)
+        if (e === "" && on && !root.romBackup)
             SavesSettings.ensureManifest()
     }
 
@@ -214,7 +215,9 @@ ColumnLayout {
                     onToggled: root.setAutoBackup(checked)
                     ToolTip.visible: hovered
                     ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: qsTr("Back up each game's saves when it closes. A game's Properties can override this.")
+                    ToolTip.text: root.romBackup
+                        ? qsTr("Back up the emulator's save folders when one of its games closes. A game's Properties can override this.")
+                        : qsTr("Back up each game's saves when it closes. A game's Properties can override this.")
                 }
             }
 

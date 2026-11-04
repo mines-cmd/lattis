@@ -115,6 +115,8 @@ QByteArray manifest(const Input &input, const QString &matched, const QList<Sour
     out += QStringLiteral("created = %1\n")
                .arg(input.now.toOffsetFromUtc(input.now.offsetFromUtc()).toString(Qt::ISODate));
     out += QStringLiteral("game = %1\ntitle = %2\n").arg(quote(input.gameId), quote(input.title));
+    if (!input.emulatorId.isEmpty())
+        out += QStringLiteral("emulator = %1   # every game of this emulator shares the backup\n").arg(quote(input.emulatorId));
     if (!matched.isEmpty())
         out += QStringLiteral("matched = %1   # the game in the Ludusavi manifest\n").arg(quote(matched));
     out += QStringLiteral("files = %1\nbytes = %2\nsignature = %3\n")
@@ -223,14 +225,19 @@ QString setBackupName(const QString &archive, const QString &name)
 Result run(const Input &input)
 {
     Result result;
-    result.gameId = input.copies.isEmpty() ? input.gameId : input.copies.first().id;
+    result.gameId = backupKey(input);
     result.title = input.title;
 
-    SavesIndex index;
-    if (const std::optional<SavesIndex> loaded = SavesManifest::loadIndex(input.manifestDir))
-        index = *loaded;
-    const SavesFinder::Matcher matcher(index);
-    const SavesFinder::Found found = SavesFinder::find(matcher, input.copies, input.env);
+    SavesFinder::Found found;
+    if (input.emulatorId.isEmpty()) {
+        SavesIndex index;
+        if (const std::optional<SavesIndex> loaded = SavesManifest::loadIndex(input.manifestDir))
+            index = *loaded;
+        const SavesFinder::Matcher matcher(index);
+        found = SavesFinder::find(matcher, input.copies, input.env);
+    } else {
+        found.paths = input.emulatorPaths;
+    }
 
     QList<Source> sources;
     for (const QString &path : found.paths)
@@ -345,10 +352,15 @@ void Service::start(const QString &gameId)
     std::optional<Input> input = m_gather(gameId);
     if (!input)
         return;
+    const QString key = backupKey(*input);
+    if (m_active.contains(key))
+        return;
+    m_active.insert(key);
     auto *watcher = new QFutureWatcher<Result>(this);
-    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher] {
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, key] {
         const Result result = watcher->result();
         watcher->deleteLater();
+        m_active.remove(key);
         --m_running;
         switch (result.status) {
         case Status::Failed:

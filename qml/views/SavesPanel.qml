@@ -12,6 +12,7 @@ ColumnLayout {
     readonly property var paths: saves.paths ?? []
     readonly property bool matched: (saves.matched ?? "") !== ""
     readonly property bool fallback: saves.fallback ?? false
+    readonly property string emulator: saves.emulator ?? ""
     readonly property bool restoring: Backups.importing
     readonly property int keep: saves.keep ?? 0
     readonly property bool empty: !fallback && paths.length === 0 && backups.length === 0
@@ -67,10 +68,12 @@ ColumnLayout {
             wrapMode: Text.WordWrap
             color: Theme.gameEditor.hintColor
             font.pixelSize: Theme.gameEditor.hintFontSize
-            text: root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
+            text: root.emulator !== "" ? qsTr("%1 hasn't made any saves on this computer yet.").arg(root.emulator)
+                : root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
                 : qsTr("Pick this game from the Ludusavi list, or choose its save folder.")
         }
         RowLayout {
+            visible: root.emulator === ""
             Layout.alignment: Qt.AlignHCenter
             spacing: Theme.layout.spacing
 
@@ -109,6 +112,14 @@ ColumnLayout {
                 onClicked: GameSaves.backUpNow(root.game.id)
             }
         }
+    }
+    Label {
+        visible: root.emulator !== "" && !root.empty
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.hintColor
+        font.pixelSize: Theme.gameEditor.hintFontSize
+        text: qsTr("A game's own saves can't be told apart, so the backup takes all of %1's save folders. Every game it runs shares these backups.").arg(root.emulator)
     }
     Label {
         visible: root.fallback

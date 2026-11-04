@@ -45,11 +45,23 @@ struct Input
     // A launcher Proton game's compatdata folder: backed up whole (as the saves backup does) when
     // nothing else is found.
     QString protonPrefix;
+    // An emulated game's backup is its emulator's whole save places (no manifest lookup): `title` is
+    // the emulator's name and `copies` stays empty.
+    QString emulatorId;
+    QStringList emulatorPaths;
     Options options;
     QString appVersion;
     QDateTime now;
     Trash trash; // empty = the system trash
 };
+
+// What names a backup's folder under Options::folder: the group's main game, or "emulator-<id>".
+inline QString backupKey(const Input &input)
+{
+    if (!input.emulatorId.isEmpty())
+        return QStringLiteral("emulator-") + input.emulatorId;
+    return input.copies.isEmpty() ? input.gameId : input.copies.first().id;
+}
 
 enum class Status { Nothing, Unchanged, TooBig, Written, Failed };
 
@@ -106,6 +118,7 @@ private:
     std::function<int()> m_minSeconds;
     QHash<QString, QElapsedTimer> m_started;
     QSet<QString> m_pending;
+    QSet<QString> m_active; // backup keys being written: two games of one emulator share one backup
     int m_running = 0;
     QList<QFuture<Result>> m_futures;
 };

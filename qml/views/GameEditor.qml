@@ -65,7 +65,7 @@ Item {
     property var newMediaFolders: null
     readonly property var mediaFoldersShown: newMediaFolders ?? game.mediaFolders ?? []
     readonly property bool mediaGame: !adding && (onSteam || linuxGame || romGame)
-    readonly property bool backupGame: !adding && (onSteam || linuxGame)
+    readonly property bool backupGame: !adding && (onSteam || linuxGame || romGame)
     readonly property string exeShown: newExe !== "" ? newExe : (game.exePath || game.exe || "")
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")
     property bool shortcutQueued: false
@@ -746,7 +746,7 @@ Item {
             }
             errors.push(...saveManagerLinks())
         }
-        if (values.auto_backup === true)
+        if (values.auto_backup === true && !romGame)
             SavesSettings.ensureManifest()
         saved(id)
         error.text = errors.join("\n")
