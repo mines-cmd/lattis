@@ -135,6 +135,17 @@ Item {
                             }
                         }
                     }
+                    LabeledRow {
+                        label: qsTr("Show rail")
+                        note: qsTr("The column of platforms and buttons on the left. When it's hidden, the filter panel lists the platforms.")
+                        SettingsSwitch {
+                            checked: !General.railHidden
+                            onToggled: {
+                                const err = General.setRailHidden(!checked)
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
                 }
 
                 SectionHeader { text: qsTr("Motion") }
