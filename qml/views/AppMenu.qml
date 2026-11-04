@@ -116,6 +116,11 @@ SettingsMenu {
         text: qsTr("Fullscreen")
     }
     Entry {
+        actionName: "toggle_toolbar"
+        iconPath: General.toolbar ? Icons.eyeCloseLine : Icons.eyeLine
+        text: General.toolbar ? qsTr("Hide toolbar") : qsTr("Show toolbar")
+    }
+    Entry {
         actionName: "toggle_rail"
         iconPath: General.railHidden ? Icons.eyeLine : Icons.eyeCloseLine
         text: General.railHidden ? qsTr("Show rail") : qsTr("Hide rail")

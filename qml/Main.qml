@@ -665,6 +665,12 @@ ApplicationWindow {
                 toast.show(error)
             break
         }
+        case "toggle_toolbar": {
+            const error = General.setToolbar(!General.toolbar)
+            if (error.length > 0)
+                toast.show(error)
+            break
+        }
         case "open_settings": openSettings(); break
         case "setup_guide": openSetup(); break
         case "look_up_missing": openBulkLookup(); break
