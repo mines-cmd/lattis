@@ -319,7 +319,7 @@ Item {
         emulatorBox.currentIndex = Math.max(0, emulators.choices.findIndex(c => c.id === g.emulator) + 1)
         autoBackupBox.currentIndex = g.autoBackup === 1 ? 1 : g.autoBackup === 0 ? 2 : 0
         if (backupGame)
-            GameSaves.load(g.id)
+            GameSaves.open(g.id)
         argsField.text = Args.join(g.args)
         protonBox.currentIndex = Math.max(0, protonChoices.findIndex(c => c.name === (g.proton ?? "")))
         launchOptionsField.text = g.launchOptions ?? ""

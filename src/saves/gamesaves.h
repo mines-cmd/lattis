@@ -58,6 +58,8 @@ public:
     bool working() const { return m_working; }
     QString message() const { return m_message; }
 
+    // load() for a game the editor just showed: a backup's message belongs to the game it was made for.
+    Q_INVOKABLE void open(const QString &gameId);
     Q_INVOKABLE void load(const QString &gameId);
     // Only the newest backup (`requested`, `when`, `size`, `name`), for the page's chip: no index is read.
     Q_INVOKABLE void loadLast(const QString &gameId);
@@ -89,6 +91,7 @@ private:
     QVariantMap m_last;
     int m_lastToken = 0;
     QString m_message;
+    QString m_openGame;
     bool m_working = false;
     int m_token = 0;
 };
