@@ -1152,8 +1152,12 @@ void LaunchTest::steamGames()
     QTRY_VERIFY_WITH_TIMEOUT(readFile(steamLog).endsWith("--prefix steam://uninstall/1145360\n"), 5000);
     QCOMPARE(m_runner->uninstall(QStringLiteral("steam-1245620")), QStringLiteral("Elden Ring isn't installed"));
     QCOMPARE(m_runner->uninstall(QStringLiteral("switch-tetris")), QString());
+    // Steam's properties window, for an installed game or not.
+    QCOMPARE(m_runner->openSteamProperties(QStringLiteral("steam-1245620")), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(steamLog).endsWith("--prefix steam://gameproperties/1245620\n"), 5000);
+    QCOMPARE(m_runner->openSteamProperties(QStringLiteral("switch-tetris")), QString());
     QCOMPARE(m_runner->openFolder(QStringLiteral("steam-1245620")), QStringLiteral("Elden Ring isn't installed"));
-    QCOMPARE(readFile(steamLog).count('\n'), 4);
+    QCOMPARE(readFile(steamLog).count('\n'), 5);
     QCOMPARE(m_runner->running(), QStringList{"steam-1145360"}); // still waiting for it to start
 
     QCOMPARE(m_runner->missingEmulator(QStringLiteral("steam-1145360")), QString());

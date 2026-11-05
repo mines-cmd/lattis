@@ -61,6 +61,7 @@ public:
     Q_INVOKABLE QString problemFile(const QString &message) const;
     Q_INVOKABLE QString uninstall(const QString &gameId);
     Q_INVOKABLE QString update(const QString &gameId);
+    Q_INVOKABLE QString openSteamProperties(const QString &gameId);
     Q_INVOKABLE QString forceClose(const QString &gameId);
     Q_INVOKABLE QVariantMap uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,
                                            const QString &action, bool permanent);

@@ -55,6 +55,7 @@ constexpr Action kActions[] = {
     {"game", "game_settings", "Alt+Return", "Properties"},
     {"game", "play_history", "", "Play history"},
     {"game", "hide_game", "", "Hide / unhide"},
+    {"game", "steam_properties", "", "Steam properties (Steam games)"},
     {"game", "uninstall_game", "", "Uninstall (Steam and Proton games)"},
     {"game", "game_menu", "Menu Shift+F10", "Open the game's menu"},
 

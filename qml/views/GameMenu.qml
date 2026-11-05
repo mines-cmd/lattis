@@ -313,6 +313,12 @@ SettingsMenu {
         text: qsTr("Properties")
     }
     Entry {
+        actionName: "steam_properties"
+        iconPath: Icons.steamLine
+        visible: !root.multi && root.game.platform === "steam"
+        text: qsTr("Steam properties")
+    }
+    Entry {
         actionName: "hide_game"
         iconPath: (root.multi ? !root.anyVisible : (root.game.hidden ?? false)) ? Icons.eyeLine : Icons.eyeCloseLine
         text: (root.multi ? !root.anyVisible : (root.game.hidden ?? false)) ? qsTr("Unhide") : qsTr("Hide")

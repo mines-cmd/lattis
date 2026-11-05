@@ -647,6 +647,7 @@ ApplicationWindow {
         case "open_mod_manager":
         case "game_settings":
         case "play_history":
+        case "steam_properties":
         case "uninstall_game":
             runOn(name, gameList.currentGame)
             break
@@ -728,6 +729,7 @@ ApplicationWindow {
         case "game_settings": editGame(game.id); break
         case "hide_game": hideGame(game); break
         case "play_history": openPlayHistory(game); break
+        case "steam_properties": showError(GameRunner.openSteamProperties(game.id)); break
         case "uninstall_game": uninstallGame(game); break
         }
     }
@@ -767,6 +769,11 @@ ApplicationWindow {
         }
         if (next !== "")
             gameList.selectGame(next)
+    }
+
+    function showError(error) {
+        if (error.length > 0)
+            toast.show(error)
     }
 
     function uninstallGame(game) {

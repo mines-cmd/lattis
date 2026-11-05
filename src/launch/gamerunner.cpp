@@ -236,6 +236,15 @@ QString GameRunner::uninstall(const QString &gameId)
     return runSteam({QStringLiteral("steam://uninstall/%1").arg(steam.runId)});
 }
 
+QString GameRunner::openSteamProperties(const QString &gameId)
+{
+    const Game *game = m_library->game(gameId);
+    const SteamRef steam = game ? steamRefOf(*game) : SteamRef();
+    if (!steam || steam.shortcut)
+        return {};
+    return runSteam({QStringLiteral("steam://gameproperties/%1").arg(steam.runId)});
+}
+
 QString GameRunner::update(const QString &gameId)
 {
     const Game *game = m_library->game(gameId);

@@ -97,6 +97,8 @@ A game started from Steam rather than from Lattis doesn't show as running.
 
 After **Launch**, the game shows as running while Steam starts it, for up to a minute and a half. If Steam doesn't start it, for example because a family member is playing a game you borrowed, click **Close** to stop waiting.
 
+**Steam properties**, in a game's right-click menu, opens the game's Properties window in Steam, where its Betas, Launch options, DLC, Language and Updates are. Its Local Files tab has Steam's own Verify integrity of game files. It starts Steam if it isn't running, and with no Steam window open Steam shows its main window beside it.
+
 **Uninstall**, in an installed game's Properties or its right-click menu, hands off to Steam, which asks and removes the files. It is also there while a first install is downloading or paused, where it cancels the download, as in Steam. Lattis never deletes a Steam game's files itself.
 
 ## Launch options and Proton version
