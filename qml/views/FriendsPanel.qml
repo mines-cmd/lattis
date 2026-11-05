@@ -134,7 +134,10 @@ Surface {
                 Label {
                     Layout.fillWidth: true
                     text: row.modelData.name
-                    color: row.playing ? Theme.friends.playingColor : Theme.friends.nameColor
+                    color: row.playing ? Theme.friends.playingColor
+                           : row.modelData.online ? Theme.friends.onlineColor : Theme.friends.nameColor
+                    font.pixelSize: Theme.friends.nameFontSize
+                    font.weight: Theme.friends.nameWeight
                     elide: Text.ElideRight
                 }
                 Label {
@@ -142,6 +145,7 @@ Surface {
                     Layout.fillWidth: true
                     text: root.hours(row.modelData.recentMinutes)
                     color: Theme.friends.hoursColor
+                    font.pixelSize: Theme.friends.hoursFontSize
                     elide: Text.ElideRight
                 }
                 Label {
@@ -149,6 +153,7 @@ Surface {
                     Layout.fillWidth: true
                     text: row.modelData.gameName ?? ""
                     color: Theme.friends.playingColor
+                    font.pixelSize: Theme.friends.hoursFontSize
                     elide: Text.ElideRight
                 }
             }

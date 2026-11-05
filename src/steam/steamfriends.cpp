@@ -387,13 +387,18 @@ void SteamFriends::finish(Outcome outcome, const QString &error)
 bool SteamFriends::applyPlaying(const QList<SteamWebApi::FriendSummary> &summaries)
 {
     const QHash<QString, Playing> before = m_playing;
+    const QSet<QString> onlineBefore = m_online;
     for (const SteamWebApi::FriendSummary &s : summaries) {
         if (s.gameId > 0)
             m_playing.insert(s.steamId, {s.gameId, s.gameName});
         else
             m_playing.remove(s.steamId);
+        if (s.online)
+            m_online.insert(s.steamId);
+        else
+            m_online.remove(s.steamId);
     }
-    return m_playing != before;
+    return m_playing != before || m_online != onlineBefore;
 }
 
 bool SteamFriends::refreshPlaying()
@@ -445,6 +450,7 @@ SteamFriends::Person SteamFriends::personOf(const SteamWebApi::Friend &f) const
         p.gameId = playing->gameId;
         p.gameName = playing->gameName;
     }
+    p.online = m_online.contains(f.steamId);
     return p;
 }
 

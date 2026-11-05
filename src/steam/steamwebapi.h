@@ -142,6 +142,8 @@ struct FriendSummary
     // The game being played now; 0 = none. Not an app of the store for a non-Steam game.
     qint64 gameId = 0;
     QString gameName;
+    // Any state but offline; a friend set to Invisible looks offline.
+    bool online = false;
 
     bool operator==(const FriendSummary &) const = default;
 };

@@ -167,11 +167,12 @@ private slots:
         const auto people = SteamWebApi::parseFriendSummaries(QJsonDocument::fromJson(
             R"({"response":{"players":[
                 {"steamid":"1","personaname":"Ann","avatarmedium":"https:\/\/x\/a_medium.jpg","gameid":"1422450","gameextrainfo":"Deadlock"},
-                {"steamid":"2","personaname":"Bob"}]}})"));
+                {"steamid":"2","personaname":"Bob","personastate":3}]}})"));
         QVERIFY(people.ok);
         QCOMPARE(people.items.size(), 2);
         QCOMPARE(people.items.at(0), (SteamWebApi::FriendSummary{"1", "Ann", "https://x/a_medium.jpg", 1422450, "Deadlock"}));
         QCOMPARE(people.items.at(1).gameId, qint64(0));
+        QVERIFY(people.items.at(1).online);
 
         // Played recently, played previously, owned and unplayed (left out).
         const auto owned = SteamWebApi::parseFriendGames(QJsonDocument::fromJson(
@@ -546,6 +547,17 @@ private slots:
         QTRY_COMPARE(changed.count(), 2);
         QCOMPARE(m_friends->friendsOf(10).playing.size(), 0);
         QCOMPARE(m_friends->playingNow().size(), 1);
+
+        // A friend who came online, with nobody starting a game.
+        QJsonObject online = player(0);
+        online.insert(QStringLiteral("personastate"), 1);
+        m_server->clear(kSummaries);
+        m_server->on(kSummaries, summaries({online, player(1), player(2, {}, 777)}));
+        QVERIFY(!m_friends->friendsOf(10).recent.first().online);
+        QTest::qWait(300);
+        QVERIFY(m_friends->refreshPlaying());
+        QTRY_COMPARE(changed.count(), 3);
+        QVERIFY(m_friends->friendsOf(10).recent.first().online);
 
         // A fetch is not interrupted by it, and Switching the setting off stops it.
         QTest::qWait(300);

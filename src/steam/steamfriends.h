@@ -5,6 +5,7 @@
 #include <QDateTime>
 #include <QHash>
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QTimer>
 
@@ -48,6 +49,7 @@ public:
         // What a friend playing now plays.
         qint64 gameId = 0;
         QString gameName;
+        bool online = false;
     };
 
     // Recent: most played in the last two weeks first; previous: most played first; playing: by name.
@@ -137,6 +139,7 @@ private:
     QString m_error;
     SteamWebApi::FriendsCache m_cache;
     QHash<QString, Playing> m_playing;
+    QSet<QString> m_online;
     qint64 m_lastSendMs = 0;
     QDateTime m_lastPlayingRefresh;
     bool m_playingBusy = false;

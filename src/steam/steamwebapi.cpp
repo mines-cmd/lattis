@@ -432,6 +432,7 @@ Parsed<FriendSummary> parseFriendSummaries(const QJsonDocument &json)
         s.avatarUrl = player.value(QLatin1String("avatarmedium")).toString();
         s.gameId = asInteger(player.value(QLatin1String("gameid")));
         s.gameName = player.value(QLatin1String("gameextrainfo")).toString();
+        s.online = asInteger(player.value(QLatin1String("personastate"))) > 0;
         out.items.append(s);
     }
     return out;

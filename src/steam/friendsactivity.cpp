@@ -16,6 +16,7 @@ QVariantList peopleOf(const QList<SteamFriends::Person> &people)
             {QStringLiteral("recentMinutes"), p.recentMinutes},
             {QStringLiteral("totalMinutes"), p.totalMinutes},
             {QStringLiteral("gameName"), p.gameName},
+            {QStringLiteral("online"), p.online},
         });
     }
     return out;
