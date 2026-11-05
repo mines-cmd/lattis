@@ -78,6 +78,16 @@ When the lookup works, each achievement also shows what share of all players unl
 - **Language:** the names and descriptions are in the language Steam runs in.
 - **Hiding it:** turn off **Show achievements** on Settings → Game page, or in the info panel's right-click menu. The panel follows the theme's `[achievements]` settings.
 
+## Friends who play
+
+A Steam game's page shows a **Friends** panel under the info panel: the friends playing it now (in the status color), the friends who played it in the last two weeks with their hours, and a row of pictures of the friends who played it before (hover one for the name and hours). Click a friend to open their profile in Steam; **View all** opens Steam's page of friends who play the game. The panel is hidden when there is nothing to show.
+
+- **It needs a Steam Web API key** (Settings → Steam → Whole library). Friends whose **Game details** are private, and friends whose list can't be read, are simply missing: nothing marks them.
+- **Only Steam games** have it, not Windows games added through Lattis.
+- **What's contacted, and when:** `api.steampowered.com` with your key, once a day starting 10 seconds after the window appears and on **Sync now**, one request a second at most (about a minute for 50 friends), plus Steam's picture servers for friends' pictures. Opening a game's page sends nothing; the panel reads what was fetched. While it is open, who is playing now is asked for once a minute at most. The friends' play is kept in the cache folder, never in a backup.
+- **Turning it off:** `friends_activity = false` in the `[steam]` section of `settings.toml` stops the fetch and hides the panel, chip and row. Each group (**Friends playing now**, **Friends who played recently**, **Friends who played previously**) has a tick on Settings → Game page and in the panel's right-click menu; with all three off the panel is hidden.
+- **A Friends chip** ("Friends, 13 play") and **info row** count the friends who played the game, whatever groups the panel shows. They are **off by default**: tick **Friends who play** in the chips' or the info panel's right-click menu (or Settings → Game page). They are hidden when no friend played it.
+
 ## Friends and your status
 
 The toolbar can show a Steam friends button (the toolbar is off by default; see [Getting started](getting-started.md)). It appears once Lattis finds Steam, and it's ticked by default: right-click the toolbar to untick it, or drag it to reorder it like the other buttons.
