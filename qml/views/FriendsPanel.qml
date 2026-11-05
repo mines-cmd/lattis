@@ -32,6 +32,14 @@ Surface {
 
     readonly property bool shown: wanted && count > 0
 
+    readonly property string playingTitle: qsTr("Playing now")
+    readonly property string recentTitle: recent.length === 1 ? qsTr("1 friend has played recently")
+                                                              : qsTr("%1 friends have played recently").arg(recent.length)
+    readonly property string previousTitle: previous.length === 1 ? qsTr("1 friend has played previously")
+                                                                  : qsTr("%1 friends have played previously").arg(previous.length)
+    // The top group's heading sits in the header, beside View all, so the panel has one title.
+    readonly property string topGroup: playing.length > 0 ? "playing" : recent.length > 0 ? "recent" : "previous"
+
     signal menuRequested(point position)
 
     visible: shown
@@ -153,22 +161,19 @@ Surface {
         id: column
         anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: Theme.friends.padding
                   leftMargin: Theme.friends.sidePadding; rightMargin: Theme.friends.sidePadding }
-        spacing: Theme.friends.groupGap
+        spacing: 0
 
         RowLayout {
             Layout.fillWidth: true
 
             Label {
-                text: qsTr("Friends")
+                Layout.fillWidth: true
+                text: root.topGroup === "playing" ? root.playingTitle
+                      : root.topGroup === "recent" ? root.recentTitle : root.previousTitle
                 color: Theme.friends.titleColor
                 font.weight: Theme.friends.titleWeight
+                elide: Text.ElideRight
             }
-            Label {
-                text: root.count
-                color: Theme.friends.countColor
-                font.pixelSize: Theme.details.countFontSize
-            }
-            Item { Layout.fillWidth: true }
             Label {
                 text: qsTr("View all")
                 color: viewAll.containsMouse ? Theme.friends.linkHoverColor : Theme.friends.linkColor
@@ -187,9 +192,9 @@ Surface {
         ColumnLayout {
             visible: root.playing.length > 0
             Layout.fillWidth: true
+            Layout.topMargin: Theme.friends.rowGap
             spacing: Theme.friends.rowGap
 
-            GroupHeading { text: qsTr("Playing now") }
             Repeater {
                 model: root.playing
                 FriendRow { playing: true }
@@ -199,11 +204,12 @@ Surface {
         ColumnLayout {
             visible: root.recent.length > 0
             Layout.fillWidth: true
+            Layout.topMargin: root.topGroup === "recent" ? Theme.friends.rowGap : Theme.friends.groupGap
             spacing: Theme.friends.rowGap
 
             GroupHeading {
-                text: root.recent.length === 1 ? qsTr("1 friend has played recently")
-                                               : qsTr("%1 friends have played recently").arg(root.recent.length)
+                visible: root.topGroup !== "recent"
+                text: root.recentTitle
             }
             Repeater {
                 model: root.recentShown
@@ -214,11 +220,12 @@ Surface {
         ColumnLayout {
             visible: root.previous.length > 0
             Layout.fillWidth: true
+            Layout.topMargin: root.topGroup === "previous" ? Theme.friends.rowGap : Theme.friends.groupGap
             spacing: Theme.friends.rowGap
 
             GroupHeading {
-                text: root.previous.length === 1 ? qsTr("1 friend has played previously")
-                                                 : qsTr("%1 friends have played previously").arg(root.previous.length)
+                visible: root.topGroup !== "previous"
+                text: root.previousTitle
             }
 
             // Placed by hand, like the achievements' icons.
