@@ -40,6 +40,7 @@ class LibrarySteamLibraryTest : public LibraryTestBase
         auto library = std::make_unique<Library>(m_data, m_cache);
         library->store().setInstallLocations(m_installs);
         library->store().setSteamLocations({m_installs.home, {}});
+        library->store().setHeroicLocations(fakeHeroic());
         library->store().setStateDir(m_state);
         library->store().setSteamWebCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")));
         library->setUndoDir(m_state + QStringLiteral("/undo"));

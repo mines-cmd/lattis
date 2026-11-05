@@ -3,6 +3,7 @@
 #include "emulators.h"
 #include "game.h"
 #include "gamefile.h"
+#include "heroicscan.h"
 #include "modmanagers.h"
 #include "parsed.h"
 #include "steamscan.h"
@@ -85,6 +86,21 @@ QString formatSteamIndex(const QString &prefix, QList<IndexEntry> entries);
 // The text of a steam.toml before its [games] section.
 QString steamIndexPrefix(const QString &text);
 
+struct HeroicEntry
+{
+    QString id;
+    QString title;
+    QString store; // also the game's platform
+    QString appName;
+    // Heroic's total when it was last counted; -1 when never.
+    int heroicMinutes = -1;
+
+    bool operator==(const HeroicEntry &) const = default;
+};
+
+// The whole file: `prefix` (the comment lines above [games]) then every entry by id.
+QString formatHeroicIndex(const QString &prefix, QList<HeroicEntry> entries);
+
 struct LibraryInfo
 {
     int version = 1;
@@ -100,6 +116,7 @@ QList<int> igdbPlatformIds(const Platform &platform);
 
 Parsed<QList<TagDef>> parseTags(const QByteArray &bytes, const QString &displayPath);
 Parsed<QList<IndexEntry>> parseSteamIndex(const QByteArray &bytes, const QString &displayPath);
+Parsed<QList<HeroicEntry>> parseHeroicIndex(const QByteArray &bytes, const QString &displayPath);
 Parsed<QList<RomEntry>> parseRomIndex(const QByteArray &bytes, const QString &displayPath);
 QString formatRomIndex(const QString &platformName, QList<RomEntry> entries);
 
@@ -162,6 +179,7 @@ struct LibraryContent
     QList<Platform> platforms;
     QList<TagDef> tags;
     QList<IndexEntry> steam;
+    QList<HeroicEntry> heroic;
     QMap<QString, QList<RomEntry>> roms;
     QList<EmulatorEntry> emulators;
     QMap<QString, GameFile> games;
@@ -186,6 +204,7 @@ inline const QStringList kArtExtensions = {QStringLiteral("png"), QStringLiteral
                                            QStringLiteral("webp")};
 
 inline const QString kSteamPlatform = QStringLiteral("steam");
+inline const QString kEpicPlatform = QStringLiteral("epic");
 inline const QString kProtonPlatform = QStringLiteral("proton");
 inline const QString kLinuxPlatform = QStringLiteral("linux");
 
@@ -201,4 +220,5 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
                           const RomFiles &romFiles = {}, const QList<EmulatorEntry> &presets = {},
                           const QHash<QString, RomFile> &romGameFiles = {}, const SteamState &steam = {},
                           const QHash<QString, QStringList> &steamQueued = {},
-                          const QHash<QString, ProgramFiles> &programFiles = {});
+                          const QHash<QString, ProgramFiles> &programFiles = {},
+                          const HeroicListing &heroic = {});

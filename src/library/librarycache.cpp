@@ -92,6 +92,46 @@ static QDataStream &operator>>(QDataStream &s, IndexEntry &e)
     return s;
 }
 
+static QDataStream &operator<<(QDataStream &s, const HeroicEntry &e)
+{
+    return s << e.id << e.title << e.store << e.appName << qint32(e.heroicMinutes);
+}
+
+static QDataStream &operator>>(QDataStream &s, HeroicEntry &e)
+{
+    qint32 minutes = -1;
+    s >> e.id >> e.title >> e.store >> e.appName >> minutes;
+    e.heroicMinutes = minutes;
+    return s;
+}
+
+static QDataStream &operator<<(QDataStream &s, const HeroicInstalled &i)
+{
+    return s << i.installDir << i.sizeBytes;
+}
+
+static QDataStream &operator>>(QDataStream &s, HeroicInstalled &i)
+{
+    return s >> i.installDir >> i.sizeBytes;
+}
+
+static QDataStream &operator<<(QDataStream &s, const HeroicListing &l)
+{
+    const HeroicInstall &i = l.install;
+    return s << qint32(i.kind) << i.root << i.pathMissing << i.program.program << i.program.args << i.program.noGui
+             << l.installed << l.gone << l.warnings;
+}
+
+static QDataStream &operator>>(QDataStream &s, HeroicListing &l)
+{
+    HeroicInstall &i = l.install;
+    qint32 kind = 0;
+    s >> kind >> i.root >> i.pathMissing >> i.program.program >> i.program.args >> i.program.noGui >> l.installed
+        >> l.gone >> l.warnings;
+    i.kind = HeroicInstall::Kind(kind);
+    return s;
+}
+
 static QDataStream &operator<<(QDataStream &s, const RomEntry &e)
 {
     return s << e.path << e.id << e.title << e.titleId << e.size << e.titleSource;
@@ -286,7 +326,7 @@ QStringList LibrarySnapshot::warnings() const
     QStringList out;
     for (const QString &path : std::as_const(paths))
         out += files.value(path).warnings;
-    return out + romWarnings + steam.warnings;
+    return out + romWarnings + steam.warnings + heroic.warnings;
 }
 
 namespace LibraryCache {
@@ -317,9 +357,9 @@ std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dat
 
     LibrarySnapshot s;
     qint32 version = 0;
-    in >> version >> s.files >> s.content.platforms >> s.content.tags >> s.content.steam >> s.content.roms
+    in >> version >> s.files >> s.content.platforms >> s.content.tags >> s.content.steam >> s.content.heroic >> s.content.roms
         >> s.content.emulators >> s.content.games >> s.content.modManagers >> s.art >> s.artChecks >> s.romFiles >> s.romWarnings >> s.romMissingFolders
-        >> s.romGameFiles >> s.programFiles >> s.steam >> s.steamQueued;
+        >> s.romGameFiles >> s.programFiles >> s.steam >> s.steamQueued >> s.heroic;
     s.version = version;
     if (in.status() != QDataStream::Ok || !in.atEnd())
         return std::nullopt;
@@ -336,9 +376,9 @@ bool save(const QString &cachePath, const QString &dataDir, const LibrarySnapsho
     out << kMagic << kFormatVersion << qint32(kStreamVersion);
     out.setVersion(kStreamVersion);
     out << QDir(dataDir).absolutePath();
-    out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.steam
+    out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.steam << s.content.heroic
         << s.content.roms << s.content.emulators << s.content.games << s.content.modManagers << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
-        << s.romGameFiles << s.programFiles << s.steam << s.steamQueued;
+        << s.romGameFiles << s.programFiles << s.steam << s.steamQueued << s.heroic;
     if (out.status() != QDataStream::Ok) {
         file.cancelWriting();
         return false;

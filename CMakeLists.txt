@@ -387,6 +387,7 @@ qt_add_qml_module(lattis
         src/steam/steamlibrary.h src/steam/steamlibrary.cpp
         src/core/qrcode.h src/core/qrcode.cpp
         src/library/steamwebmerge.h src/library/steamwebmerge.cpp
+        src/library/heroicmerge.h src/library/heroicmerge.cpp
         src/core/secretstore.h src/core/secretstore.cpp
         src/steam/steampresets.h src/steam/steampresets.cpp
         src/steam/steamscan.h src/steam/steamscan.cpp
@@ -398,6 +399,9 @@ qt_add_qml_module(lattis
         src/steam/steamsync.h src/steam/steamsync.cpp
         src/steam/steamart.h src/steam/steamart.cpp
         src/steam/steammedia.h src/steam/steammedia.cpp
+        src/heroic/heroiclocate.h src/heroic/heroiclocate.cpp
+        src/heroic/heroicscan.h src/heroic/heroicscan.cpp
+        src/heroic/heroicsettings.h src/heroic/heroicsettings.cpp
         src/theme/theme.h src/theme/theme.cpp
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp
@@ -457,7 +461,7 @@ qt_add_shaders(lattis "shaders"
 
 # The subfolders are listed too: Qt's generated type registration includes QML_ELEMENT
 # headers by file name only.
-target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/theme src/backup src/install src/saves)
+target_include_directories(lattis PRIVATE src src/core src/input src/launch src/library src/metadata src/steam src/heroic src/theme src/backup src/install src/saves)
 # Shown in About.
 target_compile_definitions(lattis PRIVATE LATTIS_VERSION="${PROJECT_VERSION}")
 # Only the AppImage built for a release (tools/appimage.sh --update-info) checks for a newer one: a local

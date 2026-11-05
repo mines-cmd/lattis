@@ -220,6 +220,7 @@ QList<int> igdbPlatformIds(const Platform &platform)
         {QStringLiteral("switch"), {130}},
         {QStringLiteral("3ds"), {37, 137}},
         {QStringLiteral("steam"), {6}},
+        {QStringLiteral("epic"), {6}},
         {QStringLiteral("proton"), {6}},
         {QStringLiteral("linux"), {3, 6}}, // Linux, and PC: many games are listed on PC only
         {QStringLiteral("gamecube"), {21}},
@@ -374,6 +375,84 @@ Parsed<QList<IndexEntry>> parseSteamIndex(const QByteArray &bytes, const QString
             }
             out.value.append(entry);
         }
+    }
+    return out;
+}
+
+Parsed<QList<HeroicEntry>> parseHeroicIndex(const QByteArray &bytes, const QString &displayPath)
+{
+    Parsed<QList<HeroicEntry>> out;
+    toml::table root;
+    if (!parseToml(bytes, displayPath, &root, &out.warnings))
+        return out;
+    out.ok = true;
+
+    const QStringList known = {QStringLiteral("title"), QStringLiteral("store"), QStringLiteral("app_name"),
+                               QStringLiteral("heroic_minutes")};
+    QSet<QString> apps;
+    for (auto &&[k, node] : root) {
+        const QString key = toQString(k.str());
+        const toml::table *games = node.as_table();
+        if (key != QLatin1String("games") || !games) {
+            out.warnings.append(QStringLiteral("%1: unknown key %2; games go in the [games] section%3")
+                                    .arg(where(displayPath, node), key, suggestion(key, {QStringLiteral("games")})));
+            continue;
+        }
+        for (auto &&[idKey, value] : *games) {
+            const QString at = where(displayPath, value);
+            HeroicEntry entry;
+            entry.id = toQString(idKey.str());
+            const toml::table *fields = value.as_table();
+            if (!fields || !GameId::isValid(entry.id)) {
+                out.warnings.append(QStringLiteral("%1: \"%2\" must be a game id (lowercase a-z, 0-9 and -) = "
+                                                   "{ title = \"…\", store = \"…\", app_name = \"…\" }; skipped")
+                                        .arg(at, entry.id));
+                continue;
+            }
+            for (auto &&[fk, fv] : *fields) {
+                const QString field = toQString(fk.str());
+                if (!known.contains(field)) {
+                    warnUnknownKey(&out.warnings, at, field, known);
+                } else if (field == u"heroic_minutes") {
+                    if (const auto *n = fv.as_integer(); n && n->get() >= 0)
+                        entry.heroicMinutes = int(n->get());
+                    else
+                        out.warnings.append(QStringLiteral("%1: heroic_minutes must be a whole number of minutes").arg(at));
+                } else if (const auto *s = fv.as_string()) {
+                    (field == u"title" ? entry.title : field == u"store" ? entry.store : entry.appName) = toQString(s->get());
+                } else {
+                    out.warnings.append(QStringLiteral("%1: %2 must be text in quotes").arg(at, field));
+                }
+            }
+            if (entry.store.isEmpty() || entry.appName.isEmpty()) {
+                out.warnings.append(QStringLiteral("%1: %2 needs a store and an app_name; skipped").arg(at, entry.id));
+                continue;
+            }
+            const QString app = entry.store + u'/' + entry.appName;
+            if (apps.contains(app)) {
+                out.warnings.append(QStringLiteral("%1: %2 is listed twice; skipped").arg(at, entry.appName));
+                continue;
+            }
+            apps.insert(app);
+            out.value.append(entry);
+        }
+    }
+    return out;
+}
+
+QString formatHeroicIndex(const QString &prefix, QList<HeroicEntry> entries)
+{
+    std::sort(entries.begin(), entries.end(), [](const HeroicEntry &a, const HeroicEntry &b) { return a.id < b.id; });
+    QString out = prefix;
+    if (!out.isEmpty() && !out.endsWith(u'\n'))
+        out += u'\n';
+    out += QStringLiteral("[games]\n");
+    for (const HeroicEntry &e : std::as_const(entries)) {
+        out += QStringLiteral("%1 = { title = %2, store = %3, app_name = %4")
+                   .arg(e.id, tomlString(e.title), tomlString(e.store), tomlString(e.appName));
+        if (e.heroicMinutes >= 0)
+            out += QStringLiteral(", heroic_minutes = %1").arg(e.heroicMinutes);
+        out += QStringLiteral(" }\n");
     }
     return out;
 }
@@ -748,7 +827,7 @@ bool titleBefore(const QCollator &collator, const Game &a, const Game &b)
 BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, ArtSet> &art, const RomFiles &romFiles,
                           const QList<EmulatorEntry> &presets, const QHash<QString, RomFile> &romGameFiles,
                           const SteamState &steam, const QHash<QString, QStringList> &steamQueued,
-                          const QHash<QString, ProgramFiles> &programFiles)
+                          const QHash<QString, ProgramFiles> &programFiles, const HeroicListing &heroic)
 {
     BuiltLibrary out;
     out.platforms = content.platforms;
@@ -805,6 +884,14 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         g.platform = kSteamPlatform;
         merged.insert(GameId::forSteamApp(entry.appId), g);
     }
+    for (const HeroicEntry &entry : content.heroic) {
+        if (heroic.gone.contains(entry.id))
+            continue;
+        GameFile g;
+        g.title = entry.title;
+        g.platform = entry.store;
+        merged.insert(entry.id, g);
+    }
     for (auto it = content.roms.cbegin(); it != content.roms.cend(); ++it) {
         const QHash<QString, QString> found = romFiles.value(it.key());
         for (const RomEntry &entry : it.value()) {
@@ -828,6 +915,9 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         // the index or installed.
         if (steam.webActive && g.platform == kSteamPlatform && !merged.contains(it.key())
             && !steamApps.contains(it.key()))
+            continue;
+        // Likewise for a game Heroic stopped listing; its file may not name a platform.
+        if (heroic.gone.contains(it.key()))
             continue;
         if (const auto base = merged.constFind(it.key()); base != merged.cend()) {
             if (g.title.isEmpty())
@@ -981,6 +1071,12 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
                 warnings->append(QStringLiteral("%1: play_minutes and last_played are Steam's for a Steam game; "
                                                 "ignored")
                                      .arg(file));
+        } else if (g.platform == kEpicPlatform) {
+            if (const auto here = heroic.installed.constFind(g.id); here != heroic.installed.cend()) {
+                g.installed = true;
+                g.installDir = here->installDir;
+                g.sizeBytes = here->sizeBytes;
+            }
         } else if (g.platform == kProtonPlatform) {
             const ProgramFiles files = programFiles.value(g.id);
             g.exe = files.exe;

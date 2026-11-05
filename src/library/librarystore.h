@@ -24,6 +24,7 @@ struct ScanOptions
     QList<EmulatorEntry> presets;
     InstallLocations installs;
     SteamLocations steam = SteamLocations::system();
+    HeroicLocations heroic = HeroicLocations::system();
     bool copySteamArt = false;
     QString steamSyncRecord;
     QString libraryId;
@@ -54,6 +55,7 @@ struct ScanResult
     QList<IndexEntry> steamWrites;
     bool steamWebWrite = false;
     QStringList steamWebAdded;
+    QStringList heroicAdded;
     bool steamChanged = false;
     QStringList steamArtCopied;
 
@@ -119,6 +121,7 @@ public:
     const InstallLocations &installLocations() const { return m_installLocations; }
     void setSteamLocations(const SteamLocations &where) { m_steamLocations = where; }
     const SteamLocations &steamLocations() const { return m_steamLocations; }
+    void setHeroicLocations(const HeroicLocations &where) { m_heroicLocations = where; }
     void setStateDir(const QString &stateDir);
     void setSteamWebCache(const QString &path) { m_steamWebCache = path; }
 
@@ -240,6 +243,7 @@ private:
     void saveCache();
     void writeRomIndexes(const QMap<QString, QList<RomEntry>> &indexes);
     void writeSteamIndex(const QList<IndexEntry> &added);
+    void writeHeroicIndex(const QList<HeroicEntry> &entries);
     void writeSteamWeb(const QList<IndexEntry> &entries);
     bool addBuiltInPlatforms();
     void applySteamSync(const ScanResult &result);
@@ -264,6 +268,7 @@ private:
     QString m_dataDir;
     InstallLocations m_installLocations = InstallLocations::system();
     SteamLocations m_steamLocations = SteamLocations::system();
+    HeroicLocations m_heroicLocations = HeroicLocations::system();
     QString m_steamSyncRecord;
     QString m_steamWebCache;
     QString m_steamBackupDir;

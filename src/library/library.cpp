@@ -801,7 +801,7 @@ QVariantList Library::steamShortcuts() const
 
     QVariantList out;
     for (const SteamShortcut &s : state.shortcuts) {
-        if (inLibrary.contains(s.appId))
+        if (inLibrary.contains(s.appId) || SteamShortcuts::isHeroic(s))
             continue;
         const QString tool = state.compatTools.value(s.appId);
         QString art = !s.icon.isEmpty() && QFileInfo(s.icon).isFile() ? s.icon : QString();
@@ -920,7 +920,7 @@ void Library::reloadFromStore()
     const LibrarySnapshot &snapshot = m_store.snapshot();
     BuiltLibrary built = buildLibrary(snapshot.content, snapshot.art, snapshot.romFiles, Emulators::presets(),
                                       snapshot.romGameFiles, snapshot.steam, snapshot.steamQueued,
-                                      snapshot.programFiles);
+                                      snapshot.programFiles, snapshot.heroic);
 
     QStringList problems = m_store.versionStatus().problems + snapshot.warnings() + built.warnings + m_listProblems;
     m_platformProblems.clear();

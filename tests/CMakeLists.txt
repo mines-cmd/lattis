@@ -4,7 +4,7 @@ list(TRANSFORM LIBRARY_RESOURCES PREPEND "../" OUTPUT_VARIABLE TEST_LIBRARY_RESO
 find_package(Qt6 REQUIRED COMPONENTS Test Qml Gui Concurrent Network DBus)
 
 # Every source folder, as the app has them; no two headers share a name.
-set(TEST_INCLUDES ../src/core ../src/input ../src/launch ../src/library ../src/metadata ../src/steam ../src/theme
+set(TEST_INCLUDES ../src/core ../src/input ../src/launch ../src/library ../src/metadata ../src/steam ../src/heroic ../src/theme
     ../src/backup ../src/install ../src/saves)
 
 # A test <name> from <name>.cpp and SOURCES, linked to Qt Test and LIBS. PRESETS embeds the default
@@ -55,6 +55,10 @@ set(STEAM_SOURCES
 set(LIBRARY_FILE_SOURCES
     ../src/library/libraryfiles.h ../src/library/libraryfiles.cpp
     ../src/library/steamwebmerge.h ../src/library/steamwebmerge.cpp
+    ../src/library/heroicmerge.h ../src/library/heroicmerge.cpp
+    ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp
+    ../src/heroic/heroicscan.h ../src/heroic/heroicscan.cpp
+    ../src/heroic/heroicsettings.h ../src/heroic/heroicsettings.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
@@ -288,7 +292,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags rom emulators platforms version steamimport steamlibrary steamsync modmanagers programs uninstall undo hero art media)
+foreach(area list edit tags rom emulators platforms version steamimport steamlibrary heroic steamsync modmanagers programs uninstall undo hero art media)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects
@@ -314,6 +318,10 @@ lattis_test(launch_test PRESETS
 lattis_test(vdf_test
     SOURCES ../src/steam/vdf.h ../src/steam/vdf.cpp
     DEFINES ${VDF_DATA})
+lattis_test(heroic_test
+    SOURCES ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp
+            ../src/heroic/heroicscan.h ../src/heroic/heroicscan.cpp
+    LIBS Qt6::Core)
 lattis_test(steam_test OFFSCREEN
     SOURCES ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp

@@ -40,6 +40,7 @@ void LibraryListTest::firstLoadParsesSecondUsesCache()
         auto library = std::make_unique<Library>(m_data, m_cache);
         library->store().setInstallLocations(m_installs); // else the real machine's emulators count
         library->store().setSteamLocations({m_installs.home, {}});
+        library->store().setHeroicLocations(fakeHeroic());
         QVERIFY(library->loading());
         QCOMPARE(library->gameCount(), 0);
         library->startRefresh();
@@ -54,6 +55,7 @@ void LibraryListTest::firstLoadParsesSecondUsesCache()
     QCOMPARE(library->gameCount(), 26); // straight from the cache, before any scan
     library->store().setInstallLocations(m_installs);
     library->store().setSteamLocations({m_installs.home, {}});
+    library->store().setHeroicLocations(fakeHeroic());
     library->startRefresh();
     library->store().waitForIdle();
     QCoreApplication::processEvents();
@@ -914,6 +916,7 @@ void LibraryListTest::emptyDataDir()
     QTemporaryDir empty;
     Library library(empty.path(), m_cache);
     library.store().setSteamLocations({m_installs.home, {}});
+    library.store().setHeroicLocations(fakeHeroic());
     library.startRefresh();
     QTRY_VERIFY(!library.loading());
     QCOMPARE(library.gameCount(), 0);

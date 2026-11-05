@@ -186,6 +186,7 @@ void LibraryVersionTest::setupHoldsGamesBack()
         auto library = std::make_unique<Library>(data, m_cache, NewLibrary::WithSetup);
         library->store().setInstallLocations(m_installs);
         library->store().setSteamLocations({m_installs.home, {}});
+        library->store().setHeroicLocations(fakeHeroic());
         library->store().setStateDir(m_state);
         library->startRefresh();
         library->store().waitForIdle();

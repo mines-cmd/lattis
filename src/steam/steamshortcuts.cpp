@@ -127,6 +127,12 @@ void setField(Node *shortcut, const Node &value)
 }
 
 namespace SteamShortcuts {
+bool isHeroic(const SteamShortcut &shortcut)
+{
+    const QString url = QStringLiteral("heroic://launch");
+    return shortcut.launchOptions.contains(url, Qt::CaseInsensitive) || shortcut.exeArgs.contains(url, Qt::CaseInsensitive);
+}
+
 QList<SteamShortcut> read(const BinaryVdf::Node &root)
 {
     QList<SteamShortcut> out;

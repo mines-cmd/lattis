@@ -402,6 +402,7 @@ void LibraryPlatformsTest::linuxPlatformFromCache()
     QVERIFY(!linuxDefined()); // its games show, under the id
     library->store().setInstallLocations(m_installs);
     library->store().setSteamLocations({m_installs.home, {}});
+    library->store().setHeroicLocations(fakeHeroic());
     library->store().setStateDir(m_state);
     library->startRefresh();
     library->store().waitForIdle();

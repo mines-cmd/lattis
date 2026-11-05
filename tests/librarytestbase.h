@@ -172,6 +172,7 @@ protected:
     // A Library on the scratch data dir that has finished its first scan.
     std::unique_ptr<Library> openLibrary();
     QString libraryId() const; // library.toml's id
+    HeroicLocations fakeHeroic() const { return {m_installs.home, m_installs.home + QStringLiteral("/.config"), {}, {}}; }
     QString gamePath(const QString &id) const { return m_data + QStringLiteral("/library/games/") + id + ".toml"; }
     QString steamIndexPath() const { return m_data + QStringLiteral("/library/steam.toml"); }
     QString romIndexPath(const QString &platform) const

@@ -12,7 +12,7 @@ Everything Lattis keeps lives in one folder, `~/.local/share/lattis/`. **Open** 
 | `library/tags.toml` | Your tags and their colors |
 | `library/games/` | One file per game, holding what you've set on it |
 | `library/history/` | Each game's play sessions, one file per game, made with its first session; `steam-seen.toml` holds the play time last seen in Steam, so only new play counts |
-| `library/roms/`, `library/steam.toml` | The games found in your ROM folders and in Steam |
+| `library/roms/`, `library/steam.toml`, `library/heroic.toml` | The games found in your ROM folders, in Steam and in Heroic |
 | `art/<game>/` | Each game's hero, cover, logo and icon |
 
 You can put art in `art/<game>/` yourself, as `hero`, `cover`, `logo` or `icon` in PNG, JPEG or WebP. Art larger than Lattis ever shows is shrunk in place in the background (heroes to 3840 px, covers to 1800, logos to 1280, icons to 512), however it got there, and the larger file is not kept. If you want the full-size original, keep a copy somewhere else. The game you're looking at is shrunk once you move to another.
@@ -34,7 +34,7 @@ favorite = true
 status = "finished"
 ```
 
-A game you've never changed has no file of its own: it comes from `library/roms/` or `library/steam.toml`, and a file appears the first time you change something about it. To remove such a game, set `hidden = true` in its file; deleting the file only forgets your changes.
+A game you've never changed has no file of its own: it comes from `library/roms/`, `library/steam.toml` or `library/heroic.toml`, and a file appears the first time you change something about it. To remove such a game, set `hidden = true` in its file; deleting the file only forgets your changes.
 
 `emulators.reference.toml` and the `reference.toml` in `themes/colors/` and `themes/styles/` are rewritten at each start: read them, but put your changes in `emulators.toml` and your colors or style.
 

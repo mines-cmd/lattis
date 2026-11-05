@@ -25,6 +25,9 @@ struct SteamShortcut
 namespace SteamShortcuts {
 QList<SteamShortcut> read(const BinaryVdf::Node &root);
 
+// Heroic's "Add to Steam": the game is in the library already, from Heroic.
+bool isHeroic(const SteamShortcut &shortcut);
+
 quint64 gameId(quint32 appId);
 
 inline qint32 signedAppId(quint32 appId)

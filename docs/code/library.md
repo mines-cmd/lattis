@@ -28,7 +28,7 @@ A game is identified by an **id**, a lowercase ASCII slug like `switch-metroid-d
 
 A game can be known from two kinds of file, and is usually known from both:
 
-- **Source indexes** are written by the app as it discovers games. `library/roms/<platform>.toml` lists the ROMs a folder scan found, keyed by path. `library/steam.toml` lists the Steam games the import found, keyed by app ID. An index entry holds only what discovery knows: an id and a title (and for ROMs a Switch title ID and a size).
+- **Source indexes** are written by the app as it discovers games. `library/roms/<platform>.toml` lists the ROMs a folder scan found, keyed by path. `library/steam.toml` lists the Steam games the import found, keyed by app ID. `library/heroic.toml` lists the games found in Heroic, keyed by game id. An index entry holds only what discovery knows: an id and a title (and for ROMs a Switch title ID and a size).
 - **Game files** (`library/games/<id>.toml`) hold everything the user or a lookup decided: description, tags, favorite, play time, launch options, art choices. For an indexed game the file holds only these changes, and deleting it simply forgets them. A game added by hand with "+" (a ROM outside the ROM folders, a Windows program, a Linux program) has no index entry, so its file also says what the game is: its `rom` or `exe`, title and platform.
 
 `buildLibrary()` merges the two by id, the file's values winning over the entry's. Either one alone is a game. The result is a list of `Game`s: what the UI shows, with platform names, tag colors and art URLs resolved, and with what no file says filled in from the system (whether it's installed, its size, Steam's play time).
@@ -224,12 +224,29 @@ These three kinds of game share a lot of the library's code. Their file formats 
 
 - **Steam games** come from the Steam import during each scan. New ones are added to `steam.toml` (with ids like `steam-<appid>`), and Steam's art is copied into `art/<id>/` unless the game file's `skip_steam_art` lists that kind. A Steam game is installed only when Steam says so. Its play time and last played are Steam's and read-only. A Steam game with an update has `steamUpdate` (`SteamUpdate`), `updateBytes` and `updatePercent` (`-1` unknown), set from its manifest; for a game whose update has started, `Library` overlays what `SteamDownloads` finds (running or paused, the percentage), see [steam.md](steam.md#updates). The selected game's map has `steamUpdate` (`"none"`, `"waiting"`, `"downloading"`, `"paused"`), `steamUpdateText` (the chip's value: "Waiting · 1.2 GB", "Downloading · 45%", "Paused · 45%") and `steamUpdatePercent`; `launchTip` says what the Launch button does in each state. The list model has an `updating` role.
 - **The whole Steam library** (owned games that are not installed, and a Steam Family's) is merged into `steam.toml` by the scan, from the Web API's cache (see [steam.md](steam.md#the-whole-library)); see [below](#the-whole-steam-library).
+- **Epic games** come from Heroic's files during each scan; see [below](#games-from-heroic).
 - **Proton games** are Windows programs run through a non-Steam shortcut in Steam. Each has a game file with its `exe`, `install_dir` and `shortcut` app ID; `protonPrefix(shortcut)` is its prefix in the first Steam library's `compatdata`, or empty. "+" with an `.exe` creates one and queues its shortcut to be added to Steam. "Add existing shortcuts" brings in Steam's own shortcuts as Proton games. Play time comes from Steam's shortcut.
 - **Linux games** are native programs (an ELF, an AppImage or a script) the launcher runs directly. Each has a game file with its `exe`, and its play time is recorded like a ROM game's. Whether a file is a Linux program is decided by its content, not its name (`linuxProgramKind()`): an ELF for this computer's processor, an AppImage (marked in its ELF header), or a script starting with `#!`. A PS3 ELF, say, is not one. A program picked that isn't executable yet is made executable.
 
 For Proton and Linux games, the **install folder** is the program's folder, climbing out of generic ones like `bin`, `Binaries/Win64` or `x86_64` (never up to the home folder or `/`): `Game/Binaries/Win64/Game.exe` → `Game`. An AppImage is the whole game and often sits in a folder of other AppImages, so its files are the AppImage alone. Each scan stats the programs, and adds up an install folder's size once, while the folder stays the same.
 
 **Edits for Steam** (launch options, Proton versions, a Proton game's shortcut) can only be written while Steam is closed, since Steam overwrites its files on exit. The store queues them. `applySteamQueue()` writes them when Steam isn't running, and otherwise a `SteamExitWatch` writes them when Steam exits. The queue shows in the UI as `Library.steamWaiting`, and `undoSteamQueue()` drops an entry, leaving Steam as it is.
+
+### Games from Heroic
+
+An entry of `heroic.toml` is `<id> = { title = "…", store = "epic", app_name = "…", heroic_minutes = 12 }`. An app name can't be an id (Epic's have capitals), so the id is `GameId::forTitle()`'s and the app name sits beside it. `store` is also the game's platform, and `heroic_minutes` is left out until Heroic's total has been counted. The `epic` platform is added once Heroic is found.
+
+`scanLibrary()` finds Heroic (`[heroic]` in `settings.toml`: `enabled`, `path`, `whole_library`, on by default), reads its files, and runs `HeroicMerge::merge()`. New games get a line and go out through `gamesAdded`, like Steam's whole library: one batch for the rate-limited lookup, which does nothing without IGDB keys or with `look_up_new_games` off. The file is written whole, as hundreds of patches would take minutes, and not at all while it has an error.
+
+The scan never removes a line or renames a game, so a game that returns has its id and its counted minutes. Leaving the list only puts the id in `HeroicListing::gone`, which `buildLibrary()` skips along with the game's file:
+
+- With the whole library on, a game leaves when a readable, non-empty cache and a readable `installed.json` both lack it. Heroic can blank a cache it can't read, so an empty one says nothing, and an installed game stays whatever the cache says.
+- With it off, only the installed games are listed, if `installed.json` could be read.
+- With Heroic off or not found, every game in the index stays, not installed.
+
+`HeroicListing` is all the disk cache keeps, so the first frame shows the right list without touching Heroic's files or loading its art URLs. `LibrarySnapshot::heroicScan` stays in memory to save later scans from parsing the library cache; a start's first scan, in the background, parses it again.
+
+A Steam shortcut made by Heroic's "Add to Steam" (`SteamShortcuts::isHeroic()`: `heroic://launch` in its launch options) isn't offered by "Add existing shortcuts", since the game is already here.
 
 ### The whole Steam library
 
@@ -351,8 +368,9 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `librarystore.*` | `LibraryStore`: scanning, writing, watching, the cache; `scanLibrary()` |
 | `libraryundo.*` | `LibraryUndo`: the last change's files, kept to put back |
 | `librarycache.*` | `LibrarySnapshot`, the binary cache, file change detection |
-| `libraryfiles.*` | Parsers for `library.toml`, `platforms.toml`, `tags.toml`, `steam.toml`, ROM indexes; programs' files; `buildLibrary()` |
+| `libraryfiles.*` | Parsers for `library.toml`, `platforms.toml`, `tags.toml`, `steam.toml`, `heroic.toml`, ROM indexes; programs' files; `buildLibrary()` |
 | `steamwebmerge.*` | `SteamWebMerge::merge()`: the Web API's cache into the `steam.toml` entries |
+| `heroicmerge.*` | `HeroicMerge::merge()`: Heroic's games into the `heroic.toml` entries, and which are installed or gone |
 | `gamefile.*` | The game file: `GameFields` (the key table), parsing, validation, formatting |
 | `modmanagers.*` | `ModManager`: parsing and formatting `mod-managers/<id>.toml`, and which linked games are missing |
 | `managericon.*` | a manager's icon: the largest image of a Windows program's first icon group (a small PE resource reader, no external tool), or the icon of the `.desktop` entry whose `Exec` starts the program (path, command or Flatpak id); cached as PNG under `<cache>/mod-manager-icons/<id>-<hash of the program>.png`, with a `.none` marker for an hour when there is none |

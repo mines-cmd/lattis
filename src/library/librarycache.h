@@ -48,12 +48,16 @@ struct LibrarySnapshot
     // Cached, so the first frame shows the badge.
     QHash<QString, QStringList> steamQueued;
 
+    HeroicListing heroic;
+    // Not cached: only saves the next scan from parsing Heroic's library again.
+    HeroicState heroicScan;
+
     QStringList warnings() const;
 };
 
 namespace LibraryCache {
 // Bump whenever what's stored (or how) changes.
-constexpr quint32 kFormatVersion = 35;
+constexpr quint32 kFormatVersion = 36;
 
 QString pathFor(const QString &cacheDir, const QString &dataDir);
 

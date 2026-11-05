@@ -6,6 +6,8 @@
 #include "romdbfetch.h"
 #include "romscan.h"
 #include "steamart.h"
+#include "heroicmerge.h"
+#include "heroicsettings.h"
 #include "steamwebmerge.h"
 #include "vdf.h"
 #include "tomlpatch.h"
@@ -40,6 +42,7 @@ bool samePlatformsBesidesOrder(QList<Platform> a, QList<Platform> b)
 }
 const QString kTags = QStringLiteral("library/tags.toml");
 const QString kSteamIndex = QStringLiteral("library/steam.toml");
+const QString kHeroicIndex = QStringLiteral("library/heroic.toml");
 const QString kEmulators = QStringLiteral("library/emulators.toml");
 const QString kGamesPrefix = QStringLiteral("library/games/");
 const QString kRomsPrefix = QStringLiteral("library/roms/");
@@ -107,6 +110,10 @@ const QString kSteamIndexHeader = QStringLiteral(
     "# Steam games found by the import, kept when uninstalled, as app ID = title. Written by\n"
     "# the Steam import, which adds games and never renames one: you can fix a title here.\n");
 
+const QString kHeroicIndexHeader = QStringLiteral(
+    "# Games found in Heroic, kept when uninstalled or gone from Heroic's list. Written by the\n"
+    "# Heroic import, which adds games and never renames one: you can fix a title here.\n");
+
 const QString kTagsHeader = QStringLiteral(
     "# Tags and their colors. `color` is an index into the theme's tags.palette.\n"
     "# A game can use a tag that isn't listed here; it shows in the first color.\n");
@@ -141,7 +148,7 @@ QHash<QString, FileStamp> listLibraryFiles(const QString &dataDir)
 {
     QHash<QString, FileStamp> out;
     const QDir root(dataDir);
-    for (const QString &path : {kLibraryInfo, kPlatforms, kTags, kSteamIndex, kEmulators}) {
+    for (const QString &path : {kLibraryInfo, kPlatforms, kTags, kSteamIndex, kHeroicIndex, kEmulators}) {
         const QFileInfo info(root.filePath(path));
         if (info.isFile())
             out.insert(path, stampOf(info));
@@ -239,6 +246,12 @@ bool parseInto(LibrarySnapshot &s, const QString &path, const QByteArray &bytes,
         if (r.ok)
             s.content.steam = r.value;
         return r.ok;
+    } else if (path == kHeroicIndex) {
+        const auto r = parseHeroicIndex(bytes, path);
+        *warnings = r.warnings;
+        if (r.ok)
+            s.content.heroic = r.value;
+        return r.ok;
     } else if (path == kEmulators) {
         const auto r = Emulators::parseFile(bytes, path);
         *warnings = r.warnings;
@@ -288,6 +301,8 @@ void forget(LibrarySnapshot &s, const QString &path)
         s.content.tags.clear();
     else if (path == kSteamIndex)
         s.content.steam.clear();
+    else if (path == kHeroicIndex)
+        s.content.heroic.clear();
     else if (path == kEmulators)
         s.content.emulators.clear();
     else if (path.startsWith(kRomsPrefix))
@@ -313,6 +328,8 @@ QSet<QString> takenIds(const LibraryContent &c)
         out.insert(it.key());
     for (const IndexEntry &e : c.steam)
         out.insert(GameId::forSteamApp(e.appId));
+    for (const HeroicEntry &e : c.heroic)
+        out.insert(e.id);
     for (const QList<RomEntry> &index : c.roms) {
         for (const RomEntry &e : index)
             out.insert(e.id);
@@ -518,6 +535,38 @@ QHash<qint64, QHash<QString, QString>> shortcutArt(const LibrarySnapshot &s)
         }
     }
     return out;
+}
+
+void scanHeroic(LibrarySnapshot &s, ScanResult &out, const QByteArray &settings, const ScanOptions &options,
+                const QString &dataDir, const HeroicState &previous)
+{
+    Parsed<HeroicSettings> parsed = parseHeroicSettings(settings, QStringLiteral("settings.toml"));
+    if (QString &path = parsed.value.path; !path.isEmpty() && !path.startsWith(u'~'))
+        path = QDir(dataDir).absoluteFilePath(path);
+
+    HeroicListing listing;
+    listing.warnings = parsed.warnings;
+    if (parsed.value.enabled)
+        listing.install = HeroicLocate::find(options.heroic, parsed.value.path);
+    s.heroicScan = listing.install.found() ? HeroicScan::scan(listing.install.root, previous) : HeroicState();
+    listing.warnings += s.heroicScan.warnings;
+
+    if (listing.install.found() && !options.setup) {
+        HeroicMerge::Input in;
+        in.index = s.content.heroic;
+        in.state = &s.heroicScan;
+        in.wholeLibrary = parsed.value.wholeLibrary;
+        in.canAdd = s.files.value(kHeroicIndex).ok;
+        in.taken = takenIds(s.content);
+        for (auto it = s.art.cbegin(); it != s.art.cend(); ++it)
+            in.taken.insert(it.key());
+        HeroicMerge::Result merged = HeroicMerge::merge(in);
+        s.content.heroic = std::move(merged.index);
+        out.heroicAdded = std::move(merged.added);
+        listing.installed = std::move(merged.installed);
+        listing.gone = std::move(merged.gone);
+    }
+    s.heroic = std::move(listing);
 }
 
 void syncSteam(LibrarySnapshot &s, ScanResult &out, const SteamSettings &settings, const QString &recordPath,
@@ -749,6 +798,9 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     }
     out.changed = out.changed || out.steamChanged || s.content.steam != previous.content.steam;
 
+    scanHeroic(s, out, settings, options, dataDir, previous.heroicScan);
+    out.changed = out.changed || s.heroic != previous.heroic || s.content.heroic != previous.content.heroic;
+
     s.steamQueued.clear();
     if (!options.steamSyncRecord.isEmpty() && s.steam.install.found() && !options.setup)
         syncSteam(s, out, steamSettings.value, options.steamSyncRecord, options.libraryId, dataDir, options.installs.home);
@@ -864,6 +916,7 @@ void LibraryStore::refresh()
     options.cacheDir = m_cacheDir;
     options.installs = m_installLocations;
     options.steam = m_steamLocations;
+    options.heroic = m_heroicLocations;
     options.steamWebCache = m_steamWebCache;
     options.copySteamArt = !m_versionStatus.readOnly;
     if (!m_versionStatus.readOnly)
@@ -943,12 +996,16 @@ void LibraryStore::onScanFinished()
                 qCWarning(lcSteam).noquote() << error;
         }
     } else {
+        // Even when nothing changed: the disk cache doesn't have it, and the next scan would parse again.
+        m_snapshot.heroicScan = result.snapshot.heroicScan;
         if (result.changed) {
             m_snapshot = result.snapshot;
             writeRomIndexes(result.romWrites);
             writeSteamIndex(result.steamWrites);
             if (result.steamWebWrite)
                 writeSteamWeb(result.snapshot.content.steam);
+            if (!result.heroicAdded.isEmpty())
+                writeHeroicIndex(result.snapshot.content.heroic);
             addBuiltInPlatforms();
             ++m_generation;
             emit changed();
@@ -971,6 +1028,7 @@ void LibraryStore::onScanFinished()
         if (result.changed) {
             added += result.romAdded;
             added += result.steamWebAdded;
+            added += result.heroicAdded;
             for (const IndexEntry &e : result.steamWrites)
                 added.append(GameId::forSteamApp(e.appId));
         }
@@ -1153,13 +1211,27 @@ void LibraryStore::writeSteamWeb(const QList<IndexEntry> &entries)
         qCWarning(lcSteam).noquote() << problem;
 }
 
+void LibraryStore::writeHeroicIndex(const QList<HeroicEntry> &entries)
+{
+    if (m_versionStatus.readOnly)
+        return;
+    // Every entry again, as in writeSteamWeb(): a first import is hundreds of games.
+    const QString problem = patchAndLoad(kHeroicIndex, kHeroicIndexHeader, [&](const QString &text) {
+        return TomlPatch::Result{true, formatHeroicIndex(steamIndexPrefix(text), entries), {}};
+    });
+    if (problem.isEmpty())
+        qCInfo(lcLibrary).noquote() << QStringLiteral("updated %1 (%2 games)").arg(kHeroicIndex).arg(entries.size());
+    else
+        qCWarning(lcLibrary).noquote() << problem;
+}
+
 bool LibraryStore::addBuiltInPlatforms()
 {
     const QList<Platform> &platforms = m_snapshot.content.platforms;
     if (m_versionStatus.readOnly || !m_snapshot.files.value(kPlatforms).ok)
         return false;
     bool added = false;
-    const QStringList builtIns = {kSteamPlatform, kProtonPlatform, kLinuxPlatform};
+    const QStringList builtIns = {kSteamPlatform, kEpicPlatform, kProtonPlatform, kLinuxPlatform};
     const auto add = [&](const QString &id, const QString &name) {
         if (std::any_of(platforms.cbegin(), platforms.cend(), [&](const Platform &p) { return p.id == id; }))
             return;
@@ -1173,7 +1245,7 @@ bool LibraryStore::addBuiltInPlatforms()
                                           {QStringLiteral("icon"), tomlString(id)}});
             if (!appended.ok)
                 return appended;
-            // Steam, Proton and Linux go before the emulators' platforms, in that order: right after the
+            // Steam, Epic, Proton and Linux go before the emulators' platforms, in that order: right after the
             // last built-in that comes before this one, or first. Where the user moved them is kept.
             const QStringList ids = TomlPatch::blockValues(appended.text, QStringLiteral("platform"), QStringLiteral("id"));
             const QStringList before = builtIns.mid(0, builtIns.indexOf(id));
@@ -1196,6 +1268,8 @@ bool LibraryStore::addBuiltInPlatforms()
     };
     if (m_snapshot.steam.install.found())
         add(kSteamPlatform, QStringLiteral("Steam"));
+    if (m_snapshot.heroic.install.found())
+        add(kEpicPlatform, QStringLiteral("Epic"));
     const QMap<QString, GameFile> &games = m_snapshot.content.games;
     if (std::any_of(games.cbegin(), games.cend(), [](const GameFile &g) { return g.platform == kProtonPlatform; }))
         add(kProtonPlatform, QStringLiteral("Proton"));
@@ -1978,6 +2052,8 @@ bool LibraryStore::inIndex(const QString &id) const
     const LibraryContent &c = m_snapshot.content;
     if (std::any_of(c.steam.cbegin(), c.steam.cend(), [&](const IndexEntry &e) { return GameId::forSteamApp(e.appId) == id; }))
         return true;
+    if (std::any_of(c.heroic.cbegin(), c.heroic.cend(), [&](const HeroicEntry &e) { return e.id == id; }))
+        return true;
     for (const QList<RomEntry> &index : c.roms) {
         if (std::any_of(index.cbegin(), index.cend(), [&](const RomEntry &e) { return e.id == id; }))
             return true;
@@ -2297,7 +2373,7 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
     for (const quint32 appId : appIds) {
         const auto s = std::find_if(steam.shortcuts.cbegin(), steam.shortcuts.cend(),
                                     [&](const SteamShortcut &c) { return c.appId == appId; });
-        if (s == steam.shortcuts.cend() || inLibrary.contains(appId))
+        if (s == steam.shortcuts.cend() || inLibrary.contains(appId) || SteamShortcuts::isHeroic(*s))
             continue;
         const QString title = s->name.trimmed().isEmpty() ? QFileInfo(s->exe).completeBaseName() : s->name.trimmed();
         const QString id = GameId::forTitle(kProtonPlatform, title, taken);

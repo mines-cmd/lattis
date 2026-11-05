@@ -5,6 +5,7 @@
 // Set LIBRARY_BENCH_KEEP=<dir> to keep the generated libraries in <dir>/files, <dir>/steam
 // and <dir>/roms, e.g. to time the app's first frame on them with tools/screenshot.sh.
 
+#include "heroicmerge.h"
 #include "library.h"
 #include "libraryversion.h"
 #include "steamshortcuts.h"
@@ -126,6 +127,41 @@ void generateSteam(const QString &dir, int count, int withFiles)
             write(QStringLiteral("%1/library/games/steam-%2.toml").arg(dir).arg(appId), userKeys(rng, false));
     }
     write(dir + "/library/steam.toml", index);
+}
+
+// A Heroic library on the scale of Epic's giveaways, at the real cache's 12 KB an entry, a tenth of it
+// installed, and its heroic.toml as a finished import leaves it.
+void generateHeroic(const QString &dir, const QString &root, int count)
+{
+    QRandomGenerator rng(3);
+    writeCommon(dir);
+    write(dir + "/library/platforms.toml",
+          "[[platform]]\nid = \"epic\"\nname = \"Epic\"\nicon = \"epic\"\n");
+    const QByteArray padding(11500, 'x');
+    QByteArray cache = "{\"library\":[";
+    QByteArray installed = "{";
+    QByteArray played = "{";
+    QByteArray index = "[games]\n";
+    for (int i = 0; i < count; ++i) {
+        const QByteArray app = QByteArray::number(0xa0000000u + i, 16) + "c9e6fd54cb492b8c6635480d792";
+        const QByteArray name = title(rng).toUtf8() + " " + QByteArray::number(i);
+        const QByteArray art = "https://cdn1.epicgames.com/item/" + app;
+        cache += (i ? ",{" : "{");
+        cache += "\"app_name\":\"" + app + "\",\"title\":\"" + name + "\",\"art_cover\":\"" + art + "/cover.jpg\","
+                 "\"art_square\":\"" + art + "/square.jpg\",\"is_installed\":false,\"description\":\"" + padding + "\","
+                 "\"install\":{\"is_dlc\":false,\"install_size\":\"1.2 GiB\"}}";
+        if (i % 10 == 0) {
+            installed += (i ? ",\"" : "\"") + app + "\":{\"title\":\"" + name + "\",\"install_path\":\"/games/" + app
+                         + "\",\"install_size\":1000000}";
+            played += (i ? ",\"" : "\"") + app + "\":{\"totalPlayed\":90,\"lastPlayed\":\"2026-11-01T20:00:00.000Z\"}";
+        }
+        index += "epic-game-" + QByteArray::number(i) + " = { title = \"" + name + "\", store = \"epic\", app_name = \""
+                 + app + "\" }\n";
+    }
+    write(root + "/store_cache/legendary_library.json", cache + "]}");
+    write(root + "/legendaryConfig/legendary/installed.json", installed + "}");
+    write(root + "/store/timestamp.json", played + "}");
+    write(dir + "/library/heroic.toml", index);
 }
 
 // A Steam install in the fake `home`, with a manifest and a localconfig.vdf block for each
@@ -262,15 +298,20 @@ void LibraryBench::initTestCase()
     QDir(m_root + "/steam").removeRecursively();
     QDir(m_root + "/roms").removeRecursively();
     QDir(m_root + "/steam-home").removeRecursively();
+    QDir(m_root + "/heroic").removeRecursively();
+    QDir(m_root + "/heroic-home").removeRecursively();
     generateFiles(m_root + "/files", 1000);
     generateSteam(m_root + "/steam", 1000, 50);
     generateSteamInstall(m_root + "/steam-home", 1000, 200);
     generateRoms(m_root + "/roms", 500);
+    generateHeroic(m_root + "/heroic", m_root + "/heroic-home/.config/heroic", 2000);
     // So the app started on these (LIBRARY_BENCH_KEEP) finds the fake Steam, not the real one.
     write(m_root + "/steam/settings.toml",
-          "[steam]\npath = \"" + m_root.toUtf8() + "/steam-home/.local/share/Steam\"\n");
-    write(m_root + "/files/settings.toml", "[steam]\nenabled = false\n");
-    write(m_root + "/roms/settings.toml", "[steam]\nenabled = false\n");
+          "[steam]\npath = \"" + m_root.toUtf8() + "/steam-home/.local/share/Steam\"\n[heroic]\nenabled = false\n");
+    write(m_root + "/files/settings.toml", "[steam]\nenabled = false\n[heroic]\nenabled = false\n");
+    write(m_root + "/roms/settings.toml", "[steam]\nenabled = false\n[heroic]\nenabled = false\n");
+    write(m_root + "/heroic/settings.toml",
+          "[steam]\nenabled = false\n[heroic]\npath = \"" + m_root.toUtf8() + "/heroic-home/.config/heroic\"\n");
 }
 
 void LibraryBench::measure_data()
@@ -280,6 +321,7 @@ void LibraryBench::measure_data()
     QTest::newRow("1000 game files") << "files" << 1000;
     QTest::newRow("1000-entry steam.toml + 50 files") << "steam" << 1000;
     QTest::newRow("500 ROMs in two folders, no index yet") << "roms" << 500;
+    QTest::newRow("2000-game Heroic cache (24 MB) + heroic.toml") << "heroic" << 2000;
 }
 
 void LibraryBench::measure()
@@ -295,6 +337,7 @@ void LibraryBench::measure()
     options.presets = Emulators::presets();
     options.installs.home = QDir::homePath(); // no install folders: detection costs nothing here
     options.steam = {m_root + "/steam-home", {}};
+    options.heroic = {m_root + "/heroic-home", m_root + "/heroic-home/.config", {}, {}};
     options.copySteamArt = true; // Steam has no art for these games: the cost of looking each time
 
     // As at startup, before anything reads the library: library.toml gets its id now, not
@@ -305,6 +348,8 @@ void LibraryBench::measure()
     const double coldMs = median(runs, [&] { cold = scanLibrary(dataDir, {}, options); });
     QVERIFY(cold.snapshot.warnings().isEmpty());
     QVERIFY(cold.romsScanned);
+    if (shape == u"heroic")
+        QVERIFY(cold.heroicAdded.isEmpty());
 
     const double saveMs = median(runs, [&] { QVERIFY(LibraryCache::save(cachePath, dataDir, cold.snapshot)); });
     const qint64 cacheBytes = QFileInfo(cachePath).size();
@@ -315,7 +360,7 @@ void LibraryBench::measure()
 
     BuiltLibrary built;
     const double buildMs = median(runs, [&] {
-        built = buildLibrary(loaded->content, loaded->art, loaded->romFiles, options.presets);
+        built = buildLibrary(loaded->content, loaded->art, loaded->romFiles, options.presets, {}, {}, {}, {}, loaded->heroic);
     });
     QCOMPARE(built.games.size(), games);
     // The library without Steam has Proton games, which say they need it.
@@ -368,6 +413,28 @@ void LibraryBench::measure()
         QCOMPARE(steam.apps.size(), games + 200);
         QCOMPARE(steam.shortcuts.size(), 200);
         QCOMPARE(steam.shortcutConfig(steam.shortcuts.last().appId).playMinutes, 199);
+    }
+    if (shape == u"heroic") {
+        const QString root = m_root + "/heroic-home/.config/heroic";
+        HeroicState state;
+        const double readMs = median(runs, [&] { state = HeroicScan::scan(root); });
+        QCOMPARE(state.games().size(), games);
+        const double checkMs = median(runs, [&] { HeroicScan::scan(root, state); });
+        HeroicMerge::Input in;
+        in.state = &state;
+        HeroicMerge::Result merged;
+        const double importMs = median(runs, [&] { merged = HeroicMerge::merge(in); });
+        QCOMPARE(merged.added.size(), games);
+        const double formatMs = median(runs, [&] { formatHeroicIndex({}, merged.index); });
+        in.index = merged.index;
+        const double mergeMs = median(runs, [&] { HeroicMerge::merge(in); });
+        qInfo().noquote() << QStringLiteral("\n  Heroic alone (background):\n"
+                                            "    reading everything: %1 ms\n"
+                                            "    a scan with the library cache unchanged: %2 ms\n"
+                                            "    merge, first import of every game: %3 ms, heroic.toml text: %4 ms\n"
+                                            "    merge, nothing new: %5 ms")
+                                 .arg(readMs, 0, 'f', 1).arg(checkMs, 0, 'f', 2).arg(importMs, 0, 'f', 1)
+                                 .arg(formatMs, 0, 'f', 1).arg(mergeMs, 0, 'f', 2);
     }
 
     qInfo().noquote() << QStringLiteral(

@@ -30,6 +30,7 @@ std::unique_ptr<Library> LibraryTestBase::openLibrary()
     auto library = std::make_unique<Library>(m_data, m_cache);
     library->store().setInstallLocations(m_installs);
     library->store().setSteamLocations({m_installs.home, {}});
+    library->store().setHeroicLocations(fakeHeroic());
     library->store().setStateDir(m_state);
     library->setUndoDir(m_state + QStringLiteral("/undo"));
     // refresh() signals once as the scan starts, and the result once more. The scan's thread can

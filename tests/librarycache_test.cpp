@@ -49,6 +49,11 @@ LibrarySnapshot LibraryCacheTest::sample() const
     s.content.platforms = {{"steam", "Steam", "steam"}, {"3ds", "3DS", "", {}, {}, 7, {37, 137}}};
     s.content.tags = {{"RPG", 5, {"genre:12", "keyword:jrpg"}, true}, {"Co-op", 4}, {"Solo", 1, {}, true}};
     s.content.steam = {{1145360, "Hades"}, {504230, "Celeste"}};
+    s.content.heroic = {{"epic-fez", "Fez", "epic", "FezApp", 12}, {"epic-hike", "A Short Hike", "epic", "HikeApp"}};
+    s.heroic.install = {HeroicInstall::Kind::Flatpak, "/h/heroic", false, {"/bin/flatpak", {"run", "--no-gui"}, true}};
+    s.heroic.installed.insert("epic-fez", {"/games/Fez", 1000});
+    s.heroic.gone = {"epic-hike"};
+    s.heroic.warnings = {"installed.json: not a JSON object"};
     GameFile g;
     g.title = QStringLiteral("Pokémon Ultra Sun");
     g.platform = QStringLiteral("3ds");
@@ -133,12 +138,14 @@ void LibraryCacheTest::roundTrip()
     QCOMPARE(loaded->content.platforms, s.content.platforms);
     QCOMPARE(loaded->content.tags, s.content.tags);
     QCOMPARE(loaded->content.steam, s.content.steam);
+    QCOMPARE(loaded->content.heroic, s.content.heroic);
+    QCOMPARE(loaded->heroic, s.heroic);
     QCOMPARE(loaded->content.games, s.content.games);
     QCOMPARE(loaded->content.games.value("3ds-pokemon-ultra-sun").lastPlayed.offsetFromUtc(), -3 * 3600);
     QCOMPARE(loaded->art, s.art);
     QCOMPARE(loaded->programFiles, s.programFiles);
     QCOMPARE(loaded->steam, s.steam);
-    QCOMPARE(loaded->warnings().size(), 2);
+    QCOMPARE(loaded->warnings().size(), 3);
 }
 
 void LibraryCacheTest::missingFileIsNoCache()
