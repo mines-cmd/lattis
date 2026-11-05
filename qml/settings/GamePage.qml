@@ -279,6 +279,47 @@ Item {
                     onFailed: text => root.report(text)
                 }
 
+                readonly property bool friendsPlayingShown: root.matches(qsTr("Friends playing now"))
+                readonly property bool friendsRecentShown: root.matches(qsTr("Friends who played recently"))
+                readonly property bool friendsPreviousShown: root.matches(qsTr("Friends who played previously"))
+                readonly property bool friendsShown: friendsPlayingShown || friendsRecentShown || friendsPreviousShown
+                SectionHeader { visible: content.friendsShown; text: qsTr("Friends panel") }
+                SectionNote {
+                    visible: content.friendsShown
+                    text: qsTr("Which Steam friends the panel lists. Needs a Steam Web API key.")
+                }
+                SettingsCard {
+                    visible: content.friendsShown
+                    spacing: Theme.layout.spacing * 2
+                    LabeledRow {
+                        visible: content.friendsPlayingShown
+                        label: qsTr("Friends playing now")
+                        note: qsTr("The Steam friends in the game.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("playing")
+                            onToggled: root.report(General.setFriendsGroup("playing", checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.friendsRecentShown
+                        label: qsTr("Friends who played recently")
+                        note: qsTr("The Steam friends who played the game in the last two weeks.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("recent")
+                            onToggled: root.report(General.setFriendsGroup("recent", checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.friendsPreviousShown
+                        label: qsTr("Friends who played previously")
+                        note: qsTr("The Steam friends who played the game before that.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("previous")
+                            onToggled: root.report(General.setFriendsGroup("previous", checked))
+                        }
+                    }
+                }
+
                 readonly property bool formatShown: root.matches(qsTr("Play time"), qsTr("Format"))
                 readonly property bool periodShown: root.matches(qsTr("Play time"), qsTr("Recent play time period"))
                 SectionHeader { visible: content.formatShown || content.periodShown; text: qsTr("Play time") }
@@ -322,22 +363,16 @@ Item {
                 }
                 readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
                 readonly property bool videoShown: root.matches(qsTr("Show video"))
-                readonly property bool friendsPlayingShown: root.matches(qsTr("Friends playing now"))
-                readonly property bool friendsRecentShown: root.matches(qsTr("Friends who played recently"))
-                readonly property bool friendsPreviousShown: root.matches(qsTr("Friends who played previously"))
-                readonly property bool mediaShown: screenshotsShown || videoShown || friendsPlayingShown
-                                                   || friendsRecentShown || friendsPreviousShown
-                Item {
-                    visible: sections.visible && (content.mediaShown)
-                    Layout.preferredHeight: Theme.settingsWindow.sectionSpacing / 2
-                }
+                readonly property bool mediaShown: screenshotsShown || videoShown
+                SectionHeader { visible: content.mediaShown; text: qsTr("Media row") }
+                SectionNote { visible: content.mediaShown; text: qsTr("What the Media row shows.") }
                 SettingsCard {
                     visible: content.mediaShown
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         visible: content.screenshotsShown
                         label: qsTr("Show screenshots")
-                        note: qsTr("Your screenshots of the game, from Steam or its emulator, in the Media row.")
+                        note: qsTr("Your screenshots of the game, from Steam or its emulator.")
                         SettingsSwitch {
                             checked: General.showScreenshots
                             onToggled: root.report(General.setShowScreenshots(checked))
@@ -346,37 +381,10 @@ Item {
                     LabeledRow {
                         visible: content.videoShown
                         label: qsTr("Show video")
-                        note: qsTr("Your Steam clips of the game, in the Media row.")
+                        note: qsTr("Your Steam clips of the game.")
                         SettingsSwitch {
                             checked: General.showVideo
                             onToggled: root.report(General.setShowVideo(checked))
-                        }
-                    }
-                    LabeledRow {
-                        visible: content.friendsPlayingShown
-                        label: qsTr("Friends playing now")
-                        note: qsTr("The Steam friends in the game, in the Friends panel below the info panel. Needs a Steam Web API key.")
-                        SettingsSwitch {
-                            checked: General.friendsGroups.includes("playing")
-                            onToggled: root.report(General.setFriendsGroup("playing", checked))
-                        }
-                    }
-                    LabeledRow {
-                        visible: content.friendsRecentShown
-                        label: qsTr("Friends who played recently")
-                        note: qsTr("The Steam friends who played the game in the last two weeks.")
-                        SettingsSwitch {
-                            checked: General.friendsGroups.includes("recent")
-                            onToggled: root.report(General.setFriendsGroup("recent", checked))
-                        }
-                    }
-                    LabeledRow {
-                        visible: content.friendsPreviousShown
-                        label: qsTr("Friends who played previously")
-                        note: qsTr("The Steam friends who played the game before that.")
-                        SettingsSwitch {
-                            checked: General.friendsGroups.includes("previous")
-                            onToggled: root.report(General.setFriendsGroup("previous", checked))
                         }
                     }
                 }
@@ -384,6 +392,7 @@ Item {
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
                              && !content.periodShown && !sections.visible && !panels.visible && !content.mediaShown
+                             && !content.friendsShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor
