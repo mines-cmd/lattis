@@ -176,7 +176,8 @@ SettingsCard {
             Layout.fillWidth: true
             linkColor: Theme.gameEditor.linkColor
             text: qsTr("Fetches the games you own, not the family's, without signing in. Your Game details must be "
-                       + "public. <a href=\"%1\">Get a key</a>").arg(SteamLibrary.keyUrl())
+                       + "public. The key also finds which friends play a game; friends who hide their Game details "
+                       + "are simply missing. <a href=\"%1\">Get a key</a>").arg(SteamLibrary.keyUrl())
             onLinkActivated: link => Qt.openUrlExternally(link)
         }
     }

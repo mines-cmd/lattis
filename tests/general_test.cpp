@@ -623,6 +623,8 @@ void GeneralTest::gamePageOrderKeepsNewNames()
     QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
     QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("protondb")));
     QVERIFY(!GamePageSettings::defaultInfoRows().contains(QStringLiteral("protondb")));
+    QVERIFY(gamePageChoices(GamePage::chips).contains(QStringLiteral("friends_playing")));
+    QVERIFY(!GamePageSettings::defaultInfoRows().contains(QStringLiteral("friends_playing")));
 }
 
 void GeneralTest::gamePageSettersWrite()

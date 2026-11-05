@@ -28,6 +28,8 @@ public:
     // {playing, recent, previous}, each a list of {steamId, name, avatar (a file URL, or empty), recentMinutes,
     // totalMinutes, gameName}. Reads the cache: nothing is sent.
     Q_INVOKABLE QVariantMap forGame(qint64 appId) const;
+    // The friends who played the game, recent and previous; 0 when friends activity is off or no key is set.
+    Q_INVOKABLE int playedCount(qint64 appId) const;
     // Asks who is playing now; the call is dropped within a minute of the last one.
     Q_INVOKABLE void refreshPlaying();
     Q_INVOKABLE QString openProfile(const QString &steamId);

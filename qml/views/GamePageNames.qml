@@ -9,6 +9,7 @@ QtObject {
         steam_family: qsTr("Steam Family"),
         last_backup: qsTr("Last backup"),
         protondb: qsTr("ProtonDB"),
+        friends_playing: qsTr("Friends who play"),
         play_time: qsTr("Play time"),
         last_played: qsTr("Last played"),
         recent_play_time: qsTr("Recent play time"),

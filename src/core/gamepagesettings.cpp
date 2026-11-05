@@ -13,7 +13,8 @@ const QStringList &fields()
         QStringLiteral("rating"),       QStringLiteral("times_played"),     QStringLiteral("first_played"),
         QStringLiteral("recent_play_time"), QStringLiteral("date_added"),
         QStringLiteral("steam_waiting"),   QStringLiteral("steam_update"),     QStringLiteral("steam_family"),
-        QStringLiteral("last_backup"),     QStringLiteral("protondb")};
+        QStringLiteral("last_backup"),     QStringLiteral("protondb"),
+        QStringLiteral("friends_playing")};
     return names;
 }
 

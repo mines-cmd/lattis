@@ -49,6 +49,15 @@ QVariantMap FriendsActivity::forGame(qint64 appId) const
     };
 }
 
+int FriendsActivity::playedCount(qint64 appId) const
+{
+    const SteamFriends *friends = SteamFriends::instance();
+    if (!friends->enabled())
+        return 0;
+    const SteamFriends::GameFriends played = friends->friendsOf(appId);
+    return int(played.recent.size() + played.previous.size());
+}
+
 void FriendsActivity::refreshPlaying()
 {
     SteamFriends::instance()->refreshPlaying();

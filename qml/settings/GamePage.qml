@@ -85,7 +85,9 @@ Item {
         last_backup: { icon: Icons.save2Line,
                        hint: qsTr("Only for a game with a save backup: when the newest was made, and its name") },
         protondb: { icon: Icons.gaugeLine,
-                    hint: qsTr("Only for a Steam game: its ProtonDB tier. Asks protondb.com about the game when its page opens; click opens the game there") }
+                    hint: qsTr("Only for a Steam game: its ProtonDB tier. Asks protondb.com about the game when its page opens; click opens the game there") },
+        friends_playing: { icon: Icons.users,
+                           hint: qsTr("Only for a Steam game some of your Steam friends have played, with a Web API key and Friends activity on: how many") }
     }, baseFieldDefs)
 
     readonly property var buttonDefs: ({

@@ -89,6 +89,19 @@ SCENARIOS = [
                "key Ctrl+W\nwait 500\nexpect Hades\nexpect-not View all\n",
                settings_has('friends_groups = []'))],
              setup()),
+    Scenario("the chip and the info row count the friends who played, whatever the groups; none on a non-Steam game",
+             [("click Hades\n" + FETCHED + "expect FRIENDS\nexpect 5 play\nexpect Friends\n"
+               "click Mario Kart 8 Deluxe\nwait 500\nexpect Mario Kart 8 Deluxe\nexpect-not 5 play\n", None)],
+             setup(game_page='\n[game_page]\nchips = ["friends_playing"]\ninfo_rows = ["friends_playing"]\n'
+                             'friends_groups = []\n')),
+    Scenario("Settings → Game page lists the friends chip and row and the three groups",
+             [("expect Hades\nkey Ctrl+Comma\nwait 800\nexpect General\nclick Game page\nwait 500\n"
+               "click Search the game page settings\ntype Friends who play\nwait 500\n"
+               "expect Friends who played recently\nexpect Friends who played previously\n", None)],
+             setup()),
+    Scenario("no chip without a key or with the switch off",
+             [("click Hades\n" + FETCHED + "expect Hades\nexpect-not 5 play\n", None)],
+             setup(key=False, game_page='\n[game_page]\nchips = ["friends_playing"]\ninfo_rows = ["friends_playing"]\n')),
     Scenario("friends_groups in settings.toml picks the groups and survives a restart",
              [("click Hades\n" + FETCHED + "expect Friends\nexpect 3 friends have played recently\n"
                "expect-not Playing now\nexpect-not friends have played previously\n", None),

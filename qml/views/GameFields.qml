@@ -41,7 +41,8 @@ QtObject {
             steam_update: steamUpdateField,
             steam_family: steamFamilyField,
             last_backup: lastBackupField,
-            protondb: protonDbField
+            protondb: protonDbField,
+            friends_playing: friendsPlayingField
         }
     }
 
@@ -132,6 +133,20 @@ QtObject {
                        : qsTr("Open on ProtonDB")
         }
     }
+
+    readonly property bool friendsPlayingWanted: protonDbAppId > 0
+        && (General.gamePageChips.includes("friends_playing") || General.gamePageInfoRows.includes("friends_playing"))
+    property int friendsRevision: 0
+    property Connections friendsWatch: Connections {
+        target: root.friendsPlayingWanted ? FriendsActivity : null
+        function onChanged() { ++root.friendsRevision }
+    }
+    readonly property int friendsPlayed: friendsRevision >= 0 && friendsPlayingWanted
+        ? FriendsActivity.playedCount(protonDbAppId) : 0
+    readonly property var friendsPlayingField: ({
+        label: qsTr("Friends"), icon: Icons.users,
+        value: friendsPlayed > 0 ? qsTr("%1 play").arg(friendsPlayed) : ""
+    })
 
     function playTime(minutes) {
         return Library.playTime(minutes ?? 0, General.playTimeFormat)
