@@ -12,7 +12,9 @@ The metadata code looks up game information on IGDB and art on SteamGridDB and S
 
 **The rating** is IGDB's members' rating (`rating`, 0-100) and nothing else: `total_rating` blends in critic scores, which run high and bunch most well-known games into the top step of the scale. `Igdb::stars(rating, ratingCount)` turns it into stars to a tenth (`rating / 20`) and pulls it toward `kTypicalStars` (3.5) the fewer ratings it rests on, as if the game had `kPriorRatings` (30) extra ratings at 3.5, so a game with a few hundred ratings moves a little and one with thousands not at all. A game with fewer than `kMinRatings` (5) ratings has no rating (-1). Ratings you set yourself stay in half stars; only IGDB's come in tenths, and `Stars` fills any fraction. A lookup that writes the rating also writes `rating_source = "igdb"` (BulkLookup applying, or the editor saving a lookup's rating); `LibraryStore::setGameValues` removes it whenever a rating is written without it, so a rating you set yourself is never marked. The game editor shows "from IGDB" beside Rating while the rating is unchanged and its source is `igdb`.
 
-Neither service is touched before a lookup is actually started. `MetadataClient` is created on first use, not at startup.
+**ProtonDB** supplies a Steam game's Linux compatibility tier for the game page's `protondb` chip, from `GET https://www.protondb.com/api/v1/reports/summaries/<appid>.json` (no key; 404 for a game with no reports). The API is not documented by ProtonDB (the path and fields come from third-party tools) and can change, so a failure only costs the tier, never the chip's link. See [ProtonDB](#protondb).
+
+Neither IGDB nor SteamGridDB is touched before a lookup is actually started. `MetadataClient` is created on first use, not at startup.
 
 ## The HTTP layer
 
@@ -22,6 +24,7 @@ Neither service is touched before a lookup is actually started. `MetadataClient`
 - **SteamGridDB requests** are straightforward GETs to its API v2.
 - **Steam store requests** (`steamStore`, `steamStoreSearch`) are keyless GETs to the two Steam hosts.
 - **Steam Web API requests** (`steamWeb`, for the whole Steam library) are GETs to `api.steampowered.com`; the access token or Web API key is in the query, so only the path is logged, and Qt's error text has the query removed. `setSteamWebFixturesDir()` answers them from files (see [steam.md](steam.md#the-whole-library)).
+- **ProtonDB requests** (`protonDb(path, context, done)`) are keyless GETs to `www.protondb.com`, spaced at least `m_protonDbIntervalMs` (1000, `setProtonDbInterval()`) apart since ProtonDB documents no limit. A 404 is a normal answer there and logs nothing. With fixtures set, `protondb-<appid>.json` in the fixtures folder answers (a missing file is a 404).
 - **Downloads** (art picked in an editor or bulk dialog) are saved under `<cache dir>/downloads/`, under a name that includes the kind (`cover`, `hero`, `logo`, `icon`), so two concurrent editors don't collide. `removeDownloads()` empties that folder when the editor is discarded.
 - **Timeouts** apply per chunk of data arriving, not to the total transfer time, so a large image on a slow line still arrives. Tests shorten the timeout.
 - **Fixtures** replace the network for screenshots and tests: `setFixturesDir(dir)` points every request at canned JSON files in that directory (named after the request; see `MetadataHttp::setFixturesDir()`). A missing fixture is an empty answer. Art images in fixture mode are generated placeholders — a two-color diagonal gradient shaped like the kind's art — so tests and screenshots run without keys or a network connection.
@@ -32,6 +35,16 @@ Neither service is touched before a lookup is actually started. `MetadataClient`
 `MetadataClient` is the QML singleton (`Metadata`). It is the only part of the metadata code QML touches directly. Its request model is asynchronous: every call (`lookup`, `findArt`, `artChoices`, `download`, `testKeys`) returns an integer request ID immediately, and `finished(id, result)` signals when the result is ready. `cancel(id)` drops a result that's no longer needed.
 
 `BulkLookup` and `ScanLookup` use the same client, not their own — there is one rate-limited queue for all lookups in the session.
+
+## ProtonDB
+
+`ProtonDb` (`protondb.*`) is a QML singleton (`ProtonDb`), created on first use (only when the chip is on), so nothing is built or read at startup.
+
+- **`summary(appId)`** returns a map: `state` is `checking` (nothing yet; a request is due or in flight), `ready` (`tier`, `trending`, `total`; may be stale while a new answer loads), `none` (no reports) or `failed`. It starts a request when the entry is missing or stale. `changed(appId)` fires when an answer lands, and the chip asks again.
+- **Waiting:** a request starts 300 ms after the last `summary()` that needed one (`setWaitMs()`), so arrowing down the list sends nothing for games passed over. One request runs at a time; a game that waited is queued behind it. A reply for a game no longer shown still lands in the cache.
+- **Cache:** `protondb.json` in the cache dir, written with `QSaveFile` after each good answer and read on first use: per app ID the tier, trending tier, total and fetch time (`none: true` for a 404). Fresh for 7 days (`kFreshSeconds`), a 404 for 1 day (`kNoReportsSeconds`). A stale entry shows at once while the new one loads.
+- **Failures** (a network error, bad JSON, an empty tier) aren't cached. The game is asked again the next time it is selected again, at most once more per run (`kMaxFailures`).
+- Tests (`protondb_test`) use fixtures, `setNow()` and `setWaitMs()`, and never reach the network.
 
 ## Searching and matching
 
@@ -116,6 +129,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `steamartfetch.*` | `SteamArtFetch`: store art for the Steam games the whole-library import added |
 | `igdb.*` | IGDB search and fetch queries, parsing, platform list, clear-match |
 | `namematch.*` | The name comparison both clear-matches share: the compact key, similarity, the rule |
+| `protondb.*` | `ProtonDb`: the QML singleton behind the ProtonDB chip: requests, the wait, the cache |
 | `steamstore.*` | Steam store request paths, art and search parsing, clear-match |
 | `steamgriddb.*` | SteamGridDB request paths, parsing, art filtering, clear-match |
 | `credentials.*` | `credentials.toml`: parsing and writing API keys |

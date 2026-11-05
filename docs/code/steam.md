@@ -16,6 +16,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Achievements](#achievements)
 - [Signing in to Steam](#signing-in-to-steam)
 - [The whole library](#the-whole-library)
+- [ProtonDB chip](#protondb-chip)
 - [Files](#files)
 - [Reference](#reference)
 
@@ -205,6 +206,10 @@ The outcome (`Synced`, `NotConfigured`, `NoAccount`, `SignInExpired`, `NoGames`,
 **`SteamLibrary`** (`steamlibrary.*`) is what QML binds to: `authState` (`signed_out`, `waiting`, `signed_in`; `expired` is a QR code that ran out), `accountName`, `qrPath` and `qrSize` (the code as SVG path data from `core/qrcode`, drawn in a `Shape`), `statusLine` ("N games · synced X ago", refreshed every minute), `messageKind`/`message` (`expired`, `again`, `private`, `empty`, `failed`), `keyringAvailable`, `hasKey`, `webKey`. `signIn()` starts the QR flow and syncs when it ends, unless the setup guide holds the fetch; `setWebKey()` writes `[steam] web_key` to `credentials.toml`. While the setup guide is open, `dailyCheck()` looks again after 60 s instead of waiting a day.
 
 The merge is described in [library.md](library.md#the-whole-steam-library).
+
+## ProtonDB chip
+
+The `protondb` chip (a chip or an info row, off by default, Steam games with a `steam-<appid>` id, installed or not) shows a game's ProtonDB tier. `GameDetails` takes the app ID from the id (`protonDbAppId`) and asks the `ProtonDb` singleton ([metadata.md](metadata.md#protondb)) only while `General.gamePageChips` includes `protondb`, so nothing is created or requested with the chip off. States: "Checking…" while the first answer is on its way, the tier ("Platinum"…, "Native", "Pending") with the icon in `stat_chip.protondb_<tier>` (`StatChip.iconTint`; the border is unchanged), "No reports" for a 404, and "Open page" for a failed request or a tier the chip doesn't know. The click opens `https://www.protondb.com/app/<appid>` with `Qt.openUrlExternally` in every state, so the link never depends on the API. The tooltip is "Platinum from 759 reports. Open on ProtonDB", with "Trending: Gold" added when the trending tier differs. No ProtonDB logo is used; the icon is the generic `gaugeLine`.
 
 ## Files
 
