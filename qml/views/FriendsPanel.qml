@@ -54,7 +54,12 @@ Surface {
     }
 
     function hours(minutes) {
-        return Library.playTime(minutes ?? 0, General.playTimeFormat)
+        const total = minutes ?? 0
+        if (General.playTimeFormat !== "hours" || total <= 0)
+            return Library.playTime(total, General.playTimeFormat)
+        if (total < 60)
+            return qsTr("%1 min").arg(total)
+        return qsTr("%1 hrs").arg(Qt.locale().toString(total / 60, "f", 1))
     }
 
     onAppIdChanged: reload()
@@ -145,6 +150,7 @@ Surface {
                     Layout.fillWidth: true
                     text: root.hours(row.modelData.recentMinutes)
                     color: Theme.friends.hoursColor
+                    opacity: Theme.friends.hoursOpacity
                     font.pixelSize: Theme.friends.hoursFontSize
                     elide: Text.ElideRight
                 }
