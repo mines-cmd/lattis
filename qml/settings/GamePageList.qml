@@ -6,7 +6,7 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    // "chips", "buttons" or "info_rows".
+    // "chips", "buttons", "info_rows", "sections" or "panels".
     required property string place
     // name → { name, icon, hint }
     required property var entries
@@ -28,7 +28,8 @@ Rectangle {
     }
     readonly property var shown: place === "chips" ? General.gamePageChips
                                : place === "buttons" ? General.gamePageButtons
-                               : place === "sections" ? General.gamePageSections : General.gamePageInfoRows
+                               : place === "sections" ? General.gamePageSections
+                               : place === "panels" ? General.gamePagePanels : General.gamePageInfoRows
 
     readonly property bool searching: query !== ""
     function matches(name) {

@@ -6,7 +6,7 @@ import Qt.labs.qmlmodels
 SettingsMenu {
     id: root
 
-    // chips, buttons, info_rows or sections
+    // chips, buttons, info_rows, sections, panels or friends
     property string place: "chips"
 
     signal customizeRequested()
@@ -17,7 +17,8 @@ SettingsMenu {
 
     readonly property var shown: place === "chips" ? General.gamePageChips
                                : place === "buttons" ? General.gamePageButtons
-                               : place === "sections" ? General.gamePageSections : General.gamePageInfoRows
+                               : place === "sections" ? General.gamePageSections
+                               : place === "panels" ? General.gamePagePanels : General.gamePageInfoRows
 
     // Every choice, hidden ones included. Replaced only when the order changes, so a toggle doesn't
     // rebuild the rows under the pointer.
@@ -113,7 +114,7 @@ SettingsMenu {
         text: qsTr("Achievements")
         checked: General.showAchievements
         keepOpen: true
-        onActivated: root.report(General.setShowAchievements(!General.showAchievements))
+        onActivated: root.report(General.setGamePageShown("panels", "achievements", !General.showAchievements))
     }
     SettingsMenuItem {
         want: root.place === "friends"

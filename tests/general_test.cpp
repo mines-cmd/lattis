@@ -703,13 +703,25 @@ void GeneralTest::gamePageSettersWrite()
     QVERIFY(general.showScreenshots());
     QVERIFY(!fileText().contains("show_screenshots"));
 
+    const QString panels = QStringLiteral("panels");
     QVERIFY(general.showAchievements());
-    QCOMPARE(general.setShowAchievements(false), QString());
+    QCOMPARE(general.setGamePageShown(panels, QStringLiteral("achievements"), false), QString());
     QVERIFY(!general.showAchievements());
-    QVERIFY(fileText().contains("show_achievements = false"));
-    QCOMPARE(general.setShowAchievements(true), QString());
-    QVERIFY(general.showAchievements());
-    QVERIFY(!fileText().contains("show_achievements"));
+    QCOMPARE(general.gamePagePanels(), (QStringList{"info", "friends"}));
+    QVERIFY(fileText().contains("panels = [\"info\", \"friends\"]"));
+    QCOMPARE(general.setGamePageOrder(panels, {"achievements", "info", "friends"}), QString());
+    QCOMPARE(general.gamePageOrder(panels), (QStringList{"achievements", "info", "friends"}));
+    QCOMPARE(general.setGamePageShown(panels, QStringLiteral("achievements"), true), QString());
+    QCOMPARE(general.gamePagePanels(), (QStringList{"achievements", "info", "friends"}));
+    QCOMPARE(general.setGamePageOrder(panels, GamePageSettings::defaultPanels()), QString());
+    QVERIFY(!fileText().contains("panels"));
+
+    const auto legacy = parseGamePageSettings("[game_page]\nshow_achievements = false\n", QStringLiteral("s.toml"));
+    QCOMPARE(legacy.value.panels, (QStringList{"info", "friends"}));
+    const auto listed = parseGamePageSettings("[game_page]\nshow_achievements = false\npanels = [\"achievements\"]\n",
+                                              QStringLiteral("s.toml"));
+    QCOMPARE(listed.value.panels, (QStringList{"achievements"}));
+    QVERIFY(listed.warnings.isEmpty());
 
     QCOMPARE(general.friendsGroups(), (QStringList{"playing", "recent", "previous"}));
     QCOMPARE(general.setFriendsGroup(QStringLiteral("recent"), false), QString());

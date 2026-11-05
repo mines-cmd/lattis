@@ -275,6 +275,9 @@ QString General::writeGamePage(const QString &place, const QStringList &order, c
         for (const char *flag : {"show_description", "show_tags", "show_clips"})
             if (error.isEmpty())
                 TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QLatin1String(flag), &error);
+    if (place == GamePage::panels)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("show_achievements"),
+                                     &error);
     write(place, list, list == defaultList);
     write(place + QStringLiteral("_order"), order, order == canonical);
     if (error.isEmpty())
@@ -344,11 +347,6 @@ QString General::setShowScreenshots(bool on)
 QString General::setShowVideo(bool on)
 {
     return setMediaFlag(QStringLiteral("show_video"), on);
-}
-
-QString General::setShowAchievements(bool on)
-{
-    return setMediaFlag(QStringLiteral("show_achievements"), on);
 }
 
 QString General::setFriendsGroup(const QString &name, bool on)

@@ -65,7 +65,7 @@ A Steam game's page (and a Proton game's, once it's added to Steam) shows your o
 
 ## Achievements
 
-A Steam game's page shows its achievements in a panel below the info panel: how many are unlocked, a progress bar and a grid of icons (colored when unlocked, gray when locked). Hover an icon for a Steam-style tooltip: the icon, name and description, then when you unlocked it and how many players have it. A hidden achievement you haven't unlocked shows a **?** and no details, as in Steam.
+A Steam game's page shows its achievements in a panel in the page's right column (below the info panel by default): how many are unlocked, a progress bar and a grid of icons (colored when unlocked, gray when locked). Hover an icon for a Steam-style tooltip: the icon, name and description, then when you unlocked it and how many players have it. A hidden achievement you haven't unlocked shows a **?** and no details, as in Steam.
 
 Click the panel or **Show all** to open the full list: your progress, a search box, an All / Unlocked / Locked filter, and the achievements in **Unlocked**, **Locked** and **Hidden** sections with their icons, descriptions and unlock dates. Esc, the close button or a click outside closes it.
 
@@ -76,16 +76,16 @@ When the lookup works, each achievement also shows what share of all players unl
 - **Where it comes from:** the files Steam keeps on this computer, for the Steam user Lattis found. No API key or public profile is needed, and nothing is changed. If nothing shows for a game, open the game in Steam once so it fetches the list, then select it again here.
 - **The only download** is the icons, from Steam's image servers, kept on disk afterwards. Offline, a plain square stands in for an icon not saved yet.
 - **Language:** the names and descriptions are in the language Steam runs in.
-- **Hiding it:** turn off **Show achievements** on Settings → Game page, or in the info panel's right-click menu. The panel follows the theme's `[achievements]` settings.
+- **Hiding it:** turn off **Achievements** under Panels on Settings → Game page, or in the info panel's right-click menu. The panel follows the theme's `[achievements]` settings.
 
 ## Friends who play
 
-A Steam game's page shows a **Friends** panel under the info panel: the friends playing it now (in the status color), the friends who played it in the last two weeks with their hours, and a row of pictures of the friends who played it before (hover one for the name and hours). Click a friend to open their profile in Steam; **View all** opens Steam's page of friends who play the game. The top group's heading is the panel's title. The panel is hidden when there is nothing to show.
+A Steam game's page shows a **Friends** panel in the right column (under the info panel by default): the friends playing it now (in the status color), the friends who played it in the last two weeks with their hours, and a row of pictures of the friends who played it before (hover one for the name and hours). Click a friend to open their profile in Steam; **View all** opens Steam's page of friends who play the game. The top group's heading is the panel's title. The panel is hidden when there is nothing to show.
 
 - **It needs a Steam Web API key** (Settings → Steam → Whole library). Friends whose **Game details** are private, and friends whose list can't be read, are simply missing: nothing marks them.
 - **Only Steam games** have it, not Windows games added through Lattis.
 - **What's contacted, and when:** `api.steampowered.com` with your key, once a day starting 10 seconds after the window appears and on **Sync now**, one request a second at most (about a minute for 50 friends), plus Steam's picture servers for friends' pictures. Opening a game's page sends nothing; the panel reads what was fetched. While it is open, who is playing now is asked for once a minute at most. The friends' play is kept in the cache folder, never in a backup.
-- **Turning it off:** `friends_activity = false` in the `[steam]` section of `settings.toml` stops the fetch and hides the panel, chip and row. Each group (**Friends playing now**, **Friends who played recently**, **Friends who played previously**) has a tick on Settings → Game page and in the panel's right-click menu; with all three off the panel is hidden.
+- **Turning it off:** `friends_activity = false` in the `[steam]` section of `settings.toml` stops the fetch and hides the panel, chip and row. Each group (**Friends playing now**, **Friends who played recently**, **Friends who played previously**) has a tick on Settings → Game page and in the panel's right-click menu; with all three off the panel is hidden. **Friends** under Panels on the same page hides the whole panel.
 - **A Friends chip** ("Friends, 13 play") and **info row** count the friends who played the game, whatever groups the panel shows. They are **off by default**: tick **Friends who play** in the chips' or the info panel's right-click menu (or Settings → Game page). They are hidden when no friend played it.
 
 ## Friends and your status

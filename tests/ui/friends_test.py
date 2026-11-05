@@ -66,8 +66,8 @@ def settings_has(*lines):
 
 SCENARIOS = [
     Scenario("a Steam game's page lists the friends who play it, by group",
-             [("click Hades\n" + FETCHED + "expect View all\nexpect Playing now\nexpect 2 friends have played recently\n"
-               "expect 2 friends have played previously\nexpect Ben\nexpect Mira\nexpect-not Tomasz\n", None)],
+             [("click Hades\n" + FETCHED + "expect View all\nexpect Playing now\nexpect Played recently  2\n"
+               "expect Played previously  2\nexpect Ben\nexpect Mira\nexpect-not Tomasz\n", None)],
              setup()),
     Scenario("no panel on a game that isn't Steam's",
              [("click Hades\n" + FETCHED + "expect View all\nclick Mario Kart 8 Deluxe\nwait 500\n"
@@ -82,10 +82,10 @@ SCENARIOS = [
     Scenario("a group that is off is left out of the panel; with all three off the panel is gone",
              [("click Hades\n" + FETCHED + "expect View all\nexpect Playing now\n"
                + SETTINGS + "toggle Friends playing now\nwait 300\nexpect-off Friends playing now\n"
-               "expect 3 friends have played recently\nexpect 2 friends have played previously\n"
-               "toggle Friends who played recently\nwait 300\nexpect-not 3 friends have played recently\n"
+               "expect Played recently  3\nexpect Played previously  2\n"
+               "toggle Friends who played recently\nwait 300\nexpect-not Played recently  3\n"
                "toggle Friends who played previously\nwait 300\nexpect-off Friends who played previously\n"
-               "expect-not View all\nexpect-not friends have played\n"
+               "expect-not View all\nexpect-not Played previously  2\n"
                "key Ctrl+W\nwait 500\nexpect Hades\nexpect-not View all\n",
                settings_has('friends_groups = []'))],
              setup()),
@@ -103,9 +103,9 @@ SCENARIOS = [
              [("click Hades\n" + FETCHED + "expect Hades\nexpect-not 5 play\n", None)],
              setup(key=False, game_page='\n[game_page]\nchips = ["friends_playing"]\ninfo_rows = ["friends_playing"]\n')),
     Scenario("friends_groups in settings.toml picks the groups and survives a restart",
-             [("click Hades\n" + FETCHED + "expect View all\nexpect 3 friends have played recently\n"
-               "expect-not Playing now\nexpect-not friends have played previously\n", None),
-              ("click Hades\nwait 800\nexpect 3 friends have played recently\nexpect-not Playing now\n", None)],
+             [("click Hades\n" + FETCHED + "expect View all\nexpect Played recently  3\n"
+               "expect-not Playing now\nexpect-not Played previously  2\n", None),
+              ("click Hades\nwait 800\nexpect Played recently  3\nexpect-not Playing now\n", None)],
              setup(game_page='\n[game_page]\nfriends_groups = ["recent"]\n')),
 ]
 

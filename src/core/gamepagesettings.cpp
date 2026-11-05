@@ -23,6 +23,7 @@ QStringList &shownOf(GamePageSettings &s, const QString &place)
     return place == GamePage::chips     ? s.chips
            : place == GamePage::buttons ? s.buttons
            : place == GamePage::sections ? s.sections
+           : place == GamePage::panels   ? s.panels
                                          : s.infoRows;
 }
 
@@ -31,6 +32,7 @@ QStringList &orderOf(GamePageSettings &s, const QString &place)
     return place == GamePage::chips     ? s.chipsOrder
            : place == GamePage::buttons ? s.buttonsOrder
            : place == GamePage::sections ? s.sectionsOrder
+           : place == GamePage::panels   ? s.panelsOrder
                                          : s.infoRowsOrder;
 }
 
@@ -91,11 +93,19 @@ QStringList GamePageSettings::defaultSections()
     return {QStringLiteral("description"), QStringLiteral("clips"), QStringLiteral("tags")};
 }
 
+QStringList GamePageSettings::defaultPanels()
+{
+    return {QStringLiteral("info"), QStringLiteral("friends"), QStringLiteral("achievements")};
+}
+
 const QStringList &gamePageChoices(const QString &place)
 {
     static const QStringList sections = GamePageSettings::defaultSections();
+    static const QStringList panels = GamePageSettings::defaultPanels();
     if (place == GamePage::sections)
         return sections;
+    if (place == GamePage::panels)
+        return panels;
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
                                         QStringLiteral("save_folder"), QStringLiteral("gallery"), QStringLiteral("mod_manager"),
@@ -141,15 +151,19 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     if (!section.table)
         return out;
 
-    const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows, GamePage::sections};
+    const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows, GamePage::sections,
+                                GamePage::panels};
     QStringList known = places;
     for (const QString &place : places)
         known.append(place + QStringLiteral("_order"));
     const qsizetype listKeys = known.size();
     known += {QStringLiteral("recent_period"), QStringLiteral("play_time_format"),
               QStringLiteral("chips_without_icon"), QStringLiteral("collapsed_sections"),
-              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("show_achievements"),
-              QStringLiteral("friends_groups")};
+              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("friends_groups")};
+    // Before `panels`, the achievements panel had a switch; a false one still hides it when `panels` isn't set.
+    known += QStringLiteral("show_achievements");
+    bool achievementsHiddenByFlag = false;
+    bool panelsSet = false;
     // Before `sections`, each of them had a switch; a false one still hides it when `sections` isn't set.
     const QStringList flags = {QStringLiteral("show_description"), QStringLiteral("show_tags"),
                                QStringLiteral("show_clips")};
@@ -167,8 +181,10 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             const bool shown = at < places.size();
             if (readNames(node, key, place, section, shown ? shownOf(out.value, place) : orderOf(out.value, place),
                           out.warnings)
-                && shown && place == GamePage::sections)
-                sectionsSet = true;
+                && shown) {
+                sectionsSet = sectionsSet || place == GamePage::sections;
+                panelsSet = panelsSet || place == GamePage::panels;
+            }
         } else if (key == QLatin1String("chips_without_icon")) {
             readNames(node, key, GamePage::chips, section, out.value.chipsWithoutIcon, out.warnings);
         } else if (key == QLatin1String("collapsed_sections")) {
@@ -196,12 +212,14 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             for (const QString &name : choices)
                 if (groups.contains(name))
                     out.value.friendsGroups.append(name);
-        } else if (key == QLatin1String("show_screenshots") || key == QLatin1String("show_video")
-                   || key == QLatin1String("show_achievements")) {
+        } else if (key == QLatin1String("show_screenshots") || key == QLatin1String("show_video")) {
             if (const auto *b = node.as_boolean())
-                (key == QLatin1String("show_video")          ? out.value.showVideo
-                 : key == QLatin1String("show_achievements") ? out.value.showAchievements
-                                                             : out.value.showScreenshots) = b->get();
+                (key == QLatin1String("show_video") ? out.value.showVideo : out.value.showScreenshots) = b->get();
+            else
+                out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
+        } else if (key == QLatin1String("show_achievements")) {
+            if (const auto *b = node.as_boolean())
+                achievementsHiddenByFlag = !b->get();
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
         } else if (flags.contains(key)) {
@@ -225,13 +243,15 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     if (!sectionsSet)
         for (const QString &name : hiddenByFlag)
             out.value.sections.removeAll(name);
+    if (!panelsSet && achievementsHiddenByFlag)
+        out.value.panels.removeAll(QStringLiteral("achievements"));
     return out;
 }
 
 bool isGamePagePlace(const QString &place)
 {
     return place == GamePage::chips || place == GamePage::buttons || place == GamePage::infoRows
-           || place == GamePage::sections;
+           || place == GamePage::sections || place == GamePage::panels;
 }
 
 const QStringList &gamePageShown(const GamePageSettings &settings, const QString &place)

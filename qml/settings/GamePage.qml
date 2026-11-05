@@ -108,6 +108,12 @@ Item {
         clips: { icon: Icons.playLargeLine, hint: qsTr("A game's clips, screenshots and videos (Steam's, its own media folders, an emulator's screenshots of a ROM game) as the Media row") }
     })
 
+    readonly property var panelDefs: ({
+        info: { icon: Icons.informationLine, hint: qsTr("The rows chosen under Info panel. With no rows, the panel is hidden") },
+        friends: { icon: Icons.users, hint: qsTr("Only for a Steam game some of your Steam friends have played, with a Web API key. Which friends is set below") },
+        achievements: { icon: Icons.medal, hint: qsTr("Only for a Steam game with achievements") }
+    })
+
     GamePageNames { id: names }
 
     function named(defs, labels) {
@@ -119,6 +125,7 @@ Item {
     readonly property var fieldEntries: named(fieldDefs, names.fields)
     readonly property var buttonEntries: named(buttonDefs, names.buttons)
     readonly property var sectionEntries: named(sectionDefs, names.sections)
+    readonly property var panelEntries: named(panelDefs, names.panels)
 
     readonly property string query: search.text.trim().toLowerCase()
     function matches(...texts) {
@@ -133,7 +140,7 @@ Item {
     // `spec` is <place>.<name>, as chips.last_played.
     function dragForScreenshot(spec, offset) {
         const [place, name] = spec.split(".")
-        const list = { chips: chips, buttons: buttons, info_rows: infoRows, sections: sections }[place]
+        const list = { chips: chips, buttons: buttons, info_rows: infoRows, sections: sections, panels: panels }[place]
         list?.dragForScreenshot(name, offset)
     }
 
@@ -245,10 +252,23 @@ Item {
                     onFailed: text => root.report(text)
                 }
 
+                SectionHeader { visible: panels.visible; text: qsTr("Panels") }
+                SectionNote {
+                    visible: panels.visible
+                    text: qsTr("Beside the description, or below it in a narrow window, in this order. One with nothing to show for the game is left out.")
+                }
+                GamePageList {
+                    id: panels
+                    place: "panels"
+                    entries: root.panelEntries
+                    query: root.query
+                    flickable: flick
+                    onFailed: text => root.report(text)
+                }
                 SectionHeader { visible: infoRows.visible; text: qsTr("Info panel") }
                 SectionNote {
                     visible: infoRows.visible
-                    text: qsTr("Beside the description, or below it in a narrow window. With no rows, the panel is hidden.")
+                    text: qsTr("The rows of the info panel. With no rows, the panel is hidden.")
                 }
                 GamePageList {
                     id: infoRows
@@ -302,12 +322,11 @@ Item {
                 }
                 readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
                 readonly property bool videoShown: root.matches(qsTr("Show video"))
-                readonly property bool achievementsShown: root.matches(qsTr("Show achievements"))
                 readonly property bool friendsPlayingShown: root.matches(qsTr("Friends playing now"))
                 readonly property bool friendsRecentShown: root.matches(qsTr("Friends who played recently"))
                 readonly property bool friendsPreviousShown: root.matches(qsTr("Friends who played previously"))
-                readonly property bool mediaShown: screenshotsShown || videoShown || achievementsShown
-                                                   || friendsPlayingShown || friendsRecentShown || friendsPreviousShown
+                readonly property bool mediaShown: screenshotsShown || videoShown || friendsPlayingShown
+                                                   || friendsRecentShown || friendsPreviousShown
                 Item {
                     visible: sections.visible && (content.mediaShown)
                     Layout.preferredHeight: Theme.settingsWindow.sectionSpacing / 2
@@ -331,15 +350,6 @@ Item {
                         SettingsSwitch {
                             checked: General.showVideo
                             onToggled: root.report(General.setShowVideo(checked))
-                        }
-                    }
-                    LabeledRow {
-                        visible: content.achievementsShown
-                        label: qsTr("Show achievements")
-                        note: qsTr("A Steam game's achievements, in a panel below the info panel.")
-                        SettingsSwitch {
-                            checked: General.showAchievements
-                            onToggled: root.report(General.setShowAchievements(checked))
                         }
                     }
                     LabeledRow {
@@ -373,7 +383,7 @@ Item {
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
-                             && !content.periodShown && !sections.visible && !content.mediaShown
+                             && !content.periodShown && !sections.visible && !panels.visible && !content.mediaShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

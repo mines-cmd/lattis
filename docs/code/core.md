@@ -50,7 +50,7 @@ The lock and socket live in the runtime dir — not the data dir — for two rea
 | `collapsed_sections` | Sections folded under their heading (`description`, `tags`, `clips`), in their catalog order; empty or absent: none. Clicking a heading on the game page writes it through `General.setSectionCollapsed(name, collapsed)` |
 | `show_screenshots`, `show_video` | Whether the Media row shows the game's Steam screenshots and its clips; default `true`, written only as `false`. `General.setShowScreenshots(on)` and `General.setShowVideo(on)` write them |
 
-A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The four lists are `GamePage::chips`, `buttons`, `infoRows` and `sections` (the names `"chips"`, `"buttons"`, `"info_rows"` and `"sections"`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
+A name that isn't a choice is dropped with a warning in `General.problems`; a choice the file leaves out is hidden (`gamePageOrder()` still lists it, after the others). The five lists are `GamePage::chips`, `buttons`, `infoRows`, `sections` and `panels` (the names `"chips"`, `"buttons"`, `"info_rows"`, `"sections"` and `"panels"`; the panels are `info`, `friends` and `achievements`, and a list without `panels` falls back on the old `show_achievements = false`, which hides `achievements`); `gamePageChoices(place)` has each one's choices. The game page's bindings listen to `General.gamePageChanged`, not `settingsChanged` (which re-shows the main window).
 
 **Gallery settings.** The Gallery's own choices live in `[gallery]` in `settings.toml`, read by `parseGallerySettings()` (`gallerysettings.*`) whenever `General` loads: `group` (`"month"` by default, `"game"` or `"none"`), `sort` (`"newest"` by default, or `"oldest"`), `tile_width` (80 to 1000 px; without it the theme's `gallery.tile_width`), `captions` (`true` by default: the date line under each tile) and `folded_sections` (of `"type"`, `"platform"`, `"game"`, `"date"`: the sidebar sections the user folded). The filters are not kept: they start empty each time the page opens. Problems show in `General.problems` like the other sections'.
 
@@ -192,7 +192,7 @@ Items are found in the main window and in any other visible window (Settings); t
 | `appMenuEntry`, `isAppImage` | `[general] app_menu_entry` (default true; written only as `false`) keeps Lattis's own applications-menu entry ([install](install.md#lattiss-own-menu-entry)). `isAppImage` is true when `$APPIMAGE` is set. `setAppMenuEntry(bool)` |
 | `checkForUpdates`, `skippedUpdate` | `[general] check_for_updates` (default true; the key is written only as `false`) turns the daily check for a newer Lattis off ([install](install.md#updating-lattis)); `skipped_update = "1.2"` is the version the user skipped. `setCheckForUpdates(bool)` and `setSkippedUpdate(version)` (empty removes the key) |
 | `clipVolume` | The clip viewer's volume, 0 to 1 (`clip_volume`, default 1). `setClipVolume(value)` rounds to hundredths and removes the key at 1; its own signal, `clipVolumeChanged` |
-| `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections` | The game page's shown chips, buttons, info rows and sections, in order (`[game_page]`, above) |
+| `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections`, `gamePagePanels` | The game page's shown chips, buttons, info rows, sections and panels, in order (`[game_page]`, above) |
 | `recentPeriod`, `playTimeFormat`, `showScreenshots`, `showVideo` | The rest of `[game_page]`; `showDescription`, `showTags` and `showClips` say whether `sections` has each one |
 | `galleryGroup`, `gallerySort`, `galleryTileWidth` (0 = the theme's), `galleryCaptions`, `galleryFoldedSections` | `[gallery]`, above; they notify with `galleryChanged`, not `settingsChanged` |
 | `startAtLogin` | An autostart entry exists and is enabled |
@@ -208,7 +208,7 @@ Items are found in the main window and in any other visible window (Settings); t
 | `setDownloadBarCollapsed(bool)` | Error string, or `""` |
 | `setReduceMotion(bool)` | Error string, or `""` |
 | `setRailHidden(bool)` | Error string, or `""` |
-| `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"`, `"info_rows"` or `"sections"` in the order the settings page shows them |
+| `gamePageOrder(place)` | Every choice of `"chips"`, `"buttons"`, `"info_rows"`, `"sections"` or `"panels"` in the order the settings page shows them |
 | `setGamePageShown(place, name, shown)` | Error string, or `""`; the entry keeps its place when hidden |
 | `setGamePageOrder(place, order)` | Error string, or `""`; `order` has every choice. Writes the list and, when it differs from the default arrangement, `<place>_order`; a default leaves no key |
 | `setRecentPeriod(period)`, `setPlayTimeFormat(format)` | Error string, or `""`; a default removes the key |

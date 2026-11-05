@@ -864,7 +864,7 @@ constexpr Setting kSettings[] = {
     color("friends", "link_hover_color", "@text", "\"View all\" under the pointer"),
     heading("friends", "Groups"),
     integer("friends", "group_gap", "12", 0, 100, "Space between the groups"),
-    color("friends", "group_color", "@text_muted", "The heading of a group below the top one, such as \"3 friends have played recently\""),
+    color("friends", "group_color", "@text_muted", "The heading of a group below the top one, such as \"Played recently  3\""),
     integer("friends", "group_weight", "500", 100, 900, "Weight of a group's heading"),
     integer("friends", "recent_max", "8", 1, 100, "Friends listed under played recently"),
     heading("friends", "Friends"),

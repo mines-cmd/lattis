@@ -1163,19 +1163,26 @@ Item {
                         }
                     }
                 }
-                ColumnLayout {
+                GridLayout {
                     id: side
+                    columns: 1
+                    rowSpacing: Theme.achievements.gap
+                    columnSpacing: 0
+                    function rowOf(name) {
+                        return Math.max(0, General.gamePagePanels.indexOf(name))
+                    }
                     Layout.row: root.compact ? 1 : 0
                     Layout.column: root.compact ? 0 : 1
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width
                     Layout.alignment: Qt.AlignTop
-                    visible: info.rows.length > 0 || friends.shown || achievements.shown
-                    spacing: Theme.achievements.gap
+                    readonly property bool infoShown: info.rows.length > 0 && General.gamePagePanels.includes("info")
+                    visible: infoShown || friends.shown || achievements.shown
 
                     InfoPanel {
                         id: info
-                        visible: rows.length > 0
+                        visible: side.infoShown
+                        Layout.row: side.rowOf("info")
                         Layout.fillWidth: true
                         fields: gameFields
                         onHistoryRequested: root.historyRequested()
@@ -1189,12 +1196,14 @@ Item {
                     }
                     FriendsPanel {
                         id: friends
+                        Layout.row: side.rowOf("friends")
                         Layout.fillWidth: true
                         game: root.game
                         onMenuRequested: point => root.openPageMenu("friends", friends, point)
                     }
                     AchievementsPanel {
                         id: achievements
+                        Layout.row: side.rowOf("achievements")
                         Layout.fillWidth: true
                         game: root.game
                     }

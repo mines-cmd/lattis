@@ -13,7 +13,7 @@ Surface {
         return m ? parseInt(m[1]) : 0
     }
     readonly property var groups: General.friendsGroups
-    readonly property bool wanted: active && appId > 0 && groups.length > 0
+    readonly property bool wanted: active && General.gamePagePanels.includes("friends") && appId > 0 && groups.length > 0
 
     property var activity: ({ playing: [], recent: [], previous: [] })
     readonly property var playing: groups.includes("playing") ? activity.playing : []
@@ -33,10 +33,8 @@ Surface {
     readonly property bool shown: wanted && count > 0
 
     readonly property string playingTitle: qsTr("Playing now")
-    readonly property string recentTitle: recent.length === 1 ? qsTr("1 friend has played recently")
-                                                              : qsTr("%1 friends have played recently").arg(recent.length)
-    readonly property string previousTitle: previous.length === 1 ? qsTr("1 friend has played previously")
-                                                                  : qsTr("%1 friends have played previously").arg(previous.length)
+    readonly property string recentTitle: qsTr("Played recently  %1").arg(recent.length)
+    readonly property string previousTitle: qsTr("Played previously  %1").arg(previous.length)
     // The top group's heading sits in the header, beside View all, so the panel has one title.
     readonly property string topGroup: playing.length > 0 ? "playing" : recent.length > 0 ? "recent" : "previous"
 

@@ -40,7 +40,13 @@ QtObject {
         clips: qsTr("Steam media")
     })
 
+    readonly property var panels: ({
+        info: qsTr("Info panel"),
+        friends: qsTr("Friends"),
+        achievements: qsTr("Achievements")
+    })
+
     function forPlace(place) {
-        return place === "buttons" ? buttons : place === "sections" ? sections : fields
+        return place === "buttons" ? buttons : place === "sections" ? sections : place === "panels" ? panels : fields
     }
 }

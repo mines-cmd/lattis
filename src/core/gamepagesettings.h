@@ -17,13 +17,14 @@ struct GamePageSettings
     QStringList buttonsOrder;
     QStringList infoRowsOrder;
     QStringList sectionsOrder;
+    QStringList panels = defaultPanels();
+    QStringList panelsOrder;
     QStringList chipsWithoutIcon;
     QStringList collapsedSections;
     QString recentPeriod = QStringLiteral("two_weeks");
     QString playTimeFormat = QStringLiteral("hours");
     bool showScreenshots = true;
     bool showVideo = true;
-    bool showAchievements = true;
     QStringList friendsGroups = friendsGroupNames();
 
     bool operator==(const GamePageSettings &) const = default;
@@ -32,16 +33,18 @@ struct GamePageSettings
     static QStringList defaultButtons();
     static QStringList defaultInfoRows();
     static QStringList defaultSections();
+    static QStringList defaultPanels();
     // The groups of the Friends panel, in the order it shows them.
     static QStringList friendsGroupNames();
 };
 
-// The four lists on the game page.
+// The five lists on the game page.
 namespace GamePage {
 inline const QString chips = QStringLiteral("chips");
 inline const QString buttons = QStringLiteral("buttons");
 inline const QString infoRows = QStringLiteral("info_rows");
 inline const QString sections = QStringLiteral("sections");
+inline const QString panels = QStringLiteral("panels");
 }
 
 const QStringList &gamePageChoices(const QString &place);
