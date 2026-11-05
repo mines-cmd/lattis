@@ -1,6 +1,7 @@
 #include "steamlibrary.h"
 #include "credentials.h"
 #include "qrcode.h"
+#include "steamfriends.h"
 #include "steamlibrarysync.h"
 
 #include <QCoreApplication>
@@ -211,6 +212,7 @@ void SteamLibrary::signOut()
 void SteamLibrary::syncNow()
 {
     m_sync->syncNow();
+    SteamFriends::instance()->syncNow();
 }
 
 QString SteamLibrary::setWebKey(const QString &key)
@@ -223,6 +225,8 @@ QString SteamLibrary::setWebKey(const QString &key)
     emit changed();
     if (hasKey() && enabled())
         m_sync->syncNow();
+    if (hasKey())
+        SteamFriends::instance()->syncNow();
     return {};
 }
 

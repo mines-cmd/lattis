@@ -590,7 +590,7 @@ Item {
     }
 
     function pageMenuForScreenshot(place, submenu) {
-        const target = place === "chips" ? statsFlow : place === "buttons" ? buttons : info
+        const target = place === "chips" ? statsFlow : place === "buttons" ? buttons : place === "friends" ? friends : info
         openPageMenu(place, target, Qt.point(target.width / 2, target.height / 2))
         if (submenu !== undefined) {
             const menu = pageMenu.item
@@ -1170,7 +1170,7 @@ Item {
                     Layout.fillWidth: root.compact
                     Layout.preferredWidth: root.compact ? -1 : Theme.infoPanel.width
                     Layout.alignment: Qt.AlignTop
-                    visible: info.rows.length > 0 || achievements.shown
+                    visible: info.rows.length > 0 || friends.shown || achievements.shown
                     spacing: Theme.achievements.gap
 
                     InfoPanel {
@@ -1186,6 +1186,12 @@ Item {
                             acceptedButtons: Qt.RightButton
                             onTapped: point => root.openPageMenu("info_rows", info, point.position)
                         }
+                    }
+                    FriendsPanel {
+                        id: friends
+                        Layout.fillWidth: true
+                        game: root.game
+                        onMenuRequested: point => root.openPageMenu("friends", friends, point)
                     }
                     AchievementsPanel {
                         id: achievements

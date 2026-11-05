@@ -68,6 +68,11 @@ QStringList GamePageSettings::defaultChips()
             QStringLiteral("steam_update"), QStringLiteral("steam_family")};
 }
 
+QStringList GamePageSettings::friendsGroupNames()
+{
+    return {QStringLiteral("playing"), QStringLiteral("recent"), QStringLiteral("previous")};
+}
+
 QStringList GamePageSettings::defaultButtons()
 {
     return {QStringLiteral("favorite"), QStringLiteral("open_platform"), QStringLiteral("folder"),
@@ -142,7 +147,8 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     const qsizetype listKeys = known.size();
     known += {QStringLiteral("recent_period"), QStringLiteral("play_time_format"),
               QStringLiteral("chips_without_icon"), QStringLiteral("collapsed_sections"),
-              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("show_achievements")};
+              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("show_achievements"),
+              QStringLiteral("friends_groups")};
     // Before `sections`, each of them had a switch; a false one still hides it when `sections` isn't set.
     const QStringList flags = {QStringLiteral("show_description"), QStringLiteral("show_tags"),
                                QStringLiteral("show_clips")};
@@ -166,6 +172,29 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
             readNames(node, key, GamePage::chips, section, out.value.chipsWithoutIcon, out.warnings);
         } else if (key == QLatin1String("collapsed_sections")) {
             readNames(node, key, GamePage::sections, section, out.value.collapsedSections, out.warnings);
+        } else if (key == QLatin1String("friends_groups")) {
+            const auto *array = node.as_array();
+            if (!array || (!array->empty() && !array->is_homogeneous(toml::node_type::string))) {
+                out.warnings.append(
+                    QStringLiteral("%1: friends_groups must be a list, like [\"recent\"]").arg(section.where(node)));
+                continue;
+            }
+            const QStringList choices = GamePageSettings::friendsGroupNames();
+            QStringList groups;
+            for (const toml::node &item : *array) {
+                const QString name = toQString(item.as_string()->get());
+                if (!choices.contains(name))
+                    out.warnings.append(QStringLiteral("%1: unknown name \"%2\" in friends_groups: they're \"%3\"%4")
+                                            .arg(section.where(item), name, choices.join(QStringLiteral("\", \"")),
+                                                 suggestion(name, choices)));
+                else if (!groups.contains(name))
+                    groups.append(name);
+            }
+            // In the panel's order, whatever order the file lists them in.
+            out.value.friendsGroups.clear();
+            for (const QString &name : choices)
+                if (groups.contains(name))
+                    out.value.friendsGroups.append(name);
         } else if (key == QLatin1String("show_screenshots") || key == QLatin1String("show_video")
                    || key == QLatin1String("show_achievements")) {
             if (const auto *b = node.as_boolean())

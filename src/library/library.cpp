@@ -587,6 +587,7 @@ QVariantMap Library::buildSteam() const
          int(std::count_if(steamGames.cbegin(), steamGames.cend(),
                            [](const Game *g) { return g->steamOwnership == u"owned"; }))},
         {QStringLiteral("wholeLibrary"), m_steamSettings.wholeLibrary},
+        {QStringLiteral("friendsActivity"), m_steamSettings.friendsActivity},
         {QStringLiteral("queue"), queue},
         {QStringLiteral("status"), status},
         {QStringLiteral("problem"), m_steamSettings.enabled && state.enabled
@@ -745,6 +746,9 @@ QString Library::setSteamValue(const QString &key, const QVariant &value)
         if (!user.isEmpty())
             formatted = number ? QString::number(id) : tomlString(user);
     } else if (key == u"whole_library") {
+        if (!value.toBool())
+            formatted = QStringLiteral("false");
+    } else if (key == u"friends_activity") {
         if (!value.toBool())
             formatted = QStringLiteral("false");
     } else if (key == u"default_proton") {

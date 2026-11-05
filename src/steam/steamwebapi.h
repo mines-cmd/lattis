@@ -117,4 +117,69 @@ bool saveCache(const QString &path, const Cache &cache);
 
 // Apps of a shared list that are games or software.
 bool isGameType(int appType);
+
+// A friend's game with some play time; games owned and never played are not kept.
+struct FriendGame
+{
+    qint64 appId = 0;
+    int recentMinutes = 0; // the last two weeks
+    int totalMinutes = 0;
+
+    bool operator==(const FriendGame &) const = default;
+};
+
+enum class FriendGroup { None, Recent, Previous };
+FriendGroup groupOf(const FriendGame &game);
+
+struct FriendSummary
+{
+    QString steamId;
+    QString name;
+    QString avatarUrl;
+    // The game being played now; 0 = none. Not an app of the store for a non-Steam game.
+    qint64 gameId = 0;
+    QString gameName;
+
+    bool operator==(const FriendSummary &) const = default;
+};
+
+struct Friend
+{
+    QString steamId;
+    QString name;
+    QString avatarUrl;
+    QList<FriendGame> games;
+
+    bool operator==(const Friend &) const = default;
+};
+
+// Needs the user's Web API key.
+Request friendListRequest(const QString &steamId, const QString &key);
+// `steamIds` is at most friendSummariesBatch() long.
+constexpr int friendSummariesBatch() { return 100; }
+// Without the games' names, which a friend's list doesn't need.
+Request friendGamesRequest(const QString &steamId, const QString &key);
+
+// A list with no friends is ok with no items: it can't be told from one that hides them.
+Parsed<QString> parseFriendList(const QJsonDocument &json);
+Parsed<FriendSummary> parseFriendSummaries(const QJsonDocument &json);
+// An answer with no games (`{"response":{}}`) is ok with no items: it can't be told from a private profile.
+Parsed<FriendGame> parseFriendGames(const QJsonDocument &json);
+
+// <cache dir>/steam-friends-<data dir key>.json, one per library. Other people's activity: never in a backup.
+struct FriendsCache
+{
+    QDateTime fetched;
+    QString steamId;
+    QList<Friend> friends;
+
+    bool isEmpty() const { return friends.isEmpty(); }
+    bool operator==(const FriendsCache &) const = default;
+};
+
+QString friendsCachePath(const QString &cacheDir, const QString &libraryKey);
+QByteArray formatFriendsCache(const FriendsCache &cache);
+bool parseFriendsCache(const QByteArray &bytes, FriendsCache *out);
+bool loadFriendsCache(const QString &path, FriendsCache *out);
+bool saveFriendsCache(const QString &path, const FriendsCache &cache);
 }

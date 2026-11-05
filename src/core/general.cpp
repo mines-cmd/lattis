@@ -351,6 +351,30 @@ QString General::setShowAchievements(bool on)
     return setMediaFlag(QStringLiteral("show_achievements"), on);
 }
 
+QString General::setFriendsGroup(const QString &name, bool on)
+{
+    const QStringList choices = GamePageSettings::friendsGroupNames();
+    if (!choices.contains(name))
+        return {};
+    QStringList names;
+    QStringList quoted;
+    for (const QString &choice : choices) {
+        if (choice == name ? on : m_gamePage.friendsGroups.contains(choice)) {
+            names.append(choice);
+            quoted.append(u'"' + choice + u'"');
+        }
+    }
+    QString error;
+    if (names == choices)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("friends_groups"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("friends_groups"),
+                                  u'[' + quoted.join(QStringLiteral(", ")) + u']', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setMediaFlag(const QString &key, bool on)
 {
     QString error;

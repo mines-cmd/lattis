@@ -28,6 +28,8 @@
 #include "metadata/scanlookup.h"
 #include "metadata/steamartfetch.h"
 #include "metadata/thumbnailcache.h"
+#include "steam/friendsactivity.h"
+#include "steam/steamfriends.h"
 #include "steam/steamlibrarysync.h"
 #include "steam/steamstatus.h"
 #include "theme/theme.h"
@@ -179,10 +181,21 @@ int main(int argc, char *argv[])
         if (!web.fixturesDir.isEmpty())
             web.secrets = std::make_shared<MemorySecretStore>();
         SteamLibrarySync::setup(web);
+
+        SteamFriends::Setup friends;
+        friends.dataDir = dataDir;
+        friends.cacheDir = AppPaths::cacheDir();
+        friends.cacheKey = AppPaths::dataDirKey(dataDir);
+        friends.steamId = web.steamId;
+        friends.held = web.held;
+        friends.http = web.http;
+        friends.fixturesDir = web.fixturesDir;
+        SteamFriends::setup(friends);
     }
     SteamStatus::setup({[&library] { return library.store().snapshot().steam.install; },
                         [&runner] { return runner.steamRunning(); },
                         [&runner](const QString &url) { return runner.openSteamUrl(url); }});
+    FriendsActivity::setup([&runner](const QString &url) { return runner.openSteamUrl(url); });
     WindowState windowState(AppPaths::stateDir(), AppPaths::dataDirKey(dataDir));
 
     BulkLookup::setLibrary([&library] { return library.lookupGames(); },
@@ -379,6 +392,7 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
                 QTimer::singleShot(0, [&library] { SavesSettings::startDailyCheck([&library] { return SavesBackup::anyOn(library); }); });
                 QTimer::singleShot(0, [] { SteamLibrarySync::instance()->startDaily(); });
+                QTimer::singleShot(0, [] { SteamFriends::instance()->startDaily(); });
                 if (!instance.listen())
                     qWarning() << "can't listen for other copies of the app starting";
             },

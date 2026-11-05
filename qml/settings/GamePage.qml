@@ -301,12 +301,17 @@ Item {
                 readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
                 readonly property bool videoShown: root.matches(qsTr("Show video"))
                 readonly property bool achievementsShown: root.matches(qsTr("Show achievements"))
+                readonly property bool friendsPlayingShown: root.matches(qsTr("Friends playing now"))
+                readonly property bool friendsRecentShown: root.matches(qsTr("Friends who played recently"))
+                readonly property bool friendsPreviousShown: root.matches(qsTr("Friends who played previously"))
+                readonly property bool mediaShown: screenshotsShown || videoShown || achievementsShown
+                                                   || friendsPlayingShown || friendsRecentShown || friendsPreviousShown
                 Item {
-                    visible: sections.visible && (content.screenshotsShown || content.videoShown || content.achievementsShown)
+                    visible: sections.visible && (content.mediaShown)
                     Layout.preferredHeight: Theme.settingsWindow.sectionSpacing / 2
                 }
                 SettingsCard {
-                    visible: content.screenshotsShown || content.videoShown || content.achievementsShown
+                    visible: content.mediaShown
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
                         visible: content.screenshotsShown
@@ -335,11 +340,38 @@ Item {
                             onToggled: root.report(General.setShowAchievements(checked))
                         }
                     }
+                    LabeledRow {
+                        visible: content.friendsPlayingShown
+                        label: qsTr("Friends playing now")
+                        note: qsTr("The Steam friends in the game, in the Friends panel below the info panel. Needs a Steam Web API key.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("playing")
+                            onToggled: root.report(General.setFriendsGroup("playing", checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.friendsRecentShown
+                        label: qsTr("Friends who played recently")
+                        note: qsTr("The Steam friends who played the game in the last two weeks.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("recent")
+                            onToggled: root.report(General.setFriendsGroup("recent", checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.friendsPreviousShown
+                        label: qsTr("Friends who played previously")
+                        note: qsTr("The Steam friends who played the game before that.")
+                        SettingsSwitch {
+                            checked: General.friendsGroups.includes("previous")
+                            onToggled: root.report(General.setFriendsGroup("previous", checked))
+                        }
+                    }
                 }
 
                 Label {
                     visible: !chips.visible && !buttons.visible && !infoRows.visible && !content.formatShown
-                             && !content.periodShown && !sections.visible && !content.screenshotsShown && !content.videoShown && !content.achievementsShown
+                             && !content.periodShown && !sections.visible && !content.mediaShown
                     Layout.fillWidth: true
                     text: qsTr("No game page settings match \"%1\".").arg(search.text.trim())
                     color: Theme.controls.descriptionColor

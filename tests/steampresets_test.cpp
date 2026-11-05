@@ -77,6 +77,8 @@ void SteamPresetsTest::defaults()
     QVERIFY(parsed.ok);
     QVERIFY(parsed.warnings.isEmpty());
     QVERIFY(parsed.value.enabled);
+    QVERIFY(parsed.value.friendsActivity);
+    QVERIFY(!parse("[steam]\nfriends_activity = false\n").value.friendsActivity);
     QVERIFY(parsed.value.path.isEmpty());
     QVERIFY(parsed.value.user.isEmpty());
     QVERIFY(parsed.value.defaultPresets.isEmpty());
@@ -160,6 +162,8 @@ void SteamPresetsTest::badValues_data()
     QTest::newRow("not a section") << QByteArray("steam = 1\n") << u"settings.toml:1: steam must be a [steam] section"_s;
     QTest::newRow("enabled") << QByteArray("[steam]\nenabled = \"yes\"\n")
                              << u"settings.toml:2: enabled must be true or false"_s;
+    QTest::newRow("friends activity") << QByteArray("[steam]\nfriends_activity = 1\n")
+                                      << u"settings.toml:2: friends_activity must be true or false"_s;
     QTest::newRow("path") << QByteArray("[steam]\npath = 3\n")
                           << u"settings.toml:2: path must be a folder, like \"~/.local/share/Steam\""_s;
     QTest::newRow("user") << QByteArray("[steam]\nuser = true\n")

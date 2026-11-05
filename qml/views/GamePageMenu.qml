@@ -115,6 +115,27 @@ SettingsMenu {
         keepOpen: true
         onActivated: root.report(General.setShowAchievements(!General.showAchievements))
     }
+    SettingsMenuItem {
+        want: root.place === "friends"
+        text: qsTr("Playing now")
+        checked: General.friendsGroups.includes("playing")
+        keepOpen: true
+        onActivated: root.report(General.setFriendsGroup("playing", !checked))
+    }
+    SettingsMenuItem {
+        want: root.place === "friends"
+        text: qsTr("Played recently")
+        checked: General.friendsGroups.includes("recent")
+        keepOpen: true
+        onActivated: root.report(General.setFriendsGroup("recent", !checked))
+    }
+    SettingsMenuItem {
+        want: root.place === "friends"
+        text: qsTr("Played previously")
+        checked: General.friendsGroups.includes("previous")
+        keepOpen: true
+        onActivated: root.report(General.setFriendsGroup("previous", !checked))
+    }
     SettingsMenuSeparator {}
     SettingsMenuItem {
         text: qsTr("Customize game page")

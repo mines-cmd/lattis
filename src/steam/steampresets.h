@@ -35,6 +35,8 @@ struct SteamSettings
     QString user;
     // Off removes the games the Web API brought that are not installed; see docs/code/steam.md.
     bool wholeLibrary = true;
+    // Friends' play for the game page; fetched only with a Web API key set.
+    bool friendsActivity = true;
     QStringList defaultPresets;
     // The compatibility tool new Proton games start with; empty = the one Steam uses for other
     // titles (CompatToolMapping "0"), else proton_experimental

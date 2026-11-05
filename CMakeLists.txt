@@ -208,6 +208,7 @@ qt_add_qml_module(lattis
         qml/views/Hero.qml
         qml/views/InfoPanel.qml
         qml/views/AchievementsPanel.qml
+        qml/views/FriendsPanel.qml
         qml/views/AchievementTip.qml
         qml/views/AchievementsViewer.qml
         qml/views/GameFields.qml
@@ -381,6 +382,8 @@ qt_add_qml_module(lattis
         src/steam/steamauth.h src/steam/steamauth.cpp
         src/steam/steamwebapi.h src/steam/steamwebapi.cpp
         src/steam/steamlibrarysync.h src/steam/steamlibrarysync.cpp
+        src/steam/steamfriends.h src/steam/steamfriends.cpp
+        src/steam/friendsactivity.h src/steam/friendsactivity.cpp
         src/steam/steamlibrary.h src/steam/steamlibrary.cpp
         src/core/qrcode.h src/core/qrcode.cpp
         src/library/steamwebmerge.h src/library/steamwebmerge.cpp

@@ -48,6 +48,7 @@ class General : public QObject
     Q_PROPERTY(bool showScreenshots READ showScreenshots NOTIFY gamePageChanged)
     Q_PROPERTY(bool showVideo READ showVideo NOTIFY gamePageChanged)
     Q_PROPERTY(bool showAchievements READ showAchievements NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList friendsGroups READ friendsGroups NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList collapsedSections READ collapsedSections NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePageProblems READ gamePageProblems NOTIFY gamePageChanged)
@@ -97,6 +98,7 @@ public:
     bool showScreenshots() const { return m_gamePage.showScreenshots; }
     bool showVideo() const { return m_gamePage.showVideo; }
     bool showAchievements() const { return m_gamePage.showAchievements; }
+    QStringList friendsGroups() const { return m_gamePage.friendsGroups; }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
     QStringList collapsedSections() const { return m_gamePage.collapsedSections; }
     QStringList gamePageProblems() const { return m_gamePageProblems; }
@@ -134,6 +136,7 @@ public:
     Q_INVOKABLE QString setShowScreenshots(bool on);
     Q_INVOKABLE QString setShowVideo(bool on);
     Q_INVOKABLE QString setShowAchievements(bool on);
+    Q_INVOKABLE QString setFriendsGroup(const QString &name, bool on);
     Q_INVOKABLE QString setChipIconShown(const QString &name, bool shown);
     Q_INVOKABLE QString setSectionCollapsed(const QString &name, bool collapsed);
     Q_INVOKABLE QString setGalleryGroup(const QString &group);

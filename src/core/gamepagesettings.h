@@ -24,6 +24,7 @@ struct GamePageSettings
     bool showScreenshots = true;
     bool showVideo = true;
     bool showAchievements = true;
+    QStringList friendsGroups = friendsGroupNames();
 
     bool operator==(const GamePageSettings &) const = default;
 
@@ -31,6 +32,8 @@ struct GamePageSettings
     static QStringList defaultButtons();
     static QStringList defaultInfoRows();
     static QStringList defaultSections();
+    // The groups of the Friends panel, in the order it shows them.
+    static QStringList friendsGroupNames();
 };
 
 // The four lists on the game page.

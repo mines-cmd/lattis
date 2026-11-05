@@ -171,6 +171,19 @@ lattis_test(steamlibrarysync_test OFFSCREEN
             ../src/library/gamefile.h ../src/library/gamefile.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Network Qt6::DBus Qt6::Concurrent Qt6::Gui tomlplusplus::tomlplusplus)
+lattis_test(steamfriends_test OFFSCREEN
+    SOURCES fakehttpserver.h
+            ../src/steam/steamfriends.h ../src/steam/steamfriends.cpp
+            ../src/steam/steamwebapi.h ../src/steam/steamwebapi.cpp
+            ../src/steam/steampresets.h ../src/steam/steampresets.cpp
+            ../src/launch/launchoptions.h ../src/launch/launchoptions.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+            ../src/metadata/credentials.h ../src/metadata/credentials.cpp
+            ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
+            ../src/library/gameid.h ../src/library/gameid.cpp
+            ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ${CORE_SOURCES}
+    LIBS Qt6::Network Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(autostart_test OFFSCREEN
     SOURCES ../src/core/autostart.h ../src/core/autostart.cpp
     LIBS Qt6::Gui)
@@ -466,7 +479,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding library bulk steamstatus protondb lookup launch settings export updates stress)
+    foreach(area startup onboarding library bulk steamstatus protondb friends lookup launch settings export updates stress)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()

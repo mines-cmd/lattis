@@ -16,6 +16,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Achievements](#achievements)
 - [Signing in to Steam](#signing-in-to-steam)
 - [The whole library](#the-whole-library)
+- [Friends' activity](#friends-activity)
 - [ProtonDB chip](#protondb-chip)
 - [Files](#files)
 - [Reference](#reference)
@@ -207,6 +208,18 @@ The outcome (`Synced`, `NotConfigured`, `NoAccount`, `SignInExpired`, `NoGames`,
 
 The merge is described in [library.md](library.md#the-whole-steam-library).
 
+## Friends' activity
+
+`SteamFriends` (`steamfriends.*`) keeps which friends play which game. It uses the Web API key only: never the QR sign-in or `SteamAuth`, as `GetFriendsGameplayInfo` refuses a key. Friends who hide their Game details are simply missing.
+
+- **Fetch:** `GetFriendList`, `GetPlayerSummaries` (100 ids a call) and `GetOwnedGames` once per friend (`friendGamesRequest()`: played free games, unvetted apps, no names), one request at a time, `requestIntervalMs` (1 s) apart, through `MetadataHttp::steamWeb` so the key stays out of logs. `startDaily()` (10 s after the first frame) fetches when the cache is a day old; `syncNow()` (Sync now, and saving a key) fetches at once. Nothing is sent when `[steam] friends_activity` is `false`, without a key, or without an account. A 429 ends the fetch and keeps what it has.
+- **Groups:** `groupOf()`: `playtime_2weeks` above 0 is recent; otherwise `playtime_forever` above 0 is previous; owned and unplayed isn't kept.
+- **Cache:** `<cache dir>/steam-friends-<data dir key>.json` (`FriendsCache`), never in a backup. A friend whose answer failed or came back empty (a private profile looks the same) keeps their last games; a friend who left the list is dropped. A failed part leaves `fetched` as it was, so the next start tries again. An empty or unreadable friend list changes nothing. The cache of another account is ignored.
+- **Pictures:** `avatarmedium`, saved as `<cache dir>/steam-avatars/<file name>` (the name carries the hash) once, and removed when no friend uses them. A fixture run makes them on the spot.
+- **Lookup:** `friendsOf(appId)` reads the cache and sends nothing: `playing`, `recent` (most played in the last two weeks first) and `previous` (most total play first). A friend playing now is also in the group their play time gives. `playingNow()` lists everyone in a game.
+- **Playing now:** `refreshPlaying()` asks the summaries' `gameid` (one request per 100 friends) at most once per `playingIntervalMs` (a minute), never during a fetch. Nothing calls it on a timer: whatever shows the data calls it while it is visible. `changed()` is emitted when the cache or who plays changes.
+- **Fixtures:** a call with a `steamid` first looks for `<Interface>-<Method>-<version>-<steamid>.json`, so each friend can have their own `GetOwnedGames` answer.
+
 ## ProtonDB chip
 
 The `protondb` chip (a chip or an info row, off by default, Steam games with a `steam-<appid>` id, installed or not) shows a game's ProtonDB tier. `GameDetails` takes the app ID from the id (`protonDbAppId`) and asks the `ProtonDb` singleton ([metadata.md](metadata.md#protondb)) only while `General.gamePageChips` includes `protondb`, so nothing is created or requested with the chip off. States: "Checking…" while the first answer is on its way, the tier ("Platinum"…, "Native", "Pending") with the icon in `stat_chip.protondb_<tier>` (`StatChip.iconTint`; the border is unchanged), "No reports" for a 404, and "Open page" for a failed request or a tier the chip doesn't know. The click opens `https://www.protondb.com/app/<appid>` with `Qt.openUrlExternally` in every state, so the link never depends on the API. The tooltip is "Platinum from 759 reports. Open on ProtonDB", with "Trending: Gold" added when the trending tier differs. No ProtonDB logo is used; the icon is the generic `gaugeLine`.
@@ -217,6 +230,7 @@ The `protondb` chip (a chip or an info row, off by default, Steam games with a `
 |---|---|
 | `steamwebapi.*` | `SteamWebApi`: request builders, parsers, `Cache` and its file |
 | `steamlibrarysync.*` | `SteamLibrarySync`: the daily and manual fetch of the whole library |
+| `steamfriends.*` | `SteamFriends`: the daily and manual fetch of friends' play, the cache, pictures, `friendsOf()`, `refreshPlaying()` |
 | `steamlibrary.*` | `SteamLibrary`: QML singleton over the sync and the sign-in (state, QR, status line, messages, Sync now, Sign out, API key) |
 | `steamauth.*` | `SteamAuth`: the QR sign-in, the refresh token in `SecretStore`, access tokens; `parseToken()` |
 | `vdf.*` | `Vdf::Document`, `Node`; `parse()`, `setValue()`, `remove()`, `quoted()` |

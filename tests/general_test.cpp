@@ -709,6 +709,20 @@ void GeneralTest::gamePageSettersWrite()
     QVERIFY(general.showAchievements());
     QVERIFY(!fileText().contains("show_achievements"));
 
+    QCOMPARE(general.friendsGroups(), (QStringList{"playing", "recent", "previous"}));
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("recent"), false), QString());
+    QCOMPARE(general.friendsGroups(), (QStringList{"playing", "previous"}));
+    QVERIFY(fileText().contains("friends_groups = [\"playing\", \"previous\"]"));
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("playing"), false), QString());
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("previous"), false), QString());
+    QCOMPARE(general.friendsGroups(), QStringList());
+    QVERIFY(fileText().contains("friends_groups = []"));
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("nobody"), true), QString());
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("previous"), true), QString());
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("playing"), true), QString());
+    QCOMPARE(general.setFriendsGroup(QStringLiteral("recent"), true), QString());
+    QVERIFY(!fileText().contains("friends_groups"));
+
     QVERIFY(general.showVideo());
     QCOMPARE(general.setShowVideo(false), QString());
     QVERIFY(!general.showVideo());

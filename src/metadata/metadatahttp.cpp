@@ -376,8 +376,16 @@ void MetadataHttp::steamWeb(const QString &path, const QUrlQuery &query, QObject
         QString name = path;
         name.remove(QRegularExpression(QStringLiteral("^/+|/+$"))).replace(u'/', u'-');
         QByteArray body = R"({"response": {}})";
-        if (QFile file(QDir(m_steamWebFixturesDir).filePath(name + QStringLiteral(".json"))); file.open(QIODevice::ReadOnly))
-            body = file.readAll();
+        // A call about one account (a friend's games) may have its own file: <method>-<steamid>.json.
+        QStringList candidates{name + QStringLiteral(".json")};
+        if (const QString account = query.queryItemValue(QStringLiteral("steamid")); !account.isEmpty())
+            candidates.prepend(name + u'-' + account + QStringLiteral(".json"));
+        for (const QString &candidate : std::as_const(candidates)) {
+            if (QFile file(QDir(m_steamWebFixturesDir).filePath(candidate)); file.open(QIODevice::ReadOnly)) {
+                body = file.readAll();
+                break;
+            }
+        }
         const QJsonDocument json = QJsonDocument::fromJson(body);
         QTimer::singleShot(0, context, [json, done = std::move(done)] { done({json, {}, 200}); });
         return;

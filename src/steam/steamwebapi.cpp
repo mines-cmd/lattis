@@ -11,6 +11,7 @@ namespace SteamWebApi {
 
 namespace {
 constexpr int kCacheVersion = 1;
+constexpr int kFriendsCacheVersion = 1;
 
 QString asText(const QJsonValue &value)
 {
@@ -368,5 +369,137 @@ bool saveCache(const QString &path, const Cache &cache)
     QDir().mkpath(QFileInfo(path).absolutePath());
     QSaveFile file(path);
     return file.open(QIODevice::WriteOnly) && file.write(formatCache(cache)) >= 0 && file.commit();
+}
+
+FriendGroup groupOf(const FriendGame &game)
+{
+    if (game.recentMinutes > 0)
+        return FriendGroup::Recent;
+    return game.totalMinutes > 0 ? FriendGroup::Previous : FriendGroup::None;
+}
+
+Request friendListRequest(const QString &steamId, const QString &key)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("key"), key);
+    query.addQueryItem(QStringLiteral("steamid"), steamId);
+    query.addQueryItem(QStringLiteral("relationship"), QStringLiteral("friend"));
+    return {QStringLiteral("/ISteamUser/GetFriendList/v1/"), query};
+}
+
+Request friendGamesRequest(const QString &steamId, const QString &key)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("key"), key);
+    query.addQueryItem(QStringLiteral("steamid"), steamId);
+    query.addQueryItem(QStringLiteral("include_played_free_games"), QStringLiteral("1"));
+    // Otherwise some owned games are missing.
+    query.addQueryItem(QStringLiteral("skip_unvetted_apps"), QStringLiteral("0"));
+    return {QStringLiteral("/IPlayerService/GetOwnedGames/v1/"), query};
+}
+
+Parsed<QString> parseFriendList(const QJsonDocument &json)
+{
+    Parsed<QString> out;
+    const QJsonValue list = json.object().value(QLatin1String("friendslist"));
+    out.ok = list.isObject();
+    for (const QJsonValue &v : list.toObject().value(QLatin1String("friends")).toArray()) {
+        if (const QString id = asText(v.toObject().value(QLatin1String("steamid"))); !id.isEmpty())
+            out.items.append(id);
+    }
+    return out;
+}
+
+Parsed<FriendSummary> parseFriendSummaries(const QJsonDocument &json)
+{
+    Parsed<FriendSummary> out;
+    const QJsonObject response = responseOf(json, &out.ok);
+    for (const QJsonValue &v : response.value(QLatin1String("players")).toArray()) {
+        const QJsonObject player = v.toObject();
+        FriendSummary s;
+        s.steamId = asText(player.value(QLatin1String("steamid")));
+        if (s.steamId.isEmpty())
+            continue;
+        s.name = player.value(QLatin1String("personaname")).toString();
+        s.avatarUrl = player.value(QLatin1String("avatarmedium")).toString();
+        s.gameId = asInteger(player.value(QLatin1String("gameid")));
+        s.gameName = player.value(QLatin1String("gameextrainfo")).toString();
+        out.items.append(s);
+    }
+    return out;
+}
+
+Parsed<FriendGame> parseFriendGames(const QJsonDocument &json)
+{
+    Parsed<FriendGame> out;
+    const QJsonObject response = responseOf(json, &out.ok);
+    for (const QJsonValue &v : response.value(QLatin1String("games")).toArray()) {
+        const QJsonObject game = v.toObject();
+        FriendGame g;
+        g.appId = asInteger(game.value(QLatin1String("appid")));
+        g.recentMinutes = game.value(QLatin1String("playtime_2weeks")).toInt();
+        g.totalMinutes = game.value(QLatin1String("playtime_forever")).toInt();
+        if (g.appId > 0 && groupOf(g) != FriendGroup::None)
+            out.items.append(g);
+    }
+    return out;
+}
+
+QString friendsCachePath(const QString &cacheDir, const QString &libraryKey)
+{
+    return QDir(cacheDir).filePath(QStringLiteral("steam-friends-%1.json").arg(libraryKey));
+}
+
+QByteArray formatFriendsCache(const FriendsCache &cache)
+{
+    QJsonArray friends;
+    for (const Friend &f : cache.friends) {
+        QJsonArray games;
+        for (const FriendGame &g : f.games)
+            games.append(QJsonArray{g.appId, g.recentMinutes, g.totalMinutes});
+        friends.append(QJsonObject{{"id", f.steamId}, {"n", f.name}, {"a", f.avatarUrl}, {"g", games}});
+    }
+    const QJsonObject root{{"version", kFriendsCacheVersion},
+                           {"fetched", cache.fetched.isValid() ? cache.fetched.toUTC().toString(Qt::ISODate) : QString()},
+                           {"steamid", cache.steamId},
+                           {"friends", friends}};
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+bool parseFriendsCache(const QByteArray &bytes, FriendsCache *out)
+{
+    QJsonParseError error;
+    const QJsonObject root = QJsonDocument::fromJson(bytes, &error).object();
+    if (error.error != QJsonParseError::NoError || root.value(QLatin1String("version")).toInt() != kFriendsCacheVersion)
+        return false;
+    FriendsCache cache;
+    cache.fetched = QDateTime::fromString(root.value(QLatin1String("fetched")).toString(), Qt::ISODate);
+    cache.steamId = root.value(QLatin1String("steamid")).toString();
+    for (const QJsonValue &v : root.value(QLatin1String("friends")).toArray()) {
+        const QJsonObject o = v.toObject();
+        Friend f{o.value("id").toString(), o.value("n").toString(), o.value("a").toString(), {}};
+        if (f.steamId.isEmpty())
+            continue;
+        for (const QJsonValue &game : o.value("g").toArray()) {
+            const QJsonArray a = game.toArray();
+            f.games.append({a.at(0).toInteger(), a.at(1).toInt(), a.at(2).toInt()});
+        }
+        cache.friends.append(f);
+    }
+    *out = std::move(cache);
+    return true;
+}
+
+bool loadFriendsCache(const QString &path, FriendsCache *out)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) && parseFriendsCache(file.readAll(), out);
+}
+
+bool saveFriendsCache(const QString &path, const FriendsCache &cache)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QSaveFile file(path);
+    return file.open(QIODevice::WriteOnly) && file.write(formatFriendsCache(cache)) >= 0 && file.commit();
 }
 }
