@@ -94,17 +94,17 @@ QtObject {
     readonly property bool protonDbWanted: (General.gamePageChips.includes("protondb")
                                             || General.gamePageInfoRows.includes("protondb")) && protonDbAppId > 0
     // Asks ProtonDb (which starts its request) only while the entry is wanted; the singleton isn't built before.
-    property var protonDbSummary: ({})
-    function refreshProtonDb() {
-        protonDbSummary = protonDbWanted ? ProtonDb.summary(protonDbAppId) : ({})
+    property int protonDbRevision: 0
+    // A binding, not a value set from change handlers: a handler writing it while protonDbField was being
+    // evaluated (a game arriving as the settings page opens) was a binding loop.
+    readonly property var protonDbSummary: {
+        return protonDbRevision >= 0 && protonDbWanted ? ProtonDb.summary(protonDbAppId) : ({})
     }
-    onProtonDbWantedChanged: refreshProtonDb()
-    onProtonDbAppIdChanged: refreshProtonDb()
     property Connections protonDbWatch: Connections {
         target: root.protonDbWanted ? ProtonDb : null
         function onChanged(appId) {
             if (appId === root.protonDbAppId)
-                root.refreshProtonDb()
+                ++root.protonDbRevision
         }
     }
     readonly property var protonDbField: {

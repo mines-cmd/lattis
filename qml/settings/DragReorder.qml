@@ -37,10 +37,16 @@ Item {
         return repeater.itemAt(i)
     }
 
+    // A reloaded list builds its rows one by one while `dragging` still holds, so the ones after the row being
+    // asked about may not exist yet.
+    function heightOf(i) {
+        return entryAt(i)?.height ?? 0
+    }
+
     function shiftOf(index) {
         if (!dragging || index === from)
             return 0
-        const height = entryAt(from).height
+        const height = heightOf(from)
         if (to > from && index > from && index <= to)
             return -height
         if (to < from && index >= to && index < from)
@@ -52,10 +58,10 @@ Item {
         let offset = 0
         if (to > from) {
             for (let i = from + 1; i <= to; ++i)
-                offset += entryAt(i).height
+                offset += heightOf(i)
         } else {
             for (let i = to; i < from; ++i)
-                offset -= entryAt(i).height
+                offset -= heightOf(i)
         }
         return offset
     }
