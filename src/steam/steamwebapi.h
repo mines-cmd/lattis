@@ -93,7 +93,7 @@ QHash<QString, double> parseAchievementPercentages(const QJsonDocument &json);
 // The store's type of each requested app; one the answer doesn't show is kTypeNoStoreData.
 QHash<qint64, int> parseItemTypes(const QJsonDocument &json, const QList<qint64> &requested);
 
-// What the last fetches brought, kept in <cache dir>/steam-library.json. A part that failed or came back
+// What the last fetches brought, kept in <cache dir>/steam-library-<data dir key>.json, one per library. A part that failed or came back
 // empty keeps what the fetch before it brought.
 struct Cache
 {
@@ -109,7 +109,7 @@ struct Cache
     bool operator==(const Cache &) const = default;
 };
 
-QString cachePath(const QString &cacheDir);
+QString cachePath(const QString &cacheDir, const QString &libraryKey);
 QByteArray formatCache(const Cache &cache);
 bool parseCache(const QByteArray &bytes, Cache *out);
 bool loadCache(const QString &path, Cache *out);

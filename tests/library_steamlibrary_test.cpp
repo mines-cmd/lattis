@@ -36,12 +36,12 @@ class LibrarySteamLibraryTest : public LibraryTestBase
     std::unique_ptr<Library> openWith(const SteamWebApi::Cache *cache)
     {
         if (cache)
-            SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), *cache);
+            SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), *cache);
         auto library = std::make_unique<Library>(m_data, m_cache);
         library->store().setInstallLocations(m_installs);
         library->store().setSteamLocations({m_installs.home, {}});
         library->store().setStateDir(m_state);
-        library->store().setSteamWebCache(SteamWebApi::cachePath(m_cache));
+        library->store().setSteamWebCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")));
         library->setUndoDir(m_state + QStringLiteral("/undo"));
         QSignalSpy scanning(&library->store(), &LibraryStore::scanningChanged);
         library->startRefresh();
@@ -240,7 +240,7 @@ void LibrarySteamLibraryTest::installedLaterIsTheSameGame()
 
     // The account no longer lists it: installed, so it stays, without the API's mark of ownership.
     cache.owned.removeFirst();
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     const QVariantMap kept = game(*library, QStringLiteral("steam-1000"));
     QVERIFY(kept.value("installed").toBool());
@@ -273,7 +273,7 @@ void LibrarySteamLibraryTest::gamesThatLeaveGo()
     cache.owned = {{1001, QStringLiteral("A Soundtrack"), 0, 0}, {3000, QStringLiteral("Another"), 0, 0}};
     cache.types.insert(3000, 0);
     cache.shared = {{2001, QStringLiteral("Both Have It"), {kMe, kAlex}, 1, 0, 0}};
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     showAll(*library);
     QCOMPARE(library->rowOfGame(QStringLiteral("steam-1000")), -1);
@@ -298,15 +298,15 @@ void LibrarySteamLibraryTest::anEmptyCacheRemovesNothing()
     // An empty or failed answer, or a privacy setting, leaves the cache with nothing: no games go.
     SteamWebApi::Cache empty;
     empty.steamId = kMe;
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), empty);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), empty);
     rescan(*library);
     QCOMPARE(readFile(steamIndexPath()), before);
-    QFile::remove(SteamWebApi::cachePath(m_cache));
+    QFile::remove(SteamWebApi::cachePath(m_cache, QStringLiteral("test")));
     rescan(*library);
     QCOMPARE(readFile(steamIndexPath()), before);
     // Only the family list empty: the owned games still decide, and the family's stay.
     cache.shared.clear();
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     QCOMPARE(readFile(steamIndexPath()), before);
 }
@@ -401,7 +401,7 @@ void LibrarySteamLibraryTest::aFileAloneIsHiddenOnceTheApiIsInvolved()
     QVERIFY(library->rowOfGame(QStringLiteral("steam-777")) >= 0);
 
     const SteamWebApi::Cache cache = baseCache();
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     showAll(*library);
     QCOMPARE(library->rowOfGame(QStringLiteral("steam-777")), -1);
@@ -442,7 +442,7 @@ void LibrarySteamLibraryTest::nothingChangesWithoutACache()
     const QByteArray before = readFile(steamIndexPath());
     QVERIFY(!before.contains("from_api"));
     const SteamWebApi::Cache cache = baseCache();
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     // Written once, then left alone.
     const QDateTime modified = QFileInfo(steamIndexPath()).lastModified();
@@ -465,7 +465,7 @@ void LibrarySteamLibraryTest::aLargeLibraryIsFast()
         cache.types.insert(100000 + i, 0);
         cache.sizes.insert(100000 + i, 1000000LL * i);
     }
-    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache), cache);
+    SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     QElapsedTimer timer;
     timer.start();
     auto library = openWith(nullptr);

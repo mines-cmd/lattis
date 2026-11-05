@@ -73,7 +73,7 @@ SteamLibrarySync::SteamLibrarySync(const Setup &setup, QObject *parent) : QObjec
         }
     }
     readLastFetch();
-    if (SteamWebApi::Cache cache; SteamWebApi::loadCache(SteamWebApi::cachePath(m_setup.cacheDir), &cache)) {
+    if (SteamWebApi::Cache cache; SteamWebApi::loadCache(SteamWebApi::cachePath(m_setup.cacheDir, m_setup.cacheKey), &cache)) {
         QSet<qint64> ids;
         for (const auto &g : std::as_const(cache.owned))
             ids.insert(g.appId);
@@ -172,7 +172,7 @@ void SteamLibrarySync::begin(bool manual)
     auto job = std::make_shared<Job>();
     job->steamId = id;
     job->http = http;
-    if (SteamWebApi::Cache cache; SteamWebApi::loadCache(SteamWebApi::cachePath(m_setup.cacheDir), &cache)
+    if (SteamWebApi::Cache cache; SteamWebApi::loadCache(SteamWebApi::cachePath(m_setup.cacheDir, m_setup.cacheKey), &cache)
                                   && cache.steamId == id)
         job->before = cache;
     job->before.steamId = id;
@@ -377,7 +377,7 @@ void SteamLibrarySync::requestDone(const std::shared_ptr<Job> &job)
     saved.fetched = job->before.fetched;
     if (saved != job->before) {
         saved.fetched = job->cache.fetched;
-        if (!SteamWebApi::saveCache(SteamWebApi::cachePath(m_setup.cacheDir), saved))
+        if (!SteamWebApi::saveCache(SteamWebApi::cachePath(m_setup.cacheDir, m_setup.cacheKey), saved))
             qCWarning(lcSteamWeb) << "could not save the library cache";
         else if (m_setup.changed)
             m_setup.changed();

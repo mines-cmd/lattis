@@ -283,9 +283,9 @@ bool isGameType(int appType)
     return appType <= 2;
 }
 
-QString cachePath(const QString &cacheDir)
+QString cachePath(const QString &cacheDir, const QString &libraryKey)
 {
-    return QDir(cacheDir).filePath(QStringLiteral("steam-library.json"));
+    return QDir(cacheDir).filePath(QStringLiteral("steam-library-%1.json").arg(libraryKey));
 }
 
 QByteArray formatCache(const Cache &cache)

@@ -110,6 +110,7 @@ class SteamLibrarySyncTest : public QObject
         m_setup = {};
         m_setup.dataDir = data();
         m_setup.cacheDir = cache();
+        m_setup.cacheKey = QStringLiteral("test");
         m_setup.stateFile = stateFile();
         m_setup.steamId = [] { return kMe; };
         m_setup.held = [] { return false; };
@@ -149,7 +150,7 @@ class SteamLibrarySyncTest : public QObject
     SteamWebApi::Cache cachedLibrary()
     {
         SteamWebApi::Cache c;
-        SteamWebApi::loadCache(SteamWebApi::cachePath(cache()), &c);
+        SteamWebApi::loadCache(SteamWebApi::cachePath(cache(), QStringLiteral("test")), &c);
         return c;
     }
 
@@ -188,7 +189,7 @@ private slots:
         QTest::qWait(150);
         QVERIFY(m_server->requests.isEmpty());
         QCOMPARE(m_store->reads.load(), 1); // only the press of Sync now
-        QVERIFY(!QFileInfo::exists(SteamWebApi::cachePath(cache())));
+        QVERIFY(!QFileInfo::exists(SteamWebApi::cachePath(cache(), QStringLiteral("test"))));
     }
 
     void theKeyFetchesTheOwnedGamesAndTheirTypes()
@@ -222,7 +223,7 @@ private slots:
         QCOMPARE(m_sync->gameCount(), 150);
         QVERIFY(fileText(stateFile()).contains("last_fetch = \""));
         // The key never leaves credentials.toml, the cache never holds a secret.
-        QVERIFY(!fileText(SteamWebApi::cachePath(cache())).contains("SECRETKEY"));
+        QVERIFY(!fileText(SteamWebApi::cachePath(cache(), QStringLiteral("test"))).contains("SECRETKEY"));
         QVERIFY(!fileText(stateFile()).contains("SECRETKEY"));
         QCOMPARE(listing(data()), before);
 

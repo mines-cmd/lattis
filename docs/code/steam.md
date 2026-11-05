@@ -191,7 +191,7 @@ The scan only reads Steam's files on disk. The games the account owns but has no
 
 `parseOwnedGames()` and `parseSharedApps()` return `ok` when the answer has the shape of one. An answer with no games (`{"response":{}}`, which is also what a private Game details profile gives) is `ok` with no items.
 
-**The cache** is `<cache dir>/steam-library.json` (`Cache`: `fetched`, the account, the owned games, the shared apps, the members' names, the sizes and the types). A part that failed or came back empty keeps what the fetch before it brought, so an outage, a privacy setting or an expired sign-in never empties the library; the types are asked once per app.
+**The cache** is `<cache dir>/steam-library-<key>.json`, one per library so a new library never inherits another's games (`Cache`: `fetched`, the account, the owned games, the shared apps, the members' names, the sizes and the types). A part that failed or came back empty keeps what the fetch before it brought, so an outage, a privacy setting or an expired sign-in never empties the library; the types are asked once per app.
 
 **`SteamLibrarySync`** (`steamlibrarysync.*`) fetches. `startDaily()` (called from `main.cpp` right after the first frame) checks 10 s later, and then each time a day has passed since `last_fetch` in the state file (`steam-library-<data dir key>.toml`, which also holds `signed_in`, the account that signed in here); `syncNow()` fetches whatever the date says. Nothing is fetched while the setup guide is pending, when `[steam] whole_library` is `false`, or without an account. Which credentials it uses:
 

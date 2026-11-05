@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
                              + QStringLiteral(".json"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
-    library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir()));
+    library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir(), AppPaths::dataDirKey(dataDir)));
     library.setRarityFetcher([](qint64 appId, QObject *context, auto done) {
         MetadataHttp *http = MetadataClient::instance()->http();
         if (!http || http->usesFixtures())
@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
         SteamLibrarySync::Setup web;
         web.dataDir = dataDir;
         web.cacheDir = AppPaths::cacheDir();
+        web.cacheKey = AppPaths::dataDirKey(dataDir);
         web.stateFile = AppPaths::stateDir() + QStringLiteral("/steam-library-") + AppPaths::dataDirKey(dataDir)
                         + QStringLiteral(".toml");
         web.steamId = [&library] { return library.store().snapshot().steam.install.activeSteamId64(); };

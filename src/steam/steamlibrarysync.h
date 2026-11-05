@@ -24,6 +24,7 @@ public:
     {
         QString dataDir;
         QString cacheDir;
+        QString cacheKey;
         // Where the last fetch time is kept.
         QString stateFile;
         std::function<QString()> steamId;
