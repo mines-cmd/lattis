@@ -66,9 +66,9 @@ QtObject {
         attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground
     })
     readonly property var steamFamilyField: ({
-        label: qsTr("Family"), icon: Icons.steamLine,
+        label: qsTr("Shared by"), icon: Icons.steamLine,
         value: (game.steamOwnership ?? "") !== "family" ? ""
-             : (game.sharedBy ?? []).length > 0 ? qsTr("Shared by %1").arg(game.sharedBy.join(", "))
+             : (game.sharedBy ?? []).length > 0 ? game.sharedBy.join(", ")
              : qsTr("Shared with you")
     })
 

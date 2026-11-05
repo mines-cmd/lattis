@@ -347,10 +347,24 @@ private slots:
         QVERIFY(state.open(QIODevice::WriteOnly));
         state.write(("last_fetch = \"" + QDateTime::currentDateTimeUtc().addSecs(-3600).toString(Qt::ISODate) + "\"\n").toUtf8());
         state.close();
+        QFile cacheFile(SteamWebApi::cachePath(cache(), QStringLiteral("test")));
+        QDir().mkpath(QFileInfo(cacheFile).absolutePath());
+        QVERIFY(cacheFile.open(QIODevice::WriteOnly));
+        cacheFile.write(SteamWebApi::formatCache(SteamWebApi::Cache{}));
+        cacheFile.close();
         makeSync();
         m_sync->startDaily(10);
         QTest::qWait(200);
         QVERIFY(m_server->requests.isEmpty());
+
+        // A recent fetch whose cache is gone is fetched again.
+        delete m_sync;
+        QVERIFY(cacheFile.remove());
+        makeSync();
+        m_sync->startDaily(10);
+        QTRY_VERIFY_WITH_TIMEOUT(!m_server->requestsTo(kOwned).isEmpty(), 3000);
+        QTRY_COMPARE(m_sync->state(), SteamLibrarySync::State::Idle);
+        m_server->requests.clear();
 
         // A day and a minute later.
         delete m_sync;

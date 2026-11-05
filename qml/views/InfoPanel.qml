@@ -45,7 +45,8 @@ Surface {
                 readonly property bool clickable: (modelData.filterPlatform ?? "") !== "" || (modelData.history ?? false)
                     || (modelData.action ?? "") !== ""
                 readonly property bool tinted: (modelData.attention ?? false) || modelData.iconTint !== undefined
-                readonly property string hoverText: modelData.hoverTip ?? (clickable ? modelData.tip ?? "" : "")
+                readonly property string hoverText: modelData.hoverTip ?? (clickable ? modelData.tip ?? ""
+                                                                         : valueLabel.truncated ? modelData.value : "")
                 readonly property color valueColor: !clickable ? Theme.infoPanel.valueColor
                     : rowClick.containsMouse ? Theme.infoPanel.valueHoverColor
                     : Theme.infoPanel.valueColor
@@ -80,6 +81,9 @@ Surface {
                             Behavior on color { enabled: Motion.fades; MotionColor {} }
                         }
                         Label {
+                            id: valueLabel
+                            Layout.maximumWidth: infoRow.width * 0.6
+                            elide: Text.ElideRight
                             visible: infoRow.modelData.stars === undefined
                             text: infoRow.modelData.value
                             color: infoRow.valueColor

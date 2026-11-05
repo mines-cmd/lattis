@@ -289,6 +289,14 @@ QString cachePath(const QString &cacheDir, const QString &libraryKey)
     return QDir(cacheDir).filePath(QStringLiteral("steam-library-%1.json").arg(libraryKey));
 }
 
+void adoptLegacyCache(const QString &cacheDir, const QString &libraryKey)
+{
+    const QString path = cachePath(cacheDir, libraryKey);
+    const QString legacy = QDir(cacheDir).filePath(QStringLiteral("steam-library.json"));
+    if (!QFileInfo::exists(path) && QFileInfo::exists(legacy))
+        QFile::copy(legacy, path);
+}
+
 QByteArray formatCache(const Cache &cache)
 {
     QJsonArray owned;

@@ -413,6 +413,9 @@ void SteamLibrarySync::readLastFetch()
     const QByteArray text = file.readAll();
     m_lastFetch = QDateTime::fromString(quotedValue(text, "last_fetch"), Qt::ISODate);
     m_signedInAs = quotedValue(text, "signed_in");
+    // A last-fetch time without its cache (the cache moved, or was deleted) would wait a day for names and sizes.
+    if (!QFileInfo::exists(SteamWebApi::cachePath(m_setup.cacheDir, m_setup.cacheKey)))
+        m_lastFetch = QDateTime();
 }
 
 void SteamLibrarySync::writeState()

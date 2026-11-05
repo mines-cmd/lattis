@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
                              + QStringLiteral(".json"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
+    SteamWebApi::adoptLegacyCache(AppPaths::cacheDir(), AppPaths::dataDirKey(dataDir));
     library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir(), AppPaths::dataDirKey(dataDir)));
     library.setRarityFetcher([](qint64 appId, QObject *context, auto done) {
         MetadataHttp *http = MetadataClient::instance()->http();

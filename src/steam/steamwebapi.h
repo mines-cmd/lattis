@@ -110,6 +110,9 @@ struct Cache
 };
 
 QString cachePath(const QString &cacheDir, const QString &libraryKey);
+// The cache was one shared steam-library.json before it was kept per library; a library without its own yet
+// starts from a copy, since the family games and lenders' names can't be fetched without the sign-in.
+void adoptLegacyCache(const QString &cacheDir, const QString &libraryKey);
 QByteArray formatCache(const Cache &cache);
 bool parseCache(const QByteArray &bytes, Cache *out);
 bool loadCache(const QString &path, Cache *out);
