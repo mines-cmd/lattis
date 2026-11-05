@@ -82,10 +82,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < argc; ++i)
         arguments.append(QString::fromLocal8Bit(argv[i]));
 
-    // An AppImage can't carry the desktop's own Qt theme (KDE's), and Qt picks the portal theme
-    // only inside Flatpak or Snap, so its file dialogs would be Qt's own unthemed ones.
-    // The portal opens the desktop's own file picker on KDE, GNOME and the rest.
-    if (qEnvironmentVariableIsSet("APPIMAGE") && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME"))
+    // Qt picks the portal theme only inside Flatpak or Snap, so file dialogs would be Qt's own
+    // unthemed ones (an AppImage can't carry the desktop's Qt theme either). The portal opens the
+    // file picker the user configured for their desktop. A global gtk3 theme, set for GTK-flavoured
+    // Qt apps, would force the GNOME picker, so it is overridden too.
+    const QByteArray platformTheme = qgetenv("QT_QPA_PLATFORMTHEME");
+    if (platformTheme.isEmpty() || platformTheme == "gtk3")
         qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
 
     QGuiApplication app(argc, argv);
