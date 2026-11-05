@@ -82,6 +82,8 @@ QString MetadataHttp::serviceName(Service service)
         return QStringLiteral("SteamGridDB");
     case Service::Steam:
         return QStringLiteral("Steam");
+    case Service::ProtonDb:
+        return QStringLiteral("ProtonDB");
     default:
         return QStringLiteral("IGDB");
     }
@@ -124,7 +126,8 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
                 out.error = tr("%1 sent an answer the launcher couldn't read").arg(name);
         }
         // The path only: a URL's query could hold a key, and Qt's error text quotes the whole URL.
-        if (!out.ok()) {
+        // A game with no reports is a normal 404 from ProtonDB.
+        if (!out.ok() && !(service == Service::ProtonDb && out.status == 404)) {
             QString detail = reply->errorString();
             if (const QString query = reply->url().query(QUrl::FullyEncoded); !query.isEmpty())
                 detail.remove(query);
@@ -384,6 +387,35 @@ void MetadataHttp::steamWeb(const QString &path, const QUrlQuery &query, QObject
     url.setQuery(query);
     // The query holds the access token or the key: send() logs the path only.
     send(Service::Steam, network()->get(QNetworkRequest(url)), context, std::move(done));
+}
+
+void MetadataHttp::protonDb(const QString &path, QObject *context, Callback done)
+{
+    if (usesFixtures()) {
+        static const QRegularExpression appId(QStringLiteral("(\\d+)\\.json$"));
+        const auto m = appId.match(path);
+        QFile file(QDir(m_fixturesDir).filePath(QStringLiteral("protondb-%1.json").arg(m.captured(1))));
+        MetadataReply reply;
+        if (m.hasMatch() && file.open(QIODevice::ReadOnly)) {
+            reply.status = 200;
+            reply.json = QJsonDocument::fromJson(file.readAll());
+            if (reply.json.isNull())
+                reply.error = tr("ProtonDB sent an answer the launcher couldn't read");
+        } else {
+            reply.status = 404;
+            reply.error = tr("ProtonDB answered with an error (404)");
+        }
+        QTimer::singleShot(m_fixtureDelayMs, context, [reply, done = std::move(done)] { done(reply); });
+        return;
+    }
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+    const QDateTime at = m_nextProtonDbSend.isValid() && m_nextProtonDbSend > now ? m_nextProtonDbSend : now;
+    m_nextProtonDbSend = at.addMSecs(m_protonDbIntervalMs);
+    QUrl url = m_endpoints.protonDb;
+    url.setPath(url.path() + path, QUrl::TolerantMode);
+    QTimer::singleShot(int(now.msecsTo(at)), context, [this, url, context, done = std::move(done)]() mutable {
+        send(Service::ProtonDb, network()->get(QNetworkRequest(url)), context, std::move(done));
+    });
 }
 
 void MetadataHttp::answerFromFixture(const QString &name, const QByteArray &empty, QObject *context, Callback done,

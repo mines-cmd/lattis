@@ -361,6 +361,26 @@ lattis_test(metadata_test
     LIBS Qt6::Qml Qt6::Gui Qt6::Network tomlplusplus::tomlplusplus
     DEFINES "METADATA_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/metadata\"")
 
+lattis_test(protondb_test
+    SOURCES fakehttpserver.h
+            ../src/metadata/credentials.h ../src/metadata/credentials.cpp
+            ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
+            ../src/metadata/protondb.h ../src/metadata/protondb.cpp
+            ../src/metadata/igdb.h ../src/metadata/igdb.cpp
+            ../src/metadata/namematch.h ../src/metadata/namematch.cpp
+            ../src/metadata/steamgriddb.h ../src/metadata/steamgriddb.cpp
+            ../src/metadata/steamstore.h ../src/metadata/steamstore.cpp
+            ../src/metadata/metadataclient.h ../src/metadata/metadataclient.cpp
+            ../src/library/lookupgame.h
+            ../src/core/apppaths.h ../src/core/apppaths.cpp
+            ../src/library/searchtext.h ../src/library/searchtext.cpp
+            ../src/library/gameid.h ../src/library/gameid.cpp
+            ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+            ${CORE_SOURCES}
+    LIBS Qt6::Qml Qt6::Gui Qt6::Network tomlplusplus::tomlplusplus
+    DEFINES "METADATA_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/metadata\"")
+
 # Installing emulators
 lattis_test(install_test
     SOURCES fakehttpserver.h

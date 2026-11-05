@@ -28,6 +28,7 @@ struct MetadataEndpoints
     QUrl steamStore = QUrl(QStringLiteral("https://api.steampowered.com"));
     QUrl steamStoreSearch = QUrl(QStringLiteral("https://store.steampowered.com"));
     QUrl steamWeb = QUrl(QStringLiteral("https://api.steampowered.com"));
+    QUrl protonDb = QUrl(QStringLiteral("https://www.protondb.com"));
 };
 
 struct MetadataReply
@@ -58,6 +59,7 @@ public:
     void steamStore(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void steamStoreSearch(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void steamWeb(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
+    void protonDb(const QString &path, QObject *context, Callback done);
     void download(const QUrl &url, const QString &fileName, QObject *context,
                   std::function<void(const QString &path, const QString &error)> done);
     QString downloadsDir() const;
@@ -74,12 +76,13 @@ public:
     void setTimeout(int ms) { m_timeoutMs = ms; }
     void setIgdbInterval(int ms) { m_igdbIntervalMs = ms; }
     void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
+    void setProtonDbInterval(int ms) { m_protonDbIntervalMs = ms; }
 
     bool hasNetworkManager() const { return m_network != nullptr; }
     int tokenFetches() const { return m_tokenFetches; }
 
 private:
-    enum class Service { Twitch, Igdb, SteamGridDb, Steam };
+    enum class Service { Twitch, Igdb, SteamGridDb, Steam, ProtonDb };
 
     struct Pending
     {
@@ -111,6 +114,8 @@ private:
     int m_timeoutMs = 10000;
     int m_igdbIntervalMs = 260; // IGDB allows 4 requests a second
     int m_fixtureDelayMs = 300; // long enough for a screenshot to catch "Looking up…"
+    int m_protonDbIntervalMs = 1000; // ProtonDB documents no limit: stay well under one request a second
+    QDateTime m_nextProtonDbSend;
 
     QString m_token;
     QDateTime m_tokenExpires;

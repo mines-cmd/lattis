@@ -367,6 +367,7 @@ qt_add_qml_module(lattis
         src/metadata/namematch.h src/metadata/namematch.cpp
         src/metadata/steamgriddb.h src/metadata/steamgriddb.cpp
         src/metadata/steamstore.h src/metadata/steamstore.cpp
+        src/metadata/protondb.h src/metadata/protondb.cpp
         src/metadata/metadataclient.h src/metadata/metadataclient.cpp
         src/metadata/thumbnailcache.h
         src/metadata/idlistmodel.h src/metadata/idlistmodel.cpp
