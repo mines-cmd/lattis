@@ -5,6 +5,8 @@ QtObject {
     id: root
 
     property var game: ({})
+    // The Launch button's update state, which tints the Steam update entry.
+    property bool updateAction: false
 
     readonly property var periodLabels: ({
         week: qsTr("This week"),
@@ -34,7 +36,100 @@ QtObject {
             first_played: { label: qsTr("First played"), value: played.firstPlayed ?? "", icon: Icons.signpostLine },
             recent_play_time: { label: periodLabels[General.recentPeriod] ?? "", value: playTime((played.recent ?? {})[General.recentPeriod]),
                                 icon: Icons.timerLine },
-            date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckLine }
+            date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckLine },
+            steam_waiting: steamWaitingField,
+            steam_update: steamUpdateField,
+            steam_family: steamFamilyField,
+            last_backup: lastBackupField,
+            protondb: protonDbField
+        }
+    }
+
+    readonly property bool steamWaitingShown: !Library.readOnly && Library.steamWaiting.length > 0
+        && ((game.installed ?? true) || (game.steamUpdate ?? "none") === "none")
+    readonly property bool pendingMine: game.pendingSteamEdits ?? false
+    readonly property var steamWaitingField: {
+        const waiting = Library.steamWaiting.length
+        return { label: qsTr("Steam"), icon: Icons.informationLine, attention: true, action: "pending",
+                 value: !steamWaitingShown ? ""
+                      : (game.shortcutQueued ?? false) ? qsTr("Added when it closes")
+                      : pendingMine ? qsTr("Changes wait for it to close")
+                      : waiting === 1 ? qsTr("1 game's changes waiting")
+                      : qsTr("%1 games' changes waiting").arg(waiting),
+                 hoverTip: pendingMine ? "" : qsTr("Waiting for Steam to close: %1").arg(Library.steamWaiting.map(w => w.title).join(", ")),
+                 tip: qsTr("Apply the changes now, or undo them") }
+    }
+    readonly property var steamUpdateField: ({
+        label: (game.installed ?? true) ? qsTr("Update available") : qsTr("Installing"),
+        value: (game.steamUpdate ?? "none") !== "none" ? game.steamUpdateText ?? "" : "",
+        icon: Icons.download, attention: true,
+        attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground
+    })
+    readonly property var steamFamilyField: ({
+        label: qsTr("Family"), icon: Icons.steamLine,
+        value: (game.steamOwnership ?? "") !== "family" ? ""
+             : (game.sharedBy ?? []).length > 0 ? qsTr("Shared by %1").arg(game.sharedBy.join(", "))
+             : qsTr("Shared with you")
+    })
+
+    readonly property bool wantsLastBackup: General.gamePageChips.includes("last_backup")
+        || General.gamePageInfoRows.includes("last_backup")
+    onWantsLastBackupChanged: loadLastBackup()
+    onGameChanged: loadLastBackup()
+    function loadLastBackup() {
+        if (wantsLastBackup && (game.id ?? "") !== "")
+            GameSaves.loadLast(game.id)
+    }
+    readonly property var lastBackupField: ({
+        label: qsTr("Last backup"), icon: Icons.save2Line,
+        value: GameSaves.last.requested !== game.id || (GameSaves.last.when ?? "") === "" ? ""
+             : GameSaves.last.name ? qsTr("%1, %2").arg(GameSaves.last.when).arg(GameSaves.last.name)
+             : GameSaves.last.when
+    })
+
+    readonly property int protonDbAppId: {
+        const m = /^steam-(\d+)$/.exec(game.id ?? "")
+        return m ? parseInt(m[1]) : 0
+    }
+    readonly property bool protonDbWanted: (General.gamePageChips.includes("protondb")
+                                            || General.gamePageInfoRows.includes("protondb")) && protonDbAppId > 0
+    // Asks ProtonDb (which starts its request) only while the entry is wanted; the singleton isn't built before.
+    property var protonDbSummary: ({})
+    function refreshProtonDb() {
+        protonDbSummary = protonDbWanted ? ProtonDb.summary(protonDbAppId) : ({})
+    }
+    onProtonDbWantedChanged: refreshProtonDb()
+    onProtonDbAppIdChanged: refreshProtonDb()
+    property Connections protonDbWatch: Connections {
+        target: root.protonDbWanted ? ProtonDb : null
+        function onChanged(appId) {
+            if (appId === root.protonDbAppId)
+                root.refreshProtonDb()
+        }
+    }
+    readonly property var protonDbField: {
+        const summary = protonDbSummary
+        const names = {
+            native: qsTr("Native"), platinum: qsTr("Platinum"), gold: qsTr("Gold"), silver: qsTr("Silver"),
+            bronze: qsTr("Bronze"), borked: qsTr("Borked"), pending: qsTr("Pending")
+        }
+        const state = summary.state ?? ""
+        const tier = state === "ready" ? summary.tier : ""
+        const known = names[tier] !== undefined
+        const trending = state === "ready" && (summary.trending ?? "") !== tier ? names[summary.trending] ?? "" : ""
+        return {
+            label: qsTr("ProtonDB"), icon: Icons.gaugeLine, action: "url",
+            url: "https://www.protondb.com/app/" + protonDbAppId,
+            iconTint: known ? Theme.statChip["protondb" + tier.charAt(0).toUpperCase() + tier.slice(1)] : undefined,
+            value: protonDbAppId === 0 ? ""
+                 : known ? names[tier]
+                 : state === "checking" ? qsTr("Checking…")
+                 : state === "none" ? qsTr("No reports")
+                 : qsTr("Open page"),
+            tip: known ? (trending !== "" ? qsTr("%1 from %2 reports. Trending: %3. Open on ProtonDB")
+                                              .arg(names[tier]).arg(summary.total).arg(trending)
+                                          : qsTr("%1 from %2 reports. Open on ProtonDB").arg(names[tier]).arg(summary.total))
+                       : qsTr("Open on ProtonDB")
         }
     }
 

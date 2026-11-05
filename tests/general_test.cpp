@@ -567,7 +567,7 @@ void GeneralTest::gamePageParser()
     QCOMPARE(r.value.chipsWithoutIcon, (QStringList{"steam_update", "rating"}));
 
     const auto bad = parseGamePageSettings("[game_page]\nchips = [\"play_tim\", \"menu\"]\nbuttons = \"favorite\"\n"
-                                           "info_rows = [\"steam_update\"]\nrecent_period = \"day\"\n"
+                                           "info_rows = [\"favorite\"]\nrecent_period = \"day\"\n"
                                            "play_time_format = \"clock\"\n"
                                            "show_tags = 1\nchip = []\nchips_without_icon = [\"favorite\"]\n",
                                            QStringLiteral("settings.toml"));
@@ -578,7 +578,7 @@ void GeneralTest::gamePageParser()
     QVERIFY(all.contains(QStringLiteral("did you mean \"play_time\"")));
     QVERIFY(all.contains(QStringLiteral("unknown name \"menu\" in chips")));
     QVERIFY(all.contains(QStringLiteral("buttons must be a list")));
-    QVERIFY(all.contains(QStringLiteral("unknown name \"steam_update\" in info_rows")));
+    QVERIFY(all.contains(QStringLiteral("unknown name \"favorite\" in info_rows")));
     QVERIFY(all.contains(QStringLiteral("recent_period must be")));
     QVERIFY(all.contains(QStringLiteral("play_time_format must be \"hours\", \"hours_minutes\"")));
     QVERIFY(all.contains(QStringLiteral("show_tags must be true or false")));
@@ -618,9 +618,11 @@ void GeneralTest::gamePageOrderKeepsNewNames()
     QCOMPARE(rows.size(), gamePageChoices(GamePage::infoRows).size());
     QCOMPARE(rows.at(1), QStringLiteral("rating"));
 
-    // Chips offer the Steam chips; the info panel doesn't.
-    QVERIFY(gamePageChoices(GamePage::chips).contains(QStringLiteral("steam_waiting")));
-    QVERIFY(!gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
+    // A new chip is a new info row too: the two places never drift apart.
+    QCOMPARE(gamePageChoices(GamePage::chips), gamePageChoices(GamePage::infoRows));
+    QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
+    QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("protondb")));
+    QVERIFY(!GamePageSettings::defaultInfoRows().contains(QStringLiteral("protondb")));
 }
 
 void GeneralTest::gamePageSettersWrite()

@@ -10,6 +10,14 @@ Surface {
     readonly property var rows: fields.shown(General.gamePageInfoRows).map(name => fields.all[name])
 
     signal historyRequested()
+    signal message(string text)
+    signal undoRequested()
+
+    SteamPendingMenu {
+        id: pendingMenu
+        onMessage: text => root.message(text)
+        onUndoRequested: root.undoRequested()
+    }
 
     implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.verticalPadding
     radius: Theme.infoPanel.radius
@@ -35,6 +43,9 @@ Surface {
                 required property int index
 
                 readonly property bool clickable: (modelData.filterPlatform ?? "") !== "" || (modelData.history ?? false)
+                    || (modelData.action ?? "") !== ""
+                readonly property bool tinted: (modelData.attention ?? false) || modelData.iconTint !== undefined
+                readonly property string hoverText: modelData.hoverTip ?? (clickable ? modelData.tip ?? "" : "")
                 readonly property color valueColor: !clickable ? Theme.infoPanel.valueColor
                     : rowClick.containsMouse ? Theme.infoPanel.valueHoverColor
                     : Theme.infoPanel.valueColor
@@ -60,10 +71,12 @@ Surface {
                         Behavior on scale { enabled: Motion.on; MotionNumber {} }
 
                         Icon {
-                            visible: infoRow.modelData.valueIcon ?? false
+                            visible: (infoRow.modelData.valueIcon ?? false) || infoRow.tinted
                             path: infoRow.modelData.icon
                             size: Theme.infoPanel.iconSize
-                            color: infoRow.valueColor
+                            color: infoRow.modelData.attention ? (infoRow.modelData.attentionColor ?? Theme.notice.icon)
+                                 : infoRow.modelData.iconTint !== undefined ? infoRow.modelData.iconTint
+                                 : infoRow.valueColor
                             Behavior on color { enabled: Motion.fades; MotionColor {} }
                         }
                         Label {
@@ -99,15 +112,19 @@ Surface {
                     onClicked: {
                         if (infoRow.modelData.history ?? false)
                             root.historyRequested()
+                        else if (infoRow.modelData.action === "pending")
+                            pendingMenu.popup(infoRow, infoRow.width - pendingMenu.width, infoRow.height)
+                        else if (infoRow.modelData.action === "url")
+                            Qt.openUrlExternally(infoRow.modelData.url)
                         else
                             Library.platformFilter = infoRow.modelData.filterPlatform
                     }
 
                     ToolTip {
                         id: tip
-                        visible: rowClick.enabled && rowClick.containsMouse
+                        visible: infoRow.hoverText !== "" && rowClick.containsMouse
                         delay: Theme.tooltip.delay
-                        text: infoRow.modelData.tip ?? ""
+                        text: infoRow.hoverText
                         x: rowClick.width - width - Theme.infoPanel.rowPadding / 2
                         y: -height
                     }

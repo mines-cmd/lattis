@@ -4,6 +4,11 @@ import QtQuick
 // See docs/code/qml.md.
 QtObject {
     readonly property var fields: ({
+        steam_waiting: qsTr("Steam changes waiting"),
+        steam_update: qsTr("Steam update"),
+        steam_family: qsTr("Steam Family"),
+        last_backup: qsTr("Last backup"),
+        protondb: qsTr("ProtonDB"),
         play_time: qsTr("Play time"),
         last_played: qsTr("Last played"),
         recent_play_time: qsTr("Recent play time"),
@@ -16,13 +21,6 @@ QtObject {
         rating: qsTr("Rating"),
         date_added: qsTr("Date added")
     })
-
-    readonly property var chips: Object.assign({
-        steam_waiting: qsTr("Steam changes waiting"),
-        steam_update: qsTr("Steam update"),
-        steam_family: qsTr("Steam Family"),
-        last_backup: qsTr("Last backup")
-    }, fields)
 
     readonly property var buttons: ({
         favorite: qsTr("Favorite"),
@@ -42,6 +40,6 @@ QtObject {
     })
 
     function forPlace(place) {
-        return place === "chips" ? chips : place === "buttons" ? buttons : place === "sections" ? sections : fields
+        return place === "buttons" ? buttons : place === "sections" ? sections : fields
     }
 }

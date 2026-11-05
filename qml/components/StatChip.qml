@@ -11,6 +11,8 @@ Surface {
     property string value
     property bool attention: false
     property var attentionColor: undefined
+    // The icon's color when set; attention wins over it.
+    property var iconTint: undefined
     property bool clickable: false
     property string tip
     // A rating shown as stars in the tooltip instead of tip; -1 for none.
@@ -85,6 +87,7 @@ Surface {
             path: root.icon
             size: Theme.statChip.iconSize
             color: root.attention ? (root.attentionColor ?? Theme.notice.icon)
+                 : root.iconTint !== undefined ? root.iconTint
                  : root.lit ? Theme.statChip.hoverIconColor : Theme.statChip.iconColor
             Behavior on color { enabled: Motion.fades; MotionColor {} }
         }

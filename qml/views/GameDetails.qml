@@ -679,25 +679,10 @@ Item {
     GameFields {
         id: gameFields
         game: root.game
+        updateAction: launchButton.updateAction
     }
 
-    readonly property bool steamWaitingShown: !Library.readOnly && Library.steamWaiting.length > 0
-        && ((root.game.installed ?? true) || (root.game.steamUpdate ?? "none") === "none")
-    readonly property bool steamUpdateShown: (root.game.steamUpdate ?? "none") !== "none"
-    readonly property bool steamFamilyShown: (root.game.steamOwnership ?? "") === "family"
-    readonly property bool lastBackupShown: GameSaves.last.requested === root.game.id && (GameSaves.last.when ?? "") !== ""
-    readonly property bool wantsLastBackup: General.gamePageChips.includes("last_backup")
-    onWantsLastBackupChanged: loadLastBackup()
-    function loadLastBackup() {
-        if (wantsLastBackup && (root.game.id ?? "") !== "")
-            GameSaves.loadLast(root.game.id)
-    }
-    readonly property var shownChips: General.gamePageChips.filter(name =>
-        name === "steam_waiting" ? steamWaitingShown
-        : name === "steam_update" ? steamUpdateShown
-        : name === "steam_family" ? steamFamilyShown
-        : name === "last_backup" ? lastBackupShown
-        : gameFields.shown([name]).length > 0)
+    readonly property var shownChips: General.gamePageChips.filter(name => gameFields.shown([name]).length > 0)
 
     // Another game's chips replace these at once: the switch has its own motion. A chip turned on or off,
     // or a Steam chip coming or going on this game, pops in or out.
@@ -710,99 +695,12 @@ Item {
         chipModel.source = shownChips.map(name => ({ key: name }))
     }
     onShownChipsChanged: showChips()
-    Component.onCompleted: { showChips(); loadLastBackup() }
-    Connections {
-        target: root
-        function onGameChanged() { root.loadLastBackup() }
-    }
+    Component.onCompleted: { showChips(); gameFields.loadLastBackup() }
 
-    Component {
-        id: steamWaitingChip
-
-        StatChip {
-            readonly property int waiting: Library.steamWaiting.length
-            readonly property bool mine: root.game.pendingSteamEdits ?? false
-
-            attention: true
-            icon: General.chipsWithoutIcon.includes("steam_waiting") ? "" : Icons.informationLine
-            label: qsTr("Steam")
-            value: (root.game.shortcutQueued ?? false) ? qsTr("Added when it closes")
-                 : mine ? qsTr("Changes wait for it to close")
-                 : waiting === 1 ? qsTr("1 game's changes waiting")
-                 : qsTr("%1 games' changes waiting").arg(waiting)
-            ToolTip.visible: chipHover.hovered && !mine
-            ToolTip.text: qsTr("Waiting for Steam to close: %1").arg(Library.steamWaiting.map(w => w.title).join(", "))
-            ToolTip.delay: 500
-
-            HoverHandler { id: chipHover }
-
-            SettingsButton {
-                id: pendingButton
-                implicitHeight: Theme.statChip.buttonHeight
-                flat: true
-                leftPadding: text === "" ? 0 : 14
-                rightPadding: leftPadding
-                implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
-                text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
-                iconPath: GameRunner.closingSteam ? "" : Icons.chevronRight
-                iconRotation: pendingMenu.showing ? -90 : 90
-                enabled: !GameRunner.closingSteam
-                tip: qsTr("Apply the changes now, or undo them")
-                onClicked: pendingMenu.popup(pendingButton, 0, pendingButton.height)
-
-                SettingsMenu {
-                    id: pendingMenu
-
-                    Action {
-                        text: qsTr("Apply")
-                        onTriggered: {
-                            const e = GameRunner.closeSteamAndApply()
-                            if (e !== "")
-                                root.message(e)
-                        }
-                    }
-                    Action {
-                        text: qsTr("Undo")
-                        onTriggered: root.steamUndoRequested()
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: steamUpdateChip
-
-        StatChip {
-            attention: true
-            attentionColor: launchButton.updateAction ? Theme.launchButton.updateBackground
-                                                      : Theme.launchButton.updatingBackground
-            icon: General.chipsWithoutIcon.includes("steam_update") ? "" : Icons.download
-            label: (root.game.installed ?? true) ? qsTr("Update available") : qsTr("Installing")
-            value: root.game.steamUpdateText ?? ""
-        }
-    }
-
-    Component {
-        id: steamFamilyChip
-
-        StatChip {
-            icon: General.chipsWithoutIcon.includes("steam_family") ? "" : Icons.steamLine
-            label: qsTr("Family")
-            value: (root.game.sharedBy ?? []).length > 0 ? qsTr("Shared by %1").arg(root.game.sharedBy.join(", "))
-                                                         : qsTr("Shared with you")
-        }
-    }
-
-    Component {
-        id: lastBackupChip
-
-        StatChip {
-            icon: General.chipsWithoutIcon.includes("last_backup") ? "" : Icons.save2Line
-            label: qsTr("Last backup")
-            value: GameSaves.last.name ? qsTr("%1, %2").arg(GameSaves.last.when).arg(GameSaves.last.name)
-                                       : GameSaves.last.when ?? ""
-        }
+    SteamPendingMenu {
+        id: pendingMenu
+        onMessage: text => root.message(text)
+        onUndoRequested: root.steamUndoRequested()
     }
 
     ColumnLayout {
@@ -1075,11 +973,7 @@ Item {
                             readonly property string name: model.key
                             readonly property bool leaving: model.leaving
 
-                            sourceComponent: name === "steam_waiting" ? steamWaitingChip
-                                           : name === "steam_update" ? steamUpdateChip
-                                           : name === "steam_family" ? steamFamilyChip
-                                           : name === "last_backup" ? lastBackupChip
-                                           : fieldChip
+                            sourceComponent: fieldChip
 
                             PopLeave { target: chip; leaving: chip.leaving }
 
@@ -1098,19 +992,47 @@ Item {
                             Component {
                                 id: fieldChip
                                 StatChip {
+                                    id: entry
                                     readonly property var field: gameFields.all[chip.name]
                                     readonly property bool opensHistory: field.history ?? false
+                                    readonly property bool opensUrl: (field.action ?? "") === "url"
+                                    attention: field.attention ?? false
+                                    attentionColor: field.attentionColor
+                                    iconTint: field.iconTint
                                     icon: General.chipsWithoutIcon.includes(chip.name) ? "" : field.icon
                                     label: field.label
                                     value: field.value
-                                    clickable: !chip.leaving && (opensHistory || (field.filterPlatform ?? "") !== "")
+                                    clickable: !chip.leaving && (opensHistory || opensUrl || (field.filterPlatform ?? "") !== "")
                                     tip: clickable ? field.tip ?? "" : ""
                                     tipStars: field.stars ?? -1
+                                    ToolTip.visible: chipHover.hovered && (field.hoverTip ?? "") !== ""
+                                    ToolTip.text: field.hoverTip ?? ""
+                                    ToolTip.delay: 500
                                     onClicked: {
                                         if (opensHistory)
                                             root.historyRequested()
+                                        else if (opensUrl)
+                                            Qt.openUrlExternally(field.url)
                                         else
                                             Library.platformFilter = field.filterPlatform
+                                    }
+
+                                    HoverHandler { id: chipHover }
+
+                                    SettingsButton {
+                                        id: pendingButton
+                                        visible: (entry.field.action ?? "") === "pending"
+                                        implicitHeight: Theme.statChip.buttonHeight
+                                        flat: true
+                                        leftPadding: text === "" ? 0 : 14
+                                        rightPadding: leftPadding
+                                        implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
+                                        text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
+                                        iconPath: GameRunner.closingSteam ? "" : Icons.chevronRight
+                                        iconRotation: pendingMenu.showing ? -90 : 90
+                                        enabled: !GameRunner.closingSteam
+                                        tip: entry.field.tip ?? ""
+                                        onClicked: pendingMenu.popup(pendingButton, 0, pendingButton.height)
                                     }
                                 }
                             }
@@ -1257,6 +1179,8 @@ Item {
                         Layout.fillWidth: true
                         fields: gameFields
                         onHistoryRequested: root.historyRequested()
+                        onMessage: text => root.message(text)
+                        onUndoRequested: root.steamUndoRequested()
 
                         TapHandler {
                             acceptedButtons: Qt.RightButton

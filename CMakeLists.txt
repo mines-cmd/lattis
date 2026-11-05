@@ -211,6 +211,7 @@ qt_add_qml_module(lattis
         qml/views/AchievementTip.qml
         qml/views/AchievementsViewer.qml
         qml/views/GameFields.qml
+        qml/views/SteamPendingMenu.qml
         qml/views/RatingEditor.qml
         qml/views/DateEditor.qml
         qml/views/StepField.qml

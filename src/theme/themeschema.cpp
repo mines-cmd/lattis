@@ -661,6 +661,13 @@ constexpr Setting kSettings[] = {
     color("stat_chip", "hover_value_color", "@stat_chip.value_color", "Value color under the mouse, on a chip that opens something"),
     color("stat_chip", "hover_label_color", "@stat_chip.label_color", "Label color under the mouse, on a chip that opens something (play time)"),
     color("stat_chip", "hover_icon_color", "@stat_chip.icon_color", "Icon color under the mouse, on a chip that opens something"),
+    color("stat_chip", "protondb_native", "#4cc38a", "ProtonDB chip icon, Native"),
+    color("stat_chip", "protondb_platinum", "#b4c7dc", "ProtonDB chip icon, Platinum"),
+    color("stat_chip", "protondb_gold", "#e3b341", "ProtonDB chip icon, Gold"),
+    color("stat_chip", "protondb_silver", "#a6adb4", "ProtonDB chip icon, Silver"),
+    color("stat_chip", "protondb_bronze", "#cd7f32", "ProtonDB chip icon, Bronze"),
+    color("stat_chip", "protondb_borked", "#f05252", "ProtonDB chip icon, Borked"),
+    color("stat_chip", "protondb_pending", "#5bbad5", "ProtonDB chip icon, Pending"),
     integer("stat_chip", "label_font_size", "@font.small_size", 6, 48, "Label size"),
     boolean("stat_chip", "uppercase_labels", "true", "Labels in uppercase"),
 

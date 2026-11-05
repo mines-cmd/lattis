@@ -50,7 +50,7 @@ Item {
         return note !== undefined ? shown + " · " + note : shown
     }
 
-    readonly property var fieldDefs: ({
+    readonly property var baseFieldDefs: ({
         play_time: { icon: Icons.clock,
                      hint: hint("play_time", qsTr("The time played in all"), qsTr("click opens play history")) },
         last_played: { icon: Icons.history,
@@ -75,7 +75,7 @@ Item {
                       hint: hint("date_added", qsTr("The day it joined the library")) }
     })
 
-    readonly property var chipDefs: Object.assign({
+    readonly property var fieldDefs: Object.assign({
         steam_waiting: { icon: Icons.informationLine,
                          hint: qsTr("Only while the game's edits wait for Steam to close, with Close Steam and apply, and Undo. Hidden, they still show on Properties and the Launch button.") },
         steam_update: { icon: Icons.download,
@@ -83,8 +83,10 @@ Item {
         steam_family: { icon: Icons.steamLine,
                         hint: qsTr("Only for a game a member of your Steam Family shares with you: who lends it") },
         last_backup: { icon: Icons.save2Line,
-                       hint: qsTr("Only for a game with a save backup: when the newest was made, and its name") }
-    }, fieldDefs)
+                       hint: qsTr("Only for a game with a save backup: when the newest was made, and its name") },
+        protondb: { icon: Icons.gaugeLine,
+                    hint: qsTr("Only for a Steam game: its ProtonDB tier. Asks protondb.com about the game when its page opens; click opens the game there") }
+    }, baseFieldDefs)
 
     readonly property var buttonDefs: ({
         favorite: { icon: Icons.star, hint: qsTr("Add to or remove from favorites") },
@@ -113,7 +115,6 @@ Item {
         return out
     }
     readonly property var fieldEntries: named(fieldDefs, names.fields)
-    readonly property var chipEntries: named(chipDefs, names.chips)
     readonly property var buttonEntries: named(buttonDefs, names.buttons)
     readonly property var sectionEntries: named(sectionDefs, names.sections)
 
@@ -225,7 +226,7 @@ Item {
                 GamePageList {
                     id: chips
                     place: "chips"
-                    entries: root.chipEntries
+                    entries: root.fieldEntries
                     query: root.query
                     flickable: flick
                     onFailed: text => root.report(text)

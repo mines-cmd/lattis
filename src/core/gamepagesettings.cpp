@@ -11,7 +11,9 @@ const QStringList &fields()
         QStringLiteral("play_time"),    QStringLiteral("last_played"),      QStringLiteral("release_date"),
         QStringLiteral("platform"),     QStringLiteral("status"),           QStringLiteral("install_size"),
         QStringLiteral("rating"),       QStringLiteral("times_played"),     QStringLiteral("first_played"),
-        QStringLiteral("recent_play_time"), QStringLiteral("date_added")};
+        QStringLiteral("recent_play_time"), QStringLiteral("date_added"),
+        QStringLiteral("steam_waiting"),   QStringLiteral("steam_update"),     QStringLiteral("steam_family"),
+        QStringLiteral("last_backup"),     QStringLiteral("protondb")};
     return names;
 }
 
@@ -88,15 +90,10 @@ const QStringList &gamePageChoices(const QString &place)
     static const QStringList sections = GamePageSettings::defaultSections();
     if (place == GamePage::sections)
         return sections;
-    // The Steam chips carry their own actions, so they're chips only; the buttons are the action row's.
-    static const QStringList chips = fields() + QStringList{QStringLiteral("steam_waiting"), QStringLiteral("steam_update"),
-                                                            QStringLiteral("steam_family"), QStringLiteral("last_backup")};
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
                                         QStringLiteral("save_folder"), QStringLiteral("gallery"), QStringLiteral("mod_manager"),
                                         QStringLiteral("menu")};
-    if (place == GamePage::chips)
-        return chips;
     return place == GamePage::buttons ? buttons : fields();
 }
 
