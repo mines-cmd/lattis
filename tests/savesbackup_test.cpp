@@ -366,7 +366,8 @@ void SavesBackupTest::aSessionEndMakesTheBackup()
     const Result result = finished.first().first().value<Result>();
     QCOMPARE(result.status, Status::Written);
     QCOMPARE(backups(m_folder, "linux-celeste").size(), 1);
-    QVERIFY(message.isEmpty());
+    QCOMPARE(message.size(), 1);
+    QVERIFY(message.first().first().toString().contains("Celeste"));
 
     service.ended("linux-celeste"); // a second end without a start makes nothing
     QTest::qWait(50);
