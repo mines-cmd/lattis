@@ -84,6 +84,11 @@ SCENARIOS = [
                + "key Escape\n", None),
               (FIRST + "click Mario Tennis Aces\nexpect-not-has " + ACES_TEXT + "\n", None)],
              setup(files={ACES_FILE: BARE_ACES})),
+    Scenario("bulk lookup: a match can be changed with Detailed lookup",
+             [(FIRST + bulk("Mario Tennis") + "expect Matched\nclick Detailed lookup\nwait 800\n"
+               + "expect Look up Mario Tennis Aces in IGDB\nclick Cancel\n"
+               + "expect-not Look up Mario Tennis Aces in IGDB\nexpect Matched\n", None)],
+             setup(files={ACES_FILE: BARE_ACES})),
     Scenario("bulk lookup: several games of one name need a pick",
              [(FIRST + bulk("Metroid") + "expect Which game?\nexpect Needs a pick\n", None)], setup()),
     Scenario("bulk lookup: an unknown title is Not found and can be marked Not on IGDB",

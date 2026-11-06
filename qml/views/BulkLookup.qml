@@ -1581,6 +1581,14 @@ ApplicationWindow {
                                                 text: String(result.r.match?.year ?? "")
                                                 font.pixelSize: Theme.font.size
                                             }
+                                            SettingsButton {
+                                                Layout.fillWidth: true
+                                                Layout.topMargin: Theme.layout.spacing / 2
+                                                implicitHeight: root.barButtonHeight
+                                                text: qsTr("Detailed lookup")
+                                                tip: qsTr("Not this game? Search another name or platform, and see every result")
+                                                onClicked: root.openDetailedLookup(result.r)
+                                            }
                                         }
 
                                         ColumnLayout {
