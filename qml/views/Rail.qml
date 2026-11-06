@@ -155,7 +155,9 @@ Item {
         onTriggered: root.resetDrag()
     }
 
+    readonly property bool steamFound: Library.steam.found === true
     readonly property var bottomDefs: ({
+        steam_friends: { icon: Icons.users, tip: qsTr("Steam friends"), friends: true },
         add_game: { icon: Icons.add, tip: Actions.tip(qsTr("Add game"), Actions.keys.add_game), run: () => root.addGame() },
         play_statistics: { icon: Icons.barChartFill, tip: Actions.tip(qsTr("Play statistics"), Actions.keys.play_statistics),
                            run: () => root.action("play_statistics") },
@@ -164,7 +166,8 @@ Item {
         open_settings: { icon: Icons.gear, tip: Actions.tip(qsTr("Settings"), Actions.keys.open_settings),
                          run: () => root.openSettings() }
     })
-    readonly property var bottomShown: General.railButtonOrder.filter(name => !General.railHiddenButtons.includes(name))
+    readonly property var bottomShown: General.railButtonOrder.filter(name => (name !== "steam_friends" || steamFound)
+                                                                              && !General.railHiddenButtons.includes(name))
 
     property string bottomDragName: ""
     property int bottomFrom: -1
@@ -220,7 +223,7 @@ Item {
         const moved = bottomShown.slice()
         moved.splice(bottomTo, 0, moved.splice(bottomFrom, 1)[0])
         let next = 0
-        const order = General.railButtonOrder.map(name => General.railHiddenButtons.includes(name) ? name : moved[next++])
+        const order = General.railButtonOrder.map(name => bottomShown.includes(name) ? moved[next++] : name)
         const error = General.setRailButtonOrder(order)
         if (error !== "") {
             resetBottomDrag()
@@ -372,6 +375,36 @@ Item {
             if (Library.platformFilter === id)
                 Library.platformFilter = ""
         }
+    }
+
+    function openStatusMenu(button) {
+        statusMenu.active = true
+        const menu = statusMenu.item
+        if (menu.visible) {
+            menu.close()
+            return
+        }
+        if (Date.now() - statusMenu.closedAt < 200)
+            return
+        menu.popup(panel, panel.width + Theme.layout.spacing / 2, button.mapToItem(panel, 0, 0).y)
+    }
+
+    function openStatusMenuForScreenshot() {
+        const button = bottomRepeater.itemAt(bottomShown.indexOf("steam_friends"))
+        if (button)
+            openStatusMenu(button)
+    }
+
+    Loader {
+        id: statusMenu
+        property double closedAt: 0
+        active: false
+        source: "../components/SteamStatusMenu.qml"
+    }
+    Connections {
+        target: statusMenu.item
+        function onClosed() { statusMenu.closedAt = Date.now() }
+        function onMessage(text) { root.message(text) }
     }
 
     function openSubmenuForScreenshot(which) {
@@ -626,9 +659,23 @@ Item {
                     onDragStarted: (x, y) => root.startBottomDrag(bottomButton, index, x, y)
                     onDragMoved: (x, y) => root.moveBottomDrag(bottomButton, x, y)
                     onDragEnded: dropped => root.endBottomDrag(dropped)
-                    icon: def.icon
-                    tip: def.tip
-                    onClicked: def.run()
+                    icon: face.item ? "" : def.icon
+                    tip: def.friends ? (face.item?.text ?? def.tip) : def.tip
+                    menuOpen: def.friends === true && (statusMenu.item?.visible ?? false)
+                    onClicked: def.friends ? root.openStatusMenu(bottomButton) : def.run()
+
+                    // Not before the first frame: the picture reads Steam's files once it exists.
+                    Loader {
+                        id: face
+                        anchors.centerIn: parent
+                        active: bottomButton.def.friends === true && root.startedUp
+                        source: "RailFriendsFace.qml"
+                    }
+                    Binding {
+                        target: face.item
+                        property: "hovered"
+                        value: bottomButton.hot
+                    }
                 }
             }
         }

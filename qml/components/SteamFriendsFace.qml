@@ -6,6 +6,11 @@ Item {
     id: root
 
     property bool hovered: false
+    property real size: Theme.toolbar.statusAvatarSize
+    property real buttonRadius: Theme.toolbar.radius
+    property real iconSize: Theme.toolbar.iconSize
+    property color iconColor: Theme.toolbar.icon
+    property color ringColor: Theme.toolbar.statusAvatarHover
 
     readonly property string status: SteamStatus.status
     readonly property string text: status === "online" ? qsTr("Steam friends: Online")
@@ -15,12 +20,12 @@ Item {
 
     readonly property real dot: Theme.toolbar.statusSize
     readonly property real ring: Math.min(Theme.toolbar.statusBorderWidth, dot / 2)
-    readonly property real corner: Math.min(Theme.toolbar.radius, width / 2)
+    readonly property real corner: Math.min(buttonRadius, width / 2)
     // On the round picture's edge: at the box's corner the dot would float clear of a large picture.
     readonly property real dotCenter: width / 2 * (1 + Math.SQRT1_2)
 
-    implicitWidth: Theme.toolbar.statusAvatarSize
-    implicitHeight: Theme.toolbar.statusAvatarSize
+    implicitWidth: size
+    implicitHeight: size
 
     Rectangle {
         id: mask
@@ -58,7 +63,7 @@ Item {
         visible: picture.visible
         radius: root.corner
         color: "transparent"
-        border.color: Theme.toolbar.statusAvatarHover
+        border.color: root.ringColor
         border.width: Theme.toolbar.statusBorderWidth
         opacity: root.hovered ? 1 : 0
 
@@ -68,9 +73,9 @@ Item {
     Icon {
         anchors.centerIn: parent
         visible: picture.status !== Image.Ready
-        size: Theme.toolbar.iconSize
+        size: root.iconSize
         path: Icons.users
-        color: Theme.toolbar.icon
+        color: root.iconColor
     }
 
     Rectangle {

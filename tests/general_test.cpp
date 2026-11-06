@@ -440,14 +440,14 @@ void GeneralTest::railButtonOrderSetting()
                                               QStringLiteral("settings.toml"));
     QCOMPARE(partial.warnings.size(), 1);
     QCOMPARE(orderedRailButtons(partial.value.railButtonOrder),
-             (QStringList{"open_settings", "add_game", "play_statistics", "gallery"}));
+             (QStringList{"open_settings", "steam_friends", "add_game", "play_statistics", "gallery"}));
 
     QFile settings(data.filePath(QStringLiteral("settings.toml")));
     QVERIFY(settings.open(QIODevice::WriteOnly));
     settings.close();
     QSignalSpy changed(&general, &General::settingsChanged);
     QSignalSpy orderChanged(&general, &General::railButtonOrderChanged);
-    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game"};
+    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
     QCOMPARE(general.setRailButtonOrder(moved), QString());
     QCOMPARE(general.railButtonOrder(), moved);
     QCOMPARE(changed.size(), 0);

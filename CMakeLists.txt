@@ -225,6 +225,7 @@ qt_add_qml_module(lattis
         qml/views/RomFileDialog.qml
         qml/views/Rail.qml
         qml/views/RailButton.qml
+        qml/views/RailFriendsFace.qml
         # Settings window
         qml/settings/GeneralPage.qml
         qml/settings/GamePage.qml

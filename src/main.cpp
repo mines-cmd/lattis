@@ -622,10 +622,10 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "platformMenuForScreenshot", Q_ARG(QVariant, id));
                 });
             }
-            if (qEnvironmentVariableIntValue("LATTIS_RAIL_MENU") == 1) {
-                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
-                    logHook("railMenuForScreenshot", {});
-                    QMetaObject::invokeMethod(window, "railMenuForScreenshot");
+            if (const QString menu = qEnvironmentVariable("LATTIS_RAIL_MENU"); !menu.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, menu] {
+                    logHook("railMenuForScreenshot", menu);
+                    QMetaObject::invokeMethod(window, "railMenuForScreenshot", Q_ARG(QVariant, menu));
                 });
             }
             if (qEnvironmentVariableIntValue("LATTIS_TOOLBAR_MENU") == 1) {

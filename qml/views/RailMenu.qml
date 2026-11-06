@@ -56,11 +56,12 @@ SettingsMenu {
     }
     SettingsMenuSeparator { id: platformsEnd; visible: root.platforms.length > 0 }
     Instantiator {
-        model: General.railButtonOrder
+        model: General.railButtonOrder.filter(name => name !== "steam_friends" || Library.steam.found === true)
         delegate: ButtonRow {
             required property string modelData
             name: modelData
-            text: modelData === "add_game" ? qsTr("Add game")
+            text: modelData === "steam_friends" ? qsTr("Steam friends")
+                : modelData === "add_game" ? qsTr("Add game")
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }

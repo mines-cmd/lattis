@@ -345,6 +345,8 @@ constexpr Setting kSettings[] = {
     color("rail", "icon", "@text_muted", "Icon color"),
     color("rail", "icon_hover", "@text", "Icon color under the mouse"),
     color("rail", "selected_icon", "@on_accent", "Selected button icon"),
+    integer("rail", "status_avatar_size", "@rail.button_size", 8, 200, "Size of the Steam friends button's profile picture; its corners follow the button radius"),
+    color("rail", "status_avatar_hover", "@rail.icon_hover", "Ring around that picture under the mouse, as it covers the hover background"),
     heading("rail", "Dragging"),
     integer("rail", "drag_hold", "400", 0, 5000,
             "Milliseconds a platform button must be held still before it can be dragged to a new place; 0 = drag at once"),

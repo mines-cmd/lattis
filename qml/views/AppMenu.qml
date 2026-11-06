@@ -51,7 +51,7 @@ SettingsMenu {
     }
     SettingsMenuSeparator { visible: AppUpdate.notify }
     Instantiator {
-        model: General.railButtonOrder
+        model: General.railButtonOrder.filter(name => name !== "steam_friends")
         delegate: Entry {
             required property string modelData
             actionName: modelData

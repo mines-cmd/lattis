@@ -6,8 +6,9 @@
 
 const QStringList &railButtons()
 {
-    static const QStringList buttons = {QStringLiteral("add_game"), QStringLiteral("play_statistics"),
-                                        QStringLiteral("gallery"), QStringLiteral("open_settings")};
+    static const QStringList buttons = {QStringLiteral("steam_friends"), QStringLiteral("add_game"),
+                                        QStringLiteral("play_statistics"), QStringLiteral("gallery"),
+                                        QStringLiteral("open_settings")};
     return buttons;
 }
 

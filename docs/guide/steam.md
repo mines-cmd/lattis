@@ -90,13 +90,13 @@ A Steam game's page shows a **Friends** panel in the right column (under the inf
 
 ## Friends and your status
 
-The toolbar can show a Steam friends button (the toolbar is off by default; see [Getting started](getting-started.md)). It appears once Lattis finds Steam, and it's ticked by default: right-click the toolbar to untick it, or drag it to reorder it like the other buttons.
+The rail and the toolbar each show a Steam friends button (the toolbar is off by default; see [Getting started](getting-started.md)). It appears once Lattis finds Steam, and it's ticked by default: right-click the rail's empty space or the toolbar to untick it, or drag it to reorder it like the other buttons.
 
 - **The picture and the dot:** the button shows your Steam profile picture at its full size, with a ring around it under the mouse and a small dot at its bottom right: green for Online, amber for Away, a hollow ring for Invisible. The picture is the one Steam keeps on this computer, so Lattis needs no sign-in or network. Without that file the button shows a two-person icon instead. Steam may only refresh the picture when it starts, so a new one may not show until Steam restarts.
 - **The popup:** click the button for **Online**, **Away** and **Invisible** (the current one is checked) and **Open friends list**. Choosing a status sets it in Steam; the check and the dot move once Steam has saved it, a second or so later, so they always show what Steam says. Busy isn't offered, because Steam doesn't accept it from other programs.
 - **Changes made in Steam** show too: set your status there and the dot follows.
 - **While Steam is closed** there's no dot, as Steam keeps the last status in its files, and the three statuses are greyed out. **Open friends list** starts Steam. The tooltip says "Steam friends" and, while Steam runs, your status ("Steam friends: Away").
-- **Looks:** the picture's size and hover ring, the dot's size, its ring and its colors are the `status_*` settings of `[toolbar]` (Customize → Toolbar).
+- **Looks:** the picture's size and hover ring are the `status_avatar_*` settings of `[rail]` and `[toolbar]`, one pair for each button. The dot's size, its ring and its colors are the other `status_*` settings of `[toolbar]` (Customize → Toolbar), and both buttons use them.
 
 ## Launching and play time
 

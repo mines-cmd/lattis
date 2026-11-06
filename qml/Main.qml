@@ -482,8 +482,11 @@ ApplicationWindow {
         rail.openPlatformMenuForScreenshot(id)
     }
 
-    function railMenuForScreenshot() {
-        rail.openRailMenu(rail.height / 2)
+    function railMenuForScreenshot(which) {
+        if (which === "friends")
+            rail.openStatusMenuForScreenshot()
+        else
+            rail.openRailMenu(rail.height / 2)
     }
 
     function toolbarMenuForScreenshot() {
