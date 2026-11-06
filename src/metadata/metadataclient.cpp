@@ -29,6 +29,13 @@ QString styleName(const QString &style)
     return names.value(style, style);
 }
 
+QVariantMap artMatch(const SgdbGame &game)
+{
+    return {{QStringLiteral("steamgriddb"), game.id},
+            {QStringLiteral("name"), game.name},
+            {QStringLiteral("candidates"), QVariantList()}};
+}
+
 QVariantMap failure(const QString &error)
 {
     return {{QStringLiteral("error"), error}};
@@ -346,26 +353,39 @@ int MetadataClient::findArt(const QString &name, int year, qint64 steamAppId)
         const QList<SgdbGame> games = reply.ok() ? SteamGridDb::parseGames(reply.json) : QList<SgdbGame>();
         if (games.isEmpty())
             return findArtByTitle(request, context, name, year, name);
-        finish(request, {{QStringLiteral("steamgriddb"), games.first().id},
-                         {QStringLiteral("name"), games.first().name},
-                         {QStringLiteral("candidates"), QVariantList()}});
+        const SgdbGame game = games.first();
+        const auto [path, query] = SteamGridDb::artRequest(game.id, QStringLiteral("hero"), {}, 0);
+        // The app id can lead to a bare duplicate of the entry that has the art.
+        m_http.steamGridDb(path, query, context, [this, request, context, name, year, game](const MetadataReply &art) {
+            if (!art.ok() || !SteamGridDb::parseImages(art.json, QStringLiteral("hero")).isEmpty())
+                return finish(request, artMatch(game));
+            findArtByTitle(request, context, name, year, name, game);
+        });
     });
     return request;
 }
 
-void MetadataClient::findArtByTitle(int request, QObject *context, const QString &name, int year, const QString &query)
+void MetadataClient::findArtByTitle(int request, QObject *context, const QString &name, int year, const QString &query,
+                                    const SgdbGame &steamEntry)
 {
     m_http.steamGridDb(SteamGridDb::searchPath(query), {}, context,
-                       [this, request, context, name, year, query](const MetadataReply &reply) {
+                       [this, request, context, name, year, query, steamEntry](const MetadataReply &reply) {
+        const bool hasEntry = steamEntry.id > 0;
         if (!reply.ok())
-            return finish(request, failure(reply.error));
+            return finish(request, hasEntry ? artMatch(steamEntry) : failure(reply.error));
         QString error;
-        const QList<SgdbGame> games = SteamGridDb::parseGames(reply.json, &error);
+        QList<SgdbGame> games = SteamGridDb::parseGames(reply.json, &error);
         if (!error.isEmpty())
-            return finish(request, failure(error));
+            return finish(request, hasEntry ? artMatch(steamEntry) : failure(error));
+        // Another year is another game of that name, and the app id's entry is surer than its art.
+        if (hasEntry) {
+            games.removeIf([&](const SgdbGame &g) {
+                return g.id == steamEntry.id || (year > 0 && g.year > 0 && g.year != year);
+            });
+        }
         // Nothing: SteamGridDB may know "Mortal Shell 2" only as "Mortal Shell II".
         if (const QString other = SteamGridDb::otherNumerals(name); games.isEmpty() && query == name && !other.isEmpty())
-            return findArtByTitle(request, context, name, year, other);
+            return findArtByTitle(request, context, name, year, other, steamEntry);
         QVariantList candidates;
         for (const SgdbGame &g : games) {
             candidates.append(QVariantMap{{QStringLiteral("steamgriddb"), g.id},
@@ -373,6 +393,11 @@ void MetadataClient::findArtByTitle(int request, QObject *context, const QString
                                           {QStringLiteral("year"), g.year}});
         }
         const int match = SteamGridDb::clearMatch(games, name, year);
+        // The base game came out before the edition, so the year says nothing about it.
+        if (const QString base = SteamGridDb::baseName(name); match < 0 && base != name)
+            return findArtByTitle(request, context, base, hasEntry ? year : 0, base, steamEntry);
+        if (match < 0 && hasEntry)
+            return finish(request, artMatch(steamEntry));
         finish(request, {{QStringLiteral("steamgriddb"), match >= 0 ? games.at(match).id : 0},
                          {QStringLiteral("name"), match >= 0 ? games.at(match).name : QString()},
                          {QStringLiteral("candidates"), candidates}});

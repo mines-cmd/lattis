@@ -88,6 +88,7 @@ private slots:
     void clientLookup();
     void clientLookupWideSearch();
     void clientLookupBundles();
+    void clientFindArtFallbacks();
     void clientLookupIds();
     void clientLookupIdsBatches();
     void clientArt();
@@ -735,6 +736,13 @@ void MetadataTest::sgdbSearch()
     QCOMPARE(SteamGridDb::clearMatch(hades, QStringLiteral("Hades 2"), 0), 3);
     QCOMPARE(SteamGridDb::clearMatch(hades, QStringLiteral("hades ii"), 0), 3);
     QCOMPARE(SteamGridDb::clearMatch(hades, QStringLiteral("Hades 3"), 0), -1);
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("Disco Elysium - The Final Cut")), QStringLiteral("Disco Elysium"));
+    QCOMPARE(SteamGridDb::baseName(QString::fromUtf8("Disco Elysium: Director’s Cut")), QStringLiteral("Disco Elysium"));
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("Tyranny - Gold Edition")), QStringLiteral("Tyranny"));
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("Trine Enchanted Edition")), QStringLiteral("Trine"));
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("The Final Cut")), QStringLiteral("The Final Cut"));
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("Paper Cut")), QStringLiteral("Paper Cut"));
+    QCOMPARE(SteamGridDb::baseName(QStringLiteral("Hades")), QStringLiteral("Hades"));
     QCOMPARE(SteamGridDb::otherNumerals(QStringLiteral("Mortal Shell 2")), QStringLiteral("Mortal Shell II"));
     QCOMPARE(SteamGridDb::otherNumerals(QStringLiteral("Hades II: Early Access")), QStringLiteral("Hades 2: Early Access"));
     QCOMPARE(SteamGridDb::otherNumerals(QStringLiteral("Final Fantasy XIV")), QStringLiteral("Final Fantasy 14"));
@@ -1071,6 +1079,44 @@ void MetadataTest::clientLookupBundles()
     QCOMPARE(typedRequests.size(), 4);
     QVERIFY(typedRequests.at(3).body.contains("game_type = (0,3,4,6,8,9,10,11,12)"));
     QVERIFY(typedRequests.at(3).body.startsWith("search \"Tomb Raider Remastered\""));
+}
+
+void MetadataTest::clientFindArtFallbacks()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    QTemporaryDir fixtures;
+    const auto write = [&](const QString &name, const QByteArray &list) {
+        QFile file(fixtures.filePath(name + QStringLiteral(".json")));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(R"({"success": true, "data": )" + list + "}");
+    };
+    write("sgdb-search-disco-elysium-the-final-cut", R"([{"id": 1, "name": "Disco Elysium: Game Boy Edition"}])");
+    write("sgdb-search-disco-elysium", R"([{"id": 2, "name": "Disco Elysium", "release_date": 1571356800}])");
+    write("sgdb-steam-100", R"({"id": 3, "name": "Dodo Peak"})");
+    write("sgdb-search-dodo-peak", R"([{"id": 4, "name": "Dodo Peak"}, {"id": 3, "name": "Dodo Peak"}])");
+    write("sgdb-steam-200", R"({"id": 5, "name": "Solo"})");
+    write("sgdb-search-solo", R"([{"id": 5, "name": "Solo"}])");
+    write("sgdb-steam-300", R"({"id": 6, "name": "Busy"})");
+    write("sgdb-heroes-6", R"([{"id": 60, "url": "https://example.com/hero.png"}])");
+    write("sgdb-search-busy", R"([{"id": 7, "name": "Busy"}])");
+    write("sgdb-steam-400", R"({"id": 8, "name": "Zero"})");
+    write("sgdb-search-zero", R"([{"id": 9, "name": "Zero", "release_date": 978307200}])");
+    MetadataClient client(data.path(), cache.path());
+    client.http()->setFixturesDir(fixtures.path());
+    client.http()->setFixtureDelay(0);
+
+    // An edition's year isn't the base game's.
+    const QVariantMap base = result(client, client.findArt(QStringLiteral("Disco Elysium: The Final Cut"), 2021));
+    QCOMPARE(base.value("steamgriddb").toInt(), 2);
+    QCOMPARE(base.value("name").toString(), QStringLiteral("Disco Elysium"));
+    // The app id's entry has no hero: the other entry of that name.
+    QCOMPARE(result(client, client.findArt(QStringLiteral("Dodo Peak"), 2018, 100)).value("steamgriddb").toInt(), 4);
+    // No other entry, and an entry with art, keep the app id's.
+    QCOMPARE(result(client, client.findArt(QStringLiteral("Solo"), 0, 200)).value("steamgriddb").toInt(), 5);
+    QCOMPARE(result(client, client.findArt(QStringLiteral("Busy"), 0, 300)).value("steamgriddb").toInt(), 6);
+    // Another year is another game.
+    QCOMPARE(result(client, client.findArt(QStringLiteral("Zero"), 2020, 400)).value("steamgriddb").toInt(), 8);
 }
 
 void MetadataTest::clientLookupIds()

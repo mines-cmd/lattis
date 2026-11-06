@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QTimeZone>
 
 namespace {
@@ -64,6 +65,17 @@ QString otherNumerals(const QString &title)
         changed = true;
     }
     return changed ? words.join(u' ') : QString();
+}
+
+QString baseName(const QString &title)
+{
+    // Punctuation first: "The Final Cut" and "Paper Cut" are whole titles.
+    static const QRegularExpression cut(QStringLiteral("\\s*[:\\-–]\\s+(?:the\\s+)?[\\w'’]+\\s+cut$"),
+                                        QRegularExpression::CaseInsensitiveOption);
+    QString base = NameMatch::withoutEdition(title);
+    base.remove(cut);
+    base = base.trimmed();
+    return base.isEmpty() ? title : base;
 }
 
 QStringList styles(const QString &kind)

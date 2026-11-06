@@ -37,6 +37,8 @@ QString searchPath(const QString &title);
 QString steamPath(qint64 appId);
 QList<SgdbGame> parseGames(const QJsonDocument &json, QString *error = nullptr);
 QString otherNumerals(const QString &title);
+// The title without its edition or cut: SteamGridDB files "Disco Elysium: The Final Cut" as "Disco Elysium".
+QString baseName(const QString &title);
 int clearMatch(const QList<SgdbGame> &games, const QString &title, int year);
 std::pair<QString, QUrlQuery> artRequest(int gameId, const QString &kind, const QString &style, int page);
 QList<SgdbImage> parseImages(const QJsonDocument &json, const QString &kind, QString *error = nullptr);

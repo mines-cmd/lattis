@@ -2,6 +2,7 @@
 
 #include "credentials.h"
 #include "metadatahttp.h"
+#include "steamgriddb.h"
 
 #include <QHash>
 #include <QObject>
@@ -67,7 +68,8 @@ private:
     void finish(int request, QVariantMap result);
     QString imageUrl(const QUrl &url, const QString &kind);
     QVariantMap candidate(const IgdbGame &game);
-    void findArtByTitle(int request, QObject *context, const QString &name, int year, const QString &query);
+    void findArtByTitle(int request, QObject *context, const QString &name, int year, const QString &query,
+                        const SgdbGame &steamEntry = {});
 
     QString m_dataDir;
     Credentials m_credentials;
