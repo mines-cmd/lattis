@@ -1072,8 +1072,9 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
                                                 "ignored")
                                      .arg(file));
         } else if (g.platform == kEpicPlatform) {
-            if (const auto here = heroic.installed.constFind(g.id); here != heroic.installed.cend()) {
-                g.installed = true;
+            const auto here = heroic.installed.constFind(g.id);
+            g.installed = here != heroic.installed.cend();
+            if (g.installed) {
                 g.installDir = here->installDir;
                 g.sizeBytes = here->sizeBytes;
             }

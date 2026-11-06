@@ -78,6 +78,13 @@ private:
     QString heroicIndexPath() const { return m_data + u"/library/heroic.toml"_s; }
     void writeLibrary(const QByteArray &text) { writeFile(HeroicScan::libraryPath(heroicRoot()), text); }
     void writeInstalled(const QByteArray &text) { writeFile(HeroicScan::installedPath(heroicRoot()), text); }
+    // The list as these tests read it: with the games that aren't installed.
+    std::unique_ptr<Library> openLibrary()
+    {
+        auto library = LibraryTestBase::openLibrary();
+        library->setInstalledOnly(false);
+        return library;
+    }
     void rescan(Library &library);
 };
 
@@ -181,6 +188,8 @@ void LibraryHeroicTest::firstImportFillsTheIndex()
     QVERIFY(index.contains("epic-a-short-hike = { title = \"A Short Hike\", store = \"epic\", app_name = \"HikeApp\" }\n"));
     QVERIFY(index.contains("epic-fez = { title = \"Fez\", store = \"epic\", app_name = \"FezApp\" }\n"));
     QVERIFY(!index.contains("HikeDlc"));
+    QVERIFY(library->game(u"epic-fez"_s)->installed);
+    QVERIFY(!library->game(u"epic-a-short-hike"_s)->installed);
 
     // Into the same lookup as Steam's whole library: one signal for the whole import.
     QCOMPARE(added.size(), 1);
