@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import Scenario, run_scenarios
 
-# library_bench's generator (tests/library_bench.cpp generateFiles), in Python: 1000 game files over
+# library_bench's generator (tests/library_bench.cpp generateFiles), in Python, scaled to GAMES: game files over
 # four platforms, random titles, tags, favorites, play time. The loose time bounds are the driver's: each
 # command retries for 2 s and the whole script may take 60 s, on software rendering beside other tests.
 WORDS = ["Shadow", "Legend", "Crystal", "Iron", "Star", "Ancient", "Last", "Dark", "Tales", "Kingdom", "Dragon",
@@ -13,6 +13,7 @@ WORDS = ["Shadow", "Legend", "Crystal", "Iron", "Star", "Ancient", "Last", "Dark
          "Chronicles", "Echoes", "Frontier", "Wild", "Neon", "Pixel", "Garden", "Ocean", "Void", "Ember"]
 TAGS = ["Adventure", "Racing", "Party", "Platformer", "Co-op", "MMO", "JRPG",
         "RPG", "Roguelike", "Metroidvania", "Puzzle", "Strategy"]
+GAMES = 2500
 PLATFORMS = ["switch", "3ds", "steam", "proton"]
 
 JAPANESE = "ゼルダの伝説 ブレスオブザワイルド"
@@ -37,7 +38,7 @@ def library(dirs, special=()):
         f'[[tag]]\nname = "{t}"\ncolor = {i % 8}\n\n' for i, t in enumerate(TAGS)))
     titles = [FIRST, LAST, NEEDLE] + list(special)
     special_count = len(titles)
-    while len(titles) < 1000:
+    while len(titles) < GAMES:
         words = [rng.choice(WORDS) for _ in range(2 + rng.randrange(3))]
         if rng.randrange(3) == 0:
             words.append(str(2 + rng.randrange(4)))
@@ -80,27 +81,27 @@ def search(text):
 
 
 SCENARIOS = [
-    Scenario("a 1000-game library starts, and Home and End reach the first and last game",
+    Scenario("a 2500-game library starts, and Home and End reach the first and last game",
              [("expect " + FIRST + "\nkey End\nwait 600\nexpect " + LAST + "\nexpect-not " + FIRST
                + "\nkey Home\nwait 600\nexpect " + FIRST + "\nexpect-not " + LAST + "\n", None)], plain),
     Scenario("holding Down and Page Down through the list stays responsive",
              [("expect " + FIRST + "\n" + "key Down\n" * 40 + "key PageDown\n" * 5 + "key PageUp\n" * 5
                + "key Home\nwait 600\nexpect " + FIRST + "\n", None)], plain),
-    Scenario("a search finds the one game among 1000, and clearing it brings the list back",
+    Scenario("a search finds the one game among 2500, and clearing it brings the list back",
              [("expect " + FIRST + "\n" + search("zyxwv") + "expect " + NEEDLE + "\nexpect-not " + FIRST
                + "\nkey Escape\nkey Escape\nkey Home\nwait 600\nexpect " + FIRST + "\n", None)], plain),
     Scenario("typing and deleting a long search keeps up",
              [("expect " + FIRST + "\n" + search("shadow legend crystal") + "key Backspace\n" * 12
                + "wait 600\nexpect-not " + FIRST + "\nkey Escape\nkey Escape\nkey Home\nwait 600\nexpect " + FIRST + "\n",
                None)], plain),
-    Scenario("Ctrl+A selects all 1000 games, and Escape clears it",
+    Scenario("Ctrl+A selects all 2500 games, and Escape clears it",
              [("expect " + FIRST + "\nkey Ctrl+A\nexpect-has selected\nkey End\nwait 600\nexpect " + LAST
                + "\nkey Escape\nexpect-not-has selected\n", None)], plain),
-    Scenario("every sort order lists 1000 games, and the title order comes back",
+    Scenario("every sort order lists 2500 games, and the title order comes back",
              [("expect " + FIRST + "\nkey Ctrl+Shift+S\nexpect Sorted by last played\nwait 3500\n"
                + "key Ctrl+Shift+S\nexpect Sorted by play time\nwait 3500\n"
                + "key Ctrl+Shift+S\nexpect Sorted by title\nwait 600\nexpect " + FIRST + "\n", None)], plain),
-    Scenario("a platform filter and a search narrow 1000 games",
+    Scenario("a platform filter and a search narrow 2500 games",
              [("expect " + FIRST + "\nkey Ctrl+2\nwait 600\n" + search("zyxwv") + "expect " + NEEDLE
                + "\nkey Ctrl+3\nwait 600\nexpect-not " + NEEDLE + "\nkey Ctrl+1\nwait 600\nexpect " + NEEDLE + "\n",
                None)], plain),
