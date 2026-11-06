@@ -2,6 +2,8 @@
 
 #include "gameid.h"
 
+#include <utility>
+
 namespace HeroicMerge {
 
 Result merge(const Input &in)
@@ -44,6 +46,24 @@ Result merge(const Input &in)
             if (e.store == kEpicPlatform && !listed.contains(e.id))
                 out.gone.insert(e.id);
         }
+    }
+    return out;
+}
+
+QList<Played> countPlay(QList<HeroicEntry> *index, const HeroicState &state)
+{
+    QList<Played> out;
+    if (!state.playTimeOk)
+        return out;
+    for (HeroicEntry &e : *index) {
+        if (e.store != kEpicPlatform)
+            continue;
+        const HeroicPlayTime time = state.playTime.value(e.appName);
+        const int before = std::exchange(e.heroicMinutes, time.minutes);
+        if (before < 0 && time.minutes > 0)
+            out.append({e.id, time.minutes, true, time.lastPlayed});
+        else if (before >= 0 && time.minutes > before)
+            out.append({e.id, time.minutes - before, false, time.lastPlayed});
     }
     return out;
 }

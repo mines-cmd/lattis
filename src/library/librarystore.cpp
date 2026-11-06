@@ -562,6 +562,9 @@ void scanHeroic(LibrarySnapshot &s, ScanResult &out, const QByteArray &settings,
             in.taken.insert(it.key());
         HeroicMerge::Result merged = HeroicMerge::merge(in);
         s.content.heroic = std::move(merged.index);
+        if (in.canAdd)
+            out.heroicPlayed = HeroicMerge::countPlay(&s.content.heroic, s.heroicScan);
+        out.heroicWrite = s.content.heroic != in.index;
         out.heroicAdded = std::move(merged.added);
         listing.installed = std::move(merged.installed);
         listing.gone = std::move(merged.gone);
@@ -1004,8 +1007,8 @@ void LibraryStore::onScanFinished()
             writeSteamIndex(result.steamWrites);
             if (result.steamWebWrite)
                 writeSteamWeb(result.snapshot.content.steam);
-            if (!result.heroicAdded.isEmpty())
-                writeHeroicIndex(result.snapshot.content.heroic);
+            if (result.heroicWrite)
+                writeHeroicIndex(applyHeroicPlay(result));
             addBuiltInPlatforms();
             ++m_generation;
             emit changed();
@@ -1129,7 +1132,8 @@ void LibraryStore::updateWatches()
     watch(m_watcher, wanted);
     // [steam] can change where Steam is, or turn it off. The data dir catches settings.toml
     // being created or replaced.
-    watch(m_steamWatcher, m_snapshot.steam.watchPaths() << m_dataDir + QStringLiteral("/settings.toml") << m_dataDir);
+    watch(m_steamWatcher, m_snapshot.steam.watchPaths() + m_snapshot.heroicScan.watchPaths()
+                              << m_dataDir + QStringLiteral("/settings.toml") << m_dataDir);
 }
 
 void LibraryStore::scheduleCacheSave()
@@ -1625,6 +1629,49 @@ void LibraryStore::applySteamHistory(const ScanResult &result)
         qCWarning(lcSteam).noquote() << error;
     if (!ids.isEmpty())
         emit historyChanged(ids);
+}
+
+QList<HeroicEntry> LibraryStore::applyHeroicPlay(const ScanResult &result)
+{
+    QList<HeroicEntry> entries = result.snapshot.content.heroic;
+    if (m_versionStatus.readOnly)
+        return entries;
+
+    QStringList ids;
+    beginBatch();
+    for (const HeroicMerge::Played &played : result.heroicPlayed) {
+        const GameFile file = m_snapshot.content.games.value(played.id);
+        // A file with play time on a first count outlived its heroic.toml line; it's already counted.
+        if (played.first && file.playMinutes > 0)
+            continue;
+        const QDateTime when = played.lastPlayed > 0 ? QDateTime::fromSecsSinceEpoch(played.lastPlayed)
+                                                     : QDateTime::currentDateTime();
+        QList<std::pair<QString, QVariant>> values = {{QStringLiteral("play_minutes"), file.playMinutes + played.minutes}};
+        if (when > file.lastPlayed)
+            values.append({QStringLiteral("last_played"), when});
+        if (const QString error = setGameValues(played.id, values); !error.isEmpty()) {
+            qCWarning(lcLibrary).noquote() << error;
+            // Not counted, so the next scan tries again.
+            const auto entry = std::find_if(entries.begin(), entries.end(),
+                                            [&](const HeroicEntry &e) { return e.id == played.id; });
+            if (entry != entries.end())
+                entry->heroicMinutes = played.first ? -1 : entry->heroicMinutes - played.minutes;
+            continue;
+        }
+        qCInfo(lcLibrary).noquote() << QStringLiteral("%1: %2 min played in Heroic").arg(played.id).arg(played.minutes);
+        if (played.first)
+            continue;
+        if (const QString error = PlayHistory::append(m_dataDir, played.id, {when, played.minutes, true}); !error.isEmpty())
+            qCWarning(lcLibrary).noquote() << error;
+        else
+            ids.append(played.id);
+    }
+    endBatch();
+    if (!ids.isEmpty())
+        emit historyChanged(ids);
+    // An unchanged heroic.toml isn't read again, so the next scan starts from this.
+    m_snapshot.content.heroic = entries;
+    return entries;
 }
 
 void LibraryStore::updateSteamQueue()

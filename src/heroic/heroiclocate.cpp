@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QUrl>
 
 namespace {
 const QString kFlatpakId = QStringLiteral("com.heroicgameslauncher.hgl");
@@ -114,5 +115,22 @@ HeroicInstall find(const HeroicLocations &where, const QString &configuredPath)
     }
     install.program = findProgram(install.kind, where);
     return install;
+}
+
+QStringList launchArgs(const HeroicProgram &program, const QString &appName)
+{
+    const QByteArray app = QUrl::toPercentEncoding(appName);
+    return program.args
+           + QStringList{QStringLiteral("heroic://launch?appName=%1&runner=legendary&gui=false").arg(QString::fromLatin1(app))};
+}
+
+QStringList openArgs(const HeroicProgram &program)
+{
+    // xdg-open needs a URL, and a ping is the one that does nothing but start Heroic or show it.
+    if (!program.noGui)
+        return {QStringLiteral("heroic://ping")};
+    QStringList args = program.args;
+    args.removeAll(QStringLiteral("--no-gui"));
+    return args;
 }
 }

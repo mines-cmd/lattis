@@ -72,12 +72,28 @@ private slots:
     void theCacheShowsTheListBeforeTheFirstScan();
     void aBrokenIndexIsNotOverwritten();
     void heroicShortcutsAreNotOffered();
+    void countsOnlyWhatGrew();
+    void anUnreadableTimestampCountsNothing();
+    void firstImportStartsFromHeroicsTotal();
+    void firstCountKeepsAFileWithPlayTime();
+    void growthIsAddedToAnEdit();
+    void aDroppedTotalRestartsTheCount();
+    void aRestoredIndexAddsNothing();
+    void aSessionUnderAMinuteChangesNothing();
+    void aBrokenGameFileIsCountedOnceFixed();
+    void aNewTimestampFileIsNoticed();
 
 private:
     QString heroicRoot() const { return m_installs.home + u"/.config/heroic"_s; }
     QString heroicIndexPath() const { return m_data + u"/library/heroic.toml"_s; }
     void writeLibrary(const QByteArray &text) { writeFile(HeroicScan::libraryPath(heroicRoot()), text); }
     void writeInstalled(const QByteArray &text) { writeFile(HeroicScan::installedPath(heroicRoot()), text); }
+    void writePlayTime(int minutes, const QString &lastPlayed = u"2026-11-01T10:00:00.000Z"_s)
+    {
+        writeFile(HeroicScan::playTimePath(heroicRoot()),
+                  QJsonDocument(QJsonObject{{u"FezApp"_s, QJsonObject{{u"lastPlayed"_s, lastPlayed}, {u"totalPlayed"_s, minutes}}}})
+                      .toJson(QJsonDocument::Compact));
+    }
     // The list as these tests read it: with the games that aren't installed.
     std::unique_ptr<Library> openLibrary()
     {
@@ -85,8 +101,19 @@ private:
         library->setInstalledOnly(false);
         return library;
     }
+    QByteArray fezFile() const { return readFile(m_data + u"/library/games/epic-fez.toml"_s); }
+    QList<PlayHistory::Session> fezHistory() const { return PlayHistory::read(m_data, u"epic-fez"_s).value.sessions; }
+    std::unique_ptr<Library> openWithFez(int minutes);
     void rescan(Library &library);
 };
+
+std::unique_ptr<Library> LibraryHeroicTest::openWithFez(int minutes)
+{
+    writeLibrary(libraryCache(kLibrary));
+    writeInstalled(installedFile({u"FezApp"_s}));
+    writePlayTime(minutes);
+    return openLibrary();
+}
 
 void LibraryHeroicTest::rescan(Library &library)
 {
@@ -185,8 +212,8 @@ void LibraryHeroicTest::firstImportFillsTheIndex()
 
     const QByteArray index = readFile(heroicIndexPath());
     QVERIFY(index.startsWith("# Games found in Heroic"));
-    QVERIFY(index.contains("epic-a-short-hike = { title = \"A Short Hike\", store = \"epic\", app_name = \"HikeApp\" }\n"));
-    QVERIFY(index.contains("epic-fez = { title = \"Fez\", store = \"epic\", app_name = \"FezApp\" }\n"));
+    QVERIFY(index.contains("epic-a-short-hike = { title = \"A Short Hike\", store = \"epic\", app_name = \"HikeApp\", heroic_minutes = 0 }\n"));
+    QVERIFY(index.contains("epic-fez = { title = \"Fez\", store = \"epic\", app_name = \"FezApp\", heroic_minutes = 0 }\n"));
     QVERIFY(!index.contains("HikeDlc"));
     QVERIFY(library->game(u"epic-fez"_s)->installed);
     QVERIFY(!library->game(u"epic-a-short-hike"_s)->installed);
@@ -436,6 +463,149 @@ void LibraryHeroicTest::heroicShortcutsAreNotOffered()
     const QStringList before = gameIds(*library);
     QCOMPARE(library->addSteamShortcuts({qint64(2900000001)}), QString());
     QCOMPARE(gameIds(*library), before);
+}
+
+void LibraryHeroicTest::countsOnlyWhatGrew()
+{
+    HeroicState state;
+    state.playTimeOk = true;
+    state.playTime = {{u"New"_s, {30, 100}}, {u"Grew"_s, {50, 200}}, {u"Same"_s, {7, 300}}, {u"Dropped"_s, {5, 400}}};
+    QList<HeroicEntry> index = {entry(u"epic-new"_s, u"New"_s),
+                                {u"epic-grew"_s, u"Grew"_s, kEpicPlatform, u"Grew"_s, 40},
+                                {u"epic-same"_s, u"Same"_s, kEpicPlatform, u"Same"_s, 7},
+                                {u"epic-dropped"_s, u"Dropped"_s, kEpicPlatform, u"Dropped"_s, 60},
+                                entry(u"epic-unplayed"_s, u"Unplayed"_s),
+                                {u"gog-other"_s, u"Other"_s, u"gog"_s, u"New"_s}};
+    const QList<HeroicMerge::Played> played = HeroicMerge::countPlay(&index, state);
+    QCOMPARE(played, (QList<HeroicMerge::Played>{{u"epic-new"_s, 30, true, 100}, {u"epic-grew"_s, 10, false, 200}}));
+    QCOMPARE(index.at(0).heroicMinutes, 30);
+    QCOMPARE(index.at(1).heroicMinutes, 50);
+    QCOMPARE(index.at(3).heroicMinutes, 5);
+    // Counted as 0, so what it's played from now on is growth.
+    QCOMPARE(index.at(4).heroicMinutes, 0);
+    QCOMPARE(index.at(5).heroicMinutes, -1);
+}
+
+void LibraryHeroicTest::anUnreadableTimestampCountsNothing()
+{
+    auto library = openWithFez(90);
+    writeFile(HeroicScan::playTimePath(heroicRoot()), "not json");
+    rescan(*library);
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 90"));
+    QVERIFY(fezFile().contains("play_minutes = 90"));
+}
+
+void LibraryHeroicTest::firstImportStartsFromHeroicsTotal()
+{
+    auto library = openWithFez(90);
+    QVERIFY(fezFile().contains("play_minutes = 90"));
+    QVERIFY(fezFile().contains("last_played = "));
+    // It's the game's past, not a session.
+    QVERIFY(fezHistory().isEmpty());
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 90"));
+    // A game Heroic never ran gets no file.
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 0"));
+    QVERIFY(!QFile::exists(m_data + u"/library/games/epic-a-short-hike.toml"_s));
+}
+
+void LibraryHeroicTest::firstCountKeepsAFileWithPlayTime()
+{
+    writeFile(m_data + u"/library/heroic.toml"_s,
+              "[games]\nepic-fez = { title = \"Fez\", store = \"epic\", app_name = \"FezApp\" }\n");
+    writeFile(m_data + u"/library/games/epic-fez.toml"_s, "play_minutes = 30\n");
+    auto library = openWithFez(90);
+    QVERIFY(fezFile().contains("play_minutes = 30"));
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 90"));
+}
+
+void LibraryHeroicTest::growthIsAddedToAnEdit()
+{
+    auto library = openWithFez(90);
+    QCOMPARE(library->store().setGameValues(u"epic-fez"_s, {{u"play_minutes"_s, 500}}), QString());
+    writePlayTime(100, u"2026-11-02T10:00:00.000Z"_s);
+    rescan(*library);
+    QVERIFY(fezFile().contains("play_minutes = 510"));
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 100"));
+    const QList<PlayHistory::Session> sessions = fezHistory();
+    QCOMPARE(sessions.size(), 1);
+    QCOMPARE(sessions.first().minutes, 10);
+    QVERIFY(sessions.first().merged);
+    QCOMPARE(sessions.first().end, QDateTime::fromString(u"2026-11-02T10:00:00.000Z"_s, Qt::ISODateWithMs));
+
+    // Nothing new: nothing added twice.
+    rescan(*library);
+    QVERIFY(fezFile().contains("play_minutes = 510"));
+    QCOMPARE(fezHistory().size(), 1);
+}
+
+void LibraryHeroicTest::aDroppedTotalRestartsTheCount()
+{
+    auto library = openWithFez(90);
+    writePlayTime(20);
+    rescan(*library);
+    QVERIFY(fezFile().contains("play_minutes = 90"));
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 20"));
+    QVERIFY(fezHistory().isEmpty());
+
+    writePlayTime(25);
+    rescan(*library);
+    QVERIFY(fezFile().contains("play_minutes = 95"));
+    QCOMPARE(fezHistory().size(), 1);
+}
+
+void LibraryHeroicTest::aRestoredIndexAddsNothing()
+{
+    writeFile(m_data + u"/library/heroic.toml"_s,
+              "[games]\nepic-fez = { title = \"Fez\", store = \"epic\", app_name = \"FezApp\", heroic_minutes = 500 }\n");
+    writeFile(m_data + u"/library/games/epic-fez.toml"_s, "play_minutes = 500\n");
+    auto library = openWithFez(90); // this computer's Heroic has played it less
+    QVERIFY(fezFile().contains("play_minutes = 500"));
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 90"));
+    QVERIFY(fezHistory().isEmpty());
+}
+
+void LibraryHeroicTest::aSessionUnderAMinuteChangesNothing()
+{
+    auto library = openWithFez(90);
+    const QDateTime edited = QDateTime::fromString(u"2020-01-01T10:00:00Z"_s, Qt::ISODate);
+    QCOMPARE(library->store().setGameValues(u"epic-fez"_s, {{u"last_played"_s, edited}}), QString());
+    const QByteArray before = fezFile();
+    writePlayTime(90, u"2026-11-05T10:00:00.000Z"_s);
+    rescan(*library);
+    QCOMPARE(fezFile(), before);
+    QVERIFY(fezHistory().isEmpty());
+}
+
+void LibraryHeroicTest::aBrokenGameFileIsCountedOnceFixed()
+{
+    auto library = openWithFez(90);
+    const QByteArray good = fezFile();
+    writeFile(m_data + u"/library/games/epic-fez.toml"_s, "play_minutes = = 1\n");
+    writePlayTime(100);
+    rescan(*library);
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 90"));
+    QVERIFY(fezHistory().isEmpty());
+
+    writeFile(m_data + u"/library/games/epic-fez.toml"_s, good);
+    rescan(*library);
+    QVERIFY(fezFile().contains("play_minutes = 100"));
+    QVERIFY(readFile(heroicIndexPath()).contains("heroic_minutes = 100"));
+    QCOMPARE(fezHistory().size(), 1);
+}
+
+void LibraryHeroicTest::aNewTimestampFileIsNoticed()
+{
+    auto library = openWithFez(90);
+    // Heroic replaces the file on save, which drops a watch on it.
+    for (const int minutes : {100, 110}) {
+        const QString path = HeroicScan::playTimePath(heroicRoot());
+        writeFile(path + u".new"_s, QJsonDocument(QJsonObject{{u"FezApp"_s, QJsonObject{{u"lastPlayed"_s, u"2026-11-02T10:00:00.000Z"_s},
+                                                                                        {u"totalPlayed"_s, minutes}}}})
+                                        .toJson(QJsonDocument::Compact));
+        QVERIFY(QFile::remove(path));
+        QVERIFY(QFile::rename(path + u".new"_s, path));
+        QTRY_VERIFY_WITH_TIMEOUT(fezFile().contains("play_minutes = " + QByteArray::number(minutes)), 5000);
+    }
 }
 
 QTEST_GUILESS_MAIN(LibraryHeroicTest)

@@ -8,6 +8,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 struct HeroicStamp
 {
     qint64 mtimeMs = 0;
@@ -92,4 +94,7 @@ QString installedPath(const QString &root);
 QString playTimePath(const QString &root);
 
 HeroicState scan(const QString &root, const HeroicState &previous = {});
+
+// Seconds since the epoch, 0 for a game Heroic hasn't closed yet; nothing when timestamp.json can't be read.
+std::optional<qint64> lastPlayed(const QString &root, const QString &appName);
 }

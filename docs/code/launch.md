@@ -4,7 +4,7 @@
 
 ## How a launch works
 
-Everything starts with `GameRunner::launch(gameId)`, which returns a message for a toast or an empty string when there's nothing to say. It looks up the game in the library, picks the right path for its platform (ROM, Steam, Proton, or Linux), and hands control to the appropriate helper. The outputs are logged to `<logDir>/launch/<game id>.log`.
+Everything starts with `GameRunner::launch(gameId)`, which returns a message for a toast or an empty string when there's nothing to say. It looks up the game in the library, picks the right path for its platform (ROM, Steam, Proton, Linux, or Epic), and hands control to the appropriate helper. The outputs are logged to `<logDir>/launch/<game id>.log`.
 
 `GameRunner` is a QML singleton, so QML calls it directly. `start()` must be called after the first frame to load settings without blocking startup.
 
@@ -36,6 +36,21 @@ Linux games need special session tracking because launcher scripts are common: a
 
 A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't really start; that's treated differently from a session that runs to completion. A session the user ended with Close (`forceClosed`) is never that: it is recorded like any other.
 
+## Epic games
+
+An Epic game is handed to Heroic, which installs, updates and runs it. `HeroicLocate::launchArgs()` builds the command: `heroic --no-gui "heroic://launch?appName=<app>&runner=legendary&gui=false"`, or the same through `flatpak run`, or through `xdg-open` for an AppImage, which can't pass `--no-gui`. `gui=false` keeps Heroic's window out of the way, and hides it if it was open.
+
+A game that isn't installed gets the same URL with no session: Heroic asks whether to install it, shows its install screen on Yes, and on No quits only if it was started for this. `openHeroic()` starts Heroic or shows its window (`openArgs()`: no `--no-gui`, and `heroic://ping` through `xdg-open`, which needs a URL). Heroic has no URL for a game's page, so `openEmulator()` opens Heroic too.
+
+Heroic is one instance, so the process we start means one of two things. If Heroic was closed, it runs the game and exits after it. If Heroic was running, it passes the URL on and exits at once, and that exit says nothing. Neither case can be told apart at launch, so a session ends on either signal that the game closed:
+
+- `lastPlayed` in `timestamp.json` differs from what it was at the launch. Heroic rewrites it when a game closes, even for a session too short to add a minute. `m_heroicPoll` reads it each second while a session lasts, and once more when the process exits, since a Heroic that was closed has written the file by then.
+- The process failed within `kQuickExitSeconds`: "Heroic closed right away; see the log", and the session ends.
+
+A launch that stops early (a missing install folder opens Heroic's own dialog) writes nothing, so nothing ends the session and the game stays Running. There's no timeout, since a running game gives no sign either. The way out is Close: `forceClose()` kills our process and its session if it's still alive, as that's the Heroic running the game, and otherwise just stops waiting. In that second case a game that did start keeps running. Its time still comes in, as Heroic's total is what counts.
+
+The runner records nothing for these games. `endHeroicSession()` asks the store for a scan, which reads Heroic's total (see [library.md](library.md#play-time-from-heroic)); the scan also covers a `timestamp.json` that didn't exist at the last scan, so nothing was watching it.
+
 ## Mod managers
 
 `launchModManager(id)` opens a mod manager. Its session is keyed `mod-manager:<id>` (`ModManagers::kKeyPrefix`) in the same two maps as games, so `running()`, `forceClose()` and the "a game is running" checks cover it; `runningManagers()` is the ids alone, for the button's and the row's running state. `runningTitle(id)` names any running id (a game's title or a manager's name).
@@ -49,7 +64,7 @@ A program that exits with an error sooner than `kQuickExitSeconds` (10 s) didn't
 
 ## Sessions and play time
 
-`GameRunner` has two separate session maps: `m_sessions` for ROM and Linux games (each holds a `DetachedProcess`), and `m_steamSessions` for Steam and Proton games (each holds a `SteamSession`). Mod managers use the same maps. The union of their keys is `running()`, the QML property.
+`GameRunner` has three separate session maps: `m_sessions` for ROM and Linux games (each holds a `DetachedProcess`), `m_steamSessions` for Steam and Proton games (each holds a `SteamSession`) and `m_heroicSessions` for Epic games (each holds a `HeroicSession`). Mod managers use the first two. The union of their keys is `running()`, the QML property.
 
 `forceClose()` kills with SIGKILL, so the usual exit handling follows: a ROM or Linux game's session is recorded as any other. `DetachedProcess::killSession()` kills every process in the session (it was created with `setsid`); `killTree()` kills a process and its descendants, for Steam games, where the launch process is Steam's, not the game's own session. A Steam game whose process hasn't appeared yet has nothing to kill, so `forceClose()` drops its session instead: Steam may never start it (a game borrowed by a family member opens its store page instead), and the button would otherwise stay on Close for the whole `kSteamStartSeconds`.
 

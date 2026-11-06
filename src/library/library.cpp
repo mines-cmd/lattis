@@ -2589,6 +2589,8 @@ QString Library::launchTip(const Game &g) const
         default: return tr("Launch through Steam");
         }
     }
+    if (g.platform == kEpicPlatform)
+        return g.installed ? tr("Launch through Heroic") : tr("Install through Heroic");
     if (g.platform == kProtonPlatform && g.shortcut != 0)
         return g.installed ? tr("Launch through Steam") : tr("Locate the game's program");
     if (g.platform == kLinuxPlatform) {

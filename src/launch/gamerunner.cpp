@@ -2,6 +2,7 @@
 #include "detachedprocess.h"
 #include "emulators.h"
 #include "gameid.h"
+#include "heroicscan.h"
 #include "launchcommand.h"
 #include "library.h"
 #include "steamshortcuts.h"
@@ -457,6 +458,120 @@ void GameRunner::endSteamSession(const QString &gameId)
     emit sessionEnded(gameId);
 }
 
+HeroicProgram GameRunner::heroicProgram() const
+{
+    return m_heroicProgram.found() ? m_heroicProgram : m_library->store().snapshot().heroic.install.program;
+}
+
+QString GameRunner::runHeroic(const QStringList &args)
+{
+    const HeroicProgram program = heroicProgram();
+    if (!program.found())
+        return tr("Heroic isn't found");
+    const LaunchCommand command{program.program, args, {}};
+    qCInfo(lcLaunch).noquote() << QStringLiteral("handing over to Heroic: %1").arg(command.toString());
+    // Watched only to reap it when it exits.
+    auto *process = new DetachedProcess(this);
+    const QString error = process->start(command, QDir::homePath(), m_logDir + QStringLiteral("/launch/heroic.log"));
+    if (!error.isEmpty()) {
+        delete process;
+        return tr("Could not start Heroic: %1").arg(error);
+    }
+    connect(process, &DetachedProcess::finished, process, &QObject::deleteLater);
+    return {};
+}
+
+QString GameRunner::openHeroic()
+{
+    return runHeroic(HeroicLocate::openArgs(heroicProgram()));
+}
+
+QString GameRunner::launchHeroicGame(const Game &game)
+{
+    if (m_heroicSessions.contains(game.id))
+        return {};
+    const LibrarySnapshot &snapshot = m_library->store().snapshot();
+    const HeroicProgram program = heroicProgram();
+    const auto entry = std::find_if(snapshot.content.heroic.cbegin(), snapshot.content.heroic.cend(),
+                                    [&](const HeroicEntry &e) { return e.id == game.id; });
+    if (entry == snapshot.content.heroic.cend() || !snapshot.heroic.install.found() || !program.found())
+        return tr("Heroic isn't found");
+    const QStringList args = HeroicLocate::launchArgs(program, entry->appName);
+    // Heroic asks whether to install it, and shows its install screen on Yes.
+    if (!game.installed)
+        return runHeroic(args);
+
+    HeroicSession session;
+    session.appName = entry->appName;
+    session.root = snapshot.heroic.install.root;
+    session.lastPlayed = HeroicScan::lastPlayed(session.root, session.appName).value_or(0);
+    session.process = new DetachedProcess(this);
+    const LaunchCommand command{program.program, args, {}};
+    qCInfo(lcLaunch).noquote() << QStringLiteral("launching %1 through Heroic: %2").arg(game.id, command.toString());
+    const QString log = QStringLiteral("%1/launch/%2.log").arg(m_logDir, game.id);
+    if (const QString error = session.process->start(command, QDir::homePath(), log); !error.isEmpty()) {
+        delete session.process;
+        return tr("Could not start Heroic: %1").arg(error);
+    }
+    session.since.start();
+    DetachedProcess *process = session.process;
+    connect(process, &DetachedProcess::finished, this, [this, id = game.id, process](int exitCode, bool crashed) {
+        process->deleteLater();
+        onHeroicProcessExited(id, process, exitCode, crashed);
+    });
+    m_heroicSessions.insert(game.id, session);
+    m_heroicPoll.start();
+    emit runningChanged();
+    emit sessionStarted(game.id);
+    return {};
+}
+
+void GameRunner::onHeroicProcessExited(const QString &gameId, DetachedProcess *process, int exitCode, bool crashed)
+{
+    const auto session = m_heroicSessions.find(gameId);
+    if (session == m_heroicSessions.end() || session->process != process)
+        return;
+    session->process = nullptr;
+    if (session->forceClosed) {
+        endHeroicSession(gameId);
+        return;
+    }
+    if ((crashed || exitCode != 0) && session->since.elapsed() < kQuickExitSeconds * 1000) {
+        const QString log = QStringLiteral("%1/launch/%2.log").arg(m_logDir, gameId);
+        for (const QString &line : lastLines(log, 20))
+            qCWarning(lcLaunch).noquote() << QStringLiteral("Heroic: %1").arg(line);
+        qCWarning(lcLaunch).noquote() << "full output in" << log;
+        emit message(tr("Heroic closed right away; see the log"));
+        endHeroicSession(gameId);
+        return;
+    }
+    // A Heroic that was closed has written timestamp.json by now, and one that was running will when the game closes.
+    pollHeroicGames();
+}
+
+void GameRunner::pollHeroicGames()
+{
+    const QStringList ids = m_heroicSessions.keys();
+    for (const QString &id : ids) {
+        const HeroicSession &session = m_heroicSessions[id];
+        const std::optional<qint64> lastPlayed = HeroicScan::lastPlayed(session.root, session.appName);
+        if (lastPlayed && *lastPlayed != session.lastPlayed)
+            endHeroicSession(id);
+    }
+}
+
+void GameRunner::endHeroicSession(const QString &gameId)
+{
+    const HeroicSession session = m_heroicSessions.take(gameId);
+    if (m_heroicSessions.isEmpty())
+        m_heroicPoll.stop();
+    qCInfo(lcLaunch).noquote() << QStringLiteral("%1 closed after %2 s").arg(gameId).arg(session.since.elapsed() / 1000);
+    emit runningChanged();
+    emit sessionEnded(gameId);
+    // timestamp.json can be new, and then nothing watches it yet.
+    m_library->store().refresh();
+}
+
 GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &logDir, QObject *parent)
     : QObject(parent)
     , m_library(library)
@@ -471,6 +586,8 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
     connect(&m_reloadTimer, &QTimer::timeout, this, &GameRunner::loadSettings);
     m_steamPoll.setInterval(1000);
     connect(&m_steamPoll, &QTimer::timeout, this, &GameRunner::pollSteamGames);
+    m_heroicPoll.setInterval(1000);
+    connect(&m_heroicPoll, &QTimer::timeout, this, &GameRunner::pollHeroicGames);
     m_steamCloseTimer.setSingleShot(true);
     m_steamCloseTimer.setInterval(kSteamCloseSeconds * 1000);
     connect(&m_steamCloseTimer, &QTimer::timeout, this, [this] { onSteamClosed(false); });
@@ -630,6 +747,8 @@ QString GameRunner::launch(const QString &gameId)
         return tr("%1 has no Steam shortcut; add it with Settings → Steam → Add existing shortcuts").arg(game->title);
     if (game->platform == kLinuxPlatform)
         return launchProgram(*game);
+    if (game->platform == kEpicPlatform)
+        return launchHeroicGame(*game);
     if (!game->rom)
         return tr("Launching %1 games is not implemented yet").arg(game->platformName);
     if (m_sessions.contains(gameId))
@@ -652,6 +771,19 @@ QString GameRunner::forceClose(const QString &gameId)
         qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1").arg(gameId);
         session->forceClosed = true;
         session->process->kill();
+        return {};
+    }
+    if (const auto session = m_heroicSessions.find(gameId); session != m_heroicSessions.end()) {
+        // Our process only holds the game while it's the Heroic that runs it. Otherwise the game
+        // can't be told from anything else of Heroic's, or never started, so this stops waiting for it.
+        if (session->process) {
+            qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1").arg(gameId);
+            session->forceClosed = true;
+            session->process->kill();
+        } else {
+            qCInfo(lcLaunch).noquote() << QStringLiteral("stopped waiting for %1").arg(gameId);
+            endHeroicSession(gameId);
+        }
         return {};
     }
     if (const auto session = m_steamSessions.constFind(gameId); session != m_steamSessions.constEnd()) {
@@ -885,6 +1017,8 @@ QString GameRunner::openEmulator(const QString &gameId)
         return {};
     if (const SteamRef steam = steamRefOf(*game))
         return runSteam({QStringLiteral("steam://nav/games/details/%1").arg(steam.runId)}, true);
+    if (game->platform == kEpicPlatform)
+        return openHeroic();
     if (game->platform == kLinuxPlatform)
         return tr("A Linux game has no emulator or Steam page to open");
     if (!game->rom)

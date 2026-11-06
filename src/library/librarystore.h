@@ -2,6 +2,7 @@
 
 #include "librarycache.h"
 #include "libraryversion.h"
+#include "heroicmerge.h"
 #include "playhistory.h"
 #include "steamsync.h"
 #include "tomlpatch.h"
@@ -56,6 +57,8 @@ struct ScanResult
     bool steamWebWrite = false;
     QStringList steamWebAdded;
     QStringList heroicAdded;
+    QList<HeroicMerge::Played> heroicPlayed;
+    bool heroicWrite = false;
     bool steamChanged = false;
     QStringList steamArtCopied;
 
@@ -236,6 +239,8 @@ signals:
 
 private:
     void applySteamHistory(const ScanResult &result);
+    // The index to write: the scan's, less what couldn't be saved.
+    QList<HeroicEntry> applyHeroicPlay(const ScanResult &result);
     void onScanFinished();
     void onShrinkFinished();
     void updateWatches();

@@ -31,4 +31,18 @@ struct Result
 };
 
 Result merge(const Input &input);
+
+struct Played
+{
+    QString id;
+    // Heroic's whole total on a first count, what it grew by after that.
+    int minutes = 0;
+    bool first = false;
+    qint64 lastPlayed = 0;
+
+    bool operator==(const Played &) const = default;
+};
+
+// Moves each entry's heroic_minutes to Heroic's total, and says what that adds to the games.
+QList<Played> countPlay(QList<HeroicEntry> *index, const HeroicState &state);
 }

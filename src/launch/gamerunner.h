@@ -1,5 +1,6 @@
 #pragma once
 
+#include "heroiclocate.h"
 #include "launchsettings.h"
 #include "steamlocate.h"
 
@@ -75,6 +76,7 @@ public:
     QString runningTitle(const QString &id) const;
     Q_INVOKABLE QString missingEmulator(const QString &gameId) const;
     Q_INVOKABLE QString closeSteamAndApply();
+    Q_INVOKABLE QString openHeroic();
     bool closingSteam() const { return m_steamClosing != nullptr; }
     Q_INVOKABLE bool steamRunning() const;
     // Hands a steam:// URL to Steam, bare; the error, or empty.
@@ -82,7 +84,7 @@ public:
 
     Q_INVOKABLE QString setLaunchValue(const QString &key, const QString &value);
 
-    QStringList running() const { return m_sessions.keys() + m_steamSessions.keys(); }
+    QStringList running() const { return m_sessions.keys() + m_steamSessions.keys() + m_heroicSessions.keys(); }
     QString runningIn(const QString &emulatorName) const
     {
         for (auto it = m_sessions.cbegin(); it != m_sessions.cend(); ++it) {
@@ -101,6 +103,7 @@ public:
 
     static QStringList steamCommand(SteamInstall::Kind kind);
     void setSteamProgram(const QStringList &program) { m_steamProgram = program; }
+    void setHeroicProgram(const HeroicProgram &program) { m_heroicProgram = program; }
 
     static int sessionMinutes(qint64 elapsedMs);
     static constexpr int kQuickExitSeconds = 10;
@@ -167,6 +170,24 @@ private:
     void addSteamSession(const QString &gameId, const SteamRef &steam);
     QString closeSteamThen(const QString &gameId);
     void onSteamClosed(bool closed);
+
+    struct HeroicSession
+    {
+        QString appName;
+        QString root;
+        // Heroic's lastPlayed at the launch: it changes when the game closes, however short the session.
+        qint64 lastPlayed = 0;
+        QElapsedTimer since;
+        // Null once it exits, which says nothing while Heroic was already running: it only passed the URL on.
+        DetachedProcess *process = nullptr;
+        bool forceClosed = false;
+    };
+    HeroicProgram heroicProgram() const;
+    QString runHeroic(const QStringList &args);
+    QString launchHeroicGame(const Game &game);
+    void onHeroicProcessExited(const QString &gameId, DetachedProcess *process, int exitCode, bool crashed);
+    void pollHeroicGames();
+    void endHeroicSession(const QString &gameId);
     void loadSettings();
     QString settingsFile() const { return m_dataDir + QStringLiteral("/settings.toml"); }
 
@@ -184,6 +205,9 @@ private:
     SteamExitWatch *m_steamClosing = nullptr;
     QTimer m_steamCloseTimer;
     QString m_launchAfterClose;
+    HeroicProgram m_heroicProgram;
+    QHash<QString, HeroicSession> m_heroicSessions;
+    QTimer m_heroicPoll;
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;
     int m_sessionPollMs = 2000;

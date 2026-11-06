@@ -87,6 +87,8 @@ private slots:
     void rescanReusesUnchangedCache();
     void rescanReadsChangedCache();
     void rescanKeepsCacheWarning();
+    void lastPlayed();
+    void launchAndOpenArgs();
 
 private:
     QString nativeRoot() const { return m_where.nativeRoot(); }
@@ -531,6 +533,35 @@ void HeroicTest::rescanKeepsCacheWarning()
     const HeroicState first = HeroicScan::scan(m_root);
     QCOMPARE(first.warnings.size(), 1);
     QCOMPARE(HeroicScan::scan(m_root, first).warnings, first.warnings);
+}
+
+void HeroicTest::lastPlayed()
+{
+    QCOMPARE(HeroicScan::lastPlayed(m_root, u"Fez"_s), std::optional<qint64>(0)); // no file yet
+    writeFile(HeroicScan::playTimePath(m_root),
+              R"({"Fez":{"lastPlayed":"2026-11-05T10:00:00.000Z","totalPlayed":3},"New":{"firstPlayed":"2026-11-05T10:00:00.000Z"}})");
+    QCOMPARE(HeroicScan::lastPlayed(m_root, u"Fez"_s),
+             std::optional<qint64>(QDateTime(QDate(2026, 11, 5), QTime(10, 0), QTimeZone::UTC).toSecsSinceEpoch()));
+    QCOMPARE(HeroicScan::lastPlayed(m_root, u"New"_s), std::optional<qint64>(0));
+    QCOMPARE(HeroicScan::lastPlayed(m_root, u"Other"_s), std::optional<qint64>(0));
+    writeFile(HeroicScan::playTimePath(m_root), "{\"Fez\":{");
+    QCOMPARE(HeroicScan::lastPlayed(m_root, u"Fez"_s), std::nullopt);
+}
+
+void HeroicTest::launchAndOpenArgs()
+{
+    const HeroicProgram native{u"/usr/bin/heroic"_s, {u"--no-gui"_s}, true};
+    QCOMPARE(HeroicLocate::launchArgs(native, u"Fez&App"_s),
+             (QStringList{u"--no-gui"_s, u"heroic://launch?appName=Fez%26App&runner=legendary&gui=false"_s}));
+    QCOMPARE(HeroicLocate::openArgs(native), QStringList());
+
+    const HeroicProgram flatpak{u"/usr/bin/flatpak"_s, {u"run"_s, u"com.heroicgameslauncher.hgl"_s, u"--no-gui"_s}, true};
+    QCOMPARE(HeroicLocate::openArgs(flatpak), (QStringList{u"run"_s, u"com.heroicgameslauncher.hgl"_s}));
+
+    const HeroicProgram xdgOpen{u"/usr/bin/xdg-open"_s, {}, false};
+    QCOMPARE(HeroicLocate::launchArgs(xdgOpen, u"App"_s),
+             QStringList{u"heroic://launch?appName=App&runner=legendary&gui=false"_s});
+    QCOMPARE(HeroicLocate::openArgs(xdgOpen), QStringList{u"heroic://ping"_s});
 }
 
 QTEST_GUILESS_MAIN(HeroicTest)

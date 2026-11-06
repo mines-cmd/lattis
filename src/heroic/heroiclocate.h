@@ -44,4 +44,7 @@ namespace HeroicLocate {
 HeroicInstall find(const HeroicLocations &where, const QString &configuredPath = {});
 
 HeroicProgram findProgram(HeroicInstall::Kind kind, const HeroicLocations &where);
+
+QStringList launchArgs(const HeroicProgram &program, const QString &appName);
+QStringList openArgs(const HeroicProgram &program);
 }

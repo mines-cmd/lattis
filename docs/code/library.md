@@ -248,6 +248,20 @@ The scan never removes a line or renames a game, so a game that returns has its 
 
 A Steam shortcut made by Heroic's "Add to Steam" (`SteamShortcuts::isHeroic()`: `heroic://launch` in its launch options) isn't offered by "Add existing shortcuts", since the game is already here.
 
+The store watches `installed.json` and `timestamp.json` (`HeroicState::watchPaths()`), with Steam's files and the same one-second delay. Heroic replaces `timestamp.json` on save, which drops the watch, so `updateWatches()` adds it again after each scan.
+
+#### Play time from Heroic
+
+An Epic game's play time is the launcher's, in its game file, and can be edited like a Linux game's. Heroic's total only feeds it, because Heroic's isn't reliable enough to show as it is. `heroic_minutes` is Heroic's total when it was last counted, and each scan compares the two (`HeroicMerge::countPlay()`):
+
+- **First count** (`heroic_minutes` missing): a game Heroic has played starts from Heroic's total, with no history, as that time isn't a session. A game file that already has play time keeps it, since it outlived its `heroic.toml` line. A game Heroic never ran counts as 0, so what it plays later is growth.
+- **The total grew:** the growth is added to `play_minutes` and to the history as a `merged` session ending at Heroic's `lastPlayed`. Only the growth is added, so an edit is never overwritten. `last_played` moves to Heroic's if that's later.
+- **The total dropped** (a lost or reset file, or an index restored on another computer): nothing is added, and counting goes on from the new total.
+
+A `timestamp.json` that can't be read counts nothing. A session under a minute adds nothing, since Heroic's total rounds down, and it doesn't touch `last_played` either: that date is only compared when the total grows, which leaves an earlier date the user set alone.
+
+As with Steam's totals, the scan only compares. `LibraryStore::applyHeroicPlay()` writes the game files and the history when the scan is kept, and then the index. A game file that can't be written (it has an error) keeps its old `heroic_minutes`, so the next scan after it's fixed counts it.
+
 ### The whole Steam library
 
 An entry of `steam.toml` is either `<appid> = "Title"` or an inline table: `title`, `owned = true`, `shared_by = ["<steamid64>", …]` (a game both owned and shared is only `owned`), `from_api = true` for a game the manifests never had, and `type` (the store's type, 0 a game). `IndexEntry` has the same fields; the plain form is written when none is set. Ids stay `steam-<appid>`, so a game installed later is the same game, with its edits and history.

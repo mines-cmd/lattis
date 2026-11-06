@@ -209,4 +209,13 @@ HeroicState scan(const QString &root, const HeroicState &previous)
     readPlayTime(playTimePath(root), &state);
     return state;
 }
+
+std::optional<qint64> lastPlayed(const QString &root, const QString &appName)
+{
+    HeroicState state;
+    readPlayTime(playTimePath(root), &state);
+    if (!state.playTimeOk)
+        return std::nullopt;
+    return state.playTime.value(appName).lastPlayed;
+}
 }

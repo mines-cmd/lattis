@@ -1,5 +1,6 @@
 #include "detachedprocess.h"
 #include "gamerunner.h"
+#include "heroicscan.h"
 #include "launchcommand.h"
 #include "launchoptions.h"
 #include "launchsettings.h"
@@ -101,6 +102,22 @@ for arg in "$@"; do
 done
 )";
 
+// Stands in for Heroic's command: appends each call's arguments, one call per line, runs for
+// FAKE_HEROIC_SECONDS, then writes FAKE_HEROIC_PLAYED over timestamp.json (as a Heroic that was closed
+// does when the game ends) and exits with FAKE_HEROIC_EXIT.
+const QByteArray kFakeHeroic = R"(#!/bin/sh
+echo "$*" >> "$(dirname "$0")/heroic.txt"
+sleep "${FAKE_HEROIC_SECONDS:-0}"
+if [ -n "$FAKE_HEROIC_PLAYED" ]; then printf '%s' "$FAKE_HEROIC_PLAYED" > "$FAKE_HEROIC_TIMESTAMP"; fi
+exit "${FAKE_HEROIC_EXIT:-0}"
+)";
+
+QByteArray heroicTimestamp(int minutes, const QByteArray &lastPlayed)
+{
+    return R"({"HikeApp":{"firstPlayed":"2026-10-01T10:00:00.000Z","lastPlayed":")" + lastPlayed
+           + R"(","totalPlayed":)" + QByteArray::number(minutes) + "}}";
+}
+
 // Stands in for a Linux game's launcher script: records what it was given and where, the
 // variables the tests look at, then runs for FAKE_SECONDS and exits with FAKE_EXIT. With
 // FAKE_CHILD_SECONDS, it leaves a child behind that runs that long, then writes child.txt.
@@ -161,6 +178,13 @@ private slots:
     void linuxGameOptionsAndStartDir();
     void linuxGameRefused();
     void linuxGamePage();
+    void heroicClosed();
+    void heroicAlreadyRunning();
+    void heroicUnreadableTimestamp();
+    void heroicInstallAndOpen();
+    void heroicForceClose();
+    void heroicQuickFailure();
+    void heroicNotFound();
     void steamGames();
     void openSteamUrl();
     void steamUpdates();
@@ -183,8 +207,12 @@ private slots:
 
 private:
     void openLibrary(const QByteArray &settings = {});
-    // A new GameRunner on the open library, handing Steam's commands to the fake one.
+    // A new GameRunner on the open library, handing Steam's and Heroic's commands to the fake ones.
     void startRunner();
+    QString heroicRoot() const { return m_dir->filePath(QStringLiteral("home/.config/heroic")); }
+    QString heroicLog() const { return fakeDir() + QStringLiteral("/heroic.txt"); }
+    // A Heroic with A Short Hike installed and played, and Fez App not installed.
+    void openWithHeroic();
     // A copy of the tests' fake Steam (it has a user's localconfig.vdf; the demo's doesn't)
     // that can run: a copy of `sleep` named like its binary. Returns its folder.
     QString copyFakeSteam();
@@ -691,6 +719,10 @@ void LaunchTest::init()
     qunsetenv("FAKE_GAME_SECONDS");
     qunsetenv("FAKE_STEAM_PID");
     qunsetenv("FAKE_CHILD_SECONDS");
+    qunsetenv("FAKE_HEROIC_SECONDS");
+    qunsetenv("FAKE_HEROIC_PLAYED");
+    qunsetenv("FAKE_HEROIC_TIMESTAMP");
+    qunsetenv("FAKE_HEROIC_EXIT");
     m_stateDir.clear();
 }
 
@@ -710,6 +742,7 @@ void LaunchTest::openLibrary(const QByteArray &settings)
     nowhere.home = m_dir->filePath(QStringLiteral("home"));
     m_library->store().setInstallLocations(nowhere);
     m_library->store().setSteamLocations({m_dir->filePath(QStringLiteral("no-home")), {}});
+    m_library->store().setHeroicLocations({nowhere.home, nowhere.home + QStringLiteral("/.config"), {}, {}});
     m_library->store().setStateDir(m_stateDir);
     m_library->startRefresh();
     m_library->store().waitForIdle();
@@ -723,7 +756,146 @@ void LaunchTest::startRunner()
     // The demo has a fake Steam, but `steam` on the PATH is the real one: never run it.
     writeFile(fakeDir() + "/steam.sh", kFakeSteam, true);
     m_runner->setSteamProgram({fakeDir() + "/steam.sh", QStringLiteral("--prefix")});
+    writeFile(fakeDir() + "/heroic.sh", kFakeHeroic, true);
+    m_runner->setHeroicProgram({fakeDir() + "/heroic.sh", {QStringLiteral("--no-gui")}, true});
     m_runner->start();
+}
+
+void LaunchTest::openWithHeroic()
+{
+    writeFile(HeroicScan::libraryPath(heroicRoot()),
+              R"({"library":[{"app_name":"HikeApp","title":"A Short Hike","install":{}},
+                             {"app_name":"Fez App","title":"Fez","install":{}}]})");
+    writeFile(HeroicScan::installedPath(heroicRoot()),
+              R"({"HikeApp":{"title":"A Short Hike","install_path":"/games/hike","install_size":1000}})");
+    writeFile(HeroicScan::playTimePath(heroicRoot()), heroicTimestamp(5, "2026-11-01T10:00:00.000Z"));
+    qputenv("FAKE_HEROIC_TIMESTAMP", HeroicScan::playTimePath(heroicRoot()).toLocal8Bit());
+    openLibrary();
+}
+
+void LaunchTest::heroicClosed()
+{
+    openWithHeroic();
+    const QString id = QStringLiteral("epic-a-short-hike");
+    const QString gameFile = m_data + QStringLiteral("/library/games/epic-a-short-hike.toml");
+    QVERIFY(readFile(gameFile).contains("play_minutes = 5"));
+    qputenv("FAKE_HEROIC_SECONDS", "1");
+    qputenv("FAKE_HEROIC_PLAYED", heroicTimestamp(7, "2026-11-02T10:00:00.000Z"));
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+
+    QCOMPARE(m_runner->launch(id), QString());
+    QCOMPARE(m_runner->running(), QStringList{id});
+    QCOMPARE(m_runner->launch(id), QString()); // already running: no second one
+    QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 1, 5000);
+    QCOMPARE(m_runner->running(), QStringList());
+    QCOMPARE(readFile(heroicLog()), QByteArray("--no-gui heroic://launch?appName=HikeApp&runner=legendary&gui=false\n"));
+    // Only Heroic's total counts, and the end of the session makes the scan that reads it.
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(gameFile).contains("play_minutes = 7"), 5000);
+}
+
+void LaunchTest::heroicAlreadyRunning()
+{
+    openWithHeroic();
+    const QString id = QStringLiteral("epic-a-short-hike");
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+    QCOMPARE(m_runner->launch(id), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
+
+    // Our process passed the URL on and is gone; the game runs on.
+    QTest::qWait(1500);
+    QCOMPARE(m_runner->running(), QStringList{id});
+
+    // Another game's entry changing isn't this game closing.
+    writeFile(HeroicScan::playTimePath(heroicRoot()),
+              heroicTimestamp(5, "2026-11-01T10:00:00.000Z").chopped(1)
+                  + R"(,"Fez App":{"lastPlayed":"2026-11-03T10:00:00.000Z","totalPlayed":1}})");
+    QTest::qWait(1500);
+    QCOMPARE(m_runner->running(), QStringList{id});
+
+    // A session under a minute: only lastPlayed moves.
+    writeFile(HeroicScan::playTimePath(heroicRoot()), heroicTimestamp(5, "2026-11-02T10:00:00.000Z"));
+    QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 1, 5000);
+    QCOMPARE(m_runner->running(), QStringList());
+}
+
+void LaunchTest::heroicUnreadableTimestamp()
+{
+    openWithHeroic();
+    const QString id = QStringLiteral("epic-a-short-hike");
+    QCOMPARE(m_runner->launch(id), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
+    // Caught halfway through a save: not a change.
+    writeFile(HeroicScan::playTimePath(heroicRoot()), "{\"HikeApp\":{");
+    QTest::qWait(1500);
+    QCOMPARE(m_runner->running(), QStringList{id});
+}
+
+void LaunchTest::heroicInstallAndOpen()
+{
+    openWithHeroic();
+    // Not installed: Heroic asks, and there's no session to wait for.
+    QCOMPARE(m_runner->launch(QStringLiteral("epic-fez")), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()),
+                              QByteArray("--no-gui heroic://launch?appName=Fez%20App&runner=legendary&gui=false\n"), 5000);
+    QCOMPARE(m_runner->running(), QStringList());
+
+    QCOMPARE(m_runner->openHeroic(), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 2, 5000);
+    QVERIFY(readFile(heroicLog()).endsWith("gui=false\n\n"));
+    QCOMPARE(m_runner->openEmulator(QStringLiteral("epic-fez")), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 3, 5000);
+
+    QCOMPARE(m_runner->missingEmulator(QStringLiteral("epic-fez")), QString());
+    m_library->setInstalledOnly(false);
+    QCOMPARE(m_library->gameAt(m_library->rowOfGame(QStringLiteral("epic-fez"))).value("launchTip").toString(),
+             QStringLiteral("Install through Heroic"));
+    QCOMPARE(m_library->gameAt(m_library->rowOfGame(QStringLiteral("epic-a-short-hike"))).value("launchTip").toString(),
+             QStringLiteral("Launch through Heroic"));
+}
+
+void LaunchTest::heroicForceClose()
+{
+    openWithHeroic();
+    const QString id = QStringLiteral("epic-a-short-hike");
+
+    // Our process is the Heroic that runs the game: it goes, with what's in its session.
+    qputenv("FAKE_HEROIC_SECONDS", "30");
+    QCOMPARE(m_runner->launch(id), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
+    QCOMPARE(m_runner->forceClose(id), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(m_runner->running(), QStringList(), 5000);
+
+    // It already exited: a launch that stopped early would otherwise stay Running.
+    qunsetenv("FAKE_HEROIC_SECONDS");
+    QCOMPARE(m_runner->launch(id), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 2, 5000);
+    QTest::qWait(300);
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+    QCOMPARE(m_runner->forceClose(id), QString());
+    QCOMPARE(ended.count(), 1);
+    QCOMPARE(m_runner->running(), QStringList());
+}
+
+void LaunchTest::heroicQuickFailure()
+{
+    openWithHeroic();
+    qputenv("FAKE_HEROIC_EXIT", "1");
+    QSignalSpy message(m_runner.get(), &GameRunner::message);
+    QCOMPARE(m_runner->launch(QStringLiteral("epic-a-short-hike")), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(message.count(), 1, 5000);
+    QCOMPARE(message.first().first().toString(), QStringLiteral("Heroic closed right away; see the log"));
+    QCOMPARE(m_runner->running(), QStringList());
+}
+
+void LaunchTest::heroicNotFound()
+{
+    openWithHeroic();
+    const QByteArray settings = readFile(m_data + "/settings.toml");
+    m_runner.reset();
+    m_library.reset();
+    openLibrary(settings + "\n[heroic]\nenabled = false\n");
+    QCOMPARE(m_runner->launch(QStringLiteral("epic-a-short-hike")), QStringLiteral("Heroic isn't found"));
+    QCOMPARE(m_runner->running(), QStringList());
 }
 
 QString LaunchTest::copyFakeSteam()
