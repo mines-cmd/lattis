@@ -28,6 +28,25 @@ void appendFacets(QStringList *facets, const QJsonValue &list, QLatin1String pre
     }
 }
 
+QString searchText(const QString &title)
+{
+    // Apicalypse strings have no escapes worth relying on; quotes and backslashes don't help
+    // a search anyway.
+    QString search = title;
+    search.remove(u'"').remove(u'\\').remove(u'™').remove(u'®').remove(u'©');
+    return search;
+}
+
+QByteArray filters(const QByteArray &types, const QList<int> &platforms)
+{
+    if (platforms.isEmpty())
+        return types;
+    QStringList ids;
+    for (int id : platforms)
+        ids.append(QString::number(id));
+    return "platforms = (" + ids.join(u',').toLatin1() + ") & " + types;
+}
+
 int yearOf(qint64 secondsSinceEpoch)
 {
     return QDateTime::fromSecsSinceEpoch(secondsSinceEpoch, QTimeZone::UTC).date().year();
@@ -142,22 +161,16 @@ QString platformName(int id)
     return {};
 }
 
-QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit, bool wildcard, qint64 steamAppId)
+QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit, bool wildcard, qint64 steamAppId,
+                       bool bundles)
 {
-    // Apicalypse strings have no escapes worth relying on; quotes and backslashes don't help
-    // a search anyway.
-    QString search = title;
-    search.remove(u'"').remove(u'\\').remove(u'™').remove(u'®').remove(u'©');
+    const QString search = searchText(title);
     // A title that names an edition is looking for that edition's own entry, which IGDB files under its base game.
-    QByteArray where = search.contains(QLatin1String("edition"), Qt::CaseInsensitive)
-                           ? QByteArray("game_type = (0,3,4,6,8,9,10,11,12)")
-                           : QByteArray("version_parent = null & game_type = (0,4,6,8,9,10,11,12)");
-    if (!platforms.isEmpty()) {
-        QStringList ids;
-        for (int id : platforms)
-            ids.append(QString::number(id));
-        where = "platforms = (" + ids.join(u',').toLatin1() + ") & " + where;
-    }
+    QByteArray where = filters(search.contains(QLatin1String("edition"), Qt::CaseInsensitive)
+                                   ? QByteArray("game_type = (0,3,4,6,8,9,10,11,12)")
+                                   : bundles ? QByteArray("version_parent = null & game_type = (0,3,4,6,8,9,10,11,12)")
+                                             : QByteArray("version_parent = null & game_type = (0,4,6,8,9,10,11,12)"),
+                               platforms);
     // The Steam game may be an edition or bundle on IGDB, which the filters above leave out.
     if (steamAppId > 0) {
         where = "(" + where + ") | (external_games.uid = \"" + QByteArray::number(steamAppId)
@@ -168,6 +181,13 @@ QByteArray searchQuery(const QString &title, const QList<int> &platforms, int li
                + QByteArray::number(limit) + ';';
     }
     return "search \"" + search.simplified().toUtf8() + "\"; where " + where + "; " + kFields + " limit "
+           + QByteArray::number(limit) + ';';
+}
+
+QByteArray alternativeNameQuery(const QString &title, const QList<int> &platforms, int limit)
+{
+    return "where alternative_names.name ~ \"" + searchText(title).simplified().toUtf8() + "\" & "
+           + filters("version_parent = null & game_type = (0,3,4,6,8,9,10,11,12)", platforms) + "; " + kFields + " limit "
            + QByteArray::number(limit) + ';';
 }
 

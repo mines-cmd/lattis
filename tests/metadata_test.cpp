@@ -87,6 +87,7 @@ private slots:
 
     void clientLookup();
     void clientLookupWideSearch();
+    void clientLookupBundles();
     void clientLookupIds();
     void clientLookupIdsBatches();
     void clientArt();
@@ -522,6 +523,11 @@ void MetadataTest::igdbSearchQuery()
     QVERIFY(Igdb::searchQuery(QStringLiteral("Pokémon"), {37, 137}).contains("search \"Pokémon\"; where platforms = (37,137) &"));
     QVERIFY(Igdb::searchQuery(QStringLiteral("Twilight Princess"), {}, 50).endsWith("keywords.slug; limit 50;"));
     QVERIFY(Igdb::searchQuery(QStringLiteral("Twilight Princess"), {3, 6}, 50).contains("where platforms = (3,6) &"));
+    QVERIFY(Igdb::searchQuery(QStringLiteral("The Alto Collection"), {6}, 50, false, 0, true)
+                .contains("where platforms = (6) & version_parent = null & game_type = (0,3,4,6,8,9,10,11,12);"));
+    QVERIFY(Igdb::alternativeNameQuery(QString::fromUtf8("Tomb \"Raider\"™"), {6}, 50)
+                .startsWith("where alternative_names.name ~ \"Tomb Raider\" & platforms = (6) & version_parent = null & "
+                            "game_type = (0,3,4,6,8,9,10,11,12); fields name,"));
     QVERIFY(Igdb::gameQuery(81145).startsWith("where id = 81145; fields name,"));
 }
 
@@ -1022,6 +1028,49 @@ void MetadataTest::clientLookupWideSearch()
     const auto missRequests = missing.requestsTo("/v4/games");
     QCOMPARE(missRequests.size(), 3);
     QVERIFY(missRequests.at(2).body.contains("search \"The Legend of Zelda: Tri Force Heroes\""));
+}
+
+void MetadataTest::clientLookupBundles()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    const QByteArray title = "Tomb Raider I-III Remastered Starring Lara Croft";
+    const QByteArray bundle = QJsonDocument(QJsonArray{QJsonObject{
+        {"id", 266683}, {"name", QString::fromUtf8("Tomb Raider I•II•III Remastered")},
+        {"alternative_names", QJsonArray{QJsonObject{{"id", 1}, {"name", QString::fromUtf8(title)}}}}}}).toJson();
+    // The search, its wildcard, then the alternative name.
+    server.on("/v4/games", {200, "[]"});
+    server.on("/v4/games", {200, "[]"});
+    server.on("/v4/games", {200, bundle});
+    MetadataClient client(data.path(), cache.path(), endpoints(server));
+    client.http()->setCredentials(kKeys);
+    client.http()->setIgdbInterval(0);
+
+    const QVariantMap byName = result(client, client.lookup(QString::fromUtf8(title), {6}));
+    QCOMPARE(byName.value("match").toInt(), 0);
+    QCOMPARE(byName.value("candidates").toList().first().toMap().value("igdb").toInt(), 266683);
+    const auto requests = server.requestsTo("/v4/games");
+    QCOMPARE(requests.size(), 3);
+    QVERIFY(requests.at(2).body.startsWith("where alternative_names.name ~ \"" + title + "\""));
+
+    FakeHttpServer typed;
+    typed.on("/oauth2/token", {200, kToken1});
+    // The search, its wildcard, the alternative name, then with bundles.
+    typed.on("/v4/games", {200, "[]"});
+    typed.on("/v4/games", {200, "[]"});
+    typed.on("/v4/games", {200, "[]"});
+    typed.on("/v4/games", {200, bundle});
+    MetadataClient typedClient(data.path(), cache.path(), endpoints(typed));
+    typedClient.http()->setCredentials(kKeys);
+    typedClient.http()->setIgdbInterval(0);
+    const QVariantMap searched = result(typedClient, typedClient.lookup(QStringLiteral("Tomb Raider Remastered"), {6}));
+    QCOMPARE(searched.value("candidates").toList().size(), 1);
+    const auto typedRequests = typed.requestsTo("/v4/games");
+    QCOMPARE(typedRequests.size(), 4);
+    QVERIFY(typedRequests.at(3).body.contains("game_type = (0,3,4,6,8,9,10,11,12)"));
+    QVERIFY(typedRequests.at(3).body.startsWith("search \"Tomb Raider Remastered\""));
 }
 
 void MetadataTest::clientLookupIds()

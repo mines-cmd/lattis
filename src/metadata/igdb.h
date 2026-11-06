@@ -40,8 +40,11 @@ namespace Igdb {
 constexpr int kSearchLimit = 10;
 
 // wildcard: IGDB's search only matches whole words, so this matches the text anywhere in the name instead.
+// bundles: a collection sold as one game ("The Alto Collection") is a bundle on IGDB, which a search leaves out.
 QByteArray searchQuery(const QString &title, const QList<int> &platforms, int limit = kSearchLimit, bool wildcard = false,
-                      qint64 steamAppId = 0);
+                      qint64 steamAppId = 0, bool bundles = false);
+// IGDB's search skips alternative names: "Tomb Raider I•II•III Remastered" has Epic's title as one.
+QByteArray alternativeNameQuery(const QString &title, const QList<int> &platforms, int limit = kSearchLimit);
 
 const QList<IgdbPlatform> &platforms();
 QString platformName(int id);

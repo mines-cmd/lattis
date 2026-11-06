@@ -175,8 +175,10 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
     const QStringList words = bare.simplified().split(u' ');
     const QString shorter = words.size() >= 3 ? words.mid(0, words.size() - 1).join(u' ') : QString();
     const QString searched = stage == 2 ? mainTitle : stage == 3 ? spaced : stage == 4 ? bare : stage == 5 ? shorter : stage == 6 ? plain : title;
-    const QByteArray query =
-        igdbId > 0 ? Igdb::gameQuery(igdbId) : Igdb::searchQuery(searched, platforms, stage >= 2 ? std::max(limit, kWideSearch) : limit, stage == 1, steamAppId);
+    const int wide = stage >= 2 ? std::max(limit, kWideSearch) : limit;
+    const QByteArray query = igdbId > 0 ? Igdb::gameQuery(igdbId)
+        : stage == 7 ? Igdb::alternativeNameQuery(searched, platforms, wide)
+                     : Igdb::searchQuery(searched, platforms, wide, stage == 1, steamAppId, stage == 8);
     m_http.igdb(QStringLiteral("games"), query, context,
                 [this, request, context, title, bare, plain, shorter, mainTitle, spaced, platforms, igdbId, steamAppId, limit, stage,
                  earlier](const MetadataReply &reply) {
@@ -215,19 +217,21 @@ void MetadataClient::lookupQuery(int request, QObject *context, const QString &t
                         int next = stage == 0 ? 1 : stage == 1 ? (spaced != title ? 3 : 2) : stage == 3 ? 2 : -1;
                         if (next == 2 && mainTitle.isEmpty())
                             next = -1;
-                        // Then, each only when it changes the title: without Steam's "(Legacy)" or "Demo" tags,
-                        // without "Complete Edition" (IGDB lists that edition on other platforms only), and last
-                        // a suggestion rather than a match: "Big Hops Together" is not on IGDB, "Big Hops" is.
+                        // Then the title as an alternative name, then, each only when it changes the title: without
+                        // Steam's "(Legacy)" or "Demo" tags, without "Complete Edition" (IGDB lists that edition on
+                        // other platforms only). Then with bundles, which only count once nothing else is called
+                        // this, and last a suggestion rather than a match: "Big Hops Together" is not on IGDB,
+                        // "Big Hops" is.
                         if (next < 0) {
-                            const int order[] = {4, 6, 5};
+                            const int order[] = {7, 4, 6, 8, 5};
                             int from = 0;
-                            for (int i = 0; i < 3; ++i) {
+                            for (int i = 0; i < 5; ++i) {
                                 if (order[i] == stage)
                                     from = i + 1;
                             }
-                            for (int i = from; i < 3; ++i) {
+                            for (int i = from; i < 5; ++i) {
                                 const int s = order[i];
-                                if (s == 4 ? bare != title : s == 6 ? plain != bare : !shorter.isEmpty()) {
+                                if (s == 7 || s == 8 || (s == 4 ? bare != title : s == 6 ? plain != bare : !shorter.isEmpty())) {
                                     next = s;
                                     break;
                                 }
