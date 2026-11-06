@@ -97,7 +97,7 @@ SCENARIOS = [
                lambda r, d: (called_with("--no-gui heroic://launch?appName=HikeApp&runner=legendary&gui=false")(r, d) or [])
                + (adds_the_growth(r, d) or []))], demo_with_heroic),
     Scenario("a game that isn't installed has Install, which opens Heroic and doesn't start a session",
-             [(select_hidden("Fez") + "expect Install\nexpect-not Launch\nclick Install\nwait 800\nexpect Install Fez in Heroic\n"
+             [(select_hidden("Fez") + "expect Install\nexpect-not Launch\nclick Install\nwait 800\nexpect Fez copied; paste it in Heroic's search\n"
                "expect-not Close\n",
                called_with(""))], demo_with_heroic),
     Scenario("Properties shows where it's installed and Open Heroic, with no launch settings",

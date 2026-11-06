@@ -835,11 +835,14 @@ void LaunchTest::heroicInstallAndOpen()
     openWithHeroic();
     // Not installed: Heroic opens, with no game URL, and there's no session to wait for.
     QSignalSpy messages(m_runner.get(), &GameRunner::message);
+    QSignalSpy copied(m_runner.get(), &GameRunner::copyRequested);
     QCOMPARE(m_runner->launch(QStringLiteral("epic-fez")), QString());
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()), QByteArray("\n"), 5000);
     QCOMPARE(m_runner->running(), QStringList());
     QCOMPARE(messages.size(), 1);
-    QCOMPARE(messages.first().first().toString(), QStringLiteral("Install Fez in Heroic"));
+    QCOMPARE(messages.first().first().toString(), QStringLiteral("Fez copied; paste it in Heroic's search"));
+    QCOMPARE(copied.size(), 1);
+    QCOMPARE(copied.first().first().toString(), QStringLiteral("Fez"));
 
     QCOMPARE(m_runner->openHeroic(), QString());
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 2, 5000);

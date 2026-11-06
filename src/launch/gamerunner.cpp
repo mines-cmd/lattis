@@ -500,8 +500,10 @@ QString GameRunner::launchHeroicGame(const Game &game)
     // hidden the dialog is a Wayland protocol error that crashes it on Hyprland.
     if (!game.installed) {
         const QString error = openHeroic();
-        if (error.isEmpty())
-            emit message(tr("Install %1 in Heroic").arg(game.title));
+        if (error.isEmpty()) {
+            emit copyRequested(game.title);
+            emit message(tr("%1 copied; paste it in Heroic's search").arg(game.title));
+        }
         return error;
     }
 

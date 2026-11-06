@@ -34,6 +34,7 @@
 #include "steam/steamstatus.h"
 #include "theme/theme.h"
 
+#include <QClipboard>
 #include <QDir>
 #include <QtConcurrent>
 #include <QElapsedTimer>
@@ -289,6 +290,8 @@ int main(int argc, char *argv[])
          [&library](const QString &id, const QString &name) {
              return library.saveGame(id, {{QStringLiteral("saves_game"), name.isEmpty() ? QVariant() : QVariant(name)}});
          }});
+    QObject::connect(&runner, &GameRunner::copyRequested, &runner,
+                     [](const QString &text) { QGuiApplication::clipboard()->setText(text); });
     QObject::connect(&runner, &GameRunner::sessionStarted, &savesBackup, &SavesBackup::Service::started);
     QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
     QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);

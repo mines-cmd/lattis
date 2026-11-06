@@ -120,6 +120,7 @@ signals:
     void sessionStarted(const QString &gameId);
     void sessionEnded(const QString &gameId);
     void message(const QString &text);
+    void copyRequested(const QString &text);
     void emulatorExited(const QString &gameId);
 
 private:
