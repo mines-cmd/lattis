@@ -124,7 +124,7 @@ Surface {
             cursorShape: Qt.PointingHandCursor
         }
         TapHandler {
-            onTapped: FriendsActivity.openProfile(row.modelData.steamId)
+            onTapped: FriendsActivity.openChat(row.modelData.steamId)
         }
 
         RowLayout {
@@ -268,7 +268,7 @@ Surface {
                             cursorShape: Qt.PointingHandCursor
                         }
                         TapHandler {
-                            onTapped: FriendsActivity.openProfile(tile.friendData.steamId)
+                            onTapped: FriendsActivity.openChat(tile.friendData.steamId)
                         }
                         ToolTip.visible: tileHover.hovered
                         ToolTip.delay: Theme.tooltip.delay

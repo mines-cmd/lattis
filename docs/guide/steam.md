@@ -80,7 +80,7 @@ When the lookup works, each achievement also shows what share of all players unl
 
 ## Friends who play
 
-A Steam game's page shows a **Friends** panel in the right column (under the info panel by default): the friends playing it now (in green), the friends who played it in the last two weeks with their hours (names in blue while online, muted while offline), and a row of pictures of the friends who played it before (hover one for the name and hours). Click a friend to open their profile in Steam; **View all** opens Steam's page of friends who play the game. The top group's heading is the panel's title. The panel is hidden when there is nothing to show.
+A Steam game's page shows a **Friends** panel in the right column (under the info panel by default): the friends playing it now (in green), the friends who played it in the last two weeks with their hours (names in blue while online, muted while offline), and a row of pictures of the friends who played it before (hover one for the name and hours). Click a friend to open a chat with them in Steam; **View all** opens Steam's page of friends who play the game. The top group's heading is the panel's title. The panel is hidden when there is nothing to show.
 
 - **It needs a Steam Web API key** (Settings → Steam → Whole library). Friends whose **Game details** are private, and friends whose list can't be read, are simply missing: nothing marks them.
 - **Only Steam games** have it, not Windows games added through Lattis.

@@ -65,12 +65,12 @@ void FriendsActivity::refreshPlaying()
 }
 
 // Neither URL has been tried in the real client.
-QString FriendsActivity::openProfile(const QString &steamId)
+QString FriendsActivity::openChat(const QString &steamId)
 {
     const bool digits = !steamId.isEmpty() && std::all_of(steamId.cbegin(), steamId.cend(), [](QChar c) { return c.isDigit(); });
     if (!digits || !pendingOpen())
         return {};
-    return pendingOpen()(QStringLiteral("steam://url/SteamIDPage/") + steamId);
+    return pendingOpen()(QStringLiteral("steam://friends/message/") + steamId);
 }
 
 QString FriendsActivity::openFriendsWhoPlay(qint64 appId)

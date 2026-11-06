@@ -32,7 +32,7 @@ public:
     Q_INVOKABLE int playedCount(qint64 appId) const;
     // Asks who is playing now; the call is dropped within a minute of the last one.
     Q_INVOKABLE void refreshPlaying();
-    Q_INVOKABLE QString openProfile(const QString &steamId);
+    Q_INVOKABLE QString openChat(const QString &steamId);
     Q_INVOKABLE QString openFriendsWhoPlay(qint64 appId);
 
 signals:
