@@ -4,7 +4,7 @@ The `src/heroic/` folder finds Heroic Games Launcher and reads its Epic files in
 
 ## Finding Heroic
 
-`HeroicLocate::find()` takes a `HeroicLocations` (the home folder, `XDG_CONFIG_HOME`, `PATH` and Flatpak folders, so tests pass fake ones) and an optional `[heroic] path`. It returns a `HeroicInstall`: the root, native or Flatpak, and the program. Without a path it takes the first of `~/.config/heroic` and the Flatpak's folder that has a library file or an `installed.json`.
+`HeroicLocate::find()` takes a `HeroicLocations` (the home folder, `XDG_CONFIG_HOME`, `PATH` and Flatpak folders, so tests pass fake ones) and an optional `[heroic] path`. It returns a `HeroicInstall`: the root, native or Flatpak, and the program. Without a path it takes the first of `~/.config/heroic` and the Flatpak's folder that has a library file or an `installed.json`. When neither has, `found()` is false but `program` is still set if `heroic` is on the `PATH` or the Flatpak is installed, never to `xdg-open`: that's a Heroic with no library yet, as after a first start without signing in. An AppImage that isn't on the `PATH` can't be told apart from no Heroic. A `[heroic] path` that isn't a Heroic folder leaves `program` empty.
 
 `findProgram()` tries `heroic` on the `PATH` and `flatpak run com.heroicgameslauncher.hgl`, the kind that was found first, then `xdg-open`, which is how an AppImage is reached through its `heroic://` handler. `HeroicProgram::noGui` is false for that last one, as it can't pass `--no-gui`. `launchArgs()` and `openArgs()` build the commands.
 

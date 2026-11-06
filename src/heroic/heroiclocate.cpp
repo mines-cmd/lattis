@@ -111,6 +111,10 @@ HeroicInstall find(const HeroicLocations &where, const QString &configuredPath)
         install.root = flatpak;
         install.kind = HeroicInstall::Kind::Flatpak;
     } else {
+        // Without xdg-open, which any desktop has: this is what tells Heroic with no library yet from no Heroic.
+        install.program = nativeProgram(where);
+        if (!install.program.found())
+            install.program = flatpakProgram(where);
         return install;
     }
     install.program = findProgram(install.kind, where);

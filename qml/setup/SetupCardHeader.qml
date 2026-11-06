@@ -32,6 +32,7 @@ ColumnLayout {
     }
     SettingsNote {
         id: subtitleLabel
+        visible: text !== ""
         Layout.fillWidth: true
         Layout.leftMargin: Theme.controls.iconSize + Theme.layout.spacing
     }

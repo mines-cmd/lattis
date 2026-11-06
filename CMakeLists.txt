@@ -162,6 +162,7 @@ qt_add_qml_module(lattis
         qml/setup/SetupCoverWall.qml
         qml/setup/SetupWelcome.qml
         qml/setup/SetupSteam.qml
+        qml/setup/SetupHeroic.qml
         qml/setup/SetupCardHeader.qml
         qml/setup/SetupDivider.qml
         qml/setup/SetupFold.qml

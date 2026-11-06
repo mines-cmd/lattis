@@ -13,12 +13,14 @@ FocusScope {
     property int current: 0
     property var visited: [0]
 
-    readonly property int lookStep: 4
-    readonly property int doneStep: 5
+    readonly property int lookStep: 5
+    readonly property int doneStep: 6
     readonly property var steps: [
         { name: qsTr("Welcome"), title: "", description: "" },
         { name: qsTr("Steam"), title: qsTr("Steam"),
           description: qsTr("Two ways to bring in Steam games: the ones installed here, or everything you own after signing in.") },
+        { name: qsTr("Heroic"), title: qsTr("Heroic"),
+          description: qsTr("Your Epic games, installed or not. Heroic keeps installing, updating and running them; Lattis only reads its files.") },
         { name: qsTr("Emulators"), title: qsTr("Emulators and ROM folders"),
           description: qsTr("Install the emulators you need, then add the folders where your ROMs are. Each platform's folders are scanned for new games at every start.") },
         { name: qsTr("Game info"), title: qsTr("Game info"),
@@ -190,6 +192,10 @@ FocusScope {
     Component {
         id: steamPage
         SetupSteam { guide: root }
+    }
+    Component {
+        id: heroicPage
+        SetupHeroic { guide: root }
     }
     Component {
         id: emulatorsPage
@@ -531,7 +537,7 @@ FocusScope {
                                             Layout.fillWidth: true
                                             Layout.fillHeight: true
                                             active: root.visited.includes(slot.index)
-                                            sourceComponent: [welcomePage, steamPage, emulatorsPage, metadataPage, lookPage, donePage][slot.index]
+                                            sourceComponent: [welcomePage, steamPage, heroicPage, emulatorsPage, metadataPage, lookPage, donePage][slot.index]
                                         }
                                     }
                                     // The leaving page keeps the height it had.

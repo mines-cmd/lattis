@@ -67,6 +67,10 @@ private slots:
     void flatpakNeedsTheApp();
     void programXdgOpen();
     void noProgram();
+    void programWithoutRoot();
+    void flatpakWithoutRoot();
+    void xdgOpenWithoutRoot();
+    void noProgramForMissingPath();
 
     void wholeLibrary();
     void installedDecides();
@@ -294,6 +298,39 @@ void HeroicTest::noProgram()
     writeLibrary(nativeRoot(), cache({}));
     const HeroicInstall install = HeroicLocate::find(m_where);
     QVERIFY(install.found());
+    QVERIFY(!install.program.found());
+}
+
+void HeroicTest::programWithoutRoot()
+{
+    const QString bin = m_where.pathDirs.first();
+    writeProgram(bin, u"heroic"_s);
+    const HeroicInstall install = HeroicLocate::find(m_where);
+    QVERIFY(!install.found());
+    QCOMPARE(install.program.program, bin + u"/heroic"_s);
+}
+
+void HeroicTest::flatpakWithoutRoot()
+{
+    const QString bin = m_where.pathDirs.first();
+    writeProgram(bin, u"flatpak"_s);
+    QVERIFY(QDir().mkpath(m_where.flatpakDirs.first() + u"/com.heroicgameslauncher.hgl/current"_s));
+    const HeroicInstall install = HeroicLocate::find(m_where);
+    QVERIFY(!install.found());
+    QCOMPARE(install.program.program, bin + u"/flatpak"_s);
+}
+
+void HeroicTest::xdgOpenWithoutRoot()
+{
+    writeProgram(m_where.pathDirs.first(), u"xdg-open"_s);
+    QVERIFY(!HeroicLocate::find(m_where).program.found());
+}
+
+void HeroicTest::noProgramForMissingPath()
+{
+    writeProgram(m_where.pathDirs.first(), u"heroic"_s);
+    const HeroicInstall install = HeroicLocate::find(m_where, m_root + u"/nothing"_s);
+    QVERIFY(install.pathMissing);
     QVERIFY(!install.program.found());
 }
 
