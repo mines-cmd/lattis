@@ -394,6 +394,11 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `setup/SetupLook.qml` | Setup guide: colors cards and a Style row; each picks only its half, and the cards wear the chosen style's corners. The cards scroll in their own list (`onboarding.theme_rows` rows tall) while the Style row stays in view |
 | `setup/SetupMetadata.qml` | Setup guide: API keys step |
 | `setup/SetupSteam.qml` | Setup guide: Steam import step |
+| `setup/SetupCardHeader.qml` | A setup card's header: icon, title, a tag on the right, and a subtitle |
+| `setup/SetupDivider.qml` | The line between a setup card's rows, reaching the card's edges; follows `settings_window.row_dividers` |
+| `setup/SetupFold.qml` | An `Unfold` for a setup page's layouts: out of the layout when folded, and `gap` (the spacing around it) grows in with the unfold |
+| `setup/SetupFoundMark.qml` | The check mark beside something the guide found; `found` fades it in and out |
+| `setup/SetupRow.qml` | A setup card's row: label and note on the left, its children (the controls) on the right |
 | `setup/SetupWelcome.qml` | Setup guide: welcome step |
 | `settings/AppearancePage.qml` | The theme in use: theme cards, colors and style pickers, Save as theme |
 | `settings/CustomizePage.qml` | Every color and style setting by section, generated from ThemeSchema, with the theme popover and Show |

@@ -36,130 +36,26 @@ ColumnLayout {
         set("default_presets", steam.presets.map(p => p.id).filter(p => ids.includes(p)))
     }
 
-    component Divider: Rectangle {
-        visible: Theme.settingsWindow.rowDividers
-        Layout.fillWidth: true
-        Layout.leftMargin: -Theme.settingsWindow.rowPadding
-        Layout.rightMargin: -Theme.settingsWindow.rowPadding
-        implicitHeight: 1
-        color: Theme.settingsWindow.rowDivider
-    }
-
-    component Row: RowLayout {
-        id: row
-        property alias label: name.text
-        property alias note: noteLabel.text
-        property alias noteColor: noteLabel.color
-        default property alias controls: controlRow.data
-
-        Layout.fillWidth: true
-        spacing: Theme.layout.spacing * 1.5
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 2
-            Label {
-                id: name
-                Layout.fillWidth: true
-                color: Theme.controls.labelColor
-                font.pixelSize: Theme.controls.labelFontSize
-                wrapMode: Text.Wrap
-            }
-            SettingsNote {
-                id: noteLabel
-                visible: text !== ""
-                Layout.fillWidth: true
-                linkColor: Theme.gameEditor.linkColor
-                onLinkActivated: link => Qt.openUrlExternally(link)
-            }
-        }
-        RowLayout {
-            id: controlRow
-            spacing: Theme.layout.spacing
-        }
-    }
-
-    component Fold: Unfold {
-        required property real gap
-
-        // Out of the layout when folded; the negative margin hides its spacing until it opens, so
-        // the gap doesn't snap in at the start of the unfold.
-        visible: open || progress > 0
-        spacing: Theme.layout.spacing
-        Layout.fillWidth: true
-        Layout.bottomMargin: -gap * (1 - progress)
-    }
-
-    component CardHeader: ColumnLayout {
-        id: header
-        property string icon
-        property alias title: titleLabel.text
-        property alias tag: tagLabel.text
-        property alias subtitle: subtitleLabel.text
-
-        Layout.fillWidth: true
-        spacing: 2
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Icon {
-                path: header.icon
-                size: Theme.controls.iconSize
-                color: Theme.controls.descriptionColor
-            }
-            Label {
-                id: titleLabel
-                Layout.fillWidth: true
-                color: Theme.controls.labelColor
-                font.pixelSize: Theme.controls.labelFontSize
-                font.weight: Theme.font.strongWeight
-            }
-            SettingsNote { id: tagLabel }
-        }
-        SettingsNote {
-            id: subtitleLabel
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.controls.iconSize + Theme.layout.spacing
-        }
-    }
-
     SettingsCard {
         panel: true
 
-        CardHeader {
+        SetupCardHeader {
             icon: Icons.computer
             title: qsTr("Installed on this computer")
             tag: qsTr("No sign-in needed")
             subtitle: qsTr("Games Steam has downloaded here.")
         }
-        Fold {
+        SetupFold {
             open: root.steam.enabled
             gap: Theme.layout.spacing
-            Divider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
+            SetupDivider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
 
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing * 1.5
 
-                Rectangle {
-                    opacity: root.held.found ? 1 : 0
-                    visible: opacity > 0
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                    implicitWidth: Theme.onboarding.foundIconSize
-                    implicitHeight: Theme.onboarding.foundIconSize
-                    radius: width / 2
-                    color: Qt.alpha(Theme.onboarding.foundColor, Theme.onboarding.stepDoneOpacity)
-
-                    Icon {
-                        anchors.centerIn: parent
-                        path: Icons.check
-                        size: Math.round(Theme.onboarding.foundIconSize / 2)
-                        color: Theme.onboarding.foundColor
-                    }
-                }
-                Row {
+                SetupFoundMark { found: root.held.found }
+                SetupRow {
                     label: root.heldLooking ? qsTr("Looking for Steam…")
                            : root.held.found ? qsTr("Steam found") : qsTr("Steam wasn't found")
                     note: root.heldLooking ? ""
@@ -200,10 +96,10 @@ ColumnLayout {
                     }
                 }
             }
-            Divider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
+            SetupDivider { visible: Theme.settingsWindow.rowDividers && root.held.enabled }
         }
 
-        Row {
+        SetupRow {
             label: qsTr("Import installed games")
             note: !root.held.enabled ? qsTr("Off: installed Steam games won't be imported.")
                   : !root.held.found ? ""
@@ -219,11 +115,11 @@ ColumnLayout {
             }
         }
 
-        Fold {
+        SetupFold {
             open: root.steam.found
             gap: Theme.layout.spacing
-            Divider { visible: Theme.settingsWindow.rowDividers && root.steam.found }
-            Row {
+            SetupDivider { visible: Theme.settingsWindow.rowDividers && root.steam.found }
+            SetupRow {
                 label: qsTr("Non-Steam games")
                 note: !root.steam.shortcutsOk ? qsTr("Steam's list of non-Steam games couldn't be read.")
                       : root.steam.shortcuts === 0 ? qsTr("Steam has no non-Steam games.")
@@ -248,20 +144,20 @@ ColumnLayout {
         }
     }
 
-    Fold {
+    SetupFold {
         open: root.steam.found && root.steam.enabled
         gap: Theme.onboarding.spacing
         SettingsCard {
             panel: true
 
-            CardHeader {
+            SetupCardHeader {
                 icon: Icons.steamLine
                 title: qsTr("Your whole library")
                 tag: qsTr("optional")
                 subtitle: qsTr("Every game your account owns, installed or not.")
             }
-            Divider { visible: Theme.settingsWindow.rowDividers }
-            Row {
+            SetupDivider { visible: Theme.settingsWindow.rowDividers }
+            SetupRow {
                 label: SteamLibrary.authState === "signed_in" ? qsTr("Signed in as %1").arg(SteamLibrary.accountName)
                        : qsTr("Sign in with a QR code")
                 note: SteamLibrary.authState === "signed_in"
@@ -284,7 +180,7 @@ ColumnLayout {
                     onClicked: SteamLibrary.signOut()
                 }
             }
-            Divider { visible: Theme.settingsWindow.rowDividers }
+            SetupDivider { visible: Theme.settingsWindow.rowDividers }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing
@@ -319,13 +215,13 @@ ColumnLayout {
         }
     }
 
-    Fold {
+    SetupFold {
         open: root.steam.found && root.tools.length > 0
         gap: Theme.onboarding.spacing
         SettingsCard {
             panel: true
 
-            Row {
+            SetupRow {
                 label: qsTr("Start new Steam games with")
                 note: qsTr("Added to a game's launch options when it's first imported. Only tools found on this "
                            + "computer are listed.")

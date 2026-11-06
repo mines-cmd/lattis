@@ -162,6 +162,11 @@ qt_add_qml_module(lattis
         qml/setup/SetupCoverWall.qml
         qml/setup/SetupWelcome.qml
         qml/setup/SetupSteam.qml
+        qml/setup/SetupCardHeader.qml
+        qml/setup/SetupDivider.qml
+        qml/setup/SetupFold.qml
+        qml/setup/SetupFoundMark.qml
+        qml/setup/SetupRow.qml
         qml/setup/SetupEmulators.qml
         qml/setup/SetupPlatformRow.qml
         qml/setup/SetupMetadata.qml
