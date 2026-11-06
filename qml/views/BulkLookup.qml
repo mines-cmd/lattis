@@ -163,20 +163,22 @@ ApplicationWindow {
         return keys.map(k => fieldNames[k] ?? kindNames[k] ?? k).join(", ")
     }
 
-    function artSteps() {
-        return lookupModel.results.filter(r => ["matched", "notFound", "notOnIgdb"].includes(r.state) && r.art.some(a => !a.none)).map(r => {
+    // A game with no art of its own only when asked for: Other game is what it's opened for.
+    function artSteps(id) {
+        return lookupModel.results.filter(r => ["matched", "notFound", "notOnIgdb"].includes(r.state)
+                                               && (r.id === id ? r.art.length > 0 : r.art.some(a => !a.none))).map(r => {
             const picks = {}
             for (const a of r.art) {
                 if (a.checked && a.image)
                     picks[a.kind] = a.image
             }
             return { id: r.id, title: r.title, steamGridDbId: lookupModel.steamGridDbId(r.id),
-                     kinds: r.art.filter(a => !a.none).map(a => a.kind), picks: picks,
+                     kinds: r.art.filter(a => !a.none || r.id === id).map(a => a.kind), picks: picks,
                      steamApp: lookupModel.steamApp(r.id) }
         })
     }
     function browseArt(id, kind) {
-        const steps = artSteps()
+        const steps = artSteps(id)
         const index = Math.max(0, steps.findIndex(s => s.id === id))
         if (steps.length === 0)
             return
@@ -346,24 +348,24 @@ ApplicationWindow {
         colorizationColor: "black"
     }
 
-    // A picture of the art about to be added; click it to choose another.
+    // A picture of the art about to be added, or "None found"; click it to choose another.
     component ArtPick: Item {
         id: pick
         required property string kind
         required property string gameId
         property var entry
-        readonly property bool found: entry !== undefined && !(entry?.none ?? false)
-        visible: found
+        readonly property bool none: entry?.none ?? false
+        visible: entry !== undefined
         MouseArea {
             id: pickArea
             anchors.fill: parent
-            enabled: pick.found
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: root.browseArt(pick.gameId, pick.kind)
             ToolTip.visible: containsMouse
             ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: qsTr("Choose another %1").arg(root.artKindNames[pick.kind].toLowerCase())
+            ToolTip.text: (pick.none ? qsTr("Choose a %1 from another game") : qsTr("Choose another %1"))
+                .arg(root.artKindNames[pick.kind].toLowerCase())
         }
         Rectangle {
             anchors.fill: parent

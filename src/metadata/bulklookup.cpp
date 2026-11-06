@@ -909,6 +909,9 @@ void BulkLookup::setArt(const QString &id, const QString &kind, const QVariantMa
     Art &a = r->art[kind];
     a.image = image;
     a.checked = !image.isEmpty();
+    // SteamGridDB had none, and this is another game's.
+    if (a.byDefault.isEmpty())
+        a.none = image.isEmpty();
     emit resultsChanged();
 }
 

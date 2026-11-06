@@ -1867,6 +1867,11 @@ void MetadataTest::bulkLookUp()
     QCOMPARE(hades.value("state").toString(), QStringLiteral("matched"));
     QVERIFY(hades.value("fields").toList().isEmpty());
     QVERIFY(artOf(hades, "hero").value("none").toBool());
+    // Another game's art fills a kind that had none, and taking it back leaves none again.
+    bulk.setArt(QStringLiteral("steam-1145360"), "hero", {{"id", 7}, {"url", "https://cdn2.steamgriddb.com/hero/other.png"}});
+    QVERIFY(!artOf(resultFor(bulk, "steam-1145360"), "hero").value("none").toBool());
+    bulk.setArt(QStringLiteral("steam-1145360"), "hero", {});
+    QVERIFY(artOf(resultFor(bulk, "steam-1145360"), "hero").value("none").toBool());
     QVERIFY(!artOf(hades, "hero").value("checked").toBool());
     QVERIFY(artOf(hades, "cover").isEmpty()); // it has one
 

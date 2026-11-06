@@ -70,8 +70,12 @@ Item {
         stepIndex = index
         const step = steps[index]
         shownKinds = step.kinds
-        openFor(step.steamGridDbId, step.title, startKind === "steam" || step.kinds.includes(startKind) ? startKind : step.kinds[0],
-                step.picks, step.steamApp)
+        const kind = startKind === "steam" || step.kinds.includes(startKind) ? startKind : step.kinds[0]
+        if (step.steamGridDbId > 0) {
+            openFor(step.steamGridDbId, step.title, kind, step.picks, step.steamApp)
+            return
+        }
+        openWithoutGame(step.title, kind, step.steamApp, step.picks)
     }
 
     function openFor(steamGridDbId, title, startKind, preselected, steamAppId) {
@@ -91,14 +95,15 @@ Item {
             popup.open()
     }
 
-    function openWithoutGame(title, startKind, steamAppId) {
+    function openWithoutGame(title, startKind, steamAppId, preselected) {
         ownId = 0
         ownTitle = title
-        picks = {}
+        picks = Object.assign({}, preselected ?? {})
         downloading = {}
         downloaded = {}
         error.text = ""
-        shownKinds = kinds.map(k => k.id)
+        if (!bulk)
+            shownKinds = kinds.map(k => k.id)
         resetSteam(steamAppId)
         resetSearch()
         resetTabs(0, title, startKind)
@@ -572,7 +577,8 @@ Item {
                 SettingsTextField {
                     id: searchField
                     visible: root.searching
-                    Layout.preferredWidth: parent.width / 2
+                    // Not the row's own width: that sets off a recursive rearrange when it opens searching.
+                    Layout.preferredWidth: popup.availableWidth / 2
                     implicitHeight: Theme.controls.buttonHeight
                     leftPadding: Theme.controls.iconSize + 22
                     rightPadding: Theme.controls.iconSize + 22

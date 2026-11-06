@@ -89,6 +89,12 @@ SCENARIOS = [
                + "expect Look up Mario Tennis Aces in IGDB\nclick Cancel\n"
                + "expect-not Look up Mario Tennis Aces in IGDB\nexpect Matched\n", None)],
              setup(files={ACES_FILE: BARE_ACES})),
+    Scenario("bulk lookup: None found opens the art browser on another game",
+             [(FIRST + bulk("Mario Tennis") + "expect Matched\nexpect None found\nclick None found\nwait 800\n"
+               + "expect-has Art for Mario Tennis Aces\nexpect Search SteamGridDB\nclick Done\nwait 500\n"
+               + "expect-not-has Art for Mario Tennis Aces\n"
+               + "expect Matched\n", None)],
+             setup({"sgdb-search-mario-tennis-aces.json": '{"success": true, "data": []}'}, {ACES_FILE: BARE_ACES})),
     Scenario("bulk lookup: several games of one name need a pick",
              [(FIRST + bulk("Metroid") + "expect Which game?\nexpect Needs a pick\n", None)], setup()),
     Scenario("bulk lookup: an unknown title is Not found and can be marked Not on IGDB",
