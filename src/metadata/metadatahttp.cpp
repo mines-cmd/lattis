@@ -126,11 +126,13 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
                 out.error = tr("%1 sent an answer the launcher couldn't read").arg(name);
         }
         // The path only: a URL's query could hold a key, and Qt's error text quotes the whole URL.
-        // A normal 404: ProtonDB has no reports for the game, or SteamGridDB doesn't know the app id
-        // and findArt() goes on to search by title.
+        // A normal 404: ProtonDB has no reports for the game, SteamGridDB doesn't know the app id and
+        // findArt() goes on to search by title, or a Steam app has no logo at the fixed path.
+        const QString requested = reply->url().path();
         const bool expected = out.status == 404
             && (service == Service::ProtonDb
-                || (service == Service::SteamGridDb && reply->url().path().contains(QLatin1String("/games/steam/"))));
+                || (service == Service::SteamGridDb
+                    && (requested.contains(QLatin1String("/games/steam/")) || requested.endsWith(QLatin1String("/logo.png")))));
         if (!out.ok() && !expected) {
             QString detail = reply->errorString();
             if (const QString query = reply->url().query(QUrl::FullyEncoded); !query.isEmpty())

@@ -44,6 +44,7 @@ QString kindName(const QString &kind)
 }
 
 const QStringList kKinds = {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo"), QStringLiteral("icon")};
+const QStringList kSteamKinds = {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo")};
 
 constexpr int kWriteBatch = 50;
 constexpr int kArtBatch = 20;
@@ -452,6 +453,7 @@ void BulkLookup::lookUp(Row &r)
     r.fields.clear();
     r.art.clear();
     r.artFailed = false;
+    r.steamLooked = false;
     r.igdb = -1;
     r.steamgriddb = 0;
     QVariantList platforms;
@@ -485,6 +487,7 @@ void BulkLookup::resolve(Row &r, const QVariantMap &candidate)
     r.uncheckedTags.clear();
     r.art.clear();
     r.artFailed = false;
+    r.steamLooked = false;
     if (m_suggestTags && m_tagMappings)
         r.tags = Igdb::fittingTags(candidate.value(QStringLiteral("facets")).toStringList(), m_tagMappings(), r.game.tags);
     const QStringList missing = r.game.missing();
@@ -532,6 +535,33 @@ QStringList BulkLookup::artKinds(const Row &r)
             out.append(kind);
     }
     return out;
+}
+
+// What SteamGridDB has none of can be on the game's Steam page, whichever store it's from here.
+bool BulkLookup::lookForSteamArt(Row &r)
+{
+    if (r.steamLooked || r.state != State::Running || r.game.platform == kSteamPlatform)
+        return false;
+    r.steamLooked = true;
+    const bool wanted = std::any_of(kSteamKinds.cbegin(), kSteamKinds.cend(), [&](const QString &kind) {
+        return r.art.contains(kind) && r.art.value(kind).none && !r.art.value(kind).replaces;
+    });
+    if (!wanted)
+        return false;
+    if (r.steamApp > 0) {
+        askSteamArt(r);
+    } else {
+        ++r.pending;
+        m_requests.insert(m_client->findSteamApp(r.match.value(QStringLiteral("name")).toString()),
+                          {r.game.id, Step::SteamApp, {}});
+    }
+    return true;
+}
+
+void BulkLookup::askSteamArt(Row &r)
+{
+    ++r.pending;
+    m_requests.insert(m_client->steamArt(r.steamApp), {r.game.id, Step::SteamArt, {}});
 }
 
 // Art for a game IGDB doesn't have (a ROM hack), from SteamGridDB's clear match for the title as searched.
@@ -636,9 +666,45 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         }
         break;
     }
+    case Step::SteamApp:
+        r->artFailed = r->artFailed || !error.isEmpty();
+        if (const int appId = result.value(QStringLiteral("steamAppId")).toInt(); appId > 0) {
+            r->steamApp = appId;
+            askSteamArt(*r);
+        }
+        break;
+    case Step::SteamArt:
+        r->artFailed = r->artFailed || !error.isEmpty();
+        for (const QVariant &v : result.value(QStringLiteral("images")).toList()) {
+            const QVariantMap image = v.toMap();
+            const QString kind = image.value(QStringLiteral("kind")).toString();
+            const auto art = r->art.find(kind);
+            if (art == r->art.end() || !art->none || art->replaces)
+                continue;
+            if (kind != QLatin1String("logo")) {
+                *art = {image, image, true, false, false};
+                continue;
+            }
+            // Steam's logo path doesn't say whether the app has one.
+            art->image = image;
+            ++r->pending;
+            m_requests.insert(m_client->download(image.value(QStringLiteral("url")).toString(), kind),
+                              {r->game.id, Step::SteamLogo, kind});
+        }
+        break;
+    case Step::SteamLogo: {
+        Art &art = r->art[req.kind];
+        if (error.isEmpty())
+            art = {art.image, art.image, true, false, false};
+        else
+            art.image = {};
+        break;
+    }
     case Step::Download:
         break;
     }
+    if (r->pending == 0 && lookForSteamArt(*r))
+        return emit resultsChanged();
     if (r->pending == 0) {
         if (r->state == State::Running)
             r->state = State::Matched;

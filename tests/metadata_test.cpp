@@ -108,6 +108,7 @@ private slots:
     void bulkLookUp();
     void bulkStopKeepsResults();
     void bulkArtDefaults();
+    void bulkArtFromSteam();
     void bulkApply();
     void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
@@ -1929,6 +1930,42 @@ void MetadataTest::bulkStopKeepsResults()
         QVERIFY(r.toMap().value("state").toString() != QLatin1String("running"));
     QTest::qWait(200); // nothing comes in late
     QCOMPARE(bulk.results().size(), kept);
+}
+
+void MetadataTest::bulkArtFromSteam()
+{
+    BulkSetup s;
+    LookupGame game;
+    game.id = QStringLiteral("epic-hades");
+    game.title = QStringLiteral("Hades");
+    game.platform = QStringLiteral("epic");
+    game.igdbPlatforms = {6};
+    s.games = {game};
+    s.bulk.reload();
+    s.bulk.start();
+    QTRY_VERIFY(!s.bulk.running());
+
+    // Several games have its name; the pick is the one IGDB links to Steam.
+    const QVariantList candidates = resultFor(s.bulk, "epic-hades").value("candidates").toList();
+    const auto steamGame = std::find_if(candidates.cbegin(), candidates.cend(), [](const QVariant &c) {
+        return c.toMap().value("steamAppId").toLongLong() == 1145360;
+    });
+    QVERIFY(steamGame != candidates.cend());
+    s.bulk.pick(game.id, int(steamGame - candidates.cbegin()));
+    QTRY_COMPARE(resultFor(s.bulk, "epic-hades").value("state").toString(), QStringLiteral("matched"));
+
+    // SteamGridDB has no hero, logo or icon for it in the fixtures; Steam has no icons.
+    const QVariantMap r = resultFor(s.bulk, "epic-hades");
+    const QVariantMap hero = artOf(r, "hero");
+    QVERIFY(hero.value("checked").toBool());
+    QVERIFY(hero.value("image").toMap().value("url").toString().contains(QStringLiteral("library_hero_2x")));
+    const QVariantMap logo = artOf(r, "logo");
+    QVERIFY(logo.value("checked").toBool());
+    QVERIFY(logo.value("image").toMap().value("url").toString().endsWith(QStringLiteral("/logo.png")));
+    QVERIFY(artOf(r, "icon").value("none").toBool());
+    const QStringList marked = r.value("unavailable").toStringList();
+    QVERIFY(marked.contains(QStringLiteral("icon")));
+    QVERIFY(!marked.contains(QStringLiteral("logo")) && !marked.contains(QStringLiteral("hero")));
 }
 
 void MetadataTest::bulkArtDefaults()

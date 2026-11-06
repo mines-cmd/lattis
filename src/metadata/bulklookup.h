@@ -176,9 +176,10 @@ private:
         int steamApp = 0;
         int pending = 0;
         bool artFailed = false; // so SteamGridDB isn't taken to have none
+        bool steamLooked = false;
         QString applyError;
     };
-    enum class Step { Lookup, FindArt, ArtChoices, Download, Prefetch };
+    enum class Step { Lookup, FindArt, ArtChoices, SteamApp, SteamArt, SteamLogo, Download, Prefetch };
     struct Request
     {
         QString id;
@@ -202,6 +203,8 @@ private:
     void resolve(Row &row, const QVariantMap &candidate);
     static QStringList artKinds(const Row &row);
     bool findArtByTitle(Row &row);
+    bool lookForSteamArt(Row &row);
+    void askSteamArt(Row &row);
     void finished(int request, const QVariantMap &result);
     void rowDone(Row &row);
     void cancelRow(const QString &id);
