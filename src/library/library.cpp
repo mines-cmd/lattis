@@ -789,6 +789,10 @@ QVariantMap Library::buildHeroic() const
     const int installed = int(std::count_if(m_games.cbegin(), m_games.cend(), [](const Game &g) {
         return g.platform == kEpicPlatform && g.installed;
     }));
+    // The merge's own list: with installed.json unreadable, the cache says what's installed.
+    const QList<HeroicGame> scanned = m_store.snapshot().heroicScan.games();
+    const int scanInstalled = int(std::count_if(scanned.cbegin(), scanned.cend(),
+                                                [](const HeroicGame &g) { return g.installed; }));
 
     QString status;
     bool problem = false;
@@ -817,9 +821,13 @@ QVariantMap Library::buildHeroic() const
         {QStringLiteral("wholeLibrary"), m_heroicSettings.wholeLibrary},
         {QStringLiteral("found"), m_heroicSettings.enabled && install.found()},
         {QStringLiteral("programFound"), install.program.found()},
+        {QStringLiteral("flatpak"), install.kind == HeroicInstall::Kind::Flatpak},
         {QStringLiteral("root"), install.root},
+        {QStringLiteral("shownRoot"), shownRoot},
         {QStringLiteral("games"), games},
         {QStringLiteral("installed"), installed},
+        {QStringLiteral("scanInstalled"), scanInstalled},
+        {QStringLiteral("scanOwned"), int(scanned.size())},
         {QStringLiteral("status"), status},
         {QStringLiteral("problem"), problem},
     };

@@ -850,7 +850,10 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     out.changed = out.changed || out.steamChanged || s.content.steam != previous.content.steam;
 
     scanHeroic(s, out, settings, options, dataDir, previous.heroicScan);
-    out.changed = out.changed || s.heroic != previous.heroic || s.content.heroic != previous.content.heroic;
+    // Setup merges nothing, so Library.heroic's counts have only the scan to change with. The disk
+    // cache doesn't keep it either, so this also covers a guide reopened after a restart.
+    out.changed = out.changed || s.heroic != previous.heroic || s.content.heroic != previous.content.heroic
+                  || (options.setup && s.heroicScan != previous.heroicScan);
 
     s.steamQueued.clear();
     if (!options.steamSyncRecord.isEmpty() && s.steam.install.found() && !options.setup)

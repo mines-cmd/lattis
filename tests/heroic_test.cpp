@@ -487,7 +487,8 @@ void HeroicTest::watchPaths()
 {
     QVERIFY(QDir().mkpath(m_root));
     QCOMPARE(HeroicScan::scan(m_root).watchPaths(),
-             (QStringList{m_root + u"/legendaryConfig/legendary/installed.json"_s, m_root + u"/store/timestamp.json"_s}));
+             (QStringList{m_root + u"/store_cache/legendary_library.json"_s,
+                          m_root + u"/legendaryConfig/legendary/installed.json"_s, m_root + u"/store/timestamp.json"_s}));
 }
 
 void HeroicTest::noRoot()

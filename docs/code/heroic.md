@@ -22,7 +22,7 @@ All paths are under the root:
 
 The flags say what the absence of a game means. `libraryKnown` is only true for a readable cache that lists something, because Heroic can blank a store it can't read. `installedOk` and `playTimeOk` are true when the file was read or doesn't exist. Nothing here decides anything from them: that's `HeroicMerge`.
 
-`HeroicState::games()` joins the two lists, with `installed.json` deciding what's installed, as the cache only changes on a refresh. `watchPaths()` is what `LibraryStore` watches. `lastPlayed()` reads one game's date for a running session. `cachedImage()` finds an image in `images-cache/`, where Heroic names a copy by the SHA-256 of its URL plus its resize parameters.
+`HeroicState::games()` joins the two lists, with `installed.json` deciding what's installed, as the cache only changes on a refresh. `watchPaths()` is what `LibraryStore` watches: all three files. `lastPlayed()` reads one game's date for a running session. `cachedImage()` finds an image in `images-cache/`, where Heroic names a copy by the SHA-256 of its URL plus its resize parameters.
 
 `HeroicListing` is the part of a scan the disk cache keeps. It's keyed by game id and holds no art URLs, so the first frame doesn't read them.
 

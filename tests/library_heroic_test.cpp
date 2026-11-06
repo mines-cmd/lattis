@@ -16,6 +16,7 @@ struct CacheGame
     QString appName;
     QString title;
     bool dlc = false;
+    bool installed = false;
 };
 
 QByteArray libraryCache(const QList<CacheGame> &games)
@@ -24,6 +25,7 @@ QByteArray libraryCache(const QList<CacheGame> &games)
     for (const CacheGame &g : games) {
         list.append(QJsonObject{{u"app_name"_s, g.appName},
                                 {u"title"_s, g.title},
+                                {u"is_installed"_s, g.installed},
                                 {u"install"_s, QJsonObject{{u"is_dlc"_s, g.dlc}}}});
     }
     return QJsonDocument(QJsonObject{{u"library"_s, list}}).toJson(QJsonDocument::Compact);
@@ -90,6 +92,11 @@ private slots:
     void aGameSaysWhoRunsIt();
     void settingsShowWhatWasFound();
     void settingsSaveTheirValues();
+    void setupCountsTheScan();
+    void setupShowsAFlatpakRoot();
+    void setupNoticesARefreshedCache();
+    void finishAddsWhatSetupCounted_data();
+    void finishAddsWhatSetupCounted();
 
 private:
     QString heroicRoot() const { return m_installs.home + u"/.config/heroic"_s; }
@@ -138,6 +145,8 @@ private:
     QByteArray fezFile() const { return readFile(m_data + u"/library/games/epic-fez.toml"_s); }
     QList<PlayHistory::Session> fezHistory() const { return PlayHistory::read(m_data, u"epic-fez"_s).value.sessions; }
     std::unique_ptr<Library> openWithFez(int minutes);
+    std::unique_ptr<Library> openInSetup();
+    void replaceLibrary(const QByteArray &text);
     void rescan(Library &library);
 };
 
@@ -738,6 +747,122 @@ void LibraryHeroicTest::settingsSaveTheirValues()
     QVERIFY(!settings().contains("~/heroic"));
 
     QVERIFY(!library->setHeroicValue(u"colour"_s, true).isEmpty());
+}
+
+std::unique_ptr<Library> LibraryHeroicTest::openInSetup()
+{
+    const QString info = m_data + u"/library/library.toml"_s;
+    writeFile(info, readFile(info) + "setup = \"pending\"\n");
+    auto library = openLibrary();
+    if (!library->setupPending())
+        qWarning("openInSetup: the library isn't in setup");
+    return library;
+}
+
+// As Heroic saves it: a new file renamed over the old one, which drops a watch on it.
+void LibraryHeroicTest::replaceLibrary(const QByteArray &text)
+{
+    const QString path = HeroicScan::libraryPath(heroicRoot());
+    writeFile(path + u".new"_s, text);
+    QVERIFY(QFile::remove(path));
+    QVERIFY(QFile::rename(path + u".new"_s, path));
+}
+
+void LibraryHeroicTest::setupCountsTheScan()
+{
+    writeLibrary(libraryCache(kLibrary));
+    // Off the cache, as a game can be until Heroic refreshes it.
+    writeInstalled(installedFile({u"FezApp"_s, u"RimeApp"_s}));
+    auto library = openInSetup();
+
+    QVariantMap heroic = library->heroic();
+    QVERIFY(heroic.value(u"found"_s).toBool());
+    QCOMPARE(heroic.value(u"scanInstalled"_s).toInt(), 2);
+    QCOMPARE(heroic.value(u"scanOwned"_s).toInt(), 3);
+    QCOMPARE(heroic.value(u"games"_s).toInt(), 0);
+    QCOMPARE(heroic.value(u"installed"_s).toInt(), 0);
+    QVERIFY(!heroic.value(u"flatpak"_s).toBool());
+    QCOMPARE(heroic.value(u"shownRoot"_s).toString(), heroic.value(u"root"_s).toString());
+    QVERIFY(!QFile::exists(heroicIndexPath()));
+
+    // Closed halfway: the disk cache has no scan, so the next start's counts come from its own.
+    library.reset();
+    library = openLibrary();
+    QVERIFY(library->setupPending());
+    QCOMPARE(library->heroic().value(u"scanOwned"_s).toInt(), 3);
+}
+
+void LibraryHeroicTest::setupShowsAFlatpakRoot()
+{
+    const HeroicLocations where = fakeHeroic();
+    writeFile(HeroicScan::libraryPath(where.flatpakRoot()), libraryCache(kLibrary));
+    auto library = openInSetup();
+    const QVariantMap heroic = library->heroic();
+    QVERIFY(heroic.value(u"flatpak"_s).toBool());
+    QCOMPARE(heroic.value(u"scanOwned"_s).toInt(), 2);
+}
+
+void LibraryHeroicTest::setupNoticesARefreshedCache()
+{
+    writeLibrary(libraryCache({}));
+    auto library = openInSetup();
+    QCOMPARE(library->heroic().value(u"scanOwned"_s).toInt(), 0);
+
+    // Twice, as the first replacement drops the watch.
+    replaceLibrary(libraryCache({kLibrary.first()}));
+    QTRY_COMPARE_WITH_TIMEOUT(library->heroic().value(u"scanOwned"_s).toInt(), 1, 5000);
+    replaceLibrary(libraryCache(kLibrary));
+    QTRY_COMPARE_WITH_TIMEOUT(library->heroic().value(u"scanOwned"_s).toInt(), 2, 5000);
+    QVERIFY(!QFile::exists(heroicIndexPath()));
+}
+
+void LibraryHeroicTest::finishAddsWhatSetupCounted_data()
+{
+    QTest::addColumn<bool>("wholeLibrary");
+    QTest::addColumn<QByteArray>("installed");
+    QTest::addColumn<int>("scanInstalled");
+    QTest::addColumn<int>("scanOwned");
+
+    const QByteArray fezAndRime = installedFile({u"FezApp"_s, u"RimeApp"_s});
+    QTest::newRow("whole library") << true << fezAndRime << 2 << 3;
+    QTest::newRow("installed only") << false << fezAndRime << 2 << 3;
+    // Then the cache says what's installed, and the installed list is empty.
+    QTest::newRow("unreadable installed.json") << true << QByteArray("{") << 1 << 2;
+    QTest::newRow("unreadable, installed only") << false << QByteArray("{") << 1 << 2;
+}
+
+void LibraryHeroicTest::finishAddsWhatSetupCounted()
+{
+    QFETCH(bool, wholeLibrary);
+    QFETCH(QByteArray, installed);
+    QFETCH(int, scanInstalled);
+    QFETCH(int, scanOwned);
+
+    writeLibrary(libraryCache({{u"HikeApp"_s, u"A Short Hike"_s},
+                               {u"FezApp"_s, u"Fez"_s, false, true},
+                               {u"HikeDlc"_s, u"A Short Hike: Hats"_s, true}}));
+    writeInstalled(installed);
+    auto library = openInSetup();
+    QCOMPARE(library->setHeroicValue(u"whole_library"_s, wholeLibrary), QString());
+    rescan(*library);
+
+    const QVariantMap before = library->heroic();
+    QCOMPARE(before.value(u"scanInstalled"_s).toInt(), scanInstalled);
+    QCOMPARE(before.value(u"scanOwned"_s).toInt(), scanOwned);
+
+    QStringList added;
+    connect(&library->store(), &LibraryStore::gamesAdded, this, [&](const QStringList &ids) { added += ids; });
+    QCOMPARE(library->finishSetup(), QString());
+    const int expected = wholeLibrary ? scanOwned : scanInstalled;
+    QTRY_COMPARE_WITH_TIMEOUT(library->heroic().value(u"games"_s).toInt(), expected, 5000);
+    library->store().waitForIdle();
+    QTRY_VERIFY_WITH_TIMEOUT(!library->store().scanning(), 5000);
+
+    const QVariantMap after = library->heroic();
+    QCOMPARE(after.value(u"games"_s).toInt(), expected);
+    QCOMPARE(after.value(u"installed"_s).toInt(), scanInstalled);
+    QCOMPARE(library->store().snapshot().content.heroic.size(), expected);
+    QCOMPARE(added.filter(QRegularExpression(u"^epic-"_s)).size(), expected);
 }
 
 QTEST_GUILESS_MAIN(LibraryHeroicTest)

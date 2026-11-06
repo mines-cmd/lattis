@@ -252,7 +252,9 @@ Nothing is downloaded for these games. When a scan adds a game, `copyHeroicArt()
 
 `Game::launcher()` answers "does someone else run this game?": `steam` for Steam and Proton games, `heroic` for Epic games, and empty when Lattis runs it. QML reads it as `game.launcher`. Code that means Steam itself still tests the platform.
 
-The store watches `installed.json` and `timestamp.json` (`HeroicState::watchPaths()`), with Steam's files and the same one-second delay. Heroic replaces `timestamp.json` on save, which drops the watch, so `updateWatches()` adds it again after each scan.
+The store watches the library cache, `installed.json` and `timestamp.json` (`HeroicState::watchPaths()`), with Steam's files and the same one-second delay. Heroic replaces the cache and `timestamp.json` on save, which drops the watch, so `updateWatches()` adds them again after each scan. A file that doesn't exist yet isn't watched.
+
+During the setup the merge doesn't run, so nothing in the listing changes with what Heroic has. A scan that differs from the last one counts as a change then, which is how `Library.heroic`'s `scanInstalled` and `scanOwned` follow a refresh. They count `HeroicState::games()`, the list the merge reads, so they match what Finish adds unless `heroic.toml` has an error.
 
 #### Play time from Heroic
 
@@ -526,7 +528,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `nextTagColor(paletteSize)` | The first palette color no tag uses |
 | `igdbTags(facets, has)` | The tags that fit a game with these IGDB genres, themes and keywords |
 | `setSteamValue(key, value)` | `enabled`, `path`, `user`, `default_presets` or `default_proton` |
-| `setHeroicValue(key, value)` | `enabled`, `path` or `whole_library`; a default removes the key. `Library.heroic` is what the page shows: `enabled`, `path`, `wholeLibrary`, `found`, `programFound`, `root`, `games`, `installed`, `status`, `problem` |
+| `setHeroicValue(key, value)` | `enabled`, `path` or `whole_library`; a default removes the key. `Library.heroic` is what the page shows: `enabled`, `path`, `wholeLibrary`, `found`, `programFound`, `flatpak`, `root`, `shownRoot`, `games`, `installed`, `scanInstalled`, `scanOwned`, `status`, `problem`. `games` and `installed` count the library; `scanInstalled` and `scanOwned` count the scan, which is what Finish brings in while the setup holds the merge back |
 | `steamShortcuts()`, `addSteamShortcuts(appIds)` | "Add existing shortcuts" |
 | `setSteamPresetForAll(preset, on)` | "Apply to all Steam games", "Remove from all" |
 | `undoSteamEdits(id)`, `undoAllSteamEdits()` | Drops edits waiting for Steam |

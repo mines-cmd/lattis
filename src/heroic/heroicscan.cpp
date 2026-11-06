@@ -167,7 +167,7 @@ QStringList HeroicState::watchPaths() const
 {
     if (root.isEmpty())
         return {};
-    return {HeroicScan::installedPath(root), HeroicScan::playTimePath(root)};
+    return {HeroicScan::libraryPath(root), HeroicScan::installedPath(root), HeroicScan::playTimePath(root)};
 }
 
 namespace HeroicScan {
