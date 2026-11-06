@@ -38,7 +38,7 @@ Item {
     readonly property bool compact: compactAt(width)
     readonly property int marginRight: compact ? Theme.details.compactMarginRight : Theme.details.marginRight
     property string descriptionExpandedFor: ""
-    readonly property bool onSteam: game.platform === "steam" || game.platform === "proton"
+    readonly property string launcher: game.launcher ?? ""
 
     // An emulated game none of whose emulators is found: Launch installs the first one, if it can be.
     // The Installer is only touched then, so it isn't made for a page that doesn't need it.
@@ -483,7 +483,9 @@ Item {
         open_platform: {
             icon: Icons.openExternal,
             color: Theme.iconButton.icon,
-            tip: Actions.tip(onSteam ? qsTr("Open in Steam") : qsTr("Open emulator"), Actions.keys.open_platform),
+            tip: Actions.tip(launcher === "steam" ? qsTr("Open in Steam")
+                             : launcher === "heroic" ? qsTr("Open Heroic") : qsTr("Open emulator"),
+                             Actions.keys.open_platform),
             badge: false
         },
         folder: {
@@ -917,8 +919,8 @@ Item {
                     updateState: root.game.steamUpdate ?? "none"
                     rom: root.game.rom ?? false
                     gameNotFound: root.game.gameNotFound ?? false
-                    installable: root.game.platform === "steam"
                     locatable: root.game.platform === "proton" || root.game.platform === "linux"
+                    installable: root.launcher !== "" && !locatable
                     running: GameRunner.running.includes(root.game.id ?? "")
                     emulatorName: root.emulatorName
                     emulatorStep: root.emulatorStep

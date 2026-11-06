@@ -248,6 +248,10 @@ The scan never removes a line or renames a game, so a game that returns has its 
 
 A Steam shortcut made by Heroic's "Add to Steam" (`SteamShortcuts::isHeroic()`: `heroic://launch` in its launch options) isn't offered by "Add existing shortcuts", since the game is already here.
 
+Nothing is downloaded for these games. When a scan adds a game, `copyHeroicArt()` copies the images Heroic has already shown into `art/<id>/`: `art_square` as the cover and `art_logo` as the logo, found by `HeroicScan::cachedImage()`. Heroic's copies are named by a hash and have no extension, so the file's content picks one. They're small, and Heroic only keeps what it has shown lately, so most games get their art from the lookup instead, as new games do from any source. Only a game's first import copies, so art the user removes stays removed, and a read-only library copies nothing.
+
+`Game::launcher()` answers "does someone else run this game?": `steam` for Steam and Proton games, `heroic` for Epic games, and empty when Lattis runs it. QML reads it as `game.launcher`. Code that means Steam itself still tests the platform.
+
 The store watches `installed.json` and `timestamp.json` (`HeroicState::watchPaths()`), with Steam's files and the same one-second delay. Heroic replaces `timestamp.json` on save, which drops the watch, so `updateWatches()` adds it again after each scan.
 
 #### Play time from Heroic
@@ -522,6 +526,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `nextTagColor(paletteSize)` | The first palette color no tag uses |
 | `igdbTags(facets, has)` | The tags that fit a game with these IGDB genres, themes and keywords |
 | `setSteamValue(key, value)` | `enabled`, `path`, `user`, `default_presets` or `default_proton` |
+| `setHeroicValue(key, value)` | `enabled`, `path` or `whole_library`; a default removes the key. `Library.heroic` is what the page shows: `enabled`, `path`, `wholeLibrary`, `found`, `programFound`, `root`, `games`, `installed`, `status`, `problem` |
 | `steamShortcuts()`, `addSteamShortcuts(appIds)` | "Add existing shortcuts" |
 | `setSteamPresetForAll(preset, on)` | "Apply to all Steam games", "Remove from all" |
 | `undoSteamEdits(id)`, `undoAllSteamEdits()` | Drops edits waiting for Steam |

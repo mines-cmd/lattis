@@ -458,6 +458,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `settings/ShortcutPicker.qml` | "Add existing shortcuts…" dialog for Steam; lazy |
 | `settings/ShortcutRow.qml` | One action row in the Keyboard page |
 | `settings/SteamAccountBox.qml` | Steam account selector in Steam settings |
+| `settings/HeroicPage.qml` | Heroic settings: import, folder, whole library, Open Heroic |
 | `settings/SteamPage.qml` | Steam settings: import, presets, queued edits |
 | `settings/SteamWholeLibrary.qml` | The Whole library card: switch, account (Sign in / Sign out), API key, status, Sync now |
 | `settings/SteamSignInPopup.qml` | The QR sign-in popup (also used by the setup guide) |

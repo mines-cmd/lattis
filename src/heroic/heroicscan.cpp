@@ -1,5 +1,6 @@
 #include "heroicscan.h"
 
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
@@ -217,5 +218,16 @@ std::optional<qint64> lastPlayed(const QString &root, const QString &appName)
     if (!state.playTimeOk)
         return std::nullopt;
     return state.playTime.value(appName).lastPlayed;
+}
+
+QString cachedImage(const QString &root, const QString &url)
+{
+    if (url.isEmpty())
+        return {};
+    // Heroic names each copy after the address it asked its image service for, size included.
+    const QByteArray asked = url.toUtf8() + "?h=400&resize=1&w=300";
+    const QByteArray name = QCryptographicHash::hash(asked, QCryptographicHash::Sha256).toHex();
+    const QString path = root + QStringLiteral("/images-cache/") + QString::fromLatin1(name);
+    return QFileInfo(path).isFile() ? path : QString();
 }
 }

@@ -402,6 +402,52 @@ QStringList copySteamArt(const QString &dataDir, LibrarySnapshot &s)
     return copied;
 }
 
+// Only for games the scan just added: art the user removed later stays removed.
+QStringList copyHeroicArt(const QString &dataDir, LibrarySnapshot &s, const QStringList &added)
+{
+    const QSet<QString> ids(added.cbegin(), added.cend());
+    QHash<QString, const HeroicGame *> games;
+    for (const HeroicGame &g : std::as_const(s.heroicScan.library))
+        games.insert(g.appName, &g);
+
+    QStringList copied;
+    for (const HeroicEntry &entry : std::as_const(s.content.heroic)) {
+        const HeroicGame *game = games.value(entry.appName);
+        if (!game || !ids.contains(entry.id))
+            continue;
+        const QString folder = dataDir + QStringLiteral("/art/") + entry.id;
+        const std::pair<QString, QString> wanted[] = {{QStringLiteral("cover"), game->artSquare},
+                                                      {QStringLiteral("logo"), game->artLogo}};
+        for (const auto &[kind, url] : wanted) {
+            const QString source = HeroicScan::cachedImage(s.heroicScan.root, url);
+            if (source.isEmpty())
+                continue;
+            // Heroic's copies have no extension.
+            QString ext = QString::fromLatin1(QImageReader(source).format());
+            if (ext == u"jpeg")
+                ext = QStringLiteral("jpg");
+            if (!kArtExtensions.contains(ext))
+                continue;
+
+            QDir().mkpath(folder);
+            const QString temp = folder + QStringLiteral("/.heroic-") + kind + u'.' + ext;
+            const QString target = folder + u'/' + kind + u'.' + ext;
+            if (const QString error = ArtImage::copy(source, temp, kind); !error.isEmpty()
+                || !QFile::rename(temp, target)) {
+                QFile::remove(temp);
+                qCWarning(lcLibrary).noquote() << "could not copy" << source << "to" << target << error;
+                continue;
+            }
+            copied.append(entry.id + u'/' + kind);
+        }
+        if (const ArtSet art = scanArtFolder(folder); art != ArtSet{})
+            s.art.insert(entry.id, art);
+        else
+            QDir().rmdir(folder);
+    }
+    return copied;
+}
+
 QList<SteamSync::Game> steamSyncGames(const LibraryContent &c, const QHash<QString, QString> &launchOptions = {})
 {
     QList<SteamSync::Game> out;
@@ -566,6 +612,8 @@ void scanHeroic(LibrarySnapshot &s, ScanResult &out, const QByteArray &settings,
             out.heroicPlayed = HeroicMerge::countPlay(&s.content.heroic, s.heroicScan);
         out.heroicWrite = s.content.heroic != in.index;
         out.heroicAdded = std::move(merged.added);
+        if (options.copyArt)
+            out.heroicArtCopied = copyHeroicArt(dataDir, s, out.heroicAdded);
         listing.installed = std::move(merged.installed);
         listing.gone = std::move(merged.gone);
     }
@@ -813,7 +861,7 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         && !s.steam.install.userId.isEmpty() && (options.steamStartup || out.steamChanged))
         diffSteamPlay(s, out, dataDir, options.steamStartup);
 
-    if (options.copySteamArt && s.steam.install.found() && !options.setup)
+    if (options.copyArt && s.steam.install.found() && !options.setup)
         out.steamArtCopied = copySteamArt(dataDir, s);
     out.changed = out.changed || !out.steamArtCopied.isEmpty();
 
@@ -921,7 +969,7 @@ void LibraryStore::refresh()
     options.steam = m_steamLocations;
     options.heroic = m_heroicLocations;
     options.steamWebCache = m_steamWebCache;
-    options.copySteamArt = !m_versionStatus.readOnly;
+    options.copyArt = !m_versionStatus.readOnly;
     if (!m_versionStatus.readOnly)
         options.steamSyncRecord = m_steamSyncRecord;
     options.libraryId = m_versionStatus.id;
@@ -1064,6 +1112,8 @@ void LibraryStore::onScanFinished()
 
     if (!result.steamArtCopied.isEmpty())
         qCInfo(lcSteam).noquote() << QStringLiteral("copied Steam's art: %1").arg(result.steamArtCopied.join(QStringLiteral(", ")));
+    if (!result.heroicArtCopied.isEmpty())
+        qCInfo(lcLibrary).noquote() << QStringLiteral("copied %1 image(s) from Heroic").arg(result.heroicArtCopied.size());
     for (const QString &line : result.steamGridLog)
         qCInfo(lcSteam).noquote() << line;
     if (result.steamChanged) {

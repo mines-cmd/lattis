@@ -2,6 +2,8 @@
 #include "heroicsettings.h"
 #include "librarytestbase.h"
 
+#include <QCryptographicHash>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -82,6 +84,12 @@ private slots:
     void aSessionUnderAMinuteChangesNothing();
     void aBrokenGameFileIsCountedOnceFixed();
     void aNewTimestampFileIsNoticed();
+    void firstImportCopiesHeroicsCovers();
+    void aRemovedCoverStaysRemoved();
+    void aBrokenCachedImageIsSkipped();
+    void aGameSaysWhoRunsIt();
+    void settingsShowWhatWasFound();
+    void settingsSaveTheirValues();
 
 private:
     QString heroicRoot() const { return m_installs.home + u"/.config/heroic"_s; }
@@ -100,6 +108,32 @@ private:
         auto library = LibraryTestBase::openLibrary();
         library->setInstalledOnly(false);
         return library;
+    }
+    // Fez and A Short Hike with square art; Heroic has shown only the images written with writeCached().
+    QByteArray libraryWithArt() const
+    {
+        const auto game = [](const QString &app, const QString &title) {
+            return QJsonObject{{u"app_name"_s, app}, {u"title"_s, title}, {u"art_square"_s, squareUrl(app)},
+                               {u"art_logo"_s, squareUrl(app + u"Logo"_s)},
+                               {u"install"_s, QJsonObject{{u"is_dlc"_s, false}}}};
+        };
+        return QJsonDocument(QJsonObject{{u"library"_s, QJsonArray{game(u"FezApp"_s, u"Fez"_s),
+                                                                   game(u"HikeApp"_s, u"A Short Hike"_s)}}})
+            .toJson(QJsonDocument::Compact);
+    }
+    static QString squareUrl(const QString &app) { return u"https://cdn.test/"_s + app + u".jpg"_s; }
+    QString cachedPath(const QString &app) const
+    {
+        const QByteArray asked = squareUrl(app).toUtf8() + "?h=400&resize=1&w=300";
+        return heroicRoot() + u"/images-cache/"_s
+               + QString::fromLatin1(QCryptographicHash::hash(asked, QCryptographicHash::Sha256).toHex());
+    }
+    void writeCached(const QString &app, const char *format)
+    {
+        QDir().mkpath(heroicRoot() + u"/images-cache"_s);
+        QImage image(30, 40, QImage::Format_RGB32);
+        image.fill(Qt::darkCyan);
+        QVERIFY(image.save(cachedPath(app), format));
     }
     QByteArray fezFile() const { return readFile(m_data + u"/library/games/epic-fez.toml"_s); }
     QList<PlayHistory::Session> fezHistory() const { return PlayHistory::read(m_data, u"epic-fez"_s).value.sessions; }
@@ -606,6 +640,104 @@ void LibraryHeroicTest::aNewTimestampFileIsNoticed()
         QVERIFY(QFile::rename(path + u".new"_s, path));
         QTRY_VERIFY_WITH_TIMEOUT(fezFile().contains("play_minutes = " + QByteArray::number(minutes)), 5000);
     }
+}
+
+void LibraryHeroicTest::firstImportCopiesHeroicsCovers()
+{
+    writeLibrary(libraryWithArt());
+    writeCached(u"FezApp"_s, "PNG");
+    writeCached(u"FezAppLogo"_s, "PNG");
+    auto library = openLibrary();
+
+    QVERIFY(QFile::exists(m_data + u"/art/epic-fez/cover.png"_s));
+    QVERIFY(QFile::exists(m_data + u"/art/epic-fez/logo.png"_s));
+    QVERIFY(!library->game(u"epic-fez"_s)->coverUrl.isEmpty());
+    QVERIFY(!library->game(u"epic-fez"_s)->logoUrl.isEmpty());
+    // Nothing is downloaded for a game Heroic hasn't shown.
+    QVERIFY(!QFile::exists(m_data + u"/art/epic-a-short-hike"_s));
+    QVERIFY(library->game(u"epic-a-short-hike"_s)->coverUrl.isEmpty());
+    QCOMPARE(QDir(m_data + u"/art/epic-fez"_s).entryList(QDir::Files | QDir::Hidden).size(), 2);
+}
+
+void LibraryHeroicTest::aRemovedCoverStaysRemoved()
+{
+    writeLibrary(libraryWithArt());
+    writeCached(u"FezApp"_s, "JPEG");
+    auto library = openLibrary();
+    const QString cover = m_data + u"/art/epic-fez/cover.jpg"_s;
+    QVERIFY(QFile::remove(cover));
+    rescan(*library);
+    QVERIFY(!QFile::exists(cover));
+}
+
+void LibraryHeroicTest::aBrokenCachedImageIsSkipped()
+{
+    writeLibrary(libraryWithArt());
+    writeFile(cachedPath(u"FezApp"_s), "not an image");
+    auto library = openLibrary();
+    QVERIFY(library->game(u"epic-fez"_s));
+    QVERIFY(!QFile::exists(m_data + u"/art/epic-fez"_s));
+}
+
+void LibraryHeroicTest::aGameSaysWhoRunsIt()
+{
+    writeLibrary(libraryCache(kLibrary));
+    auto library = openLibrary();
+    QCOMPARE(library->game(u"epic-fez"_s)->launcher(), u"heroic"_s);
+    QCOMPARE(library->gameAt(library->rowOfGame(u"epic-fez"_s)).value(u"launcher"_s).toString(), u"heroic"_s);
+
+    const QHash<QString, QString> launchers = {{kSteamPlatform, u"steam"_s}, {kProtonPlatform, u"steam"_s},
+                                               {kLinuxPlatform, QString()}, {u"switch"_s, QString()}};
+    for (auto it = launchers.cbegin(); it != launchers.cend(); ++it) {
+        Game game;
+        game.platform = it.key();
+        QCOMPARE(game.launcher(), it.value());
+    }
+}
+
+void LibraryHeroicTest::settingsShowWhatWasFound()
+{
+    writeLibrary(libraryCache(kLibrary));
+    writeInstalled(installedFile({u"FezApp"_s}));
+    auto library = openLibrary();
+    QVariantMap heroic = library->heroic();
+    QVERIFY(heroic.value(u"enabled"_s).toBool());
+    QVERIFY(heroic.value(u"found"_s).toBool());
+    QVERIFY(heroic.value(u"wholeLibrary"_s).toBool());
+    QVERIFY(!heroic.value(u"problem"_s).toBool());
+    QCOMPARE(heroic.value(u"games"_s).toInt(), 2);
+    QCOMPARE(heroic.value(u"installed"_s).toInt(), 1);
+    QCOMPARE(heroic.value(u"root"_s).toString(), QFileInfo(heroicRoot()).canonicalFilePath());
+
+    QSignalSpy changed(library.get(), &Library::heroicChanged);
+    QCOMPARE(library->setHeroicValue(u"path"_s, u"/nowhere"_s), QString());
+    library->store().waitForIdle();
+    QTRY_VERIFY(!library->heroic().value(u"found"_s).toBool());
+    QVERIFY(changed.count() > 0);
+    heroic = library->heroic();
+    QVERIFY(heroic.value(u"problem"_s).toBool());
+    QVERIFY(heroic.value(u"status"_s).toString().contains(u"/nowhere"_s));
+}
+
+void LibraryHeroicTest::settingsSaveTheirValues()
+{
+    auto library = openLibrary();
+    const auto settings = [this] { return readFile(m_data + u"/settings.toml"_s); };
+    QCOMPARE(library->setHeroicValue(u"whole_library"_s, false), QString());
+    QVERIFY(settings().contains("[heroic]"));
+    QVERIFY(settings().contains("whole_library = false"));
+    QCOMPARE(library->setHeroicValue(u"enabled"_s, false), QString());
+    QVERIFY(settings().contains("enabled = false"));
+    QCOMPARE(library->setHeroicValue(u"path"_s, u"~/heroic"_s), QString());
+    QVERIFY(settings().contains("path = \"~/heroic\""));
+
+    // A default isn't written.
+    QCOMPARE(library->setHeroicValue(u"whole_library"_s, true), QString());
+    QVERIFY(!settings().contains("whole_library"));
+    QCOMPARE(library->setHeroicValue(u"path"_s, QString()), QString());
+    QVERIFY(!settings().contains("~/heroic"));
+
+    QVERIFY(!library->setHeroicValue(u"colour"_s, true).isEmpty());
 }
 
 QTEST_GUILESS_MAIN(LibraryHeroicTest)

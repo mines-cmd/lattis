@@ -323,6 +323,10 @@ void Library::loadListSettings()
         m_steamSettings = steam.value;
         updateSteam();
     }
+    if (const Parsed<HeroicSettings> heroic = parseHeroicSettings(bytes, QStringLiteral("settings.toml")); heroic.ok) {
+        m_heroicSettings = heroic.value;
+        updateHeroic();
+    }
     const Parsed<ListSettings> parsed = parseListSettings(bytes, QStringLiteral("settings.toml"));
     if (parsed.warnings != m_listProblems) {
         for (const QString &warning : parsed.warnings) {
@@ -764,12 +768,97 @@ QString Library::setSteamValue(const QString &key, const QVariant &value)
         return tr("[steam] has no setting %1").arg(key);
     }
 
+    return saveSettingsValue(QStringLiteral("steam"), key, formatted);
+}
+
+QVariantMap Library::heroic() const
+{
+    if (m_heroic.isEmpty())
+        m_heroic = buildHeroic();
+    return m_heroic;
+}
+
+QVariantMap Library::buildHeroic() const
+{
+    const HeroicInstall &install = m_store.snapshot().heroic.install;
+    const QString home = QDir::homePath();
+    const QString shownRoot = install.root == home || install.root.startsWith(home + u'/')
+        ? u'~' + install.root.sliced(home.size()) : install.root;
+    const int games = int(std::count_if(m_games.cbegin(), m_games.cend(),
+                                         [](const Game &g) { return g.platform == kEpicPlatform; }));
+    const int installed = int(std::count_if(m_games.cbegin(), m_games.cend(), [](const Game &g) {
+        return g.platform == kEpicPlatform && g.installed;
+    }));
+
+    QString status;
+    bool problem = false;
+    if (!m_heroicSettings.enabled) {
+        status = tr("Off: Epic games aren't imported, and those in the library show as not installed.");
+    } else if (install.pathMissing) {
+        status = tr("There's no Heroic in %1: the folder needs its Epic library or installed games.").arg(m_heroicSettings.path);
+        problem = true;
+    } else if (!install.found()) {
+        status = tr("Heroic wasn't found in ~/.config/heroic or the Flatpak's folder. If it's elsewhere, choose its folder.");
+        problem = !m_heroicSettings.path.isEmpty();
+    } else {
+        status = install.kind == HeroicInstall::Kind::Flatpak
+            ? tr("Heroic (Flatpak) found at %1, %n Epic game(s) in the library", "", games).arg(shownRoot)
+            : tr("Heroic found at %1, %n Epic game(s) in the library", "", games).arg(shownRoot);
+        status += tr(", %n installed.", "", installed);
+        if (!install.program.found()) {
+            status += u' ' + tr("Its program wasn't found, so these games can't be launched.");
+            problem = true;
+        }
+    }
+
+    return {
+        {QStringLiteral("enabled"), m_heroicSettings.enabled},
+        {QStringLiteral("path"), m_heroicSettings.path},
+        {QStringLiteral("wholeLibrary"), m_heroicSettings.wholeLibrary},
+        {QStringLiteral("found"), m_heroicSettings.enabled && install.found()},
+        {QStringLiteral("programFound"), install.program.found()},
+        {QStringLiteral("root"), install.root},
+        {QStringLiteral("games"), games},
+        {QStringLiteral("installed"), installed},
+        {QStringLiteral("status"), status},
+        {QStringLiteral("problem"), problem},
+    };
+}
+
+void Library::updateHeroic()
+{
+    if (m_heroic.isEmpty())
+        return;
+    QVariantMap heroic = buildHeroic();
+    if (heroic == m_heroic)
+        return;
+    m_heroic = std::move(heroic);
+    emit heroicChanged();
+}
+
+QString Library::setHeroicValue(const QString &key, const QVariant &value)
+{
+    QString formatted;
+    if (key == u"enabled" || key == u"whole_library") {
+        if (!value.toBool())
+            formatted = QStringLiteral("false");
+    } else if (key == u"path") {
+        if (const QString path = value.toString().trimmed(); !path.isEmpty())
+            formatted = tomlString(path);
+    } else {
+        return tr("[heroic] has no setting %1").arg(key);
+    }
+    return saveSettingsValue(QStringLiteral("heroic"), key, formatted);
+}
+
+QString Library::saveSettingsValue(const QString &section, const QString &key, const QString &formatted)
+{
     if (!ensureSettingsFile())
         return tr("Couldn't create %1").arg(settingsFile());
     QString error;
     const bool ok = formatted.isEmpty()
-        ? TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("steam"), key, &error)
-        : TomlPatch::setValueInFile(settingsFile(), QStringLiteral("steam"), key, formatted, &error);
+        ? TomlPatch::removeValueInFile(settingsFile(), section, key, &error)
+        : TomlPatch::setValueInFile(settingsFile(), section, key, formatted, &error);
     if (!ok)
         return tr("Couldn't save %1 in settings.toml: %2").arg(key, error);
     // Shows the change now, and runs the import with it, not when the watchers catch it.
@@ -1026,6 +1115,7 @@ void Library::reloadFromStore()
         emit platformSettingsChanged();
     }
     updateSteam();
+    updateHeroic();
 
     QVariantList tags;
     for (const TagDef &t : snapshot.content.tags) {
@@ -2958,6 +3048,7 @@ QVariantMap Library::gameAt(int row) const
         {QStringLiteral("logoScrimSide"), g.logoScrimSide},
         {QStringLiteral("logoScrimStrength"), g.logoScrimStrength},
         {QStringLiteral("installed"), g.installed},
+        {QStringLiteral("launcher"), g.launcher()},
         {QStringLiteral("steamUpdate"), updateStateName(g.steamUpdate)},
         {QStringLiteral("steamOwnership"), g.steamOwnership},
         {QStringLiteral("sharedBy"), g.sharedBy},
@@ -3430,6 +3521,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("romPath"), g->romPath},
         {QStringLiteral("romWritten"), file.rom},
         {QStringLiteral("installed"), g->installed},
+        {QStringLiteral("launcher"), g->launcher()},
         {QStringLiteral("playMinutes"), g->playMinutes},
         {QStringLiteral("lastPlayed"), g->lastPlayed},
         {QStringLiteral("art"), QVariantMap{{QStringLiteral("hero"), url(g->heroUrl)},

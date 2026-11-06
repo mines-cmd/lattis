@@ -338,7 +338,7 @@ void LibraryBench::measure()
     options.installs.home = QDir::homePath(); // no install folders: detection costs nothing here
     options.steam = {m_root + "/steam-home", {}};
     options.heroic = {m_root + "/heroic-home", m_root + "/heroic-home/.config", {}, {}};
-    options.copySteamArt = true; // Steam has no art for these games: the cost of looking each time
+    options.copyArt = true; // Steam has no art for these games: the cost of looking each time
 
     // As at startup, before anything reads the library: library.toml gets its id now, not
     // from the Library below after the cache is saved, which would make the warm check stale.

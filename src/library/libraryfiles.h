@@ -203,11 +203,6 @@ inline const QStringList kArtKinds = {QStringLiteral("hero"), QStringLiteral("lo
 inline const QStringList kArtExtensions = {QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
                                            QStringLiteral("webp")};
 
-inline const QString kSteamPlatform = QStringLiteral("steam");
-inline const QString kEpicPlatform = QStringLiteral("epic");
-inline const QString kProtonPlatform = QStringLiteral("proton");
-inline const QString kLinuxPlatform = QStringLiteral("linux");
-
 inline bool runsProgram(const QString &platform)
 {
     return platform == kProtonPlatform || platform == kLinuxPlatform;

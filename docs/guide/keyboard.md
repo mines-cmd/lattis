@@ -43,7 +43,7 @@ Typing in the main window starts a search, so the main window's shortcuts all us
 |---|---|
 | Enter | Launch |
 | Ctrl+D | Add to / remove from favorites |
-| Ctrl+O | Open in Steam or the emulator |
+| Ctrl+O | Open in Steam, Heroic or the emulator |
 | Ctrl+Shift+O | Open the game folder |
 | Alt+Enter | Properties |
 | Menu or Shift+F10 | The game's menu (the selection's, with several selected) |

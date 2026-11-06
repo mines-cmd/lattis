@@ -3,6 +3,7 @@
 #include "game.h"
 #include "gameid.h"
 #include "herocache.h"
+#include "heroicsettings.h"
 #include "librarystore.h"
 #include "libraryundo.h"
 #include "listsettings.h"
@@ -67,6 +68,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(QStringList missingDefaultTags READ missingDefaultTags NOTIFY tagsChanged)
     Q_PROPERTY(QVariantList hiddenGames READ hiddenGames NOTIFY hiddenGamesChanged)
     Q_PROPERTY(QVariantMap steam READ steam NOTIFY steamChanged)
+    Q_PROPERTY(QVariantMap heroic READ heroic NOTIFY heroicChanged)
     Q_PROPERTY(QVariantList steamWaiting READ steamWaiting NOTIFY steamWaitingChanged)
     Q_PROPERTY(QVariantMap download READ download NOTIFY downloadChanged)
     Q_PROPERTY(QVariantMap groupChange READ groupChange NOTIFY groupChangeChanged)
@@ -252,6 +254,8 @@ public:
     QVariantMap download() const { return m_download; }
     QVariantMap groupChange() const { return m_groupChange; }
     Q_INVOKABLE QString setSteamValue(const QString &key, const QVariant &value);
+    QVariantMap heroic() const;
+    Q_INVOKABLE QString setHeroicValue(const QString &key, const QVariant &value);
     Q_INVOKABLE QVariantList steamShortcuts() const;
     Q_INVOKABLE QString addSteamShortcuts(const QVariantList &appIds);
     Q_INVOKABLE QString addSteamShortcutAsModManager(qint64 appId, const QStringList &games = {});
@@ -335,6 +339,7 @@ signals:
     void tagsChanged();
     void hiddenGamesChanged();
     void steamChanged();
+    void heroicChanged();
     void steamWaitingChanged();
     void downloadChanged();
     void groupChangeChanged();
@@ -388,9 +393,13 @@ private:
     void saveListSettings();
     QString settingsFile() const { return m_store.dataDir() + QStringLiteral("/settings.toml"); }
     bool ensureSettingsFile() const;
+    // An empty value removes the key, leaving its default.
+    QString saveSettingsValue(const QString &section, const QString &key, const QString &formatted);
     QVariantMap buildSteam() const;
     QVariantList buildSteamWaiting() const;
     void updateSteam();
+    QVariantMap buildHeroic() const;
+    void updateHeroic();
     void updateDownloads();
     bool applyDownloads();
     void updateDownloadBar();
@@ -470,6 +479,8 @@ private:
     QStringList m_listProblems;
     SteamSettings m_steamSettings = parseSteamSettings({}, {}).value;
     mutable QVariantMap m_steam;
+    HeroicSettings m_heroicSettings;
+    mutable QVariantMap m_heroic;
     SteamDownloads m_downloads;
     QVariantList m_steamWaiting;
     QVariantMap m_download;

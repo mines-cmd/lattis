@@ -8,6 +8,11 @@
 #include <QString>
 #include <QUrl>
 
+inline const QString kSteamPlatform = QStringLiteral("steam");
+inline const QString kEpicPlatform = QStringLiteral("epic");
+inline const QString kProtonPlatform = QStringLiteral("proton");
+inline const QString kLinuxPlatform = QStringLiteral("linux");
+
 struct GameTag
 {
     QString name;
@@ -17,6 +22,16 @@ struct GameTag
 // See docs/code/library.md.
 struct Game
 {
+    QString launcher() const
+    {
+        if (platform == kSteamPlatform || platform == kProtonPlatform)
+            return QStringLiteral("steam");
+        if (platform == kEpicPlatform)
+            return QStringLiteral("heroic");
+        return {};
+    }
+
+
     QString id;
     QString title;
     QString platform;

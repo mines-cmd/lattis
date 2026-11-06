@@ -26,7 +26,7 @@ struct ScanOptions
     InstallLocations installs;
     SteamLocations steam = SteamLocations::system();
     HeroicLocations heroic = HeroicLocations::system();
-    bool copySteamArt = false;
+    bool copyArt = false;
     QString steamSyncRecord;
     QString libraryId;
     bool setup = false;
@@ -57,6 +57,7 @@ struct ScanResult
     bool steamWebWrite = false;
     QStringList steamWebAdded;
     QStringList heroicAdded;
+    QStringList heroicArtCopied;
     QList<HeroicMerge::Played> heroicPlayed;
     bool heroicWrite = false;
     bool steamChanged = false;

@@ -47,7 +47,7 @@ def set_value(description, old, new):
 SCENARIOS = [
     Scenario("Ctrl+Comma opens Settings, every category opens its page, Ctrl+W closes it",
              [(OPEN + "".join(f"click {name}\nwait 500\n" for name in (
-                 "Game page", "Library", "Steam", "Mod managers", "Platforms", "Emulators", "Metadata",
+                 "Game page", "Library", "Steam", "Heroic", "Mod managers", "Platforms", "Emulators", "Metadata",
                  "Appearance", "Customize", "Keyboard", "General"))
                + "key Ctrl+W\nwait 400\nexpect-not General\n" + FIRST, None)], demo),
     Scenario("General switches change live, persist in settings.toml and show the same after a restart",

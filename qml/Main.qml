@@ -11,7 +11,7 @@ ApplicationWindow {
             locateProgram(game)
             return
         }
-        if (!game.installed && game.platform !== "steam")
+        if (!game.installed && (game.launcher ?? "") === "")
             return
         // Edits waiting for Steam to close: ask whether to restart it. With Steam closed,
         // they're written first without asking.

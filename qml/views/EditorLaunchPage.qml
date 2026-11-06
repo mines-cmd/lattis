@@ -98,6 +98,7 @@ ColumnLayout {
                 help: editor.programGame
                       ? qsTr("The game's whole folder, with the program somewhere inside. Open folder "
                              + "opens it, and the game's size is this folder's.")
+                      : editor.heroicGame ? qsTr("Where Heroic installed the game.")
                       : qsTr("Where Steam installed the game.")
 
                 PathField {
@@ -121,6 +122,12 @@ ColumnLayout {
                         iconPath: Icons.editLine
                         tip: qsTr("Change the install folder")
                         onClicked: editor.folderPickerLoader.pickFor("install")
+                    }
+                    SettingsButton {
+                        visible: editor.heroicGame
+                        text: qsTr("Open Heroic")
+                        tip: qsTr("Wine, launch options and updates for this game are in Heroic")
+                        onClicked: editor.errorLabel.text = GameRunner.openHeroic()
                     }
                 }
             }
@@ -277,7 +284,7 @@ ColumnLayout {
 
     EditorCard {
         title: qsTr("Run")
-        visible: !editor.romGame
+        visible: !editor.romGame && !editor.heroicGame
 
         EditorField {
             visible: editor.onSteam

@@ -248,6 +248,7 @@ qt_add_qml_module(lattis
         qml/settings/ProgramDialog.qml
         qml/settings/LibraryPage.qml
         qml/settings/MetadataPage.qml
+        qml/settings/HeroicPage.qml
         qml/settings/SteamPage.qml
         qml/settings/ShortcutPicker.qml
         qml/settings/SteamAccountBox.qml

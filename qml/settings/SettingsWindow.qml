@@ -63,6 +63,7 @@ ApplicationWindow {
         { key: "game_page", name: qsTr("Game page"), icon: Icons.layoutMasonryLine, enabled: true, page: gamePage },
         { key: "library", name: qsTr("Library"), icon: Icons.folder, enabled: true, page: library },
         { key: "steam", name: qsTr("Steam"), icon: Icons.steam, enabled: true, page: steam },
+        { key: "heroic", name: qsTr("Heroic"), icon: Icons.epic, enabled: true, page: heroic },
         { key: "mod_managers", name: qsTr("Mod managers"), icon: Icons.puzzle, enabled: true,
           page: modManagers },
         { key: "platforms", name: qsTr("Platforms"), icon: Icons.computer, enabled: true,
@@ -772,6 +773,15 @@ ApplicationWindow {
                     source: "SteamPage.qml"
                     Connections {
                         target: steam.item
+                        function onMessage(text, link) { root.showMessage(text, link) }
+                    }
+                }
+
+                PageLoader {
+                    id: heroic
+                    source: "HeroicPage.qml"
+                    Connections {
+                        target: heroic.item
                         function onMessage(text, link) { root.showMessage(text, link) }
                     }
                 }

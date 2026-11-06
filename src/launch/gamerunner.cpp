@@ -701,8 +701,7 @@ QString GameRunner::chooseEmulator(const QString &gameId, QString *emulatorId) c
 QString GameRunner::missingEmulator(const QString &gameId) const
 {
     const Game *game = m_library->game(gameId);
-    if (!game || game->platform == kSteamPlatform || game->platform == kProtonPlatform
-        || game->platform == kLinuxPlatform)
+    if (!game || !game->launcher().isEmpty() || game->platform == kLinuxPlatform)
         return {};
     QString chosen;
     chooseEmulator(gameId, &chosen);
@@ -1050,7 +1049,8 @@ QString GameRunner::openFolder(const QString &gameId)
     const Game *game = m_library->game(gameId);
     if (!game)
         return {};
-    const bool steam = game->platform == kSteamPlatform && GameId::steamAppId(game->id) > 0;
+    const bool steam = (game->platform == kSteamPlatform && GameId::steamAppId(game->id) > 0)
+                       || game->platform == kEpicPlatform;
     const bool proton = runsProgram(game->platform);
     if (!game->rom && !steam && !proton)
         return tr("Opening the folder of %1 games is not implemented yet").arg(game->platformName);

@@ -12,14 +12,15 @@ SettingsMenu {
     property var games: []
 
     readonly property bool multi: games.length > 1
-    readonly property bool onSteam: game.platform === "steam" || game.platform === "proton"
+    readonly property string launcher: game.launcher ?? ""
     readonly property bool programGame: game.platform === "proton" || game.platform === "linux"
+    readonly property bool installable: launcher !== "" && !programGame
     readonly property bool running: GameRunner.running.includes(game.id ?? "")
     readonly property bool installed: game.installed ?? true
 
     readonly property bool allFavorite: games.every(g => g.favorite)
     readonly property bool anyVisible: games.some(g => !g.hidden)
-    readonly property bool emulatorChoosable: multi && !["steam", "proton", "linux"].includes(games[0].platform)
+    readonly property bool emulatorChoosable: multi && (games[0].launcher ?? "") === "" && games[0].platform !== "linux"
                                               && games.every(g => g.platform === games[0].platform)
     readonly property var emulatorChoices: emulatorChoosable ? Library.emulatorChoices(games[0].platform).choices : []
     readonly property var linked: game.linked ?? []
@@ -162,16 +163,16 @@ SettingsMenu {
 
     Entry {
         actionName: "launch"
-        iconPath: !root.installed && root.game.platform === "steam" ? Icons.download
+        iconPath: !root.installed && root.installable ? Icons.download
                 : !root.installed && root.programGame ? Icons.fileSearchLine
                 : Icons.playLargeLine
         visible: !root.multi
         text: root.running ? Theme.launchButton.runningLabel
             : root.installed ? Theme.launchButton.label
-            : root.game.platform === "steam" ? Theme.launchButton.installLabel
+            : root.installable ? Theme.launchButton.installLabel
             : root.programGame ? qsTr("Locate")
             : Theme.launchButton.missingRomLabel
-        enabled: !root.running && (root.installed || root.onSteam || root.programGame)
+        enabled: !root.running && (root.installed || root.launcher !== "" || root.programGame)
     }
     SettingsMenuSeparator { visible: !root.multi }
     Entry {
@@ -226,9 +227,11 @@ SettingsMenu {
     }
     Entry {
         actionName: "open_platform"
-        iconPath: root.onSteam ? Icons.steamLine : Icons.gamepadLine
+        iconPath: root.launcher === "steam" ? Icons.steamLine
+                : root.launcher === "heroic" ? Icons.openExternal : Icons.gamepadLine
         visible: !root.multi && root.game.platform !== "linux"
-        text: root.onSteam ? qsTr("Open in Steam") : qsTr("Open emulator")
+        text: root.launcher === "steam" ? qsTr("Open in Steam")
+            : root.launcher === "heroic" ? qsTr("Open Heroic") : qsTr("Open emulator")
     }
     Entry {
         actionName: "open_folder"

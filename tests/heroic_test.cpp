@@ -1,6 +1,7 @@
 #include "heroiclocate.h"
 #include "heroicscan.h"
 
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -88,6 +89,7 @@ private slots:
     void rescanReadsChangedCache();
     void rescanKeepsCacheWarning();
     void lastPlayed();
+    void cachedImage();
     void launchAndOpenArgs();
 
 private:
@@ -533,6 +535,20 @@ void HeroicTest::rescanKeepsCacheWarning()
     const HeroicState first = HeroicScan::scan(m_root);
     QCOMPARE(first.warnings.size(), 1);
     QCOMPARE(HeroicScan::scan(m_root, first).warnings, first.warnings);
+}
+
+void HeroicTest::cachedImage()
+{
+    const QString url = u"https://cdn.test/fez-square.jpg"_s;
+    QCOMPARE(HeroicScan::cachedImage(m_root, url), QString());
+    QCOMPARE(HeroicScan::cachedImage(m_root, QString()), QString());
+
+    // The name of a real copy: sha256 of the URL and the size Heroic asks for.
+    const QByteArray name = QCryptographicHash::hash(url.toUtf8() + "?h=400&resize=1&w=300", QCryptographicHash::Sha256).toHex();
+    const QString path = m_root + u"/images-cache/"_s + QString::fromLatin1(name);
+    writeFile(path, "image");
+    QCOMPARE(HeroicScan::cachedImage(m_root, url), path);
+    QCOMPARE(HeroicScan::cachedImage(m_root, u"https://cdn.test/other.jpg"_s), QString());
 }
 
 void HeroicTest::lastPlayed()

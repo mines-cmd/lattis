@@ -16,6 +16,7 @@ Item {
     readonly property bool steamGame: !adding && game.platform === "steam"
     readonly property bool protonGame: adding ? addingProgram : game.platform === "proton"
     readonly property bool onSteam: steamGame || protonGame
+    readonly property bool heroicGame: !adding && game.launcher === "heroic"
     readonly property bool addingLinux: adding && (pick.linux ?? false)
     readonly property bool linuxGame: adding ? addingLinux : game.platform === "linux"
     readonly property bool programGame: protonGame || linuxGame

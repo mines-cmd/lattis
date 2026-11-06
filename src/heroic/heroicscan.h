@@ -97,4 +97,7 @@ HeroicState scan(const QString &root, const HeroicState &previous = {});
 
 // Seconds since the epoch, 0 for a game Heroic hasn't closed yet; nothing when timestamp.json can't be read.
 std::optional<qint64> lastPlayed(const QString &root, const QString &appName);
+
+// Empty when Heroic hasn't shown this image.
+QString cachedImage(const QString &root, const QString &url);
 }

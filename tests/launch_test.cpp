@@ -846,6 +846,7 @@ void LaunchTest::heroicInstallAndOpen()
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 3, 5000);
 
     QCOMPARE(m_runner->missingEmulator(QStringLiteral("epic-fez")), QString());
+    QCOMPARE(m_runner->openFolder(QStringLiteral("epic-fez")), QStringLiteral("Fez isn't installed"));
     m_library->setInstalledOnly(false);
     QCOMPARE(m_library->gameAt(m_library->rowOfGame(QStringLiteral("epic-fez"))).value("launchTip").toString(),
              QStringLiteral("Install through Heroic"));

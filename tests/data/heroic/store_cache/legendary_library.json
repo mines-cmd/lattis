@@ -1,0 +1,44 @@
+{
+  "library": [
+    {
+      "app_name": "HikeApp",
+      "title": "A Short Hike",
+      "is_installed": true,
+      "art_cover": "https://cdn.test/HikeApp-cover.jpg",
+      "art_square": "https://cdn.test/HikeApp-square.jpg",
+      "install": {
+        "install_size": "308.78 MiB",
+        "is_dlc": false
+      }
+    },
+    {
+      "app_name": "FezApp",
+      "title": "Fez",
+      "is_installed": false,
+      "art_cover": "https://cdn.test/FezApp-cover.jpg",
+      "art_square": "https://cdn.test/FezApp-square.jpg",
+      "install": {
+        "install_size": "308.78 MiB",
+        "is_dlc": false
+      }
+    },
+    {
+      "app_name": "RimeApp",
+      "title": "Rime",
+      "is_installed": false,
+      "art_cover": "https://cdn.test/RimeApp-cover.jpg",
+      "art_square": "https://cdn.test/RimeApp-square.jpg",
+      "install": {
+        "install_size": "308.78 MiB",
+        "is_dlc": false
+      }
+    },
+    {
+      "app_name": "HikeHats",
+      "title": "A Short Hike: Hats",
+      "install": {
+        "is_dlc": true
+      }
+    }
+  ]
+}
