@@ -496,17 +496,21 @@ QString GameRunner::launchHeroicGame(const Game &game)
                                     [&](const HeroicEntry &e) { return e.id == game.id; });
     if (entry == snapshot.content.heroic.cend() || !snapshot.heroic.install.found() || !program.found())
         return tr("Heroic isn't found");
-    const QStringList args = HeroicLocate::launchArgs(program, entry->appName);
-    // Heroic asks whether to install it, and shows its install screen on Yes.
-    if (!game.installed)
-        return runHeroic(args);
+    // A launch URL would ask whether to install it, but Heroic 2.22.4 does nothing on Yes, and with its window
+    // hidden the dialog is a Wayland protocol error that crashes it on Hyprland.
+    if (!game.installed) {
+        const QString error = openHeroic();
+        if (error.isEmpty())
+            emit message(tr("Install %1 in Heroic").arg(game.title));
+        return error;
+    }
 
     HeroicSession session;
     session.appName = entry->appName;
     session.root = snapshot.heroic.install.root;
     session.lastPlayed = HeroicScan::lastPlayed(session.root, session.appName).value_or(0);
     session.process = new DetachedProcess(this);
-    const LaunchCommand command{program.program, args, {}};
+    const LaunchCommand command{program.program, HeroicLocate::launchArgs(program, entry->appName), {}};
     qCInfo(lcLaunch).noquote() << QStringLiteral("launching %1 through Heroic: %2").arg(game.id, command.toString());
     const QString log = QStringLiteral("%1/launch/%2.log").arg(m_logDir, game.id);
     if (const QString error = session.process->start(command, QDir::homePath(), log); !error.isEmpty()) {

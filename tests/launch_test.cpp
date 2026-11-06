@@ -833,15 +833,17 @@ void LaunchTest::heroicUnreadableTimestamp()
 void LaunchTest::heroicInstallAndOpen()
 {
     openWithHeroic();
-    // Not installed: Heroic asks, and there's no session to wait for.
+    // Not installed: Heroic opens, with no game URL, and there's no session to wait for.
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
     QCOMPARE(m_runner->launch(QStringLiteral("epic-fez")), QString());
-    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()),
-                              QByteArray("--no-gui heroic://launch?appName=Fez%20App&runner=legendary&gui=false\n"), 5000);
+    QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()), QByteArray("\n"), 5000);
     QCOMPARE(m_runner->running(), QStringList());
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.first().first().toString(), QStringLiteral("Install Fez in Heroic"));
 
     QCOMPARE(m_runner->openHeroic(), QString());
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 2, 5000);
-    QVERIFY(readFile(heroicLog()).endsWith("gui=false\n\n"));
+    QCOMPARE(readFile(heroicLog()), QByteArray("\n\n"));
     QCOMPARE(m_runner->openEmulator(QStringLiteral("epic-fez")), QString());
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 3, 5000);
 
