@@ -14,6 +14,14 @@ SettingsMenu {
 
     readonly property var platforms: Library.platformSettings.filter(p => p.games > 0)
 
+    // The platform rows may not be inserted yet when the button rows are, so a count can't place them.
+    function positionOf(item) {
+        for (let i = 0; i < count; ++i)
+            if (itemAt(i) === item)
+                return i
+        return count - 1
+    }
+
     component ButtonRow: MenuCheckRow {
         property string name
         checked: !General.railHiddenButtons.includes(name)
@@ -46,7 +54,7 @@ SettingsMenu {
         onObjectAdded: (index, object) => root.insertItem(index, object)
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
-    SettingsMenuSeparator { visible: root.platforms.length > 0 }
+    SettingsMenuSeparator { id: platformsEnd; visible: root.platforms.length > 0 }
     Instantiator {
         model: General.railButtonOrder
         delegate: ButtonRow {
@@ -56,7 +64,7 @@ SettingsMenu {
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }
-        onObjectAdded: (index, object) => root.addItem(object)
+        onObjectAdded: (index, object) => root.insertItem(root.positionOf(platformsEnd) + 1 + index, object)
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
     SettingsMenuSeparator {}
