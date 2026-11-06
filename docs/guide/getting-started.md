@@ -30,16 +30,17 @@ Open the entry to see the release notes, then click **Update**. Lattis downloads
 
 ## The setup guide
 
-The first time Lattis starts, a setup guide walks you through six short steps. Every one can be skipped, and everything it sets up can be changed later in Settings.
+The first time Lattis starts, a setup guide walks you through seven short steps. Every one can be skipped, and everything it sets up can be changed later in Settings.
 
 1. **Welcome.** Start fresh, or restore a library from a backup (see [Backups](backups.md)).
-2. **Steam.** If Steam is installed, its installed games are imported; their covers show at the bottom of the step. If Lattis can't find Steam, **Choose folder** points it at the folder with `steamapps` in it. You can pick presets new Steam games start with, like MangoHud or Wayland, and bring in the non-Steam games you already have in Steam (see [Steam games](steam.md) and [Windows games](windows-games.md)).
-3. **Emulators and ROM folders.** Two lists, laid out like Settings → Emulators. **Ready** holds the platforms whose emulator Lattis found; open one to add the folders its ROMs are in. **Install an emulator** holds the platforms whose emulator is missing, each tagged **Install**: open it to install the emulator as an AppImage or from Flathub, or, under **Already have it somewhere else?**, choose its program if it's installed somewhere Lattis doesn't look. A platform moves up to Ready as soon as its emulator is found, and its ROM folders show there. Installs carry on while you move to the next step. If you keep one folder per platform (`roms/switch`, `roms/3ds`…), **Find from one folder**, beside the Ready heading, matches them to platforms by name in one go. See [Emulators and ROM folders](emulators.md).
-4. **Game info.** Free API keys for IGDB and SteamGridDB, so your games come in with a description, year, rating and art. Without them, games come in with their names only; you can add the keys later. See [Game info and art](game-info.md).
-5. **Look.** Pick colors and a style. They apply right away. With many colors, the list scrolls and the styles stay in view below it.
-6. **Done.** Lattis brings your games in and looks them up. You can start using it while that runs.
+2. **Steam.** If Steam is installed, the step says how many of its installed games will be imported. If Lattis can't find Steam, **Choose folder** points it at the folder with `steamapps` in it. You can pick presets new Steam games start with, like MangoHud or Wayland, and bring in the non-Steam games you already have in Steam (see [Steam games](steam.md) and [Windows games](windows-games.md)).
+3. **Heroic.** If Heroic is installed, your Epic games come in through it, and the step says how many: the installed ones and, unless you turn off **Import the whole library**, the rest of what you own as not installed. If Lattis can't find Heroic, **Choose folder** points it at the folder with `store_cache` in it, and a link leads to Heroic's site. GOG and Amazon are listed, but not implemented yet. See [Epic games through Heroic](heroic.md#in-the-setup-guide).
+4. **Emulators and ROM folders.** Two lists, laid out like Settings → Emulators. **Ready** holds the platforms whose emulator Lattis found; open one to add the folders its ROMs are in. **Install an emulator** holds the platforms whose emulator is missing, each tagged **Install**: open it to install the emulator as an AppImage or from Flathub, or, under **Already have it somewhere else?**, choose its program if it's installed somewhere Lattis doesn't look. A platform moves up to Ready as soon as its emulator is found, and its ROM folders show there. Installs carry on while you move to the next step. If you keep one folder per platform (`roms/switch`, `roms/3ds`…), **Find from one folder**, beside the Ready heading, matches them to platforms by name in one go. See [Emulators and ROM folders](emulators.md).
+5. **Game info.** Free API keys for IGDB and SteamGridDB, so your games come in with a description, year, rating and art. Without them, games come in with their names only; you can add the keys later. See [Game info and art](game-info.md).
+6. **Look.** Pick colors and a style. They apply right away. With many colors, the list scrolls and the styles stay in view below it.
+7. **Done.** Lattis brings your games in and looks them up. You can start using it while that runs.
 
-Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. The guide has no step for Heroic: if it's installed, your Epic games come in with the rest (see [Epic games through Heroic](heroic.md)). To run the guide again, use **Run setup guide** in Settings → General.
+Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. To run the guide again, use **Run setup guide** in Settings → General.
 
 ## The window
 
