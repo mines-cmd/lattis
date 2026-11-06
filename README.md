@@ -133,7 +133,7 @@ Lattis is free software: you can redistribute it and/or modify it under the term
 
 ## Credits
 
-- Icons from [Tabler Icons](https://tabler.io/icons) (MIT), except the Steam, Switch and Proton platform icons, which are redrawn from [Remix Icon](https://remixicon.com) (Remix Icon License v1.0).
+- Icons from [Tabler Icons](https://tabler.io/icons) (MIT), except the Steam, Switch and Proton platform icons, which are redrawn from [Remix Icon](https://remixicon.com) (Remix Icon License v1.0), and the Heroic icon, from [Simple Icons](https://simpleicons.org) (CC0).
 - The gamepad icon is "game controller" by Milinda Courey from [Noun Project](https://thenounproject.com/browse/icons/term/game-controller/), licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) (scaled; face buttons spaced apart).
 - The Wii U, Wii, GameCube, Linux and home icons are redrawn or traced from the "Nintendo Wii U", "Wii", "Nintendo GameCube", "Penguin" and "Home" icons by [Icons8](https://icons8.com). They're part of the release builds only; built from source, Lattis shows stand-ins for them.
 - Game names for Switch, 3DS, DS, Wii, GameCube, PS1, PS2, GBA and Nintendo 64 files come from [titledb](https://github.com/blawar/titledb) (MIT), [GameTDB](https://www.gametdb.com) (add missing games and artwork there), and [libretro-database](https://github.com/libretro/libretro-database)'s lists of [No-Intro](https://no-intro.org) and [Redump](http://redump.org) (CC BY-SA 4.0). Lattis downloads the lists it needs from `data/romdb/` in this repository (made by `tools/romdb.py`) the first time a scan needs them.
