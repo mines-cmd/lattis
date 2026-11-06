@@ -1,6 +1,6 @@
 # Lattis user guide
 
-Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, Windows games run through Proton and native Linux games in one list, launches them, and records how long you play.
+Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, Epic games from Heroic, Windows games run through Proton and native Linux games in one list, launches them, and records how long you play.
 
 ## Start here
 
@@ -10,6 +10,7 @@ Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, 
 
 - [Emulators and ROM folders](emulators.md): platforms, emulators, and the folders your ROMs are in.
 - [Steam games](steam.md): installed Steam games, launch options, Proton versions and presets.
+- [Epic games through Heroic](heroic.md): your Epic library, launched through Heroic, and its play time.
 - [Windows games](windows-games.md): Windows games run through Proton as Steam shortcuts.
 - [Linux games](linux-games.md): native programs, scripts and AppImages.
 - [Mod managers](mod-managers.md): Mod Organizer 2, Vortex and others, linked to the games they mod.

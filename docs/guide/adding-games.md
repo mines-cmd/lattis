@@ -1,6 +1,6 @@
 # Adding and editing games
 
-Most games come in by themselves: ROMs from your [ROM folders](emulators.md#rom-folders), and installed [Steam games](steam.md). The **+** button adds anything else.
+Most games come in by themselves: ROMs from your [ROM folders](emulators.md#rom-folders), installed [Steam games](steam.md), and [Epic games through Heroic](heroic.md). The **+** button adds anything else.
 
 ## Adding a game with +
 
@@ -31,7 +31,7 @@ The gear button on a game's page (Alt+Return), or **Properties** in its right-cl
 
 **Launch**
 
-- **Install:** for a ROM game, its platform and ROM; for Steam, Windows and Linux games, their install location, program and start folder.
+- **Install:** for a ROM game, its platform and ROM; for Steam, Windows and Linux games, their install location, program and start folder; for an Epic game, its install location and **Open Heroic**.
 - **Run:** for a ROM game, its emulator and launch arguments; for Steam, Windows and Linux games, the Proton version, presets and launch options.
 
 **Saves** (**Saves & mods** for Steam, Windows and Linux games, which can have [mod managers](mod-managers.md))

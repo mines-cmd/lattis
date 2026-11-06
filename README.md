@@ -30,9 +30,10 @@ Lattis brings every game you own on Linux into a single, fast library: games for
 
 ## Features
 
-- **One library for everything.** Emulated games, Steam, Windows games through Proton, and native Linux games and AppImages, all with play time, last played, tags and favorites.
+- **One library for everything.** Emulated games, Steam, Epic through Heroic, Windows games through Proton, and native Linux games and AppImages, all with play time, last played, tags and favorites.
 - **Emulators made easy.** Add your ROM folders once and new games appear on startup. Twelve presets ship built in, including Ryubing, Azahar, Dolphin, PCSX2 and RPCS3, and you can add emulators of your own.
 - **Steam and Proton.** Installed Steam games appear automatically. Windows games run through Proton as non-Steam shortcuts that Lattis manages for you, with preset launch options like MangoHud.
+- **Epic through Heroic.** Your Epic library shows up from Heroic's files and launches through it, and what you play there counts toward your play time.
 - **Art and metadata.** Hero art, covers, logos and icons from SteamGridDB, and descriptions, release years, ratings and tags from IGDB, one game at a time or in bulk, reviewed before anything is saved.
 - **Find anything.** Search that ignores accents and word order; filters for installed, favorites, status, tags and hidden games; sorting by title, last played or play time, grouped by platform or status.
 - **Make it yours.** Pick colors and a style separately, mix any with any, and save the pair as a theme. Edit them live in Settings with undo, or in plain TOML files that apply the moment you save.

@@ -6,6 +6,7 @@ Select a game and click **Launch**, press Enter, or double-click it in the list.
 
 - **Emulated games** start in the game's emulator: the one pinned in its Properties if it's installed, else the first installed one in its platform's list. If none is installed, a message says which to install, and the game's page shows **Install** and the emulator's name in place of Launch (the first emulator in the platform's list, if it can be installed from the app). The click opens a window, closed with its X, with the same install choices as [Settings → Emulators](emulators.md#installing-an-emulator): a tile for each way to install it, and "Already have it somewhere else?" to point at a program you installed yourself. While it installs the window shows the progress, and the button on the page shows the step ("37 %", "Unpacking"; click it to bring the window back). The window closes by itself once the emulator is found, and the button becomes Launch. This works for any emulated game, with or without a ROM. Pressing Enter or double-clicking in the list never installs anything: it shows the message.
 - **Steam and Windows games** start through Steam.
+- **Epic games** start through Heroic (see [Epic games through Heroic](heroic.md)).
 - **Linux games** start directly.
 
 **Open emulator** starts the emulator without a game, and **Open folder** opens the folder the game is in. **Open save folder**, in the game's menu, opens where its saves are (see [Properties](adding-games.md#properties) for how it's found); it's also a button you can add to the game's page in `[game_page] buttons`, shown only when the game has a save folder.
@@ -31,7 +32,7 @@ When an emulated or Linux game closes, the session is added to its play time and
 - The game keeps running if you quit Lattis, but that session isn't recorded.
 - Play time and last played can be corrected by hand in the game's Properties.
 
-Steam and Windows games show the play time Steam records instead, including sessions started from Steam.
+Steam and Windows games show the play time Steam records instead, including sessions started from Steam. Epic games add what Heroic records to the time Lattis keeps (see [Play time](heroic.md#play-time)).
 
 ### The same game from two sources
 

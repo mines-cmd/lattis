@@ -39,7 +39,7 @@ The first time Lattis starts, a setup guide walks you through six short steps. E
 5. **Look.** Pick colors and a style. They apply right away. With many colors, the list scrolls and the styles stay in view below it.
 6. **Done.** Lattis brings your games in and looks them up. You can start using it while that runs.
 
-Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. To run the guide again, use **Run setup guide** in Settings → General.
+Nothing is imported or scanned until you finish or skip, so your games come in with their info already filled in. The guide has no step for Heroic: if it's installed, your Epic games come in with the rest (see [Epic games through Heroic](heroic.md)). To run the guide again, use **Run setup guide** in Settings → General.
 
 ## The window
 
@@ -69,6 +69,7 @@ Open Settings with the button at the bottom of the rail, or Ctrl+,. Its pages:
 | Platforms | Your platforms, their emulators and their ROM folders |
 | Emulators | The emulators Lattis knows, where each is installed, and their arguments; add your own |
 | Steam | Steam's folder and account, presets, and changes waiting for Steam to close |
+| Heroic | Importing Epic games, Heroic's folder, the whole library, Open Heroic |
 | Metadata | Your IGDB and SteamGridDB keys, and **Look up missing info** |
 | Keyboard | Every shortcut, and changing them |
 
