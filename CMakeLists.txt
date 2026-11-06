@@ -11,6 +11,10 @@ find_package(tomlplusplus 3 REQUIRED)
 find_package(LibArchive 3.6 REQUIRED)
 # The Ludusavi manifest (save locations of games), parsed once per download.
 find_package(yaml-cpp REQUIRED)
+# Ubuntu 22.04's yaml-cpp 0.7, which the AppImage builds on, exports the target without its namespace.
+if(NOT TARGET yaml-cpp::yaml-cpp)
+    add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.8)
 
