@@ -1141,6 +1141,10 @@ ApplicationWindow {
 
     Toast {
         id: toast
+        // The setup guide's Done step shows this itself.
+        status: ScanLookup.running && !(setupGuide.active && !setupGuide.reopened)
+                ? qsTr("Looking up new games: %1 of %2").arg(ScanLookup.progressDone).arg(ScanLookup.progressTotal)
+                : ""
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 28

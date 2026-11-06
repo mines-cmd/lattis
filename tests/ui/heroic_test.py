@@ -41,6 +41,11 @@ def demo_with_heroic(dirs):
     os.chmod(program, 0o755)
 
 
+def heroic_with_lookup(dirs):
+    demo_with_heroic(dirs)
+    dirs.env["LATTIS_METADATA_FIXTURES"] = os.path.join(ROOT, "tests", "data", "metadata")
+
+
 def select(title):
     return f"type {title}\nwait 400\nclick {title}\nwait 300\n"
 
@@ -111,6 +116,9 @@ SCENARIOS = [
                "wait 600\n", settings_has("whole_library = false")),
               (OPEN_SETTINGS + "expect-off Import the whole library\ntoggle Import the whole library\nwait 1000\n"
                "expect-has 3 Epic game\nwait 600\n", None)], demo_with_heroic),
+    Scenario("a toast counts the new games while they're looked up, and goes when it's done",
+             [("expect-has Looking up new games\nwait 4000\nexpect-not-has Looking up new games\n", None)],
+             heroic_with_lookup),
     Scenario("a folder without Heroic's files says so",
              [(OPEN_SETTINGS + "expect-has There's no Heroic in\nexpect Find automatically\nexpect-not EPIC\n", None)],
              lambda dirs: (dirs.use_demo(), dirs.write("settings.toml", '[steam]\npath = "steam"\n\n[heroic]\npath = "nothing"\n'))),

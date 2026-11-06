@@ -8,11 +8,21 @@ Surface {
     property var link: null
     property int minimum: 0
     property bool open: false
+    // A running job's progress: up for as long as it isn't empty, behind any message.
+    property string status: ""
     // How far it has slid in from the bottom edge: 0 off the window, 1 shown. `open` is what
     // it should be, this is what you see.
     property real shown: 0
     readonly property int undoDuration: 15000
     readonly property string text: label.text
+
+    function settle() {
+        if (!open && status !== "") {
+            label.text = status
+            link = null
+        }
+        shown = open || status !== "" ? 1 : 0
+    }
 
     function show(text: string, link, minimum = 0) {
         root.minimum = minimum
@@ -65,7 +75,8 @@ Surface {
         enabled: Motion.fades
         MotionNumber { fade: true; speed: slide.targetValue > 0 ? "normal" : "fast" }
     }
-    onOpenChanged: shown = open ? 1 : 0
+    onOpenChanged: settle()
+    onStatusChanged: settle()
     opacity: Motion.on ? 1 : shown
     transform: Translate {
         y: Motion.on ? (1 - root.shown) * (root.parent ? root.parent.height - root.y : root.height) : 0
