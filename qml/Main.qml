@@ -1119,6 +1119,19 @@ ApplicationWindow {
                 gameList.revealGame(id)
                 window.setOverviewOpen(false)
             }
+            function onAttentionRequested(kind) {
+                switch (kind) {
+                case "neverBackedUp": window.openSettingsAt("library", "backup-saves"); break
+                case "missingArt":
+                case "missingInfo": window.openBulkLookup(window); break
+                case "updates":
+                    Library.showFiltered("steam", [], [])
+                    window.setOverviewOpen(false)
+                    break
+                case "romsNotFound": window.openSettingsAt("platforms"); break
+                case "emulatorsMissing": window.openSettingsAt("emulators"); break
+                }
+            }
         }
 
         Loader {

@@ -197,6 +197,8 @@ qt_add_qml_module(lattis
         qml/views/OverviewBarRow.qml
         qml/views/OverviewPlatformInfo.qml
         qml/views/OverviewPlatforms.qml
+        qml/views/OverviewAttention.qml
+        qml/views/OverviewBacklog.qml
         qml/views/OverviewStatuses.qml
         qml/views/OverviewTags.qml
         qml/views/OverviewYears.qml

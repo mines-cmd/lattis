@@ -283,6 +283,7 @@ int main(int argc, char *argv[])
         },
         [&runner] { return runner.minSessionSeconds(); });
     SavesSettings::setup({dataDir, SavesManifest::defaultDir()});
+    library.setBackupFolder([&library, &dataDir] { return SavesBackup::autoFolder(library, dataDir); });
     GameSaves::setup(
         {[&library, &dataDir](const QString &id) {
              return SavesBackup::inputFor(library, id, dataDir, QStringLiteral(LATTIS_VERSION), true);

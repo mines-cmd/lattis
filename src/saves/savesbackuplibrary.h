@@ -16,6 +16,9 @@ bool anyOn(const Library &library);
 // menu's Back up saves takes them all); copies of one game come as one entry.
 QList<BackupPlan::GameQueries> queriesFor(const Library &library);
 
+// The folder automatic backups go into (`[backup] auto_folder`, the default when unset), with `~` resolved.
+QString autoFolder(const Library &library, const QString &dataDir);
+
 // `ignoreChoice` is the game page's Back up now: the automatic setting doesn't matter to it.
 std::optional<Input> inputFor(const Library &library, const QString &gameId, const QString &dataDir,
                               const QString &appVersion, bool ignoreChoice = false);

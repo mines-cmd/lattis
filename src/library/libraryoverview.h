@@ -2,9 +2,12 @@
 
 #include <QDateTime>
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+
+#include <optional>
 
 // See docs/code/library.md.
 namespace LibraryOverview {
@@ -27,6 +30,12 @@ struct Game
     bool uninstallable = false;
     QStringList tags;
     int year = 0; // 0 = unknown
+    bool rom = false;
+    bool emulatorMissing = false; // a ROM game none of whose emulators is found
+    bool updateWaiting = false;
+    bool missingArt = false; // no cover, and a lookup hasn't marked it as having none
+    bool missingInfo = false; // no description, year or rating a lookup could still find
+    QString backupKey; // the folder name its saves are backed up under; empty = saves can't cover it
 };
 
 struct Drive
@@ -108,9 +117,26 @@ struct Totals
     int played = 0;
 };
 
+struct Attention
+{
+    QString kind; // neverBackedUp, missingArt, missingInfo, updates, romsNotFound, emulatorsMissing
+    int count = 0;
+};
+
+struct Pick
+{
+    QString id;
+    QString title;
+    QString platform;
+    QString coverUrl;
+    int year = 0;
+};
+
 struct Overview
 {
     Totals totals;
+    QList<Attention> attention; // in this order, the ones with something to report
+    QList<Pick> backlog; // installed Backlog games, for From your backlog to pick from
     QList<Counted> continuePlaying;
     QList<DriveUse> drives; // the ones holding games, most games first
     QList<PlatformSize> platformSizes;
@@ -128,7 +154,9 @@ constexpr int kDormantMonths = 6;
 constexpr int kTopTagLimit = 12;
 constexpr int kYearSpanLimit = 100; // a wider span (a mistyped year) lists only the years in use
 
+// `backedUp` holds the backup keys that have a backup; nothing (not read) leaves "never backed up" out.
 Overview overview(const QList<Game> &games, const QList<Drive> &drives = {},
-                  const QDateTime &now = QDateTime::currentDateTimeUtc());
+                  const QDateTime &now = QDateTime::currentDateTimeUtc(),
+                  const std::optional<QSet<QString>> &backedUp = std::nullopt);
 QVariantMap toVariantMap(const Overview &overview);
 } // namespace LibraryOverview

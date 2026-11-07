@@ -17,6 +17,7 @@ FocusScope {
     readonly property real contentWidth: Math.min(Theme.overview.maxWidth, width - 2 * sideMargin)
     readonly property var continuePlaying: overview.continuePlaying ?? []
 
+    signal attentionRequested(string kind)
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
     signal gameRequested(string id)
@@ -404,8 +405,46 @@ FocusScope {
                         shown: root.loaded
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
-                        visible: (root.overview.topTags ?? []).length > 0
+                        visible: (root.overview.attention ?? []).length > 0
                         order: root.tiles.length + 4
+
+                        OverviewAttention {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            onActionRequested: kind => root.attentionRequested(kind)
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.backlogPicks ?? []).length > 0
+                        order: root.tiles.length + 5
+
+                        OverviewBacklog {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            info: platformInfo
+                            onGameRequested: id => root.gameRequested(id)
+                            onPlayRequested: id => root.playRequested(id)
+                        }
+                    }
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: Math.min(2, root.columns)
+                    columnSpacing: Theme.overview.sectionSpacing
+                    rowSpacing: Theme.overview.sectionSpacing
+                    uniformCellWidths: true
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.topTags ?? []).length > 0
+                        order: root.tiles.length + 6
 
                         OverviewTags {
                             Layout.fillWidth: true
@@ -419,7 +458,7 @@ FocusScope {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
                         visible: (root.overview.years ?? []).length > 0
-                        order: root.tiles.length + 5
+                        order: root.tiles.length + 7
 
                         OverviewYears {
                             Layout.fillWidth: true

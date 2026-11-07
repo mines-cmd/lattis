@@ -13,6 +13,23 @@
 
 namespace SavesBackup {
 namespace {
+BackupPlan::Settings readSettings(const QString &dataDir)
+{
+    QFile file(dataDir + QStringLiteral("/settings.toml"));
+    const QByteArray bytes = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    return BackupPlan::parseSettings(bytes, file.fileName()).value;
+}
+
+QString resolvedFolder(const BackupPlan::Settings &settings, const QString &home)
+{
+    QString folder = settings.autoFolder;
+    if (folder.isEmpty())
+        folder = QStringLiteral("~/.local/share/lattis-saves");
+    if (folder == QLatin1String("~") || folder.startsWith(QLatin1String("~/")))
+        folder = home + folder.mid(1);
+    return QDir::cleanPath(folder);
+}
+
 bool autoBackupOn(const LibrarySnapshot &snapshot, const Game &game)
 {
     const int own = snapshot.content.games.value(game.id).autoBackup;
@@ -104,6 +121,11 @@ bool anyOn(const Library &library)
     return false;
 }
 
+QString autoFolder(const Library &library, const QString &dataDir)
+{
+    return resolvedFolder(readSettings(dataDir), library.store().installLocations().home);
+}
+
 std::optional<Input> inputFor(const Library &library, const QString &gameId, const QString &dataDir,
                               const QString &appVersion, bool ignoreChoice)
 {
@@ -116,9 +138,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
     if (!ignoreChoice && !autoBackupOn(snapshot, *game))
         return std::nullopt;
 
-    QFile file(dataDir + QStringLiteral("/settings.toml"));
-    const QByteArray bytes = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-    const BackupPlan::Settings settings = BackupPlan::parseSettings(bytes, file.fileName()).value;
+    const BackupPlan::Settings settings = readSettings(dataDir);
 
     Input input;
     input.env = SavesFinder::Env::system();
@@ -167,12 +187,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
     }
 
     input.manifestDir = SavesManifest::defaultDir();
-    QString folder = settings.autoFolder;
-    if (folder.isEmpty())
-        folder = QStringLiteral("~/.local/share/lattis-saves");
-    if (folder == QLatin1String("~") || folder.startsWith(QLatin1String("~/")))
-        folder = input.env.home + folder.mid(1);
-    input.options.folder = QDir::cleanPath(folder);
+    input.options.folder = resolvedFolder(settings, input.env.home);
     input.options.keep = settings.autoKeep;
     input.options.maxBytes = qint64(settings.autoMaxMb) << 20;
     input.appVersion = appVersion;

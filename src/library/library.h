@@ -22,6 +22,7 @@
 #include <QtQml/qqmlregistration.h>
 
 #include <array>
+#include <functional>
 
 class VideoThumbnailMaker;
 class QJSEngine;
@@ -321,6 +322,8 @@ public:
     const QList<Game> &allGames() const { return m_games; }
     const QHash<QString, EmulatorInstall> &installs() const { return m_store.snapshot().installs; }
     QString protonPrefix(quint32 appId) const;
+    // The folder saves are backed up into, for the overview's "never backed up"; without it that row is left out.
+    void setBackupFolder(std::function<QString()> folder) { m_backupFolder = std::move(folder); }
 
 signals:
     void platformFilterChanged();
@@ -449,6 +452,7 @@ private:
     QStringList m_foldedTitles;
     QList<int> m_order;
     QList<Row> m_rows;
+    std::function<QString()> m_backupFolder;
     QList<Platform> m_platforms;
     QList<Platform> m_allPlatforms;
     QList<EmulatorDef> m_emulators;

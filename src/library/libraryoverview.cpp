@@ -172,9 +172,54 @@ void addBreakdowns(Overview &out, const QList<Game> &games, const QList<Unit> &u
             out.years.append({year, years.value(year)});
     }
 }
+
+// Facts about a copy (an update, a ROM, an emulator) count per copy, since each is its own thing to fix; facts about the
+// game (its art, its info, its saves) count a linked group once, by its shown copy.
+void addNextSteps(Overview &out, const QList<Game> &games, const QList<Unit> &units,
+                  const std::optional<QSet<QString>> &backedUp)
+{
+    int neverBackedUp = 0;
+    int missingArt = 0;
+    int missingInfo = 0;
+    for (const Unit &unit : units) {
+        const Game &g = *unit.shown;
+        if (g.missingArt)
+            ++missingArt;
+        if (g.missingInfo)
+            ++missingInfo;
+        const bool played = (unit.grouped ? g.groupPlayMinutes : g.playMinutes) > 0
+            || (unit.grouped ? g.groupLastPlayed : g.lastPlayed).isValid();
+        if (backedUp && played && !g.backupKey.isEmpty() && !backedUp->contains(g.backupKey))
+            ++neverBackedUp;
+        if (unit.installed && g.status == QLatin1String("not_started"))
+            out.backlog.append({g.id, g.title, g.platform, g.coverUrl, g.year});
+    }
+    int updates = 0;
+    int romsNotFound = 0;
+    int emulatorsMissing = 0;
+    for (const Game &g : games) {
+        if (g.hidden)
+            continue;
+        if (g.updateWaiting)
+            ++updates;
+        if (g.rom && !g.installed)
+            ++romsNotFound;
+        if (g.emulatorMissing)
+            ++emulatorsMissing;
+    }
+    const std::pair<const char *, int> rows[] = {{"neverBackedUp", neverBackedUp}, {"missingArt", missingArt},
+                                                 {"missingInfo", missingInfo},     {"updates", updates},
+                                                 {"romsNotFound", romsNotFound},   {"emulatorsMissing", emulatorsMissing}};
+    for (const auto &[kind, count] : rows) {
+        if (count > 0)
+            out.attention.append({QLatin1String(kind), count});
+    }
+    std::sort(out.backlog.begin(), out.backlog.end(), [](const Pick &a, const Pick &b) { return a.id < b.id; });
+}
 } // namespace
 
-Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now)
+Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now,
+                  const std::optional<QSet<QString>> &backedUp)
 {
     QList<Unit> units;
     QHash<QString, int> groupUnit;
@@ -230,6 +275,7 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
 
     addStorage(out, games, drives, now);
     addBreakdowns(out, games, units);
+    addNextSteps(out, games, units, backedUp);
     return out;
 }
 
@@ -285,8 +331,20 @@ QVariantMap toVariantMap(const Overview &overview)
     QVariantList years;
     for (const YearCount &c : overview.years)
         years.append(QVariantMap{{QStringLiteral("year"), c.year}, {QStringLiteral("count"), c.count}});
+    QVariantList attention;
+    for (const Attention &a : overview.attention)
+        attention.append(QVariantMap{{QStringLiteral("kind"), a.kind}, {QStringLiteral("count"), a.count}});
+    QVariantList backlog;
+    for (const Pick &p : overview.backlog)
+        backlog.append(QVariantMap{{QStringLiteral("id"), p.id},
+                                   {QStringLiteral("title"), p.title},
+                                   {QStringLiteral("platform"), p.platform},
+                                   {QStringLiteral("coverUrl"), p.coverUrl},
+                                   {QStringLiteral("year"), p.year}});
     const Totals &t = overview.totals;
-    return {{QStringLiteral("platformCounts"), platformCounts},
+    return {{QStringLiteral("attention"), attention},
+            {QStringLiteral("backlogPicks"), backlog},
+            {QStringLiteral("platformCounts"), platformCounts},
             {QStringLiteral("statusCounts"), statusCounts},
             {QStringLiteral("topTags"), topTags},
             {QStringLiteral("years"), years},

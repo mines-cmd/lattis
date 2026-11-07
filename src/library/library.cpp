@@ -2595,6 +2595,7 @@ void Library::overview()
 {
     QList<LibraryOverview::Game> games;
     games.reserve(m_games.size());
+    const auto &files = m_store.snapshot().content.games;
     for (const Game &g : m_games) {
         const bool uninstallable = g.platform == kSteamPlatform
             ? g.installed || g.steamUpdate == SteamUpdate::Downloading || g.steamUpdate == SteamUpdate::Paused
@@ -2602,10 +2603,33 @@ void Library::overview()
         QStringList tags;
         for (const GameTag &tag : g.tags)
             tags.append(tag.name);
-        games.append({g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes, g.lastPlayed,
-                      g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString(), g.sizeBytes,
-                      g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable, tags, g.year});
+        LibraryOverview::Game o{g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes,
+                                g.lastPlayed, g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString(), g.sizeBytes,
+                                g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable, tags, g.year};
+        if (g.hidden) {
+            games.append(o);
+            continue;
+        }
+        o.rom = g.rom;
+        o.updateWaiting = g.steamUpdate == SteamUpdate::Waiting;
+        if (g.rom && g.installed) {
+            const Platform *p = platform(g.platform);
+            o.emulatorMissing = Emulators::choose(g.emulator, p ? p->emulators : QStringList(), installs()).isEmpty();
+        }
+        // A game IGDB doesn't know (igdb 0) is left to the user, as Look up missing info leaves it.
+        const auto file = files.constFind(g.id);
+        const bool lookupable = file == files.cend() || file->igdb != 0;
+        const QStringList marked = file == files.cend() ? QStringList() : file->unavailable;
+        o.missingArt = lookupable && g.coverUrl.isEmpty() && !marked.contains(QStringLiteral("cover"));
+        o.missingInfo = lookupable
+            && ((g.description.trimmed().isEmpty() && !marked.contains(QStringLiteral("description")))
+                || (g.year <= 0 && !marked.contains(QStringLiteral("year")))
+                || (g.rating < 0 && !marked.contains(QStringLiteral("rating"))));
+        if (!g.rom && (g.platform == kSteamPlatform || g.platform == kProtonPlatform || g.platform == kLinuxPlatform))
+            o.backupKey = g.groupId.isEmpty() ? g.id : g.groupId;
+        games.append(o);
     }
+    const QString backupFolder = m_backupFolder ? m_backupFolder() : QString();
     QVariantList platforms;
     for (const Platform &p : m_platforms)
         platforms.append(QVariantMap{{QStringLiteral("id"), p.id}, {QStringLiteral("name"), p.name}});
@@ -2614,7 +2638,7 @@ void Library::overview()
         emit overviewReady(watcher->result());
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms)]() mutable {
+    watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms), backupFolder]() mutable {
         // A link to another drive (~/Games -> /mnt/ssd/Games) takes space where it leads.
         for (LibraryOverview::Game &g : games) {
             if (g.installed && !g.hidden && !g.path.isEmpty()) {
@@ -2629,7 +2653,20 @@ void Library::overview()
                                v.bytesTotal(), v.bytesAvailable()});
         }
 
-        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives));
+        // Only the folder names that hold an archive: a listing per played game, no archive is opened.
+        std::optional<QSet<QString>> backedUp;
+        if (!backupFolder.isEmpty()) {
+            backedUp.emplace();
+            for (const LibraryOverview::Game &g : std::as_const(games)) {
+                const bool played = g.playMinutes > 0 || g.lastPlayed.isValid() || g.groupPlayMinutes > 0
+                    || g.groupLastPlayed.isValid();
+                if (g.hidden || !played || g.backupKey.isEmpty() || backedUp->contains(g.backupKey))
+                    continue;
+                if (!QDir(backupFolder + u'/' + g.backupKey).entryList({QStringLiteral("*.tar.zst")}, QDir::Files).isEmpty())
+                    backedUp->insert(g.backupKey);
+            }
+        }
+        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives, QDateTime::currentDateTimeUtc(), backedUp));
         const auto withDates = [&map](const QString &key) {
             QVariantList rows = map.value(key).toList();
             for (QVariant &row : rows) {

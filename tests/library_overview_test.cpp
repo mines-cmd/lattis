@@ -45,6 +45,12 @@ private slots:
     void topTags();
     void releaseYears();
     void breakdownsVariantMap();
+    void nothingNeedsAttention();
+    void attentionRows();
+    void attentionLeavesOutHiddenAndCountsGroupsOnce();
+    void savesNeverBackedUp();
+    void backlogPicks();
+    void attentionVariantMap();
 };
 
 void LibraryOverviewTest::emptyLibrary()
@@ -543,6 +549,151 @@ void LibraryOverviewTest::breakdownsVariantMap()
     QCOMPARE(map.value("statusCounts").toList().at(0).toMap().value("status").toString(), QStringLiteral("playing"));
     QCOMPARE(map.value("topTags").toList().at(0).toMap().value("tag").toString(), QStringLiteral("RPG"));
     QCOMPARE(map.value("years").toList().at(0).toMap().value("year").toInt(), 2020);
+}
+
+namespace {
+int attentionCount(const LibraryOverview::Overview &o, const QString &kind)
+{
+    for (const LibraryOverview::Attention &a : o.attention) {
+        if (a.kind == kind)
+            return a.count;
+    }
+    return 0;
+}
+} // namespace
+
+void LibraryOverviewTest::nothingNeedsAttention()
+{
+    const LibraryOverview::Overview o = LibraryOverview::overview({game("a"), game("b")});
+    QVERIFY(o.attention.isEmpty());
+    QVERIFY(o.backlog.isEmpty());
+    QVERIFY(LibraryOverview::toVariantMap(o).value("attention").toList().isEmpty());
+}
+
+void LibraryOverviewTest::attentionRows()
+{
+    Game art = game("art");
+    art.missingArt = true;
+    Game info = game("info");
+    info.missingInfo = true;
+    Game update = game("update", "steam");
+    update.updateWaiting = true;
+    Game gone = game("gone");
+    gone.rom = true;
+    gone.installed = false;
+    Game noEmulator = game("noemu");
+    noEmulator.rom = true;
+    noEmulator.emulatorMissing = true;
+    const LibraryOverview::Overview o = LibraryOverview::overview({art, info, update, gone, noEmulator, game("fine")});
+    QCOMPARE(attentionCount(o, "missingArt"), 1);
+    QCOMPARE(attentionCount(o, "missingInfo"), 1);
+    QCOMPARE(attentionCount(o, "updates"), 1);
+    QCOMPARE(attentionCount(o, "romsNotFound"), 1);
+    QCOMPARE(attentionCount(o, "emulatorsMissing"), 1);
+    QCOMPARE(attentionCount(o, "neverBackedUp"), 0); // not read: left out, not zero-and-shown
+    QCOMPARE(o.attention.size(), 5);
+    // The brief's order, whatever the games' order.
+    QCOMPARE(o.attention.at(0).kind, QStringLiteral("missingArt"));
+    QCOMPARE(o.attention.at(4).kind, QStringLiteral("emulatorsMissing"));
+}
+
+void LibraryOverviewTest::attentionLeavesOutHiddenAndCountsGroupsOnce()
+{
+    Game hidden = game("h");
+    hidden.hidden = true;
+    hidden.missingArt = true;
+    hidden.updateWaiting = true;
+    hidden.rom = true;
+    hidden.installed = false;
+    Game main = game("main", "steam");
+    main.groupId = "main";
+    main.missingArt = true;
+    main.missingInfo = true;
+    Game copy = game("copy", "epic");
+    copy.groupId = "main";
+    copy.missingArt = true;
+    copy.missingInfo = true;
+    const LibraryOverview::Overview o = LibraryOverview::overview({hidden, main, copy});
+    QCOMPARE(attentionCount(o, "missingArt"), 1);
+    QCOMPARE(attentionCount(o, "missingInfo"), 1);
+    QCOMPARE(attentionCount(o, "updates"), 0);
+    QCOMPARE(attentionCount(o, "romsNotFound"), 0);
+
+    // An update on each copy is two updates to run.
+    main.updateWaiting = true;
+    copy.updateWaiting = true;
+    QCOMPARE(attentionCount(LibraryOverview::overview({main, copy}), "updates"), 2);
+}
+
+void LibraryOverviewTest::savesNeverBackedUp()
+{
+    const auto played = [](const QString &id, const QString &key) {
+        Game g = game(id, "steam");
+        g.playMinutes = 30;
+        g.backupKey = key;
+        return g;
+    };
+    Game never = game("never", "steam"); // unplayed: nothing to back up yet
+    never.backupKey = "never";
+    Game rom = game("rom"); // no key: saves can't cover it
+    rom.playMinutes = 10;
+    Game mainCopy = played("main", "main");
+    mainCopy.groupId = "main";
+    mainCopy.groupPlayMinutes = 30;
+    Game linked = game("linked", "linux");
+    linked.groupId = "main";
+    linked.groupPlayMinutes = 30;
+    linked.backupKey = "main";
+    Game hidden = played("hidden", "hidden");
+    hidden.hidden = true;
+    const QList<Game> games{played("a", "a"), played("b", "b"), never, rom, mainCopy, linked, hidden};
+
+    LibraryOverview::Overview o = LibraryOverview::overview(games, {}, QDateTime::currentDateTimeUtc(), QSet<QString>{"b"});
+    QCOMPARE(attentionCount(o, "neverBackedUp"), 2); // a, and the linked group once
+    o = LibraryOverview::overview(games, {}, QDateTime::currentDateTimeUtc(), QSet<QString>{"a", "b", "main"});
+    QCOMPARE(attentionCount(o, "neverBackedUp"), 0);
+    o = LibraryOverview::overview(games);
+    QCOMPARE(attentionCount(o, "neverBackedUp"), 0);
+}
+
+void LibraryOverviewTest::backlogPicks()
+{
+    Game a = game("a");
+    a.status = "not_started";
+    a.year = 2020;
+    Game uninstalled = game("u");
+    uninstalled.status = "not_started";
+    uninstalled.installed = false;
+    Game hidden = game("h");
+    hidden.status = "not_started";
+    hidden.hidden = true;
+    Game playing = game("p");
+    playing.status = "playing";
+    Game main = game("m", "steam");
+    main.status = "not_started";
+    main.groupId = "m";
+    Game copy = game("m2", "epic");
+    copy.status = "not_started";
+    copy.groupId = "m";
+    const LibraryOverview::Overview o = LibraryOverview::overview({copy, main, a, uninstalled, hidden, playing});
+    QCOMPARE(o.backlog.size(), 2); // installed only, a group once
+    QCOMPARE(o.backlog.at(0).id, QStringLiteral("a"));
+    QCOMPARE(o.backlog.at(0).year, 2020);
+    QCOMPARE(o.backlog.at(1).id, QStringLiteral("m"));
+
+    const QVariantMap map = LibraryOverview::toVariantMap(o);
+    QCOMPARE(map.value("backlogPicks").toList().size(), 2);
+    QCOMPARE(map.value("backlogPicks").toList().at(0).toMap().value("platform").toString(), QStringLiteral("switch"));
+}
+
+void LibraryOverviewTest::attentionVariantMap()
+{
+    Game art = game("art");
+    art.missingArt = true;
+    const QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview({art}));
+    const QVariantMap row = map.value("attention").toList().at(0).toMap();
+    QCOMPARE(row.value("kind").toString(), QStringLiteral("missingArt"));
+    QCOMPARE(row.value("count").toInt(), 1);
 }
 
 QTEST_APPLESS_MAIN(LibraryOverviewTest)
