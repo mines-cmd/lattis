@@ -124,6 +124,7 @@ The tests (`secretstore_test`) run a fake Secret Service on a private session bu
 | `generalsettings.*` | `[general]` struct and parser |
 | `localtime.h` | `localDateTime(date, time)`: a local `QDateTime` that doesn't ask libc for the zone each time |
 | `oldname.*` | One-time migration from the "game-launcher" folder names |
+| `pluralfallback.*` | `PluralFallback`: a translator that turns "%n game(s)" into "1 game" or "3 games" while there are no translation files |
 | `restart.*` | Restarting the process after a library Import |
 | `singleinstance.*` | One running copy per data dir: lock, socket, activate |
 | `suggestion.*` | "did you mean" hint for unknown names in user files |

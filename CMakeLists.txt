@@ -346,6 +346,7 @@ qt_add_qml_module(lattis
         src/core/gallerysettings.h src/core/gallerysettings.cpp
         src/core/generalsettings.h src/core/generalsettings.cpp
         src/core/oldname.h src/core/oldname.cpp
+        src/core/pluralfallback.h src/core/pluralfallback.cpp
         src/core/restart.h src/core/restart.cpp
         src/core/singleinstance.h src/core/singleinstance.cpp
         src/core/suggestion.h src/core/suggestion.cpp

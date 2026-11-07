@@ -12,6 +12,7 @@
 #include "core/gamepagemigration.h"
 #include "core/general.h"
 #include "core/oldname.h"
+#include "core/pluralfallback.h"
 #include "core/restart.h"
 #include "core/singleinstance.h"
 #include "core/uidriver.h"
@@ -99,6 +100,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("Lattis"));
     app.setApplicationVersion(QStringLiteral(LATTIS_VERSION));
     app.setDesktopFileName(QStringLiteral("lattis"));
+    app.installTranslator(new PluralFallback(&app));
     // The desktop finds the icon through lattis.desktop; this is for X11 and for Wayland
     // compositors that take a window's own icon.
     QIcon icon;
