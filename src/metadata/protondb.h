@@ -28,6 +28,14 @@ public:
     // total; possibly stale while a new one loads), "none" (no reports) or "failed" (asked again when selected again, once per run).
     Q_INVOKABLE QVariantMap summary(qint64 appId);
 
+    // Asks for the game's entry if it has no fresh one and hasn't failed this run, without the reselect rule summary() has.
+    // True when a request was queued, so the caller waits for changed(); the library overview walks its games with it.
+    Q_INVOKABLE bool request(qint64 appId);
+    // The cached tier of each game that has an entry (stale ones too); "none" = ProtonDB has no reports. Asks for nothing.
+    QHash<qint64, QString> cachedTiers(const QList<qint64> &appIds);
+    // The games of `appIds` that request() would ask for. Asks for nothing.
+    QList<qint64> unfresh(const QList<qint64> &appIds);
+
     void setWaitMs(int ms) { m_waitMs = ms; }
     void setNow(qint64 secsSinceEpoch) { m_now = secsSinceEpoch; }
 
@@ -48,6 +56,7 @@ private:
     };
 
     qint64 now() const;
+    bool wanted(qint64 appId) const;
     bool fresh(const Entry &entry) const;
     void load();
     void save() const;

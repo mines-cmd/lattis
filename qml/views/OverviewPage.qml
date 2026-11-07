@@ -9,6 +9,9 @@ FocusScope {
     property real dragReserve: 0
     property var overview: ({})
     property bool achievementsRead: false
+    // The app ids ProtonDB is still to be asked about, one at a time at the pace ProtonDb keeps.
+    property var protonQueue: []
+    property bool protonAsking: false
     readonly property bool loaded: overview.games !== undefined
 
     // Three columns of cards, two below compactWidth, one below narrowWidth.
@@ -19,6 +22,8 @@ FocusScope {
     readonly property var continuePlaying: overview.continuePlaying ?? []
 
     signal attentionRequested(string kind)
+    signal backUpRequested()
+    signal galleryRequested()
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
     signal gameRequested(string id)
@@ -28,13 +33,35 @@ FocusScope {
 
     function start() {
         overview = {}
+        stopAskingProtonDb()
         Library.overview()
         sinkOut.stop()
         riseIn.restart()
         forceActiveFocus()
     }
 
+    function stopAskingProtonDb() {
+        protonQueue = []
+        protonAsking = false
+        askWatchdog.stop()
+        protonRefresh.stop()
+    }
+
+    function askProtonDb() {
+        while (protonQueue.length > 0) {
+            const appId = protonQueue.shift()
+            if (ProtonDb.request(appId)) {
+                protonAsking = true
+                askWatchdog.restart()
+                return
+            }
+        }
+        protonAsking = false
+        askWatchdog.stop()
+    }
+
     function leave() {
+        stopAskingProtonDb()
         riseIn.stop()
         sinkOut.restart()
     }
@@ -109,6 +136,9 @@ FocusScope {
         target: Library
         function onOverviewReady(result) {
             root.overview = result
+            root.protonQueue = result.protonDbPending ?? []
+            if (!askWatchdog.running && root.visible)
+                root.askProtonDb()
             // The pass can end before the first answer lands, which then has no achievements.
             if (root.achievementsRead && result.achievements === undefined)
                 Library.overview()
@@ -122,6 +152,30 @@ FocusScope {
             if (root.visible && root.loaded)
                 Library.overview()
         }
+    }
+
+    // The singleton is only built when the page asks, and only listened to while it does.
+    Connections {
+        target: root.protonAsking ? ProtonDb : null
+        function onChanged() {
+            if (!protonRefresh.running)
+                protonRefresh.start()
+            root.askProtonDb()
+        }
+    }
+
+    // Another part of the app can take the one request ProtonDb holds, which leaves no answer to wait for.
+    Timer {
+        id: askWatchdog
+        interval: 15000
+        onTriggered: root.askProtonDb()
+    }
+
+    // The card fills in over a minute or two; it is worked out again now and then, not for each answer.
+    Timer {
+        id: protonRefresh
+        interval: 8000
+        onTriggered: if (root.visible && root.loaded) Library.overview()
     }
 
     MotionNumber {
@@ -509,6 +563,65 @@ FocusScope {
                         OverviewYears {
                             Layout.fillWidth: true
                             overview: root.overview
+                        }
+                    }
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: Math.min(2, root.columns)
+                    columnSpacing: Theme.overview.sectionSpacing
+                    rowSpacing: Theme.overview.sectionSpacing
+                    uniformCellWidths: true
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: compatibility.hasContent
+                        order: root.tiles.length + 9
+
+                        OverviewCompatibility {
+                            id: compatibility
+                            readonly property bool hasContent: games > 0 || (stats.native ?? 0) + (stats.proton ?? 0) > 0
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            asking: root.protonAsking
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        spacing: Theme.overview.sectionSpacing
+
+                        OverviewReveal {
+                            shown: root.loaded
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            visible: (root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0
+                            order: root.tiles.length + 10
+
+                            OverviewSaves {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                onBackUpRequested: root.backUpRequested()
+                            }
+                        }
+
+                        OverviewReveal {
+                            shown: root.loaded
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            order: root.tiles.length + 11
+
+                            OverviewFacts {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                onGalleryRequested: root.galleryRequested()
+                                onGameRequested: id => root.gameRequested(id)
+                                onSteamRequested: root.filterRequested("steam", [], [])
+                            }
                         }
                     }
                 }

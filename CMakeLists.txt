@@ -203,6 +203,9 @@ qt_add_qml_module(lattis
         qml/views/OverviewStatuses.qml
         qml/views/OverviewTags.qml
         qml/views/OverviewYears.qml
+        qml/views/OverviewCompatibility.qml
+        qml/views/OverviewSaves.qml
+        qml/views/OverviewFacts.qml
         qml/views/GalleryFilters.qml
         qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml

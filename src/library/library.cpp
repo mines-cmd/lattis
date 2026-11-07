@@ -131,6 +131,16 @@ QString lastPlayedText(const QDateTime &time)
     return DateFormat::shortDate(date);
 }
 
+QString waitingText(const QDate &added)
+{
+    const qint64 days = qMax<qint64>(0, added.daysTo(QDate::currentDate()));
+    if (days < 60)
+        return Library::tr("%n day(s)", nullptr, int(days));
+    if (days < 730)
+        return Library::tr("%n month(s)", nullptr, int(days / 30));
+    return Library::tr("%n year(s)", nullptr, int(days / 365));
+}
+
 QString shellQuoted(const QString &arg)
 {
     static const QString kSafe = QStringLiteral("-_./=:+,@%~");
@@ -2597,6 +2607,13 @@ void Library::overview()
     QList<LibraryOverview::Game> games;
     games.reserve(m_games.size());
     const auto &files = m_store.snapshot().content.games;
+    const SteamState &steam = m_store.snapshot().steam;
+    QHash<QString, QString> toolNames;
+    for (const CompatTool &t : steam.tools())
+        toolNames.insert(t.name, t.displayName);
+    const auto toolName = [&](const QString &name) { return toolNames.value(name, name); };
+    const QString defaultTool = steam.compatTools.contains(0) ? toolName(steam.compatTools.value(0)) : QString();
+    QList<qint64> installedApps;
     for (const Game &g : m_games) {
         const bool uninstallable = g.platform == kSteamPlatform
             ? g.installed || g.steamUpdate == SteamUpdate::Downloading || g.steamUpdate == SteamUpdate::Paused
@@ -2612,6 +2629,23 @@ void Library::overview()
             continue;
         }
         o.rom = g.rom;
+        o.added = g.added;
+        if (g.installed && !g.rom) {
+            if (g.platform == kLinuxPlatform) {
+                o.runner = QStringLiteral("native");
+            } else if (g.platform == kProtonPlatform) {
+                o.runner = QStringLiteral("proton");
+                const QString tool = g.proton.isEmpty() ? steam.compatTools.value(g.shortcut) : g.proton;
+                o.tool = tool.isEmpty() ? (defaultTool.isEmpty() ? tr("Steam's default") : defaultTool) : toolName(tool);
+            } else if (g.platform == kSteamPlatform) {
+                const qint64 appId = GameId::steamAppId(g.id);
+                const QString tool = steam.compatTools.value(appId);
+                o.runner = tool.isEmpty() ? QStringLiteral("steam") : QStringLiteral("proton");
+                o.tool = toolName(tool);
+                if (appId > 0)
+                    installedApps.append(appId);
+            }
+        }
         if (g.platform == kSteamPlatform && (g.installed || g.playMinutes > 0 || g.lastPlayed.isValid())) {
             o.steamAppId = GameId::steamAppId(g.id);
             if (o.steamAppId > 0)
@@ -2636,6 +2670,13 @@ void Library::overview()
         games.append(o);
     }
     const QString backupFolder = m_backupFolder ? m_backupFolder() : QString();
+    const QString dataDir = m_store.dataDir();
+    LibraryOverview::Sources sources;
+    sources.defaultTool = defaultTool;
+    if (m_protonTiers)
+        sources.protonTiers = m_protonTiers(installedApps);
+    if (m_protonUnfresh)
+        m_protonPending = m_protonUnfresh(installedApps);
 
     // What was read before is used while a game whose play changed is read again.
     LibraryOverview::AchievementCounts counts;
@@ -2687,7 +2728,8 @@ void Library::overview()
         watcher->deleteLater();
     });
     watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms), backupFolder,
-                                     achievementCounts = std::move(achievementCounts)]() mutable {
+                                     achievementCounts = std::move(achievementCounts), sources = std::move(sources), dataDir,
+                                     pending = m_protonPending]() mutable {
         // A link to another drive (~/Games -> /mnt/ssd/Games) takes space where it leads.
         for (LibraryOverview::Game &g : games) {
             if (g.installed && !g.hidden && !g.path.isEmpty()) {
@@ -2702,20 +2744,58 @@ void Library::overview()
                                v.bytesTotal(), v.bytesAvailable()});
         }
 
-        // Only the folder names that hold an archive: a listing per played game, no archive is opened.
+        // One listing per backup folder; no archive is opened. A folder holding an archive is a game (or an emulator)
+        // that has been backed up.
         std::optional<QSet<QString>> backedUp;
         if (!backupFolder.isEmpty()) {
             backedUp.emplace();
-            for (const LibraryOverview::Game &g : std::as_const(games)) {
-                const bool played = g.playMinutes > 0 || g.lastPlayed.isValid() || g.groupPlayMinutes > 0
-                    || g.groupLastPlayed.isValid();
-                if (g.hidden || !played || g.backupKey.isEmpty() || backedUp->contains(g.backupKey))
+            LibraryOverview::SaveBackups saves;
+            const QDir root(backupFolder);
+            for (const QString &name : root.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QFileInfoList archives = QDir(root.filePath(name)).entryInfoList({QStringLiteral("*.tar.zst")}, QDir::Files);
+                if (archives.isEmpty())
                     continue;
-                if (!QDir(backupFolder + u'/' + g.backupKey).entryList({QStringLiteral("*.tar.zst")}, QDir::Files).isEmpty())
-                    backedUp->insert(g.backupKey);
+                backedUp->insert(name);
+                for (const QFileInfo &archive : archives) {
+                    ++saves.archives;
+                    saves.bytes += archive.size();
+                    if (!saves.last.isValid() || archive.lastModified() > saves.last)
+                        saves.last = archive.lastModified();
+                }
+            }
+            sources.saves = saves;
+        }
+
+        // Merged entries (several sessions in one) don't count, as in Play statistics.
+        for (LibraryOverview::Game &g : games) {
+            if (g.hidden || (g.playMinutes <= 0 && !g.lastPlayed.isValid()))
+                continue;
+            for (const PlayHistory::Session &s : PlayHistory::read(dataDir, g.id).value.sessions) {
+                if (!s.merged && s.minutes > g.longestSession) {
+                    g.longestSession = s.minutes;
+                    g.longestEnd = s.end;
+                }
             }
         }
-        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives, QDateTime::currentDateTimeUtc(), backedUp, achievementCounts));
+        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives, QDateTime::currentDateTimeUtc(), backedUp, achievementCounts, sources));
+        // The dates the cards say, in words, as the lists above get theirs.
+        const auto textOf = [&map](const QString &key, const QString &date, const QString &name, auto text) {
+            if (!map.contains(key))
+                return;
+            QVariantMap m = map.value(key).toMap();
+            m.insert(name, text(m.value(date)));
+            map.insert(key, m);
+        };
+        textOf(QStringLiteral("saves"), QStringLiteral("last"), QStringLiteral("lastText"),
+               [](const QVariant &v) { return lastPlayedText(v.toDateTime()); });
+        textOf(QStringLiteral("longest"), QStringLiteral("end"), QStringLiteral("endText"),
+               [](const QVariant &v) { return lastPlayedText(v.toDateTime()); });
+        textOf(QStringLiteral("waiting"), QStringLiteral("added"), QStringLiteral("waitingText"),
+               [](const QVariant &v) { return waitingText(v.toDate()); });
+        QVariantList pendingApps;
+        for (qint64 appId : std::as_const(pending))
+            pendingApps.append(appId);
+        map.insert(QStringLiteral("protonDbPending"), pendingApps);
         const auto withDates = [&map](const QString &key) {
             QVariantList rows = map.value(key).toList();
             for (QVariant &row : rows) {

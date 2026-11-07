@@ -64,6 +64,15 @@ private slots:
     void nearlyDoneOrderAndLimit();
     void nearlyDoneLeavesOutBelowEightyAndPerfect();
     void achievementsLeaveOutHiddenAndCountLinkedCopiesOnce();
+    void compatibilityTiersAndNothingAsked();
+    void compatibilityRunners();
+    void compatibilityTopToolAndLinkedCopies();
+    void compatibilityVariantMap();
+    void savesCoverage();
+    void savesFolderUnknown();
+    void longestSession();
+    void waitingLongest();
+    void factsVariantMap();
 };
 
 void LibraryOverviewTest::emptyLibrary()
@@ -808,6 +817,223 @@ void LibraryOverviewTest::achievementsLeaveOutHiddenAndCountLinkedCopiesOnce()
     QCOMPARE(o.achievements->total, 10);
     QCOMPARE(o.achievements->nearlyDone.size(), 1);
     QCOMPARE(o.achievements->nearlyDone.at(0).id, QStringLiteral("steam-3"));
+}
+
+void LibraryOverviewTest::compatibilityTiersAndNothingAsked()
+{
+    QList<Game> games{steamGame("steam-1", 1), steamGame("steam-2", 2), steamGame("steam-3", 3),
+                      steamGame("steam-4", 4), steamGame("steam-5", 5), steamGame("steam-6", 6)};
+    games[4].installed = false; // not installed: not counted
+    games[5].hidden = true;
+    LibraryOverview::Sources sources;
+    sources.protonTiers = {{1, "gold"}, {2, "native"}, {3, "none"}, {5, "platinum"}, {6, "gold"}};
+
+    LibraryOverview::Overview o = LibraryOverview::overview(games, {}, day(20), std::nullopt, std::nullopt, sources);
+    const LibraryOverview::Compatibility &c = o.compatibility;
+    QCOMPARE(c.games, 4);
+    QCOMPARE(c.noReports, 1);
+    QCOMPARE(c.unchecked, 1); // steam-4
+    QCOMPARE(c.tiers.size(), 2);
+    QCOMPARE(c.tiers.at(0).tier, QStringLiteral("native")); // the tiers' own order, not by count
+    QCOMPARE(c.tiers.at(1).tier, QStringLiteral("gold"));
+
+    o = LibraryOverview::overview(games);
+    QCOMPARE(o.compatibility.unchecked, 4);
+    QVERIFY(o.compatibility.tiers.isEmpty());
+}
+
+void LibraryOverviewTest::compatibilityRunners()
+{
+    Game linuxGame = game("l", "linux");
+    linuxGame.runner = "native";
+    Game proton = game("p", "proton");
+    proton.runner = "proton";
+    proton.tool = "GE-Proton9";
+    Game mapped = steamGame("steam-1", 1);
+    mapped.runner = "proton";
+    mapped.tool = "Proton 9";
+    Game nativeTier = steamGame("steam-2", 2);
+    nativeTier.runner = "steam";
+    Game windowsTier = steamGame("steam-3", 3);
+    windowsTier.runner = "steam";
+    Game unknownTier = steamGame("steam-4", 4);
+    unknownTier.runner = "steam";
+    Game gone = linuxGame;
+    gone.id = "gone";
+    gone.installed = false;
+    gone.runner.clear(); // a game that isn't installed has no runner
+    Game rom = game("r");
+    LibraryOverview::Sources sources;
+    sources.protonTiers = {{2, "native"}, {3, "gold"}};
+    sources.defaultTool = "Proton Experimental";
+
+    LibraryOverview::Overview o = LibraryOverview::overview({linuxGame, proton, mapped, nativeTier, windowsTier, unknownTier, gone, rom},
+                                                            {}, day(20), std::nullopt, std::nullopt, sources);
+    QCOMPARE(o.compatibility.native, 2); // the Linux game and the native Steam one
+    QCOMPARE(o.compatibility.proton, 3); // the shortcut, the mapped game and the Steam game under the default tool
+
+    // Without a default tool Steam has nothing to run a Windows game with, so an unmapped game is native.
+    sources.defaultTool.clear();
+    o = LibraryOverview::overview({windowsTier, unknownTier}, {}, day(20), std::nullopt, std::nullopt, sources);
+    QCOMPARE(o.compatibility.native, 2);
+    QCOMPARE(o.compatibility.proton, 0);
+}
+
+void LibraryOverviewTest::compatibilityTopToolAndLinkedCopies()
+{
+    Game a = game("a", "proton");
+    a.runner = "proton";
+    a.tool = "GE-Proton9";
+    Game b = a;
+    b.id = "b";
+    Game c = a;
+    c.id = "c";
+    c.tool = "Proton 9";
+    Game copy = a; // a linked copy of c, installed too
+    copy.id = "copy";
+    copy.groupId = "c";
+    c.groupId = "c";
+
+    LibraryOverview::Overview o = LibraryOverview::overview({a, b, c, copy});
+    QCOMPARE(o.compatibility.proton, 3);
+    QCOMPARE(o.compatibility.topTool, QStringLiteral("GE-Proton9"));
+    QCOMPARE(o.compatibility.topToolGames, 2);
+
+    // A tie goes to the name that sorts first, so the card doesn't change between runs.
+    b.tool = "Proton 9";
+    o = LibraryOverview::overview({a, b});
+    QCOMPARE(o.compatibility.topTool, QStringLiteral("GE-Proton9"));
+}
+
+void LibraryOverviewTest::compatibilityVariantMap()
+{
+    Game g = steamGame("steam-1", 1);
+    g.runner = "proton";
+    g.tool = "Proton 9";
+    LibraryOverview::Sources sources;
+    sources.protonTiers = {{1, "silver"}};
+    const QVariantMap map = LibraryOverview::toVariantMap(
+        LibraryOverview::overview({g}, {}, day(20), std::nullopt, std::nullopt, sources)).value("compatibility").toMap();
+    QCOMPARE(map.value("games").toInt(), 1);
+    QCOMPARE(map.value("proton").toInt(), 1);
+    QCOMPARE(map.value("topTool").toString(), QStringLiteral("Proton 9"));
+    QCOMPARE(map.value("tiers").toList().at(0).toMap().value("tier").toString(), QStringLiteral("silver"));
+}
+
+void LibraryOverviewTest::savesCoverage()
+{
+    Game played = steamGame("steam-1", 1);
+    played.backupKey = "steam-1";
+    played.playMinutes = 10;
+    Game also = steamGame("steam-2", 2);
+    also.backupKey = "steam-2";
+    also.lastPlayed = day(3);
+    Game unplayed = steamGame("steam-3", 3);
+    unplayed.backupKey = "steam-3";
+    Game rom = game("r"); // no backup key: its saves can't be covered
+    rom.playMinutes = 5;
+    Game hidden = steamGame("steam-5", 5);
+    hidden.backupKey = "steam-5";
+    hidden.playMinutes = 5;
+    hidden.hidden = true;
+    LibraryOverview::Sources sources;
+    sources.saves = LibraryOverview::SaveBackups{7, 3 << 20, day(9)};
+
+    const LibraryOverview::Overview o = LibraryOverview::overview(
+        {played, also, unplayed, rom, hidden}, {}, day(20), QSet<QString>{"steam-1", "steam-3", "emulator-x"}, std::nullopt, sources);
+    QVERIFY(o.saves);
+    QCOMPARE(o.saves->played, 2);
+    QCOMPARE(o.saves->backedUp, 1);
+    QCOMPARE(o.saves->archives, 7);
+    QCOMPARE(o.saves->bytes, qint64(3 << 20));
+    QCOMPARE(o.saves->last, day(9));
+
+    const QVariantMap map = LibraryOverview::toVariantMap(o).value("saves").toMap();
+    QCOMPARE(map.value("played").toInt(), 2);
+    QCOMPARE(map.value("backedUp").toInt(), 1);
+    QCOMPARE(map.value("archives").toInt(), 7);
+}
+
+void LibraryOverviewTest::savesFolderUnknown()
+{
+    const LibraryOverview::Overview o = LibraryOverview::overview({game("a")});
+    QVERIFY(!o.saves);
+    QVERIFY(!LibraryOverview::toVariantMap(o).contains("saves"));
+}
+
+void LibraryOverviewTest::longestSession()
+{
+    QVERIFY(!LibraryOverview::overview({game("a")}).longest);
+
+    Game a = game("a");
+    a.longestSession = 90;
+    a.longestEnd = day(2);
+    Game b = game("b");
+    b.longestSession = 240;
+    b.longestEnd = day(5);
+    Game hidden = game("h");
+    hidden.longestSession = 999;
+    hidden.hidden = true;
+    // A linked group answers under its main copy, whichever copy had the session.
+    Game main = game("m");
+    main.groupId = "m";
+    Game copy = game("c");
+    copy.groupId = "m";
+    copy.longestSession = 300;
+    copy.longestEnd = day(7);
+
+    LibraryOverview::Overview o = LibraryOverview::overview({a, b, hidden});
+    QVERIFY(o.longest);
+    QCOMPARE(o.longest->id, QStringLiteral("b"));
+    QCOMPARE(o.longest->minutes, 240);
+
+    o = LibraryOverview::overview({a, b, copy, main});
+    QCOMPARE(o.longest->id, QStringLiteral("m"));
+    QCOMPARE(o.longest->minutes, 300);
+    QCOMPARE(o.longest->end, day(7));
+}
+
+void LibraryOverviewTest::waitingLongest()
+{
+    QVERIFY(!LibraryOverview::overview({game("a")}).waiting);
+
+    Game newer = game("newer");
+    newer.status = "not_started";
+    newer.added = QDate(2026, 5, 1);
+    Game older = game("older");
+    older.status = "not_started";
+    older.added = QDate(2024, 1, 15);
+    Game unknown = game("unknown");
+    unknown.status = "not_started"; // no date: it can't be said to have waited
+    Game playing = game("playing");
+    playing.status = "playing";
+    playing.added = QDate(2020, 1, 1);
+    Game hidden = game("hidden");
+    hidden.status = "not_started";
+    hidden.added = QDate(2019, 1, 1);
+    hidden.hidden = true;
+
+    LibraryOverview::Overview o = LibraryOverview::overview({newer, older, unknown, playing, hidden});
+    QVERIFY(o.waiting);
+    QCOMPARE(o.waiting->id, QStringLiteral("older"));
+    QCOMPARE(o.waiting->added, QDate(2024, 1, 15));
+
+    newer.added = older.added; // a tie goes to the title
+    newer.title = "A";
+    o = LibraryOverview::overview({newer, older});
+    QCOMPARE(o.waiting->id, QStringLiteral("newer"));
+}
+
+void LibraryOverviewTest::factsVariantMap()
+{
+    Game g = game("a");
+    g.status = "not_started";
+    g.added = QDate(2025, 3, 4);
+    g.longestSession = 125;
+    g.longestEnd = day(4);
+    const QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview({g}));
+    QCOMPARE(map.value("longest").toMap().value("minutes").toInt(), 125);
+    QCOMPARE(map.value("waiting").toMap().value("added").toDate(), QDate(2025, 3, 4));
 }
 
 QTEST_APPLESS_MAIN(LibraryOverviewTest)

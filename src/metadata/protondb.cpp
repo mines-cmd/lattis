@@ -105,6 +105,49 @@ QVariantMap ProtonDb::summary(qint64 appId)
     return describe(appId);
 }
 
+bool ProtonDb::wanted(qint64 appId) const
+{
+    const auto entry = m_entries.constFind(appId);
+    const bool stale = entry == m_entries.cend() || !fresh(*entry);
+    const bool busy = appId == m_waiting || appId == m_ready || appId == m_inFlight;
+    return appId > 0 && stale && !busy && m_failures.value(appId) == 0;
+}
+
+bool ProtonDb::request(qint64 appId)
+{
+    if (!m_loaded)
+        load();
+    if (!wanted(appId))
+        return false;
+    schedule(appId);
+    return true;
+}
+
+QHash<qint64, QString> ProtonDb::cachedTiers(const QList<qint64> &appIds)
+{
+    if (!m_loaded)
+        load();
+    QHash<qint64, QString> out;
+    for (qint64 appId : appIds) {
+        const auto entry = m_entries.constFind(appId);
+        if (entry != m_entries.cend())
+            out.insert(appId, entry->noReports ? QStringLiteral("none") : entry->tier);
+    }
+    return out;
+}
+
+QList<qint64> ProtonDb::unfresh(const QList<qint64> &appIds)
+{
+    if (!m_loaded)
+        load();
+    QList<qint64> out;
+    for (qint64 appId : appIds) {
+        if (wanted(appId))
+            out.append(appId);
+    }
+    return out;
+}
+
 QVariantMap ProtonDb::describe(qint64 appId) const
 {
     const auto entry = m_entries.constFind(appId);

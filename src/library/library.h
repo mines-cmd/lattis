@@ -324,6 +324,14 @@ public:
     QString protonPrefix(quint32 appId) const;
     // The folder saves are backed up into, for the overview's "never backed up"; without it that row is left out.
     void setBackupFolder(std::function<QString()> folder) { m_backupFolder = std::move(folder); }
+    // The overview's Compatibility card: the cached ProtonDB tier of each app id, and the ids with no fresh entry
+    // (answered as `protonDbPending`, which the page asks ProtonDB for one by one). Without them the card counts nothing.
+    void setProtonDb(std::function<QHash<qint64, QString>(const QList<qint64> &)> tiers,
+                     std::function<QList<qint64>(const QList<qint64> &)> unfresh)
+    {
+        m_protonTiers = std::move(tiers);
+        m_protonUnfresh = std::move(unfresh);
+    }
 
 signals:
     void platformFilterChanged();
@@ -454,6 +462,9 @@ private:
     QList<int> m_order;
     QList<Row> m_rows;
     std::function<QString()> m_backupFolder;
+    std::function<QHash<qint64, QString>(const QList<qint64> &)> m_protonTiers;
+    std::function<QList<qint64>(const QList<qint64> &)> m_protonUnfresh;
+    QList<qint64> m_protonPending;
     struct AchievementEntry
     {
         int unlocked = 0;

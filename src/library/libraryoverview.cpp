@@ -13,6 +13,9 @@ struct Unit
     const Game *shown = nullptr;
     bool grouped = false;
     bool installed = false;
+    const Game *active = nullptr; // the installed copy, the main one when several are
+    int longest = 0;
+    QDateTime longestEnd;
 };
 
 bool within(const QString &path, const QString &root)
@@ -254,10 +257,111 @@ Achievements achievementsOf(const QList<Game> &games, const AchievementCounts &c
     out.nearlyDone.resize(qMin<qsizetype>(out.nearlyDone.size(), kNearlyDoneLimit));
     return out;
 }
+
+const QStringList kTierOrder{QStringLiteral("native"), QStringLiteral("platinum"), QStringLiteral("gold"),
+                             QStringLiteral("silver"), QStringLiteral("bronze"), QStringLiteral("borked"),
+                             QStringLiteral("pending")};
+
+// A Steam game with no tool of its own is native when ProtonDB says so, or when Steam has no tool to run it with;
+// otherwise a tier ProtonDB knows means it runs under Steam's default tool. No tier yet leaves it uncounted.
+void addCompatibility(Overview &out, const QList<Unit> &units, const Sources &sources)
+{
+    Compatibility &c = out.compatibility;
+    QHash<QString, int> tiers;
+    QHash<QString, int> tools;
+    for (const Unit &unit : units) {
+        const Game *g = unit.active;
+        if (!g)
+            continue;
+        QString tier;
+        if (g->platform == QLatin1String("steam") && g->steamAppId > 0) {
+            ++c.games;
+            const auto it = sources.protonTiers.constFind(g->steamAppId);
+            if (it == sources.protonTiers.cend())
+                ++c.unchecked;
+            else if (*it == QLatin1String("none"))
+                ++c.noReports;
+            else
+                ++tiers[kTierOrder.contains(*it) ? *it : QStringLiteral("pending")];
+            tier = it == sources.protonTiers.cend() ? QString() : *it;
+        }
+
+        QString runner = g->runner;
+        QString tool = g->tool;
+        if (runner == QLatin1String("steam")) {
+            if (tier == QLatin1String("native") || sources.defaultTool.isEmpty()) {
+                runner = QStringLiteral("native");
+            } else if (!tier.isEmpty()) {
+                runner = QStringLiteral("proton");
+                tool = sources.defaultTool;
+            }
+        }
+        if (runner == QLatin1String("native")) {
+            ++c.native;
+        } else if (runner == QLatin1String("proton")) {
+            ++c.proton;
+            ++tools[tool];
+        }
+    }
+    for (const QString &tier : kTierOrder) {
+        if (tiers.value(tier) > 0)
+            c.tiers.append({tier, tiers.value(tier)});
+    }
+    for (auto it = tools.cbegin(); it != tools.cend(); ++it) {
+        if (it.value() > c.topToolGames || (it.value() == c.topToolGames && it.key() < c.topTool)) {
+            c.topTool = it.key();
+            c.topToolGames = it.value();
+        }
+    }
+}
+
+// Coverage is of played games whose saves can be backed up, as Needs attention counts; the archives and their space
+// are the whole backup folder's, emulators' included.
+void addSaves(Overview &out, const QList<Unit> &units, const std::optional<QSet<QString>> &backedUp,
+              const std::optional<SaveBackups> &saves)
+{
+    if (!saves)
+        return;
+    SaveCoverage coverage;
+    coverage.archives = saves->archives;
+    coverage.bytes = saves->bytes;
+    coverage.last = saves->last;
+    for (const Unit &unit : units) {
+        const Game &g = *unit.shown;
+        const bool played = (unit.grouped ? g.groupPlayMinutes : g.playMinutes) > 0
+            || (unit.grouped ? g.groupLastPlayed : g.lastPlayed).isValid();
+        if (!played || g.backupKey.isEmpty())
+            continue;
+        ++coverage.played;
+        if (backedUp && backedUp->contains(g.backupKey))
+            ++coverage.backedUp;
+    }
+    out.saves = coverage;
+}
+
+// The game of a linked group is the shown copy; its sessions are the group's.
+void addFacts(Overview &out, const QList<Unit> &units)
+{
+    for (const Unit &unit : units) {
+        const Game &g = *unit.shown;
+        if (unit.longest > 0) {
+            const bool better = !out.longest || unit.longest > out.longest->minutes
+                || (unit.longest == out.longest->minutes && unit.longestEnd > out.longest->end);
+            if (better)
+                out.longest = LongestSession{g.id, g.title, g.coverUrl, unit.longest, unit.longestEnd};
+        }
+        if (g.status != QLatin1String("not_started") || !g.added.isValid())
+            continue;
+        const bool older = !out.waiting || g.added < out.waiting->added
+            || (g.added == out.waiting->added && g.title.compare(out.waiting->title, Qt::CaseInsensitive) < 0);
+        if (older)
+            out.waiting = Waiting{g.id, g.title, g.coverUrl, g.added};
+    }
+}
 } // namespace
 
 Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now,
-                  const std::optional<QSet<QString>> &backedUp, const std::optional<AchievementCounts> &achievements)
+                  const std::optional<QSet<QString>> &backedUp, const std::optional<AchievementCounts> &achievements, const Sources &sources)
 {
     QList<Unit> units;
     QHash<QString, int> groupUnit;
@@ -267,17 +371,23 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
             continue;
         platforms.insert(g.platform);
         if (g.groupId.isEmpty()) {
-            units.append({&g, false, g.installed});
+            units.append({&g, false, g.installed, g.installed ? &g : nullptr, g.longestSession, g.longestEnd});
             continue;
         }
         const auto it = groupUnit.constFind(g.groupId);
         if (it == groupUnit.cend()) {
             groupUnit.insert(g.groupId, int(units.size()));
-            units.append({&g, true, g.installed});
+            units.append({&g, true, g.installed, g.installed ? &g : nullptr, g.longestSession, g.longestEnd});
             continue;
         }
         Unit &unit = units[*it];
         unit.installed = unit.installed || g.installed;
+        if (g.installed && (!unit.active || g.id == g.groupId))
+            unit.active = &g;
+        if (g.longestSession > unit.longest || (g.longestSession == unit.longest && g.longestEnd > unit.longestEnd)) {
+            unit.longest = g.longestSession;
+            unit.longestEnd = g.longestEnd;
+        }
         if (g.id == g.groupId)
             unit.shown = &g;
     }
@@ -314,6 +424,9 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
     addStorage(out, games, drives, now);
     addBreakdowns(out, games, units);
     addNextSteps(out, games, units, backedUp);
+    addCompatibility(out, units, sources);
+    addSaves(out, units, backedUp, sources.saves);
+    addFacts(out, units);
     if (achievements)
         out.achievements = achievementsOf(games, *achievements);
     return out;
@@ -396,10 +509,46 @@ QVariantMap toVariantMap(const Overview &overview)
                         {QStringLiteral("total"), a.total},
                         {QStringLiteral("perfect"), a.perfect}};
     }
+    const Compatibility &comp = overview.compatibility;
+    QVariantList tiers;
+    for (const TierCount &t : comp.tiers)
+        tiers.append(QVariantMap{{QStringLiteral("tier"), t.tier}, {QStringLiteral("count"), t.count}});
+    const QVariantMap compatibility{{QStringLiteral("games"), comp.games},
+                                    {QStringLiteral("noReports"), comp.noReports},
+                                    {QStringLiteral("unchecked"), comp.unchecked},
+                                    {QStringLiteral("tiers"), tiers},
+                                    {QStringLiteral("native"), comp.native},
+                                    {QStringLiteral("proton"), comp.proton},
+                                    {QStringLiteral("topTool"), comp.topTool},
+                                    {QStringLiteral("topToolGames"), comp.topToolGames}};
     const Totals &t = overview.totals;
-    QVariantMap map{{QStringLiteral("nearlyDone"), nearlyDone}};
+    QVariantMap map{{QStringLiteral("compatibility"), compatibility},
+            {QStringLiteral("nearlyDone"), nearlyDone}};
     if (overview.achievements)
         map.insert(QStringLiteral("achievements"), achievements);
+    if (overview.saves) {
+        const SaveCoverage &c = *overview.saves;
+        map.insert(QStringLiteral("saves"), QVariantMap{{QStringLiteral("played"), c.played},
+                                                        {QStringLiteral("backedUp"), c.backedUp},
+                                                        {QStringLiteral("archives"), c.archives},
+                                                        {QStringLiteral("bytes"), c.bytes},
+                                                        {QStringLiteral("last"), c.last}});
+    }
+    if (overview.longest) {
+        const LongestSession &l = *overview.longest;
+        map.insert(QStringLiteral("longest"), QVariantMap{{QStringLiteral("id"), l.id},
+                                                          {QStringLiteral("title"), l.title},
+                                                          {QStringLiteral("coverUrl"), l.coverUrl},
+                                                          {QStringLiteral("minutes"), l.minutes},
+                                                          {QStringLiteral("end"), l.end}});
+    }
+    if (overview.waiting) {
+        const Waiting &w = *overview.waiting;
+        map.insert(QStringLiteral("waiting"), QVariantMap{{QStringLiteral("id"), w.id},
+                                                          {QStringLiteral("title"), w.title},
+                                                          {QStringLiteral("coverUrl"), w.coverUrl},
+                                                          {QStringLiteral("added"), w.added}});
+    }
     map.insert(QVariantMap{{QStringLiteral("attention"), attention},
             {QStringLiteral("backlogPicks"), backlog},
             {QStringLiteral("platformCounts"), platformCounts},

@@ -44,6 +44,7 @@ Neither IGDB nor SteamGridDB is touched before a lookup is actually started. `Me
 - **Waiting:** a request starts 300 ms after the last `summary()` that needed one (`setWaitMs()`), so arrowing down the list sends nothing for games passed over. One request runs at a time; a game that waited is queued behind it. A reply for a game no longer shown still lands in the cache.
 - **Cache:** `protondb.json` in the cache dir, written with `QSaveFile` after each good answer and read on first use: per app ID the tier, trending tier, total and fetch time (`none: true` for a 404). Fresh for 7 days (`kFreshSeconds`), a 404 for 1 day (`kNoReportsSeconds`). A stale entry shows at once while the new one loads.
 - **Failures** (a network error, bad JSON, an empty tier) aren't cached. The game is asked again the next time it is selected again, at most once more per run (`kMaxFailures`).
+- **Library overview:** `request(appId)` asks for a game's entry when it has no fresh one and hasn't failed this run, without `summary()`'s reselect rule (a failed game isn't asked again by the overview, only by its own page), and says whether it queued one, so the caller waits for `changed()` before the next. `cachedTiers(ids)` and `unfresh(ids)` read the cache and ask for nothing; the overview's Compatibility card counts from them. Like `summary()`, `request()` keeps one waiting game, so a caller must wait for `changed()` between requests.
 - Tests (`protondb_test`) use fixtures, `setNow()` and `setWaitMs()`, and never reach the network.
 
 ## Searching and matching

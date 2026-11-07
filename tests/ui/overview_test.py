@@ -75,7 +75,7 @@ SCENARIOS = [
                + "key F7\nexpect Library overview\n" + STATUS + "click Completed\nwait 500\nexpect Metroid Dread\n"
                + "expect-not Final Fantasy XIV Online\n", None)], demo),
     Scenario("Needs attention lists what to fix and Look up opens Look up missing info",
-             [(OPEN + DOWN + "expect Needs attention\nexpect Games without a cover\nexpect Games without game info\n"
+             [(OPEN + "key PageDown\nkey PageDown\nwait 300\nexpect Needs attention\nexpect Games without a cover\nexpect Games without game info\n"
                + "click Look up\nwait 800\nexpect Missing info\nexpect Games not on IGDB\n", None)], demo),
     Scenario("Needs attention leaves out a row with nothing to report",
              [(OPEN + DOWN + "expect-not Steam updates waiting\n", None)], demo),
@@ -92,6 +92,15 @@ SCENARIOS = [
     Scenario("the Achievements tile opens the Steam games",
              [(OPEN + "click Achievements\nwait 500\nexpect-not Library overview\nexpect Hades\n"
                + "expect-not Metroid Dread\n", None)], with_achievements),
+    Scenario("Compatibility says what it covers, counts native and Proton games and asks ProtonDB for the rest",
+             [(OPEN + DOWN + "expect Compatibility\nexpect ProtonDB tiers of your installed Steam games\n"
+               + "expect Native games\nexpect Proton games\n", None)], demo),
+    Scenario("Save backups offers Back up now, which opens the saves backup",
+             [(OPEN + DOWN + "expect Save backups\nexpect Played games\nclick Back up now\nwait 800\n"
+               + "expect Backups kept per game\n", None)], demo),
+    Scenario("Fun facts name the longest session and link to the Gallery",
+             [(OPEN + DOWN + "expect Fun facts\nexpect Waiting longest\nclick Open the Gallery\nwait 800\n"
+               + "expect-not Library overview\nexpect Gallery\n", None)], demo),
     Scenario("the Games tile opens the whole library, filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\nkey Home\nwait 300\nclick Games\nwait 500\n"

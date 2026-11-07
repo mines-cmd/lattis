@@ -25,6 +25,7 @@
 #include "library/uninstall.h"
 #include "metadata/bulklookup.h"
 #include "metadata/metadataclient.h"
+#include "metadata/protondb.h"
 #include "metadata/scanlookup.h"
 #include "metadata/steamartfetch.h"
 #include "metadata/thumbnailcache.h"
@@ -284,6 +285,8 @@ int main(int argc, char *argv[])
         [&runner] { return runner.minSessionSeconds(); });
     SavesSettings::setup({dataDir, SavesManifest::defaultDir()});
     library.setBackupFolder([&library, &dataDir] { return SavesBackup::autoFolder(library, dataDir); });
+    library.setProtonDb([](const QList<qint64> &ids) { return ProtonDb::instance()->cachedTiers(ids); },
+                        [](const QList<qint64> &ids) { return ProtonDb::instance()->unfresh(ids); });
     GameSaves::setup(
         {[&library, &dataDir](const QString &id) {
              return SavesBackup::inputFor(library, id, dataDir, QStringLiteral(LATTIS_VERSION), true);

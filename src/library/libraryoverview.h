@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDate>
 #include <QDateTime>
 #include <QHash>
 #include <QList>
@@ -38,6 +39,13 @@ struct Game
     bool missingInfo = false; // no description, year or rating a lookup could still find
     QString backupKey; // the folder name its saves are backed up under; empty = saves can't cover it
     qint64 steamAppId = 0; // set for a Steam game whose achievements are read (installed or played); 0 = none
+    QDate added; // invalid = unknown
+    int longestSession = 0; // minutes of its longest session in the play history; merged entries don't count
+    QDateTime longestEnd;
+    // How an installed game runs: "native" (a Linux program), "proton" (through `tool`), or "steam" for a Steam game
+    // with no tool of its own, which ProtonDB's tier settles; empty = not part of the card.
+    QString runner;
+    QString tool; // the display name of the Proton tool, for "proton"
 };
 
 struct AchievementCount
@@ -159,6 +167,65 @@ struct Achievements
     QList<NearlyDone> nearlyDone; // below 100%, highest first
 };
 
+struct TierCount
+{
+    QString tier; // native, platinum, gold, silver, bronze, borked, pending
+    int count = 0;
+};
+
+struct Compatibility
+{
+    int games = 0; // installed Steam games
+    int noReports = 0;
+    int unchecked = 0; // no entry in ProtonDB's cache yet
+    QList<TierCount> tiers; // in that order, the ones in use
+    int native = 0;
+    int proton = 0;
+    QString topTool; // the Proton tool most installed games run through
+    int topToolGames = 0;
+};
+
+struct SaveBackups
+{
+    int archives = 0;
+    qint64 bytes = 0;
+    QDateTime last; // invalid: none
+};
+
+struct SaveCoverage
+{
+    int played = 0; // played games whose saves can be backed up
+    int backedUp = 0;
+    int archives = 0;
+    qint64 bytes = 0;
+    QDateTime last;
+};
+
+struct LongestSession
+{
+    QString id;
+    QString title;
+    QString coverUrl;
+    int minutes = 0;
+    QDateTime end;
+};
+
+struct Waiting
+{
+    QString id;
+    QString title;
+    QString coverUrl;
+    QDate added;
+};
+
+// What the Compatibility and Save backups cards read besides the games.
+struct Sources
+{
+    std::optional<SaveBackups> saves; // nothing: the backup folder is unknown, so the card is left out
+    QHash<qint64, QString> protonTiers; // by app id: a tier, or "none" for no reports; absent = not asked yet
+    QString defaultTool; // display name of the tool Steam runs other titles with; empty = none
+};
+
 struct Overview
 {
     Totals totals;
@@ -174,6 +241,10 @@ struct Overview
     QList<StatusCount> statusCounts; // the list's status order, none last; only the ones in use
     QList<TagCount> topTags;
     QList<YearCount> years; // oldest first, the years between filled with 0
+    Compatibility compatibility;
+    std::optional<SaveCoverage> saves;
+    std::optional<LongestSession> longest;
+    std::optional<Waiting> waiting; // the Backlog game added longest ago
 };
 
 constexpr int kContinueLimit = 7;
@@ -189,6 +260,6 @@ constexpr int kNearlyDonePercent = 80;
 Overview overview(const QList<Game> &games, const QList<Drive> &drives = {},
                   const QDateTime &now = QDateTime::currentDateTimeUtc(),
                   const std::optional<QSet<QString>> &backedUp = std::nullopt,
-                  const std::optional<AchievementCounts> &achievements = std::nullopt);
+                  const std::optional<AchievementCounts> &achievements = std::nullopt, const Sources &sources = {});
 QVariantMap toVariantMap(const Overview &overview);
 } // namespace LibraryOverview

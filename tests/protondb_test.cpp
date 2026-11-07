@@ -84,6 +84,9 @@ private slots:
     void waitSkipsGamesPassedOver();
     void oneRequestAtATime();
     void cacheSurvivesARestart();
+    void cachedTiersAskNothing();
+    void requestAsksOnlyWhatIsWanted();
+    void requestWalkAnswersEveryGame();
 };
 
 void ProtonDbTest::tiersFromFixtures_data()
@@ -318,6 +321,60 @@ void ProtonDbTest::cacheSurvivesARestart()
     QCOMPARE(s.protonDb->summary(200).value("state"), "none");
     QTest::qWait(100);
     QVERIFY(s.server.requests.isEmpty());
+}
+
+void ProtonDbTest::cachedTiersAskNothing()
+{
+    QTemporaryDir cache;
+    writeCache(cache.path(), {{"100", cached("gold", kNow - 6 * kDay)},
+                              {"200", cached("silver", kNow - 20 * kDay)},
+                              {"300", QJsonObject{{"none", true}, {"fetched", kNow - 3600}}}});
+    Setup s(cache.path());
+
+    const QHash<qint64, QString> tiers = s.protonDb->cachedTiers({100, 200, 300, 400});
+    QCOMPARE(tiers.size(), 3);
+    QCOMPARE(tiers.value(100), QStringLiteral("gold"));
+    QCOMPARE(tiers.value(200), QStringLiteral("silver")); // stale, but still the best answer there is
+    QCOMPARE(tiers.value(300), QStringLiteral("none"));
+    QCOMPARE(s.protonDb->unfresh({100, 200, 300, 400, 0}), (QList<qint64>{200, 400}));
+    QTest::qWait(100);
+    QVERIFY(s.server.requests.isEmpty());
+}
+
+void ProtonDbTest::requestAsksOnlyWhatIsWanted()
+{
+    QTemporaryDir cache;
+    writeCache(cache.path(), {{"100", cached("gold", kNow - 6 * kDay)}});
+    Setup s(cache.path());
+    s.server.on(pathFor(200), {500, {}});
+
+    QVERIFY(!s.protonDb->request(100)); // fresh
+    QVERIFY(!s.protonDb->request(0));
+    QSignalSpy changed(s.protonDb.get(), &ProtonDb::changed);
+    QVERIFY(s.protonDb->request(200));
+    QVERIFY(!s.protonDb->request(200)); // already on its way
+    QVERIFY(changed.wait(5000));
+    QVERIFY(!s.protonDb->request(200)); // it failed: the game's own page asks again, not the overview
+    QVERIFY(!s.protonDb->unfresh({200}).contains(200));
+    QCOMPARE(s.server.requestsTo(pathFor(200)).size(), 1);
+}
+
+void ProtonDbTest::requestWalkAnswersEveryGame()
+{
+    QTemporaryDir cache;
+    Setup s(cache.path());
+    for (qint64 id : {11, 12, 13})
+        s.server.on(pathFor(id), {200, answer("gold")});
+    QSignalSpy changed(s.protonDb.get(), &ProtonDb::changed);
+
+    QList<qint64> queue{11, 12, 13};
+    while (!queue.isEmpty()) {
+        QVERIFY(s.protonDb->request(queue.takeFirst()));
+        QVERIFY(changed.wait(5000));
+    }
+    QCOMPARE(changed.size(), 3);
+    QVERIFY(s.protonDb->unfresh({11, 12, 13}).isEmpty());
+    QCOMPARE(s.protonDb->cachedTiers({11, 12, 13}).size(), 3);
 }
 
 QTEST_GUILESS_MAIN(ProtonDbTest)
