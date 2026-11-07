@@ -55,11 +55,9 @@ SCENARIOS = [
     Scenario("the app menu's Library overview entry opens the overview",
              [("key F10\nwait 600\nclick Library overview\nwait 300\nexpect Back to games\nexpect Storage\n", None)],
              demo),
-    Scenario("Storage lists the largest games, switches to Dormant and Uninstall asks first",
+    Scenario("Storage lists the largest games and switches to Dormant",
              [(OPEN + "expect Storage\nexpect Largest\nexpect Dormant\nexpect Baldur's Gate 3\n"
-               + STATUS + "click Uninstall\nexpect Cancel\nclick Cancel\n"
-               + "expect-not Cancel\nexpect Library overview\n" + "key Home\nwait 300\n"
-               + "click Dormant\nexpect Not played yet\n", None)], demo),
+               + "expect-not Uninstall\nclick Dormant\nexpect Not played yet\n", None)], demo),
     Scenario("Games by platform, Status, Top tags and Release years list the library",
              [(OPEN + "expect Games by platform\nexpect Status\nexpect Top tags\nexpect Release years\n"
                + "expect Dropped\nexpect Roguelike\n", None)], demo),
@@ -70,7 +68,7 @@ SCENARIOS = [
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
                + "expect-not Metroid Dread\n", None)], demo),
     Scenario("a platform in the overview opens the game list on that platform, and the next click replaces the filters",
-             [(OPEN + "click Proton\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
+             [(OPEN + STATUS + "click Proton\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
                + "expect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\n" + STATUS + "click Completed\nwait 500\nexpect Metroid Dread\n"
                + "expect-not Final Fantasy XIV Online\n", None)], demo),

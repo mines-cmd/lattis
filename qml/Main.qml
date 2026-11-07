@@ -1116,7 +1116,6 @@ ApplicationWindow {
                 window.setOverviewOpen(false)
             }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
-            function onUninstallRequested(id) { window.uninstallGame(Library.gameWithId(id)) }
             function onGameRequested(id) {
                 gameList.revealGame(id)
                 window.setOverviewOpen(false)

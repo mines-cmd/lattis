@@ -8,8 +8,10 @@ Item {
 
     property string name
     property string countText
+    // A quieter line under the name, for what would crowd the count.
+    property string detailText
     property real fraction: 0
-    // The widest count in the card, so every bar in it is as long.
+    // The widest count in the card, for when it needs more than count_width; otherwise the bars in every card end alike.
     property real countWidth: 0
     property color fill: Theme.overview.barFill
     // Whether the card's bars have already grown, so a refresh doesn't grow them again.
@@ -45,11 +47,24 @@ Item {
         anchors.rightMargin: Theme.layout.spacing
         spacing: Theme.layout.spacing * 1.5
 
-        Label {
+        ColumnLayout {
+            Layout.fillWidth: false
             Layout.preferredWidth: Theme.overview.labelWidth
-            text: root.name
-            color: Theme.palette.text
-            elide: Text.ElideRight
+            Layout.maximumWidth: Theme.overview.labelWidth
+            spacing: 0
+
+            Label {
+                Layout.fillWidth: true
+                text: root.name
+                color: Theme.palette.text
+                elide: Text.ElideRight
+            }
+            OverviewQuiet {
+                Layout.fillWidth: true
+                visible: root.detailText !== ""
+                text: root.detailText
+                elide: Text.ElideRight
+            }
         }
         Rectangle {
             Layout.fillWidth: true

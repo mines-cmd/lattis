@@ -21,7 +21,6 @@ OverviewCard {
     readonly property real otherTotal: drives.reduce((sum, d) => sum + d.otherBytes, 0)
 
     signal gameRequested(string id)
-    signal uninstallRequested(string id)
 
     onOverviewChanged: if (overview.drives === undefined) barsGrown = false
 
@@ -216,7 +215,7 @@ OverviewCard {
                     readonly property bool unknownSize: modelData.bytes <= 0
 
                     Layout.fillWidth: true
-                    implicitHeight: Math.max(thumb.height, uninstall.implicitHeight)
+                    implicitHeight: thumb.height
 
                     MouseArea {
                         anchors.fill: parent
@@ -261,20 +260,9 @@ OverviewCard {
 
                     OverviewQuiet {
                         id: size
-                        anchors.right: uninstall.visible ? uninstall.left : parent.right
-                        anchors.rightMargin: uninstall.visible ? Theme.layout.spacing : 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
-                    }
-
-                    SettingsButton {
-                        id: uninstall
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: entry.modelData.uninstallable
-                        text: qsTr("Uninstall")
-                        danger: true
-                        onClicked: root.uninstallRequested(entry.modelData.id)
+                        text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
                     }
                 }
             }

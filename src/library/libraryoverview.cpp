@@ -76,7 +76,7 @@ void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &dri
             continue;
         addBytes(out.platformSizes, g.platform, g.sizeBytes);
         const QDateTime lastPlayed = g.groupId.isEmpty() ? g.lastPlayed : g.groupLastPlayed;
-        const Sized row{g.id, g.title, g.platform, g.coverUrl, lastPlayed, qMax<qint64>(g.sizeBytes, 0), g.uninstallable};
+        const Sized row{g.id, g.title, g.platform, g.coverUrl, lastPlayed, qMax<qint64>(g.sizeBytes, 0)};
         if (row.bytes > 0)
             out.largest.append(row);
         if (!lastPlayed.isValid() || lastPlayed < cutoff)
@@ -456,8 +456,7 @@ QVariantMap toVariantMap(const Overview &overview)
                                    {QStringLiteral("platform"), s.platform},
                                    {QStringLiteral("coverUrl"), s.coverUrl},
                                    {QStringLiteral("lastPlayed"), s.lastPlayed},
-                                   {QStringLiteral("bytes"), s.bytes},
-                                   {QStringLiteral("uninstallable"), s.uninstallable}});
+                                   {QStringLiteral("bytes"), s.bytes}});
         return out;
     };
     QVariantList drives;

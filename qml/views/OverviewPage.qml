@@ -21,6 +21,8 @@ FocusScope {
     readonly property real contentWidth: Math.min(Theme.overview.maxWidth, width - 2 * sideMargin)
     readonly property var continuePlaying: overview.continuePlaying ?? []
 
+    onLoadedChanged: if (!loaded) stacks.reset()
+
     signal attentionRequested(string kind)
     signal backUpRequested()
     signal galleryRequested()
@@ -29,7 +31,6 @@ FocusScope {
     signal gameRequested(string id)
     signal playRequested(string id)
     signal statsRequested()
-    signal uninstallRequested(string id)
 
     function start() {
         overview = {}
@@ -337,6 +338,13 @@ FocusScope {
                             flickableDirection: Flickable.HorizontalFlick
                             ScrollBar.horizontal: ScrollBar { visible: coverStrip.contentWidth > coverStrip.width }
 
+                            // The covers share the card's width, so a few games don't leave it mostly empty.
+                            readonly property real coverWidth: {
+                                const count = Math.max(1, root.continuePlaying.length)
+                                const share = (width - (count - 1) * Theme.overview.coverSpacing) / count
+                                return Math.max(Theme.overview.coverWidth, Math.min(Theme.overview.coverMaxWidth, share))
+                            }
+
                             Row {
                                 id: coverRow
                                 spacing: Theme.overview.coverSpacing
@@ -349,7 +357,7 @@ FocusScope {
                                         required property var modelData
                                         readonly property bool hovered: hover.hovered
 
-                                        width: Theme.overview.coverWidth
+                                        width: coverStrip.coverWidth
                                         implicitHeight: cover.height + caption.implicitHeight + Theme.layout.spacing
 
                                         ArtThumb {
@@ -413,17 +421,65 @@ FocusScope {
                     }
                 }
 
-                GridLayout {
+                // Cards differ in height and come and go with the library, so no fixed pairing or split keeps
+                // both columns level. Each card, in this order, goes in the shorter column when the page loads
+                // and stays there, so a refresh doesn't move cards around while they are read.
+                Item {
+                    id: stacks
+
+                    property real stackHeight: 0
+                    readonly property int count: root.columns === 1 ? 1 : 2
+                    readonly property real gap: Theme.overview.sectionSpacing
+                    readonly property real columnWidth: (width - (count - 1) * gap) / count
+
                     Layout.fillWidth: true
-                    columns: root.columns === 1 ? 1 : 2
-                    columnSpacing: Theme.overview.sectionSpacing
-                    rowSpacing: Theme.overview.sectionSpacing
-                    uniformCellWidths: true
+                    Layout.preferredHeight: stackHeight
+
+                    function reset() {
+                        for (let i = 0; i < children.length; ++i)
+                            children[i].column = -1
+                        Qt.callLater(relayout)
+                    }
+
+                    function relayout() {
+                        const bottoms = new Array(count).fill(0)
+                        const last = new Array(count).fill(null)
+                        for (let i = 0; i < children.length; ++i) {
+                            const card = children[i]
+                            if (!card.visible)
+                                continue
+                            if (card.column < 0 || card.column >= count)
+                                card.column = bottoms.indexOf(Math.min(...bottoms))
+                            card.x = card.column * (columnWidth + gap)
+                            card.y = bottoms[card.column]
+                            card.width = columnWidth
+                            card.height = card.implicitHeight
+                            card.stretch = false
+                            bottoms[card.column] += card.implicitHeight + gap
+                            last[card.column] = card
+                        }
+                        stackHeight = Math.max(0, Math.max(...bottoms) - gap)
+                        if (count === 2) {
+                            const shorter = bottoms[0] < bottoms[1] ? 0 : 1
+                            const difference = Math.abs(bottoms[0] - bottoms[1])
+                            if (difference > 0 && difference <= Theme.overview.columnStretch && last[shorter]) {
+                                last[shorter].height += difference
+                                last[shorter].stretch = true
+                            }
+                        }
+                    }
+
+                    onCountChanged: reset()
+                    onWidthChanged: relayout()
+                    Component.onCompleted: {
+                        for (let i = 0; i < children.length; ++i) {
+                            children[i].implicitHeightChanged.connect(() => Qt.callLater(relayout))
+                            children[i].visibleChanged.connect(() => Qt.callLater(relayout))
+                        }
+                    }
 
                     OverviewReveal {
                         shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
                         visible: storage.hasContent
                         order: root.tiles.length + 1
 
@@ -434,57 +490,36 @@ FocusScope {
                             info: platformInfo
                             stacked: true
                             onGameRequested: id => root.gameRequested(id)
-                            onUninstallRequested: id => root.uninstallRequested(id)
                         }
                     }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
-                        spacing: Theme.overview.sectionSpacing
-
-                        OverviewReveal {
-                            shown: root.loaded
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            visible: (root.overview.platformCounts ?? []).length > 0
-                            order: root.tiles.length + 2
-
-                            OverviewPlatforms {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                info: platformInfo
-                                onFilterRequested: platform => root.filterRequested(platform, [], [])
-                            }
-                        }
-
-                        OverviewReveal {
-                            shown: root.loaded
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            visible: (root.overview.statusCounts ?? []).length > 0
-                            order: root.tiles.length + 3
-
-                            OverviewStatuses {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                onFilterRequested: status => root.filterRequested("", [status], [])
-                            }
-                        }
-                    }
-                }
-
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: Math.min(2, root.columns)
-                    columnSpacing: Theme.overview.sectionSpacing
-                    rowSpacing: Theme.overview.sectionSpacing
-                    uniformCellWidths: true
 
                     OverviewReveal {
                         shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.platformCounts ?? []).length > 0
+                        order: root.tiles.length + 2
+
+                        OverviewPlatforms {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            info: platformInfo
+                            onFilterRequested: platform => root.filterRequested(platform, [], [])
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        visible: (root.overview.statusCounts ?? []).length > 0
+                        order: root.tiles.length + 3
+
+                        OverviewStatuses {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            onFilterRequested: status => root.filterRequested("", [status], [])
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
                         visible: (root.overview.attention ?? []).length > 0
                         order: root.tiles.length + 4
 
@@ -495,54 +530,34 @@ FocusScope {
                         }
                     }
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
-                        spacing: Theme.overview.sectionSpacing
+                    OverviewReveal {
+                        shown: root.loaded
+                        visible: (root.overview.backlogPicks ?? []).length > 0
+                        order: root.tiles.length + 5
 
-                        OverviewReveal {
-                            shown: root.loaded
+                        OverviewBacklog {
                             Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            visible: (root.overview.backlogPicks ?? []).length > 0
-                            order: root.tiles.length + 5
-
-                            OverviewBacklog {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                info: platformInfo
-                                onGameRequested: id => root.gameRequested(id)
-                                onPlayRequested: id => root.playRequested(id)
-                            }
-                        }
-
-                        OverviewReveal {
-                            shown: root.loaded
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            visible: (root.overview.nearlyDone ?? []).length > 0
-                            order: root.tiles.length + 6
-
-                            OverviewNearlyDone {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                onGameRequested: id => root.gameRequested(id)
-                            }
+                            overview: root.overview
+                            info: platformInfo
+                            onGameRequested: id => root.gameRequested(id)
+                            onPlayRequested: id => root.playRequested(id)
                         }
                     }
-                }
-
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: Math.min(2, root.columns)
-                    columnSpacing: Theme.overview.sectionSpacing
-                    rowSpacing: Theme.overview.sectionSpacing
-                    uniformCellWidths: true
 
                     OverviewReveal {
                         shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.nearlyDone ?? []).length > 0
+                        order: root.tiles.length + 6
+
+                        OverviewNearlyDone {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            onGameRequested: id => root.gameRequested(id)
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
                         visible: (root.overview.topTags ?? []).length > 0
                         order: root.tiles.length + 7
 
@@ -555,8 +570,6 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
                         visible: (root.overview.years ?? []).length > 0
                         order: root.tiles.length + 8
 
@@ -565,19 +578,9 @@ FocusScope {
                             overview: root.overview
                         }
                     }
-                }
-
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: Math.min(2, root.columns)
-                    columnSpacing: Theme.overview.sectionSpacing
-                    rowSpacing: Theme.overview.sectionSpacing
-                    uniformCellWidths: true
 
                     OverviewReveal {
                         shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
                         visible: compatibility.hasContent
                         order: root.tiles.length + 9
 
@@ -590,38 +593,28 @@ FocusScope {
                         }
                     }
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
-                        spacing: Theme.overview.sectionSpacing
+                    OverviewReveal {
+                        shown: root.loaded
+                        visible: (root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0
+                        order: root.tiles.length + 10
 
-                        OverviewReveal {
-                            shown: root.loaded
+                        OverviewSaves {
                             Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            visible: (root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0
-                            order: root.tiles.length + 10
-
-                            OverviewSaves {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                onBackUpRequested: root.backUpRequested()
-                            }
+                            overview: root.overview
+                            onBackUpRequested: root.backUpRequested()
                         }
+                    }
 
-                        OverviewReveal {
-                            shown: root.loaded
+                    OverviewReveal {
+                        shown: root.loaded
+                        order: root.tiles.length + 11
+
+                        OverviewFacts {
                             Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            order: root.tiles.length + 11
-
-                            OverviewFacts {
-                                Layout.fillWidth: true
-                                overview: root.overview
-                                onGalleryRequested: root.galleryRequested()
-                                onGameRequested: id => root.gameRequested(id)
-                                onSteamRequested: root.filterRequested("steam", [], [])
-                            }
+                            overview: root.overview
+                            onGalleryRequested: root.galleryRequested()
+                            onGameRequested: id => root.gameRequested(id)
+                            onSteamRequested: root.filterRequested("steam", [], [])
                         }
                     }
                 }

@@ -8,10 +8,19 @@ Item {
     default property alias content: holder.data
     property int order: 0
     property bool shown: false
+    // Set by the page, which places the cards: the column it chose, and whether the card grows to end level with the other column.
+    property int column: -1
+    property bool stretch: false
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
     opacity: 0
+
+    onStretchChanged: {
+        const card = holder.children[0]
+        if (card)
+            card.Layout.fillHeight = stretch
+    }
 
     onShownChanged: {
         if (shown) {
@@ -31,6 +40,7 @@ Item {
     ColumnLayout {
         id: holder
         width: parent.width
+        height: parent.height
         spacing: 0
     }
 }

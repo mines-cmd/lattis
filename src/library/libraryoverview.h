@@ -29,7 +29,6 @@ struct Game
     QString coverUrl;
     qint64 sizeBytes = 0; // 0 = unknown
     QString path; // the folder (or ROM) it takes space in, resolved; empty = nowhere known
-    bool uninstallable = false;
     QStringList tags;
     int year = 0; // 0 = unknown
     bool rom = false;
@@ -96,7 +95,6 @@ struct Sized
     QString coverUrl;
     QDateTime lastPlayed;
     qint64 bytes = 0;
-    bool uninstallable = false;
 };
 
 struct PlatformCount

@@ -2615,15 +2615,12 @@ void Library::overview()
     const QString defaultTool = steam.compatTools.contains(0) ? toolName(steam.compatTools.value(0)) : QString();
     QList<qint64> installedApps;
     for (const Game &g : m_games) {
-        const bool uninstallable = g.platform == kSteamPlatform
-            ? g.installed || g.steamUpdate == SteamUpdate::Downloading || g.steamUpdate == SteamUpdate::Paused
-            : runsProgram(g.platform) && g.installed;
         QStringList tags;
         for (const GameTag &tag : g.tags)
             tags.append(tag.name);
         LibraryOverview::Game o{g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes,
                                 g.lastPlayed, g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString(), g.sizeBytes,
-                                g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable, tags, g.year};
+                                g.installDir.isEmpty() ? g.romPath : g.installDir, tags, g.year};
         if (g.hidden) {
             games.append(o);
             continue;

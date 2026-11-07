@@ -16,7 +16,7 @@ OverviewCard {
     signal filterRequested(string platform)
 
     function countText(c): string {
-        return qsTr("%1 · %2 · %3 installed").arg(c.games).arg(percentText(c.games, total)).arg(c.installed)
+        return qsTr("%1 · %2").arg(c.games).arg(percentText(c.games, total))
     }
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
@@ -35,6 +35,7 @@ OverviewCard {
         OverviewBarRow {
             required property var modelData
             name: root.info.nameOf(modelData.platform)
+            detailText: qsTr("%1 installed").arg(modelData.installed)
             countText: root.countText(modelData)
             countWidth: sample.implicitWidth
             fraction: root.total > 0 ? modelData.games / root.total : 0

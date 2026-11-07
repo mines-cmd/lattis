@@ -416,7 +416,6 @@ void LibraryOverviewTest::largestAndDormant()
 void LibraryOverviewTest::storageVariantMap()
 {
     Game g = installedAt("g", "steam", "/g/g", 5 * GB);
-    g.uninstallable = true;
     g.title = "Hades";
     const QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview({g}, {drive("/", 100 * GB, 40 * GB)}, kNow));
 
@@ -433,7 +432,6 @@ void LibraryOverviewTest::storageVariantMap()
     const QVariantMap row = map.value("largest").toList().at(0).toMap();
     QCOMPARE(row.value("id").toString(), QStringLiteral("g"));
     QCOMPARE(row.value("bytes").toLongLong(), 5 * GB);
-    QVERIFY(row.value("uninstallable").toBool());
     QCOMPARE(map.value("dormant").toList().size(), 1);
     QCOMPARE(map.value("platformSizes").toList().size(), 1);
 }
