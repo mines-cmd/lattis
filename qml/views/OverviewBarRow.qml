@@ -23,7 +23,7 @@ Item {
     signal grew()
 
     Layout.fillWidth: true
-    implicitHeight: line.implicitHeight + Theme.layout.spacing
+    implicitHeight: line.implicitHeight + 2 * Theme.overview.rowPadding
 
     Component.onCompleted: {
         grow = 1

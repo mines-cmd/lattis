@@ -9,13 +9,15 @@ OverviewCard {
     property var overview: ({})
     property bool barsGrown: false
 
-    readonly property var counts: overview.statusCounts ?? []
-    readonly property int total: overview.games ?? 0
+    readonly property var allCounts: overview.statusCounts ?? []
+    readonly property var counts: allCounts.filter(c => c.status !== "none")
+    readonly property int unsetCount: allCounts.find(c => c.status === "none")?.count ?? 0
+    readonly property int total: counts.reduce((sum, c) => sum + c.count, 0)
 
     signal filterRequested(string status)
 
     function countText(c): string {
-        return qsTr("%1 · %2").arg(c.count).arg(percentText(c.count, total))
+        return String(c.count)
     }
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
@@ -40,6 +42,23 @@ OverviewCard {
             grown: root.barsGrown
             onGrew: root.barsGrown = true
             onClicked: root.filterRequested(modelData.status)
+        }
+    }
+
+    OverviewQuiet {
+        id: footnote
+        Layout.fillWidth: true
+        visible: root.unsetCount > 0
+        text: qsTr("%n game(s) with no status", "", root.unsetCount)
+        elide: Text.ElideRight
+        font.underline: footnoteMouse.containsMouse
+
+        MouseArea {
+            id: footnoteMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.filterRequested("none")
         }
     }
 }

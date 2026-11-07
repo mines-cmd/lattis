@@ -9,6 +9,7 @@ OverviewCard {
     property var overview: ({})
 
     readonly property var rows: overview.attention ?? []
+    readonly property int itemCount: rows.reduce((sum, r) => sum + r.count, 0)
 
     signal actionRequested(string kind)
 
@@ -36,7 +37,30 @@ OverviewCard {
         return ""
     }
 
-    OverviewCardTitle { text: qsTr("Needs attention") }
+    function iconOf(kind: string): string {
+        switch (kind) {
+        case "neverBackedUp": return Icons.save2Line
+        case "missingArt": return Icons.image
+        case "missingInfo": return Icons.informationLine
+        case "updates": return Icons.download
+        case "romsNotFound": return Icons.link
+        case "emulatorsMissing": return Icons.gamepadLine
+        }
+        return ""
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+
+        OverviewCardTitle {
+            Layout.fillWidth: true
+            text: qsTr("Needs attention")
+        }
+        OverviewQuiet {
+            visible: root.itemCount > 0
+            text: qsTr("%n item(s)", "", root.itemCount)
+        }
+    }
 
     Repeater {
         model: root.rows
@@ -48,10 +72,25 @@ OverviewCard {
             Layout.fillWidth: true
             spacing: Theme.layout.spacing * 1.5
 
+            Rectangle {
+                visible: Theme.overview.attentionIconTile > 0
+                Layout.preferredWidth: Theme.overview.attentionIconTile
+                Layout.preferredHeight: Theme.overview.attentionIconTile
+                radius: Theme.radius.small
+                color: Theme.overview.attentionIconBackground
+
+                Icon {
+                    anchors.centerIn: parent
+                    size: Theme.overview.attentionIconSize
+                    color: Theme.overview.attentionIcon
+                    path: root.iconOf(line.modelData.kind)
+                }
+            }
             Label {
-                Layout.preferredWidth: Theme.overview.countWidth
+                Layout.preferredWidth: Theme.overview.attentionCountWidth
                 text: line.modelData.count
                 color: Theme.palette.text
+                font.pixelSize: Theme.overview.attentionCountSize
                 font.weight: Theme.font.strongWeight
                 horizontalAlignment: Text.AlignRight
             }
