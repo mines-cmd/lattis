@@ -934,11 +934,15 @@ void LibraryOverviewTest::savesCoverage()
     hidden.backupKey = "steam-5";
     hidden.playMinutes = 5;
     hidden.hidden = true;
+    Game removed = steamGame("steam-6", 6); // played, but not installed: nothing to back up
+    removed.backupKey = "steam-6";
+    removed.playMinutes = 5;
+    removed.installed = false;
     LibraryOverview::Sources sources;
     sources.saves = LibraryOverview::SaveBackups{7, 3 << 20, day(9)};
 
     const LibraryOverview::Overview o = LibraryOverview::overview(
-        {played, also, unplayed, rom, hidden}, {}, day(20), QSet<QString>{"steam-1", "steam-3", "emulator-x"}, std::nullopt, sources);
+        {played, also, unplayed, rom, hidden, removed}, {}, day(20), QSet<QString>{"steam-1", "steam-3", "emulator-x"}, std::nullopt, sources);
     QVERIFY(o.saves);
     QCOMPARE(o.saves->played, 2);
     QCOMPARE(o.saves->backedUp, 1);

@@ -192,7 +192,7 @@ void addNextSteps(Overview &out, const QList<Game> &games, const QList<Unit> &un
             ++missingInfo;
         const bool played = (unit.grouped ? g.groupPlayMinutes : g.playMinutes) > 0
             || (unit.grouped ? g.groupLastPlayed : g.lastPlayed).isValid();
-        if (backedUp && played && !g.backupKey.isEmpty() && !backedUp->contains(g.backupKey))
+        if (backedUp && played && unit.installed && !g.backupKey.isEmpty() && !backedUp->contains(g.backupKey))
             ++neverBackedUp;
         if (unit.installed && g.status == QLatin1String("not_started"))
             out.backlog.append({g.id, g.title, g.platform, g.coverUrl, g.year});
@@ -315,7 +315,7 @@ void addCompatibility(Overview &out, const QList<Unit> &units, const Sources &so
     }
 }
 
-// Coverage is of played games whose saves can be backed up, as Needs attention counts; the archives and their space
+// Coverage is of installed, played games whose saves can be backed up, as Needs attention counts; the archives and their space
 // are the whole backup folder's, emulators' included.
 void addSaves(Overview &out, const QList<Unit> &units, const std::optional<QSet<QString>> &backedUp,
               const std::optional<SaveBackups> &saves)
@@ -330,7 +330,7 @@ void addSaves(Overview &out, const QList<Unit> &units, const std::optional<QSet<
         const Game &g = *unit.shown;
         const bool played = (unit.grouped ? g.groupPlayMinutes : g.playMinutes) > 0
             || (unit.grouped ? g.groupLastPlayed : g.lastPlayed).isValid();
-        if (!played || g.backupKey.isEmpty())
+        if (!played || !unit.installed || g.backupKey.isEmpty())
             continue;
         ++coverage.played;
         if (backedUp && backedUp->contains(g.backupKey))
