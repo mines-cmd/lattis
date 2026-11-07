@@ -17,6 +17,10 @@ def demo(dirs):
     dirs.use_demo()
 
 
+def empty_library(dirs):
+    dirs.write("library/library.toml", "version = 1\n")
+
+
 def steam_achievements(dirs, app_id, game, count, unlocked):
     """Gives a demo Steam game `count` achievements, `unlocked` of them done, with the fixture builder's files."""
     spec = importlib.util.spec_from_file_location(
@@ -102,7 +106,11 @@ SCENARIOS = [
     Scenario("the Games tile opens the whole library, filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\nkey Home\nwait 300\nclick Games\nwait 500\n"
-               + "expect-not Library overview\nexpect Metroid Dread\nexpect Final Fantasy XIV Online\n", None)], demo),
+               + "expect-not Library overview\nexpect Metroid Dread\nexpect Final Fantasy XIV Online\n", None)], demo),    Scenario("an empty library shows the tiles and leaves out the cards with nothing to show",
+             [("key F7\nexpect Library overview\nwait 800\n" + CARDS.replace("expect Continue playing\n", "")
+               + "expect-not Continue playing\nexpect-not Storage\nexpect-not Needs attention\n"
+               + "expect-not From your backlog\nexpect-not Nearly done\nkey Escape\nexpect-not Library overview\n",
+               None)], empty_library),
 ]
 
 sys.exit(run_scenarios(SCENARIOS))

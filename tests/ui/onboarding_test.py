@@ -22,7 +22,7 @@ NO_GUIDE_AFTER = "expect No games yet\nexpect-not Skip setup\nexpect-not Set up 
 
 
 def guide_on_f7(dirs):
-    dirs.write("settings.toml", "[shortcuts]\nsetup_guide = \"F7\"\n")
+    dirs.write("settings.toml", "[shortcuts]\nsetup_guide = \"F6\"\n")
 
 
 def empty(dirs):
@@ -43,7 +43,7 @@ def fake_heroic_program(dirs):
 def fake_heroic(dirs):
     root = os.path.join(dirs.root, "heroic")
     shutil.copytree(FAKE_HEROIC, root)
-    dirs.write("settings.toml", f'[shortcuts]\nsetup_guide = "F7"\n\n[heroic]\npath = "{root}"\n')
+    dirs.write("settings.toml", f'[shortcuts]\nsetup_guide = "F6"\n\n[heroic]\npath = "{root}"\n')
     fake_heroic_program(dirs)
     return root
 
@@ -147,17 +147,17 @@ SCENARIOS = [
     Scenario("a guide left open without finishing comes back on the next start",
              [(WELCOME + "click Next\n" + STEAM, None), (WELCOME, None)], empty),
     Scenario("a shortcut reopens the guide as Close, not Skip setup",
-             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F7\n"
+             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F6\n"
                + "expect Close\nexpect-not Skip setup\nexpect Set up a new library\nclick Close\n"
                + "expect-not Set up a new library\n", None)],
              guide_on_f7),
     Scenario("Escape closes a reopened guide but not the first-start guide",
              [(WELCOME + "key Escape\n" + WELCOME + "click Skip setup\n" + EMPTY_LIBRARY
-               + "key F7\nexpect Set up a new library\nwait 600\nkey Escape\n"
+               + "key F6\nexpect Set up a new library\nwait 600\nkey Escape\n"
                + "expect-not Set up a new library\n", None)],
              guide_on_f7),
     Scenario("a reopened guide can be walked through to the end",
-             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F7\n"
+             [(WELCOME + "click Skip setup\n" + EMPTY_LIBRARY + "key F6\n"
                + "click Next\n" + STEAM + "click Next\n" + HEROIC + "click Next\n" + EMULATORS + "click Next\n" + GAME_INFO
                + "click Next\n" + LOOK + "click Finish\n" + DONE + "click Start\n" + EMPTY_LIBRARY, None)],
              guide_on_f7),
@@ -214,7 +214,7 @@ SCENARIOS = [
                "expect-not No Epic games yet. Sign in to Epic in Heroic to see them here.\n", None)],
              sign_in_later),
     Scenario("a reopened guide says what the whole library switch takes out",
-             [(TO_HEROIC + "click Look\nclick Finish\n" + DONE + "click Start\nwait 800\nkey F7\nwait 600\n"
+             [(TO_HEROIC + "click Look\nclick Finish\n" + DONE + "click Start\nwait 800\nkey F6\nwait 600\n"
                "click Heroic\nwait 500\nexpect 1 installed game.\n"
                "expect Turning this off takes the games that aren't installed out of the library.\n"
                "toggle Import the whole library\nwait 1000\n"

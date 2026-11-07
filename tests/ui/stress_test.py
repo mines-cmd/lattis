@@ -101,6 +101,10 @@ SCENARIOS = [
              [("expect " + FIRST + "\nkey Ctrl+Shift+S\nexpect Sorted by last played\nwait 3500\n"
                + "key Ctrl+Shift+S\nexpect Sorted by play time\nwait 3500\n"
                + "key Ctrl+Shift+S\nexpect Sorted by title\nwait 600\nexpect " + FIRST + "\n", None)], plain),
+    Scenario("the Library overview opens on 2500 games and a platform in it filters the list",
+             [("expect " + FIRST + "\nkey F7\nexpect Library overview\nexpect Needs attention\nwait 1500\n"
+               + "key PageDown\nwait 300\nexpect Games by platform\nclick 3ds\nwait 800\n"
+               + "expect-not Library overview\n", None)], plain),
     Scenario("a platform filter and a search narrow 2500 games",
              [("expect " + FIRST + "\nkey Ctrl+2\nwait 600\n" + search("zyxwv") + "expect " + NEEDLE
                + "\nkey Ctrl+3\nwait 600\nexpect-not " + NEEDLE + "\nkey Ctrl+1\nwait 600\nexpect " + NEEDLE + "\n",
