@@ -164,8 +164,8 @@ void LibraryOverviewTest::aHiddenMainCopyDoesNotHideTheGroup()
     Game shownMain = main;
     shownMain.hidden = false;
     shownMain.title = "Main";
-    shownMain.status = "playing";
-    copy.status = "playing";
+    shownMain.groupLastPlayed = day(3);
+    copy.groupLastPlayed = day(3);
     const LibraryOverview::Overview o = LibraryOverview::overview({copy, shownMain});
     QCOMPARE(o.continuePlaying.size(), 1);
     QCOMPARE(o.continuePlaying.at(0).id, QStringLiteral("main"));
@@ -174,24 +174,24 @@ void LibraryOverviewTest::aHiddenMainCopyDoesNotHideTheGroup()
 void LibraryOverviewTest::continuePlayingOrder()
 {
     Game old = game("old");
-    old.status = "playing";
     old.lastPlayed = day(1);
     Game recent = game("recent");
-    recent.status = "playing";
+    recent.status = "finished";
     recent.lastPlayed = day(20);
     Game never = game("never");
     never.status = "playing";
-    Game neverToo = game("A never");
-    neverToo.status = "playing";
-    Game finished = game("finished");
-    finished.status = "finished";
-    finished.lastPlayed = day(25);
+    Game removed = game("removed");
+    removed.installed = false;
+    removed.lastPlayed = day(30);
+    Game tied = game("A tied");
+    tied.lastPlayed = day(1);
 
-    const LibraryOverview::Overview o = LibraryOverview::overview({old, never, finished, recent, neverToo});
+    // Any status counts; what matters is that it is installed and has been played.
+    const LibraryOverview::Overview o = LibraryOverview::overview({old, never, removed, recent, tied});
     QStringList ids;
     for (const LibraryOverview::Counted &c : o.continuePlaying)
         ids.append(c.id);
-    QCOMPARE(ids, (QStringList{"recent", "old", "A never", "never"}));
+    QCOMPARE(ids, (QStringList{"recent", "A tied", "old"}));
 }
 
 void LibraryOverviewTest::continuePlayingLimitAndGroups()
@@ -199,7 +199,6 @@ void LibraryOverviewTest::continuePlayingLimitAndGroups()
     QList<Game> games;
     for (int i = 1; i <= 10; ++i) {
         Game g = game(QStringLiteral("g%1").arg(i));
-        g.status = "playing";
         g.lastPlayed = day(i);
         games.append(g);
     }

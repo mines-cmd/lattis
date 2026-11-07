@@ -212,14 +212,13 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
             ++out.totals.played;
         if (g.status == QLatin1String("not_started"))
             ++out.totals.backlog;
-        if (g.status == QLatin1String("playing"))
-            out.continuePlaying.append({g.id, g.title, g.coverUrl, unit.grouped ? g.groupLastPlayed : g.lastPlayed});
+        const QDateTime lastPlayed = unit.grouped ? g.groupLastPlayed : g.lastPlayed;
+        if (unit.installed && lastPlayed.isValid())
+            out.continuePlaying.append({g.id, g.title, g.coverUrl, lastPlayed});
     }
 
-    // Never-played ones last, then by title, so the order doesn't depend on the library's.
+    // Ties by title, so the order doesn't depend on the library's.
     std::sort(out.continuePlaying.begin(), out.continuePlaying.end(), [](const Counted &a, const Counted &b) {
-        if (a.lastPlayed.isValid() != b.lastPlayed.isValid())
-            return a.lastPlayed.isValid();
         if (a.lastPlayed != b.lastPlayed)
             return a.lastPlayed > b.lastPlayed;
         if (const int byTitle = a.title.compare(b.title, Qt::CaseInsensitive))

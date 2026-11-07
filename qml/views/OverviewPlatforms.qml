@@ -11,12 +11,12 @@ OverviewCard {
     property bool barsGrown: false
 
     readonly property var counts: overview.platformCounts ?? []
-    readonly property int most: counts.reduce((most, c) => Math.max(most, c.games), 0)
+    readonly property int total: overview.games ?? 0
 
     signal filterRequested(string platform)
 
     function countText(c): string {
-        return qsTr("%1 · %2 installed").arg(c.games).arg(c.installed)
+        return qsTr("%1 · %2 · %3 installed").arg(c.games).arg(percentText(c.games, total)).arg(c.installed)
     }
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
@@ -37,7 +37,7 @@ OverviewCard {
             name: root.info.nameOf(modelData.platform)
             countText: root.countText(modelData)
             countWidth: sample.implicitWidth
-            fraction: root.most > 0 ? modelData.games / root.most : 0
+            fraction: root.total > 0 ? modelData.games / root.total : 0
             fill: root.info.colorOf(modelData.platform)
             grown: root.barsGrown
             onGrew: root.barsGrown = true
