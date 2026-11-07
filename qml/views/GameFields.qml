@@ -83,9 +83,7 @@ QtObject {
     }
     readonly property var lastBackupField: ({
         label: qsTr("Last backup"), icon: Icons.save2Line,
-        value: GameSaves.last.requested !== game.id || (GameSaves.last.when ?? "") === "" ? ""
-             : GameSaves.last.name ? qsTr("%1, %2").arg(GameSaves.last.when).arg(GameSaves.last.name)
-             : GameSaves.last.when
+        value: GameSaves.last.requested !== game.id ? "" : (GameSaves.last.when ?? "")
     })
 
     readonly property int protonDbAppId: {
