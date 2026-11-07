@@ -652,7 +652,7 @@ void LibraryListTest::sortValue()
 
     library->setSort(QStringLiteral("last_played"));
     QCOMPARE(value("3ds-today"), Library::tr("Today"));
-    QCOMPARE(value("3ds-days"), Library::tr("%n day(s) ago", nullptr, 3));
+    QCOMPARE(value("3ds-days"), Library::tr("%1 days ago").arg(3));
     QCOMPARE(value("3ds-long"), QLocale().toString(now.addDays(-40).date(), QLocale::ShortFormat));
     QCOMPARE(value("switch-pikmin-4"), QString());
     // Headers have none.

@@ -385,6 +385,8 @@ FocusScope {
                                             color: Theme.overview.coverPlaceholder
                                             iconWhenEmpty: true
                                             source: entry.modelData.coverUrl
+                                            zoom: entry.hovered ? Theme.overview.coverHoverZoom : 1
+                                            Behavior on zoom { enabled: Motion.on; MotionNumber {} }
 
                                             MouseArea {
                                                 anchors.fill: parent
@@ -395,16 +397,43 @@ FocusScope {
                                             Rectangle {
                                                 anchors.fill: parent
                                                 radius: cover.radius
-                                                color: Theme.overview.coverHoverOverlay
+                                                gradient: Gradient {
+                                                    GradientStop { position: 0; color: "transparent" }
+                                                    GradientStop { position: 1; color: Theme.overview.coverHoverOverlay }
+                                                }
                                                 opacity: entry.hovered ? 1 : 0
                                                 visible: opacity > 0
                                                 Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
 
-                                                ChromeButton {
-                                                    anchors.centerIn: parent
-                                                    icon: Icons.playFill
-                                                    label: qsTr("Play")
-                                                    onClicked: root.playRequested(entry.modelData.id)
+                                                Rectangle {
+                                                    id: playButton
+                                                    anchors.right: parent.right
+                                                    anchors.bottom: parent.bottom
+                                                    anchors.margins: Theme.overview.coverPlayInset
+                                                    width: Theme.overview.coverPlaySize
+                                                    height: width
+                                                    radius: width / 2
+                                                    color: playMouse.containsMouse ? Theme.overview.coverPlayHoverBackground
+                                                                                   : Theme.overview.coverPlayBackground
+                                                    scale: playMouse.pressed ? Theme.motion.pressScale : 1
+                                                    Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                                    Behavior on scale { enabled: Motion.on; MotionNumber {} }
+
+                                                    Icon {
+                                                        anchors.centerIn: parent
+                                                        size: Theme.overview.coverPlayIconSize
+                                                        color: Theme.overview.coverPlayIcon
+                                                        path: Icons.playFill
+                                                    }
+                                                    MouseArea {
+                                                        id: playMouse
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: root.playRequested(entry.modelData.id)
+                                                    }
+                                                    Accessible.role: Accessible.Button
+                                                    Accessible.name: qsTr("Play")
                                                 }
                                             }
                                         }

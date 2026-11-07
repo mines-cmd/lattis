@@ -9,6 +9,8 @@ Rectangle {
     property int fillMode: Image.PreserveAspectCrop
     property string failedIcon: Icons.image
     property bool iconWhenEmpty: false
+    // Magnifies the picture around its center inside the same outline.
+    property real zoom: 1
     readonly property alias status: thumbImage.status
     readonly property real pictureAspect: thumbImage.loaded ? thumbImage.implicitWidth / thumbImage.implicitHeight : 0
     implicitHeight: Theme.gameEditor.bulkThumbnailHeight
@@ -42,9 +44,9 @@ Rectangle {
             strokeWidth: -1
             fillItem: thumbImage
             // The fill is the picture's texture at its own pixel size, so it's scaled and centered here.
-            fillTransform: PlanarTransform.fromAffineMatrix(thumbImage.fitScale, 0, 0, thumbImage.fitScale,
-                                                            (thumb.width - thumbImage.shownWidth) / 2,
-                                                            (thumb.height - thumbImage.shownHeight) / 2)
+            fillTransform: PlanarTransform.fromAffineMatrix(thumbImage.fitScale * thumb.zoom, 0, 0, thumbImage.fitScale * thumb.zoom,
+                                                            (thumb.width - thumbImage.shownWidth * thumb.zoom) / 2,
+                                                            (thumb.height - thumbImage.shownHeight * thumb.zoom) / 2)
             PathRectangle {
                 x: picture.insetX
                 y: picture.insetY

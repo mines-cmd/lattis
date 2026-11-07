@@ -115,6 +115,11 @@ QString shortPlayTimeText(int minutes)
     return Library::tr("%1 h").arg(QLocale().toString(hours, 'f', hours < 10 ? 1 : 0));
 }
 
+QString daysAgoText(qint64 days)
+{
+    return days == 1 ? Library::tr("1 day ago") : Library::tr("%1 days ago").arg(days);
+}
+
 QString lastPlayedText(const QDateTime &time)
 {
     if (!time.isValid())
@@ -127,8 +132,29 @@ QString lastPlayedText(const QDateTime &time)
     if (days == 1)
         return Library::tr("Yesterday");
     if (days < 7)
-        return Library::tr("%n day(s) ago", nullptr, int(days));
+        return daysAgoText(days);
     return DateFormat::shortDate(date);
+}
+
+QString playedAgoText(const QDateTime &time)
+{
+    if (!time.isValid())
+        return {};
+    const qint64 seconds = qMax<qint64>(0, time.secsTo(QDateTime::currentDateTimeUtc()));
+    if (seconds < 60)
+        return Library::tr("just now");
+    if (seconds < 3600)
+        return Library::tr("%n min ago", nullptr, int(seconds / 60));
+    if (seconds < 86400)
+        return Library::tr("%n h ago", nullptr, int(seconds / 3600));
+    const qint64 days = qMax<qint64>(0, time.toLocalTime().date().daysTo(QDate::currentDate()));
+    if (days < 7)
+        return lastPlayedText(time);
+    if (days < 30)
+        return (days < 14 ? Library::tr("1 week ago") : Library::tr("%1 weeks ago").arg(days / 7));
+    if (days < 365)
+        return (days < 60 ? Library::tr("1 month ago") : Library::tr("%1 months ago").arg(days / 30));
+    return (days < 730 ? Library::tr("1 year ago") : Library::tr("%1 years ago").arg(days / 365));
 }
 
 QString waitingText(const QDate &added)
@@ -2793,18 +2819,18 @@ void Library::overview()
         for (qint64 appId : std::as_const(pending))
             pendingApps.append(appId);
         map.insert(QStringLiteral("protonDbPending"), pendingApps);
-        const auto withDates = [&map](const QString &key) {
+        const auto withDates = [&map](const QString &key, auto text) {
             QVariantList rows = map.value(key).toList();
             for (QVariant &row : rows) {
                 QVariantMap m = row.toMap();
-                m.insert(QStringLiteral("lastPlayedText"), lastPlayedText(m.value(QStringLiteral("lastPlayed")).toDateTime()));
+                m.insert(QStringLiteral("lastPlayedText"), text(m.value(QStringLiteral("lastPlayed")).toDateTime()));
                 row = m;
             }
             map.insert(key, rows);
         };
-        withDates(QStringLiteral("continuePlaying"));
-        withDates(QStringLiteral("largest"));
-        withDates(QStringLiteral("dormant"));
+        withDates(QStringLiteral("continuePlaying"), playedAgoText);
+        withDates(QStringLiteral("largest"), lastPlayedText);
+        withDates(QStringLiteral("dormant"), lastPlayedText);
         QVariantList statusCounts = map.value(QStringLiteral("statusCounts")).toList();
         for (QVariant &row : statusCounts) {
             QVariantMap m = row.toMap();
