@@ -104,6 +104,6 @@ OverviewCard {
         Layout.fillWidth: true
         visible: root.stats.topTool !== undefined && root.stats.topTool !== ""
         elide: Text.ElideRight
-        text: qsTr("Most used: %1 (%n game(s))", "", root.stats.topToolGames).arg(root.stats.topTool)
+        text: qsTr("Most used: %1 (%n game(s))", "", root.stats.topToolGames ?? 0).arg(root.stats.topTool)
     }
 }
