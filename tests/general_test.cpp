@@ -440,14 +440,14 @@ void GeneralTest::railButtonOrderSetting()
                                               QStringLiteral("settings.toml"));
     QCOMPARE(partial.warnings.size(), 1);
     QCOMPARE(orderedRailButtons(partial.value.railButtonOrder),
-             (QStringList{"open_settings", "steam_friends", "add_game", "play_statistics", "gallery"}));
+             (QStringList{"open_settings", "steam_friends", "add_game", "overview", "play_statistics", "gallery"}));
 
     QFile settings(data.filePath(QStringLiteral("settings.toml")));
     QVERIFY(settings.open(QIODevice::WriteOnly));
     settings.close();
     QSignalSpy changed(&general, &General::settingsChanged);
     QSignalSpy orderChanged(&general, &General::railButtonOrderChanged);
-    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
+    const QStringList moved{"overview", "play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
     QCOMPARE(general.setRailButtonOrder(moved), QString());
     QCOMPARE(general.railButtonOrder(), moved);
     QCOMPARE(changed.size(), 0);
@@ -470,7 +470,7 @@ void GeneralTest::toolbarSettings()
     QVERIFY(!general.toolbar());
     QVERIFY(general.toolbarHiddenButtons().isEmpty());
     QCOMPARE(general.toolbarButtonOrder(), toolbarButtons());
-    QCOMPARE(toolbarButtons(), (QStringList{"steam_friends", "add_game", "play_statistics", "gallery", "open_settings"}));
+    QCOMPARE(toolbarButtons(), (QStringList{"steam_friends", "add_game", "overview", "play_statistics", "gallery", "open_settings"}));
 
     const auto bad = parseGeneralSettings(
         "[general]\ntoolbar = true\ntoolbar_hidden_buttons = [\"settings\", \"gallery\"]\n"
@@ -483,7 +483,7 @@ void GeneralTest::toolbarSettings()
     QVERIFY(warnings.contains(QLatin1String("unknown toolbar button \"settings\"")));
     QVERIFY(warnings.contains(QLatin1String("\"open_settings\"")));
     QCOMPARE(orderedToolbarButtons(bad.value.toolbarButtonOrder),
-             (QStringList{"open_settings", "steam_friends", "add_game", "play_statistics", "gallery"}));
+             (QStringList{"open_settings", "steam_friends", "add_game", "overview", "play_statistics", "gallery"}));
 
     const auto wrongType = parseGeneralSettings("[general]\ntoolbar = \"yes\"\ntoolbar_button_order = 3\n",
                                                 QStringLiteral("settings.toml"));
@@ -509,7 +509,7 @@ void GeneralTest::toolbarSettings()
     QCOMPARE(general.setToolbarButtonShown(QStringLiteral("nope"), false), QString());
     QCOMPARE(hiddenChanged.size(), 2);
 
-    const QStringList moved{"play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
+    const QStringList moved{"overview", "play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
     QCOMPARE(general.setToolbarButtonOrder(moved), QString());
     QCOMPARE(general.toolbarButtonOrder(), moved);
     QCOMPARE(orderChanged.size(), 1);

@@ -117,6 +117,11 @@ qt_add_qml_module(lattis
         qml/components/LaunchButton.qml
         qml/components/NoticeBar.qml
         qml/components/CaptionLabel.qml
+        qml/components/CardFrame.qml
+        qml/components/Card.qml
+        qml/components/CardTitle.qml
+        qml/components/CardLabel.qml
+        qml/components/Muted.qml
         qml/components/StatChip.qml
         qml/components/Surface.qml
         qml/components/ChromeButton.qml
@@ -183,6 +188,7 @@ qt_add_qml_module(lattis
         qml/views/ForceClosePrompt.qml
         qml/views/PlayHistoryPopup.qml
         qml/views/StatsPage.qml
+        qml/views/OverviewPage.qml
         qml/views/GalleryFilters.qml
         qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml
@@ -369,6 +375,7 @@ qt_add_qml_module(lattis
         src/library/listsettings.h src/library/listsettings.cpp
         src/library/library.h src/library/library.cpp
         src/library/playhistory.h src/library/playhistory.cpp
+        src/library/libraryoverview.h src/library/libraryoverview.cpp
         src/library/uninstall.h src/library/uninstall.cpp
         src/launch/launchsettings.h src/launch/launchsettings.cpp
         src/launch/launchcommand.h src/launch/launchcommand.cpp

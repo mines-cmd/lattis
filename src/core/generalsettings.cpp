@@ -7,7 +7,7 @@
 const QStringList &railButtons()
 {
     static const QStringList buttons = {QStringLiteral("steam_friends"), QStringLiteral("add_game"),
-                                        QStringLiteral("play_statistics"), QStringLiteral("gallery"),
+                                        QStringLiteral("overview"), QStringLiteral("play_statistics"), QStringLiteral("gallery"),
                                         QStringLiteral("open_settings")};
     return buttons;
 }
@@ -24,7 +24,7 @@ QStringList orderedRailButtons(const QStringList &order)
 const QStringList &toolbarButtons()
 {
     static const QStringList buttons = {QStringLiteral("steam_friends"), QStringLiteral("add_game"),
-                                        QStringLiteral("play_statistics"), QStringLiteral("gallery"),
+                                        QStringLiteral("overview"), QStringLiteral("play_statistics"), QStringLiteral("gallery"),
                                         QStringLiteral("open_settings")};
     return buttons;
 }
@@ -90,7 +90,7 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                     out.warnings.append(QStringLiteral("%1: unknown %2 button \"%3\": they're %4%5")
                                             .arg(section.where(item),
                                                  isToolbarList ? QStringLiteral("toolbar") : QStringLiteral("rail"), name,
-                                                 QStringLiteral("\"add_game\", \"play_statistics\", \"gallery\", \"open_settings\""),
+                                                 QStringLiteral("\"add_game\", \"overview\", \"play_statistics\", \"gallery\", \"open_settings\""),
                                                  suggestion(name, valid)));
                 else if (!names.contains(name))
                     names.append(name);

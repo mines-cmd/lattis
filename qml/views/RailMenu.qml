@@ -62,6 +62,7 @@ SettingsMenu {
             name: modelData
             text: modelData === "steam_friends" ? qsTr("Steam friends")
                 : modelData === "add_game" ? qsTr("Add game")
+                : modelData === "overview" ? qsTr("Library overview")
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }

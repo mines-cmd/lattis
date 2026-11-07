@@ -82,6 +82,7 @@ set(LIBRARY_SOURCES
     ../src/library/librarystore.h ../src/library/librarystore.cpp
     ../src/library/libraryundo.h ../src/library/libraryundo.cpp
     ../src/library/playhistory.h ../src/library/playhistory.cpp
+    ../src/library/libraryoverview.h ../src/library/libraryoverview.cpp
     ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
     ../src/library/mediafolders.h ../src/library/mediafolders.cpp
     ../src/library/videothumbnails.h ../src/library/videothumbnails.cpp
@@ -298,6 +299,8 @@ foreach(area list edit tags rom emulators platforms version steamimport steamlib
         LIBS library_objects
         DEFINES ${DEMO_DATA} ${STEAM_DATA} ${MEDIA_HOME})
 endforeach()
+lattis_test(library_overview_test
+    SOURCES ../src/library/libraryoverview.h ../src/library/libraryoverview.cpp)
 lattis_test(play_history_test PRESETS
     SOURCES librarytestbase.h librarytestbase.cpp
     LIBS library_objects
@@ -487,7 +490,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding library bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
+    foreach(area startup onboarding overview library bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()

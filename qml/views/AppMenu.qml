@@ -55,9 +55,11 @@ SettingsMenu {
         delegate: Entry {
             required property string modelData
             actionName: modelData
-            iconPath: modelData === "add_game" ? Icons.add : modelData === "play_statistics" ? Icons.barChartFill
+            iconPath: modelData === "add_game" ? Icons.add : modelData === "overview" ? Icons.layoutMasonryLine
+                    : modelData === "play_statistics" ? Icons.barChartFill
                     : modelData === "gallery" ? Icons.image : Icons.gear
             text: modelData === "add_game" ? qsTr("Add game")
+                : modelData === "overview" ? qsTr("Library overview")
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }

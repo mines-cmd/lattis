@@ -1,0 +1,353 @@
+import QtQuick
+import QtQuick.Controls.Basic
+import QtQuick.Layouts
+
+// See docs/code/qml.md.
+FocusScope {
+    id: root
+
+    property real dragReserve: 0
+    property var overview: ({})
+    readonly property bool loaded: overview.games !== undefined
+
+    // Three columns of cards, two below compactWidth, one below narrowWidth.
+    readonly property int columns: Theme.overview.compactWidth > 0 && width < Theme.overview.compactWidth
+        ? (Theme.overview.narrowWidth > 0 && width < Theme.overview.narrowWidth ? 1 : 2) : 3
+    readonly property real sideMargin: 2 * Theme.layout.margin
+    readonly property real contentWidth: Math.min(Theme.overview.maxWidth, width - 2 * sideMargin)
+    readonly property var continuePlaying: overview.continuePlaying ?? []
+
+    signal closeRequested()
+    signal gameRequested(string id)
+    signal playRequested(string id)
+    signal statsRequested()
+
+    function start() {
+        overview = {}
+        Library.overview()
+        sinkOut.stop()
+        riseIn.restart()
+        forceActiveFocus()
+    }
+
+    function leave() {
+        riseIn.stop()
+        sinkOut.restart()
+    }
+
+    function hoursText(minutes: int): string {
+        return minutes <= 0 ? qsTr("0 min") : Library.shortPlayTime(minutes)
+    }
+
+    function daysText(minutes: int): string {
+        return minutes < 1440 ? qsTr("Less than a day") : qsTr("%1 days").arg((minutes / 1440).toFixed(1))
+    }
+
+    readonly property var tiles: {
+        const o = overview
+        if (!loaded)
+            return []
+        return [
+            { label: qsTr("Games"), value: String(o.games), icon: Icons.stackLine, color: Theme.palette.text,
+              sub: qsTr("%1 installed on %n platform(s)", "", o.platforms).arg(o.installed) },
+            { label: qsTr("Hours played"), value: hoursText(o.minutes), icon: Icons.timeLine, color: Theme.overview.tilePrimaryValue,
+              sub: daysText(o.minutes) },
+            { label: qsTr("Backlog"), value: String(o.backlog), icon: Icons.calendarCheckLine, color: Theme.palette.text,
+              sub: o.games > 0 ? qsTr("%1% of the library").arg(Math.round(100 * o.backlog / o.games)) : qsTr("Nothing in the library") }
+        ]
+    }
+
+    Keys.onEscapePressed: root.closeRequested()
+
+    Connections {
+        target: Library
+        function onOverviewReady(result) { root.overview = result }
+        function onGamesChanged() {
+            if (root.visible && root.loaded)
+                Library.overview()
+        }
+    }
+
+    MotionNumber {
+        id: riseIn
+        target: rise
+        property: "y"
+        from: Theme.overview.pageOffset
+        to: 0
+        speed: "slow"
+    }
+
+    // Not riseIn reversed: that saves its movement for the end, when the page has all but faded.
+    MotionNumber {
+        id: sinkOut
+        target: rise
+        property: "y"
+        to: Theme.overview.pageOffset
+        speed: "normal"
+    }
+
+    Surface {
+        anchors.fill: parent
+        fill: Theme.palette.background
+        fillEnd: Theme.palette.backgroundEnd
+        direction: Theme.palette.gradientDirection
+    }
+
+    Item {
+        width: parent.width - root.dragReserve
+        height: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.layout.spacing
+
+        DragHandler {
+            target: null
+            enabled: !(root.Window.window?.toolbarHovered ?? false)
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+            onActiveChanged: if (active) root.Window.window.startSystemMove()
+        }
+    }
+
+    component OCard: Card {
+        padding: Theme.overview.cardPadding
+        radius: Theme.overview.cardRadius
+        fill: Theme.overview.cardBackground
+        fillEnd: Theme.overview.cardBackgroundEnd
+        border.color: Theme.overview.cardBorder
+    }
+
+    component OCardTitle: CardTitle {
+        font.pixelSize: Theme.overview.cardTitleSize
+    }
+
+    component Quiet: Muted {
+        color: Theme.overview.textMuted
+    }
+
+    // A card that fades in a little after the one before it as the page opens.
+    component Reveal: Item {
+        id: reveal
+
+        default property alias content: holder.data
+        property int order: 0
+        readonly property bool shown: root.loaded
+
+        implicitWidth: holder.implicitWidth
+        implicitHeight: holder.implicitHeight
+        opacity: 0
+
+        onShownChanged: {
+            if (shown) {
+                fadeIn.restart()
+            } else {
+                fadeIn.stop()
+                opacity = 0
+            }
+        }
+
+        SequentialAnimation {
+            id: fadeIn
+            PauseAnimation { duration: Motion.on ? reveal.order * Theme.overview.cardStagger : 0 }
+            MotionNumber { target: reveal; property: "opacity"; to: 1; speed: "normal"; fade: true; linear: true }
+        }
+
+        ColumnLayout {
+            id: holder
+            width: parent.width
+            spacing: 0
+        }
+    }
+
+    ChromeButton {
+        x: Theme.layout.margin
+        y: Theme.layout.margin
+        icon: Icons.arrowUp
+        iconRotation: -90
+        label: qsTr("Back to games")
+        tip: qsTr("Back to games (Esc)")
+        onClicked: root.closeRequested()
+    }
+
+    Flickable {
+        id: flick
+
+        y: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.layout.spacing
+        width: parent.width
+        height: parent.height - y
+        clip: true
+        contentWidth: width
+        contentHeight: content.implicitHeight + 2 * root.sideMargin
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {}
+
+        ColumnLayout {
+            id: content
+            transform: Translate { id: rise }
+
+            x: (flick.width - width) / 2
+            width: root.contentWidth
+            spacing: Theme.overview.sectionSpacing
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 2 * Theme.overview.sectionSpacing
+
+                Label {
+                    text: qsTr("Library overview")
+                    color: Theme.palette.text
+                    font.pixelSize: Theme.overview.titleSize
+                    font.weight: Theme.font.emphasisWeight
+                }
+                Item { Layout.fillWidth: true }
+                ChromeButton {
+                    icon: Icons.barChartFill
+                    label: qsTr("Play statistics")
+                    tip: qsTr("Play statistics")
+                    onClicked: root.statsRequested()
+                }
+            }
+
+            ColumnLayout {
+                visible: root.loaded
+                Layout.fillWidth: true
+                spacing: Theme.overview.sectionSpacing
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: root.columns === 3 ? Math.max(1, root.tiles.length) : root.columns === 2 ? 2 : 1
+                    columnSpacing: Theme.overview.sectionSpacing
+                    rowSpacing: Theme.overview.sectionSpacing
+                    uniformCellWidths: true
+
+                    Repeater {
+                        model: root.tiles
+
+                        Reveal {
+                            id: tileReveal
+                            required property var modelData
+                            required property int index
+                            Layout.fillWidth: true
+                            order: index
+
+                            OCard {
+                                Layout.fillWidth: true
+                                horizontalPadding: Theme.overview.tilePaddingX
+                                watermark: tileReveal.modelData.icon
+
+                                CardLabel {
+                                    text: tileReveal.modelData.label
+                                    color: Theme.overview.textMuted
+                                }
+                                Label {
+                                    text: tileReveal.modelData.value
+                                    color: tileReveal.modelData.color
+                                    font.pixelSize: Theme.overview.tileValueSize
+                                    font.weight: Theme.font.strongWeight
+                                }
+                                Quiet {
+                                    Layout.fillWidth: true
+                                    text: tileReveal.modelData.sub
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Reveal {
+                    Layout.fillWidth: true
+                    visible: root.continuePlaying.length > 0
+                    order: root.tiles.length
+
+                    OCard {
+                        Layout.fillWidth: true
+
+                        OCardTitle { text: qsTr("Continue playing") }
+
+                        Flickable {
+                            id: coverStrip
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: coverRow.implicitHeight
+                            contentWidth: coverRow.implicitWidth
+                            contentHeight: coverRow.implicitHeight
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            flickableDirection: Flickable.HorizontalFlick
+                            ScrollBar.horizontal: ScrollBar { visible: coverStrip.contentWidth > coverStrip.width }
+
+                            Row {
+                                id: coverRow
+                                spacing: Theme.overview.coverSpacing
+
+                                Repeater {
+                                    model: root.continuePlaying
+
+                                    Item {
+                                        id: entry
+                                        required property var modelData
+                                        readonly property bool hovered: hover.hovered
+
+                                        width: Theme.overview.coverWidth
+                                        implicitHeight: cover.height + caption.implicitHeight + Theme.layout.spacing
+
+                                        ArtThumb {
+                                            id: cover
+                                            width: parent.width
+                                            height: Math.round(width * Theme.overview.coverRatio)
+                                            cornerRadius: Theme.overview.coverRadius
+                                            color: Theme.overview.coverPlaceholder
+                                            iconWhenEmpty: true
+                                            source: entry.modelData.coverUrl
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.gameRequested(entry.modelData.id)
+                                            }
+
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                radius: cover.radius
+                                                color: Theme.overview.coverHoverOverlay
+                                                opacity: entry.hovered ? 1 : 0
+                                                visible: opacity > 0
+                                                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+
+                                                ChromeButton {
+                                                    anchors.centerIn: parent
+                                                    icon: Icons.playFill
+                                                    label: qsTr("Play")
+                                                    onClicked: root.playRequested(entry.modelData.id)
+                                                }
+                                            }
+                                        }
+
+                                        HoverHandler { id: hover }
+
+                                        Column {
+                                            id: caption
+                                            anchors.top: cover.bottom
+                                            anchors.topMargin: Theme.layout.spacing
+                                            width: parent.width
+
+                                            Label {
+                                                width: parent.width
+                                                text: entry.modelData.title
+                                                color: Theme.palette.text
+                                                font.weight: Theme.font.emphasisWeight
+                                                elide: Text.ElideRight
+                                            }
+                                            Quiet {
+                                                width: parent.width
+                                                text: entry.modelData.lastPlayedText !== "" ? entry.modelData.lastPlayedText
+                                                                                            : qsTr("Not played yet")
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -604,6 +604,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "statsForScreenshot", Q_ARG(QVariant, month));
                 });
             }
+            if (qEnvironmentVariableIsSet("LATTIS_OVERVIEW")) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
+                    logHook("overviewForScreenshot", QString());
+                    QMetaObject::invokeMethod(window, "overviewForScreenshot");
+                });
+            }
             if (const QString spec = qEnvironmentVariable("LATTIS_GALLERY"); !spec.isEmpty()) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window, spec] {
                     logHook("galleryForScreenshot", spec);

@@ -676,6 +676,12 @@ recent          play time per period: week (from the locale's first day of the w
                 (today and the 13 days before), month and year (the calendar month and year)
 ```
 
+### Library overview
+
+`LibraryOverview` (`libraryoverview.*`) works out the Library overview page's numbers from a list of plain `LibraryOverview::Game` structs, so it runs on any thread and is tested without the library (`library_overview_test`). `overview(games)` leaves hidden games out, whatever the filters say, and counts a group of linked copies (`same_as`) once, under its main copy or else the first shown one, with the group's `groupPlayMinutes` and `groupLastPlayed`; the platform count still follows every shown copy, and a group is installed while any shown copy is. `Totals` has `games`, `installed`, `platforms`, `minutes` (the library's play time) and `backlog` (status `not_started`). `continuePlaying` holds the games with status `playing`, most recently played first (never played last, then by title), at most `kContinueLimit` (7): `id, title, coverUrl, lastPlayed`.
+
+`Library::overview()` copies the games into those structs, works the overview out on a worker thread and answers with `overviewReady(map)`: the totals as `games, installed, platforms, minutes, backlog`, and `continuePlaying` rows with `id, title, coverUrl, lastPlayed, lastPlayedText` (the text the list shows). `Library::gameWithId(id)` is `gameAt()` for a game by id, shown or not in the list, for launching from the page.
+
 `monthStatsReady`'s map. Games carry `id, minutes, title, platform, iconUrl, hue`, platforms `id, minutes, name, icon`:
 
 ```

@@ -124,8 +124,11 @@ ApplicationWindow {
     }
 
     property bool statsOpen: false
+    property bool overviewOpen: false
     // The views under the page stay drawn while it fades in and out.
     readonly property bool statsCovering: statsOpen && statsPage.opacity === 1
+    readonly property bool overviewCovering: overviewOpen && overviewPage.opacity === 1
+    readonly property string openPage: statsOpen ? "stats" : galleryOpen ? "gallery" : overviewOpen ? "overview" : ""
 
     // Switching between the pages keeps the old one drawn under the new one until the new one
     // covers it, so they crossfade instead of both fading through the game page.
@@ -137,8 +140,9 @@ ApplicationWindow {
         if (open === statsOpen)
             return
         if (open) {
-            const below = galleryOpen ? "gallery" : ""
+            const below = openPage
             setGalleryOpen(false, "", true)
+            setOverviewOpen(false, true)
             pageBelow = below
             pageOnTop = "stats"
             statsPage.active = true
@@ -155,6 +159,29 @@ ApplicationWindow {
         }
     }
 
+    function setOverviewOpen(open, switching = false) {
+        if (open === overviewOpen)
+            return
+        if (open) {
+            const below = openPage
+            setStatsOpen(false, true)
+            setGalleryOpen(false, "", true)
+            pageBelow = below
+            pageOnTop = "overview"
+            overviewPage.active = true
+            overviewOpen = true
+            overviewPage.item.start()
+            if (overviewPage.opacity === 1)
+                pageBelow = ""
+        } else {
+            overviewOpen = false
+            pageBelow = ""
+            if (!switching)
+                overviewPage.item.leave()
+            gameList.focusList()
+        }
+    }
+
     property bool galleryOpen: false
 
     // Creating the page on the first click froze the window for ~20 ms before it showed.
@@ -167,14 +194,15 @@ ApplicationWindow {
         }
     }
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
-    readonly property bool pageCovering: statsCovering || galleryCovering
+    readonly property bool pageCovering: statsCovering || galleryCovering || overviewCovering
 
     function setGalleryOpen(open, gameId = "", switching = false) {
         if (open === galleryOpen)
             return
         if (open) {
-            const below = statsOpen ? "stats" : ""
+            const below = openPage
             setStatsOpen(false, true)
+            setOverviewOpen(false, true)
             pageBelow = below
             pageOnTop = "gallery"
             galleryPage.active = true
@@ -195,6 +223,10 @@ ApplicationWindow {
     function galleryForScreenshot(spec) {
         setGalleryOpen(true)
         galleryPage.item.autoOpen = spec
+    }
+
+    function overviewForScreenshot() {
+        setOverviewOpen(true)
     }
 
     function statsForScreenshot(spec) {
@@ -660,6 +692,7 @@ ApplicationWindow {
             break
         case "app_menu": rail.openMenu(); break
         case "undo": toast.undo(); break
+        case "overview": setOverviewOpen(!overviewOpen); break
         case "play_statistics": setStatsOpen(!statsOpen); break
         case "gallery": setGalleryOpen(!galleryOpen); break
         case "add_game": addGame(); break
@@ -1051,6 +1084,39 @@ ApplicationWindow {
         }
 
         Loader {
+            id: overviewPage
+            anchors.fill: parent
+            active: false
+            z: window.pageOnTop === "overview" ? 1 : 0
+            visible: opacity > 0
+            opacity: window.overviewOpen || window.pageBelow === "overview" ? 1 : 0
+            onOpacityChanged: if (opacity === 1 && window.overviewOpen) window.pageBelow = ""
+            layer.enabled: opacity > 0 && opacity < 1
+            enabled: (window.overviewOpen || window.pageBelow === "overview" || opacity === 0) && !setupGuide.active
+            source: "views/OverviewPage.qml"
+
+            Behavior on opacity {
+                enabled: Motion.fades
+                MotionNumber { fade: true; speed: "normal"; linear: true }
+            }
+        }
+        Binding {
+            target: overviewPage.item
+            property: "dragReserve"
+            value: windowControls.width + 2 * Theme.windowControls.margin
+        }
+        Connections {
+            target: overviewPage.item
+            function onCloseRequested() { window.setOverviewOpen(false) }
+            function onStatsRequested() { window.setStatsOpen(true) }
+            function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
+            function onGameRequested(id) {
+                gameList.revealGame(id)
+                window.setOverviewOpen(false)
+            }
+        }
+
+        Loader {
             id: galleryPage
             anchors.fill: parent
             active: false
@@ -1109,7 +1175,7 @@ ApplicationWindow {
                               : Math.max(low, Math.min(high - width, (window.width - width) / 2))
         y: Theme.toolbar.marginTop
         started: window.startedUp
-        checkedButton: window.statsOpen ? "play_statistics" : window.galleryOpen ? "gallery" : ""
+        checkedButton: window.statsOpen ? "play_statistics" : window.galleryOpen ? "gallery" : window.overviewOpen ? "overview" : ""
         onTriggered: name => window.run(name)
         onMessage: text => toast.show(text)
     }

@@ -6,6 +6,7 @@
 #include "gameid.h"
 #include "igdb.h"
 #include "launchcommand.h"
+#include "libraryoverview.h"
 #include "managericon.h"
 #include "mediafolders.h"
 #include "romfoldermatch.h"
@@ -2579,6 +2580,31 @@ void Library::yearStats(int year)
     }));
 }
 
+void Library::overview()
+{
+    QList<LibraryOverview::Game> games;
+    games.reserve(m_games.size());
+    for (const Game &g : m_games)
+        games.append({g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes, g.lastPlayed,
+                      g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString()});
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher] {
+        emit overviewReady(watcher->result());
+        watcher->deleteLater();
+    });
+    watcher->setFuture(QtConcurrent::run([games = std::move(games)] {
+        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games));
+        QVariantList playing = map.value(QStringLiteral("continuePlaying")).toList();
+        for (QVariant &row : playing) {
+            QVariantMap m = row.toMap();
+            m.insert(QStringLiteral("lastPlayedText"), lastPlayedText(m.value(QStringLiteral("lastPlayed")).toDateTime()));
+            row = m;
+        }
+        map.insert(QStringLiteral("continuePlaying"), playing);
+        return map;
+    }));
+}
+
 QVariantMap Library::deleteSession(const QString &id, const QString &end)
 {
     const auto fail = [](const QString &error) { return QVariantMap{{QStringLiteral("error"), error}}; };
@@ -3018,7 +3044,17 @@ QVariantMap Library::gameAt(int row) const
 {
     if (row < 0 || row >= m_rows.size() || m_rows.at(row).game < 0)
         return {};
-    const Game &g = m_games.at(m_rows.at(row).game);
+    return gameMap(m_games.at(m_rows.at(row).game));
+}
+
+QVariantMap Library::gameWithId(const QString &id) const
+{
+    const Game *g = game(id);
+    return g ? gameMap(*g) : QVariantMap();
+}
+
+QVariantMap Library::gameMap(const Game &g) const
+{
     QString platformIcon;
     for (const Platform &p : m_platforms) {
         if (p.id == g.platform)

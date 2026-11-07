@@ -183,12 +183,14 @@ public:
     Q_INVOKABLE bool showSteamMediaFolder(const QString &id);
     Q_INVOKABLE void monthStats(int year, int month);
     Q_INVOKABLE void yearStats(int year);
+    Q_INVOKABLE void overview();
     Q_INVOKABLE QString shortPlayTime(int minutes) const;
     Q_INVOKABLE QString playTime(int minutes, const QString &format) const;
     Q_INVOKABLE QVariantMap deleteSession(const QString &id, const QString &end);
     Q_INVOKABLE QString restoreSession(const QString &id, const QVariantMap &session);
 
     Q_INVOKABLE QVariantMap gameAt(int row) const;
+    Q_INVOKABLE QVariantMap gameWithId(const QString &id) const;
 
     QVariantList modManagers() const { return m_modManagers; }
     Q_INVOKABLE QVariantList modManagersFor(const QString &gameId) const;
@@ -347,6 +349,7 @@ signals:
     void reloaded();
     void monthStatsReady(int year, int month, const QVariantMap &stats);
     void yearStatsReady(int year, const QVariantMap &stats);
+    void overviewReady(const QVariantMap &overview);
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
     void mediaLimited(const QString &id);
@@ -368,6 +371,7 @@ private:
     QString movePlatformWith(const QString &id, const std::function<QString()> &move);
     struct StatsInput;
     StatsInput statsInput() const;
+    QVariantMap gameMap(const Game &g) const;
     QVariantList linkedCopies(const Game &g) const;
     struct Row
     {

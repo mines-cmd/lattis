@@ -62,6 +62,7 @@ constexpr Action kActions[] = {
     {"window", "add_game", "Ctrl+N", "Add a game"},
     {"window", "toggle_fullscreen", "F11", "Fullscreen"},
     {"window", "toggle_rail", "", "Show or hide the rail"},
+    {"window", "overview", "F7", "Library overview"},
     {"window", "play_statistics", "F9", "Play statistics"},
     {"window", "gallery", "F8", "Gallery"},
     {"window", "look_up_missing", "Ctrl+Shift+L", "Look up missing info"},
