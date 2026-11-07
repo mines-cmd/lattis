@@ -44,7 +44,7 @@ SCENARIOS = [
              [(OPEN + DOWN + "click Dropped\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
                + "expect-not Metroid Dread\n", None)], demo),
     Scenario("a platform in the overview opens the game list on that platform, and the next click replaces the filters",
-             [(OPEN + DOWN + "click Proton\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
+             [(OPEN + "click Proton\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
                + "expect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\n" + DOWN + "click Completed\nwait 500\nexpect Metroid Dread\n"
                + "expect-not Final Fantasy XIV Online\n", None)], demo),

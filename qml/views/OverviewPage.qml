@@ -42,7 +42,7 @@ FocusScope {
     }
 
     function daysText(minutes: int): string {
-        return minutes < 1440 ? qsTr("Less than a day") : qsTr("%1 days").arg((minutes / 1440).toFixed(1))
+        return minutes < 1440 ? qsTr("Less than a day of your life") : qsTr("%1 days of your life").arg((minutes / 1440).toFixed(1))
     }
 
     function openTile(target: string) {
@@ -357,42 +357,48 @@ FocusScope {
                         }
                     }
 
-                    OverviewReveal {
-                        shown: root.loaded
+                    ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
-                        visible: (root.overview.platformCounts ?? []).length > 0
-                        order: root.tiles.length + 2
+                        spacing: Theme.overview.sectionSpacing
 
-                        OverviewPlatforms {
+                        OverviewReveal {
+                            shown: root.loaded
                             Layout.fillWidth: true
-                            overview: root.overview
-                            info: platformInfo
-                            onFilterRequested: platform => root.filterRequested(platform, [], [])
+                            Layout.alignment: Qt.AlignTop
+                            visible: (root.overview.platformCounts ?? []).length > 0
+                            order: root.tiles.length + 2
+
+                            OverviewPlatforms {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                info: platformInfo
+                                onFilterRequested: platform => root.filterRequested(platform, [], [])
+                            }
+                        }
+
+                        OverviewReveal {
+                            shown: root.loaded
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            visible: (root.overview.statusCounts ?? []).length > 0
+                            order: root.tiles.length + 3
+
+                            OverviewStatuses {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                onFilterRequested: status => root.filterRequested("", [status], [])
+                            }
                         }
                     }
                 }
 
                 GridLayout {
                     Layout.fillWidth: true
-                    columns: root.columns
+                    columns: Math.min(2, root.columns)
                     columnSpacing: Theme.overview.sectionSpacing
                     rowSpacing: Theme.overview.sectionSpacing
                     uniformCellWidths: true
-
-                    OverviewReveal {
-                        shown: root.loaded
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop
-                        visible: (root.overview.statusCounts ?? []).length > 0
-                        order: root.tiles.length + 3
-
-                        OverviewStatuses {
-                            Layout.fillWidth: true
-                            overview: root.overview
-                            onFilterRequested: status => root.filterRequested("", [status], [])
-                        }
-                    }
 
                     OverviewReveal {
                         shown: root.loaded
