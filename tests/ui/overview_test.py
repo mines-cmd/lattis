@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import Scenario, run_scenarios
 
 OPEN = "key F7\nexpect Library overview\n"
+DOWN = "key End\nwait 300\n"
 CARDS = "expect Games\nexpect Hours played\nexpect Backlog\nexpect Continue playing\n"
 
 
@@ -33,6 +34,24 @@ SCENARIOS = [
                + "click Uninstall\nexpect Uninstall Hades?\nexpect Cancel\nclick Cancel\n"
                + "expect-not Uninstall Hades?\nexpect Library overview\n"
                + "click Dormant\nexpect Not played yet\n", None)], demo),
+    Scenario("Games by platform, Status, Top tags and Release years list the library",
+             [(OPEN + "expect Games by platform\nexpect Status\nexpect Top tags\nexpect Release years\n"
+               + "expect Dropped\nexpect Roguelike\n", None)], demo),
+    Scenario("a tag in Top tags opens the game list with that tag on",
+             [(OPEN + DOWN + "click Roguelike\nwait 500\nexpect-not Library overview\nexpect Hades\n"
+               + "expect-not Metroid Dread\n", None)], demo),
+    Scenario("a status in the overview opens the game list with that status on, uninstalled games included",
+             [(OPEN + DOWN + "click Dropped\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
+               + "expect-not Metroid Dread\n", None)], demo),
+    Scenario("a platform in the overview opens the game list on that platform, and the next click replaces the filters",
+             [(OPEN + DOWN + "click Proton\nwait 500\nexpect-not Library overview\nexpect Final Fantasy XIV Online\n"
+               + "expect-not Metroid Dread\n"
+               + "key F7\nexpect Library overview\n" + DOWN + "click Completed\nwait 500\nexpect Metroid Dread\n"
+               + "expect-not Final Fantasy XIV Online\n", None)], demo),
+    Scenario("the Games tile opens the whole library, filters cleared",
+             [(OPEN + DOWN + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
+               + "key F7\nexpect Library overview\nkey Home\nwait 300\nclick Games\nwait 500\n"
+               + "expect-not Library overview\nexpect Metroid Dread\nexpect Final Fantasy XIV Online\n", None)], demo),
 ]
 
 sys.exit(run_scenarios(SCENARIOS))

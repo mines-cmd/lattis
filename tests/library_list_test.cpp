@@ -22,6 +22,7 @@ private slots:
     void renameSendsAMove();
     void twoChangesReset();
     void clearFilters();
+    void showFiltered();
     void showHiddenGames();
     void sortValue();
     void listSettingsParsing();
@@ -553,6 +554,33 @@ void LibraryListTest::clearFilters()
     library->clearFilters(); // nothing to clear
     QCOMPARE(filtersChanged.count(), 1);
     QCOMPARE(reset.count(), 1);
+}
+
+void LibraryListTest::showFiltered()
+{
+    auto library = openLibrary();
+    library->setFavoritesOnly(true);
+    library->setShowHidden(true);
+    library->setSearch(QStringLiteral("mario"));
+    library->setSort(QStringLiteral("play_time"));
+    library->setPlatformFilter(QStringLiteral("3ds"));
+
+    // The overview's click replaces every filter, counts uninstalled games too, and leaves the sort.
+    library->showFiltered(QStringLiteral("switch"), {QStringLiteral("playing")}, {QStringLiteral("Party")});
+    QVERIFY(!library->installedOnly());
+    QVERIFY(!library->favoritesOnly());
+    QVERIFY(!library->showHidden());
+    QVERIFY(library->search().isEmpty());
+    QCOMPARE(library->platformFilter(), QStringLiteral("switch"));
+    QCOMPARE(library->statusFilter(), QStringList{QStringLiteral("playing")});
+    QCOMPARE(library->tagFilter(), QStringList{QStringLiteral("Party")});
+    QCOMPARE(library->sort(), QStringLiteral("play_time"));
+
+    library->showFiltered({}, {}, {});
+    QVERIFY(!library->installedOnly());
+    QVERIFY(library->platformFilter().isEmpty());
+    QVERIFY(library->statusFilter().isEmpty());
+    QVERIFY(library->tagFilter().isEmpty());
 }
 
 void LibraryListTest::showHiddenGames()

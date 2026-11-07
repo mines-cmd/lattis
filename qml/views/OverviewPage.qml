@@ -18,6 +18,7 @@ FocusScope {
     readonly property var continuePlaying: overview.continuePlaying ?? []
 
     signal closeRequested()
+    signal filterRequested(string platform, var statuses, var tags)
     signal gameRequested(string id)
     signal playRequested(string id)
     signal statsRequested()
@@ -44,21 +45,48 @@ FocusScope {
         return minutes < 1440 ? qsTr("Less than a day") : qsTr("%1 days").arg((minutes / 1440).toFixed(1))
     }
 
+    function openTile(target: string) {
+        if (target === "stats")
+            statsRequested()
+        else
+            filterRequested("", target === "backlog" ? ["not_started"] : [], [])
+    }
+
     readonly property var tiles: {
         const o = overview
         if (!loaded)
             return []
         return [
             { label: qsTr("Games"), value: String(o.games), icon: Icons.stackLine, color: Theme.palette.text,
-              sub: qsTr("%1 installed on %n platform(s)", "", o.platforms).arg(o.installed) },
+              sub: qsTr("%1 installed on %n platform(s)", "", o.platforms).arg(o.installed), target: "all" },
             { label: qsTr("Hours played"), value: hoursText(o.minutes), icon: Icons.timeLine, color: Theme.overview.tilePrimaryValue,
-              sub: daysText(o.minutes) },
+              sub: daysText(o.minutes), target: "stats" },
             { label: qsTr("Backlog"), value: String(o.backlog), icon: Icons.calendarCheckLine, color: Theme.palette.text,
-              sub: o.games > 0 ? qsTr("%1% of the library").arg(Math.round(100 * o.backlog / o.games)) : qsTr("Nothing in the library") }
+              sub: o.games > 0 ? qsTr("%1% of the library").arg(Math.round(100 * o.backlog / o.games)) : qsTr("Nothing in the library"), target: "backlog" }
         ]
     }
 
     Keys.onEscapePressed: root.closeRequested()
+    Keys.onPressed: event => {
+        const page = flick.height - Theme.layout.margin
+        const line = Theme.overview.sectionSpacing * 4
+        const steps = { [Qt.Key_Down]: line, [Qt.Key_Up]: -line, [Qt.Key_PageDown]: page, [Qt.Key_PageUp]: -page }
+        const top = Math.max(0, flick.contentHeight - flick.height)
+        if (event.key === Qt.Key_Home)
+            flick.contentY = 0
+        else if (event.key === Qt.Key_End)
+            flick.contentY = top
+        else if (event.key in steps)
+            flick.contentY = Math.max(0, Math.min(top, flick.contentY + steps[event.key]))
+        else
+            return
+        event.accepted = true
+    }
+
+    OverviewPlatformInfo {
+        id: platformInfo
+        platformList: root.overview.platformList ?? []
+    }
 
     Connections {
         target: Library
@@ -182,6 +210,9 @@ FocusScope {
                                 Layout.fillWidth: true
                                 horizontalPadding: Theme.overview.tilePaddingX
                                 watermark: tileReveal.modelData.icon
+
+                                TapHandler { onTapped: root.openTile(tileReveal.modelData.target) }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
 
                                 CardLabel {
                                     text: tileReveal.modelData.label
@@ -311,9 +342,73 @@ FocusScope {
                         id: storage
                         Layout.fillWidth: true
                         overview: root.overview
+                        info: platformInfo
                         stacked: root.columns === 1
                         onGameRequested: id => root.gameRequested(id)
                         onUninstallRequested: id => root.uninstallRequested(id)
+                    }
+                }
+
+                OverviewReveal {
+                    shown: root.loaded
+                    Layout.fillWidth: true
+                    visible: (root.overview.platformCounts ?? []).length > 0
+                    order: root.tiles.length + 2
+
+                    OverviewPlatforms {
+                        Layout.fillWidth: true
+                        overview: root.overview
+                        info: platformInfo
+                        onFilterRequested: platform => root.filterRequested(platform, [], [])
+                    }
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: root.columns
+                    columnSpacing: Theme.overview.sectionSpacing
+                    rowSpacing: Theme.overview.sectionSpacing
+                    uniformCellWidths: true
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.statusCounts ?? []).length > 0
+                        order: root.tiles.length + 3
+
+                        OverviewStatuses {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            onFilterRequested: status => root.filterRequested("", [status], [])
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.topTags ?? []).length > 0
+                        order: root.tiles.length + 4
+
+                        OverviewTags {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            onFilterRequested: tag => root.filterRequested("", [], [tag])
+                        }
+                    }
+
+                    OverviewReveal {
+                        shown: root.loaded
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.years ?? []).length > 0
+                        order: root.tiles.length + 5
+
+                        OverviewYears {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                        }
                     }
                 }
             }

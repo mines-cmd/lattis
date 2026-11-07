@@ -148,6 +148,7 @@ public:
     bool filtersActive() const;
     int notInstalledHidden() const { return m_notInstalledHidden; }
     Q_INVOKABLE void clearFilters();
+    Q_INVOKABLE void showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags);
 
     Q_INVOKABLE void toggleGroup(const QString &group);
     Q_INVOKABLE int nextGameRow(int from, int step) const;

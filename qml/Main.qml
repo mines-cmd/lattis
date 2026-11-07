@@ -1109,6 +1109,10 @@ ApplicationWindow {
             target: overviewPage.item
             function onCloseRequested() { window.setOverviewOpen(false) }
             function onStatsRequested() { window.setStatsOpen(true) }
+            function onFilterRequested(platform, statuses, tags) {
+                Library.showFiltered(platform, statuses, tags)
+                window.setOverviewOpen(false)
+            }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
             function onUninstallRequested(id) { window.uninstallGame(Library.gameWithId(id)) }
             function onGameRequested(id) {

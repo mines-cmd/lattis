@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property var info
     property bool stacked: false
     property string mode: "largest"
     // Set once the bars have grown, so a refresh while the page is open doesn't grow them again.
@@ -23,16 +24,12 @@ OverviewCard {
 
     onOverviewChanged: if (overview.drives === undefined) barsGrown = false
 
-    // A platform keeps its color however the rows are sorted: it is its place in the library's platform list.
     function colorOf(platform: string): color {
-        const colors = Theme.overview.platformColors
-        const list = overview.platformList ?? []
-        const index = Math.max(0, list.findIndex(p => p.id === platform))
-        return colors.length > 0 ? colors[index % colors.length] : Theme.overview.storageOther
+        return info.colorOf(platform)
     }
 
     function nameOf(platform: string): string {
-        return (overview.platformList ?? []).find(p => p.id === platform)?.name ?? platform
+        return info.nameOf(platform)
     }
 
     function percent(part: real, whole: real): string {

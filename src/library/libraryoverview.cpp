@@ -109,6 +109,69 @@ void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &dri
     out.largest.resize(qMin<qsizetype>(out.largest.size(), kStorageListLimit));
     out.dormant.resize(qMin<qsizetype>(out.dormant.size(), kStorageListLimit));
 }
+
+// Platforms count each copy where it is; statuses, tags and years count a linked group once, by its shown copy.
+void addBreakdowns(Overview &out, const QList<Game> &games, const QList<Unit> &units)
+{
+    QHash<QString, PlatformCount> byPlatform;
+    for (const Game &g : games) {
+        if (g.hidden)
+            continue;
+        PlatformCount &c = byPlatform[g.platform];
+        c.platform = g.platform;
+        ++c.games;
+        if (g.installed)
+            ++c.installed;
+    }
+    out.platformCounts = byPlatform.values();
+    std::sort(out.platformCounts.begin(), out.platformCounts.end(), [](const PlatformCount &a, const PlatformCount &b) {
+        return a.games != b.games ? a.games > b.games : a.platform < b.platform;
+    });
+
+    static const QStringList statusOrder{QStringLiteral("playing"), QStringLiteral("not_started"), QStringLiteral("finished"),
+                                         QStringLiteral("completed"), QStringLiteral("dropped"), QStringLiteral("none")};
+    QHash<QString, int> statuses;
+    QHash<QString, int> tags;
+    QHash<int, int> years;
+    for (const Unit &unit : units) {
+        const Game &g = *unit.shown;
+        ++statuses[statusOrder.contains(g.status) ? g.status : QStringLiteral("none")];
+        const QStringList unique = QSet<QString>(g.tags.cbegin(), g.tags.cend()).values();
+        for (const QString &tag : unique)
+            ++tags[tag];
+        if (g.year > 0)
+            ++years[g.year];
+    }
+    for (const QString &status : statusOrder) {
+        if (statuses.value(status) > 0)
+            out.statusCounts.append({status, statuses.value(status)});
+    }
+
+    for (auto it = tags.cbegin(); it != tags.cend(); ++it)
+        out.topTags.append({it.key(), it.value()});
+    std::sort(out.topTags.begin(), out.topTags.end(), [](const TagCount &a, const TagCount &b) {
+        if (a.count != b.count)
+            return a.count > b.count;
+        if (const int byName = a.tag.compare(b.tag, Qt::CaseInsensitive))
+            return byName < 0;
+        return a.tag < b.tag;
+    });
+    out.topTags.resize(qMin<qsizetype>(out.topTags.size(), kTopTagLimit));
+
+    if (years.isEmpty())
+        return;
+    QList<int> keys = years.keys();
+    std::sort(keys.begin(), keys.end());
+    const int first = *std::min_element(keys.cbegin(), keys.cend());
+    const int last = *std::max_element(keys.cbegin(), keys.cend());
+    if (last - first < kYearSpanLimit) {
+        for (int year = first; year <= last; ++year)
+            out.years.append({year, years.value(year)});
+    } else {
+        for (int year : std::as_const(keys))
+            out.years.append({year, years.value(year)});
+    }
+}
 } // namespace
 
 Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now)
@@ -143,7 +206,10 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
         const Game &g = *unit.shown;
         if (unit.installed)
             ++out.totals.installed;
-        out.totals.minutes += unit.grouped ? g.groupPlayMinutes : g.playMinutes;
+        const int minutes = unit.grouped ? g.groupPlayMinutes : g.playMinutes;
+        out.totals.minutes += minutes;
+        if (minutes > 0 || (unit.grouped ? g.groupLastPlayed : g.lastPlayed).isValid())
+            ++out.totals.played;
         if (g.status == QLatin1String("not_started"))
             ++out.totals.backlog;
         if (g.status == QLatin1String("playing"))
@@ -164,6 +230,7 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
         out.continuePlaying.resize(kContinueLimit);
 
     addStorage(out, games, drives, now);
+    addBreakdowns(out, games, units);
     return out;
 }
 
@@ -205,11 +272,31 @@ QVariantMap toVariantMap(const Overview &overview)
                                   {QStringLiteral("otherBytes"), use.otherBytes},
                                   {QStringLiteral("unknown"), use.unknown},
                                   {QStringLiteral("platforms"), sizes(use.platforms)}});
+    QVariantList platformCounts;
+    for (const PlatformCount &c : overview.platformCounts)
+        platformCounts.append(QVariantMap{{QStringLiteral("platform"), c.platform},
+                                          {QStringLiteral("games"), c.games},
+                                          {QStringLiteral("installed"), c.installed}});
+    QVariantList statusCounts;
+    for (const StatusCount &c : overview.statusCounts)
+        statusCounts.append(QVariantMap{{QStringLiteral("status"), c.status}, {QStringLiteral("count"), c.count}});
+    QVariantList topTags;
+    for (const TagCount &c : overview.topTags)
+        topTags.append(QVariantMap{{QStringLiteral("tag"), c.tag}, {QStringLiteral("count"), c.count}});
+    QVariantList years;
+    for (const YearCount &c : overview.years)
+        years.append(QVariantMap{{QStringLiteral("year"), c.year}, {QStringLiteral("count"), c.count}});
     const Totals &t = overview.totals;
-    return {{QStringLiteral("drives"), drives},
+    return {{QStringLiteral("platformCounts"), platformCounts},
+            {QStringLiteral("statusCounts"), statusCounts},
+            {QStringLiteral("topTags"), topTags},
+            {QStringLiteral("years"), years},
+            {QStringLiteral("played"), t.played},
+{QStringLiteral("drives"), drives},
             {QStringLiteral("platformSizes"), sizes(overview.platformSizes)},
             {QStringLiteral("largest"), rows(overview.largest)},
-            {QStringLiteral("dormant"), rows(overview.dormant)},{QStringLiteral("games"), t.games},
+            {QStringLiteral("dormant"), rows(overview.dormant)},
+            {QStringLiteral("games"), t.games},
             {QStringLiteral("installed"), t.installed},
             {QStringLiteral("platforms"), t.platforms},
             {QStringLiteral("minutes"), t.minutes},

@@ -40,6 +40,11 @@ private slots:
     void linkedCopiesEachTakeSpace();
     void largestAndDormant();
     void storageVariantMap();
+    void platformCounts();
+    void statusCounts();
+    void topTags();
+    void releaseYears();
+    void breakdownsVariantMap();
 };
 
 void LibraryOverviewTest::emptyLibrary()
@@ -404,6 +409,141 @@ void LibraryOverviewTest::storageVariantMap()
     QVERIFY(row.value("uninstallable").toBool());
     QCOMPARE(map.value("dormant").toList().size(), 1);
     QCOMPARE(map.value("platformSizes").toList().size(), 1);
+}
+
+void LibraryOverviewTest::platformCounts()
+{
+    Game a = game("a", "steam");
+    Game b = game("b", "steam");
+    b.installed = false;
+    Game hidden = game("h", "steam");
+    hidden.hidden = true;
+    Game copy1 = game("c1", "steam");
+    copy1.groupId = "c1";
+    Game copy2 = game("c2", "epic");
+    copy2.groupId = "c1";
+    Game rom = game("r", "switch");
+    rom.playMinutes = 5;
+
+    const auto o = LibraryOverview::overview({a, b, hidden, copy1, copy2, rom});
+    // Linked copies are one game in the totals but each counts on its own platform.
+    QCOMPARE(o.totals.games, 4);
+    QCOMPARE(o.platformCounts.size(), 3);
+    QCOMPARE(o.platformCounts.at(0).platform, QStringLiteral("steam"));
+    QCOMPARE(o.platformCounts.at(0).games, 3);
+    QCOMPARE(o.platformCounts.at(0).installed, 2);
+    QCOMPARE(o.platformCounts.at(1).platform, QStringLiteral("epic"));
+    QCOMPARE(o.platformCounts.at(1).games, 1);
+    QCOMPARE(o.platformCounts.at(2).platform, QStringLiteral("switch"));
+    QCOMPARE(o.totals.played, 1);
+}
+
+void LibraryOverviewTest::statusCounts()
+{
+    Game a = game("a");
+    a.status = "finished";
+    Game b = game("b");
+    b.status = "playing";
+    Game c = game("c");
+    c.status = "finished";
+    Game d = game("d");
+    Game odd = game("e");
+    odd.status = "not-a-status";
+    Game hidden = game("h");
+    hidden.hidden = true;
+    hidden.status = "dropped";
+    Game linked1 = game("l1");
+    linked1.groupId = "l1";
+    linked1.status = "dropped";
+    Game linked2 = game("l2");
+    linked2.groupId = "l1";
+    linked2.status = "dropped";
+
+    const auto o = LibraryOverview::overview({a, b, c, d, odd, hidden, linked1, linked2});
+    // The list's order; a linked group once; unknown and empty statuses are "none"; unused ones are left out.
+    QCOMPARE(o.statusCounts.size(), 4);
+    QCOMPARE(o.statusCounts.at(0).status, QStringLiteral("playing"));
+    QCOMPARE(o.statusCounts.at(1).status, QStringLiteral("finished"));
+    QCOMPARE(o.statusCounts.at(1).count, 2);
+    QCOMPARE(o.statusCounts.at(2).status, QStringLiteral("dropped"));
+    QCOMPARE(o.statusCounts.at(2).count, 1);
+    QCOMPARE(o.statusCounts.at(3).status, QStringLiteral("none"));
+    QCOMPARE(o.statusCounts.at(3).count, 2);
+}
+
+void LibraryOverviewTest::topTags()
+{
+    QList<Game> games;
+    for (int i = 0; i < 15; ++i) {
+        Game g = game(QString("g%1").arg(i));
+        g.tags = {QString("tag%1").arg(i), "Common", "Common"};
+        if (i < 3)
+            g.tags.append("Often");
+        games.append(g);
+    }
+    Game hidden = game("h");
+    hidden.hidden = true;
+    hidden.tags = {"Hidden"};
+    games.append(hidden);
+
+    const auto o = LibraryOverview::overview(games);
+    QCOMPARE(o.topTags.size(), LibraryOverview::kTopTagLimit);
+    QCOMPARE(o.topTags.at(0).tag, QStringLiteral("Common"));
+    QCOMPARE(o.topTags.at(0).count, 15); // a repeated tag counts once per game
+    QCOMPARE(o.topTags.at(1).tag, QStringLiteral("Often"));
+    QCOMPARE(o.topTags.at(1).count, 3);
+    // Equal counts by name.
+    QCOMPARE(o.topTags.at(2).tag, QStringLiteral("tag0"));
+    QCOMPARE(o.topTags.at(3).tag, QStringLiteral("tag1"));
+    for (const auto &t : o.topTags)
+        QVERIFY(t.tag != QLatin1String("Hidden"));
+}
+
+void LibraryOverviewTest::releaseYears()
+{
+    QVERIFY(LibraryOverview::overview({game("none")}).years.isEmpty());
+
+    Game a = game("a");
+    a.year = 2018;
+    Game b = game("b");
+    b.year = 2021;
+    Game c = game("c");
+    c.year = 2021;
+    Game hidden = game("h");
+    hidden.hidden = true;
+    hidden.year = 1990;
+    auto o = LibraryOverview::overview({a, b, c, hidden, game("unknown")});
+    QCOMPARE(o.years.size(), 4); // the years between are listed with 0
+    QCOMPARE(o.years.at(0).year, 2018);
+    QCOMPARE(o.years.at(0).count, 1);
+    QCOMPARE(o.years.at(1).count, 0);
+    QCOMPARE(o.years.at(3).year, 2021);
+    QCOMPARE(o.years.at(3).count, 2);
+
+    // A mistyped year doesn't make a column for every year in between.
+    Game odd = game("odd");
+    odd.year = 5;
+    o = LibraryOverview::overview({a, odd});
+    QCOMPARE(o.years.size(), 2);
+    QCOMPARE(o.years.at(0).year, 5);
+    QCOMPARE(o.years.at(1).year, 2018);
+}
+
+void LibraryOverviewTest::breakdownsVariantMap()
+{
+    Game g = game("g", "steam");
+    g.status = "playing";
+    g.tags = {"RPG"};
+    g.year = 2020;
+    const QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview({g}));
+    QCOMPARE(map.value("played").toInt(), 0);
+    const QVariantMap p = map.value("platformCounts").toList().at(0).toMap();
+    QCOMPARE(p.value("platform").toString(), QStringLiteral("steam"));
+    QCOMPARE(p.value("games").toInt(), 1);
+    QCOMPARE(p.value("installed").toInt(), 1);
+    QCOMPARE(map.value("statusCounts").toList().at(0).toMap().value("status").toString(), QStringLiteral("playing"));
+    QCOMPARE(map.value("topTags").toList().at(0).toMap().value("tag").toString(), QStringLiteral("RPG"));
+    QCOMPARE(map.value("years").toList().at(0).toMap().value("year").toInt(), 2020);
 }
 
 QTEST_APPLESS_MAIN(LibraryOverviewTest)

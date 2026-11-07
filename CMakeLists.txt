@@ -194,6 +194,12 @@ qt_add_qml_module(lattis
         qml/views/OverviewQuiet.qml
         qml/views/OverviewReveal.qml
         qml/views/OverviewStorage.qml
+        qml/views/OverviewBarRow.qml
+        qml/views/OverviewPlatformInfo.qml
+        qml/views/OverviewPlatforms.qml
+        qml/views/OverviewStatuses.qml
+        qml/views/OverviewTags.qml
+        qml/views/OverviewYears.qml
         qml/views/GalleryFilters.qml
         qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml

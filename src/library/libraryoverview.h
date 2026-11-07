@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QList>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 // See docs/code/library.md.
@@ -24,6 +25,8 @@ struct Game
     qint64 sizeBytes = 0; // 0 = unknown
     QString path; // the folder (or ROM) it takes space in, resolved; empty = nowhere known
     bool uninstallable = false;
+    QStringList tags;
+    int year = 0; // 0 = unknown
 };
 
 struct Drive
@@ -70,6 +73,31 @@ struct Sized
     bool uninstallable = false;
 };
 
+struct PlatformCount
+{
+    QString platform;
+    int games = 0;
+    int installed = 0;
+};
+
+struct StatusCount
+{
+    QString status; // as in the game file; "none" = no status
+    int count = 0;
+};
+
+struct TagCount
+{
+    QString tag;
+    int count = 0;
+};
+
+struct YearCount
+{
+    int year = 0;
+    int count = 0;
+};
+
 struct Totals
 {
     int games = 0;
@@ -77,6 +105,7 @@ struct Totals
     int platforms = 0;
     qint64 minutes = 0;
     int backlog = 0;
+    int played = 0;
 };
 
 struct Overview
@@ -87,11 +116,17 @@ struct Overview
     QList<PlatformSize> platformSizes;
     QList<Sized> largest;
     QList<Sized> dormant;
+    QList<PlatformCount> platformCounts; // most games first
+    QList<StatusCount> statusCounts; // the list's status order, none last; only the ones in use
+    QList<TagCount> topTags;
+    QList<YearCount> years; // oldest first, the years between filled with 0
 };
 
 constexpr int kContinueLimit = 7;
 constexpr int kStorageListLimit = 4;
 constexpr int kDormantMonths = 6;
+constexpr int kTopTagLimit = 12;
+constexpr int kYearSpanLimit = 100; // a wider span (a mistyped year) lists only the years in use
 
 Overview overview(const QList<Game> &games, const QList<Drive> &drives = {},
                   const QDateTime &now = QDateTime::currentDateTimeUtc());

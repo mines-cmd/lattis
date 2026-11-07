@@ -1454,6 +1454,16 @@ void Library::setStatusFilter(const QStringList &statuses)
     filtersEdited();
 }
 
+void Library::showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags)
+{
+    clearFilters();
+    setInstalledOnly(false);
+    setSearch({});
+    setStatusFilter(statuses);
+    setTagFilter(tags);
+    setPlatformFilter(platform);
+}
+
 void Library::setSteamFilter(const QStringList &kinds)
 {
     QStringList known;
@@ -2589,9 +2599,12 @@ void Library::overview()
         const bool uninstallable = g.platform == kSteamPlatform
             ? g.installed || g.steamUpdate == SteamUpdate::Downloading || g.steamUpdate == SteamUpdate::Paused
             : runsProgram(g.platform) && g.installed;
+        QStringList tags;
+        for (const GameTag &tag : g.tags)
+            tags.append(tag.name);
         games.append({g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes, g.lastPlayed,
                       g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString(), g.sizeBytes,
-                      g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable});
+                      g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable, tags, g.year});
     }
     QVariantList platforms;
     for (const Platform &p : m_platforms)
@@ -2629,6 +2642,13 @@ void Library::overview()
         withDates(QStringLiteral("continuePlaying"));
         withDates(QStringLiteral("largest"));
         withDates(QStringLiteral("dormant"));
+        QVariantList statusCounts = map.value(QStringLiteral("statusCounts")).toList();
+        for (QVariant &row : statusCounts) {
+            QVariantMap m = row.toMap();
+            m.insert(QStringLiteral("name"), statusName(m.value(QStringLiteral("status")).toString()));
+            row = m;
+        }
+        map.insert(QStringLiteral("statusCounts"), statusCounts);
         map.insert(QStringLiteral("platformList"), platforms);
         return map;
     }));
