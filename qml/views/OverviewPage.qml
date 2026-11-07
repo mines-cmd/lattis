@@ -289,12 +289,29 @@ FocusScope {
                             order: index
 
                             OverviewCard {
+                                id: tileCard
                                 Layout.fillWidth: true
                                 horizontalPadding: Theme.overview.tilePaddingX
                                 watermark: tileReveal.modelData.icon
+                                scale: tap.pressed ? Theme.motion.pressScale : 1
 
-                                TapHandler { onTapped: root.openTile(tileReveal.modelData.target) }
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                Behavior on scale { enabled: Motion.on; MotionNumber {} }
+
+                                TapHandler {
+                                    id: tap
+                                    onTapped: root.openTile(tileReveal.modelData.target)
+                                }
+                                HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
+
+                                Rectangle {
+                                    parent: tileCard
+                                    anchors.fill: parent
+                                    radius: tileCard.radius
+                                    color: Theme.overview.tileHoverTint
+                                    opacity: tileHover.hovered ? 1 : 0
+
+                                    Behavior on opacity { MotionNumber { fade: true } }
+                                }
 
                                 CardLabel {
                                     text: tileReveal.modelData.label

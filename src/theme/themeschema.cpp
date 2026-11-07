@@ -1201,6 +1201,7 @@ constexpr Setting kSettings[] = {
     integer("overview", "tile_padding_x", "@stats.tile_padding_x", 0, 100, "Space between a tile's left and right edges and its text"),
     integer("overview", "tile_value_size", "@stats.tile_value_size", 12, 120, "The big number on a tile"),
     color("overview", "tile_primary_value", "@stats.tile_primary_value", "Hours played's number"),
+    color("overview", "tile_hover_tint", "#ffffff0d", "Laid over a tile under the mouse; transparent = no hover"),
     heading("overview", "Continue playing"),
     integer("overview", "cover_width", "120", 40, 400, "Narrowest a game's cover is in Continue playing; it is as tall as the cover's shape"),
     integer("overview", "cover_max_width", "200", 40, 600,
