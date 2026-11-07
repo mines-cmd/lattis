@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDateTime>
+#include <QHash>
 #include <QList>
 #include <QSet>
 #include <QString>
@@ -36,7 +37,15 @@ struct Game
     bool missingArt = false; // no cover, and a lookup hasn't marked it as having none
     bool missingInfo = false; // no description, year or rating a lookup could still find
     QString backupKey; // the folder name its saves are backed up under; empty = saves can't cover it
+    qint64 steamAppId = 0; // set for a Steam game whose achievements are read (installed or played); 0 = none
 };
+
+struct AchievementCount
+{
+    int unlocked = 0;
+    int total = 0; // 0 = the game has none
+};
+using AchievementCounts = QHash<qint64, AchievementCount>;
 
 struct Drive
 {
@@ -132,9 +141,28 @@ struct Pick
     int year = 0;
 };
 
+struct NearlyDone
+{
+    QString id;
+    QString title;
+    QString coverUrl;
+    int unlocked = 0;
+    int total = 0;
+};
+
+struct Achievements
+{
+    int games = 0; // Steam games with achievements
+    int unlocked = 0;
+    int total = 0;
+    int perfect = 0;
+    QList<NearlyDone> nearlyDone; // below 100%, highest first
+};
+
 struct Overview
 {
     Totals totals;
+    std::optional<Achievements> achievements; // nullopt = not read yet
     QList<Attention> attention; // in this order, the ones with something to report
     QList<Pick> backlog; // installed Backlog games, for From your backlog to pick from
     QList<Counted> continuePlaying;
@@ -153,10 +181,14 @@ constexpr int kStorageListLimit = 4;
 constexpr int kDormantMonths = 6;
 constexpr int kTopTagLimit = 12;
 constexpr int kYearSpanLimit = 100; // a wider span (a mistyped year) lists only the years in use
+constexpr int kNearlyDoneLimit = 4;
+constexpr int kNearlyDonePercent = 80;
 
 // `backedUp` holds the backup keys that have a backup; nothing (not read) leaves "never backed up" out.
+// `achievements` is what was read per Steam app id; nothing (not read yet) leaves the achievements out.
 Overview overview(const QList<Game> &games, const QList<Drive> &drives = {},
                   const QDateTime &now = QDateTime::currentDateTimeUtc(),
-                  const std::optional<QSet<QString>> &backedUp = std::nullopt);
+                  const std::optional<QSet<QString>> &backedUp = std::nullopt,
+                  const std::optional<AchievementCounts> &achievements = std::nullopt);
 QVariantMap toVariantMap(const Overview &overview);
 } // namespace LibraryOverview

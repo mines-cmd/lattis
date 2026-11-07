@@ -2593,6 +2593,7 @@ void Library::yearStats(int year)
 
 void Library::overview()
 {
+    QHash<qint64, qint64> stamps;
     QList<LibraryOverview::Game> games;
     games.reserve(m_games.size());
     const auto &files = m_store.snapshot().content.games;
@@ -2611,6 +2612,11 @@ void Library::overview()
             continue;
         }
         o.rom = g.rom;
+        if (g.platform == kSteamPlatform && (g.installed || g.playMinutes > 0 || g.lastPlayed.isValid())) {
+            o.steamAppId = GameId::steamAppId(g.id);
+            if (o.steamAppId > 0)
+                stamps.insert(o.steamAppId, (qint64(g.playMinutes) << 32) | (g.lastPlayed.toSecsSinceEpoch() & 0xffffffff));
+        }
         o.updateWaiting = g.steamUpdate == SteamUpdate::Waiting;
         if (g.rom && g.installed) {
             const Platform *p = platform(g.platform);
@@ -2630,6 +2636,48 @@ void Library::overview()
         games.append(o);
     }
     const QString backupFolder = m_backupFolder ? m_backupFolder() : QString();
+
+    // What was read before is used while a game whose play changed is read again.
+    LibraryOverview::AchievementCounts counts;
+    QList<QPair<qint64, qint64>> stale;
+    for (auto it = stamps.cbegin(); it != stamps.cend(); ++it) {
+        const auto cached = m_achievementCache.constFind(it.key());
+        if (cached != m_achievementCache.cend())
+            counts.insert(it.key(), {cached->unlocked, cached->total});
+        if (cached == m_achievementCache.cend() || cached->stamp != it.value())
+            stale.append({it.key(), it.value()});
+    }
+    const SteamInstall install = m_store.snapshot().steam.install;
+    const bool readable = !install.userDataDir().isEmpty();
+    if (stale.isEmpty() || !readable)
+        m_achievementsRead = true;
+    else if (!m_achievementsRunning) {
+        m_achievementsRunning = true;
+        auto *pass = new QFutureWatcher<QHash<qint64, AchievementEntry>>(this);
+        connect(pass, &QFutureWatcher<QHash<qint64, AchievementEntry>>::finished, this, [this, pass] {
+            const auto read = pass->result();
+            for (auto it = read.cbegin(); it != read.cend(); ++it)
+                m_achievementCache.insert(it.key(), it.value());
+            m_achievementsRunning = false;
+            m_achievementsRead = true;
+            pass->deleteLater();
+            emit overviewAchievementsRead();
+        });
+        pass->setFuture(QtConcurrent::run([install, stale] {
+            const QString language = SteamAchievements::steamLanguage(install, QDir::homePath());
+            QHash<qint64, AchievementEntry> read;
+            for (const auto &[appId, stamp] : stale) {
+                const auto list = SteamAchievements::readAchievements(install, appId, language);
+                const int unlocked = int(std::count_if(list.cbegin(), list.cend(), [](const auto &a) { return a.unlocked; }));
+                read.insert(appId, {unlocked, int(list.size()), stamp});
+            }
+            return read;
+        }));
+    }
+    std::optional<LibraryOverview::AchievementCounts> achievementCounts;
+    if (m_achievementsRead)
+        achievementCounts = readable ? counts : LibraryOverview::AchievementCounts();
+
     QVariantList platforms;
     for (const Platform &p : m_platforms)
         platforms.append(QVariantMap{{QStringLiteral("id"), p.id}, {QStringLiteral("name"), p.name}});
@@ -2638,7 +2686,8 @@ void Library::overview()
         emit overviewReady(watcher->result());
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms), backupFolder]() mutable {
+    watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms), backupFolder,
+                                     achievementCounts = std::move(achievementCounts)]() mutable {
         // A link to another drive (~/Games -> /mnt/ssd/Games) takes space where it leads.
         for (LibraryOverview::Game &g : games) {
             if (g.installed && !g.hidden && !g.path.isEmpty()) {
@@ -2666,7 +2715,7 @@ void Library::overview()
                     backedUp->insert(g.backupKey);
             }
         }
-        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives, QDateTime::currentDateTimeUtc(), backedUp));
+        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives, QDateTime::currentDateTimeUtc(), backedUp, achievementCounts));
         const auto withDates = [&map](const QString &key) {
             QVariantList rows = map.value(key).toList();
             for (QVariant &row : rows) {

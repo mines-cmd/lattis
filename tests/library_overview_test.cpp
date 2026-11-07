@@ -14,6 +14,13 @@ Game game(const QString &id, const QString &platform = QStringLiteral("switch"))
     return g;
 }
 
+Game steamGame(const QString &id, qint64 appId)
+{
+    Game g = game(id, QStringLiteral("steam"));
+    g.steamAppId = appId;
+    return g;
+}
+
 QDateTime day(int d)
 {
     return QDateTime(QDate(2026, 10, d), QTime(12, 0), QTimeZone::UTC);
@@ -51,6 +58,12 @@ private slots:
     void savesNeverBackedUp();
     void backlogPicks();
     void attentionVariantMap();
+    void achievementsNotReadYet();
+    void achievementShareAndPerfectGames();
+    void noSteamGamesStillReadsNothing();
+    void nearlyDoneOrderAndLimit();
+    void nearlyDoneLeavesOutBelowEightyAndPerfect();
+    void achievementsLeaveOutHiddenAndCountLinkedCopiesOnce();
 };
 
 void LibraryOverviewTest::emptyLibrary()
@@ -694,6 +707,107 @@ void LibraryOverviewTest::attentionVariantMap()
     const QVariantMap row = map.value("attention").toList().at(0).toMap();
     QCOMPARE(row.value("kind").toString(), QStringLiteral("missingArt"));
     QCOMPARE(row.value("count").toInt(), 1);
+}
+
+void LibraryOverviewTest::achievementsNotReadYet()
+{
+    Game g = game("steam-1", "steam");
+    g.steamAppId = 1;
+    const LibraryOverview::Overview o = LibraryOverview::overview({g});
+    QVERIFY(!o.achievements);
+    const QVariantMap map = LibraryOverview::toVariantMap(o);
+    QVERIFY(!map.contains("achievements"));
+    QVERIFY(map.value("nearlyDone").toList().isEmpty());
+}
+
+void LibraryOverviewTest::achievementShareAndPerfectGames()
+{
+    Game a = steamGame("steam-1", 1);
+    Game b = steamGame("steam-2", 2);
+    Game none = steamGame("steam-3", 3);
+    Game unread = steamGame("steam-4", 4);
+    Game epic = game("epic-1", "epic");
+    const LibraryOverview::AchievementCounts counts{{1, {10, 10}}, {2, {5, 20}}, {3, {0, 0}}};
+
+    const LibraryOverview::Overview o = LibraryOverview::overview({a, b, none, unread, epic}, {}, day(20), std::nullopt, counts);
+    QVERIFY(o.achievements);
+    QCOMPARE(o.achievements->games, 2); // no achievements and not read are left out
+    QCOMPARE(o.achievements->unlocked, 15);
+    QCOMPARE(o.achievements->total, 30);
+    QCOMPARE(o.achievements->perfect, 1);
+
+    const QVariantMap map = LibraryOverview::toVariantMap(o).value("achievements").toMap();
+    QCOMPARE(map.value("unlocked").toInt(), 15);
+    QCOMPARE(map.value("total").toInt(), 30);
+    QCOMPARE(map.value("perfect").toInt(), 1);
+}
+
+void LibraryOverviewTest::noSteamGamesStillReadsNothing()
+{
+    const LibraryOverview::Overview o = LibraryOverview::overview({game("a")}, {}, day(20), std::nullopt,
+                                                                  LibraryOverview::AchievementCounts());
+    QVERIFY(o.achievements);
+    QCOMPARE(o.achievements->games, 0);
+    QCOMPARE(o.achievements->total, 0);
+    QVERIFY(o.achievements->nearlyDone.isEmpty());
+}
+
+void LibraryOverviewTest::nearlyDoneOrderAndLimit()
+{
+    QList<Game> games;
+    LibraryOverview::AchievementCounts counts;
+    const std::pair<int, int> shares[] = {{79, 100}, {80, 100}, {9, 10}, {10, 10}, {19, 20}, {99, 100}, {40, 50}};
+    int appId = 10;
+    for (const auto &[unlocked, total] : shares) {
+        games.append(steamGame(QStringLiteral("steam-%1").arg(appId), appId));
+        counts.insert(appId, {unlocked, total});
+        ++appId;
+    }
+    games[5].title = "B"; // 99%
+    games[2].title = "A"; // 90%
+    games[4].title = "C"; // 95%
+
+    const LibraryOverview::Overview o = LibraryOverview::overview(games, {}, day(20), std::nullopt, counts);
+    QVERIFY(o.achievements);
+    QCOMPARE(o.achievements->perfect, 1);
+    // Five games are at 80% or more and not perfect; the fifth, an 80% one, is cut.
+    QCOMPARE(o.achievements->nearlyDone.size(), 4);
+    QCOMPARE(o.achievements->nearlyDone.at(0).title, QStringLiteral("B"));
+    QCOMPARE(o.achievements->nearlyDone.at(1).title, QStringLiteral("C"));
+    QCOMPARE(o.achievements->nearlyDone.at(2).title, QStringLiteral("A"));
+    QCOMPARE(o.achievements->nearlyDone.at(3).id, QStringLiteral("steam-11")); // 80/100 and 40/50 tie: by title
+}
+
+void LibraryOverviewTest::nearlyDoneLeavesOutBelowEightyAndPerfect()
+{
+    Game below = steamGame("steam-1", 1);
+    Game exact = steamGame("steam-2", 2);
+    Game perfect = steamGame("steam-3", 3);
+    const LibraryOverview::AchievementCounts counts{{1, {79, 100}}, {2, {4, 5}}, {3, {5, 5}}};
+    const LibraryOverview::Overview o = LibraryOverview::overview({below, exact, perfect}, {}, day(20), std::nullopt, counts);
+    QCOMPARE(o.achievements->nearlyDone.size(), 1);
+    QCOMPARE(o.achievements->nearlyDone.at(0).id, QStringLiteral("steam-2"));
+    const QVariantMap row = LibraryOverview::toVariantMap(o).value("nearlyDone").toList().at(0).toMap();
+    QCOMPARE(row.value("unlocked").toInt(), 4);
+    QCOMPARE(row.value("total").toInt(), 5);
+}
+
+void LibraryOverviewTest::achievementsLeaveOutHiddenAndCountLinkedCopiesOnce()
+{
+    Game hidden = steamGame("steam-1", 1);
+    hidden.hidden = true;
+    Game main = steamGame("steam-2", 2);
+    main.groupId = "steam-2";
+    Game copy = steamGame("steam-3", 3);
+    copy.groupId = "steam-2";
+    const LibraryOverview::AchievementCounts counts{{1, {9, 10}}, {2, {3, 10}}, {3, {9, 10}}};
+
+    const LibraryOverview::Overview o = LibraryOverview::overview({hidden, main, copy}, {}, day(20), std::nullopt, counts);
+    QCOMPARE(o.achievements->games, 1);
+    QCOMPARE(o.achievements->unlocked, 9); // the copy that was played
+    QCOMPARE(o.achievements->total, 10);
+    QCOMPARE(o.achievements->nearlyDone.size(), 1);
+    QCOMPARE(o.achievements->nearlyDone.at(0).id, QStringLiteral("steam-3"));
 }
 
 QTEST_APPLESS_MAIN(LibraryOverviewTest)

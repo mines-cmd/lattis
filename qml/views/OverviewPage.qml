@@ -8,6 +8,7 @@ FocusScope {
 
     property real dragReserve: 0
     property var overview: ({})
+    property bool achievementsRead: false
     readonly property bool loaded: overview.games !== undefined
 
     // Three columns of cards, two below compactWidth, one below narrowWidth.
@@ -49,8 +50,22 @@ FocusScope {
     function openTile(target: string) {
         if (target === "stats")
             statsRequested()
+        else if (target === "steam")
+            filterRequested("steam", [], [])
         else
             filterRequested("", target === "backlog" ? ["not_started"] : [], [])
+    }
+
+    // Steam is the only source with achievements, so the tile says it covers Steam games and not the library.
+    function achievementsTile(o): var {
+        const a = o.achievements
+        const tile = { label: qsTr("Achievements"), icon: Icons.medal, color: Theme.palette.text, target: "steam" }
+        if (a === undefined)
+            return Object.assign(tile, { value: "…", sub: qsTr("Reading Steam games") })
+        if (a.total <= 0)
+            return Object.assign(tile, { value: "–", sub: qsTr("No achievements in Steam games") })
+        return Object.assign(tile, { value: qsTr("%1%").arg(Math.floor(100 * a.unlocked / a.total)),
+                                     sub: qsTr("%n perfect · Steam games", "", a.perfect) })
     }
 
     readonly property var tiles: {
@@ -63,7 +78,8 @@ FocusScope {
             { label: qsTr("Hours played"), value: hoursText(o.minutes), icon: Icons.timeLine, color: Theme.overview.tilePrimaryValue,
               sub: daysText(o.minutes), target: "stats" },
             { label: qsTr("Backlog"), value: String(o.backlog), icon: Icons.calendarCheckLine, color: Theme.palette.text,
-              sub: o.games > 0 ? qsTr("%1% of the library").arg(Math.round(100 * o.backlog / o.games)) : qsTr("Nothing in the library"), target: "backlog" }
+              sub: o.games > 0 ? qsTr("%1% of the library").arg(Math.round(100 * o.backlog / o.games)) : qsTr("Nothing in the library"), target: "backlog" },
+            achievementsTile(o)
         ]
     }
 
@@ -91,7 +107,17 @@ FocusScope {
 
     Connections {
         target: Library
-        function onOverviewReady(result) { root.overview = result }
+        function onOverviewReady(result) {
+            root.overview = result
+            // The pass can end before the first answer lands, which then has no achievements.
+            if (root.achievementsRead && result.achievements === undefined)
+                Library.overview()
+        }
+        function onOverviewAchievementsRead() {
+            root.achievementsRead = true
+            if (root.visible && root.loaded)
+                Library.overview()
+        }
         function onGamesChanged() {
             if (root.visible && root.loaded)
                 Library.overview()
@@ -415,19 +441,39 @@ FocusScope {
                         }
                     }
 
-                    OverviewReveal {
-                        shown: root.loaded
+                    ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
-                        visible: (root.overview.backlogPicks ?? []).length > 0
-                        order: root.tiles.length + 5
+                        spacing: Theme.overview.sectionSpacing
 
-                        OverviewBacklog {
+                        OverviewReveal {
+                            shown: root.loaded
                             Layout.fillWidth: true
-                            overview: root.overview
-                            info: platformInfo
-                            onGameRequested: id => root.gameRequested(id)
-                            onPlayRequested: id => root.playRequested(id)
+                            Layout.alignment: Qt.AlignTop
+                            visible: (root.overview.backlogPicks ?? []).length > 0
+                            order: root.tiles.length + 5
+
+                            OverviewBacklog {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                info: platformInfo
+                                onGameRequested: id => root.gameRequested(id)
+                                onPlayRequested: id => root.playRequested(id)
+                            }
+                        }
+
+                        OverviewReveal {
+                            shown: root.loaded
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            visible: (root.overview.nearlyDone ?? []).length > 0
+                            order: root.tiles.length + 6
+
+                            OverviewNearlyDone {
+                                Layout.fillWidth: true
+                                overview: root.overview
+                                onGameRequested: id => root.gameRequested(id)
+                            }
                         }
                     }
                 }
@@ -444,7 +490,7 @@ FocusScope {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
                         visible: (root.overview.topTags ?? []).length > 0
-                        order: root.tiles.length + 6
+                        order: root.tiles.length + 7
 
                         OverviewTags {
                             Layout.fillWidth: true
@@ -458,7 +504,7 @@ FocusScope {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignTop
                         visible: (root.overview.years ?? []).length > 0
-                        order: root.tiles.length + 7
+                        order: root.tiles.length + 8
 
                         OverviewYears {
                             Layout.fillWidth: true

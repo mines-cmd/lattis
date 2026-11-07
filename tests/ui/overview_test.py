@@ -1,6 +1,8 @@
+import importlib.util
 import os
 import sys
 
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import Scenario, run_scenarios
 
@@ -13,6 +15,28 @@ CARDS = "expect Games\nexpect Hours played\nexpect Backlog\nexpect Continue play
 
 def demo(dirs):
     dirs.use_demo()
+
+
+def steam_achievements(dirs, app_id, game, count, unlocked):
+    """Gives a demo Steam game `count` achievements, `unlocked` of them done, with the fixture builder's files."""
+    spec = importlib.util.spec_from_file_location(
+        "make_fixtures", os.path.join(REPO, "tests", "data", "steam", "appcache", "stats", "make-fixtures.py"))
+    mk = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mk)
+    bits = [mk.achievement(i, f"A{i}", dict(english=f"Achievement {i}"), dict(english="Do it."), f"a{i}")
+            for i in range(count)]
+    stats = "steam/appcache/stats/"
+    dirs.write(f"{stats}UserGameStatsSchema_{app_id}.bin", mk.schema(
+        app_id, game, mk.kv_map("0", mk.kv_str("type", "ACHIEVEMENTS"), mk.kv_map("bits", *bits))) + b"\x08")
+    dirs.write(f"{stats}UserGameStats_{mk.USER}_{app_id}.bin", mk.progress(
+        mk.stat_progress(0, (1 << unlocked) - 1, {i: 1700000000 + i for i in range(unlocked)})) + b"\x08")
+
+
+def with_achievements(dirs):
+    dirs.use_demo()
+    steam_achievements(dirs, 1145360, "Hades", 5, 4)  # 80%: nearly done
+    steam_achievements(dirs, 367520, "Hollow Knight", 10, 5)  # 50%
+    steam_achievements(dirs, 413150, "Stardew Valley", 4, 4)  # perfect: done, not nearly
 
 
 SCENARIOS = [
@@ -58,6 +82,16 @@ SCENARIOS = [
     Scenario("From your backlog offers a game with Play and Shuffle, and Shuffle keeps the card",
              [(OPEN + DOWN + "expect From your backlog\nexpect Play\nexpect Shuffle\nclick Shuffle\nwait 500\n"
                + "expect From your backlog\nexpect Play\n", None)], demo),
+    Scenario("the Achievements tile says it covers Steam games and Nearly done lists those at 80% or more",
+             [(OPEN + "expect Achievements\nexpect 1 perfect · Steam games\n" + DOWN
+               + "expect Nearly done\nexpect 4 of 5\nexpect-not 5 of 10\nexpect-not 4 of 4\n", None)],
+             with_achievements),
+    Scenario("without achievements the tile says so and Nearly done is left out",
+             [(OPEN + "expect Achievements\nexpect No achievements in Steam games\n" + DOWN
+               + "expect-not Nearly done\n", None)], demo),
+    Scenario("the Achievements tile opens the Steam games",
+             [(OPEN + "click Achievements\nwait 500\nexpect-not Library overview\nexpect Hades\n"
+               + "expect-not Metroid Dread\n", None)], with_achievements),
     Scenario("the Games tile opens the whole library, filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\nkey Home\nwait 300\nclick Games\nwait 500\n"

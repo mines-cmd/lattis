@@ -355,6 +355,7 @@ signals:
     void monthStatsReady(int year, int month, const QVariantMap &stats);
     void yearStatsReady(int year, const QVariantMap &stats);
     void overviewReady(const QVariantMap &overview);
+    void overviewAchievementsRead();
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
     void mediaLimited(const QString &id);
@@ -453,6 +454,15 @@ private:
     QList<int> m_order;
     QList<Row> m_rows;
     std::function<QString()> m_backupFolder;
+    struct AchievementEntry
+    {
+        int unlocked = 0;
+        int total = 0;
+        qint64 stamp = 0; // the game's play time and last play when it was read; a different one reads it again
+    };
+    QHash<qint64, AchievementEntry> m_achievementCache;
+    bool m_achievementsRunning = false;
+    bool m_achievementsRead = false; // the first pass has finished
     QList<Platform> m_platforms;
     QList<Platform> m_allPlatforms;
     QList<EmulatorDef> m_emulators;

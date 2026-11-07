@@ -216,10 +216,48 @@ void addNextSteps(Overview &out, const QList<Game> &games, const QList<Unit> &un
     }
     std::sort(out.backlog.begin(), out.backlog.end(), [](const Pick &a, const Pick &b) { return a.id < b.id; });
 }
+
+// A linked group counts once, by the copy with the most achievements unlocked, since that is the one played.
+Achievements achievementsOf(const QList<Game> &games, const AchievementCounts &counts)
+{
+    QHash<QString, const Game *> best;
+    for (const Game &g : games) {
+        if (g.hidden || g.steamAppId <= 0 || counts.value(g.steamAppId).total <= 0)
+            continue;
+        const AchievementCount c = counts.value(g.steamAppId);
+        const QString key = g.groupId.isEmpty() ? g.id : g.groupId;
+        const auto it = best.constFind(key);
+        if (it == best.cend() || c.unlocked > counts.value((*it)->steamAppId).unlocked
+            || (c.unlocked == counts.value((*it)->steamAppId).unlocked && g.id < (*it)->id))
+            best.insert(key, &g);
+    }
+
+    Achievements out;
+    for (const Game *g : std::as_const(best)) {
+        const AchievementCount c = counts.value(g->steamAppId);
+        ++out.games;
+        out.unlocked += c.unlocked;
+        out.total += c.total;
+        if (c.unlocked >= c.total)
+            ++out.perfect;
+        else if (c.unlocked * 100 >= c.total * kNearlyDonePercent)
+            out.nearlyDone.append({g->id, g->title, g->coverUrl, c.unlocked, c.total});
+    }
+    // Cross-multiplied, so two fractions compare exactly; ties by title.
+    std::sort(out.nearlyDone.begin(), out.nearlyDone.end(), [](const NearlyDone &a, const NearlyDone &b) {
+        if (const qint64 byShare = qint64(a.unlocked) * b.total - qint64(b.unlocked) * a.total)
+            return byShare > 0;
+        if (const int byTitle = a.title.compare(b.title, Qt::CaseInsensitive))
+            return byTitle < 0;
+        return a.id < b.id;
+    });
+    out.nearlyDone.resize(qMin<qsizetype>(out.nearlyDone.size(), kNearlyDoneLimit));
+    return out;
+}
 } // namespace
 
 Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now,
-                  const std::optional<QSet<QString>> &backedUp)
+                  const std::optional<QSet<QString>> &backedUp, const std::optional<AchievementCounts> &achievements)
 {
     QList<Unit> units;
     QHash<QString, int> groupUnit;
@@ -276,6 +314,8 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
     addStorage(out, games, drives, now);
     addBreakdowns(out, games, units);
     addNextSteps(out, games, units, backedUp);
+    if (achievements)
+        out.achievements = achievementsOf(games, *achievements);
     return out;
 }
 
@@ -341,8 +381,26 @@ QVariantMap toVariantMap(const Overview &overview)
                                    {QStringLiteral("platform"), p.platform},
                                    {QStringLiteral("coverUrl"), p.coverUrl},
                                    {QStringLiteral("year"), p.year}});
+    QVariantList nearlyDone;
+    QVariantMap achievements;
+    if (overview.achievements) {
+        const Achievements &a = *overview.achievements;
+        for (const NearlyDone &n : a.nearlyDone)
+            nearlyDone.append(QVariantMap{{QStringLiteral("id"), n.id},
+                                          {QStringLiteral("title"), n.title},
+                                          {QStringLiteral("coverUrl"), n.coverUrl},
+                                          {QStringLiteral("unlocked"), n.unlocked},
+                                          {QStringLiteral("total"), n.total}});
+        achievements = {{QStringLiteral("games"), a.games},
+                        {QStringLiteral("unlocked"), a.unlocked},
+                        {QStringLiteral("total"), a.total},
+                        {QStringLiteral("perfect"), a.perfect}};
+    }
     const Totals &t = overview.totals;
-    return {{QStringLiteral("attention"), attention},
+    QVariantMap map{{QStringLiteral("nearlyDone"), nearlyDone}};
+    if (overview.achievements)
+        map.insert(QStringLiteral("achievements"), achievements);
+    map.insert(QVariantMap{{QStringLiteral("attention"), attention},
             {QStringLiteral("backlogPicks"), backlog},
             {QStringLiteral("platformCounts"), platformCounts},
             {QStringLiteral("statusCounts"), statusCounts},
@@ -358,6 +416,7 @@ QVariantMap toVariantMap(const Overview &overview)
             {QStringLiteral("platforms"), t.platforms},
             {QStringLiteral("minutes"), t.minutes},
             {QStringLiteral("backlog"), t.backlog},
-            {QStringLiteral("continuePlaying"), playing}};
+            {QStringLiteral("continuePlaying"), playing}});
+    return map;
 }
 } // namespace LibraryOverview
