@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
@@ -101,9 +102,24 @@ OverviewCard {
                         Layout.preferredHeight: Theme.overview.storageBarHeight
                         radius: Theme.overview.storageBarRadius
                         color: Theme.overview.storageFree
-                        clip: true
+
+                        Rectangle {
+                            id: barMask
+                            anchors.fill: parent
+                            radius: track.radius
+                            visible: false
+                            layer.enabled: true
+                        }
 
                         Row {
+                            anchors.fill: parent
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                maskEnabled: true
+                                maskSource: barMask
+                                maskThresholdMin: 0.5
+                                maskSpreadAtMin: 1.0
+                            }
                             spacing: Theme.overview.storageSegmentGap
 
                             Repeater {
@@ -115,10 +131,9 @@ OverviewCard {
                                     readonly property bool other: modelData.platform === ""
 
                                     visible: modelData.bytes > 0
-                                    width: Math.max(1, track.width * drive.grow * modelData.bytes / drive.modelData.total)
+                                    width: Math.max(Theme.overview.storageSegmentMinWidth * drive.grow, track.width * drive.grow * modelData.bytes / drive.modelData.total)
                                     height: track.height
-                                    radius: Theme.overview.storageBarRadius
-                                    color: other ? Theme.overview.storageOther : root.colorOf(modelData.platform)
+                                    color: other ?Theme.overview.storageOther : root.colorOf(modelData.platform)
 
                                     HoverHandler {
                                         onHoveredChanged: {
