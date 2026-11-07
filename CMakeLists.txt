@@ -189,6 +189,11 @@ qt_add_qml_module(lattis
         qml/views/PlayHistoryPopup.qml
         qml/views/StatsPage.qml
         qml/views/OverviewPage.qml
+        qml/views/OverviewCard.qml
+        qml/views/OverviewCardTitle.qml
+        qml/views/OverviewQuiet.qml
+        qml/views/OverviewReveal.qml
+        qml/views/OverviewStorage.qml
         qml/views/GalleryFilters.qml
         qml/views/GalleryPage.qml
         qml/views/StatsPeriodPicker.qml

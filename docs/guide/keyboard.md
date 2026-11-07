@@ -57,6 +57,7 @@ Open save folder, Open mod manager (with several managers it opens a menu of the
 | Keys | Action |
 |---|---|
 | Ctrl+N | Add a game |
+| F7 | Library overview (Esc, or F7 again, returns) |
 | F9 | Play statistics (Esc, or F9 again, returns; Left / Right change the month) |
 | F8 | Gallery (Esc, or F8 again, returns; arrows move between pictures, Enter opens one) |
 | F11 | Fullscreen |

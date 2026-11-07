@@ -32,6 +32,7 @@
 #include <QPointer>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QStorageInfo>
 #include <QUrl>
 #include <QtConcurrent>
 
@@ -2584,25 +2585,58 @@ void Library::overview()
 {
     QList<LibraryOverview::Game> games;
     games.reserve(m_games.size());
-    for (const Game &g : m_games)
+    for (const Game &g : m_games) {
+        const bool uninstallable = g.platform == kSteamPlatform
+            ? g.installed || g.steamUpdate == SteamUpdate::Downloading || g.steamUpdate == SteamUpdate::Paused
+            : runsProgram(g.platform) && g.installed;
         games.append({g.id, g.title, g.platform, g.hidden, g.installed, g.status, g.groupId, g.playMinutes, g.lastPlayed,
-                      g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString()});
+                      g.groupPlayMinutes, g.groupLastPlayed, g.coverUrl.toString(), g.sizeBytes,
+                      g.installDir.isEmpty() ? g.romPath : g.installDir, uninstallable});
+    }
+    QVariantList platforms;
+    for (const Platform &p : m_platforms)
+        platforms.append(QVariantMap{{QStringLiteral("id"), p.id}, {QStringLiteral("name"), p.name}});
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher] {
         emit overviewReady(watcher->result());
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([games = std::move(games)] {
-        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games));
-        QVariantList playing = map.value(QStringLiteral("continuePlaying")).toList();
-        for (QVariant &row : playing) {
-            QVariantMap m = row.toMap();
-            m.insert(QStringLiteral("lastPlayedText"), lastPlayedText(m.value(QStringLiteral("lastPlayed")).toDateTime()));
-            row = m;
+    watcher->setFuture(QtConcurrent::run([games = std::move(games), platforms = std::move(platforms)]() mutable {
+        // A link to another drive (~/Games -> /mnt/ssd/Games) takes space where it leads.
+        for (LibraryOverview::Game &g : games) {
+            if (g.installed && !g.hidden && !g.path.isEmpty()) {
+                const QString real = QFileInfo(g.path).canonicalFilePath();
+                g.path = real.isEmpty() ? QDir::cleanPath(g.path) : real;
+            }
         }
-        map.insert(QStringLiteral("continuePlaying"), playing);
+        QList<LibraryOverview::Drive> drives;
+        for (const QStorageInfo &v : QStorageInfo::mountedVolumes()) {
+            if (v.isValid() && v.isReady() && v.bytesTotal() > 0)
+                drives.append({QString::fromUtf8(v.device()), v.name().isEmpty() ? v.rootPath() : v.name(), v.rootPath(),
+                               v.bytesTotal(), v.bytesAvailable()});
+        }
+
+        QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview(games, drives));
+        const auto withDates = [&map](const QString &key) {
+            QVariantList rows = map.value(key).toList();
+            for (QVariant &row : rows) {
+                QVariantMap m = row.toMap();
+                m.insert(QStringLiteral("lastPlayedText"), lastPlayedText(m.value(QStringLiteral("lastPlayed")).toDateTime()));
+                row = m;
+            }
+            map.insert(key, rows);
+        };
+        withDates(QStringLiteral("continuePlaying"));
+        withDates(QStringLiteral("largest"));
+        withDates(QStringLiteral("dormant"));
+        map.insert(QStringLiteral("platformList"), platforms);
         return map;
     }));
+}
+
+QString Library::sizeText(qint64 bytes) const
+{
+    return QLocale().formattedDataSize(qMax<qint64>(bytes, 0), 1, QLocale::DataSizeTraditionalFormat);
 }
 
 QVariantMap Library::deleteSession(const QString &id, const QString &end)

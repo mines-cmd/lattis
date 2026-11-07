@@ -56,6 +56,16 @@ Lattis keeps each session, so you can see when you played and for how long. Clic
 
 Sessions are in your data folder, one file per game (see [Your data folder](data-folder.md)).
 
+## Library overview
+
+The button above Play statistics on the rail (or F7) opens the Library overview: the state of the library now, where Play statistics is about play over time. A **Play statistics** button at the top right switches to that page. Hidden games are left out of every number, and a game linked to copies on other platforms counts once.
+
+- **Games, Hours played and Backlog** at the top: how many games the library has and how many are installed, the total play time (and as days), and how many games have the status Not started.
+- **Continue playing:** the games with the status Playing, most recently played first, up to seven. Hover a cover for **Play**; click it to find the game in the list.
+- **Storage:** a bar for each drive that holds installed games, split by platform, then the other files on the drive, then free space. Hover a part of the bar to see its size and share of the drive. The legend under the bars gives each platform's total. A game whose size isn't known (a Proton shortcut Lattis can't measure, say) isn't added up, and the drive says how many were left out. Beside the bars, **Largest** lists the four installed games that take the most space and **Dormant** the four largest among those not played for six months or more, or never played. **Uninstall** on a row asks first, the same way as on the game's page; click anywhere else on a row to find the game in the list. Games from Heroic and ROMs have no Uninstall there, since Lattis doesn't remove them.
+
+Esc, or F7 again, returns to the games. The colors, sizes and spacing are the theme's `[overview]` section, which follows `[stats]` unless you change it, and `platform_colors` there lists the colors platforms get in the Storage bars, in the order the platforms are listed.
+
 ## Play statistics
 
 The bar chart button on the rail (or F9) opens the statistics page over the whole window. It shows one month or one year at a time, from the sessions only, so time under Before history isn't in it. It opens on the current month.

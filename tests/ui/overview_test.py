@@ -25,6 +25,14 @@ SCENARIOS = [
                + "key F7\nexpect Library overview\nexpect-not Sessions appear here once a game is played.\n"
                + "key F9\nexpect Sessions appear here once a game is played.\nexpect-not Library overview\n", None)],
              demo),
+    Scenario("the app menu's Library overview entry opens the overview",
+             [("key F10\nwait 600\nclick Library overview\nwait 300\nexpect Back to games\nexpect Storage\n", None)],
+             demo),
+    Scenario("Storage lists the largest games, switches to Dormant and Uninstall asks first",
+             [(OPEN + "expect Storage\nexpect Largest\nexpect Dormant\nexpect Baldur's Gate 3\n"
+               + "click Uninstall\nexpect Uninstall Hades?\nexpect Cancel\nclick Cancel\n"
+               + "expect-not Uninstall Hades?\nexpect Library overview\n"
+               + "click Dormant\nexpect Not played yet\n", None)], demo),
 ]
 
 sys.exit(run_scenarios(SCENARIOS))

@@ -33,6 +33,13 @@ private slots:
     void continuePlayingOrder();
     void continuePlayingLimitAndGroups();
     void variantMap();
+    void gamesOnTwoDrives();
+    void unknownSizesAreNotCounted();
+    void otherFilesNeverBelowZero();
+    void storageLeavesOutHiddenAndUninstalled();
+    void linkedCopiesEachTakeSpace();
+    void largestAndDormant();
+    void storageVariantMap();
 };
 
 void LibraryOverviewTest::emptyLibrary()
@@ -217,6 +224,186 @@ void LibraryOverviewTest::variantMap()
     QCOMPARE(row.value("title").toString(), QStringLiteral("Hades"));
     QCOMPARE(row.value("coverUrl").toString(), QStringLiteral("file:///cover.png"));
     QCOMPARE(row.value("lastPlayed").toDateTime(), day(3));
+}
+
+namespace {
+constexpr qint64 GB = 1000LL * 1000 * 1000;
+
+const QDateTime kNow(QDate(2026, 11, 6), QTime(12, 0), QTimeZone::UTC);
+
+LibraryOverview::Drive drive(const QString &root, qint64 total, qint64 free, const QString &device = {})
+{
+    return {device.isEmpty() ? root : device, root, root, total, free};
+}
+
+Game installedAt(const QString &id, const QString &platform, const QString &path, qint64 size)
+{
+    Game g = game(id, platform);
+    g.path = path;
+    g.sizeBytes = size;
+    return g;
+}
+} // namespace
+
+void LibraryOverviewTest::gamesOnTwoDrives()
+{
+    const QList<LibraryOverview::Drive> drives{drive("/", 500 * GB, 200 * GB), drive("/mnt/games", 1000 * GB, 400 * GB)};
+    const LibraryOverview::Overview o = LibraryOverview::overview(
+        {installedAt("a", "steam", "/home/me/.steam/common/a", 50 * GB),
+         installedAt("b", "steam", "/mnt/games/steam/b", 100 * GB),
+         installedAt("c", "epic", "/mnt/games/epic/c", 60 * GB),
+         installedAt("d", "switch", "/mnt/gamesque/d.nsp", 5 * GB)}, // not under /mnt/games
+        drives, kNow);
+
+    QCOMPARE(o.drives.size(), 2);
+    // Most games first.
+    QCOMPARE(o.drives.at(0).drive.root, QStringLiteral("/mnt/games"));
+    QCOMPARE(o.drives.at(0).gamesBytes, 160 * GB);
+    QCOMPARE(o.drives.at(0).otherBytes, 440 * GB); // 600 used - 160
+    QCOMPARE(o.drives.at(0).platforms.size(), 2);
+    QCOMPARE(o.drives.at(0).platforms.at(0).platform, QStringLiteral("steam"));
+    QCOMPARE(o.drives.at(0).platforms.at(0).bytes, 100 * GB);
+    QCOMPARE(o.drives.at(1).drive.root, QStringLiteral("/"));
+    QCOMPARE(o.drives.at(1).gamesBytes, 55 * GB); // a, and d which falls back to /
+    QCOMPARE(o.drives.at(1).otherBytes, 245 * GB);
+
+    // The legend adds a platform up over every drive.
+    QCOMPARE(o.platformSizes.size(), 3);
+    QCOMPARE(o.platformSizes.at(0).platform, QStringLiteral("steam"));
+    QCOMPARE(o.platformSizes.at(0).bytes, 150 * GB);
+    QCOMPARE(o.platformSizes.at(1).platform, QStringLiteral("epic"));
+}
+
+void LibraryOverviewTest::unknownSizesAreNotCounted()
+{
+    const QList<LibraryOverview::Drive> drives{drive("/", 100 * GB, 50 * GB)};
+    const LibraryOverview::Overview o = LibraryOverview::overview(
+        {installedAt("a", "proton", "/g/a", 0), installedAt("b", "proton", "/g/b", 10 * GB)}, drives, kNow);
+
+    QCOMPARE(o.drives.size(), 1);
+    QCOMPARE(o.drives.at(0).gamesBytes, 10 * GB);
+    QCOMPARE(o.drives.at(0).unknown, 1);
+    QCOMPARE(o.drives.at(0).otherBytes, 40 * GB);
+    QCOMPARE(o.platformSizes.at(0).bytes, 10 * GB);
+    QCOMPARE(o.platformSizes.at(0).unknown, 1);
+    QCOMPARE(o.largest.size(), 1); // the game of unknown size isn't ranked
+
+    // Only unknown sizes: the drive still holds games, with nothing split by platform.
+    const LibraryOverview::Overview none = LibraryOverview::overview({installedAt("a", "proton", "/g/a", 0)}, drives, kNow);
+    QCOMPARE(none.drives.size(), 1);
+    QCOMPARE(none.drives.at(0).gamesBytes, qint64(0));
+    QCOMPARE(none.drives.at(0).otherBytes, 50 * GB);
+    QVERIFY(none.largest.isEmpty());
+    QCOMPARE(none.dormant.size(), 1);
+}
+
+void LibraryOverviewTest::otherFilesNeverBelowZero()
+{
+    // Sizes the drive can't hold (a game folder copied while the drive filled, a stale size) leave no negative rest.
+    const LibraryOverview::Overview o = LibraryOverview::overview(
+        {installedAt("a", "steam", "/g/a", 80 * GB), installedAt("b", "steam", "/g/b", 80 * GB)},
+        {drive("/", 100 * GB, 20 * GB)}, kNow);
+    QCOMPARE(o.drives.at(0).gamesBytes, 160 * GB);
+    QCOMPARE(o.drives.at(0).otherBytes, qint64(0));
+
+    // More free than total (a drive reporting oddly) is no negative either.
+    const LibraryOverview::Overview odd = LibraryOverview::overview(
+        {installedAt("a", "steam", "/g/a", 1 * GB)}, {drive("/", 10 * GB, 20 * GB)}, kNow);
+    QCOMPARE(odd.drives.at(0).otherBytes, qint64(0));
+}
+
+void LibraryOverviewTest::storageLeavesOutHiddenAndUninstalled()
+{
+    Game hidden = installedAt("h", "steam", "/g/h", 90 * GB);
+    hidden.hidden = true;
+    Game notInstalled = installedAt("n", "steam", "/g/n", 70 * GB);
+    notInstalled.installed = false;
+    Game noPath = installedAt("p", "heroic", QString(), 5 * GB);
+    const Game shown = installedAt("s", "steam", "/g/s", 10 * GB);
+
+    const LibraryOverview::Overview o = LibraryOverview::overview(
+        {hidden, notInstalled, noPath, shown}, {drive("/", 200 * GB, 100 * GB)}, kNow);
+    QCOMPARE(o.drives.at(0).gamesBytes, 10 * GB);
+    QCOMPARE(o.drives.at(0).otherBytes, 90 * GB); // the hidden game's files are among them
+    QCOMPARE(o.platformSizes.size(), 2); // steam (s) and heroic (p, on no known drive)
+    QCOMPARE(o.largest.size(), 2);
+    QCOMPARE(o.largest.at(0).id, QStringLiteral("s"));
+    for (const LibraryOverview::Sized &row : o.dormant)
+        QVERIFY(row.id != "h" && row.id != "n");
+
+    // No drive holds a game: no bars.
+    QVERIFY(LibraryOverview::overview({noPath}, {drive("/", 200 * GB, 100 * GB)}, kNow).drives.isEmpty());
+    QVERIFY(LibraryOverview::overview({shown}, {}, kNow).drives.isEmpty());
+}
+
+void LibraryOverviewTest::linkedCopiesEachTakeSpace()
+{
+    Game steam = installedAt("steam-1", "steam", "/g/steam-1", 30 * GB);
+    steam.groupId = "steam-1";
+    steam.groupLastPlayed = QDateTime(QDate(2026, 11, 1), QTime(10, 0), QTimeZone::UTC);
+    Game epic = installedAt("epic-1", "epic", "/g/epic-1", 32 * GB);
+    epic.groupId = "steam-1";
+    epic.groupLastPlayed = steam.groupLastPlayed;
+    epic.lastPlayed = QDateTime(QDate(2025, 1, 1), QTime(10, 0), QTimeZone::UTC); // played here long ago
+
+    const LibraryOverview::Overview o = LibraryOverview::overview({steam, epic}, {drive("/", 200 * GB, 100 * GB)}, kNow);
+    QCOMPARE(o.totals.games, 1);
+    QCOMPARE(o.drives.at(0).gamesBytes, 62 * GB);
+    QCOMPARE(o.largest.size(), 2);
+    QCOMPARE(o.largest.at(0).id, QStringLiteral("epic-1"));
+    // The group was played this month, so neither copy is dormant.
+    QVERIFY(o.dormant.isEmpty());
+}
+
+void LibraryOverviewTest::largestAndDormant()
+{
+    QList<Game> games;
+    for (int i = 0; i < 6; ++i)
+        games.append(installedAt(QString("g%1").arg(i), "steam", "/g", (i + 1) * GB));
+    // g5 is the largest and was played yesterday; g0..g4 never or long ago.
+    games[5].lastPlayed = kNow.addDays(-1);
+    games[4].lastPlayed = kNow.addMonths(-6).addDays(1); // just inside the threshold
+    games[3].lastPlayed = kNow.addMonths(-6).addDays(-1); // just outside
+    games[2].lastPlayed = kNow.addYears(-2);
+    Game unknown = installedAt("u", "steam", "/g", 0);
+    games.append(unknown);
+
+    const LibraryOverview::Overview o = LibraryOverview::overview(games, {drive("/", 100 * GB, 50 * GB)}, kNow);
+    QCOMPARE(o.largest.size(), LibraryOverview::kStorageListLimit);
+    QCOMPARE(o.largest.at(0).id, QStringLiteral("g5"));
+    QCOMPARE(o.largest.at(3).id, QStringLiteral("g2"));
+
+    // Dormant: g3, g2, g1, g0 and u; the biggest four, the unknown size last (so cut).
+    QCOMPARE(o.dormant.size(), LibraryOverview::kStorageListLimit);
+    QCOMPARE(o.dormant.at(0).id, QStringLiteral("g3"));
+    QCOMPARE(o.dormant.at(1).id, QStringLiteral("g2"));
+    QCOMPARE(o.dormant.at(2).id, QStringLiteral("g1"));
+    QCOMPARE(o.dormant.at(3).id, QStringLiteral("g0"));
+}
+
+void LibraryOverviewTest::storageVariantMap()
+{
+    Game g = installedAt("g", "steam", "/g/g", 5 * GB);
+    g.uninstallable = true;
+    g.title = "Hades";
+    const QVariantMap map = LibraryOverview::toVariantMap(LibraryOverview::overview({g}, {drive("/", 100 * GB, 40 * GB)}, kNow));
+
+    const QVariantList drives = map.value("drives").toList();
+    QCOMPARE(drives.size(), 1);
+    const QVariantMap d = drives.at(0).toMap();
+    QCOMPARE(d.value("root").toString(), QStringLiteral("/"));
+    QCOMPARE(d.value("total").toLongLong(), 100 * GB);
+    QCOMPARE(d.value("free").toLongLong(), 40 * GB);
+    QCOMPARE(d.value("gamesBytes").toLongLong(), 5 * GB);
+    QCOMPARE(d.value("otherBytes").toLongLong(), 55 * GB);
+    QCOMPARE(d.value("platforms").toList().at(0).toMap().value("platform").toString(), QStringLiteral("steam"));
+
+    const QVariantMap row = map.value("largest").toList().at(0).toMap();
+    QCOMPARE(row.value("id").toString(), QStringLiteral("g"));
+    QCOMPARE(row.value("bytes").toLongLong(), 5 * GB);
+    QVERIFY(row.value("uninstallable").toBool());
+    QCOMPARE(map.value("dormant").toList().size(), 1);
+    QCOMPARE(map.value("platformSizes").toList().size(), 1);
 }
 
 QTEST_APPLESS_MAIN(LibraryOverviewTest)

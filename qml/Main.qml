@@ -1110,6 +1110,7 @@ ApplicationWindow {
             function onCloseRequested() { window.setOverviewOpen(false) }
             function onStatsRequested() { window.setStatsOpen(true) }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
+            function onUninstallRequested(id) { window.uninstallGame(Library.gameWithId(id)) }
             function onGameRequested(id) {
                 gameList.revealGame(id)
                 window.setOverviewOpen(false)
