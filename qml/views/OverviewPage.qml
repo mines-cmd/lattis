@@ -332,34 +332,44 @@ FocusScope {
                     }
                 }
 
-                OverviewReveal {
-                    shown: root.loaded
+                GridLayout {
                     Layout.fillWidth: true
-                    visible: storage.hasContent
-                    order: root.tiles.length + 1
+                    columns: root.columns === 1 ? 1 : 2
+                    columnSpacing: Theme.overview.sectionSpacing
+                    rowSpacing: Theme.overview.sectionSpacing
+                    uniformCellWidths: true
 
-                    OverviewStorage {
-                        id: storage
+                    OverviewReveal {
+                        shown: root.loaded
                         Layout.fillWidth: true
-                        overview: root.overview
-                        info: platformInfo
-                        stacked: root.columns === 1
-                        onGameRequested: id => root.gameRequested(id)
-                        onUninstallRequested: id => root.uninstallRequested(id)
+                        Layout.alignment: Qt.AlignTop
+                        visible: storage.hasContent
+                        order: root.tiles.length + 1
+
+                        OverviewStorage {
+                            id: storage
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            info: platformInfo
+                            stacked: true
+                            onGameRequested: id => root.gameRequested(id)
+                            onUninstallRequested: id => root.uninstallRequested(id)
+                        }
                     }
-                }
 
-                OverviewReveal {
-                    shown: root.loaded
-                    Layout.fillWidth: true
-                    visible: (root.overview.platformCounts ?? []).length > 0
-                    order: root.tiles.length + 2
-
-                    OverviewPlatforms {
+                    OverviewReveal {
+                        shown: root.loaded
                         Layout.fillWidth: true
-                        overview: root.overview
-                        info: platformInfo
-                        onFilterRequested: platform => root.filterRequested(platform, [], [])
+                        Layout.alignment: Qt.AlignTop
+                        visible: (root.overview.platformCounts ?? []).length > 0
+                        order: root.tiles.length + 2
+
+                        OverviewPlatforms {
+                            Layout.fillWidth: true
+                            overview: root.overview
+                            info: platformInfo
+                            onFilterRequested: platform => root.filterRequested(platform, [], [])
+                        }
                     }
                 }
 

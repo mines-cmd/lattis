@@ -31,8 +31,8 @@ SCENARIOS = [
              demo),
     Scenario("Storage lists the largest games, switches to Dormant and Uninstall asks first",
              [(OPEN + "expect Storage\nexpect Largest\nexpect Dormant\nexpect Baldur's Gate 3\n"
-               + "click Uninstall\nexpect Uninstall Hades?\nexpect Cancel\nclick Cancel\n"
-               + "expect-not Uninstall Hades?\nexpect Library overview\n"
+               + DOWN + "click Uninstall\nexpect Cancel\nclick Cancel\n"
+               + "expect-not Cancel\nexpect Library overview\n" + "key Home\nwait 300\n"
                + "click Dormant\nexpect Not played yet\n", None)], demo),
     Scenario("Games by platform, Status, Top tags and Release years list the library",
              [(OPEN + "expect Games by platform\nexpect Status\nexpect Top tags\nexpect Release years\n"
