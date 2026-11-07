@@ -519,7 +519,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `setPlatformValue(id, key, value)` | `name`, `icon`, `emulators`, `rom_folders` or `in_rail` (`false` is written; `true`, the default, removes the key) |
 | `addPlatform(name, id)`, `removePlatform(id)`, `movePlatform(id, step)`, `movePlatformBefore(id, beforeId)`, `platformIdFor(name)` | A removed platform's games stay, under its id. `movePlatformBefore` (an empty or unknown `beforeId` means last) is what a drag writes; a platform only its games define gets its block, named after its id, as Define writes it. Both offer an Undo |
 | `matchRomFolders(parentPath)` | "Find from one folder" (below) |
-| `setEmulatorValue(id, key, value)` | `path`, `args` or `screenshot_folders` (an empty list means none; `undefined` goes back to the built-in folders); for a user emulator also `name`, `platforms`, `flatpak`, `extensions` or `command` |
+| `setEmulatorValue(id, key, value)` | `path`, `args`, `screenshot_folders` or `saves` (an empty list means none; `undefined` goes back to the built-in folders; `saves` is a list written as the `native` and `flatpak` entries of the `saves` table, its `portable` entry kept); for a user emulator also `name`, `platforms`, `flatpak`, `extensions` or `command` |
 | `addEmulator(name, startFrom, id)`, `removeEmulator(id)`, `emulatorIdFor(name)` | `startFrom` is a preset's id, or empty for a blank emulator; removing takes it off every platform |
 | `pinnedGames(emulatorId)` | How many games are pinned to it, for the remove confirmation |
 | `emulatorsFile()`, `platformsFile()` | The file's path, created if missing so it can be opened |
@@ -599,6 +599,7 @@ commandArgs     the `command` list as written, for editing
 fileOnly        a user emulator's keys only emulators.toml can set (saves, keys…); empty for presets
 command         the command as it would run
 screenshotFolders  where the game page looks for its screenshots (~/… under home, "{romdir}" for beside the ROM)
+saveFolders        the `native` entries of its `saves` table, as written (the list the row's Save folders edits)
 ```
 
 `platformSettings`, one per platform in rail order, those without games too:

@@ -3121,7 +3121,8 @@ QVariantList Library::buildEmulatorList() const
     static const QStringList editableInApp{QStringLiteral("name"), QStringLiteral("platforms"),
                                            QStringLiteral("flatpak"), QStringLiteral("path"),
                                            QStringLiteral("extensions"), QStringLiteral("command"),
-                                           QStringLiteral("args"), QStringLiteral("screenshot_folders")};
+                                           QStringLiteral("args"), QStringLiteral("screenshot_folders"),
+                                           QStringLiteral("saves")};
     const QString home = QDir::homePath();
     const bool detecting = !m_store.snapshot().installsDetected;
     QVariantList out;
@@ -3177,6 +3178,9 @@ QVariantList Library::buildEmulatorList() const
             {QStringLiteral("command"), buildLaunchCommand(e, shown, QStringLiteral("ROM")).toString()},
             {QStringLiteral("custom"), e.userKeys},
             {QStringLiteral("screenshotFolders"), screenshotFolders},
+            {QStringLiteral("saveFolders"), e.saves.value(install.kind == EmulatorInstall::Kind::Flatpak
+                                                              ? QStringLiteral("flatpak")
+                                                              : QStringLiteral("native"))},
         });
     }
     return out;
@@ -3266,10 +3270,11 @@ QVariantList Library::matchRomFolders(const QString &parentPath) const
 QString Library::setEmulatorValue(const QString &id, const QString &key, const QVariant &value)
 {
     static const QStringList presetKeys{QStringLiteral("path"), QStringLiteral("args"),
-                                        QStringLiteral("screenshot_folders")};
+                                        QStringLiteral("screenshot_folders"), QStringLiteral("saves")};
     static const QStringList userKeys{QStringLiteral("name"), QStringLiteral("platforms"), QStringLiteral("flatpak"),
                                       QStringLiteral("path"), QStringLiteral("extensions"), QStringLiteral("command"),
-                                      QStringLiteral("args"), QStringLiteral("screenshot_folders")};
+                                      QStringLiteral("args"), QStringLiteral("screenshot_folders"),
+                                      QStringLiteral("saves")};
     const EmulatorDef *emulator = Emulators::find(m_emulators, id);
     if (!(emulator && !emulator->preset ? userKeys : presetKeys).contains(key))
         return tr("%1 can't be changed here; edit emulators.toml").arg(key);

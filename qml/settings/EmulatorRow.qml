@@ -569,6 +569,69 @@ ColumnLayout {
             }
         }
 
+        Section {
+            visible: root.own || root.emulator.found
+            title: qsTr("Save folders")
+            note: qsTr("Backups take the saves in these folders.")
+            actions: RowLayout {
+                spacing: Theme.controls.controlSpacing
+
+                ListAction {
+                    visible: !root.own && root.emulator.custom.includes("saves")
+                    iconPath: Icons.undo
+                    text: qsTr("Reset")
+                    tip: qsTr("Back to the built-in folders")
+                    onClicked: root.save("saves", undefined)
+                }
+                ListAction {
+                    text: qsTr("Add folder")
+                    onClicked: saveFolderDialog.active = true
+                }
+            }
+
+            Repeater {
+                model: root.emulator.saveFolders
+
+                ListRow {
+                    id: saveItem
+                    required property string modelData
+                    required property int index
+                    last: index === root.emulator.saveFolders.length - 1
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: saveItem.modelData
+                        color: Theme.controls.descriptionColor
+                        elide: Text.ElideMiddle
+                    }
+                    ListButton {
+                        iconPath: Icons.folderOpenLine
+                        textColor: hovered ? foreground : Theme.controls.descriptionColor
+                        tip: qsTr("Open the folder")
+                        onClicked: root.error = GameRunner.openPath(saveItem.modelData)
+                    }
+                    ListButton {
+                        iconPath: Icons.close
+                        textColor: hovered ? foreground : Theme.controls.descriptionColor
+                        tip: qsTr("Stop backing up this folder")
+                        onClicked: root.save("saves", root.emulator.saveFolders.filter(f => f !== saveItem.modelData))
+                    }
+                }
+            }
+            ListRow {
+                visible: root.emulator.saveFolders.length === 0
+                last: true
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("None: add the folder it keeps saves in.")
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
         Label {
             visible: root.error !== ""
             Layout.fillWidth: true
@@ -642,6 +705,18 @@ ColumnLayout {
                 tip: qsTr("Platforms stop using it; games pinned to it use their platform's emulators")
                 onClicked: removeDialog.active = true
             }
+        }
+    }
+
+    Loader {
+        id: saveFolderDialog
+        active: false
+        sourceComponent: RomFolderDialog {
+            onPicked: path => {
+                if (!root.emulator.saveFolders.includes(path))
+                    root.save("saves", root.emulator.saveFolders.concat([path]))
+            }
+            onClosed: saveFolderDialog.active = false
         }
     }
 

@@ -22,6 +22,8 @@ Lattis knows twelve emulators out of the box, among them Ryubing (Switch), Azaha
 
 **Arguments** added on an emulator's row go to every game it runs, like `--fullscreen`. A single game can have its own arguments too, in its Properties.
 
+**Save folders** on an emulator's row are where backups look for its saves. The built-in emulators come with the folders they save in; if you moved them, **Add folder** adds yours, the folder button opens one, the cross removes one, and **Reset** goes back to the built-in ones. The list applies to the program and Flatpak installs alike.
+
 **Screenshot folders** on an emulator's row are where its game pages look for the screenshots it took. The built-in emulators come with the folders they save in by default. If you changed the folder in the emulator's own settings, or keep screenshots somewhere else too, **Add folder** adds it, the folder button opens one, the cross removes one, and **Reset** goes back to the built-in ones. Lattis still matches each file to its game the same way, by the game's ID or title in the file name; for an emulator that names its screenshots only by time (or one you added yourself), a screenshot shows on the page of the game you were playing from Lattis when it was taken.
 
 ### Installing an emulator
@@ -64,6 +66,7 @@ Its row, under **Yours**, sets:
 - **Program**, with **Browse**, or its **Flatpak app id**, like `org.citra_emu.citra`.
 - **Command**: how it's started. `{exe}` is the program, `{args}` the arguments, `{rom}` the game's file. Most emulators take `{exe} {args} {rom}`, the default.
 - **Arguments** and **Screenshot folders**, as for the built-in ones.
+- **Save folders**, as for the built-in ones.
 
 **Remove emulator** takes it off every platform. Games pinned to it use their platform's emulators instead, and get their pin back if you add the emulator again under the same name.
 

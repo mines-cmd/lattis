@@ -1790,7 +1790,8 @@ QString LibraryStore::editFile(const QString &relative, const QString &header,
 QString LibraryStore::setEmulatorValue(const QString &id, const QString &key, const QVariant &value)
 {
     const EmulatorFields::Field *field = EmulatorFields::find(key);
-    if (!field || key == QLatin1String("id") || field->type == EmulatorFields::Type::PathTable)
+    const bool folderList = key == QLatin1String("saves");
+    if (!field || key == QLatin1String("id") || (field->type == EmulatorFields::Type::PathTable && !folderList))
         return tr("%1 can't be changed here; edit emulators.toml").arg(key);
 
     const QList<EmulatorEntry> &presets = Emulators::presets();
@@ -1801,7 +1802,33 @@ QString LibraryStore::setEmulatorValue(const QString &id, const QString &key, co
         return tr("There's no emulator with the id %1").arg(id);
 
     QString formatted;
-    if (value.isValid() && field->type == EmulatorFields::Type::String) {
+    if (folderList) {
+        // One list for the native and Flatpak installs; the file's portable folders stay as written.
+        const auto own = std::find_if(user.cbegin(), user.cend(), [&](const EmulatorEntry &e) { return e.id == id; });
+        const QVariantMap base = own != user.cend() && own->values.contains(key) ? own->values.value(key).toMap()
+                               : preset != presets.cend()                         ? preset->values.value(key).toMap()
+                                                                                  : QVariantMap();
+        const QStringList portable = base.value(QStringLiteral("portable")).toStringList();
+        const auto quoted = [](const QStringList &list) {
+            QStringList items;
+            for (const QString &s : list)
+                items.append(tomlString(s));
+            return u'[' + items.join(QStringLiteral(", ")) + u']';
+        };
+        QStringList parts;
+        const QStringList folders = value.toStringList();
+        if (!folders.isEmpty()) {
+            parts.append(QStringLiteral("native = ") + quoted(folders));
+            parts.append(QStringLiteral("flatpak = ") + quoted(folders));
+        }
+        if (!portable.isEmpty())
+            parts.append(QStringLiteral("portable = ") + quoted(portable));
+        if (!parts.isEmpty())
+            formatted = QStringLiteral("{ ") + parts.join(QStringLiteral(", ")) + QStringLiteral(" }");
+        // An empty list on a preset means no folders, not the built-in ones.
+        else if (preset != presets.cend() && value.isValid())
+            formatted = QStringLiteral("{}");
+    } else if (value.isValid() && field->type == EmulatorFields::Type::String) {
         const QString s = value.toString().trimmed();
         if (!s.isEmpty() && (preset == presets.cend() || preset->values.value(key).toString() != s))
             formatted = tomlString(s);
@@ -1866,15 +1893,16 @@ QString LibraryStore::addEmulator(const QString &id, const QString &name, const 
                                        [&](const EmulatorEntry &e) { return e.id == startFrom; });
         if (from == presets.cend())
             return tr("There's no built-in emulator with the id %1").arg(startFrom);
-        // Not the install (the copy would find the original's), nor saves and keys (the original's folders).
+        // Not the install (the copy would find the original's), nor saves, keys and screenshots (the original's folders).
         static const QStringList left{QStringLiteral("name"), QStringLiteral("flatpak"), QStringLiteral("executables"),
                                       QStringLiteral("appimage"), QStringLiteral("release"),
                                       QStringLiteral("release_asset"), QStringLiteral("release_inside"),
                                       QStringLiteral("release_unofficial"),
-                                      QStringLiteral("path"), QStringLiteral("saves"), QStringLiteral("keys")};
+                                      QStringLiteral("path"), QStringLiteral("saves"), QStringLiteral("keys"),
+                                      QStringLiteral("screenshots")};
         for (const EmulatorFields::Field &f : EmulatorFields::all()) {
             const QString key = QLatin1String(f.key);
-            if (left.contains(key) || !from->values.contains(key))
+            if (left.contains(key) || f.type == EmulatorFields::Type::PathTable || !from->values.contains(key))
                 continue;
             const QVariant &v = from->values[key];
             values.append({key, f.type == EmulatorFields::Type::String ? tomlString(v.toString())
