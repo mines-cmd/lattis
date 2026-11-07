@@ -1187,7 +1187,7 @@ constexpr Setting kSettings[] = {
             "When one column ends this much or less above the other, the last card in it grows to end level; a bigger difference is left alone; 0 = never"),
     integer("overview", "section_spacing", "@stats.section_spacing", 0, 100, "Space between the cards"),
     color("overview", "text_muted", "@stats.text_muted", "Labels and hints"),
-    colors("overview", "platform_colors", "#e15f24 #3c94d0 #b88c33 #8d7be0 #3a9f84",
+    colors("overview", "platform_colors", "#e15f24 #3c94d0 #b88c33 #8d7be0 #3a9f84 #d65a8f #7bb43f #c9c04a #4fb8c9 #a0623d #6a7fd6 #d9534f",
            "One color per platform, in the order platforms are first listed, then around again; a platform keeps "
            "its color however the rows are sorted"),
     heading("overview", "Cards"),
