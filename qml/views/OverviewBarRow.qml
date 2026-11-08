@@ -14,6 +14,8 @@ Item {
     // The widest count in the card, for when it needs more than count_width; otherwise the bars in every card end alike.
     property real countWidth: 0
     property color fill: Theme.overview.barFill
+    // A dot in the bar's color before the name.
+    property bool dot: false
     // Whether the card's bars have already grown, so a refresh doesn't grow them again.
     property bool grown: false
     property real grow: grown ? 1 : 0
@@ -55,11 +57,23 @@ Item {
             Layout.maximumWidth: Theme.overview.labelWidth
             spacing: 0
 
-            Label {
+            RowLayout {
                 Layout.fillWidth: true
-                text: root.name
-                color: Theme.palette.text
-                elide: Text.ElideRight
+                spacing: Theme.layout.spacing
+
+                Rectangle {
+                    visible: root.dot
+                    Layout.preferredWidth: Theme.overview.barHeight
+                    Layout.preferredHeight: Theme.overview.barHeight
+                    radius: width / 2
+                    color: root.fill
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: root.name
+                    color: Theme.palette.text
+                    elide: Text.ElideRight
+                }
             }
             OverviewQuiet {
                 Layout.fillWidth: true
