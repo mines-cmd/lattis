@@ -209,4 +209,20 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
     input.now = QDateTime::currentDateTime();
     return input;
 }
+
+QList<Input> inputsForPlayed(const Library &library, const QString &dataDir, const QString &appVersion)
+{
+    QList<Input> out;
+    QSet<QString> keys;
+    for (const Game &game : library.allGames()) {
+        if (game.hidden || !game.installed || (game.playMinutes <= 0 && !game.lastPlayed.isValid()))
+            continue;
+        std::optional<Input> input = inputFor(library, game.id, dataDir, appVersion, true);
+        if (input && !keys.contains(backupKey(*input))) {
+            keys.insert(backupKey(*input));
+            out.append(std::move(*input));
+        }
+    }
+    return out;
+}
 }

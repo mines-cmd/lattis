@@ -34,6 +34,8 @@ public:
     {
         // The backup input for a game, whatever its automatic setting; nothing for a game that can't be backed up.
         std::function<std::optional<SavesBackup::Input>(const QString &gameId)> input;
+        // The inputs of every played, installed game, for the overview's Back up now.
+        std::function<QList<SavesBackup::Input>()> playedInputs;
         // Writes `saves_game` (empty clears it); returns an error or nothing.
         std::function<QString(const QString &gameId, const QString &name)> choose;
     };
@@ -70,6 +72,7 @@ public:
     // Moves one of the game's backups (and its name) to the trash; returns an error or nothing. Reloads.
     Q_INVOKABLE QString remove(const QString &gameId, const QString &archive);
     Q_INVOKABLE void backUpNow(const QString &gameId);
+    Q_INVOKABLE void backUpAll();
     Q_INVOKABLE QVariantList search(const QString &text) const;
     Q_INVOKABLE QString choose(const QString &gameId, const QString &name);
 
@@ -78,6 +81,7 @@ signals:
     void lastChanged();
     void workingChanged();
     void messageChanged();
+    void backedUpAll();
 
 private:
     void setMessage(const QString &text);

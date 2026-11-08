@@ -214,6 +214,38 @@ QString GameSaves::remove(const QString &gameId, const QString &archive)
     return {};
 }
 
+void GameSaves::backUpAll()
+{
+    if (m_working || !m_setup.playedInputs)
+        return;
+    QList<SavesBackup::Input> inputs = m_setup.playedInputs();
+    if (inputs.isEmpty())
+        return;
+    m_working = true;
+    setMessage({});
+    emit workingChanged();
+    auto *watcher = new QFutureWatcher<int>(this);
+    connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher] {
+        const int failed = watcher->result();
+        watcher->deleteLater();
+        m_working = false;
+        if (failed > 0)
+            setMessage(tr("%n game(s) couldn't be backed up.", "", failed));
+        emit workingChanged();
+        emit backedUpAll();
+        refreshLast();
+    });
+    // One after another: games of one emulator share a backup folder.
+    watcher->setFuture(QtConcurrent::run([inputs = std::move(inputs)] {
+        int failed = 0;
+        for (const SavesBackup::Input &input : inputs) {
+            if (SavesBackup::run(input).status == SavesBackup::Status::Failed)
+                ++failed;
+        }
+        return failed;
+    }));
+}
+
 void GameSaves::backUpNow(const QString &gameId)
 {
     if (m_working)

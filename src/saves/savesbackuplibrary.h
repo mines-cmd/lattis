@@ -22,4 +22,8 @@ QString autoFolder(const Library &library, const QString &dataDir);
 // `ignoreChoice` is the game page's Back up now: the automatic setting doesn't matter to it.
 std::optional<Input> inputFor(const Library &library, const QString &gameId, const QString &dataDir,
                               const QString &appVersion, bool ignoreChoice = false);
+
+// The overview's Back up now: the input of every installed game that has been played, whatever its automatic
+// setting, one per backup key.
+QList<Input> inputsForPlayed(const Library &library, const QString &dataDir, const QString &appVersion);
 }

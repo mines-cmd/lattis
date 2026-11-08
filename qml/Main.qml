@@ -1117,7 +1117,6 @@ ApplicationWindow {
             function onCloseRequested() { window.setOverviewOpen(false) }
             function onStatsRequested() { window.setStatsOpen(true) }
             function onGalleryRequested() { window.setGalleryOpen(true) }
-            function onBackUpRequested() { window.openSettingsAt("library", "backup-saves") }
             function onFilterRequested(platform, statuses, tags) {
                 Library.showFiltered(platform, statuses, tags)
                 window.setOverviewOpen(false)
@@ -1129,7 +1128,7 @@ ApplicationWindow {
             }
             function onAttentionRequested(kind) {
                 switch (kind) {
-                case "neverBackedUp": window.openSettingsAt("library", "backup-saves"); break
+                case "neverBackedUp": GameSaves.backUpAll(); break
                 case "missingArt":
                 case "missingInfo": window.openBulkLookup(window); break
                 case "updates":

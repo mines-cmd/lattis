@@ -18,8 +18,6 @@ OverviewCard {
     property real grow: barsGrown ? 1 : 0
     Behavior on grow { enabled: Motion.on; MotionNumber { speed: "slow" } }
 
-    signal backUpRequested()
-
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
 
     RowLayout {
@@ -33,9 +31,10 @@ OverviewCard {
         SettingsButton {
             primary: root.empty
             iconPath: Icons.save2Line
-            text: qsTr("Back up now")
-            tip: qsTr("Back up saves")
-            onClicked: root.backUpRequested()
+            text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
+            tip: qsTr("Back up the saves of every game you've played")
+            enabled: !GameSaves.working
+            onClicked: GameSaves.backUpAll()
         }
     }
 

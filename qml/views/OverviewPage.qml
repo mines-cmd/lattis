@@ -31,7 +31,6 @@ FocusScope {
     onLoadedChanged: if (!loaded) stacks.reset()
 
     signal attentionRequested(string kind)
-    signal backUpRequested()
     signal galleryRequested()
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
@@ -184,6 +183,14 @@ FocusScope {
         }
         function onGamesChanged() {
             if (root.visible && root.loaded)
+                Library.overview()
+        }
+    }
+
+    Connections {
+        target: GameSaves
+        function onBackedUpAll() {
+            if (root.loaded)
                 Library.overview()
         }
     }
@@ -732,7 +739,6 @@ FocusScope {
                             regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
-                            onBackUpRequested: root.backUpRequested()
                         }
                     }
 

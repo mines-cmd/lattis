@@ -293,6 +293,9 @@ int main(int argc, char *argv[])
         {[&library, &dataDir](const QString &id) {
              return SavesBackup::inputFor(library, id, dataDir, QStringLiteral(LATTIS_VERSION), true);
          },
+         [&library, &dataDir] {
+             return SavesBackup::inputsForPlayed(library, dataDir, QStringLiteral(LATTIS_VERSION));
+         },
          [&library](const QString &id, const QString &name) {
              return library.saveGame(id, {{QStringLiteral("saves_game"), name.isEmpty() ? QVariant() : QVariant(name)}});
          }});
