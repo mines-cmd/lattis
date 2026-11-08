@@ -1233,7 +1233,7 @@ constexpr Setting kSettings[] = {
     integer("overview", "attention_icon_size", "20", 6, 80, "Size of a row's icon"),
     color("overview", "attention_icon_background", "@stats.track", "The square behind a row's icon"),
     color("overview", "attention_icon", "@palette.text", "A row's icon"),
-    integer("overview", "attention_count_width", "52", 10, 200, "Width reserved for the numbers, right-aligned next to the icons; widen it for counts of 1 000 or more"),
+    integer("overview", "attention_count_width", "40", 10, 200, "Width reserved for the numbers, right-aligned next to the icons; widen it for counts of 1 000 or more"),
     integer("overview", "attention_count_size", "24", 8, 96, "The number in each row"),
     heading("overview", "Breakdowns"),
     integer("overview", "bar_height", "8", 2, 40, "Height of a bar in Games by platform, Status and Top tags"),
