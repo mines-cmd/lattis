@@ -417,6 +417,14 @@ int main(int argc, char *argv[])
             window->requestActivate();
         });
 
+        // Runs on the first frame, before a UI script starts, so a script can use the field.
+        if (const QString spec = qEnvironmentVariable("LATTIS_DATE_FIELD"); !spec.isEmpty()) {
+            QObject::connect(window, &QQuickWindow::frameSwapped, window, [window, spec] {
+                logHook("dateFieldForScreenshot", spec);
+                QMetaObject::invokeMethod(window, "dateFieldForScreenshot", Q_ARG(QVariant, spec));
+            }, Qt::SingleShotConnection);
+        }
+
         if (const QString script = qEnvironmentVariable("LATTIS_UI_SCRIPT"); !script.isEmpty()) {
             auto *driver = new UiDriver(window, script, window);
             QObject::connect(window, &QQuickWindow::frameSwapped, driver, &UiDriver::start,

@@ -108,6 +108,8 @@ constexpr Section kSections[] = {
     {"play_history", "A game's play history, opened from its play time chip or its menu. Its background, border "
                      "and text look like the game editor's, its cards like the settings window's, its close "
                      "button (×) like the About dialog's."},
+    {"calendar", "The calendar that opens from a date field (Add session's start and end): its panel, month header, "
+                 "weekdays and days."},
 };
 
 constexpr Setting kSettings[] = {
@@ -1688,6 +1690,29 @@ constexpr Setting kSettings[] = {
     integer("play_history", "row_radius", "@settings_window.row_radius", 0, 60, "Corner radius of a session's row"),
     color("play_history", "duration_color", "@text", "A session's length"),
     color("play_history", "note_color", "@text_muted", "A session's date when it comes from Steam, and the empty state"),
+
+    heading("calendar", "Panel"),
+    color("calendar", "background", "@menu.popup_background", "Background of the calendar"),
+    color("calendar", "border", "@settings_window.card_border", "Outline of the calendar"),
+    integer("calendar", "border_width", "@settings_window.card_border_width", 0, 20, "Outline thickness; 0 = none"),
+    integer("calendar", "radius", "@controls.input_radius", 0, 100, "Corner radius of the calendar"),
+    integer("calendar", "padding", "@menu.dialog_padding", 0, 100, "Space between the calendar's edge and its content"),
+    heading("calendar", "Header"),
+    color("calendar", "header_color", "@text", "The month and year, and the arrows beside them"),
+    color("calendar", "arrow_disabled_color", "@text_muted", "An arrow that can't be used (next month, from the current one)"),
+    color("calendar", "weekday_color", "@text_muted", "The weekday initials over the days"),
+    heading("calendar", "Days"),
+    integer("calendar", "cell_size", "34", 16, 100, "Width and height of a day, and of the arrows"),
+    integer("calendar", "cell_radius", "@menu.item_radius", 0, 100, "Corner radius of a day's highlight"),
+    color("calendar", "day_color", "@text", "A day of the shown month"),
+    color("calendar", "outside_color", "@text_muted", "A day of the month before or after; it can still be picked"),
+    color("calendar", "disabled_color", "@text_muted", "A day that can't be picked (in the future)"),
+    real("calendar", "disabled_opacity", "0.4", 0, 1, "How faint those days are"),
+    color("calendar", "hover_background", "@controls.hover", "Behind the day under the mouse or the keyboard"),
+    color("calendar", "today_ring", "@accent", "Ring around today"),
+    integer("calendar", "today_ring_width", "2", 0, 10, "Thickness of that ring; 0 = none"),
+    color("calendar", "picked_background", "@accent", "Behind the date the field holds"),
+    color("calendar", "picked_text", "@on_accent", "The date the field holds"),
 
     integer("about", "width", "480", 280, 1200, "Width of the dialog, at most the window's"),
     integer("about", "close_size", "18", 8, 100, "The close button (×) in the top right corner"),

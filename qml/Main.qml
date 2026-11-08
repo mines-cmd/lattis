@@ -1234,6 +1234,52 @@ ApplicationWindow {
         }
     }
 
+    Loader {
+        id: dateFieldHost
+        active: false
+        anchors.horizontalCenter: parent.horizontalCenter
+        sourceComponent: Rectangle {
+            id: hostCard
+
+            property alias field: hostField
+
+            implicitWidth: hostColumn.implicitWidth + 2 * Theme.menu.dialogPadding
+            implicitHeight: hostColumn.implicitHeight + 2 * Theme.menu.dialogPadding
+            color: Theme.menu.popupBackground
+            radius: Theme.controls.inputRadius
+
+            ColumnLayout {
+                id: hostColumn
+                anchors.centerIn: parent
+                spacing: Theme.controls.controlSpacing
+
+                DateTimeField {
+                    id: hostField
+                    maximumDate: new Date()
+                }
+                Label {
+                    text: hostField.valid ? "picked " + Qt.formatDateTime(hostField.value, "yyyy-MM-dd HH:mm") : "nothing picked"
+                    color: Theme.controls.labelColor
+                }
+            }
+        }
+    }
+
+    // Stands in for the Add session dialog until it exists: a date field to try the calendar on.
+    function dateFieldForScreenshot(spec) {
+        const parts = spec.split("/")
+        dateFieldHost.active = true
+        dateFieldHost.y = parts.includes("bottom") ? height - dateFieldHost.height - 40 : 80
+        const when = parts[0].match(/^(\d+)-(\d+)-(\d+) (\d+):(\d+)$/)
+        if (when)
+            dateFieldHost.item.field.value = new Date(+when[1], +when[2] - 1, +when[3], +when[4], +when[5])
+        const limit = parts.find(part => part.startsWith("max="))?.slice(4).split("-")
+        if (limit)
+            dateFieldHost.item.field.maximumDate = new Date(+limit[0], +limit[1] - 1, +limit[2])
+        if (parts.includes("open"))
+            dateFieldHost.item.field.openCalendar()
+    }
+
     Toast {
         id: toast
         // The setup guide's Done step shows this itself.
