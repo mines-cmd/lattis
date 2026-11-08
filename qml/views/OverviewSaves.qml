@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property bool barsGrown: false
 
     readonly property var stats: overview.saves ?? ({})
@@ -29,6 +30,7 @@ OverviewCard {
     OverviewCardTitle { text: qsTr("Save backups") }
 
     OverviewBarRow {
+        regrow: root.regrow
         visible: root.played > 0
         name: qsTr("Played games")
         countText: root.countText()

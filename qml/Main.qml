@@ -168,6 +168,7 @@ ApplicationWindow {
             setGalleryOpen(false, "", true)
             pageBelow = below
             pageOnTop = "overview"
+            overviewPage.asynchronous = false
             overviewPage.active = true
             overviewOpen = true
             overviewPage.item.start()
@@ -191,6 +192,11 @@ ApplicationWindow {
         onTriggered: {
             galleryPage.active = true
             galleryPage.item.warmUp()
+            // Made over several frames, as it takes ~45 ms; a click before that finishes it at once.
+            if (!overviewPage.active) {
+                overviewPage.asynchronous = true
+                overviewPage.active = true
+            }
         }
     }
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
@@ -1094,6 +1100,7 @@ ApplicationWindow {
             layer.enabled: opacity > 0 && opacity < 1
             enabled: (window.overviewOpen || window.pageBelow === "overview" || opacity === 0) && !setupGuide.active
             source: "views/OverviewPage.qml"
+            onLoaded: if (!window.overviewOpen) item.warmUp()
 
             Behavior on opacity {
                 enabled: Motion.fades

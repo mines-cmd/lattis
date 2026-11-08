@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property bool barsGrown: false
 
     readonly property var rows: overview.nearlyDone ?? []
@@ -72,7 +73,7 @@ OverviewCard {
                     color: Theme.overview.barTrack
 
                     Rectangle {
-                        width: Math.max(Theme.overview.barHeight, parent.width * entry.modelData.unlocked / entry.modelData.total * entry.grow)
+                        width: Math.max(Theme.overview.barHeight, parent.width * entry.modelData.unlocked / entry.modelData.total * entry.grow * root.regrow)
                         height: parent.height
                         radius: parent.radius
                         color: Theme.overview.barFill

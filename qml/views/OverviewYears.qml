@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property bool barsGrown: false
     property int hoveredIndex: -1
 
@@ -60,7 +61,7 @@ OverviewCard {
                         anchors.bottom: parent.bottom
                         width: parent.width
                         height: root.most > 0 && column.modelData.count > 0
-                            ? Math.max(Theme.overview.barRadius, chart.height * chart.grow * column.modelData.count / root.most) : 0
+                            ? Math.max(Theme.overview.barRadius, chart.height * chart.grow * root.regrow * column.modelData.count / root.most) : 0
                         radius: Theme.overview.barRadius
                         color: column.hovered ? Theme.overview.barActive : Theme.overview.barFill
                         opacity: column.hovered ? 1 : Theme.overview.barOpacity

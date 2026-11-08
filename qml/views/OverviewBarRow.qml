@@ -17,6 +17,8 @@ Item {
     // Whether the card's bars have already grown, so a refresh doesn't grow them again.
     property bool grown: false
     property real grow: grown ? 1 : 0
+    // The page grows every bar again from nothing when it opens on the results it kept.
+    property real regrow: 1
     readonly property bool hovered: hover.hovered
 
     signal clicked()
@@ -73,7 +75,7 @@ Item {
             color: Theme.overview.barTrack
 
             Rectangle {
-                width: root.fraction > 0 ? Math.max(Theme.overview.barHeight, parent.width * root.fraction * root.grow) : 0
+                width: root.fraction > 0 ? Math.max(Theme.overview.barHeight, parent.width * root.fraction * root.grow * root.regrow) : 0
                 height: parent.height
                 radius: parent.radius
                 color: root.fill

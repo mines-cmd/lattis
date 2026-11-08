@@ -8,6 +8,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property var info
     property bool stacked: false
     property string mode: "largest"
@@ -130,7 +131,7 @@ OverviewCard {
                                     readonly property bool other: modelData.platform === ""
 
                                     visible: modelData.bytes > 0
-                                    width: Math.max(Theme.overview.storageSegmentMinWidth * drive.grow, track.width * drive.grow * modelData.bytes / drive.modelData.total)
+                                    width: Math.max(Theme.overview.storageSegmentMinWidth * drive.grow * root.regrow, track.width * drive.grow * root.regrow * modelData.bytes / drive.modelData.total)
                                     height: track.height
                                     color: other ?Theme.overview.storageOther : root.colorOf(modelData.platform)
 

@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property bool barsGrown: false
 
     readonly property var allCounts: overview.statusCounts ?? []
@@ -34,6 +35,7 @@ OverviewCard {
         model: root.counts
 
         OverviewBarRow {
+            regrow: root.regrow
             required property var modelData
             name: modelData.name
             countText: root.countText(modelData)

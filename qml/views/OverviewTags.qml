@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property bool barsGrown: false
 
     readonly property var counts: overview.topTags ?? []
@@ -22,6 +23,7 @@ OverviewCard {
         model: root.counts
 
         OverviewBarRow {
+            regrow: root.regrow
             required property var modelData
             name: modelData.tag
             countText: String(modelData.count)

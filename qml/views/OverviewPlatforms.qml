@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     property var info
     property bool barsGrown: false
 
@@ -33,6 +34,7 @@ OverviewCard {
         model: root.counts
 
         OverviewBarRow {
+            regrow: root.regrow
             required property var modelData
             name: root.info.nameOf(modelData.platform)
             detailText: qsTr("%1 installed").arg(modelData.installed)

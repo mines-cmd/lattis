@@ -13,6 +13,13 @@ FocusScope {
     property var protonQueue: []
     property bool protonAsking: false
     readonly property bool loaded: overview.games !== undefined
+    // Replacing `overview` remakes every card, ~40 ms on the main thread, so the results are kept between
+    // opens and a refresh that shows nothing new is dropped; one that does waits for the rise to end.
+    property string overviewKey: ""
+    property var pendingOverview: null
+    property bool revealed: false
+    readonly property bool revealedCards: loaded && revealed
+    property real barsGrow: 1
 
     // Three columns of cards, two below compactWidth, one below narrowWidth.
     readonly property int columns: Theme.overview.compactWidth > 0 && width < Theme.overview.compactWidth
@@ -32,13 +39,35 @@ FocusScope {
     signal playRequested(string id)
     signal statsRequested()
 
+    function warmUp() {
+        if (!loaded)
+            Library.overview()
+    }
+
     function start() {
-        overview = {}
         stopAskingProtonDb()
         Library.overview()
+        revealed = false
+        revealed = true
+        if (loaded)
+            regrowIn.restart()
         sinkOut.stop()
         riseIn.restart()
         forceActiveFocus()
+    }
+
+    // Free space moves with every write to the drive; only what the Storage card prints counts.
+    function keyOf(result): string {
+        return JSON.stringify(result, (key, value) => key === "free" ? Library.sizeText(value) : value)
+    }
+
+    function applyOverview(result) {
+        pendingOverview = null
+        const key = keyOf(result)
+        if (key === overviewKey)
+            return
+        overviewKey = key
+        overview = result
     }
 
     function stopAskingProtonDb() {
@@ -136,7 +165,10 @@ FocusScope {
     Connections {
         target: Library
         function onOverviewReady(result) {
-            root.overview = result
+            if (root.loaded && riseIn.running)
+                root.pendingOverview = result
+            else
+                root.applyOverview(result)
             root.protonQueue = result.protonDbPending ?? []
             if (!askWatchdog.running && root.visible)
                 root.askProtonDb()
@@ -146,7 +178,8 @@ FocusScope {
         }
         function onOverviewAchievementsRead() {
             root.achievementsRead = true
-            if (root.visible && root.loaded)
+            // Also while hidden, so the results kept for the next open have them.
+            if (root.loaded)
                 Library.overview()
         }
         function onGamesChanged() {
@@ -185,6 +218,16 @@ FocusScope {
         property: "y"
         from: Theme.overview.pageOffset
         to: 0
+        speed: "slow"
+        onStopped: if (root.pendingOverview && rise.y === 0) root.applyOverview(root.pendingOverview)
+    }
+
+    MotionNumber {
+        id: regrowIn
+        target: root
+        property: "barsGrow"
+        from: 0
+        to: 1
         speed: "slow"
     }
 
@@ -282,7 +325,7 @@ FocusScope {
 
                         OverviewReveal {
                             id: tileReveal
-                            shown: root.loaded
+                            shown: root.revealedCards
                             required property var modelData
                             required property int index
                             Layout.fillWidth: true
@@ -334,7 +377,7 @@ FocusScope {
                 }
 
                 OverviewReveal {
-                    shown: root.loaded
+                    shown: root.revealedCards
                     Layout.fillWidth: true
                     visible: root.continuePlaying.length > 0
                     order: root.tiles.length
@@ -525,11 +568,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: storage.hasContent
                         order: root.tiles.length + 1
 
                         OverviewStorage {
+                            regrow: root.barsGrow
                             id: storage
                             Layout.fillWidth: true
                             overview: root.overview
@@ -540,11 +584,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.platformCounts ?? []).length > 0
                         order: root.tiles.length + 2
 
                         OverviewPlatforms {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                             info: platformInfo
@@ -553,11 +598,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.statusCounts ?? []).length > 0
                         order: root.tiles.length + 3
 
                         OverviewStatuses {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                             onFilterRequested: status => root.filterRequested("", [status], [])
@@ -565,7 +611,7 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.attention ?? []).length > 0
                         order: root.tiles.length + 4
 
@@ -577,7 +623,7 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.backlogPicks ?? []).length > 0
                         order: root.tiles.length + 5
 
@@ -591,11 +637,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.nearlyDone ?? []).length > 0
                         order: root.tiles.length + 6
 
                         OverviewNearlyDone {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                             onGameRequested: id => root.gameRequested(id)
@@ -603,11 +650,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.topTags ?? []).length > 0
                         order: root.tiles.length + 7
 
                         OverviewTags {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                             onFilterRequested: tag => root.filterRequested("", [], [tag])
@@ -615,22 +663,24 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.years ?? []).length > 0
                         order: root.tiles.length + 8
 
                         OverviewYears {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                         }
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: compatibility.hasContent
                         order: root.tiles.length + 9
 
                         OverviewCompatibility {
+                            regrow: root.barsGrow
                             id: compatibility
                             readonly property bool hasContent: games > 0 || (stats.native ?? 0) + (stats.proton ?? 0) > 0
                             Layout.fillWidth: true
@@ -640,11 +690,12 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         visible: (root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0
                         order: root.tiles.length + 10
 
                         OverviewSaves {
+                            regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
                             onBackUpRequested: root.backUpRequested()
@@ -652,7 +703,7 @@ FocusScope {
                     }
 
                     OverviewReveal {
-                        shown: root.loaded
+                        shown: root.revealedCards
                         order: root.tiles.length + 11
 
                         OverviewFacts {

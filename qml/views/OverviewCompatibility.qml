@@ -7,6 +7,7 @@ OverviewCard {
     id: root
 
     property var overview: ({})
+    property real regrow: 1
     // Whether ProtonDB is still being asked about the games with no entry.
     property bool asking: false
     property bool barsGrown: false
@@ -47,6 +48,7 @@ OverviewCard {
         model: root.tiers
 
         OverviewBarRow {
+            regrow: root.regrow
             required property var modelData
             name: root.tierName(modelData.tier)
             countText: root.countText(modelData.count)
