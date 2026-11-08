@@ -35,13 +35,11 @@ OverviewCard {
         }
     }
 
-    // Only the first rows show; the tags past them are clipped, which also keeps them from the pointer.
-    Flow {
+    JustifiedFlow {
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.min(implicitHeight, Theme.overview.tagRows * Theme.tags.height
-                                         + (Theme.overview.tagRows - 1) * Theme.overview.tagSpacing)
-        clip: true
+        Layout.preferredHeight: implicitHeight
         spacing: Theme.overview.tagSpacing
+        maxRows: Theme.overview.tagRows
 
         Repeater {
             model: root.counts

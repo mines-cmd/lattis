@@ -127,6 +127,7 @@ qt_add_qml_module(lattis
         qml/components/ChromeButton.qml
         qml/components/SegmentedToggle.qml
         qml/components/TextLink.qml
+        qml/components/JustifiedFlow.qml
         qml/components/TagChip.qml
         qml/components/FilterChip.qml
         qml/components/InstallProgress.qml
