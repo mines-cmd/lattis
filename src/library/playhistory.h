@@ -18,6 +18,7 @@ struct Session
     QDateTime end;
     int minutes = 0;
     bool merged = false; // may hold several sessions (Steam's total grew while the launcher was closed)
+    bool manual = false; // added by hand; never together with merged
     QString gameId; // not in the file: set when copies of one game (same_as) are shown together
 
     QDateTime start() const { return end.addSecs(-qint64(minutes) * 60); }
@@ -28,6 +29,10 @@ struct File
     QList<Session> sessions;
     int deletedMinutes = 0;
 };
+
+// The file's sessions (merged entries excepted, as their start means nothing) that run into `session`.
+QList<Session> overlapping(const File &file, const Session &session);
+bool hasEnd(const File &file, const QDateTime &end);
 
 QString path(const QString &dataDir, const QString &id);
 QString seenPath(const QString &dataDir);

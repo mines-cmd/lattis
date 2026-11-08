@@ -52,15 +52,23 @@ bool readSession(const toml::table &entry, const QString &displayPath, QStringLi
     out->end = toDateTime(*end);
     out->minutes = int(minutes->get());
     out->merged = false;
+    out->manual = false;
     for (auto &&[k, node] : entry) {
         const QString key = toQString(k.str());
         if (key == QLatin1String("end") || key == QLatin1String("minutes"))
             continue;
         if (key == QLatin1String("merged") && node.is_boolean())
             out->merged = node.as_boolean()->get();
+        else if (key == QLatin1String("manual") && node.is_boolean())
+            out->manual = node.as_boolean()->get();
         else
             warnings->append(QStringLiteral("%1: %2 is not a session key (or has the wrong type)")
                                  .arg(where(displayPath, node), key));
+    }
+    if (out->merged && out->manual) {
+        out->manual = false;
+        warnings->append(QStringLiteral("%1: a session can't be both merged and manual; keeping merged")
+                             .arg(where(displayPath, entry)));
     }
     return true;
 }
@@ -71,6 +79,8 @@ QByteArray sessionText(const Session &session)
         + QByteArray::number(session.minutes) + "\n";
     if (session.merged)
         text += "merged = true\n";
+    else if (session.manual)
+        text += "manual = true\n";
     return text;
 }
 
@@ -106,6 +116,23 @@ QString syntaxError(const QString &path, const QByteArray &text)
     return QStringLiteral("%1 has an error, so play history wasn't saved: %2")
         .arg(QFileInfo(path).fileName(), parsed.warnings.value(0));
 }
+}
+
+QList<Session> overlapping(const File &file, const Session &session)
+{
+    QList<Session> out;
+    for (const Session &other : file.sessions) {
+        if (!other.merged && other.start() < session.end && session.start() < other.end)
+            out.append(other);
+    }
+    return out;
+}
+
+bool hasEnd(const File &file, const QDateTime &end)
+{
+    return std::any_of(file.sessions.cbegin(), file.sessions.cend(), [&](const Session &s) {
+        return s.end.toSecsSinceEpoch() == end.toSecsSinceEpoch();
+    });
 }
 
 QString path(const QString &dataDir, const QString &id)
@@ -386,7 +413,8 @@ QVariantMap sessionMap(const Session &s)
             {QStringLiteral("endMs"), s.end.toMSecsSinceEpoch()},
             {QStringLiteral("startMs"), s.start().toMSecsSinceEpoch()},
             {QStringLiteral("minutes"), s.minutes},
-            {QStringLiteral("merged"), s.merged}};
+            {QStringLiteral("merged"), s.merged},
+            {QStringLiteral("manual"), s.manual}};
 }
 }
 

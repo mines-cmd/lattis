@@ -1836,6 +1836,14 @@ bool playedInSteam(const Game &g)
 {
     return g.platform == kSteamPlatform || g.platform == kProtonPlatform;
 }
+
+QVariantMap sessionToMap(const PlayHistory::Session &s)
+{
+    return {{QStringLiteral("end"), s.end.toOffsetFromUtc(s.end.offsetFromUtc()).toString(Qt::ISODate)},
+            {QStringLiteral("minutes"), s.minutes},
+            {QStringLiteral("merged"), s.merged},
+            {QStringLiteral("manual"), s.manual}};
+}
 }
 
 namespace {
@@ -2879,11 +2887,25 @@ QVariantMap Library::deleteSession(const QString &id, const QString &end)
         PlayHistory::append(dataDir, id, removed);
         return fail(error);
     }
-    return {{QStringLiteral("error"), QString()},
-            {QStringLiteral("session"),
-             QVariantMap{{QStringLiteral("end"), removed.end.toOffsetFromUtc(removed.end.offsetFromUtc()).toString(Qt::ISODate)},
-                         {QStringLiteral("minutes"), removed.minutes},
-                         {QStringLiteral("merged"), removed.merged}}}};
+    return {{QStringLiteral("error"), QString()}, {QStringLiteral("session"), sessionToMap(removed)}};
+}
+
+namespace {
+// A session put into a game's history and totals: restoring a deleted one, or adding one by hand.
+QString putSession(LibraryStore &store, const Game &game, const PlayHistory::Session &session)
+{
+    const QString dataDir = store.dataDir();
+    if (const QString error = PlayHistory::append(dataDir, game.id, session); !error.isEmpty())
+        return error;
+    if (playedInSteam(game)) {
+        const int deleted = PlayHistory::read(dataDir, game.id).value.deletedMinutes;
+        return PlayHistory::setDeletedMinutes(dataDir, game.id, qMax(0, deleted - session.minutes));
+    }
+    QList<std::pair<QString, QVariant>> values{{QStringLiteral("play_minutes"), game.playMinutes + session.minutes}};
+    if (!game.lastPlayed.isValid() || session.end > game.lastPlayed)
+        values.append({QStringLiteral("last_played"), session.end});
+    return store.setGameValues(game.id, values);
+}
 }
 
 QString Library::restoreSession(const QString &id, const QVariantMap &session)
@@ -2893,23 +2915,53 @@ QString Library::restoreSession(const QString &id, const QVariantMap &session)
     const auto it = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == id; });
     if (it == m_games.cend())
         return tr("There's no game with the id %1").arg(id);
-    const PlayHistory::Session restored{QDateTime::fromString(session.value(QStringLiteral("end")).toString(), Qt::ISODate),
-                                        session.value(QStringLiteral("minutes")).toInt(),
-                                        session.value(QStringLiteral("merged")).toBool()};
+    PlayHistory::Session restored{QDateTime::fromString(session.value(QStringLiteral("end")).toString(), Qt::ISODate),
+                                  session.value(QStringLiteral("minutes")).toInt(),
+                                  session.value(QStringLiteral("merged")).toBool()};
+    restored.manual = !restored.merged && session.value(QStringLiteral("manual")).toBool();
     if (!restored.end.isValid() || restored.minutes < 0)
         return tr("That isn't a session");
+    return putSession(m_store, *it, restored);
+}
 
-    const QString dataDir = m_store.dataDir();
-    if (const QString error = PlayHistory::append(dataDir, id, restored); !error.isEmpty())
-        return error;
-    if (playedInSteam(*it)) {
-        const int deleted = PlayHistory::read(dataDir, id).value.deletedMinutes;
-        return PlayHistory::setDeletedMinutes(dataDir, id, qMax(0, deleted - restored.minutes));
-    }
-    QList<std::pair<QString, QVariant>> values{{QStringLiteral("play_minutes"), it->playMinutes + restored.minutes}};
-    if (!it->lastPlayed.isValid() || restored.end > it->lastPlayed)
-        values.append({QStringLiteral("last_played"), restored.end});
-    return m_store.setGameValues(id, values);
+QVariantMap Library::addSession(const QString &id, const QString &startIso, int minutes)
+{
+    const auto fail = [](const QString &error) { return QVariantMap{{QStringLiteral("error"), error}}; };
+    if (m_store.readOnly())
+        return fail(tr("Not saved: %1").arg(m_store.versionStatus().reason));
+    const auto it = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == id; });
+    if (it == m_games.cend())
+        return fail(tr("There's no game with the id %1").arg(id));
+    if (playedInSteam(*it))
+        return fail(tr("Steam counts play outside Lattis itself, so sessions can't be added to its games"));
+    const QDateTime start = QDateTime::fromString(startIso, Qt::ISODate);
+    if (!start.isValid())
+        return fail(tr("%1 isn't a date and time").arg(startIso));
+    if (minutes <= 0)
+        return fail(tr("The length must be at least a minute"));
+
+    // The offset in force at the end, as for a session Lattis records, so a DST change in between is counted.
+    const QDateTime end = start.toTimeZone(QTimeZone::systemTimeZone()).addSecs(qint64(minutes) * 60);
+    if (end > QDateTime::currentDateTime())
+        return fail(tr("The session can't end in the future"));
+    PlayHistory::Session added;
+    added.end = end.toOffsetFromUtc(end.offsetFromUtc());
+    added.minutes = minutes;
+    added.manual = true;
+
+    const Parsed<PlayHistory::File> file = PlayHistory::read(m_store.dataDir(), id);
+    if (PlayHistory::hasEnd(file.value, added.end))
+        return fail(tr("Another session of this game ends at the same time"));
+    const QList<PlayHistory::Session> overlaps = PlayHistory::overlapping(file.value, added);
+
+    if (const QString error = putSession(m_store, *it, added); !error.isEmpty())
+        return fail(error);
+    QVariantList overlapping;
+    for (const PlayHistory::Session &s : overlaps)
+        overlapping.append(sessionToMap(s));
+    return {{QStringLiteral("error"), QString()},
+            {QStringLiteral("session"), sessionToMap(added)},
+            {QStringLiteral("overlaps"), overlapping}};
 }
 
 QString Library::gameIdAt(int row) const

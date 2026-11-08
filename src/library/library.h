@@ -191,6 +191,7 @@ public:
     Q_INVOKABLE QString playTime(int minutes, const QString &format) const;
     Q_INVOKABLE QVariantMap deleteSession(const QString &id, const QString &end);
     Q_INVOKABLE QString restoreSession(const QString &id, const QVariantMap &session);
+    Q_INVOKABLE QVariantMap addSession(const QString &id, const QString &startIso, int minutes);
 
     Q_INVOKABLE QVariantMap gameAt(int row) const;
     Q_INVOKABLE QVariantMap gameWithId(const QString &id) const;

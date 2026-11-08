@@ -80,6 +80,12 @@ private slots:
     void pageHistoryFromTheLibrary();
     void linkedCopiesCountAsOne();
     void badSameAsIsIgnored();
+    void manualFlagRoundTrip();
+    void overlapAndDuplicateEnd();
+    void addSessionToAPlainGame();
+    void addSessionRefusals();
+    void addSessionAcrossDst();
+    void addThenDeleteRestoresTotals();
 
 private:
     QString historyFile(const QString &id) const { return PlayHistory::path(m_data, id); }
@@ -1046,6 +1052,158 @@ void PlayHistoryTest::pageHistoryFromTheLibrary()
     QCOMPARE(library->playTime(45, QStringLiteral("hours_minutes")), QStringLiteral("45m"));
     QCOMPARE(library->playTime(0, QStringLiteral("hours_minutes")), QString());
     QCOMPARE(library->playTime(863, QStringLiteral("hours")), QLocale().toString(14.4, 'f', 1) + QStringLiteral(" hours"));
+}
+
+void PlayHistoryTest::manualFlagRoundTrip()
+{
+    const QString id = QStringLiteral("switch-test");
+    PlayHistory::Session manual{at(2026, 10, 10, 22, 41), 95, false};
+    manual.manual = true;
+    QCOMPARE(PlayHistory::append(m_data, id, manual), QString());
+    QCOMPARE(readFile(historyFile(id)),
+             QByteArray("[[session]]\nend = 2026-10-10T22:41:00+02:00\nminutes = 95\nmanual = true\n"));
+    Parsed<PlayHistory::File> file = PlayHistory::read(m_data, id);
+    QVERIFY(file.warnings.isEmpty());
+    QVERIFY(file.value.sessions.at(0).manual);
+    QVERIFY(!file.value.sessions.at(0).merged);
+    QVERIFY(PlayHistory::summary(file.value, 95, QDate(2026, 10, 12), Qt::Monday, kPlus2)
+                .value("sessions").toList().at(0).toMap().value("manual").toBool());
+
+    writeFile(historyFile(id), "[[session]]\nend = 2026-10-10T22:41:00+02:00\nminutes = 95\nmerged = true\nmanual = true\n");
+    file = PlayHistory::read(m_data, id);
+    QCOMPARE(file.warnings.size(), 1);
+    QVERIFY(file.value.sessions.at(0).merged);
+    QVERIFY(!file.value.sessions.at(0).manual);
+}
+
+void PlayHistoryTest::overlapAndDuplicateEnd()
+{
+    PlayHistory::File file;
+    file.sessions = {{at(2026, 10, 10, 20, 0), 60, false}, {at(2026, 10, 11, 12, 0), 600, true}};
+    const auto session = [](const QDateTime &end, int minutes) { return PlayHistory::Session{end, minutes, false}; };
+
+    QCOMPARE(PlayHistory::overlapping(file, session(at(2026, 10, 10, 20, 30), 60)).size(), 1);
+    QCOMPARE(PlayHistory::overlapping(file, session(at(2026, 10, 10, 19, 30), 60)).size(), 1);
+    // Touching is not overlapping.
+    QCOMPARE(PlayHistory::overlapping(file, session(at(2026, 10, 10, 19, 0), 60)).size(), 0);
+    QCOMPARE(PlayHistory::overlapping(file, session(at(2026, 10, 10, 21, 0), 60)).size(), 0);
+    // A merged entry's start means nothing.
+    QCOMPARE(PlayHistory::overlapping(file, session(at(2026, 10, 11, 8, 0), 60)).size(), 0);
+
+    QVERIFY(PlayHistory::hasEnd(file, at(2026, 10, 10, 20, 0)));
+    QVERIFY(PlayHistory::hasEnd(file, at(2026, 10, 10, 18, 0, QTimeZone::UTC)));
+    QVERIFY(!PlayHistory::hasEnd(file, at(2026, 10, 10, 20, 1)));
+}
+
+void PlayHistoryTest::addSessionToAPlainGame()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("switch-mario-kart-8-deluxe");
+    const auto game = [&] { return library->store().snapshot().content.games.value(id); };
+    const QDateTime latest = at(2026, 10, 10, 22, 41);
+    QCOMPARE(library->setGameValue(id, QStringLiteral("last_played"), latest), QString());
+
+    // Older than last_played: the total grows, last_played stays.
+    QVariantMap added = library->addSession(id, QStringLiteral("2026-10-09T19:00:00+02:00"), 90);
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(game().playMinutes, 2460 + 90);
+    QCOMPARE(game().lastPlayed, latest);
+    QCOMPARE(added.value("session").toMap().value("manual").toBool(), true);
+    QCOMPARE(added.value("overlaps").toList().size(), 0);
+    Parsed<PlayHistory::File> file = PlayHistory::read(m_data, id);
+    QCOMPARE(file.value.sessions.size(), 1);
+    QCOMPARE(file.value.sessions.at(0).minutes, 90);
+    QCOMPARE(file.value.sessions.at(0).end, at(2026, 10, 9, 20, 30));
+    QVERIFY(file.value.sessions.at(0).manual);
+    QVERIFY(readFile(historyFile(id)).contains("manual = true\n"));
+
+    // Later: last_played moves. It overlaps the first only if they run into each other.
+    added = library->addSession(id, QStringLiteral("2026-10-11T20:00:00+02:00"), 60);
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(game().playMinutes, 2460 + 150);
+    QCOMPARE(game().lastPlayed, at(2026, 10, 11, 21, 0));
+
+    // Overlapping is allowed and reported.
+    added = library->addSession(id, QStringLiteral("2026-10-09T19:30:00+02:00"), 30);
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(added.value("overlaps").toList().size(), 1);
+    QCOMPARE(PlayHistory::read(m_data, id).value.sessions.size(), 3);
+}
+
+void PlayHistoryTest::addSessionRefusals()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("switch-mario-kart-8-deluxe");
+    const auto refused = [&](const QString &game, const QString &start, int minutes) {
+        return !library->addSession(game, start, minutes).value("error").toString().isEmpty();
+    };
+    QVERIFY(refused(QStringLiteral("steam-367520"), QStringLiteral("2026-10-09T19:00:00+02:00"), 30));
+    QVERIFY(refused(QStringLiteral("no-such-game"), QStringLiteral("2026-10-09T19:00:00+02:00"), 30));
+    QVERIFY(refused(id, QStringLiteral("not a time"), 30));
+    QVERIFY(refused(id, QStringLiteral("2026-10-09T19:00:00+02:00"), 0));
+    QVERIFY(refused(id, QStringLiteral("2026-10-09T19:00:00+02:00"), -5));
+    const QDateTime soon = QDateTime::currentDateTime().addSecs(-10 * 60);
+    QVERIFY(refused(id, soon.toString(Qt::ISODate), 30));
+    QVERIFY(refused(id, QDateTime::currentDateTime().addDays(1).toString(Qt::ISODate), 30));
+
+    QCOMPARE(library->addSession(id, QStringLiteral("2026-10-09T19:00:00+02:00"), 60).value("error").toString(), QString());
+    // The same end as the one just added.
+    QVERIFY(refused(id, QStringLiteral("2026-10-09T19:30:00+02:00"), 30));
+    QCOMPARE(PlayHistory::read(m_data, id).value.sessions.size(), 1);
+    QVERIFY(!QFileInfo::exists(historyFile(QStringLiteral("steam-367520"))));
+    QCOMPARE(library->store().snapshot().content.games.value(id).playMinutes, 2460 + 60);
+}
+
+void PlayHistoryTest::addSessionAcrossDst()
+{
+    const QByteArray zone = qgetenv("TZ");
+    qputenv("TZ", "Europe/Berlin");
+    if (QTimeZone::systemTimeZone().id() != "Europe/Berlin") {
+        if (zone.isEmpty())
+            qunsetenv("TZ");
+        else
+            qputenv("TZ", zone);
+        QSKIP("The system zone can't be switched here");
+    }
+    auto library = openLibrary();
+    const QString id = QStringLiteral("switch-mario-kart-8-deluxe");
+    // Clocks go back at 03:00 on 26 October 2025: two hours from 01:30 summer time end at 02:30 winter time.
+    const QVariantMap added = library->addSession(id, QStringLiteral("2025-10-26T01:30:00+02:00"), 120);
+    if (zone.isEmpty())
+        qunsetenv("TZ");
+    else
+        qputenv("TZ", zone);
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(added.value("session").toMap().value("end").toString(), QStringLiteral("2025-10-26T02:30:00+01:00"));
+    QVERIFY(readFile(historyFile(id)).contains("end = 2025-10-26T02:30:00+01:00\n"));
+}
+
+void PlayHistoryTest::addThenDeleteRestoresTotals()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("switch-mario-kart-8-deluxe");
+    const auto game = [&] { return library->store().snapshot().content.games.value(id); };
+    const QDateTime last = at(2026, 10, 9, 20, 0);
+    QCOMPARE(library->recordPlaySession(id, 60, last), QString());
+    const int before = library->historyFor(id).value("before").toInt();
+
+    const QVariantMap added = library->addSession(id, QStringLiteral("2026-10-10T20:00:00+02:00"), 45);
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(game().playMinutes, 2460 + 105);
+    QCOMPARE(game().lastPlayed, at(2026, 10, 10, 20, 45));
+    QCOMPARE(library->historyFor(id).value("before").toInt(), before);
+
+    const QString end = added.value("session").toMap().value("end").toString();
+    const QVariantMap deleted = library->deleteSession(id, end);
+    QCOMPARE(deleted.value("error").toString(), QString());
+    QCOMPARE(deleted.value("session").toMap().value("manual").toBool(), true);
+    QCOMPARE(game().playMinutes, 2460 + 60);
+    QCOMPARE(game().lastPlayed, last);
+    QCOMPARE(library->historyFor(id).value("before").toInt(), before);
+
+    QCOMPARE(library->restoreSession(id, deleted.value("session").toMap()), QString());
+    QVERIFY(PlayHistory::read(m_data, id).value.sessions.constLast().manual);
+    QCOMPARE(game().playMinutes, 2460 + 105);
 }
 
 QTEST_GUILESS_MAIN(PlayHistoryTest)
