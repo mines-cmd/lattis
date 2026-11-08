@@ -97,9 +97,9 @@ SCENARIOS = [
     Scenario("Compatibility says what it covers, counts native and Proton games and asks ProtonDB for the rest",
              [(OPEN + DOWN + "expect Compatibility\nexpect ProtonDB tiers of your installed Steam games\n"
                + "expect Native games\nexpect Proton games\n", None)], demo),
-    Scenario("Save backups offers Back up now, which opens the saves backup",
-             [(OPEN + DOWN + "expect Save backups\nexpect-not Not protected\nclick Back up now\nwait 800\n"
-               + "expect Backups kept per game\n", None)], demo),
+    Scenario("Save backups offers Back up now, which backs up the played games and stays on the overview",
+             [(OPEN + DOWN + "expect Save backups\nexpect-not Not protected\nclick Back up now\nwait 1500\n"
+               + "expect Library overview\nexpect Back up now\nexpect-not Backups kept per game\n", None)], demo),
     Scenario("Fun facts name the longest session and link to the Gallery",
              [(OPEN + DOWN + "expect Fun facts\nexpect Waiting longest\nclick Open the Gallery\nwait 800\n"
                + "expect-not Library overview\nexpect Gallery\n", None)], demo),
