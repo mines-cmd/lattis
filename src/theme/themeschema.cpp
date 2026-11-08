@@ -1244,7 +1244,7 @@ constexpr Setting kSettings[] = {
     real("overview", "bar_opacity", "@stats.bar_opacity", 0, 1, "How strong the release year columns are; the hovered one is full"),
     integer("overview", "row_padding", "10", 0, 40, "Space above and below a row of Games by platform and Status, inside its hover highlight"),
     integer("overview", "label_width", "120", 40, 400, "Width of the names left of the bars"),
-    integer("overview", "count_width", "96", 20, 200,
+    integer("overview", "count_width", "56", 20, 200,
             "Width of the counts right of the bars, the same in every card so the bars end in one line; a card whose longest count is wider uses that"),
     integer("overview", "years_height", "96", 24, 400, "Height of the release year columns"),
     integer("overview", "year_gap", "3", 0, 20, "Space between the release year columns"),

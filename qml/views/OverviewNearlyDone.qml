@@ -51,6 +51,7 @@ OverviewCard {
 
             ArtThumb {
                 id: thumb
+                x: Theme.layout.spacing
                 width: Theme.overview.storageThumbWidth
                 height: Math.round(width * Theme.overview.coverRatio)
                 cornerRadius: Theme.overview.coverRadius
@@ -62,7 +63,7 @@ OverviewCard {
             ColumnLayout {
                 anchors.left: thumb.right
                 anchors.leftMargin: Theme.layout.spacing * 1.5
-                anchors.right: progress.left
+                anchors.right: parent.right
                 anchors.rightMargin: Theme.layout.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Theme.layout.spacing
@@ -74,26 +75,29 @@ OverviewCard {
                     font.weight: Theme.font.emphasisWeight
                     elide: Text.ElideRight
                 }
-                Rectangle {
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.overview.barHeight
-                    radius: Theme.overview.barRadius
-                    color: Theme.overview.barTrack
+                    spacing: Theme.layout.spacing * 1.5
 
                     Rectangle {
-                        width: Math.max(Theme.overview.barHeight, parent.width * entry.modelData.unlocked / entry.modelData.total * entry.grow * root.regrow)
-                        height: parent.height
-                        radius: parent.radius
-                        color: Theme.overview.barFill
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Theme.overview.barHeight
+                        radius: Theme.overview.barRadius
+                        color: Theme.overview.barTrack
+
+                        Rectangle {
+                            width: Math.max(Theme.overview.barHeight, parent.width * entry.modelData.unlocked / entry.modelData.total * entry.grow * root.regrow)
+                            height: parent.height
+                            radius: parent.radius
+                            color: Theme.overview.barFill
+                        }
+                    }
+                    OverviewQuiet {
+                        Layout.preferredWidth: Math.max(Theme.overview.countWidth, implicitWidth)
+                        horizontalAlignment: Text.AlignRight
+                        text: qsTr("%1 of %2").arg(entry.modelData.unlocked).arg(entry.modelData.total)
                     }
                 }
-            }
-
-            OverviewQuiet {
-                id: progress
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("%1 of %2").arg(entry.modelData.unlocked).arg(entry.modelData.total)
             }
         }
     }
