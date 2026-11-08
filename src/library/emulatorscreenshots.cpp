@@ -1,6 +1,7 @@
 #include "emulatorscreenshots.h"
 
 #include "localtime.h"
+#include "romscan.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -231,9 +232,12 @@ RomInfo readInfo(const Game &game)
 {
     if (!game.rom || game.romPath.isEmpty())
         return {};
-    if (QFileInfo(game.romPath).isDir())
-        return RomInfoReader::readFolder(game.romPath, game.platform);
-    return RomInfoReader::read(game.romPath, game.platform);
+    RomInfo info = QFileInfo(game.romPath).isDir() ? RomInfoReader::readFolder(game.romPath, game.platform)
+                                                    : RomInfoReader::read(game.romPath, game.platform);
+    // No header reader for Switch 2 (.nup) or other Switch formats: the dump's name still carries the title ID.
+    if (info.serial.isEmpty() && info.titleId.isEmpty() && info.discId.isEmpty())
+        info.titleId = RomName::titleId(QFileInfo(game.romPath).fileName());
+    return info;
 }
 
 QString idOf(const RomInfo &info)
