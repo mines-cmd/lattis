@@ -220,6 +220,8 @@ QList<int> igdbPlatformIds(const Platform &platform)
     // From IGDB's platform list (checked 2026-09). The 3DS includes New Nintendo 3DS exclusives.
     static const QHash<QString, QList<int>> builtIn = {
         {QStringLiteral("switch"), {130}},
+        {QStringLiteral("switch2"), {508}},
+        {QStringLiteral("switch-2"), {508}},
         {QStringLiteral("3ds"), {37, 137}},
         {QStringLiteral("steam"), {6}},
         {QStringLiteral("epic"), {6}},

@@ -16,7 +16,8 @@
 # ids Lattis has offered as defaults; it adds a default that isn't here once, and delete one from here
 # to have it offered again.
 offered = [
-    "switch", "switch/ryubing",
+    "switch", "switch/ryubing", "switch/lichii",
+    "switch-2", "switch-2/lichii",
     "3ds", "3ds/azahar",
     "wiiu", "wiiu/cemu",
     "wii", "wii/dolphin",
@@ -35,7 +36,13 @@ offered = [
 id = "switch"
 name = "Switch"
 icon = "switch"
-emulators = ["ryubing"]
+emulators = ["ryubing", "lichii"]
+
+[[platform]]
+id = "switch-2"
+name = "Switch 2"
+icon = "switch2"
+emulators = ["lichii"]
 
 [[platform]]
 id = "3ds"

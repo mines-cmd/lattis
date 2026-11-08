@@ -21,6 +21,7 @@ const QHash<QString, QStringList> &aliasTable()
     static const QHash<QString, QStringList> table = [] {
         QHash<QString, QStringList> t;
         t.insert(QStringLiteral("switch"), {QStringLiteral("switch"), QStringLiteral("nintendoswitch"), QStringLiteral("ns"), QStringLiteral("nsw")});
+        t.insert(QStringLiteral("switch-2"), {QStringLiteral("switch2"), QStringLiteral("nintendoswitch2"), QStringLiteral("ns2"), QStringLiteral("nsw2")});
         t.insert(QStringLiteral("3ds"), {QStringLiteral("3ds"), QStringLiteral("nintendo3ds"), QStringLiteral("n3ds")});
         t.insert(QStringLiteral("wiiu"), {QStringLiteral("wiiu"), QStringLiteral("nintendowiiu")});
         t.insert(QStringLiteral("wii"), {QStringLiteral("wii"), QStringLiteral("nintendowii")});

@@ -538,6 +538,8 @@ igdb_platforms = [0, "130"]
     QCOMPARE(igdbPlatformIds(r.value.at(3)), QList<int>()); // every platform
     QCOMPARE(r.value.at(4).igdbPlatforms, QList<int>());
     QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("linux")}), (QList<int>{3, 6})); // Linux, and PC
+    QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("switch-2")}), (QList<int>{508}));
+    QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("x"), .icon = QStringLiteral("switch2")}), (QList<int>{508}));
     QCOMPARE(r.warnings.size(), 1);
     QVERIFY(anyContains(r.warnings, QStringLiteral(":18: igdb_platforms must be a list of IGDB platform ids")));
 }

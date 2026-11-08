@@ -22,6 +22,9 @@ void RomFolderMatchTest::byAlias_data()
     QTest::newRow("switch abbreviation") << "NSW" << "switch";
     QTest::newRow("switch dashes") << "nintendo-switch" << "switch";
     QTest::newRow("switch underscores") << "nintendo_switch" << "switch";
+    QTest::newRow("switch 2 name") << "Switch 2" << "switch-2";
+    QTest::newRow("switch 2 folder") << "switch2" << "switch-2";
+    QTest::newRow("switch 2 abbreviation") << "NS2" << "switch-2";
     QTest::newRow("3ds") << "3DS" << "3ds";
     QTest::newRow("3ds name") << "Nintendo 3DS" << "3ds";
     QTest::newRow("wiiu") << "Wii U" << "wiiu";

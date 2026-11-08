@@ -69,6 +69,7 @@ class OfferedDefaultsTest : public QObject
 
 private slots:
     void freshFileIsComplete();
+    void oldFileGetsSwitch2AndLichii();
     void oldFileGetsOnlyLaterDefaults();
     void deletedBootstrapPlatformStaysDeleted();
     void deletedNewPlatformStaysDeleted();
@@ -102,6 +103,22 @@ void OfferedDefaultsTest::freshFileIsComplete()
     const TomlPatch::Result r = OfferedDefaults::apply(defaults, defaults, OfferedDefaults::bootstrap());
     QVERIFY(r.ok);
     QCOMPARE(r.text, defaults);
+}
+
+void OfferedDefaultsTest::oldFileGetsSwitch2AndLichii()
+{
+    const QString old = file(block("switch", "[\"ryubing\"]") + block("3ds", "[\"azahar\"]"));
+    QStringList added;
+    const TomlPatch::Result r = OfferedDefaults::apply(old, resourceDefaults(), OfferedDefaults::bootstrap(), &added);
+    QVERIFY(r.ok);
+    QCOMPARE(ids(r.text), QStringList({"switch", "switch-2", "3ds"}));
+    QCOMPARE(emulatorsOf(r.text, "switch"), QStringList({"ryubing", "lichii"}));
+    QCOMPARE(emulatorsOf(r.text, "switch-2"), QStringList({"lichii"}));
+    QVERIFY(r.text.contains("icon = \"switch2\""));
+
+    const TomlPatch::Result again = OfferedDefaults::apply(r.text, resourceDefaults(), OfferedDefaults::bootstrap());
+    QVERIFY(again.ok);
+    QCOMPARE(again.text, r.text);
 }
 
 void OfferedDefaultsTest::oldFileGetsOnlyLaterDefaults()

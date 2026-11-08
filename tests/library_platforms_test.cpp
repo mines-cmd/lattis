@@ -323,7 +323,7 @@ void LibraryPlatformsTest::defaultPlatforms()
                                                          "[[platform]]\nid = \"proton\"\nname = \"Proton\"\nicon = \"proton\"\n\n"
                                                          "[[platform]]\nid = \"linux\"\nname = \"Linux\"\nicon = \"linux\"\n\n");
     QCOMPARE(readFile(file), withSteam);
-    QCOMPARE(platformIds(*library), QStringList({"steam", "proton", "linux", "switch", "3ds", "wiiu", "wii", "gamecube",
+    QCOMPARE(platformIds(*library), QStringList({"steam", "proton", "linux", "switch", "switch-2", "3ds", "wiiu", "wii", "gamecube",
                                                  "n64", "nds", "gba", "ps4", "ps3", "ps2", "ps1", "psp"}));
     // Every default platform's emulator is a preset. Steam, Proton and Linux need none.
     for (const QVariant &p : library->platformSettings()) {
@@ -331,7 +331,7 @@ void LibraryPlatformsTest::defaultPlatforms()
         const QString id = platform.value("id").toString();
         if (platform.value("defined").toBool() && id != QStringLiteral("steam") && id != QStringLiteral("proton")
             && id != QStringLiteral("linux"))
-            QCOMPARE(platform.value("emulatorNames").toStringList().size(), 1);
+            QVERIFY(!platform.value("emulatorNames").toStringList().isEmpty());
     }
     // No ROM folders yet, so nothing to warn about, even with emulators not installed.
     QVERIFY2(library->problems().isEmpty(), qPrintable(library->problems().join(u'\n')));
@@ -346,7 +346,7 @@ void LibraryPlatformsTest::builtInPlatformsFollowTheUsersOrder()
               "[[platform]]\nid = \"steam\"\nname = \"Steam\"\n\n"
               "[[platform]]\nid = \"3ds\"\nname = \"3DS\"\nemulators = [\"azahar\"]\n");
     auto library = openLibrary();
-    QCOMPARE(platformIds(*library), QStringList({"switch", "steam", "proton", "linux", "3ds"}));
+    QCOMPARE(platformIds(*library), QStringList({"switch", "switch-2", "steam", "proton", "linux", "3ds"})); // Switch 2 comes in after Switch, once
 }
 
 void LibraryPlatformsTest::linuxPlatformAdded()
