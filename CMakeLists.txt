@@ -193,6 +193,7 @@ qt_add_qml_module(lattis
         qml/views/SteamUndoPrompt.qml
         qml/views/ForceClosePrompt.qml
         qml/views/PlayHistoryPopup.qml
+        qml/views/AddSessionDialog.qml
         qml/views/StatsPage.qml
         qml/views/OverviewPage.qml
         qml/views/OverviewCard.qml

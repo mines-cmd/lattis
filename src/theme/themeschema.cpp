@@ -1690,6 +1690,7 @@ constexpr Setting kSettings[] = {
     integer("play_history", "row_radius", "@settings_window.row_radius", 0, 60, "Corner radius of a session's row"),
     color("play_history", "duration_color", "@text", "A session's length"),
     color("play_history", "note_color", "@text_muted", "A session's date when it comes from Steam, and the empty state"),
+    color("play_history", "manual_mark_color", "@text_muted", "The mark on a session added by hand"),
 
     heading("calendar", "Panel"),
     color("calendar", "background", "@menu.popup_background", "Background of the calendar"),

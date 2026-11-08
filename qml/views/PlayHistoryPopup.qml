@@ -15,6 +15,7 @@ MotionPopup {
     readonly property int undoDuration: 15000
 
     property var pendingUndo: null
+    property var addable: []
 
     signal message(string text)
     signal undoHandedOver(string text, var link, int duration)
@@ -33,7 +34,45 @@ MotionPopup {
         leaveSpeed: "normal"
     }
 
+    // The copies a session can go to: Steam and Proton games count play outside Lattis, so not those.
+    function addableCopies(): var {
+        const game = Library.gameWithId(gameId)
+        const all = [{ id: gameId, title: game.title ?? gameTitle, platformName: "" }].concat(game.linked ?? [])
+        const out = []
+        for (const c of all) {
+            const copy = Library.gameWithId(c.id)
+            if (copy.launcher !== "steam")
+                out.push({ id: c.id, title: c.title, platformName: all.length > 1 ? copy.platformName : "", launcher: copy.launcher })
+        }
+        return out
+    }
+
+    function addSession() {
+        addSessionLoader.active = true
+        addSessionLoader.item.openFor(root, gameId, history, addable)
+    }
+
+    function sessionAdded(owner: string, session) {
+        const id = gameId
+        const link = {
+            text: qsTr("Undo"),
+            run: () => {
+                pendingUndo = null
+                const result = Library.deleteSession(owner, session.end)
+                if (result.error !== "")
+                    tell(result.error)
+                if (root.gameId === id)
+                    root.refresh()
+            }
+        }
+        refresh()
+        const text = qsTr("Session added")
+        pendingUndo = {text: text, link: link, until: Date.now() + undoDuration}
+        toast.show(text, link, undoDuration)
+    }
+
     function refresh() {
+        addable = addableCopies()
         history = Library.historyFor(gameId)
         const kept = {}
         for (const e of Object.keys(selection)) {
@@ -42,7 +81,7 @@ MotionPopup {
         }
         selection = kept
         sessionModel.scope = gameId
-        sessionModel.source = sessions.map(s => Object.assign({ gameId: "", source: "" }, s))
+        sessionModel.source = sessions.map(s => Object.assign({ gameId: "", source: "", manual: false }, s))
     }
 
     function durationText(minutes: int): string {
@@ -357,6 +396,17 @@ MotionPopup {
                 }
             }
 
+            Loader {
+                id: addSessionLoader
+                active: false
+                source: "AddSessionDialog.qml"
+            }
+            Connections {
+                target: addSessionLoader.item
+                function onAdded(owner, session) { root.sessionAdded(owner, session) }
+                function onClosed() { closeButton.forceActiveFocus() }
+            }
+
             Label {
                 anchors.centerIn: parent
                 visible: root.sessions.length === 0
@@ -421,7 +471,8 @@ MotionPopup {
                     readonly property bool selected: root.selection[model.key] === true
                     readonly property var session: ({ end: model.end, key: model.key, gameId: model.gameId,
                                                       source: model.source, startMs: model.startMs,
-                                                      endMs: model.endMs, merged: model.merged, minutes: model.minutes })
+                                                      endMs: model.endMs, merged: model.merged, manual: model.manual,
+                                                      minutes: model.minutes })
 
                     // A session that comes back while the popup is open unfolds, the way a deleted one
                     // folds away; the rows made on opening, or for another game, are there at once.
@@ -496,11 +547,32 @@ MotionPopup {
                             color: Theme.playHistory.noteColor
                             elide: Text.ElideRight
                         }
-                        Label {
+                        Item {
                             Layout.preferredWidth: Theme.playHistory.durationColumnWidth
-                            horizontalAlignment: Text.AlignRight
-                            text: row.session.merged ? "" : root.durationText(row.session.minutes)
-                            color: Theme.playHistory.durationColor
+                            Layout.fillHeight: true
+
+                            Label {
+                                id: durationLabel
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: row.session.merged ? "" : root.durationText(row.session.minutes)
+                                color: Theme.playHistory.durationColor
+                            }
+                            Icon {
+                                id: manualMark
+                                visible: row.session.manual
+                                anchors.right: durationLabel.left
+                                anchors.rightMargin: Theme.layout.spacing
+                                anchors.verticalCenter: parent.verticalCenter
+                                path: Icons.editLine
+                                size: Theme.playHistory.deleteIconSize
+                                color: Theme.playHistory.manualMarkColor
+
+                                HoverHandler { id: manualHover }
+                                ToolTip.visible: manualHover.hovered
+                                ToolTip.delay: Theme.tooltip.delay
+                                ToolTip.text: qsTr("Added by hand")
+                            }
                         }
                         Item {
                             Layout.preferredWidth: Theme.playHistory.deleteSize
@@ -549,6 +621,13 @@ MotionPopup {
                     Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
                     onClicked: root.deleteSelected()
                 }
+            }
+            SettingsButton {
+                id: addSessionButton
+                visible: root.addable.length > 0
+                text: qsTr("Add session")
+                iconPath: Icons.add
+                onClicked: root.addSession()
             }
             SettingsButton {
                 id: closeButton
