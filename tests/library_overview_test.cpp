@@ -499,7 +499,7 @@ void LibraryOverviewTest::statusCounts()
 void LibraryOverviewTest::topTags()
 {
     QList<Game> games;
-    for (int i = 0; i < 15; ++i) {
+    for (int i = 0; i < 50; ++i) {
         Game g = game(QString("g%1").arg(i));
         g.tags = {QString("tag%1").arg(i), "Common", "Common"};
         if (i < 3)
@@ -514,7 +514,7 @@ void LibraryOverviewTest::topTags()
     const auto o = LibraryOverview::overview(games);
     QCOMPARE(o.topTags.size(), LibraryOverview::kTopTagLimit);
     QCOMPARE(o.topTags.at(0).tag, QStringLiteral("Common"));
-    QCOMPARE(o.topTags.at(0).count, 15); // a repeated tag counts once per game
+    QCOMPARE(o.topTags.at(0).count, 50); // a repeated tag counts once per game
     QCOMPARE(o.topTags.at(1).tag, QStringLiteral("Often"));
     QCOMPARE(o.topTags.at(1).count, 3);
     // Equal counts by name.

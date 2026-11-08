@@ -248,7 +248,7 @@ struct Overview
 constexpr int kContinueLimit = 7;
 constexpr int kStorageListLimit = 4;
 constexpr int kDormantMonths = 6;
-constexpr int kTopTagLimit = 12;
+constexpr int kTopTagLimit = 40;
 constexpr int kYearSpanLimit = 100; // a wider span (a mistyped year) lists only the years in use
 constexpr int kNearlyDoneLimit = 4;
 constexpr int kNearlyDonePercent = 80;

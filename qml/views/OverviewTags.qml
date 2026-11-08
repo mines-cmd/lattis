@@ -11,26 +11,48 @@ OverviewCard {
     property bool barsGrown: false
 
     readonly property var counts: overview.topTags ?? []
-    readonly property int most: counts.reduce((most, c) => Math.max(most, c.count), 0)
+    readonly property var colors: {
+        const byName = {}
+        for (const t of Library.tags)
+            byName[t.name] = t.color
+        return byName
+    }
 
     signal filterRequested(string tag)
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
 
-    OverviewCardTitle { text: qsTr("Top tags") }
+    RowLayout {
+        Layout.fillWidth: true
 
-    Repeater {
-        model: root.counts
+        OverviewCardTitle {
+            Layout.fillWidth: true
+            text: qsTr("Top tags")
+        }
+        OverviewQuiet {
+            visible: root.counts.length > 0
+            text: qsTr("Click to filter")
+        }
+    }
 
-        OverviewBarRow {
-            regrow: root.regrow
-            required property var modelData
-            name: modelData.tag
-            countText: String(modelData.count)
-            fraction: root.most > 0 ? modelData.count / root.most : 0
-            grown: root.barsGrown
-            onGrew: root.barsGrown = true
-            onClicked: root.filterRequested(modelData.tag)
+    // Only the first rows show; the tags past them are clipped, which also keeps them from the pointer.
+    Flow {
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.min(implicitHeight, Theme.overview.tagRows * Theme.tags.height
+                                         + (Theme.overview.tagRows - 1) * Theme.overview.tagSpacing)
+        clip: true
+        spacing: Theme.overview.tagSpacing
+
+        Repeater {
+            model: root.counts
+
+            OverviewTagChip {
+                required property var modelData
+                name: modelData.tag
+                countText: String(modelData.count)
+                colorIndex: root.colors[modelData.tag] ?? 0
+                onClicked: root.filterRequested(modelData.tag)
+            }
         }
     }
 }
