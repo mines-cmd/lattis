@@ -252,6 +252,7 @@ private:
     void writeHeroicIndex(const QList<HeroicEntry> &entries);
     void writeSteamWeb(const QList<IndexEntry> &entries);
     bool addBuiltInPlatforms();
+    bool addOfferedDefaults();
     void applySteamSync(const ScanResult &result);
     // Steam's values for a manager's shortcut, written into its file.
     void applyManagerCopies(const QString &id, const QList<std::pair<QString, QVariant>> &copies,

@@ -80,6 +80,7 @@ set(LIBRARY_SOURCES
     ../src/library/uninstall.h ../src/library/uninstall.cpp
     ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
     ../src/library/librarystore.h ../src/library/librarystore.cpp
+    ../src/library/offereddefaults.h ../src/library/offereddefaults.cpp
     ../src/library/libraryundo.h ../src/library/libraryundo.cpp
     ../src/library/playhistory.h ../src/library/playhistory.cpp
     ../src/library/libraryoverview.h ../src/library/libraryoverview.cpp
@@ -125,6 +126,10 @@ set(HISTORY_DATA "HISTORY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/history\""
 # Core
 lattis_test(tomlpatch_test
     SOURCES ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+    LIBS tomlplusplus::tomlplusplus)
+lattis_test(offereddefaults_test PRESETS
+    SOURCES ../src/library/offereddefaults.h ../src/library/offereddefaults.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
     LIBS tomlplusplus::tomlplusplus)
 lattis_test(general_test OFFSCREEN
     SOURCES ../src/core/general.h ../src/core/general.cpp ../src/core/dateformat.h ../src/core/dateformat.cpp

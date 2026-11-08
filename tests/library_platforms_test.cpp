@@ -269,8 +269,8 @@ void LibraryPlatformsTest::platformProblems()
 
     // In Library.problems with the file and line, the missing folder once (from the scan).
     const QStringList problems = library->problems();
-    QVERIFY(anyContains(problems, QStringLiteral("library/platforms.toml:11: Switch: Ryubing is a Flatpak")));
-    QVERIFY(anyContains(problems, QStringLiteral("library/platforms.toml:18: 3DS: Azahar isn't installed")));
+    QVERIFY(anyContains(problems, QStringLiteral("library/platforms.toml:13: Switch: Ryubing is a Flatpak")));
+    QVERIFY(anyContains(problems, QStringLiteral("library/platforms.toml:20: 3DS: Azahar isn't installed")));
     QCOMPARE(std::count_if(problems.cbegin(), problems.cend(), [](const QString &p) { return p.contains("roms/3ds not found"); }), 1);
 
     // Allowed by a user override, the Flatpak problem goes away with the next scan.

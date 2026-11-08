@@ -3,6 +3,7 @@
 #include "artimage.h"
 #include "gameid.h"
 #include "metadatasettings.h"
+#include "offereddefaults.h"
 #include "romdbfetch.h"
 #include "romscan.h"
 #include "steamart.h"
@@ -1331,7 +1332,24 @@ bool LibraryStore::addBuiltInPlatforms()
     if (std::any_of(games.cbegin(), games.cend(), [](const GameFile &g) { return g.platform == kProtonPlatform; }))
         add(kProtonPlatform, QStringLiteral("Proton"));
     add(kLinuxPlatform, QStringLiteral("Linux"));
-    return added;
+    return addOfferedDefaults() || added;
+}
+
+bool LibraryStore::addOfferedDefaults()
+{
+    bool changedList = false;
+    const QString problem = patchAndLoad(kPlatforms, defaultPlatforms(), [&](const QString &text) {
+        QStringList added;
+        const TomlPatch::Result r
+            = OfferedDefaults::apply(text, defaultPlatforms(), OfferedDefaults::bootstrap(), &added);
+        for (const QString &what : std::as_const(added))
+            qCInfo(lcLibrary).noquote() << "added" << what << "to" << kPlatforms;
+        changedList = !added.isEmpty();
+        return r;
+    });
+    if (!problem.isEmpty())
+        qCWarning(lcLibrary).noquote() << problem;
+    return changedList && problem.isEmpty();
 }
 
 void LibraryStore::setStateDir(const QString &stateDir)

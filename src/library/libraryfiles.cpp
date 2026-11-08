@@ -45,12 +45,14 @@ void warnUnknownKey(QStringList *warnings, const QString &at, const QString &key
 }
 
 QList<const toml::table *> arrayOfTables(const toml::table &root, const char *name, const QString &displayPath,
-                                         QStringList *warnings)
+                                         QStringList *warnings, const char *otherKey = nullptr)
 {
     QList<const toml::table *> out;
     const QString arrayName = QLatin1String(name);
     for (auto &&[k, node] : root) {
         const QString key = toQString(k.str());
+        if (otherKey && key == QLatin1String(otherKey))
+            continue;
         if (key != arrayName) {
             warnings->append(QStringLiteral("%1: unknown key %2; entries go in [[%3]] blocks%4")
                                  .arg(where(displayPath, node), key, arrayName, suggestion(key, {arrayName})));
@@ -127,7 +129,7 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
                                QStringLiteral("igdb_platforms"), QStringLiteral("in_rail"),
                                QStringLiteral("auto_backup")};
     QSet<QString> ids;
-    for (const toml::table *entry : arrayOfTables(root, "platform", displayPath, &out.warnings)) {
+    for (const toml::table *entry : arrayOfTables(root, "platform", displayPath, &out.warnings, "offered")) {
         const QString at = where(displayPath, *entry);
         Platform p;
         p.line = int(entry->source().begin.line);

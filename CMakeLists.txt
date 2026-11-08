@@ -369,6 +369,7 @@ qt_add_qml_module(lattis
         src/library/libraryfiles.h src/library/libraryfiles.cpp
         src/library/librarycache.h src/library/librarycache.cpp
         src/library/librarystore.h src/library/librarystore.cpp
+        src/library/offereddefaults.h src/library/offereddefaults.cpp
         src/library/libraryundo.h src/library/libraryundo.cpp
         src/library/libraryversion.h src/library/libraryversion.cpp
         src/library/emulators.h src/library/emulators.cpp

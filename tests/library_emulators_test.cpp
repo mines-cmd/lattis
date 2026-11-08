@@ -212,10 +212,10 @@ void LibraryEmulatorsTest::userEmulatorEdits()
 {
     const QString file = m_data + QStringLiteral("/library/emulators.toml");
     writeFile(file, "[[emulator]]\nid = \"mine\"\nname = \"Mine\"\ncommand = [\"{exe}\", \"{rom}\"]\n"
-                    "extensions = [\"iso\"]\nsaves = { native = [\"~/x\"] }\n");
+                    "extensions = [\"iso\"]\nkeys = { native = [\"~/x\"] }\n");
     auto library = openLibrary();
     QTRY_VERIFY(!emulatorIn(*library, "mine").isEmpty());
-    QCOMPARE(emulatorIn(*library, "mine").value("fileOnly").toStringList(), QStringList{"saves"});
+    QCOMPARE(emulatorIn(*library, "mine").value("fileOnly").toStringList(), QStringList{"keys"});
 
     QCOMPARE(library->setEmulatorValue("mine", "name", "Mine 2"), QString());
     QCOMPARE(library->setEmulatorValue("mine", "flatpak", "org.example.Mine"), QString());

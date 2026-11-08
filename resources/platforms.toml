@@ -13,6 +13,24 @@
 # to change. A platform without games doesn't show in the rail. Delete the file to get the
 # defaults back.
 
+# ids Lattis has offered as defaults; it adds a default that isn't here once, and delete one from here
+# to have it offered again.
+offered = [
+    "switch", "switch/ryubing",
+    "3ds", "3ds/azahar",
+    "wiiu", "wiiu/cemu",
+    "wii", "wii/dolphin",
+    "gamecube", "gamecube/dolphin",
+    "n64", "n64/rmg",
+    "nds", "nds/melonds",
+    "gba", "gba/mgba",
+    "ps4", "ps4/shadps4",
+    "ps3", "ps3/rpcs3",
+    "ps2", "ps2/pcsx2",
+    "ps1", "ps1/duckstation",
+    "psp", "psp/ppsspp",
+]
+
 [[platform]]
 id = "switch"
 name = "Switch"
