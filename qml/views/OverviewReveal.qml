@@ -11,6 +11,7 @@ Item {
     // Set by the page, which places the cards: the column it chose, and whether the card grows to end level with the other column.
     property int column: -1
     property bool stretch: false
+    property bool seen: false
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight

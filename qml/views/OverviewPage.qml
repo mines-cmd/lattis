@@ -511,8 +511,10 @@ FocusScope {
                 }
 
                 // Cards differ in height and come and go with the library, so no fixed pairing or split keeps
-                // both columns level. Each card, in this order, goes in the shorter column when the page loads
-                // and stays there, so a refresh doesn't move cards around while they are read.
+                // both columns level. Each card, in this order, goes in the shorter column. A card that has
+                // been on screen keeps its column, so a refresh doesn't move cards around while they are read;
+                // the ones below the view are dealt again, since cards above them grow as answers arrive
+                // (Compatibility as ProtonDB answers) and the first deal no longer levels the columns.
                 Item {
                     id: stacks
 
@@ -525,19 +527,42 @@ FocusScope {
                     Layout.preferredHeight: stackHeight
 
                     function reset() {
-                        for (let i = 0; i < children.length; ++i)
+                        for (let i = 0; i < children.length; ++i) {
                             children[i].column = -1
+                            children[i].seen = false
+                        }
                         Qt.callLater(relayout)
                     }
 
+                    function markSeen() {
+                        if (!root.revealedCards)
+                            return
+                        const viewBottom = mapFromItem(flick, 0, flick.height).y
+                        for (let i = 0; i < children.length; ++i) {
+                            const card = children[i]
+                            if (card.visible && card.column >= 0 && card.y < viewBottom)
+                                card.seen = true
+                        }
+                    }
+
                     function relayout() {
+                        markSeen()
                         const bottoms = new Array(count).fill(0)
                         const last = new Array(count).fill(null)
+                        const kept = []
+                        const dealt = []
                         for (let i = 0; i < children.length; ++i) {
                             const card = children[i]
                             if (!card.visible)
                                 continue
-                            if (card.column < 0 || card.column >= count)
+                            if (card.seen && card.column >= 0 && card.column < count)
+                                kept.push(card)
+                            else
+                                dealt.push(card)
+                        }
+                        // Seen cards go first: an unseen card dealt above one would push it down in view.
+                        for (const card of kept.concat(dealt)) {
+                            if (dealt.includes(card))
                                 card.column = bottoms.indexOf(Math.min(...bottoms))
                             card.x = card.column * (columnWidth + gap)
                             card.y = bottoms[card.column]
@@ -560,6 +585,15 @@ FocusScope {
 
                     onCountChanged: reset()
                     onWidthChanged: relayout()
+
+                    Connections {
+                        target: flick
+                        function onContentYChanged() { stacks.markSeen() }
+                    }
+                    Connections {
+                        target: root
+                        function onRevealedCardsChanged() { stacks.markSeen() }
+                    }
                     Component.onCompleted: {
                         for (let i = 0; i < children.length; ++i) {
                             children[i].implicitHeightChanged.connect(() => Qt.callLater(relayout))
