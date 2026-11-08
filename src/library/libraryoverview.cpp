@@ -64,23 +64,17 @@ bool bySizeThenTitle(const Sized &a, const Sized &b)
     return a.id < b.id;
 }
 
-// Every installed copy takes its own space, so linked copies are all counted; a linked copy is dormant by the
-// group's last play, since playing it anywhere keeps it in use.
-void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &drives, const QDateTime &now)
+// Every installed copy takes its own space, so linked copies are all counted.
+void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &drives)
 {
-    const QDateTime cutoff = now.addMonths(-kDormantMonths);
     QList<DriveUse> uses;
     QHash<QString, int> useOfDevice;
     for (const Game &g : games) {
         if (g.hidden || !g.installed)
             continue;
         addBytes(out.platformSizes, g.platform, g.sizeBytes);
-        const QDateTime lastPlayed = g.groupId.isEmpty() ? g.lastPlayed : g.groupLastPlayed;
-        const Sized row{g.id, g.title, g.platform, g.coverUrl, lastPlayed, qMax<qint64>(g.sizeBytes, 0)};
-        if (row.bytes > 0)
-            out.largest.append(row);
-        if (!lastPlayed.isValid() || lastPlayed < cutoff)
-            out.dormant.append(row);
+        if (g.sizeBytes > 0)
+            out.largest.append({g.id, g.title, g.platform, g.coverUrl, g.sizeBytes});
 
         const Drive *drive = g.path.isEmpty() ? nullptr : driveOf(g.path, drives);
         if (!drive)
@@ -108,9 +102,7 @@ void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &dri
     sortBySize(out.platformSizes);
 
     std::sort(out.largest.begin(), out.largest.end(), bySizeThenTitle);
-    std::sort(out.dormant.begin(), out.dormant.end(), bySizeThenTitle);
     out.largest.resize(qMin<qsizetype>(out.largest.size(), kStorageListLimit));
-    out.dormant.resize(qMin<qsizetype>(out.dormant.size(), kStorageListLimit));
 }
 
 // Platforms count each copy where it is; statuses, tags and years count a linked group once, by its shown copy.
@@ -421,7 +413,7 @@ Overview overview(const QList<Game> &games, const QList<Drive> &drives, const QD
     if (out.continuePlaying.size() > kContinueLimit)
         out.continuePlaying.resize(kContinueLimit);
 
-    addStorage(out, games, drives, now);
+    addStorage(out, games, drives);
     addBreakdowns(out, games, units);
     addNextSteps(out, games, units, backedUp);
     addCompatibility(out, units, sources);
@@ -455,7 +447,6 @@ QVariantMap toVariantMap(const Overview &overview)
                                    {QStringLiteral("title"), s.title},
                                    {QStringLiteral("platform"), s.platform},
                                    {QStringLiteral("coverUrl"), s.coverUrl},
-                                   {QStringLiteral("lastPlayed"), s.lastPlayed},
                                    {QStringLiteral("bytes"), s.bytes}});
         return out;
     };
@@ -558,7 +549,6 @@ QVariantMap toVariantMap(const Overview &overview)
 {QStringLiteral("drives"), drives},
             {QStringLiteral("platformSizes"), sizes(overview.platformSizes)},
             {QStringLiteral("largest"), rows(overview.largest)},
-            {QStringLiteral("dormant"), rows(overview.dormant)},
             {QStringLiteral("games"), t.games},
             {QStringLiteral("installed"), t.installed},
             {QStringLiteral("platforms"), t.platforms},

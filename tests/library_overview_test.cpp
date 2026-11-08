@@ -45,7 +45,7 @@ private slots:
     void otherFilesNeverBelowZero();
     void storageLeavesOutHiddenAndUninstalled();
     void linkedCopiesEachTakeSpace();
-    void largestAndDormant();
+    void largest();
     void storageVariantMap();
     void platformCounts();
     void statusCounts();
@@ -326,7 +326,6 @@ void LibraryOverviewTest::unknownSizesAreNotCounted()
     QCOMPARE(none.drives.at(0).gamesBytes, qint64(0));
     QCOMPARE(none.drives.at(0).otherBytes, 50 * GB);
     QVERIFY(none.largest.isEmpty());
-    QCOMPARE(none.dormant.size(), 1);
 }
 
 void LibraryOverviewTest::otherFilesNeverBelowZero()
@@ -360,7 +359,7 @@ void LibraryOverviewTest::storageLeavesOutHiddenAndUninstalled()
     QCOMPARE(o.platformSizes.size(), 2); // steam (s) and heroic (p, on no known drive)
     QCOMPARE(o.largest.size(), 2);
     QCOMPARE(o.largest.at(0).id, QStringLiteral("s"));
-    for (const LibraryOverview::Sized &row : o.dormant)
+    for (const LibraryOverview::Sized &row : o.largest)
         QVERIFY(row.id != "h" && row.id != "n");
 
     // No drive holds a game: no bars.
@@ -372,45 +371,27 @@ void LibraryOverviewTest::linkedCopiesEachTakeSpace()
 {
     Game steam = installedAt("steam-1", "steam", "/g/steam-1", 30 * GB);
     steam.groupId = "steam-1";
-    steam.groupLastPlayed = QDateTime(QDate(2026, 11, 1), QTime(10, 0), QTimeZone::UTC);
     Game epic = installedAt("epic-1", "epic", "/g/epic-1", 32 * GB);
     epic.groupId = "steam-1";
-    epic.groupLastPlayed = steam.groupLastPlayed;
-    epic.lastPlayed = QDateTime(QDate(2025, 1, 1), QTime(10, 0), QTimeZone::UTC); // played here long ago
 
     const LibraryOverview::Overview o = LibraryOverview::overview({steam, epic}, {drive("/", 200 * GB, 100 * GB)}, kNow);
     QCOMPARE(o.totals.games, 1);
     QCOMPARE(o.drives.at(0).gamesBytes, 62 * GB);
     QCOMPARE(o.largest.size(), 2);
     QCOMPARE(o.largest.at(0).id, QStringLiteral("epic-1"));
-    // The group was played this month, so neither copy is dormant.
-    QVERIFY(o.dormant.isEmpty());
 }
 
-void LibraryOverviewTest::largestAndDormant()
+void LibraryOverviewTest::largest()
 {
     QList<Game> games;
     for (int i = 0; i < 6; ++i)
         games.append(installedAt(QString("g%1").arg(i), "steam", "/g", (i + 1) * GB));
-    // g5 is the largest and was played yesterday; g0..g4 never or long ago.
-    games[5].lastPlayed = kNow.addDays(-1);
-    games[4].lastPlayed = kNow.addMonths(-6).addDays(1); // just inside the threshold
-    games[3].lastPlayed = kNow.addMonths(-6).addDays(-1); // just outside
-    games[2].lastPlayed = kNow.addYears(-2);
-    Game unknown = installedAt("u", "steam", "/g", 0);
-    games.append(unknown);
+    games.append(installedAt("u", "steam", "/g", 0));
 
     const LibraryOverview::Overview o = LibraryOverview::overview(games, {drive("/", 100 * GB, 50 * GB)}, kNow);
     QCOMPARE(o.largest.size(), LibraryOverview::kStorageListLimit);
     QCOMPARE(o.largest.at(0).id, QStringLiteral("g5"));
     QCOMPARE(o.largest.at(3).id, QStringLiteral("g2"));
-
-    // Dormant: g3, g2, g1, g0 and u; the biggest four, the unknown size last (so cut).
-    QCOMPARE(o.dormant.size(), LibraryOverview::kStorageListLimit);
-    QCOMPARE(o.dormant.at(0).id, QStringLiteral("g3"));
-    QCOMPARE(o.dormant.at(1).id, QStringLiteral("g2"));
-    QCOMPARE(o.dormant.at(2).id, QStringLiteral("g1"));
-    QCOMPARE(o.dormant.at(3).id, QStringLiteral("g0"));
 }
 
 void LibraryOverviewTest::storageVariantMap()
@@ -432,7 +413,6 @@ void LibraryOverviewTest::storageVariantMap()
     const QVariantMap row = map.value("largest").toList().at(0).toMap();
     QCOMPARE(row.value("id").toString(), QStringLiteral("g"));
     QCOMPARE(row.value("bytes").toLongLong(), 5 * GB);
-    QCOMPARE(map.value("dormant").toList().size(), 1);
     QCOMPARE(map.value("platformSizes").toList().size(), 1);
 }
 

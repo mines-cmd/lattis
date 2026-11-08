@@ -1225,7 +1225,7 @@ constexpr Setting kSettings[] = {
     integer("overview", "storage_segment_min_width", "4", 1, 50, "Narrowest a part of a drive's bar is drawn, so a small platform stays visible"),
     color("overview", "storage_free", "@stats.track", "The free space on a drive's bar"),
     color("overview", "storage_other", "@palette.text_muted", "What is on a drive besides games, on its bar and in the legend"),
-    integer("overview", "storage_thumb_width", "40", 16, 200, "Width of a cover in the Largest and Dormant lists; it is as tall as the cover's shape"),
+    integer("overview", "storage_thumb_width", "40", 16, 200, "Width of a cover in the Largest list; it is as tall as the cover's shape"),
     heading("overview", "From your backlog"),
     integer("overview", "backlog_cover_width", "96", 40, 400, "Width of the game's cover in From your backlog; it is as tall as the cover's shape"),
     heading("overview", "Needs attention"),

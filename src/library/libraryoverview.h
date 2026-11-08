@@ -93,7 +93,6 @@ struct Sized
     QString title;
     QString platform;
     QString coverUrl;
-    QDateTime lastPlayed;
     qint64 bytes = 0;
 };
 
@@ -234,7 +233,6 @@ struct Overview
     QList<DriveUse> drives; // the ones holding games, most games first
     QList<PlatformSize> platformSizes;
     QList<Sized> largest;
-    QList<Sized> dormant;
     QList<PlatformCount> platformCounts; // most games first
     QList<StatusCount> statusCounts; // the list's status order, none last; only the ones in use
     QList<TagCount> topTags;
@@ -247,7 +245,6 @@ struct Overview
 
 constexpr int kContinueLimit = 7;
 constexpr int kStorageListLimit = 4;
-constexpr int kDormantMonths = 6;
 constexpr int kTopTagLimit = 40;
 constexpr int kYearSpanLimit = 100; // a wider span (a mistyped year) lists only the years in use
 constexpr int kNearlyDoneLimit = 4;

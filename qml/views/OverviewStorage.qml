@@ -11,14 +11,13 @@ OverviewCard {
     property real regrow: 1
     property var info
     property bool stacked: false
-    property string mode: "largest"
     // Set once the bars have grown, so a refresh while the page is open doesn't grow them again.
     property bool barsGrown: false
 
     readonly property var drives: overview.drives ?? []
     readonly property var platformSizes: overview.platformSizes ?? []
-    readonly property var rows: (mode === "largest" ? overview.largest : overview.dormant) ?? []
-    readonly property bool hasContent: drives.length > 0 || (overview.largest ?? []).length > 0 || (overview.dormant ?? []).length > 0
+    readonly property var rows: overview.largest ?? []
+    readonly property bool hasContent: drives.length > 0 || rows.length > 0
     readonly property real otherTotal: drives.reduce((sum, d) => sum + d.otherBytes, 0)
 
     signal gameRequested(string id)
@@ -194,17 +193,15 @@ OverviewCard {
             Layout.alignment: Qt.AlignTop
             spacing: Theme.layout.spacing
 
-            SegmentedToggle {
-                accessibleName: qsTr("List")
-                choices: [{ id: "largest", text: qsTr("Largest") }, { id: "dormant", text: qsTr("Dormant") }]
-                current: root.mode
-                onPicked: id => root.mode = id
+            // The card spaces its own title by twice the spacing; this column's spacing gives the other half.
+            OverviewCardTitle {
+                Layout.bottomMargin: Theme.layout.spacing
+                text: qsTr("Largest")
             }
 
             OverviewQuiet {
                 visible: root.rows.length === 0
-                text: root.mode === "largest" ? qsTr("No installed game has a known size yet")
-                                              : qsTr("Every installed game was played in the last six months")
+                text: qsTr("No installed game has a known size yet")
             }
 
             Repeater {
@@ -251,10 +248,7 @@ OverviewCard {
                         }
                         OverviewQuiet {
                             Layout.fillWidth: true
-                            text: root.mode === "largest"
-                                ? root.nameOf(entry.modelData.platform)
-                                : entry.modelData.lastPlayedText !== "" ? qsTr("Played %1").arg(entry.modelData.lastPlayedText)
-                                                                        : qsTr("Not played yet")
+                            text: root.nameOf(entry.modelData.platform)
                             elide: Text.ElideRight
                         }
                     }
