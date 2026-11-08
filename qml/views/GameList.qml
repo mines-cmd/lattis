@@ -241,6 +241,8 @@ Rectangle {
             Library.installedOnly = false
             Library.platformFilter = ""
         }
+        if (Library.rowOfGame(id) < 0 && Library.collectionId !== "")
+            Library.closeCollection()
         selectGame(id)
     }
 
@@ -371,6 +373,7 @@ Rectangle {
         function onFailed(text) { root.message(text) }
         function onManagerChosen(id) { root.modManagerRequested(id) }
         function onNewTagRequested(ids) { root.askNewTag(ids) }
+        function onNewCollectionRequested(ids) { root.askCollection("new", "", "", ids) }
         function onOpened() { root.placeMenu() }
         function onHeightChanged() { root.placeMenu() }
         function onWidthChanged() { root.placeMenu() }
@@ -423,7 +426,10 @@ Rectangle {
             ? Library.gameCounts.find(p => p.id === Library.platformFilter) : undefined
         if (platform !== undefined)
             out.push({ key: "platform", text: platform.name, off: () => Library.platformFilter = "" })
-        if (!Library.installedOnly)
+        // Installed off is how a collection opens, so there it's Installed on that is the filter.
+        if (Library.collectionId !== "" && Library.installedOnly)
+            out.push({ key: "installed", text: qsTr("Installed only"), off: () => Library.installedOnly = false })
+        else if (Library.collectionId === "" && !Library.installedOnly)
             out.push({ key: "installed", text: qsTr("Not installed shown"), off: () => Library.installedOnly = true })
         if (Library.favoritesOnly)
             out.push({ key: "favorites", text: qsTr("Favorites"), off: () => Library.favoritesOnly = false })
@@ -537,6 +543,26 @@ Rectangle {
     }
     Connections {
         target: newTag.item
+        function onMessage(text) { root.message(text) }
+        function onClosed() { root.focusList() }
+    }
+
+    function askCollection(mode, id, name, ids) {
+        collectionDialog.active = true
+        const dialog = collectionDialog.item
+        dialog.mode = mode
+        dialog.collectionId = id
+        dialog.startName = name
+        dialog.ids = ids
+        dialog.open()
+    }
+    Loader {
+        id: collectionDialog
+        active: false
+        source: "CollectionDialog.qml"
+    }
+    Connections {
+        target: collectionDialog.item
         function onMessage(text) { root.message(text) }
         function onClosed() { root.focusList() }
     }
@@ -665,6 +691,15 @@ Rectangle {
                 Connections {
                     target: filterPanel.item
                     function onClosedByKey() { root.focusList() }
+                    function onCollectionDialogRequested(mode, id, name) {
+                        filterPanel.item.close()
+                        root.askCollection(mode, id, name, [])
+                    }
+                    function onCollectionDeleted(id) {
+                        const error = Library.deleteCollection(id)
+                        if (error !== "")
+                            root.message(error)
+                    }
                 }
             }
         }
@@ -737,6 +772,60 @@ Rectangle {
         }
         }
 
+        // The open collection: its name and size, and × to leave it.
+        Rectangle {
+            visible: Library.collectionId !== ""
+            Layout.fillWidth: true
+            Layout.leftMargin: -root.reach
+            Layout.topMargin: root.extraTop - Theme.layout.spacing
+            Layout.preferredHeight: Theme.collections.bannerHeight
+            radius: Theme.collections.bannerRadius
+            color: Theme.collections.bannerBackground
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 8
+                anchors.rightMargin: 4
+                spacing: Theme.layout.spacing
+
+                Label {
+                    Layout.fillWidth: true
+                    text: Library.collection.name ?? ""
+                    color: Theme.collections.bannerText
+                    font.weight: Theme.font.strongWeight
+                    elide: Text.ElideRight
+                }
+                Label {
+                    text: qsTr("%n game(s)", "", Library.collection.count ?? 0)
+                    color: Theme.collections.bannerCountColor
+                    font.pixelSize: Theme.list.sortValueFontSize
+                }
+                AbstractButton {
+                    id: leaveButton
+                    Layout.rightMargin: 4
+                    padding: 6
+                    text: qsTr("Leave the collection")
+                    hoverEnabled: true
+                    focusPolicy: Qt.NoFocus
+                    onClicked: Library.closeCollection()
+
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    ToolTip.visible: hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: text
+
+                    background: null
+                    contentItem: Icon {
+                        id: leaveIcon
+                        path: Icons.close
+                        size: Theme.list.sortValueFontSize + 2
+                        color: Theme.collections.bannerText
+                        opacity: leaveButton.hovered ? 1 : 0.7
+                    }
+                }
+            }
+        }
+
         Label {
             visible: list.count === 0 && (Library.loading || Library.gameCount === 0)
             opacity: visible ? 1 : 0
@@ -755,8 +844,8 @@ Rectangle {
 
             Layout.fillWidth: true
             Layout.leftMargin: -root.reach
-            // Less the gap the chip row's cell adds even when empty.
-            Layout.topMargin: root.extraTop - Theme.layout.spacing
+            // Less the gap the chip row's cell adds even when empty; under the banner, its own spacing.
+            Layout.topMargin: (Library.collectionId !== "" ? Theme.collections.bannerSpacing : root.extraTop) - Theme.layout.spacing
             Layout.fillHeight: true
             clip: true
             model: Library

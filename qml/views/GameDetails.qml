@@ -722,6 +722,7 @@ Item {
             text: Library.gameCount === 0 ? qsTr("Your library is empty")
                 : root.allCollapsed ? qsTr("All groups are collapsed")
                 : Library.search !== "" ? qsTr("No games match \"%1\"").arg(Library.search)
+                : Library.collectionId !== "" && (Library.collection.count ?? 0) === 0 ? qsTr("This collection has no games")
                 : Library.filtersActive ? qsTr("No games match the filters")
                 : Library.notInstalledHidden > 0 ? qsTr("No installed games")
                 : qsTr("No games match")

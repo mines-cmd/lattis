@@ -332,6 +332,20 @@ void Library::startRefresh()
 
 ListSettings Library::listSettings() const
 {
+    ListSettings s = workingSettings();
+    if (m_held) {
+        s.installedOnly = m_held->list.installedOnly;
+        s.favoritesOnly = m_held->list.favoritesOnly;
+        s.tags = m_held->list.tags;
+        s.matchAllTags = m_held->list.matchAllTags;
+        s.statuses = m_held->list.statuses;
+        s.showHidden = m_held->list.showHidden;
+    }
+    return s;
+}
+
+ListSettings Library::workingSettings() const
+{
     ListSettings s;
     s.sort = m_sort;
     s.descending = m_sortDescending;
@@ -383,9 +397,25 @@ void Library::loadListSettings()
     applyListSettings(parsed.value); // the app's own writes change nothing here
 }
 
-void Library::applyListSettings(const ListSettings &s)
+void Library::applyListSettings(const ListSettings &incoming)
 {
-    const ListSettings now = listSettings();
+    ListSettings s = incoming;
+    const ListSettings now = workingSettings();
+    if (m_held) {
+        // The file holds the normal view: what changed there lands in the held copy, never in the open collection.
+        m_held->list.installedOnly = s.installedOnly;
+        m_held->list.favoritesOnly = s.favoritesOnly;
+        m_held->list.tags = s.tags;
+        m_held->list.matchAllTags = s.matchAllTags;
+        m_held->list.statuses = s.statuses;
+        m_held->list.showHidden = s.showHidden;
+        s.installedOnly = now.installedOnly;
+        s.favoritesOnly = now.favoritesOnly;
+        s.tags = now.tags;
+        s.matchAllTags = now.matchAllTags;
+        s.statuses = now.statuses;
+        s.showHidden = now.showHidden;
+    }
     if (s == now)
         return;
     const bool sortDiffers = s.sort != now.sort || s.descending != now.descending;
@@ -1116,6 +1146,7 @@ void Library::reloadFromStore()
         m_tagNames.insert(it.key());
     if (effectiveTags() != tagsBefore)
         emit filtersChanged();
+    updateCollections();
 
     bool showingGroups = false;
     int notInstalled = 0;
@@ -1492,6 +1523,7 @@ void Library::setStatusFilter(const QStringList &statuses)
 
 void Library::showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags)
 {
+    leaveCollection(false);
     clearFilters();
     setInstalledOnly(false);
     setSearch({});
@@ -1549,17 +1581,19 @@ void Library::setShowSortValue(bool show)
 
 bool Library::filtersActive() const
 {
-    return !m_installedOnly || m_favoritesOnly || m_showHidden || !effectiveTags().isEmpty()
+    // Installed off is how a collection starts, so there it's Installed on that counts as a filter.
+    return m_installedOnly == bool(m_held) || m_favoritesOnly || m_showHidden || !effectiveTags().isEmpty()
         || !m_statusFilter.isEmpty() || !m_steamFilter.isEmpty();
 }
 
 void Library::clearFilters()
 {
-    if (m_installedOnly && !m_favoritesOnly && m_tagFilter.isEmpty() && !m_tagMatchAll && m_statusFilter.isEmpty()
-        && m_steamFilter.isEmpty() && !m_showHidden)
+    const bool baseInstalled = !m_held;
+    if (m_installedOnly == baseInstalled && !m_favoritesOnly && m_tagFilter.isEmpty() && !m_tagMatchAll
+        && m_statusFilter.isEmpty() && m_steamFilter.isEmpty() && !m_showHidden)
         return;
     const bool platformsDiffer = m_showHidden;
-    m_installedOnly = true;
+    m_installedOnly = baseInstalled;
     m_favoritesOnly = false;
     m_tagFilter.clear();
     m_tagMatchAll = false;
@@ -1569,6 +1603,384 @@ void Library::clearFilters()
     if (platformsDiffer && updatePlatforms())
         emit platformsChanged();
     filtersEdited();
+}
+
+QVariantMap Library::collection() const
+{
+    for (const QVariant &c : m_collections) {
+        const QVariantMap map = c.toMap();
+        if (map.value(QStringLiteral("id")).toString() == m_collectionId)
+            return map;
+    }
+    return {};
+}
+
+void Library::setTagsOpen(bool open)
+{
+    if (m_tagsOpen == open)
+        return;
+    m_tagsOpen = open;
+    emit tagsOpenChanged();
+    m_viewStateTimer.start();
+}
+
+void Library::updateCollections()
+{
+    const QList<Collection> &all = m_store.collections();
+    QList<std::pair<QString, QVariantMap>> entries;
+    entries.reserve(all.size());
+    for (const Collection &c : all) {
+        const CollectionMatcher matcher = matcherOf(c);
+        const int count = int(std::count_if(m_games.cbegin(), m_games.cend(),
+                                            [&](const Game &g) { return !g.hidden && matcher.isMember(g); }));
+        entries.append({c.name, QVariantMap{{QStringLiteral("id"), c.id}, {QStringLiteral("name"), c.name},
+                                            {QStringLiteral("count"), count}}});
+    }
+    const QCollator collator = titleCollator();
+    std::stable_sort(entries.begin(), entries.end(),
+                     [&](const auto &a, const auto &b) { return collator.compare(a.first, b.first) < 0; });
+    QVariantList list;
+    for (const auto &entry : std::as_const(entries))
+        list.append(entry.second);
+
+    if (!m_collectionId.isEmpty()) {
+        const auto open = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == m_collectionId; });
+        if (open == all.cend())
+            leaveCollection(false); // deleted while open; the caller builds the rows
+        else
+            m_matcher.emplace(matcherOf(*open));
+    }
+    if (!m_restoreCollection.isEmpty()) {
+        if (std::any_of(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == m_restoreCollection; }))
+            enterCollection(std::exchange(m_restoreCollection, QString()), false);
+        else if (!m_store.loading())
+            m_restoreCollection.clear();
+    }
+
+    if (list != m_collections) {
+        m_collections = std::move(list);
+        emit collectionsChanged();
+        if (!m_collectionId.isEmpty())
+            emit collectionChanged();
+    }
+}
+
+void Library::openCollection(const QString &id)
+{
+    enterCollection(id, true);
+}
+
+void Library::closeCollection()
+{
+    leaveCollection(true);
+}
+
+bool Library::enterCollection(const QString &id, bool rebuildNow)
+{
+    if (id == m_collectionId)
+        return false;
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return false;
+
+    if (!m_held)
+        m_held = HeldFilters{workingSettings(), m_steamFilter, m_platformFilter};
+    const bool platformsDiffer = m_showHidden;
+    m_installedOnly = false;
+    m_favoritesOnly = false;
+    m_tagFilter.clear();
+    m_tagMatchAll = false;
+    m_statusFilter.clear();
+    m_steamFilter.clear();
+    m_showHidden = false;
+    const bool platformChanged = !m_platformFilter.isEmpty();
+    m_platformFilter.clear();
+    m_collectionId = id;
+    m_matcher.emplace(matcherOf(*found));
+    if (platformsDiffer && updatePlatforms())
+        emit platformsChanged();
+    if (platformChanged)
+        emit platformFilterChanged();
+    emit collectionChanged();
+    emit filtersChanged();
+    if (rebuildNow)
+        rebuild();
+    m_viewStateTimer.start();
+    return true;
+}
+
+void Library::leaveCollection(bool rebuildNow)
+{
+    if (!m_held)
+        return;
+    const HeldFilters held = *m_held;
+    m_held.reset();
+    m_matcher.reset();
+    m_collectionId.clear();
+    const bool platformsDiffer = m_showHidden != held.list.showHidden;
+    m_installedOnly = held.list.installedOnly;
+    m_favoritesOnly = held.list.favoritesOnly;
+    m_tagFilter = held.list.tags;
+    m_tagMatchAll = held.list.matchAllTags;
+    m_statusFilter = held.list.statuses;
+    m_steamFilter = held.steam;
+    m_showHidden = held.list.showHidden;
+    if (platformsDiffer && updatePlatforms())
+        emit platformsChanged();
+    const QString platform = std::any_of(m_platforms.cbegin(), m_platforms.cend(),
+                                         [&](const Platform &p) { return p.id == held.platform; })
+        ? held.platform : QString();
+    const bool platformChanged = platform != m_platformFilter;
+    m_platformFilter = platform;
+    if (platformChanged)
+        emit platformFilterChanged();
+    emit collectionChanged();
+    emit filtersChanged();
+    if (rebuildNow)
+        rebuild();
+    m_viewStateTimer.start();
+}
+
+QVariantMap Library::collectionStates(const QStringList &ids) const
+{
+    QVariantMap out;
+    if (ids.isEmpty())
+        return out;
+    const QSet<QString> wanted(ids.cbegin(), ids.cend());
+    for (const Collection &c : m_store.collections()) {
+        const CollectionMatcher matcher = matcherOf(c);
+        int in = 0;
+        int total = 0;
+        for (const Game &g : m_games) {
+            if (!wanted.contains(g.id))
+                continue;
+            ++total;
+            in += matcher.isMember(g) ? 1 : 0;
+        }
+        if (in > 0)
+            out.insert(c.id, in == total ? 1 : 2);
+    }
+    return out;
+}
+
+QString Library::setCollectionMembers(const QStringList &ids, const QString &collectionId, bool member)
+{
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == collectionId; });
+    if (found == all.cend())
+        return tr("That collection no longer exists");
+    Collection c = *found;
+
+    int changed = 0;
+    for (const QString &id : ids) {
+        const auto game = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == id; });
+        if (game == m_games.cend())
+            continue;
+        // The copies of one game are members together, so the lists drop every one of them.
+        QStringList group = game->linked;
+        group.append(game->id);
+        if (!game->groupId.isEmpty())
+            group.append(game->groupId);
+        const auto drop = [&](QStringList &list) {
+            const qsizetype before = list.size();
+            list.removeIf([&](const QString &x) { return group.contains(x); });
+            return list.size() != before;
+        };
+        const auto inNow = [&] { return matcherOf(c).isMember(*game); };
+        const bool was = inNow();
+        if (member) {
+            drop(c.removed);
+            if (!inNow())
+                c.added.append(game->id);
+        } else {
+            drop(c.added);
+            if (inNow())
+                c.removed.append(game->id);
+        }
+        changed += was != member ? 1 : 0;
+    }
+    if (c == *found)
+        return {};
+
+    const QString games = changed == 1 ? tr("1 game") : tr("%1 games").arg(changed);
+    const QString text = member ? tr("%1 added to %2").arg(games, c.name) : tr("%1 removed from %2").arg(games, c.name);
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    const QString error = m_store.setCollection(c);
+    commitUndo(text);
+    return error;
+}
+
+QString Library::addCollection(const QString &name, const QStringList &ids)
+{
+    return makeCollection(name, ids, std::nullopt);
+}
+
+QString Library::makeCollection(const QString &name, const QStringList &ids, const std::optional<CollectionRules> &rules)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return tr("A collection needs a name");
+    QSet<QString> taken;
+    for (const Collection &c : m_store.collections()) {
+        if (c.name.compare(trimmed, Qt::CaseInsensitive) == 0)
+            return tr("There is already a collection called %1").arg(c.name);
+        taken.insert(c.id);
+    }
+    Collection c;
+    c.name = trimmed;
+    c.rules = rules;
+    const QString base = GameId::slug(trimmed).isEmpty() ? QStringLiteral("collection") : GameId::slug(trimmed);
+    c.id = base;
+    for (int n = 2; taken.contains(c.id); ++n)
+        c.id = QStringLiteral("%1-%2").arg(base).arg(n);
+    for (const QString &id : ids) {
+        if (!c.added.contains(id))
+            c.added.append(id);
+    }
+
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    const QString error = m_store.setCollection(c);
+    const QString games = c.added.size() == 1 ? tr("1 game") : tr("%1 games").arg(c.added.size());
+    commitUndo(rules                ? tr("Collection %1 saved from the filters").arg(trimmed)
+               : c.added.isEmpty() ? tr("Collection %1 made").arg(trimmed)
+                                    : tr("Collection %1 made with %2").arg(trimmed, games));
+    return error;
+}
+
+QString Library::addCollectionFromFilters(const QString &name)
+{
+    if (m_held)
+        return tr("Leave the open collection first");
+    CollectionRules rules;
+    rules.platform = m_platformFilter;
+    rules.installedOnly = m_installedOnly;
+    rules.favoritesOnly = m_favoritesOnly;
+    rules.statuses = m_statusFilter;
+    rules.tags = effectiveTags();
+    rules.matchAllTags = m_tagMatchAll && rules.tags.size() >= 2;
+    rules.steamOwnership = m_steamFilter;
+    if (rules == CollectionRules{})
+        return tr("There are no filters to save");
+    return makeCollection(name, {}, rules);
+}
+
+QVariantMap Library::collectionDetails(const QString &id) const
+{
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return {};
+    const auto titled = [&](const QStringList &ids) {
+        QVariantList out;
+        for (const QString &gameId : ids) {
+            const auto game = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == gameId; });
+            out.append(QVariantMap{{QStringLiteral("id"), gameId},
+                                   {QStringLiteral("title"), game == m_games.cend() ? gameId : game->title}});
+        }
+        return out;
+    };
+    const CollectionRules rules = found->rules.value_or(CollectionRules{});
+    QStringList tags;
+    for (const QString &tag : rules.tags) {
+        if (m_tagNames.contains(tag))
+            tags.append(tag);
+    }
+    return QVariantMap{{QStringLiteral("name"), found->name},
+                       {QStringLiteral("enabled"), found->rules.has_value()},
+                       {QStringLiteral("platform"), rules.platform},
+                       {QStringLiteral("installedOnly"), rules.installedOnly},
+                       {QStringLiteral("favoritesOnly"), rules.favoritesOnly},
+                       {QStringLiteral("statuses"), rules.statuses},
+                       {QStringLiteral("tags"), tags},
+                       {QStringLiteral("matchAllTags"), rules.matchAllTags},
+                       {QStringLiteral("steam"), rules.steamOwnership},
+                       {QStringLiteral("added"), titled(found->added)},
+                       {QStringLiteral("removed"), titled(found->removed)}};
+}
+
+QString Library::editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
+                                const QStringList &dropRemoved)
+{
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return tr("That collection no longer exists");
+    Collection c = *found;
+    if (rules.value(QStringLiteral("enabled")).toBool()) {
+        CollectionRules r;
+        r.platform = rules.value(QStringLiteral("platform")).toString();
+        r.installedOnly = rules.value(QStringLiteral("installedOnly")).toBool();
+        r.favoritesOnly = rules.value(QStringLiteral("favoritesOnly")).toBool();
+        r.statuses = rules.value(QStringLiteral("statuses")).toStringList();
+        r.tags = rules.value(QStringLiteral("tags")).toStringList();
+        r.matchAllTags = rules.value(QStringLiteral("matchAllTags")).toBool();
+        r.steamOwnership = rules.value(QStringLiteral("steam")).toStringList();
+        c.rules = r;
+    } else {
+        c.rules.reset();
+    }
+    c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
+    c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
+    if (c == *found)
+        return {};
+
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    const QString error = m_store.setCollection(c);
+    commitUndo(tr("Collection %1 changed").arg(c.name));
+    return error;
+}
+
+void Library::renameTagInCollections(const QString &from, const QString &to)
+{
+    const QList<Collection> all = m_store.collections();
+    for (Collection c : all) {
+        if (!c.rules || !c.rules->tags.contains(from))
+            continue;
+        c.rules->tags.replace(c.rules->tags.indexOf(from), to);
+        m_store.setCollection(c);
+    }
+}
+
+QString Library::renameCollection(const QString &id, const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return tr("A collection needs a name");
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return tr("That collection no longer exists");
+    if (found->name == trimmed)
+        return {};
+    for (const Collection &c : all) {
+        if (c.id != id && c.name.compare(trimmed, Qt::CaseInsensitive) == 0)
+            return tr("There is already a collection called %1").arg(c.name);
+    }
+    Collection c = *found;
+    c.name = trimmed;
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    const QString error = m_store.setCollection(c);
+    commitUndo(tr("Collection renamed to %1").arg(trimmed));
+    return error;
+}
+
+QString Library::deleteCollection(const QString &id)
+{
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return {};
+    const QString name = found->name;
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    const QString error = m_store.removeCollection(id);
+    commitUndo(tr("Collection %1 deleted").arg(name));
+    return error;
 }
 
 void Library::filtersEdited()
@@ -1581,6 +1993,17 @@ void Library::filtersEdited()
 QString Library::renameTag(const QString &from, const QString &to)
 {
     const QString error = m_store.renameTag(from, to);
+    if (error.isEmpty() && from != to.trimmed())
+        renameTagInCollections(from, to.trimmed());
+    if (error.isEmpty() && m_held && m_held->list.tags.contains(from)) {
+        QStringList &held = m_held->list.tags;
+        const qsizetype at = held.indexOf(from);
+        if (held.contains(to))
+            held.removeAt(at);
+        else
+            held[at] = to;
+        saveListSettings();
+    }
     if (error.isEmpty() && m_tagFilter.contains(from)) {
         const qsizetype at = m_tagFilter.indexOf(from);
         if (m_tagFilter.contains(to))
@@ -1607,6 +2030,8 @@ QString Library::removeTag(const QString &name)
         m_undo.keepCopy(gameFileOf(id));
 
     const QString error = m_store.removeTag(name);
+    if (error.isEmpty() && m_held && m_held->list.tags.removeAll(name) > 0)
+        saveListSettings();
     if (error.isEmpty() && m_tagFilter.removeAll(name) > 0)
         filtersEdited();
     const QString text = games.isEmpty() ? tr("Tag %1 deleted").arg(name)
@@ -1636,6 +2061,8 @@ QStringList Library::effectiveTags() const
 bool Library::passesFilters(const Game &g, const QStringList &tags) const
 {
     if (g.hidden && !m_showHidden)
+        return false;
+    if (m_matcher && !m_matcher->isMember(g))
         return false;
     if (m_favoritesOnly && !g.favorite)
         return false;
@@ -1670,10 +2097,12 @@ bool Library::updatePlatforms()
     }
     if (!m_restorePlatform.isEmpty() && !m_platforms.isEmpty()) {
         const QString wanted = std::exchange(m_restorePlatform, QString());
-        if (m_platformFilter.isEmpty()
+        QString &target = m_held ? m_held->platform : m_platformFilter;
+        if (target.isEmpty()
             && std::any_of(m_platforms.cbegin(), m_platforms.cend(), [&](const Platform &p) { return p.id == wanted; })) {
-            m_platformFilter = wanted;
-            emit platformFilterChanged();
+            target = wanted;
+            if (!m_held)
+                emit platformFilterChanged();
         }
     }
     return true;
@@ -4191,6 +4620,8 @@ void Library::setViewStateFile(const QString &file)
         return;
     const QJsonObject saved = QJsonDocument::fromJson(f.readAll()).object();
     m_restorePlatform = saved.value(QLatin1String("platform")).toString();
+    m_restoreCollection = saved.value(QLatin1String("collection")).toString();
+    m_tagsOpen = saved.value(QLatin1String("tagsOpen")).toBool();
     for (const QJsonValue &key : saved.value(QLatin1String("collapsed")).toArray())
         m_collapsed.insert(key.toString());
     if (!m_platforms.isEmpty()) {
@@ -4200,6 +4631,10 @@ void Library::setViewStateFile(const QString &file)
             emit platformFilterChanged();
         }
     }
+    if (!m_restoreCollection.isEmpty() && std::any_of(m_collections.cbegin(), m_collections.cend(), [&](const QVariant &c) {
+            return c.toMap().value(QStringLiteral("id")).toString() == m_restoreCollection;
+        }))
+        enterCollection(std::exchange(m_restoreCollection, QString()), false);
     if (!m_rows.isEmpty())
         rebuild();
 }
@@ -4216,8 +4651,11 @@ void Library::saveViewState() const
     QSaveFile f(m_viewStateFile);
     if (!f.open(QIODevice::WriteOnly))
         return;
-    f.write(QJsonDocument(QJsonObject{{QStringLiteral("platform"), m_platformFilter},
-                                      {QStringLiteral("collapsed"), collapsed}}).toJson());
+    // While a collection is open the platform kept is the normal view's: opening starts on All.
+    f.write(QJsonDocument(QJsonObject{{QStringLiteral("platform"), m_held ? m_held->platform : m_platformFilter},
+                                      {QStringLiteral("collapsed"), collapsed},
+                                      {QStringLiteral("collection"), m_collectionId},
+                                      {QStringLiteral("tagsOpen"), m_tagsOpen}}).toJson());
     f.commit();
 }
 

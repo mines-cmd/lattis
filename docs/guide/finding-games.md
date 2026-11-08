@@ -31,6 +31,18 @@ Filters add up: a game is listed only when it passes every one.
 
 Each filter you've turned on shows as a chip under the search box. Click × on a chip to turn it off, or **Clear filters** (Ctrl+Shift+Backspace) to turn them all off. The search and the sort stay as they are, and so does the platform, unless the rail is hidden: then the platform shows as the first chip, × and Clear filters return to All, and the dot lights. A dot on the filter button means a filter is on, so a short list always tells you why.
 
+## Collections
+
+A collection is a named group of games: ones you pick by hand, ones that match saved filters, or both. The **Collections** section at the top of the filter panel lists them A to Z, each with its game count; click one to open it. The list then shows only its games, uninstalled ones too, with a bar above it giving the name and count and an × to leave. Search, sort, grouping and the other filters work inside it, and **Clear filters** goes back to the collection's full list. The × puts back the filters and platform from before. One collection is open at a time, and Lattis reopens it after a restart.
+
+- **New collection** (the last row of the section) asks for a name and makes an empty collection.
+- Right-click the selected game or games, then **Collections**: each collection has a check, on when every selected game is in it, a dash when some are. Click to add them all, or to take them all out. **New collection** there makes one holding the selection. This works on one game too.
+- Inside a collection, **Remove from collection** in the game's menu takes the game out of it. The game stays in your library.
+- **Save as collection** (above Clear filters, shown while filters are on) asks for a name and makes a collection from the filters you have now: the platform, Installed, Favorites, status, tags (and match all) and Steam ownership. It then keeps itself up to date: a game you tag or favorite later joins it. Opening it shows its games as a fixed list, and its rules never appear in the filter panel, so using the filters inside it only narrows what you see. A rule that names a tag you delete ignores that tag (undoing the delete brings it back); renaming a tag updates the rules.
+- Right-click a collection (or press the Menu key on it) for **Rename**, **Edit** and **Delete**. **Edit** shows the rules (platform, Installed, Favorites, status, tags, Steam ownership) behind "Keep up to date with these rules", and the games you added by hand and the ones you left out of it. Uncheck a game to drop that exception. Turning the rules off leaves the games you added by hand. Delete removes only the collection, never its games.
+
+Each change is one step with **Undo** in the message that follows. Collections are kept in `library/collections.toml`, so a backup of the library has them.
+
 ## Sorting and grouping
 
 Also in the filter panel:
@@ -53,6 +65,7 @@ The selection's menu has:
 - **Add to favorites** or **Remove from favorites**: Remove when every one is a favorite.
 - **Tags**: each tag has a check that is on (all have it), off (none do) or half (some do). Click an off or half tag to add it to all of them, an on tag to remove it from all. The menu stays open, so you can set several tags in a row. **New tag** adds a tag and puts it on all of them.
 - **Emulator**: when they're all ROM games on one platform, pins an emulator for all of them, or **Platform default** to clear the pin. With mixed platforms the entry is greyed out and says why.
+- **Collections**: the same checks as in a single game's menu (see above).
 - **Hide** or **Unhide**: Hide when any is visible, Unhide when all are hidden.
 
 Each change is one step with **Undo** in the message that follows ("4 games hidden"). The menu leaves out what is about one game: Launch, Open in Steam, Open game folder, Open save folder, Play history, Properties and Uninstall.

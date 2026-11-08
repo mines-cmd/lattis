@@ -42,6 +42,7 @@ bool samePlatformsBesidesOrder(QList<Platform> a, QList<Platform> b)
     return a == b;
 }
 const QString kTags = QStringLiteral("library/tags.toml");
+const QString kCollections = QStringLiteral("library/collections.toml");
 const QString kSteamIndex = QStringLiteral("library/steam.toml");
 const QString kHeroicIndex = QStringLiteral("library/heroic.toml");
 const QString kEmulators = QStringLiteral("library/emulators.toml");
@@ -119,6 +120,10 @@ const QString kTagsHeader = QStringLiteral(
     "# Tags and their colors. `color` is an index into the theme's tags.palette.\n"
     "# A game can use a tag that isn't listed here; it shows in the first color.\n");
 
+const QString kCollectionsHeader = QStringLiteral(
+    "# Collections: named groups of games. `added` and `removed` are game ids; a collection with\n"
+    "# `rules = true` also takes the games its rules match. Ids of games that left the library stay here.\n");
+
 FileStamp stampOf(const QFileInfo &info)
 {
     return {info.lastModified(QTimeZone::UTC).toMSecsSinceEpoch(), info.size()};
@@ -149,7 +154,7 @@ QHash<QString, FileStamp> listLibraryFiles(const QString &dataDir)
 {
     QHash<QString, FileStamp> out;
     const QDir root(dataDir);
-    for (const QString &path : {kLibraryInfo, kPlatforms, kTags, kSteamIndex, kHeroicIndex, kEmulators}) {
+    for (const QString &path : {kLibraryInfo, kPlatforms, kTags, kCollections, kSteamIndex, kHeroicIndex, kEmulators}) {
         const QFileInfo info(root.filePath(path));
         if (info.isFile())
             out.insert(path, stampOf(info));
@@ -241,6 +246,12 @@ bool parseInto(LibrarySnapshot &s, const QString &path, const QByteArray &bytes,
         if (r.ok)
             s.content.tags = r.value;
         return r.ok;
+    } else if (path == kCollections) {
+        const auto r = parseCollections(bytes, path);
+        *warnings = r.warnings;
+        if (r.ok)
+            s.content.collections = r.value;
+        return r.ok;
     } else if (path == kSteamIndex) {
         const auto r = parseSteamIndex(bytes, path);
         *warnings = r.warnings;
@@ -300,6 +311,8 @@ void forget(LibrarySnapshot &s, const QString &path)
         s.content.platforms.clear();
     else if (path == kTags)
         s.content.tags.clear();
+    else if (path == kCollections)
+        s.content.collections.clear();
     else if (path == kSteamIndex)
         s.content.steam.clear();
     else if (path == kHeroicIndex)
@@ -3423,6 +3436,46 @@ QString LibraryStore::removeTag(const QString &name)
     });
     changedHere();
     return errors.join(u'\n');
+}
+
+QString LibraryStore::setCollection(const Collection &collection)
+{
+    if (collection.id.isEmpty())
+        return tr("A collection needs an id");
+    const TomlPatch::Block block{QStringLiteral("collection"), collection.id};
+    const CollectionValues values = collectionValues(collection);
+    const QString error = patchAndLoad(kCollections, kCollectionsHeader, [&](QString text) {
+        if (!TomlPatch::blockValues(text, block.array, block.key).contains(collection.id))
+            return TomlPatch::appendBlock(text, block.array, values.set);
+        for (const auto &[key, value] : values.set) {
+            if (key == block.key)
+                continue;
+            const TomlPatch::Result r = TomlPatch::setBlockValue(text, block, key, value);
+            if (!r.ok)
+                return r;
+            text = r.text;
+        }
+        for (const QString &key : values.remove) {
+            const TomlPatch::Result r = TomlPatch::removeBlockValue(text, block, key);
+            if (!r.ok)
+                return r;
+            text = r.text;
+        }
+        return TomlPatch::Result{true, text, {}};
+    });
+    if (error.isEmpty())
+        changedHere();
+    return error;
+}
+
+QString LibraryStore::removeCollection(const QString &id)
+{
+    const QString error = patchAndLoad(kCollections, kCollectionsHeader, [&](const QString &text) {
+        return TomlPatch::removeBlock(text, {QStringLiteral("collection"), id});
+    });
+    if (error.isEmpty())
+        changedHere();
+    return error;
 }
 
 const QList<TagDef> &LibraryStore::defaultTags()

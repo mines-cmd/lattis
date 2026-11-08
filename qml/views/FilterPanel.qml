@@ -7,6 +7,8 @@ MotionPopup {
     id: root
 
     signal closedByKey()
+    signal collectionDialogRequested(string mode, string id, string name)
+    signal collectionDeleted(string id)
 
     readonly property var directionNames: ({
         title: [qsTr("A to Z"), qsTr("Z to A")],
@@ -99,6 +101,56 @@ MotionPopup {
         font.weight: Theme.font.strongWeight
         font.pixelSize: Theme.filters.headingFontSize
         font.letterSpacing: Theme.filters.headingUppercase ? 0.8 : 0
+    }
+
+    component CollectionRow: AbstractButton {
+        id: row
+        property bool selected: false
+        property string detail
+        signal menuRequested(real x, real y)
+
+        width: parent?.width ?? 0
+        implicitHeight: Theme.collections.rowHeight
+        leftPadding: Theme.layout.spacing
+        rightPadding: Theme.layout.spacing
+        focusPolicy: Qt.StrongFocus
+        hoverEnabled: true
+
+        PressDip { pressed: row.pressed }
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: eventPoint => row.menuRequested(eventPoint.position.x, eventPoint.position.y)
+        }
+        Keys.onMenuPressed: row.menuRequested(row.width / 2, row.height)
+        ToolTip.visible: hovered && nameLabel.truncated
+        ToolTip.delay: Theme.tooltip.delay
+        ToolTip.text: row.text
+
+        background: Rectangle {
+            radius: Theme.collections.rowRadius
+            color: row.selected ? Theme.collections.rowSelected
+                 : row.hovered ? Theme.collections.rowHover : Theme.collections.rowBackground
+        }
+        contentItem: RowLayout {
+            spacing: Theme.layout.spacing
+
+            Label {
+                id: nameLabel
+                Layout.fillWidth: true
+                text: row.text
+                elide: Text.ElideRight
+                font.weight: row.selected ? Theme.font.onAccentWeight : Font.Normal
+                color: row.selected ? Theme.collections.rowSelectedText : Theme.collections.rowText
+            }
+            Label {
+                text: row.detail
+                font.weight: Theme.font.emphasisWeight
+                color: row.selected ? Theme.collections.rowSelectedText : Theme.collections.rowCountColor
+                opacity: row.selected ? 0.75 : 1
+            }
+        }
+        FocusRing {}
     }
 
     component Segment: AbstractButton {
@@ -202,6 +254,74 @@ MotionPopup {
             id: content
             width: flick.width - 2 * root.swellRoom - (scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
             spacing: Theme.filters.spacing
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacing
+
+                Heading { title: qsTr("Collections") }
+                Flickable {
+                    id: collectionsFlick
+                    visible: Library.collections.length > 0
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(collectionRows.implicitHeight, Theme.collections.listMaxHeight)
+                    contentHeight: collectionRows.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+
+                    Column {
+                        id: collectionRows
+                        width: collectionsFlick.width
+                        spacing: Theme.collections.rowSpacing
+
+                        Repeater {
+                            model: Library.collections
+
+                            CollectionRow {
+                                required property var modelData
+                                text: modelData.name
+                                detail: modelData.count
+                                selected: Library.collectionId === modelData.id
+                                onClicked: Library.openCollection(modelData.id)
+                                onMenuRequested: (x, y) => {
+                                    collectionMenu.collection = modelData
+                                    collectionMenu.popup(this, x, y)
+                                }
+                            }
+                        }
+                    }
+                }
+                CollectionRow {
+                    text: qsTr("New collection")
+                    onClicked: root.collectionDialogRequested("new", "", "")
+                }
+            }
+
+            SettingsMenu {
+                id: collectionMenu
+                property var collection: ({})
+                atPointer: true
+
+                SettingsMenuItem {
+                    iconPath: Icons.editLine
+                    text: qsTr("Rename")
+                    onTriggered: root.collectionDialogRequested("rename", collectionMenu.collection.id,
+                                                                collectionMenu.collection.name)
+                }
+                SettingsMenuItem {
+                    iconPath: Icons.gear
+                    text: qsTr("Edit")
+                    onTriggered: root.collectionDialogRequested("edit", collectionMenu.collection.id,
+                                                                collectionMenu.collection.name)
+                }
+                SettingsMenuItem {
+                    iconPath: Icons.deleteBin6Line
+                    text: qsTr("Delete")
+                    danger: true
+                    onTriggered: root.collectionDeleted(collectionMenu.collection.id)
+                }
+            }
 
             ColumnLayout {
                 Layout.fillWidth: true
@@ -421,16 +541,48 @@ MotionPopup {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing
 
-                Heading { title: qsTr("Tags") }
+                AbstractButton {
+                    id: tagsHeader
+                    Layout.fillWidth: true
+                    implicitHeight: tagsHeading.implicitHeight
+                    focusPolicy: Qt.StrongFocus
+                    hoverEnabled: true
+                    onClicked: Library.tagsOpen = !Library.tagsOpen
+
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    ToolTip.visible: hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: Library.tagsOpen ? qsTr("Hide the tags") : qsTr("Show the tags")
+
+                    background: null
+                    contentItem: RowLayout {
+                        spacing: Theme.layout.spacing / 2
+
+                        Icon {
+                            path: Icons.chevronRight
+                            size: Theme.filters.headingFontSize + 3
+                            color: tagsHeading.color
+                            rotation: Library.tagsOpen ? 90 : 0
+                            Behavior on rotation { enabled: Motion.on; MotionNumber {} }
+                        }
+                        Heading {
+                            id: tagsHeading
+                            title: root.selectedTags.length > 0
+                                ? qsTr("Tags (%1)").arg(root.selectedTags.length) : qsTr("Tags")
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+                    FocusRing {}
+                }
                 Label {
-                    visible: root.shownTags.length === 0
+                    visible: Library.tagsOpen && root.shownTags.length === 0
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     text: qsTr("No game has a tag yet. Add them in a game's settings.")
                     color: Theme.filters.hintColor
                 }
                 GridLayout {
-                    visible: root.shownTags.length > 0
+                    visible: Library.tagsOpen && root.shownTags.length > 0
                     Layout.fillWidth: true
                     columns: 3
                     rowSpacing: Theme.filters.tagSpacing
@@ -481,11 +633,20 @@ MotionPopup {
                     }
                 }
                 ToggleRow {
-                    visible: root.selectedTags.length >= 2 || Library.tagMatchAll
+                    visible: Library.tagsOpen && (root.selectedTags.length >= 2 || Library.tagMatchAll)
                     text: qsTr("Match all selected tags")
                     isOn: Library.tagMatchAll
                     onFlipped: Library.tagMatchAll = !Library.tagMatchAll
                 }
+            }
+
+            SettingsButton {
+                visible: Library.filtersActive && Library.collectionId === ""
+                Layout.fillWidth: true
+                text: qsTr("Save as collection")
+                focusPolicy: Qt.StrongFocus
+                onClicked: root.collectionDialogRequested("save", "", "")
+                FocusRing {}
             }
 
             SettingsButton {

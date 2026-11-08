@@ -17,6 +17,7 @@ What the files hold is described for users in the guide's [data folder](../guide
 - [Mod managers](#mod-managers)
 - [Play history](#play-history)
 - [Tags and art](#tags-and-art)
+- [Collections](#collections)
 - [Uninstalling](#uninstalling)
 - [Format versions](#format-versions)
 - [Files](#files)
@@ -363,6 +364,65 @@ Each shrink is logged at info under `launcher.library` (`art/<id>/<file>: 3479×
 
 `HeroCache::make()` writes a copy (through a `.partial` name) and `HeroCache::list()` and `prune()` read and clean the folder. `Library` lists the folder once when it is created, so the first frame already uses the copies that exist. After the first frame (`startRefresh()`) it makes the missing ones in the background, one at a time, starting with the games nearest the selected row (`copyHeroesNear()`), and signals only that game's row when a copy is ready. When none are missing and no scan runs, it deletes the copies of art that is gone. A copy that can't be made leaves the original in use and logs once under `launcher.library`; it isn't tried again until the art changes. Everything in `heroes/` can be deleted: it is made again.
 
+## Collections
+
+A collection is a named group of games: hand-picked, kept up to date by saved rules, or both. They are `[[collection]]` blocks in `library/collections.toml`, which doesn't exist until the first one is saved. `Collection` and its functions are in `collection.*`, with no QML or `Library` in them, so tests reach them directly.
+
+```toml
+[[collection]]
+id = "uc-1a2b"                 # stable; never shown
+name = "Couch co-op"
+steam_id = "uc-1a2b"           # only on a collection imported from Steam
+rules = true                   # present only on a saved-filter collection; the keys below belong to it
+platform = "switch"
+installed_only = true
+favorites_only = true
+statuses = ["playing", "none"] # `none` is a game without a status
+tags = ["Co-op"]
+match_all_tags = true
+steam = ["owned"]              # Steam ownership: owned, family
+added = ["switch-mario-kart-8"]
+removed = ["switch-metroid-dread"]
+```
+
+A game is in a collection when it is in `added`, or the collection has rules, it matches them and it is not in `removed`. `added` wins over `removed`; with no rules only `added` counts. Hidden games are not the collection's business: the list's Hidden filter decides, as for any list. A linked copy (`same_as`) belongs with its group: an id in `added` or `removed` counts for every copy of that game, so the Switch and Wii U copies of a game are in or out together. Rules are checked on each copy on its own platform.
+
+Ids of games that are no longer in the library stay in `added` and `removed`, so a game that comes back returns to its collections. Nothing prunes them.
+
+- `parseCollections()` reads the file. One bad block never stops the rest: a block with no id or a repeated id is skipped, a wrong type or an unknown key is a warning (with a "did you mean" hint), a missing name becomes the id, and rule keys without `rules = true` are ignored with a warning. A file that doesn't parse at all is not ok, so the store keeps the last version that loaded and refuses to write over the user's edit, as for every file.
+- `CollectionMatcher` is the membership test for many games: it turns `added` and `removed` into sets once, and with a set of known tags it ignores the rule's tags that aren't in it. `isMember(game, collection)` builds one for a single call.
+- `LibraryStore::setCollection(collection)` adds the block (at the end) or updates it in place, keeping the other blocks and the user's comments: keys the collection doesn't use (rules it lost, an empty `added`) are removed from the block. `removeCollection(id)` removes the block, never a game. `collections()` returns them in file order. They are part of `LibraryContent`, so they are cached (`LibraryCache`, format 37) and re-read when the file changes, like `tags.toml`.
+- **Undo and backup.** `LibraryUndo` keeps any file under the data dir, so a change to collections records `library/collections.toml` with `keepCopy()` as `movePlatform()` does `platforms.toml`; a file that didn't exist before is removed again by the undo. A library backup takes everything under `library/` except the regenerated reference files, so `collections.toml` is in it.
+- **Not yet in the code (step 4):** a rule naming a tag that no longer exists ignores that tag, and renaming a tag updates the rules; both belong to `Library`, which knows the tags.
+
+### Hand-picking
+
+`Library` changes collections through these calls, each one Undo step (`m_undo` keeps `library/collections.toml`, then `commitUndo()` offers the toast, so the toast, Ctrl+Z and the file restore work as for tags):
+
+- `setCollectionMembers(ids, collectionId, member)` puts games in or takes them out. The copies of one game (`groupId` and `linked`) count together, so every id of the group is dropped from the list being edited. Adding drops the games from `removed` and lists in `added` only those the rules don't already match; removing drops them from `added` and, when the collection's rules still match them, adds them to `removed`. So the same call is a hand-picked collection's checkbox and a rule-based collection's Remove from collection, and a game that is already in (or out) changes nothing and offers no Undo.
+- `collectionStates(ids)` answers `{collectionId: 1 | 2}` for a selection: 1 when every game is a member (by `added` or by rules), 2 when some are, and no key when none are. The game menu's checks read it.
+- `addCollection(name, ids)` makes a collection holding `ids`. The id is `GameId::slug(name)`, or `collection` when the name has no ASCII letters, with `-2`, `-3` for a clash. An empty name, or a name another collection has (case aside), is refused with a message.
+- `renameCollection(id, name)` keeps the id, so held references and Steam's later import still find it; `deleteCollection(id)` removes the block only, never a game. Deleting the open collection closes it through `updateCollections()`.
+
+### Saved filters
+
+A collection with rules is a saved filter, a fixed scope when opened: its rules are never copied into the filter panel, so the panel's filters only narrow within it. Rules are the filters of the normal view (platform, Installed, Favorites, status, tags with match all, Steam ownership), not search or Hidden.
+
+- `addCollectionFromFilters(name)` copies the filters now on into the rules of a new collection (the tags that exist, "match all" only with two or more of them, the platform as set). It is refused while a collection is open (the working filters then narrow that collection, they aren't a view of the library) and when no filter is on, with a message. `addCollection()` and this one share `makeCollection()`, so names and ids follow the same rules; its Undo text is "Collection X saved from the filters".
+- `collectionDetails(id)` is what Edit collection shows: `name`, `enabled` (the collection has rules), `platform`, `installedOnly`, `favoritesOnly`, `statuses`, `tags` (only tags that exist), `matchAllTags`, `steam`, and `added` and `removed` as `{id, title}` (an id no longer in the library shows as itself).
+- `editCollection(id, rules, dropAdded, dropRemoved)` writes the dialog's result as one Undo step: `rules` has the same keys plus `enabled` (false removes the rules, leaving `added`), `dropAdded` and `dropRemoved` are the exceptions the user unchecked. Nothing changed means nothing written and no Undo. Because the dialog sends only the tags that exist, saving drops a deleted tag's name from the rules.
+- **Tags that go away.** `CollectionMatcher` takes the library's tag names (`Library::matcherOf()`), and a rule's tag that isn't one is ignored, as the tag filter ignores it; a rule whose tags are all gone has no tag rule. Deleting a tag leaves the name in the rules, so its Undo brings the tag and the rule back together. `renameTag()` rewrites the name in every collection's rules (`renameTagInCollections()`), without a step of its own, as the tag filter follows a rename.
+
+### Opening a collection
+
+`Library` shows one collection at a time as a scope on the list. `collections` is `{id, name, count}` per collection, A to Z (the title collator), counted over the games the list could show (hidden ones aside; a linked copy counts as the group does); `updateCollections()` rebuilds it with every reload from the store, so counts follow the games. `openCollection(id)` and `closeCollection()` change `collectionId` and `collection` (the open one's map, empty when none); the banner and the empty message read these.
+
+- **Membership.** While one is open `m_matcher` (a `CollectionMatcher`) is checked first in `passesFilters()`, so search, sort, grouping, the platform and every filter work inside it as usual, and a game hidden stays out unless Hidden is on.
+- **Held filters.** Opening moves the normal view's filters (Installed, favorites, tags, match all, status, Steam ownership, Hidden) and its platform into `m_held`, and the working filters start empty with Installed off and the platform All. Opening another collection keeps the first held copy, so the × always returns to the view from before the first. `leaveCollection()` puts them back (a platform that no longer exists is dropped). `listSettings()` returns the held copy while one is open, so `saveListSettings()` never writes a collection's filters into `[list]`; `applyListSettings()` (the watched file) sends the file's filters to the held copy and leaves the working ones. Renaming or deleting a tag updates the held tag filter too.
+- **Inside a collection** `filtersActive` treats Installed *on* as the filter, and `clearFilters()` returns to Installed off with the rest cleared, so Clear filters gives the collection's full list. Only `closeCollection()` leaves. `showFiltered()` (a number on the overview) leaves first, so its list covers the whole library.
+- **Kept across restarts.** `view-<key>.json` gains `collection` and `tagsOpen`; `platform` is the held platform while one is open (a restart opens the collection on All, as opening did, and the × brings the platform back). A collection that is gone when the library has loaded is dropped; one deleted while open closes the view (`updateCollections()` leaves without rebuilding, as the reload builds the rows next).
+- `tagsOpen` is whether the filter panel's Tags section is open (collapsed by default); it is saved with the view state.
+
 ## Uninstalling
 
 Uninstalling a Proton or Linux game deletes real folders, so `Uninstall::refusal()` checks every folder first, and again just before it goes. It refuses:
@@ -394,6 +454,7 @@ Folders go to the trash. Where there's no trash for a folder (another drive, say
 | `libraryundo.*` | `LibraryUndo`: the last change's files, kept to put back |
 | `librarycache.*` | `LibrarySnapshot`, the binary cache, file change detection |
 | `offereddefaults.*` | `OfferedDefaults::apply()`, `bootstrap()`: default platforms and emulators added after a `platforms.toml` was written |
+| `collection.*` | `Collection`: `collections.toml` parsing, the keys to write, `CollectionMatcher` and `isMember()` |
 | `libraryfiles.*` | Parsers for `library.toml`, `platforms.toml`, `tags.toml`, `steam.toml`, `heroic.toml`, ROM indexes; programs' files; `buildLibrary()` |
 | `steamwebmerge.*` | `SteamWebMerge::merge()`: the Web API's cache into the `steam.toml` entries |
 | `heroicmerge.*` | `HeroicMerge::merge()`: Heroic's games into the `heroic.toml` entries, and which are installed or gone |
@@ -431,6 +492,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | Property | |
 |---|---|
 | `platformFilter`, `search` | The rail's platform and the search text |
+| `collections`, `collectionId`, `collection` | The collections (`{id, name, count}`, A to Z), the open one's id (`""` when none) and its map. `openCollection(id)` opens one (replacing an open one), `closeCollection()` leaves it with the old filters and platform back. `tagsOpen` is the filter panel's Tags section, open or collapsed |
 | `groupBy` | `"platform"`, `"status"` or `"none"` |
 | `sort`, `sortDescending` | `"title"`, `"last_played"` or `"play_time"`. Choosing an order sets its usual direction: A to Z, most recent first, most played first |
 | `installedOnly`, `favoritesOnly`, `tagFilter`, `tagMatchAll`, `statusFilter`, `showHidden` | The filters. `statusFilter` takes the ids from `statuses`, with `"none"` for games without a status |
@@ -493,6 +555,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `removeGame(id, wipe)` | Hides a game. With `wipe`, an indexed game also forgets everything but where its ROM is, and any other game is deleted; a wipe offers an Undo |
 | `beginEditUndo(id)`, `discardEditUndo()`, `undo(token)` | The editor's Undo around a Save; putting the last change back (see Undo) |
 | `setGamesValue(ids, key, value)` | One key on many games (`hidden`, `favorite`, `emulator`) in one store batch: one reload and one Undo ("4 games hidden"). Returns the errors joined, or `""` |
+| `collectionStates(ids)`, `setCollectionMembers(ids, collectionId, member)`, `addCollection(name, ids)`, `renameCollection(id, name)`, `deleteCollection(id)` | Hand-picking (see Collections): a selection's membership per collection, adding or removing games (a rule-based collection gets an exception in `removed`), making, renaming and deleting a collection. `addCollectionFromFilters(name)`, `collectionDetails(id)` and `editCollection(id, rules, dropAdded, dropRemoved)` are the saved filters (see Saved filters). Each offers an Undo; they return an error text, empty on success |
 | `retagGames(ids, add, remove)` | Adds and removes tags on many games the same way; a tag already there or absent is left alone |
 | `unhideGame(id)` | |
 | `uninstallChoices(id)` | The uninstall dialog (below) |

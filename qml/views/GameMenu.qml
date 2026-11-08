@@ -29,11 +29,15 @@ SettingsMenu {
     readonly property var managers: !multi && game.id ? Library.modManagersFor(game.id) : []
     readonly property bool linkable: game.platform === "steam" || game.platform === "proton" || game.platform === "linux"
     property var tagStates: ({})
+    property var collectionStates: ({})
+    readonly property var targets: multi ? games : (game.id ? [game] : [])
+    readonly property bool inCollection: Library.collectionId !== ""
 
     signal chosen(string name)
     signal managerChosen(string id)
     signal failed(string text)
     signal newTagRequested(var ids)
+    signal newCollectionRequested(var ids)
 
     onGamesChanged: {
         const states = {}
@@ -44,9 +48,27 @@ SettingsMenu {
         for (const name of Object.keys(states))
             states[name] = states[name] === games.length ? 1 : 2
         tagStates = states
+        refreshCollections()
     }
 
     function ids() { return games.map(g => g.id) }
+    function targetIds() { return targets.map(g => g.id) }
+
+    function refreshCollections() {
+        collectionStates = Library.collectionStates(targetIds())
+    }
+    onGameChanged: refreshCollections()
+    Connections {
+        target: Library
+        function onCollectionsChanged() { root.refreshCollections() }
+    }
+
+    function toggleCollection(id) {
+        const error = Library.setCollectionMembers(targetIds(), id, (collectionStates[id] ?? 0) !== 1)
+        if (error !== "")
+            failed(error)
+        refreshCollections()
+    }
 
     function syncSubmenus() {
         for (let i = 0; i < count; ++i) {
@@ -60,7 +82,7 @@ SettingsMenu {
         }
     }
     function openSubmenu(which) {
-        const submenu = which === "emulator" ? emulatorMenu : tagsMenu
+        const submenu = which === "emulator" ? emulatorMenu : which === "collections" ? collectionsMenu : tagsMenu
         for (let i = 0; i < count; ++i) {
             const item = itemAt(i)
             if (item?.subMenu === submenu) {
@@ -94,6 +116,63 @@ SettingsMenu {
         property string actionName
         keys: Actions.label(Actions.keys[actionName] ?? [])
         onTriggered: Qt.callLater(() => root.chosen(actionName))
+    }
+    component CollectionRow: Item {
+        id: collectionRow
+
+        required property var modelData
+        readonly property int state: root.collectionStates[modelData.id] ?? 0
+
+        implicitHeight: Theme.menu.itemHeight
+        implicitWidth: collectionContent.implicitWidth + 20
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.menu.itemRadius
+            color: collectionHover.hovered ? Theme.controls.hover : "transparent"
+        }
+        RowLayout {
+            id: collectionContent
+            anchors.fill: parent
+            anchors.leftMargin: Theme.menu.itemPadding
+            anchors.rightMargin: Theme.menu.itemPadding
+            spacing: Theme.menu.itemSpacing
+
+            Item {
+                implicitWidth: 16
+                Layout.fillHeight: true
+                Icon {
+                    anchors.centerIn: parent
+                    visible: collectionRow.state === 1
+                    path: Icons.check
+                    size: 16
+                    color: Theme.controls.inputText
+                }
+                Rectangle {
+                    anchors.centerIn: parent
+                    visible: collectionRow.state === 2
+                    width: 8
+                    height: 2
+                    color: Theme.controls.inputText
+                }
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                text: collectionRow.modelData.name
+                color: Theme.controls.inputText
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+        }
+        HoverHandler {
+            id: collectionHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            // After the tap: the change reloads the collections, which rebuilds these rows.
+            onTapped: Qt.callLater(root.toggleCollection, collectionRow.modelData.id)
+        }
     }
     component TagRow: Item {
         id: tagRow
@@ -199,6 +278,36 @@ SettingsMenu {
             text: qsTr("New tag")
             iconPath: Icons.add
             onTriggered: Qt.callLater(() => root.newTagRequested(root.ids()))
+        }
+    }
+    SettingsMenu {
+        id: collectionsMenu
+        pops: true
+        title: qsTr("Collections")
+        iconPath: Icons.stackLine
+        checkColumn: true
+
+        Instantiator {
+            model: Library.collections
+            delegate: CollectionRow {}
+            onObjectAdded: (index, object) => collectionsMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => collectionsMenu.removeItem(object)
+        }
+        SettingsMenuSeparator { visible: Library.collections.length > 0 }
+        SettingsMenuItem {
+            text: qsTr("New collection")
+            iconPath: Icons.add
+            onTriggered: Qt.callLater(() => root.newCollectionRequested(root.targetIds()))
+        }
+    }
+    SettingsMenuItem {
+        iconPath: Icons.close
+        visible: root.inCollection
+        text: qsTr("Remove from collection")
+        onTriggered: {
+            const error = Library.setCollectionMembers(root.targetIds(), Library.collectionId, false)
+            if (error !== "")
+                root.failed(error)
         }
     }
     SettingsMenu {

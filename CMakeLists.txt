@@ -235,6 +235,7 @@ qt_add_qml_module(lattis
         qml/views/GameMenu.qml
         qml/views/ModManagerMenu.qml
         qml/views/NewTagPrompt.qml
+        qml/views/CollectionDialog.qml
         qml/views/LogoAdjuster.qml
         qml/views/LogoMenu.qml
         qml/views/AboutDialog.qml
@@ -370,6 +371,7 @@ qt_add_qml_module(lattis
         src/library/lookupgame.h
         src/library/gameid.h src/library/gameid.cpp
         src/library/gamefile.h src/library/gamefile.cpp
+        src/library/collection.h src/library/collection.cpp
         src/library/modmanagers.h src/library/modmanagers.cpp
         src/library/managericon.h src/library/managericon.cpp
         src/library/libraryfiles.h src/library/libraryfiles.cpp

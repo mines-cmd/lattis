@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collection.h"
 #include "game.h"
 #include "gameid.h"
 #include "herocache.h"
@@ -23,6 +24,7 @@
 
 #include <array>
 #include <functional>
+#include <optional>
 
 class VideoThumbnailMaker;
 class QJSEngine;
@@ -66,6 +68,10 @@ class Library : public QAbstractListModel
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(bool updatingNames READ updatingNames NOTIFY updatingNamesChanged)
     Q_PROPERTY(QVariantList tags READ tags NOTIFY tagsChanged)
+    Q_PROPERTY(QVariantList collections READ collections NOTIFY collectionsChanged)
+    Q_PROPERTY(QString collectionId READ collectionId NOTIFY collectionChanged)
+    Q_PROPERTY(QVariantMap collection READ collection NOTIFY collectionChanged)
+    Q_PROPERTY(bool tagsOpen READ tagsOpen WRITE setTagsOpen NOTIFY tagsOpenChanged)
     Q_PROPERTY(QStringList missingDefaultTags READ missingDefaultTags NOTIFY tagsChanged)
     Q_PROPERTY(QVariantList hiddenGames READ hiddenGames NOTIFY hiddenGamesChanged)
     Q_PROPERTY(QVariantMap steam READ steam NOTIFY steamChanged)
@@ -149,6 +155,22 @@ public:
     bool filtersActive() const;
     int notInstalledHidden() const { return m_notInstalledHidden; }
     Q_INVOKABLE void clearFilters();
+    QVariantList collections() const { return m_collections; }
+    QString collectionId() const { return m_collectionId; }
+    QVariantMap collection() const;
+    Q_INVOKABLE void openCollection(const QString &id);
+    Q_INVOKABLE void closeCollection();
+    Q_INVOKABLE QVariantMap collectionStates(const QStringList &ids) const;
+    Q_INVOKABLE QString setCollectionMembers(const QStringList &ids, const QString &collectionId, bool member);
+    Q_INVOKABLE QString addCollection(const QString &name, const QStringList &ids);
+    Q_INVOKABLE QString addCollectionFromFilters(const QString &name);
+    Q_INVOKABLE QVariantMap collectionDetails(const QString &id) const;
+    Q_INVOKABLE QString editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
+                                       const QStringList &dropRemoved);
+    Q_INVOKABLE QString renameCollection(const QString &id, const QString &name);
+    Q_INVOKABLE QString deleteCollection(const QString &id);
+    bool tagsOpen() const { return m_tagsOpen; }
+    void setTagsOpen(bool open);
     Q_INVOKABLE void showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags);
 
     Q_INVOKABLE void toggleGroup(const QString &group);
@@ -341,6 +363,9 @@ signals:
     void sortChanged();
     void showSortValueChanged();
     void filtersChanged();
+    void collectionsChanged();
+    void collectionChanged();
+    void tagsOpenChanged();
     void notInstalledHiddenChanged();
     void platformsChanged();
     void gamesChanged();
@@ -406,7 +431,14 @@ private:
     Uninstall::Places uninstallPlaces(const QString &id) const;
     bool updatePlatforms();
     void filtersEdited();
+    ListSettings workingSettings() const;
     ListSettings listSettings() const;
+    void updateCollections();
+    CollectionMatcher matcherOf(const Collection &collection) const { return CollectionMatcher(collection, &m_tagNames); }
+    QString makeCollection(const QString &name, const QStringList &ids, const std::optional<CollectionRules> &rules);
+    void renameTagInCollections(const QString &from, const QString &to);
+    bool enterCollection(const QString &id, bool rebuildNow);
+    void leaveCollection(bool rebuildNow);
     void applyListSettings(const ListSettings &settings);
     void loadListSettings();
     void saveListSettings();
@@ -502,6 +534,19 @@ private:
     QStringList m_statusFilter;
     QStringList m_steamFilter;
     bool m_showHidden = false;
+    // The filters and platform of the normal view while a collection is open; saveListSettings writes these.
+    struct HeldFilters
+    {
+        ListSettings list;
+        QStringList steam;
+        QString platform;
+    };
+    std::optional<HeldFilters> m_held;
+    QString m_collectionId;
+    std::optional<CollectionMatcher> m_matcher;
+    QVariantList m_collections;
+    QString m_restoreCollection;
+    bool m_tagsOpen = false;
     int m_allMediaGeneration = 0;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;
     bool m_showSortValue = true;

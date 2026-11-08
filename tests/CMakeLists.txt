@@ -65,6 +65,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/library/rominfo.h ../src/library/rominfo.cpp
     ../src/library/romdb.h ../src/library/romdb.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
+    ../src/library/collection.h ../src/library/collection.cpp
     ../src/library/modmanagers.h ../src/library/modmanagers.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
     ${STEAM_SOURCES}
@@ -284,6 +285,9 @@ lattis_test(libraryformat_test PRESETS
     SOURCES ../src/library/game.h ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus
     DEFINES ${DEMO_DATA} ${DOCS})
+lattis_test(collection_test
+    SOURCES ../src/library/game.h ${LIBRARY_FILE_SOURCES}
+    LIBS tomlplusplus::tomlplusplus)
 lattis_test(librarycache_test OFFSCREEN
     SOURCES ../src/library/librarycache.h ../src/library/librarycache.cpp
             ../src/core/apppaths.h ../src/core/apppaths.cpp
@@ -298,7 +302,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags rom emulators platforms version steamimport steamlibrary heroic steamsync modmanagers programs uninstall undo hero art media)
+foreach(area list edit tags collections rom emulators platforms version steamimport steamlibrary heroic steamsync modmanagers programs uninstall undo hero art media)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects
@@ -495,7 +499,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding overview calendar addsession library bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
+    foreach(area startup onboarding overview calendar addsession library collections bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()

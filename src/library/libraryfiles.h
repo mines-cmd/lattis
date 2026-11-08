@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collection.h"
 #include "emulators.h"
 #include "game.h"
 #include "gamefile.h"
@@ -178,6 +179,7 @@ struct LibraryContent
 {
     QList<Platform> platforms;
     QList<TagDef> tags;
+    QList<Collection> collections;
     QList<IndexEntry> steam;
     QList<HeroicEntry> heroic;
     QMap<QString, QList<RomEntry>> roms;

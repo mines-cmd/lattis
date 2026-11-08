@@ -79,6 +79,29 @@ static QDataStream &operator>>(QDataStream &s, TagDef &t)
     return s;
 }
 
+static QDataStream &operator<<(QDataStream &s, const Collection &c)
+{
+    s << c.id << c.name << c.added << c.removed << c.steamId << c.rules.has_value();
+    if (c.rules) {
+        s << c.rules->platform << c.rules->installedOnly << c.rules->favoritesOnly << c.rules->statuses << c.rules->tags
+          << c.rules->matchAllTags << c.rules->steamOwnership;
+    }
+    return s;
+}
+
+static QDataStream &operator>>(QDataStream &s, Collection &c)
+{
+    bool hasRules = false;
+    s >> c.id >> c.name >> c.added >> c.removed >> c.steamId >> hasRules;
+    c.rules.reset();
+    if (hasRules) {
+        CollectionRules r;
+        s >> r.platform >> r.installedOnly >> r.favoritesOnly >> r.statuses >> r.tags >> r.matchAllTags >> r.steamOwnership;
+        c.rules = r;
+    }
+    return s;
+}
+
 static QDataStream &operator<<(QDataStream &s, const IndexEntry &e)
 {
     return s << e.appId << e.title << e.owned << e.sharedBy << e.fromApi << qint32(e.storeType);
@@ -357,7 +380,7 @@ std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dat
 
     LibrarySnapshot s;
     qint32 version = 0;
-    in >> version >> s.files >> s.content.platforms >> s.content.tags >> s.content.steam >> s.content.heroic >> s.content.roms
+    in >> version >> s.files >> s.content.platforms >> s.content.tags >> s.content.collections >> s.content.steam >> s.content.heroic >> s.content.roms
         >> s.content.emulators >> s.content.games >> s.content.modManagers >> s.art >> s.artChecks >> s.romFiles >> s.romWarnings >> s.romMissingFolders
         >> s.romGameFiles >> s.programFiles >> s.steam >> s.steamQueued >> s.heroic;
     s.version = version;
@@ -376,7 +399,7 @@ bool save(const QString &cachePath, const QString &dataDir, const LibrarySnapsho
     out << kMagic << kFormatVersion << qint32(kStreamVersion);
     out.setVersion(kStreamVersion);
     out << QDir(dataDir).absolutePath();
-    out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.steam << s.content.heroic
+    out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.collections << s.content.steam << s.content.heroic
         << s.content.roms << s.content.emulators << s.content.games << s.content.modManagers << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
         << s.romGameFiles << s.programFiles << s.steam << s.steamQueued << s.heroic;
     if (out.status() != QDataStream::Ok) {

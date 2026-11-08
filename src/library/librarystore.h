@@ -206,6 +206,10 @@ public:
     QList<TagDef> missingDefaultTags() const;
     QString addDefaultTags();
 
+    const QList<Collection> &collections() const { return m_snapshot.content.collections; }
+    QString setCollection(const Collection &collection);
+    QString removeCollection(const QString &id);
+
     QString setEmulatorValue(const QString &id, const QString &key, const QVariant &value);
     QString addEmulator(const QString &id, const QString &name, const QString &startFrom);
     QString removeEmulator(const QString &id);
