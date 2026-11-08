@@ -7,6 +7,7 @@ TextField {
     property color fieldBackground: Theme.controls.inputBackground
     property color textColor: Theme.controls.inputText
     property color placeholderColor: Theme.controls.placeholderColor
+    property bool invalid: false
 
     implicitHeight: Theme.controls.inputHeight
     selectByMouse: true
@@ -20,8 +21,9 @@ TextField {
     background: Rectangle {
         radius: Theme.controls.inputRadius
         color: root.fieldBackground
-        border.color: root.activeFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
-        border.width: root.activeFocus ? Theme.controls.inputBorderFocusWidth : Theme.controls.inputBorderWidth
+        border.color: root.invalid ? Theme.controls.inputBorderInvalid
+                      : root.activeFocus ? Theme.controls.inputBorderFocus : Theme.controls.inputBorder
+        border.width: root.activeFocus || root.invalid ? Theme.controls.inputBorderFocusWidth : Theme.controls.inputBorderWidth
 
         Behavior on border.color { enabled: Motion.fades; MotionColor {} }
     }

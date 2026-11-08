@@ -91,6 +91,9 @@ qt_add_qml_module(lattis
         qml/components/CollapseHeading.qml
         qml/components/Icon.qml
         qml/components/Stars.qml
+        qml/components/DateInput.js
+        qml/components/DateTimeField.qml
+        qml/components/DurationField.qml
         qml/components/IconButton.qml
         qml/components/Args.js
         qml/components/Icons.qml

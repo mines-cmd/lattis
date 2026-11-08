@@ -210,6 +210,7 @@ constexpr Setting kSettings[] = {
     integer("controls", "input_border_width", "0", 0, 20, "Editor outline thickness while not selected"),
     integer("controls", "input_border_focus_width", "2", 0, 20, "Editor outline thickness while selected or typing"),
     color("controls", "input_border_focus", "@accent", "Editor border while typing"),
+    color("controls", "input_border_invalid", "@menu.danger_text", "Editor border while its text isn't a valid value (a date that can't be read)"),
     color("controls", "input_text", "@text", "Editor text"),
     color("controls", "placeholder_color", "@text_muted", "Hint text in empty fields (\"Search settings\")"),
     color("controls", "icon_color", "@text_muted", "Icons in fields and buttons (magnifier, dropdown arrow)"),
