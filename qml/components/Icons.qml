@@ -20,6 +20,7 @@ QtObject {
     readonly property string library: LicensedIcons.home
     readonly property string computer: "stroke:M3 5 C3 4.448 3.448 4 4 4 L20 4 C20.552 4 21 4.448 21 5 L21 15 C21 15.552 20.552 16 20 16 L4 16 C3.448 16 3 15.552 3 15 L3 5 Z M7 20 L17 20 M9 16 L9 20 M15 16 L15 20" // device-desktop
     readonly property string switchConsole:"M11 1V23H7A6 6 0 0 1 1 17V7A6 6 0 0 1 7 1ZM9 3H7A4 4 0 0 0 3 7V17A4 4 0 0 0 7 21H9ZM4.5 8A1.5 1.5 0 1 0 7.5 8A1.5 1.5 0 1 0 4.5 8ZM13 1H17A6 6 0 0 1 23 7V17A6 6 0 0 1 17 23H13ZM16 13A2 2 0 0 0 20 13A2 2 0 0 0 16 13Z" // switch-fill, redrawn on whole pixels at the platform icons' 22 px
+    readonly property string switch2Console: "M11 1V23H7A6 6 0 0 1 1 17V7A6 6 0 0 1 7 1ZM9 3H7A4 4 0 0 0 3 7V17A4 4 0 0 0 7 21H9ZM4.5 8A1.5 1.5 0 1 0 7.5 8A1.5 1.5 0 1 0 4.5 8ZM13 1H17A6 6 0 0 1 23 7V17A6 6 0 0 1 17 23H13ZM14.42 19.7H21.64V17.85H17.61V17.84L19.44 16.29Q20.1 15.73 20.59 15.21Q21.08 14.7 21.34 14.14Q21.61 13.57 21.61 12.87Q21.61 11.92 21.15 11.24Q20.69 10.55 19.88 10.17Q19.07 9.8 18.03 9.8Q16.9 9.8 16.08 10.24Q15.25 10.68 14.8 11.48Q14.36 12.29 14.36 13.39H16.51Q16.51 12.83 16.7 12.44Q16.89 12.05 17.23 11.85Q17.57 11.64 18.03 11.64Q18.45 11.64 18.77 11.81Q19.08 11.98 19.25 12.28Q19.42 12.59 19.42 12.99Q19.42 13.43 19.23 13.78Q19.03 14.12 18.71 14.42Q18.39 14.71 18.04 15.02L14.42 18.02Z" // switchConsole with Inter ExtraBold's 2 cut into the right half in place of its button
     readonly property string nintendo3ds: "M3.5 1L7.5 1A2.5 2.5 0 0 1 10 3.5L10 8.5A2.5 2.5 0 0 1 7.5 11L3.5 11A2.5 2.5 0 0 1 1 8.5L1 3.5A2.5 2.5 0 0 1 3.5 1ZM3.5 3A0.5 0.5 0 0 0 3 3.5L3 8.5A0.5 0.5 0 0 0 3.5 9L7.5 9A0.5 0.5 0 0 0 8 8.5L8 3.5A0.5 0.5 0 0 0 7.5 3ZM3.5 13L7.5 13A2.5 2.5 0 0 1 10 15.5L10 20.5A2.5 2.5 0 0 1 7.5 23L3.5 23A2.5 2.5 0 0 1 1 20.5L1 15.5A2.5 2.5 0 0 1 3.5 13ZM3.5 15A0.5 0.5 0 0 0 3 15.5L3 20.5A0.5 0.5 0 0 0 3.5 21L7.5 21A0.5 0.5 0 0 0 8 20.5L8 15.5A0.5 0.5 0 0 0 7.5 15ZM12.5 1L16.5 1A6 6 0 0 1 20.56 11.42A6.5 6.5 0 0 1 16.5 23L12.5 23A0.5 0.5 0 0 1 12 22.5L12 20.5A0.5 0.5 0 0 1 12.5 20L16.5 20A3.5 3.5 0 0 0 16.5 13L14.5 13A0.5 0.5 0 0 1 14 12.5L14 10.5A0.5 0.5 0 0 1 14.5 10L16.5 10A3 3 0 0 0 16.5 4L12.5 4A0.5 0.5 0 0 1 12 3.5L12 1.5A0.5 0.5 0 0 1 12.5 1Z" // 3DS logo, redrawn from 3ds-icon.svg on whole pixels: two stacked square outlines beside a "3", 2 apart
     readonly property string wiiu: LicensedIcons.wiiu
     readonly property string wii: LicensedIcons.wii
@@ -137,11 +138,12 @@ QtObject {
     // A platform's icon, by the `icon` name in library/platforms.toml (platformIconNames
     // below lists them). Unknown or empty names get the generic library icon.
     // The names forPlatform() knows, for the icon picker; "" is the generic icon.
-    readonly property var platformIconNames: ["switch", "3ds", "wiiu", "wii", "gamecube", "n64", "nds", "gba", "psp", "ps1", "ps2", "ps3", "ps4", "steam", "epic", "proton", "linux", "gamepad", ""]
+    readonly property var platformIconNames: ["switch", "switch2", "3ds", "wiiu", "wii", "gamecube", "n64", "nds", "gba", "psp", "ps1", "ps2", "ps3", "ps4", "steam", "epic", "proton", "linux", "gamepad", ""]
 
     function forPlatform(icon: string): string {
         switch (icon) {
         case "switch": return switchConsole
+        case "switch2": return switch2Console
         case "3ds": return nintendo3ds
         case "wiiu": return wiiu || library
         case "wii": return wii || library
@@ -167,6 +169,7 @@ QtObject {
     function platformIconLabel(icon: string): string {
         switch (icon) {
         case "switch": return qsTr("Switch")
+        case "switch2": return qsTr("Switch 2")
         case "3ds": return qsTr("3DS")
         case "wiiu": return qsTr("Wii U")
         case "wii": return qsTr("Wii")
