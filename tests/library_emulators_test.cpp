@@ -35,7 +35,7 @@ void LibraryEmulatorsTest::emulatorListShowsInstalls()
 {
     auto library = openLibrary();
     const QVariantList list = library->emulatorList();
-    QCOMPARE(list.size(), 12);
+    QCOMPARE(list.size(), 13);
     QCOMPARE(list.at(0).toMap().value("id"), QStringLiteral("azahar")); // presets by id
     const QVariantMap ryubing = emulatorIn(*library, "ryubing");
     QCOMPARE(ryubing.value("name"), QStringLiteral("Ryubing"));

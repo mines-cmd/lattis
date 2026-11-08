@@ -34,6 +34,7 @@ constexpr Field kFields[] = {
                               "separated by ;, in order of preference"},
     {"release_unofficial", String, "Set (to whose builds they are) when the release isn't the project's own: Install tags "
                                    "the AppImage Unofficial and recommends the Flatpak instead"},
+    {"release_prereleases", String, "Set to \"true\" to take the newest release, pre-release or not (GitHub only)"},
     {"release_inside", String, "When the download is a zip or tarball: the pattern of the AppImage inside it"},
     {"path", String, "Your install: an absolute path or ~/…; skips detection"},
     {"command", StringList, "The program's arguments, not a shell line: {exe} is the program (or flatpak run "
@@ -198,6 +199,8 @@ QVariant readValue(const toml::node &node, const Field &field, const QString &di
             if (!ReleaseSources::parse(value, &problem))
                 return fail(problem);
         }
+        if (key == QLatin1String("release_prereleases") && value != QLatin1String("true") && value != QLatin1String("false"))
+            return fail(QStringLiteral("release_prereleases is \"true\" or \"false\""));
         if ((key == QLatin1String("release_asset") || key == QLatin1String("release_inside")) && value.contains(u'/'))
             return fail(QStringLiteral("%1 is a file name pattern, without folders").arg(key));
         if (key == QLatin1String("portable") && !relativeInside(value))
@@ -319,6 +322,11 @@ EmulatorEntry readEntry(const toml::table &table, const QString &at, const QStri
         if (value.isValid())
             entry.values.insert(key, value);
     }
+    if (entry.values.value(QStringLiteral("release_prereleases")).toString() == QLatin1String("true")
+        && entry.values.value(QStringLiteral("release")).toString().startsWith(QLatin1String("gitlab:"))) {
+        warnings->append(QStringLiteral("%1: release_prereleases works for github: releases only; ignored").arg(at));
+        entry.values.remove(QStringLiteral("release_prereleases"));
+    }
     return entry;
 }
 
@@ -357,6 +365,7 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.release = v.value(QStringLiteral("release")).toString();
     def.releaseAsset = v.value(QStringLiteral("release_asset")).toString();
     def.releaseUnofficial = v.value(QStringLiteral("release_unofficial")).toString();
+    def.releasePrereleases = v.value(QStringLiteral("release_prereleases")).toString() == QLatin1String("true");
     def.releaseInside = v.value(QStringLiteral("release_inside")).toString();
     def.path = v.value(QStringLiteral("path")).toString();
     def.command = v.value(QStringLiteral("command")).toStringList();
@@ -424,6 +433,7 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("release_asset")) return def.releaseAsset.isEmpty() ? QString() : tomlString(def.releaseAsset);
     if (key == QLatin1String("release_unofficial"))
         return def.releaseUnofficial.isEmpty() ? QString() : tomlString(def.releaseUnofficial);
+    if (key == QLatin1String("release_prereleases")) return def.releasePrereleases ? tomlString(QStringLiteral("true")) : QString();
     if (key == QLatin1String("release_inside")) return def.releaseInside.isEmpty() ? QString() : tomlString(def.releaseInside);
     if (key == QLatin1String("path")) return def.path.isEmpty() ? QString() : tomlString(def.path);
     if (key == QLatin1String("command")) return list(def.command);

@@ -13,6 +13,7 @@ struct InstallRecord
     QString route;
     QString file;
     QString tag;
+    bool prerelease = false;
     QString sha256;
     QString assetId;
     QString assetDate;

@@ -764,7 +764,7 @@ void LibraryFormatTest::mergeRomIndex()
     const BuiltLibrary lib = buildLibrary(c, {}, found, Emulators::presets());
     QVERIFY2(lib.warnings.isEmpty(), qPrintable(lib.warnings.join(u'\n')));
     QCOMPARE(lib.games.size(), 3);
-    QCOMPARE(lib.emulators.size(), 12);
+    QCOMPARE(lib.emulators.size(), 13);
 
     const Game *mk8 = findGame(lib, "switch-mario-kart-8-deluxe");
     QVERIFY(mk8);

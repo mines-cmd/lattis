@@ -41,6 +41,7 @@ Parsed<Records> parse(const QByteArray &bytes)
         r.route = text(*table, "route");
         r.file = text(*table, "file");
         r.tag = text(*table, "tag");
+        r.prerelease = text(*table, "prerelease") == QLatin1String("true");
         r.sha256 = text(*table, "sha256");
         r.assetId = text(*table, "asset_id");
         r.assetDate = text(*table, "asset_date");
@@ -81,6 +82,7 @@ bool write(const QString &path, const Records &records, QString *error)
         put("route", r.route);
         put("file", r.file);
         put("tag", r.tag);
+        put("prerelease", r.prerelease ? QStringLiteral("true") : QString());
         put("sha256", r.sha256);
         put("asset_id", r.assetId);
         put("asset_date", r.assetDate);

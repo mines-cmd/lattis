@@ -20,6 +20,19 @@ Q_LOGGING_CATEGORY(lcInstall, "launcher.install")
 Installer::Setup Installer::s_setup;
 
 namespace {
+std::optional<ReleaseSource> sourceOf(const EmulatorDef &def, QString *problem = nullptr)
+{
+    auto source = ReleaseSources::parse(def.release, problem);
+    if (source && source->host == ReleaseSource::Host::GitHub)
+        source->prereleases = def.releasePrereleases;
+    return source;
+}
+
+QString versionText(const QString &tag, bool prerelease)
+{
+    return prerelease ? tag + QStringLiteral(" (pre-release)") : tag;
+}
+
 constexpr qint64 FixtureAssetSize = 2 * 1024 * 1024;
 constexpr int FixtureSteps = 40;
 constexpr qint64 ReleaseCacheSeconds = 3600;
@@ -134,14 +147,15 @@ void Installer::rebuild()
         }
         QString source;
         QString project;
-        if (const auto parsed = ReleaseSources::parse(def.release)) {
+        if (const auto parsed = sourceOf(def)) {
             source = parsed->label();
             project = parsed->project;
         }
         QString updateVersion;
         if (byApp && record.route == QLatin1String("appimage")) {
             if (const auto update = m_updates.constFind(def.id); update != m_updates.cend())
-                updateVersion = update->release.tag.isEmpty() ? update->asset.date : update->release.tag;
+                updateVersion = update->release.tag.isEmpty() ? update->asset.date
+                                                               : versionText(update->release.tag, update->release.prerelease);
         }
         out.insert(def.id, QVariantMap{
                                {QStringLiteral("state"), stateName(job.state)},
@@ -156,7 +170,7 @@ void Installer::rebuild()
                                {QStringLiteral("route"), byApp ? record.route : QString()},
                                {QStringLiteral("file"), byApp ? record.file : QString()},
                                {QStringLiteral("installed"), byApp ? record.installed : QString()},
-                               {QStringLiteral("version"), byApp ? record.tag : QString()},
+                               {QStringLiteral("version"), byApp ? versionText(record.tag, record.prerelease) : QString()},
                                {QStringLiteral("updateVersion"), updateVersion},
                                {QStringLiteral("upToDate"), byApp && record.route == QLatin1String("appimage")
                                                                 && updateVersion.isEmpty() && m_upToDate.contains(def.id)},
@@ -276,7 +290,7 @@ void Installer::begin(const EmulatorDef &emulator)
     const QString id = emulator.id;
     Job &job = m_jobs[id];
     QString problem;
-    const auto source = ReleaseSources::parse(emulator.release, &problem);
+    const auto source = sourceOf(emulator, &problem);
     if (emulator.release.isEmpty() || emulator.releaseAsset.isEmpty()) {
         fail(id, tr("%1 has no AppImage to download").arg(emulator.name));
         return;
@@ -340,9 +354,9 @@ void Installer::gotRelease(const EmulatorDef &emulator, quint64 serial, const QB
     const auto it = m_jobs.find(emulator.id);
     if (it == m_jobs.end() || it->serial != serial || it->state != State::Checking)
         return;
-    const auto source = ReleaseSources::parse(emulator.release);
+    const auto source = sourceOf(emulator);
     QString error;
-    const auto release = source ? ReleaseSources::parseRelease(*source, json, &error) : std::nullopt;
+    const auto release = source ? ReleaseSources::parseRelease(*source, json, &error, emulator.releaseAsset) : std::nullopt;
     if (!release) {
         if (fromCache && m_fixturesDir.isEmpty())
             QFile::remove(cachedReleasePath(emulator.release));
@@ -507,6 +521,7 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
     record.route = QStringLiteral("appimage");
     record.file = result.path;
     record.tag = it->release.tag;
+    record.prerelease = it->release.prerelease;
     record.sha256 = it->asset.sha256;
     record.assetId = it->asset.id;
     record.assetDate = it->asset.date;

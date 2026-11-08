@@ -1915,7 +1915,7 @@ QString LibraryStore::addEmulator(const QString &id, const QString &name, const 
         static const QStringList left{QStringLiteral("name"), QStringLiteral("flatpak"), QStringLiteral("executables"),
                                       QStringLiteral("appimage"), QStringLiteral("release"),
                                       QStringLiteral("release_asset"), QStringLiteral("release_inside"),
-                                      QStringLiteral("release_unofficial"),
+                                      QStringLiteral("release_unofficial"), QStringLiteral("release_prereleases"),
                                       QStringLiteral("path"), QStringLiteral("saves"), QStringLiteral("keys"),
                                       QStringLiteral("screenshots")};
         for (const EmulatorFields::Field &f : EmulatorFields::all()) {

@@ -104,6 +104,7 @@ private slots:
     void githubRelease();
     void gitlabRelease();
     void releaseErrors();
+    void prereleaseList();
     void assetPatterns_data();
     void assetPatterns();
     void assetPreference();
@@ -290,6 +291,40 @@ void InstallTest::releaseErrors()
     const auto empty = ReleaseSources::parseRelease(github, json("{'tag_name': '1'}"), &error);
     QVERIFY(empty.has_value());
     QVERIFY(empty->assets.isEmpty());
+}
+
+void InstallTest::prereleaseList()
+{
+    auto github = *ReleaseSources::parse("github:o/r");
+    QCOMPARE(github.apiUrl().toString(), QStringLiteral("https://api.github.com/repos/o/r/releases/latest"));
+    github.prereleases = true;
+    QCOMPARE(github.apiUrl().toString(), QStringLiteral("https://api.github.com/repos/o/r/releases?per_page=20"));
+
+    const QByteArray list = json("[\n"
+        "  {'tag_name': 'b4', 'draft': true, 'assets': [{'id': 1, 'name': 'x-pgo.AppImage', 'browser_download_url': 'https://github.com/o/r/d/1'}]},\n"
+        "  {'tag_name': 'b3', 'prerelease': true, 'assets': [{'id': 2, 'name': 'x.tar.gz', 'browser_download_url': 'https://github.com/o/r/d/2'}]},\n"
+        "  {'tag_name': 'b2', 'prerelease': true, 'assets': [{'id': 3, 'name': 'x.AppImage', 'browser_download_url': 'https://github.com/o/r/d/3'}]},\n"
+        "  {'tag_name': 'b1', 'assets': [{'id': 4, 'name': 'x-pgo.AppImage', 'browser_download_url': 'https://github.com/o/r/d/4'}]}\n"
+        "]");
+    QString error;
+    auto release = ReleaseSources::parseRelease(github, list, &error, QStringLiteral("x-pgo.AppImage;x.AppImage"));
+    QVERIFY2(release.has_value(), qPrintable(error));
+    QCOMPARE(release->tag, QStringLiteral("b2")); // the draft and the release without a download are skipped
+    QVERIFY(release->prerelease);
+
+    release = ReleaseSources::parseRelease(github, list, &error, QStringLiteral("x-pgo.AppImage"));
+    QVERIFY(release.has_value());
+    QCOMPARE(release->tag, QStringLiteral("b1"));
+    QVERIFY(!release->prerelease);
+
+    error.clear();
+    QVERIFY(!ReleaseSources::parseRelease(github, list, &error, QStringLiteral("*.zip")));
+    QVERIFY2(error.contains(QStringLiteral("None of the latest releases has a download named *.zip")), qPrintable(error));
+
+    // An answer cached before the key was set is a single release.
+    release = ReleaseSources::parseRelease(github, kGitHub, &error, QStringLiteral("*.appimage"));
+    QVERIFY(release.has_value());
+    QCOMPARE(release->tag, QStringLiteral("0.10.5"));
 }
 
 void InstallTest::assetPatterns_data()

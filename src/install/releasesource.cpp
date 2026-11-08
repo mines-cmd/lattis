@@ -48,6 +48,7 @@ std::optional<Release> fromGitHub(const QJsonObject &root, QString *error)
     release.tag = root.value(QLatin1String("tag_name")).toString();
     release.date = root.value(QLatin1String("published_at")).toString();
     release.notes = root.value(QLatin1String("body")).toString();
+    release.prerelease = root.value(QLatin1String("prerelease")).toBool();
     for (const QJsonValue &item : root.value(QLatin1String("assets")).toArray()) {
         const QJsonObject a = item.toObject();
         ReleaseAsset asset;
@@ -90,8 +91,10 @@ std::optional<Release> fromGitLab(const QJsonObject &root, QString *error)
 
 QUrl ReleaseSource::apiUrl() const
 {
-    if (host == Host::GitHub)
-        return QUrl(QStringLiteral("https://api.github.com/repos/%1/releases/latest").arg(project));
+    if (host == Host::GitHub) {
+        return QUrl(QStringLiteral("https://api.github.com/repos/%1/releases%2")
+                        .arg(project, prereleases ? QStringLiteral("?per_page=20") : QStringLiteral("/latest")));
+    }
     return QUrl(QStringLiteral("https://%1/api/v4/projects/%2/releases?per_page=1")
                     .arg(server, QString::fromLatin1(QUrl::toPercentEncoding(project))),
                 QUrl::TolerantMode);
@@ -132,10 +135,31 @@ std::optional<ReleaseSource> parse(const QString &text, QString *error)
     return fail(QStringLiteral("release starts with github: or gitlab:, like \"github:owner/repo\""));
 }
 
-std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error)
+std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error,
+                                    const QString &assetPatterns)
 {
     QJsonParseError parseError;
     const QJsonDocument doc = QJsonDocument::fromJson(json, &parseError);
+    if (source.host == ReleaseSource::Host::GitHub && source.prereleases && doc.isArray()) {
+        // GitHub lists the newest first; a cached /latest answer (an object) falls through to the single parse.
+        if (doc.array().isEmpty()) {
+            *error = QStringLiteral("There is no release yet");
+            return std::nullopt;
+        }
+        for (const QJsonValue &item : doc.array()) {
+            const QJsonObject candidate = item.toObject();
+            if (candidate.value(QLatin1String("draft")).toBool())
+                continue;
+            QString ignored;
+            const auto release = fromGitHub(candidate, &ignored);
+            if (release && (assetPatterns.isEmpty() || pickAsset(*release, assetPatterns)))
+                return release;
+        }
+        *error = assetPatterns.isEmpty() ? QStringLiteral("There is no release yet")
+                                         : QStringLiteral("None of the latest releases has a download named %1")
+                                               .arg(assetPatterns);
+        return std::nullopt;
+    }
     QJsonObject root;
     if (doc.isArray() && !doc.array().isEmpty())
         root = doc.array().first().toObject();

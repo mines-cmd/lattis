@@ -1,0 +1,27 @@
+# Lichii (Switch 2, and Switch), a "very experimental" fork of Eden / yuzu. Built into the app;
+# change it in library/emulators.toml. Checked against its GitHub repository and sources, 2026-11.
+# Download it only from GitHub: lichii.org and lichiiemulator.net aren't the project's, and an
+# archive from one of them was reported to carry malware.
+id = "lichii"
+name = "Lichii"
+platforms = ["switch-2", "switch"]
+# No Flatpak. The build target is still called yuzu, the program is lichii.
+executables = ["lichii"]
+appimage = "lichii*.AppImage"
+release = "github:zortos293/Lichii"
+# The optimized (-pgo) build first; older releases have only the plain one. Builds come several
+# times a day and every one before build-116 was a pre-release, hence release_prereleases.
+release_asset = "lichii-linux-x86_64-pgo.AppImage;lichii-linux-x86_64.AppImage"
+release_prereleases = "true"
+command = ["{exe}", "{args}", "-g", "{rom}"]
+extensions = ["nsp", "nsz", "xci", "xcz", "nup", "nro", "nso", "nca"]
+# It keeps Eden's data folders on purpose, so Lichii and Eden share saves and keys on one
+# machine (src/common/fs/fs_paths.h, path_util.cpp). Saves are nand/user/save and the system's
+# nand/system/save; keys are keys/ (prod.keys, title.keys) and the firmware
+# nand/system/Contents/registered (the yuzu layout, not checked on a real install). Its
+# portable `user/` folder is looked for in the working folder, not next to the program, and the
+# launcher starts emulators in the home folder, so there's no portable entry.
+saves = { native = ["~/.local/share/eden/nand/user/save", "~/.local/share/eden/nand/system/save"] }
+keys = { native = ["~/.local/share/eden/keys", "~/.local/share/eden/nand/system/Contents/registered"] }
+# <title ID>_<yyyy-MM-dd_hh-mm-ss-zzz>.png (src/yuzu/main_window.cpp, OnCaptureScreenshot).
+screenshots = { native = "~/.local/share/eden/screenshots/{serial}_[0-9]*.png" }

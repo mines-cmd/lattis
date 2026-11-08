@@ -61,6 +61,7 @@ class EmulatorsTest : public QObject
 
 private slots:
     void presetsAreValid();
+    void prereleasesKey();
     void overrideMergesKeyByKey();
     void userDefinedEmulator();
     void incompleteUserEmulatorSuggestsPreset();
@@ -92,7 +93,7 @@ void EmulatorsTest::presetsAreValid()
 {
     const QDir dir(QStringLiteral(":/qt/qml/Launcher/resources/emulators"));
     const QStringList files = dir.entryList({QStringLiteral("*.toml")});
-    QCOMPARE(files, (QStringList{"azahar.toml", "cemu.toml", "dolphin.toml", "duckstation.toml", "melonds.toml",
+    QCOMPARE(files, (QStringList{"azahar.toml", "cemu.toml", "dolphin.toml", "duckstation.toml", "lichii.toml", "melonds.toml",
                                  "mgba.toml", "pcsx2.toml", "ppsspp.toml", "rmg.toml", "rpcs3.toml", "ryubing.toml",
                                  "shadps4.toml"}));
     for (const QString &name : files) {
@@ -107,12 +108,13 @@ void EmulatorsTest::presetsAreValid()
     QStringList warnings;
     const QList<EmulatorDef> defs = Emulators::merge(Emulators::presets(), {}, &warnings);
     QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
-    QCOMPARE(defs.size(), 12);
+    QCOMPARE(defs.size(), 13);
     QCOMPARE(defs.at(0).id, QStringLiteral("azahar"));
     for (const EmulatorDef &d : defs) {
         QVERIFY(d.preset);
         QVERIFY(d.userKeys.isEmpty());
-        QVERIFY2(!d.platforms.isEmpty() && !d.flatpak.isEmpty() && !d.appimage.isEmpty(), qPrintable(d.id));
+        QVERIFY2(!d.platforms.isEmpty() && (!d.flatpak.isEmpty() || d.id == QStringLiteral("lichii")) && !d.appimage.isEmpty(),
+                 qPrintable(d.id));
         // Ryubing's release server was taken down: Flatpak only.
         QVERIFY2(d.release.isEmpty() == (d.id == QStringLiteral("ryubing")), qPrintable(d.id));
         // Dolphin's only AppImage is a community build; every other preset is the project's own.
@@ -129,6 +131,42 @@ void EmulatorsTest::presetsAreValid()
     QCOMPARE(Emulators::find(defs, "ryubing")->flatpak, QStringLiteral("io.github.ryubing.Ryujinx"));
     QCOMPARE(Emulators::find(defs, "rpcs3")->files, QStringList{"eboot.bin"});
     QCOMPARE(Emulators::find(defs, "dolphin")->platforms, (QStringList{"gamecube", "wii"}));
+
+    const EmulatorDef *lichii = Emulators::find(defs, "lichii");
+    QVERIFY(lichii);
+    QCOMPARE(lichii->platforms, (QStringList{"switch-2", "switch"}));
+    QVERIFY(lichii->flatpak.isEmpty());
+    QCOMPARE(lichii->release, QStringLiteral("github:zortos293/Lichii"));
+    QCOMPARE(lichii->releaseAsset,
+             QStringLiteral("lichii-linux-x86_64-pgo.AppImage;lichii-linux-x86_64.AppImage"));
+    QVERIFY(lichii->releasePrereleases);
+    for (const EmulatorDef &d : defs)
+        QCOMPARE(d.releasePrereleases, d.id == QStringLiteral("lichii"));
+}
+
+void EmulatorsTest::prereleasesKey()
+{
+    QStringList warnings;
+    const QList<EmulatorDef> defs = mergeText(kCitra + R"(
+[[emulator]]
+id = "azahar"
+release_prereleases = "true"
+)",
+                                              &warnings);
+    QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
+    QVERIFY(Emulators::find(defs, "azahar")->releasePrereleases);
+    QVERIFY(Emulators::referenceText(defs).contains(QStringLiteral("release_prereleases = \"true\"   # emulators.toml\n")));
+
+    const Parsed<QList<EmulatorEntry>> bad = Emulators::parseFile(
+        "[[emulator]]\nid = \"azahar\"\nrelease_prereleases = \"yes\"\n", kFile);
+    QVERIFY2(anyContains(bad.warnings, QStringLiteral("release_prereleases is \"true\" or \"false\"")),
+             qPrintable(dump(bad.warnings)));
+
+    const Parsed<QList<EmulatorEntry>> gitlab = Emulators::parseFile(
+        "[[emulator]]\nid = \"x\"\nrelease = \"gitlab:git.example.org/a/b\"\nrelease_prereleases = \"true\"\n", kFile);
+    QVERIFY2(anyContains(gitlab.warnings, QStringLiteral("works for github: releases only")),
+             qPrintable(dump(gitlab.warnings)));
+    QVERIFY(!gitlab.value.first().values.contains(QStringLiteral("release_prereleases")));
 }
 
 void EmulatorsTest::overrideMergesKeyByKey()
@@ -161,7 +199,7 @@ void EmulatorsTest::userDefinedEmulator()
     QStringList warnings;
     const QList<EmulatorDef> defs = mergeText(kCitra, &warnings);
     QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
-    QCOMPARE(defs.size(), 13);
+    QCOMPARE(defs.size(), 14);
     const EmulatorDef &citra = defs.last(); // after the presets
     QCOMPARE(citra.id, QStringLiteral("citra"));
     QVERIFY(!citra.preset);
@@ -180,7 +218,7 @@ id = "ryujing"
 path = "/opt/ryujinx/Ryujinx"
 )",
                                               &warnings);
-    QCOMPARE(defs.size(), 12);
+    QCOMPARE(defs.size(), 13);
     QCOMPARE(warnings.size(), 1);
     const QString w = warnings.first();
     QVERIFY2(w.startsWith(kFile + QStringLiteral(":2:")), qPrintable(w));
@@ -245,7 +283,7 @@ void EmulatorsTest::validation()
     // The preset's own value stays.
     QStringList warnings;
     const QList<EmulatorDef> defs = Emulators::merge(Emulators::presets(), parsed.value, &warnings);
-    QCOMPARE(defs.size(), 12); // the presets, nothing more
+    QCOMPARE(defs.size(), 13); // the presets, nothing more
 }
 
 void EmulatorsTest::extensionsNormalized()
@@ -389,7 +427,7 @@ void EmulatorsTest::presetFolders()
     // Those that write saves next to the ROM have no save folders; only they have saves_beside_rom.
     const QStringList besideRom = {QStringLiteral("melonds"), QStringLiteral("mgba")};
     // Those whose portable folder depends on the working folder have no portable entry.
-    const QStringList notPortable = {QStringLiteral("azahar"), QStringLiteral("ppsspp"), QStringLiteral("rmg"),
+    const QStringList notPortable = {QStringLiteral("azahar"), QStringLiteral("ppsspp"), QStringLiteral("rmg"), QStringLiteral("lichii"),
                                      QStringLiteral("shadps4")};
     for (const EmulatorDef &d : defs) {
         QCOMPARE(d.savesBesideRom.isEmpty(), !besideRom.contains(d.id));
@@ -398,7 +436,8 @@ void EmulatorsTest::presetFolders()
             QVERIFY(d.savesBesideRom.contains(QStringLiteral("sav")));
             continue;
         }
-        const QStringList types = notPortable.contains(d.id) ? QStringList{"flatpak", "native"}
+        const QStringList types = d.id == QStringLiteral("lichii") ? QStringList{"native"}
+                                : notPortable.contains(d.id) ? QStringList{"flatpak", "native"}
                                                              : QStringList{"flatpak", "native", "portable"};
         QCOMPARE(d.saves.keys(), types);
         QCOMPARE(d.portable.isEmpty(), notPortable.contains(d.id));

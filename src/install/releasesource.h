@@ -16,6 +16,7 @@ struct ReleaseSource
     Host host = Host::GitHub;
     QString server;
     QString project;
+    bool prereleases = false;
 
     QUrl apiUrl() const;
     QString label() const;
@@ -40,6 +41,7 @@ struct Release
     QString tag;
     QString date;
     QString notes;
+    bool prerelease = false;
     QList<ReleaseAsset> assets;
 
     bool operator==(const Release &) const = default;
@@ -47,7 +49,8 @@ struct Release
 
 namespace ReleaseSources {
 std::optional<ReleaseSource> parse(const QString &text, QString *error = nullptr);
-std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error);
+std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error,
+                                    const QString &assetPatterns = QString());
 
 bool matches(const QString &name, const QString &patterns);
 const ReleaseAsset *pickAsset(const Release &release, const QString &patterns);

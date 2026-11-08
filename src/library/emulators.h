@@ -50,6 +50,7 @@ struct EmulatorDef
     QString release;
     QString releaseAsset;
     QString releaseUnofficial;
+    bool releasePrereleases = false;
     QString releaseInside;
     QString path;
     QStringList command;
