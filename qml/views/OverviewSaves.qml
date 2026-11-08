@@ -14,7 +14,6 @@ OverviewCard {
     readonly property int played: stats.played ?? 0
     readonly property int backedUp: stats.backedUp ?? 0
     readonly property bool empty: (stats.archives ?? 0) === 0
-    readonly property bool complete: !empty && backedUp >= played
 
     property real grow: barsGrown ? 1 : 0
     Behavior on grow { enabled: Motion.on; MotionNumber { speed: "slow" } }
@@ -31,20 +30,12 @@ OverviewCard {
             Layout.fillWidth: true
             text: qsTr("Save backups")
         }
-        Rectangle {
-            visible: root.empty || root.complete
-            implicitWidth: chip.implicitWidth + 2 * Theme.layout.spacing * 1.5
-            implicitHeight: chip.implicitHeight + Theme.layout.spacing
-            radius: height / 2
-            color: root.empty ? Theme.overview.savesBadBackground : Theme.overview.savesGoodBackground
-
-            Label {
-                id: chip
-                anchors.centerIn: parent
-                text: root.empty ? qsTr("Not protected") : qsTr("Up to date")
-                color: root.empty ? Theme.overview.savesBadText : Theme.overview.savesGoodText
-                font.pixelSize: Theme.font.smallSize
-            }
+        SettingsButton {
+            primary: root.empty
+            iconPath: Icons.save2Line
+            text: qsTr("Back up now")
+            tip: qsTr("Back up saves")
+            onClicked: root.backUpRequested()
         }
     }
 
@@ -169,18 +160,4 @@ OverviewCard {
     }
 
     Item { Layout.fillHeight: true }
-
-    RowLayout {
-        Layout.fillHeight: false
-        Layout.fillWidth: true
-
-        Item { Layout.fillWidth: true }
-        SettingsButton {
-            primary: root.empty
-            iconPath: Icons.save2Line
-            text: qsTr("Back up now")
-            tip: qsTr("Back up saves")
-            onClicked: root.backUpRequested()
-        }
-    }
 }

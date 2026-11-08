@@ -98,7 +98,7 @@ SCENARIOS = [
              [(OPEN + DOWN + "expect Compatibility\nexpect ProtonDB tiers of your installed Steam games\n"
                + "expect Native games\nexpect Proton games\n", None)], demo),
     Scenario("Save backups offers Back up now, which opens the saves backup",
-             [(OPEN + DOWN + "expect Save backups\nexpect Played games\nclick Back up now\nwait 800\n"
+             [(OPEN + DOWN + "expect Save backups\nexpect-not Not protected\nclick Back up now\nwait 800\n"
                + "expect Backups kept per game\n", None)], demo),
     Scenario("Fun facts name the longest session and link to the Gallery",
              [(OPEN + DOWN + "expect Fun facts\nexpect Waiting longest\nclick Open the Gallery\nwait 800\n"
