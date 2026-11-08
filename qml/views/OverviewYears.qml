@@ -13,7 +13,7 @@ OverviewCard {
 
     readonly property var years: overview.years ?? []
     readonly property int most: years.reduce((most, y) => Math.max(most, y.count), 0)
-    readonly property var hoveredYear: hoveredIndex >= 0 && hoveredIndex < years.length ? years[hoveredIndex] : null
+    readonly property var busiestYear: years.reduce((best, y) => best === null || y.count > best.count ? y : best, null)
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
 
@@ -23,11 +23,11 @@ OverviewCard {
         OverviewCardTitle { text: qsTr("Release years") }
         Item { Layout.fillWidth: true }
         OverviewQuiet {
-            text: root.hoveredYear ? qsTr("%1 · %n game(s)", "", root.hoveredYear.count).arg(root.hoveredYear.year) : ""
+            text: root.busiestYear ? qsTr("Most in %1 · %n game(s)", "", root.busiestYear.count).arg(root.busiestYear.year) : ""
         }
     }
 
-    // The library has no year filter, so the columns show their count while hovered and aren't clickable.
+    // The library has no year filter, so the columns show their count in a tooltip while hovered and aren't clickable.
     Item {
         id: chart
         property real grow: root.barsGrown ? 1 : 0
@@ -65,6 +65,9 @@ OverviewCard {
                         radius: Theme.overview.barRadius
                         color: column.hovered ? Theme.overview.barActive : Theme.overview.barFill
                         opacity: column.hovered ? 1 : Theme.overview.barOpacity
+
+                        ToolTip.visible: column.hovered
+                        ToolTip.text: qsTr("%1 · %n game(s)", "", column.modelData.count).arg(column.modelData.year)
                     }
 
                     HoverHandler {
