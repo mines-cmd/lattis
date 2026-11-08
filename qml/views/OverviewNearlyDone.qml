@@ -16,7 +16,15 @@ OverviewCard {
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
 
-    OverviewCardTitle { text: qsTr("Nearly done") }
+    RowLayout {
+        Layout.fillWidth: true
+
+        OverviewCardTitle {
+            Layout.fillWidth: true
+            text: qsTr("Nearly done")
+        }
+        OverviewQuiet { text: qsTr("Games with 80%+ achievements") }
+    }
 
     Repeater {
         model: root.rows
