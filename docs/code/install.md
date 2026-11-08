@@ -20,11 +20,12 @@ The install code puts an emulator on the computer from inside the app, as the up
 
 ## Where a download comes from
 
-Four emulator keys (see [library](library.md#emulators)) name it:
+Five emulator keys (see [library](library.md#emulators)) name it:
 
 - `release`: `github:<owner>/<repo>` or `gitlab:<host>/<group>/<project>`.
 - `release_asset`: the file's name pattern in the latest release (case-insensitive, `;` separates patterns in order of preference).
 - `release_inside`: for a zip or tarball, the pattern of the AppImage inside it.
+- `release_prereleases`: `"true"` (GitHub only; a `gitlab:` source warns and ignores it) takes the newest release with a matching download, pre-release or not, instead of `/releases/latest`, which skips pre-releases. `ReleaseSource::prereleases` carries it, `Release::prerelease` and the install record's `prerelease` say whether the installed or offered build is one, and the card's version adds "(pre-release)". Lichii sets it.
 - `release_unofficial`: set (to whose builds they are) when the release isn't the emulator's own project. The `Installer` row then has `unofficial`, and lists the Flatpak route first, so the card tags the AppImage "Unofficial" and recommends the Flatpak.
 
 An emulator with `release` and `release_asset` can be installed as an AppImage. Every built-in emulator has them except Ryubing, whose GitLab server was taken down (Flatpak only); Dolphin's are `pkgforge-dev`'s community builds, so it sets `release_unofficial`. A value that doesn't parse is a warning when the file is read and the key is ignored. An emulator with a `flatpak` id can be installed as a Flatpak.
@@ -36,7 +37,7 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 | Function | What it does |
 |---|---|
 | `ReleaseSources::parse(text, &error)` | A `ReleaseSource` (host, server, project) from a `release` value, or why not. Names are checked: no `..`, no `@`, a GitLab host needs a dot |
-| `ReleaseSource::apiUrl()` | GitHub: `https://api.github.com/repos/<project>/releases/latest`. GitLab: `https://<server>/api/v4/projects/<project, percent-encoded>/releases?per_page=1` |
+| `ReleaseSource::apiUrl()` | GitHub: `https://api.github.com/repos/<project>/releases/latest`, or with `prereleases` `…/releases?per_page=20` (newest first). GitLab: `https://<server>/api/v4/projects/<project, percent-encoded>/releases?per_page=1` |
 | `ReleaseSource::label()` | "GitHub", or the GitLab server's name, for the interface |
 | `ReleaseSources::parseRelease(source, json, &error)` | A `Release`: tag, date and the assets (id, name, URL, size, sha256, date). GitHub's answer is one release; GitLab's is a list whose first entry counts. An API error body (`{"message": …}`) becomes the error. GitHub's `digest` (`sha256:…`) is the checksum; GitLab gives none, and uses an asset's `direct_asset_url` when it has one |
 | `ReleaseSources::matches(name, patterns)` | `*` and `?` patterns, anchored, case-insensitive, `;`-separated |
