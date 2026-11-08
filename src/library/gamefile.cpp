@@ -51,7 +51,7 @@ constexpr Field kFields[] = {
     {"start_dir", String, 0, 0, "", "Proton and Linux games: the folder it starts in (Steam's Start in); the exe's folder when not set"},
     {"install_dir", String, 0, 0, "", "Proton and Linux games: the game's folder, which Open folder opens and Uninstall can delete"},
     {"save_folder", String, 0, 0, "", "The folder Open save folder opens (`~` for the home folder); when not set, or not found, it's looked for: the ROM's folder for an emulator that saves next to it, the emulator's save folder, or the Proton prefix's user folder"},
-    {"save_paths", StringList, 0, 0, "[]", "Steam, Proton and Linux games: more folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game"},
+    {"save_paths", StringList, 0, 0, "[]", "More folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game; an emulated game's replace its emulator's save folders in its backup"},
     {"saves_game", String, 0, 0, "", "Steam, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
     {"auto_backup", Bool, 0, 0, "", "Steam, Proton and Linux games: back up the game's saves when it closes (true), never (false), or, when not set, as its platform does"},
     {"media_folders", StringList, 0, 0, "[]", "Folders of pictures and videos (OBS recordings, a screenshot tool's folder; `~` for the home folder) shown in the game's Media row and the Gallery; every picture and video in them and their subfolders counts"},

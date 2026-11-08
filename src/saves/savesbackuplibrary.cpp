@@ -4,6 +4,7 @@
 #include "emulators.h"
 #include "gameid.h"
 #include "library.h"
+#include "libraryfiles.h"
 #include "protonsaves.h"
 #include "savesmanifest.h"
 
@@ -152,18 +153,32 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
         if (!def || !install.found())
             return std::nullopt;
         input.emulatorId = def->id;
-        input.gameId = backupKey(input);
-        input.title = def->name.isEmpty() ? def->id : def->name;
         // Only what a restore accepts back: inside the home.
         const auto inHome = [&](const QString &path) { return path.startsWith(input.env.home + u'/'); };
-        for (const QString &path : Emulators::installPaths(def->saves, install, input.env.home)) {
-            if (inHome(path) && (QFileInfo(path).exists() || QFileInfo(path).isSymLink()))
-                input.emulatorPaths.append(path);
+        const auto exists = [](const QString &path) { return QFileInfo(path).exists() || QFileInfo(path).isSymLink(); };
+        const GameFile gameFile = snapshot.content.games.value(gameId);
+        QStringList own = gameFile.savePaths;
+        if (!gameFile.saveFolder.isEmpty())
+            own.prepend(gameFile.saveFolder);
+        for (const QString &path : std::as_const(own)) {
+            const QString resolved = resolveRomFolder(path, dataDir, input.env.home);
+            if (inHome(resolved) && exists(resolved))
+                input.emulatorPaths.append(resolved);
         }
-        for (const BesideRom::GameSaves &saves : BesideRom::find(*def, snapshot.content.platforms, library.allGames())) {
-            for (const BesideRom::SaveFile &file : saves.files) {
-                if (inHome(file.path))
-                    input.emulatorPaths.append(file.path);
+        input.ownSaves = !input.emulatorPaths.isEmpty();
+        input.gameId = input.ownSaves ? game->id : backupKey(input);
+        input.title = input.ownSaves ? game->title : def->name.isEmpty() ? def->id : def->name;
+        if (!input.ownSaves) {
+            for (const QString &path : Emulators::installPaths(def->saves, install, input.env.home)) {
+                if (inHome(path) && exists(path))
+                    input.emulatorPaths.append(path);
+            }
+            for (const BesideRom::GameSaves &saves :
+                 BesideRom::find(*def, snapshot.content.platforms, library.allGames())) {
+                for (const BesideRom::SaveFile &file : saves.files) {
+                    if (inHome(file.path))
+                        input.emulatorPaths.append(file.path);
+                }
             }
         }
         if (input.emulatorPaths.isEmpty())

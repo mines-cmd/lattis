@@ -115,7 +115,7 @@ QByteArray manifest(const Input &input, const QString &matched, const QList<Sour
     out += QStringLiteral("created = %1\n")
                .arg(input.now.toOffsetFromUtc(input.now.offsetFromUtc()).toString(Qt::ISODate));
     out += QStringLiteral("game = %1\ntitle = %2\n").arg(quote(input.gameId), quote(input.title));
-    if (!input.emulatorId.isEmpty())
+    if (!input.emulatorId.isEmpty() && !input.ownSaves)
         out += QStringLiteral("emulator = %1   # every game of this emulator shares the backup\n").arg(quote(input.emulatorId));
     if (!matched.isEmpty())
         out += QStringLiteral("matched = %1   # the game in the Ludusavi manifest\n").arg(quote(matched));

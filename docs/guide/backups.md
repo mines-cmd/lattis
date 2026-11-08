@@ -45,7 +45,7 @@ Games keep their saves in their own places, so Lattis finds them from the [Ludus
 
 It covers Steam, Proton, Linux and emulated games. It's off until you turn it on, and nothing is downloaded before that.
 
-**Emulated games** work differently: an emulator keeps every game's saves together, so closing a game backs up all of that emulator's save folders (and the saves it keeps next to ROMs), not keys or firmware. There is one backup per emulator, shared by all its games, in `emulator-<name>` inside the backup folder; it's skipped when nothing changed since the last one, so playing several games in a row makes few. The saves list isn't needed. Turn it on with the **Back up saves** switch of an emulated platform, or per game as below; the game's Properties → Saves shows the emulator's backups and restores them.
+**Emulated games** work differently: an emulator keeps every game's saves together, so closing a game backs up all of that emulator's save folders (and the saves it keeps next to ROMs), not keys or firmware. There is one backup per emulator, shared by all its games, in `emulator-<name>` inside the backup folder; it's skipped when nothing changed since the last one, so playing several games in a row makes few. If you set a save source on an emulated game (its save folder or extra save paths, inside your home folder), that replaces the emulator's folders: closing that game backs up only those, in a backup of its own named after the game. The saves list isn't needed. Turn it on with the **Back up saves** switch of an emulated platform, or per game as below; the game's Properties → Saves shows the emulator's backups and restores them.
 
 **Turning it on**
 

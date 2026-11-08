@@ -49,16 +49,19 @@ struct Input
     // the emulator's name and `copies` stays empty.
     QString emulatorId;
     QStringList emulatorPaths;
+    // The game's own save_folder / save_paths replaced the emulator's places: `gameId` is the game's, so
+    // the backup is the game's alone.
+    bool ownSaves = false;
     Options options;
     QString appVersion;
     QDateTime now;
     Trash trash; // empty = the system trash
 };
 
-// What names a backup's folder under Options::folder: the group's main game, or "emulator-<id>".
+// What names a backup's folder under Options::folder: the group's main game, or "emulator-<id>" (the game itself when it has its own saves).
 inline QString backupKey(const Input &input)
 {
-    if (!input.emulatorId.isEmpty())
+    if (!input.emulatorId.isEmpty() && !input.ownSaves)
         return QStringLiteral("emulator-") + input.emulatorId;
     return input.copies.isEmpty() ? input.gameId : input.copies.first().id;
 }
