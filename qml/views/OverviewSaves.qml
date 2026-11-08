@@ -12,68 +12,175 @@ OverviewCard {
 
     readonly property var stats: overview.saves ?? ({})
     readonly property int played: stats.played ?? 0
+    readonly property int backedUp: stats.backedUp ?? 0
+    readonly property bool empty: (stats.archives ?? 0) === 0
+    readonly property bool complete: !empty && backedUp >= played
+
+    property real grow: barsGrown ? 1 : 0
+    Behavior on grow { enabled: Motion.on; MotionNumber { speed: "slow" } }
 
     signal backUpRequested()
 
     onOverviewChanged: if (overview.games === undefined) barsGrown = false
 
-    function countText(): string {
-        return qsTr("%1 of %2 · %3").arg(stats.backedUp).arg(played).arg(percentText(stats.backedUp, played))
-    }
+    RowLayout {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
 
-    OverviewQuiet {
-        id: sample
-        visible: false
-        text: root.countText()
-    }
-
-    OverviewCardTitle { text: qsTr("Save backups") }
-
-    OverviewBarRow {
-        regrow: root.regrow
-        visible: root.played > 0
-        name: qsTr("Played games")
-        countText: root.countText()
-        countWidth: sample.implicitWidth
-        fraction: root.played > 0 ? root.stats.backedUp / root.played : 0
-        grown: root.barsGrown
-        onGrew: root.barsGrown = true
-    }
-
-    Repeater {
-        model: [
-            { label: qsTr("Last backup"), value: root.stats.lastText ?? "" },
-            { label: qsTr("Backups"), value: root.stats.archives > 0 ? String(root.stats.archives) : "" },
-            { label: qsTr("Space used"), value: root.stats.archives > 0 ? Library.sizeText(root.stats.bytes) : "" }
-        ]
-
-        RowLayout {
-            required property var modelData
+        OverviewCardTitle {
             Layout.fillWidth: true
-            visible: modelData.value !== ""
+            text: qsTr("Save backups")
+        }
+        Rectangle {
+            visible: root.empty || root.complete
+            implicitWidth: chip.implicitWidth + 2 * Theme.layout.spacing * 1.5
+            implicitHeight: chip.implicitHeight + Theme.layout.spacing
+            radius: height / 2
+            color: root.empty ? Theme.overview.savesBadBackground : Theme.overview.savesGoodBackground
 
-            OverviewQuiet {
-                Layout.fillWidth: true
-                text: parent.modelData.label
-            }
             Label {
-                text: parent.modelData.value
-                color: Theme.palette.text
-                font.weight: Theme.font.emphasisWeight
+                id: chip
+                anchors.centerIn: parent
+                text: root.empty ? qsTr("Not protected") : qsTr("Up to date")
+                color: root.empty ? Theme.overview.savesBadText : Theme.overview.savesGoodText
+                font.pixelSize: Theme.font.smallSize
             }
         }
     }
 
-    OverviewQuiet {
-        visible: root.stats.archives === 0
-        text: qsTr("Nothing backed up yet")
+    RowLayout {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+        visible: root.empty
+        spacing: Theme.layout.spacing * 1.5
+
+        Rectangle {
+            Layout.preferredWidth: Theme.overview.attentionIconTile
+            Layout.preferredHeight: Theme.overview.attentionIconTile
+            radius: Theme.overview.savesTileRadius
+            color: Theme.overview.savesIconBackground
+
+            Icon {
+                anchors.centerIn: parent
+                size: Theme.overview.attentionIconSize
+                color: Theme.overview.savesIcon
+                path: Icons.shieldCheckLine
+            }
+        }
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
+
+            Label {
+                Layout.fillWidth: true
+                text: root.played > 0 ? qsTr("%n played game(s), no backups", "", root.played) : qsTr("Nothing backed up yet")
+                color: Theme.palette.text
+                elide: Text.ElideRight
+            }
+            OverviewQuiet {
+                Layout.fillWidth: true
+                visible: root.played > 0
+                wrapMode: Text.WordWrap
+                text: qsTr("Saves stay safe if a prefix breaks or a game updates.")
+            }
+        }
     }
 
-    ChromeButton {
-        Layout.alignment: Qt.AlignLeft
-        icon: Icons.save2Line
-        label: qsTr("Back up now")
-        tip: qsTr("Back up saves")
-        onClicked: root.backUpRequested()
+    ColumnLayout {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+        visible: !root.empty && root.played > 0
+        spacing: Theme.layout.spacing
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing / 2
+
+            Label {
+                text: root.backedUp
+                color: Theme.palette.text
+                font.pixelSize: Theme.overview.cardTitleSize * 1.5
+                font.weight: Theme.font.strongWeight
+            }
+            OverviewQuiet {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignBaseline
+                text: qsTr("of %n played game(s)", "", root.played)
+            }
+            OverviewQuiet { text: root.percentText(root.backedUp, root.played) }
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: Theme.overview.barHeight
+            radius: Theme.overview.barRadius
+            color: Theme.overview.barTrack
+
+            Rectangle {
+                width: root.backedUp > 0 ? Math.max(Theme.overview.barHeight, parent.width * root.backedUp / root.played * root.grow * root.regrow) : 0
+                height: parent.height
+                radius: parent.radius
+                color: Theme.overview.barFill
+            }
+        }
+        Component.onCompleted: {
+            root.barsGrown = true
+        }
+    }
+
+    RowLayout {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+        visible: !root.empty
+        spacing: Theme.layout.spacing * 1.5
+
+        Repeater {
+            model: [
+                { label: qsTr("Last backup"), value: root.stats.lastText ?? "" },
+                { label: qsTr("Backups"), value: root.stats.archives > 0 ? String(root.stats.archives) : "" },
+                { label: qsTr("Space used"), value: root.stats.archives > 0 ? Library.sizeText(root.stats.bytes) : "" }
+            ]
+
+            Rectangle {
+                required property var modelData
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                visible: modelData.value !== ""
+                implicitHeight: tile.implicitHeight + 2 * Theme.layout.spacing * 1.5
+                radius: Theme.overview.savesTileRadius
+                color: Theme.overview.savesTileBackground
+
+                ColumnLayout {
+                    id: tile
+                    anchors.fill: parent
+                    anchors.margins: Theme.layout.spacing * 1.5
+                    spacing: 0
+
+                    OverviewQuiet { text: parent.parent.modelData.label }
+                    Label {
+                        Layout.fillWidth: true
+                        text: parent.parent.modelData.value
+                        color: Theme.palette.text
+                        font.weight: Theme.font.emphasisWeight
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+        }
+    }
+
+    Item { Layout.fillHeight: true }
+
+    RowLayout {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+
+        Item { Layout.fillWidth: true }
+        SettingsButton {
+            primary: root.empty
+            iconPath: Icons.save2Line
+            text: qsTr("Back up now")
+            tip: qsTr("Back up saves")
+            onClicked: root.backUpRequested()
+        }
     }
 }
