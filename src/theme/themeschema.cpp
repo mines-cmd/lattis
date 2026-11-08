@@ -1242,7 +1242,7 @@ constexpr Setting kSettings[] = {
     color("overview", "bar_fill", "@stats.bar", "Status bars and the release year columns; platform bars use platform_colors"),
     color("overview", "bar_active", "@stats.bar_active", "The release year column under the pointer"),
     real("overview", "bar_opacity", "@stats.bar_opacity", 0, 1, "How strong the release year columns are; the hovered one is full"),
-    integer("overview", "row_padding", "10", 0, 40, "Space above and below a row of Games by platform and Status, inside its hover highlight"),
+    integer("overview", "row_padding", "4", 0, 40, "Space above and below a row of Games by platform and Status, inside its hover highlight"),
     integer("overview", "label_width", "120", 40, 400, "Width of the names left of the bars"),
     integer("overview", "count_width", "56", 20, 200,
             "Width of the counts right of the bars, the same in every card so the bars end in one line; a card whose longest count is wider uses that"),
