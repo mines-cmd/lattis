@@ -13,12 +13,18 @@ Rectangle {
 
     readonly property real inset: Theme.layout.spacing / 2 + Theme.iconButton.borderWidth
 
+    // Measured by the probes rather than bound: itemAt() isn't a dependency (made by an asynchronous Loader,
+    // the count changes before the labels exist), and reading a label's implicitWidth in the binding can
+    // change it mid-evaluation, a binding loop.
+    property real widestLabel: 0
     // Every segment as wide as the widest bold label, so checking one doesn't resize it.
-    readonly property real segmentWidth: {
+    readonly property real segmentWidth: widestLabel + 4 * Theme.layout.spacing
+
+    function measure() {
         let widest = 0
         for (let i = 0; i < probes.count; ++i)
             widest = Math.max(widest, probes.itemAt(i)?.implicitWidth ?? 0)
-        return widest + 4 * Theme.layout.spacing
+        widestLabel = widest
     }
 
     implicitWidth: root.choices.length * segmentWidth + 2 * inset
@@ -38,6 +44,8 @@ Rectangle {
             visible: false
             text: modelData.text
             font.weight: Theme.font.emphasisWeight
+            Component.onCompleted: Qt.callLater(root.measure)
+            onImplicitWidthChanged: Qt.callLater(root.measure)
         }
     }
 
