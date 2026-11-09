@@ -260,18 +260,22 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
 
-        Label {
-            text: parent.title
-            color: Theme.collections.editSectionHeading
-            font.weight: Theme.font.strongWeight
-            font.pixelSize: Theme.filters.headingFontSize
-            font.letterSpacing: Theme.filters.headingUppercase ? 0.8 : 0
-            font.capitalization: Theme.filters.headingUppercase ? Font.AllUppercase : Font.MixedCase
-        }
-        Rectangle {
+        RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 1
-            color: Theme.collections.editSectionRule
+            spacing: Theme.layout.spacing
+
+            Label {
+                text: parent.parent.title
+                color: Theme.collections.editSectionHeading
+                opacity: Theme.collections.editSectionHeadingOpacity
+                font.weight: Theme.font.strongWeight
+                font.pixelSize: Theme.filters.headingFontSize
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: Theme.collections.editSectionRule
+            }
         }
     }
 
@@ -550,8 +554,8 @@ ColumnLayout {
                             Rectangle {
                                 visible: tagSearch.text.trim() !== "" && root.tagMatches.length > 0
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * Theme.tags.height
-                                                                 + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2
+                                Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * matchList.rowHeight
+                                                                 + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2 * matchList.anchors.margins
                                 color: "transparent"
                                 radius: Theme.filters.sortRadius
                                 border.color: Theme.collections.editSectionRule
@@ -559,12 +563,23 @@ ColumnLayout {
 
                                 ListView {
                                     id: matchList
+                                    readonly property int rowHeight: Theme.tags.height + 2 * Theme.collections.editTagRowPadding
                                     anchors.fill: parent
-                                    anchors.margins: 1
+                                    anchors.margins: Theme.layout.spacing / 2
+                                    anchors.rightMargin: matchBar.visible ? matchBar.width + Theme.layout.spacing / 2 : anchors.margins
                                     spacing: Theme.filters.tagSpacing
                                     model: root.tagMatches
                                     boundsBehavior: Flickable.StopAtBounds
-                                    ScrollBar.vertical: SettingsScrollBar { trackless: true }
+                                    ScrollBar.vertical: SettingsScrollBar {
+                                        id: matchBar
+                                        parent: matchList.parent
+                                        anchors.top: matchList.top
+                                        anchors.bottom: matchList.bottom
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: Theme.layout.spacing / 2
+                                        thickness: Theme.collections.editTagScrollbarWidth
+                                        trackless: true
+                                    }
 
                                     delegate: AbstractButton {
                                         id: match
@@ -573,7 +588,7 @@ ColumnLayout {
                                         width: matchList.width
                                         leftPadding: Theme.layout.spacing / 2
                                         rightPadding: Theme.layout.spacing
-                                        implicitHeight: Theme.tags.height
+                                        implicitHeight: matchList.rowHeight
                                         hoverEnabled: true
                                         onClicked: root.addTag(modelData.name)
                                         HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -649,12 +664,22 @@ ColumnLayout {
             spacing: Theme.layout.spacing
 
             Label {
-                text: root.matches === 1 ? qsTr("1 game matches") : qsTr("%n game(s) match", "", root.matches)
-                color: Theme.gameEditor.headingColor
-                font.weight: Theme.font.strongWeight
+                // Only the number keeps the heading color; the rest of the sentence is muted.
+                readonly property string sentence: root.matches === 1 ? qsTr("1 game matches") : qsTr("%n game(s) match", "", root.matches)
+                textFormat: Text.StyledText
+                text: sentence.replace(/^(\d+)/, "<font color=\"" + Theme.gameEditor.headingColor + "\"><b>$1</b></font>")
+                color: Theme.collections.editFooterText
+                Accessible.name: sentence
+            }
+            Label {
+                visible: root.rulesOn && root.hasRules
+                text: "·"
+                color: Theme.collections.editFooterText
             }
             SettingsButton {
                 visible: root.rulesOn && root.hasRules
+                flat: true
+                textColor: Theme.collections.editFooterText
                 text: qsTr("Clear rules")
                 onClicked: root.clearRules()
             }

@@ -59,7 +59,7 @@ SCENARIOS = [
               (OPEN_COLL + "expect Year 2013\nclick Year 2013\nwait 500\n"
                + "expect The Legend of Zelda: A Link Between Worlds\nexpect-not Pikmin 4\n"
                + "key Escape\nwait 400\n" + OPEN_COLL + "click Year 2013\nwait 500\nkey Menu\nwait 400\n"
-               + "click Edit\nwait 600\nexpect Edit collection\nexpect Release year\nexpect-has 2013\n", None)],
+               + "click Edit\nwait 600\nexpect Edit collection\nexpect Released\nexpect-has 2013\n", None)],
              with_list("\n[list]\nyear_from = 2013\nyear_to = 2013\n")),
     Scenario("a saved minimum rating shows as a chip and in the column",
              [("expect-not Pikmin 4\nexpect Rated 3.5 or more\n" + OPEN_FILTERS + OPEN_MORE

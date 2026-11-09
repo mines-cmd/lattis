@@ -22,14 +22,6 @@ Item {
             item.forceActiveFocus(Qt.TabFocusReason)
     }
 
-    Rectangle {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Theme.collections.editTabIndicatorHeight
-        color: Theme.collections.editSectionRule
-    }
-
     RowLayout {
         id: row
         anchors.left: parent.left
@@ -103,7 +95,8 @@ Item {
                         anchors.leftMargin: Theme.layout.spacing / 2
                         anchors.verticalCenter: parent.verticalCenter
                         text: tab.modelData.count ?? ""
-                        color: Theme.collections.editTabCount
+                        color: label.color
+                        opacity: Theme.collections.editTabCountOpacity
                     }
                 }
             }

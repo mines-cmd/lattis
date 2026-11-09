@@ -158,15 +158,15 @@ def with_rated(dirs):
 SCENARIOS += [
     Scenario("Edit collection: chips toggle, the count follows them and Save keeps them",
              [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Library\nexpect Progress\nexpect Details\n"
-               + "expect 2 games match\nclick Installed\nwait 400\nexpect 1 game matches\n"
-               + "click Installed\nwait 400\nexpect 2 games match\nclick Installed\nwait 400\nexpect 1 game matches\n"
+               + "expect-has <b>2</b></font> games match\nclick Installed\nwait 400\nexpect-has <b>1</b></font> game matches\n"
+               + "click Installed\nwait 400\nexpect-has <b>2</b></font> games match\nclick Installed\nwait 400\nexpect-has <b>1</b></font> game matches\n"
                + "click Save\nwait 600\nexpect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect 1 game\nexpect Pikmin 4\nexpect-not Mario Tennis Aces\n", None),
               ("expect Leave the collection\n" + OPEN_COLL + "expect Faves\nkey Escape\nwait 400\n" + EDIT
-               + "expect 1 game matches\n", None)], with_ruled),
+               + "expect-has <b>1</b></font> game matches\n", None)], with_ruled),
     Scenario("Clear rules resets them without saving, and is hidden while none is set",
              [(FIRST + OPEN_COLL + EDIT + "expect Clear rules\nclick Clear rules\nwait 400\nexpect-not Clear rules\n"
-               + "expect-not 2 games match\nclick Installed\nwait 300\nexpect Clear rules\nclick Cancel\nwait 500\n"
+               + "expect-not-has <b>2</b></font> games match\nclick Installed\nwait 300\nexpect Clear rules\nclick Cancel\nwait 500\n"
                + OPEN_COLL + "click Faves\nwait 500\nexpect 2 games\nexpect Mario Tennis Aces\n", None)], with_ruled),
     Scenario("Rating chips hide half steps no game has, unless the collection saved one",
              [(FIRST + OPEN_COLL + EDIT + "expect Any\nexpect 3.5+\nexpect 4.5+\nexpect-not 1+\nexpect-not 2+\n"
@@ -186,9 +186,9 @@ SCENARIOS += [
              [(FIRST + OPEN_COLL + EDIT + "expect Racing\nexpect-not Match\nclick Search tags to add\ntype pLATFÖRMER\nwait 400\n"
                + "expect Platformer\nexpect-not Roguelike\nclick Platformer\nwait 400\nexpect Match\nexpect All\n"
                + "type zzz\nwait 300\nexpect-has No other tag called\nkey Escape\nwait 300\n"
-               + "expect Edit collection\nclick All\nwait 300\nexpect 1 game matches\nclick Any\nwait 300\nexpect-not 1 game matches\nclick All\nwait 300\nclick Save\nwait 600\n", None),
+               + "expect Edit collection\nclick All\nwait 300\nexpect-has <b>1</b></font> game matches\nclick Any\nwait 300\nexpect-not-has <b>1</b></font> game matches\nclick All\nwait 300\nclick Save\nwait 600\n", None),
               ("expect Leave the collection\n" + OPEN_COLL + "expect Faves\nkey Escape\nwait 400\n" + EDIT
-               + "expect Racing\nexpect Platformer\nexpect Match\nexpect 1 game matches\n", None)], with_tagged),
+               + "expect Racing\nexpect Platformer\nexpect Match\nexpect-has <b>1</b></font> game matches\n", None)], with_tagged),
     Scenario("Edit collection's tag picker removes a tag with its x, hides Match under two and Return adds the first match",
              [(FIRST + OPEN_COLL + EDIT + "click Search tags to add\ntype Plat\nkey Return\nwait 400\nexpect Match\n"
                + "click Racing\nwait 400\nexpect-not Match\nclick Save\nwait 600\n", None),
@@ -207,9 +207,9 @@ SCENARIOS += [
                + "click Added by hand\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
                + "click Rules\nwait 300\nexpect Library\nexpect-not Uncheck a game to take it out of the collection.\n", None)], with_ruled),
     Scenario("Edit collection's tab counts follow the ticks, and the footer count follows them too",
-             [(FIRST + OPEN_COLL + EDIT + "expect 2 games match\nclick Left out\nwait 300\nclick Hades\nwait 400\n"
-               + "expect 3 games match\nexpect 0\nclick Added by hand\nwait 300\nclick Pikmin 4\nwait 400\n"
-               + "expect 2 games match\nclick Cancel\nwait 500\n", None)], with_ruled),
+             [(FIRST + OPEN_COLL + EDIT + "expect-has <b>2</b></font> games match\nclick Left out\nwait 300\nclick Hades\nwait 400\n"
+               + "expect-has <b>3</b></font> games match\nexpect 0\nclick Added by hand\nwait 300\nclick Pikmin 4\nwait 400\n"
+               + "expect-has <b>2</b></font> games match\nclick Cancel\nwait 500\n", None)], with_ruled),
     Scenario("Edit collection's tabs follow the keyboard: Tab reaches the open one after the switch, arrows change the tab",
              [(FIRST + OPEN_COLL + EDIT + "key Tab\nkey Tab\nkey Right\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
                + "key Right\nwait 300\nexpect Hades\n" + LEFT_HINT
