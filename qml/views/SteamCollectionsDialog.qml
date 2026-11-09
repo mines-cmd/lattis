@@ -34,7 +34,7 @@ MotionPopup {
     function load() {
         read = account !== "" ? Library.readSteamCollections(account)
                               : { error: qsTr("No Steam account with collections was found") }
-        ticked = (read.collections ?? []).map(c => c.steamId)
+        ticked = (read.collections ?? []).filter(c => c.games > 0).map(c => c.steamId)
     }
 
     function run() {
@@ -89,6 +89,11 @@ MotionPopup {
             wrapMode: Text.WordWrap
         }
 
+        Note {
+            visible: root.summary === null
+            text: qsTr("Pick the collections to copy into Lattis. Nothing is changed in Steam.")
+        }
+
         ColumnLayout {
             visible: root.summary === null
             Layout.fillWidth: true
@@ -114,42 +119,35 @@ MotionPopup {
                 text: qsTr("This account has no collections of its own to import.")
             }
 
-            ListView {
-                id: checklist
+            CheckList {
                 visible: root.offered.length > 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(contentHeight, Theme.collections.importListHeight)
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                interactive: contentHeight > height
-                model: root.offered
-                ScrollBar.vertical: SettingsScrollBar { trackless: true }
-
-                delegate: SettingsCheckBox {
-                    required property var modelData
-                    width: checklist.width
-                    bordered: false
-                    text: qsTr("%1 (%n game(s))", "", modelData.games).arg(modelData.name)
-                          + (modelData.imported ? qsTr(", imported before") : "")
-                    checked: root.ticked.includes(modelData.steamId)
-                    onToggled: root.ticked = root.toggled(root.ticked, modelData.steamId)
-                }
+                model: root.offered.map(c => ({
+                    id: c.steamId,
+                    title: c.name,
+                    enabled: c.games > 0,
+                    info: (c.imported ? qsTr("Imported before") + "  ·  " : "")
+                          + (c.games > 0 ? qsTr("%n game(s)", "", c.games) : qsTr("Empty"))
+                }))
+                ticked: root.ticked
+                withSelectAll: true
+                maxListHeight: Theme.collections.importListHeight
+                onToggled: id => root.ticked = root.toggled(root.ticked, id)
+                onAllToggled: on => root.ticked = on ? selectable.slice() : []
             }
 
             Note {
-                visible: (root.read.dynamic ?? 0) > 0
-                text: qsTr("%n collection(s) of Steam's own rules are left out: Lattis can't run them.", "", root.read.dynamic ?? 0)
-            }
-            Note {
-                visible: (root.read.unreadable ?? 0) > 0
-                text: qsTr("%n entry(ies) in Steam's file couldn't be read and are skipped.", "", root.read.unreadable ?? 0)
+                visible: (root.read.dynamic ?? 0) > 0 || (root.read.unreadable ?? 0) > 0
+                text: [
+                    (root.read.dynamic ?? 0) > 0
+                        ? qsTr("%n collection(s) of Steam's own rules are left out: Lattis can't run them.", "", root.read.dynamic) : "",
+                    (root.read.unreadable ?? 0) > 0
+                        ? qsTr("%n entry(ies) in Steam's file couldn't be read and are skipped.", "", root.read.unreadable) : ""
+                ].filter(t => t !== "").join(" ")
             }
             Note {
                 visible: root.anyImported
                 text: qsTr("Collections imported before get Steam's games again. Games you added to them in Lattis are removed; their names stay.")
-            }
-            Note {
-                text: qsTr("Nothing is changed in Steam.")
             }
         }
 
@@ -160,56 +158,113 @@ MotionPopup {
             spacing: Theme.gameEditor.rowSpacing
 
             readonly property var s: root.summary ?? ({})
-            readonly property int changed: (s.added ?? []).length + (s.updated ?? []).length
+            readonly property var added: s.added ?? []
+            readonly property var updated: s.updated ?? []
+            readonly property var missing: s.missingApps ?? []
+            readonly property int changed: added.length + updated.length
+            readonly property var rows: {
+                const out = []
+                if (added.length > 0)
+                    out.push({ title: qsTr("Added"), count: qsTr("%n collection(s)", "", added.length), detail: root.names(added) })
+                if (updated.length > 0)
+                    out.push({ title: qsTr("Updated"), count: qsTr("%n collection(s)", "", updated.length), detail: root.names(updated) })
+                if ((s.unchanged ?? 0) > 0)
+                    out.push({ title: qsTr("Already matched Steam"), count: qsTr("%n collection(s)", "", s.unchanged), detail: "" })
+                if (missing.length > 0)
+                    out.push({ title: qsTr("Not in your library"), count: qsTr("%n game(s)", "", missing.length),
+                               detail: qsTr("They join their collections if they are added later. Steam app ids: %1").arg(missing.join(", ")) })
+                return out
+            }
 
             Note {
-                visible: summaryColumn.changed === 0
-                text: qsTr("Nothing needed changing.")
+                text: summaryColumn.changed > 0 ? qsTr("%n collection(s) imported.", "", summaryColumn.changed)
+                                                : qsTr("Nothing needed changing.")
             }
-            Note {
-                visible: (summaryColumn.s.added ?? []).length > 0
-                color: Theme.gameEditor.headingColor
-                text: qsTr("Added: %1").arg(root.names(summaryColumn.s.added ?? []))
-            }
-            Note {
-                visible: (summaryColumn.s.updated ?? []).length > 0
-                color: Theme.gameEditor.headingColor
-                text: qsTr("Updated: %1").arg(root.names(summaryColumn.s.updated ?? []))
-            }
-            Note {
-                visible: (summaryColumn.s.unchanged ?? 0) > 0
-                text: qsTr("%n collection(s) already matched Steam.", "", summaryColumn.s.unchanged ?? 0)
-            }
-            Note {
-                visible: (summaryColumn.s.dynamic ?? 0) > 0
-                text: qsTr("%n collection(s) of Steam's own rules were left out.", "", summaryColumn.s.dynamic ?? 0)
-            }
-            Note {
-                visible: (summaryColumn.s.unreadable ?? 0) > 0
-                text: qsTr("%n entry(ies) in Steam's file couldn't be read and were skipped.", "", summaryColumn.s.unreadable ?? 0)
-            }
-            Note {
-                visible: (summaryColumn.s.missingApps ?? []).length > 0
-                text: qsTr("%n game(s) in them aren't in your library; they join their collections if they are added later. Steam's app ids:", "",
-                           (summaryColumn.s.missingApps ?? []).length)
-            }
+
             Flickable {
-                visible: (summaryColumn.s.missingApps ?? []).length > 0
+                id: results
+                visible: summaryColumn.rows.length > 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(missingText.implicitHeight, Theme.collections.importListHeight)
-                contentHeight: missingText.implicitHeight
+                Layout.preferredHeight: Math.min(contentHeight, Theme.collections.importListHeight)
+                contentHeight: resultsBox.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height
-                ScrollBar.vertical: SettingsScrollBar { trackless: true }
+                ScrollBar.vertical: SettingsScrollBar { id: resultsBar; trackless: true }
 
-                Label {
-                    id: missingText
-                    width: parent.width
-                    text: (summaryColumn.s.missingApps ?? []).join(", ")
-                    color: Theme.gameEditor.hintColor
-                    wrapMode: Text.WordWrap
+                Rectangle {
+                    id: resultsBox
+                    width: results.width - (resultsBar.visible ? resultsBar.thickness + Theme.layout.spacing : 0)
+                    implicitHeight: resultRows.implicitHeight
+                    radius: Theme.controls.inputRadius
+                    color: Theme.controls.inputBackground
+                    border.color: Theme.controls.inputBorder
+                    border.width: Theme.controls.inputBorderWidth
+
+                    ColumnLayout {
+                        id: resultRows
+                        width: parent.width
+                        spacing: 0
+
+                        Repeater {
+                            model: summaryColumn.rows
+
+                            ColumnLayout {
+                                id: result
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                Rectangle {
+                                    visible: result.index > 0
+                                    Layout.fillWidth: true
+                                    implicitHeight: 1
+                                    color: Theme.controls.inputBorder
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.margins: Theme.collections.checklistRowPadding
+                                    spacing: Theme.layout.spacing / 2
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: result.modelData.title
+                                            color: Theme.gameEditor.headingColor
+                                            font.weight: Theme.font.strongWeight
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: result.modelData.count
+                                            color: Theme.collections.rowCountColor
+                                            font.pixelSize: Theme.controls.labelFontSize
+                                        }
+                                    }
+                                    Label {
+                                        visible: result.modelData.detail !== ""
+                                        Layout.fillWidth: true
+                                        text: result.modelData.detail
+                                        color: Theme.controls.labelColor
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+
+            Note {
+                visible: (summaryColumn.s.dynamic ?? 0) > 0 || (summaryColumn.s.unreadable ?? 0) > 0
+                text: [
+                    (summaryColumn.s.dynamic ?? 0) > 0
+                        ? qsTr("%n collection(s) of Steam's own rules were left out.", "", summaryColumn.s.dynamic) : "",
+                    (summaryColumn.s.unreadable ?? 0) > 0
+                        ? qsTr("%n entry(ies) in Steam's file couldn't be read and were skipped.", "", summaryColumn.s.unreadable) : ""
+                ].filter(t => t !== "").join(" ")
             }
         }
 
@@ -225,12 +280,14 @@ MotionPopup {
             }
             SettingsButton {
                 visible: root.summary === null
-                text: qsTr("Import")
+                primary: true
+                text: root.ticked.length > 0 ? qsTr("Import %n collection(s)", "", root.ticked.length) : qsTr("Import")
                 enabled: root.ticked.length > 0
                 onClicked: root.run()
             }
             SettingsButton {
                 visible: root.summary !== null
+                primary: true
                 text: qsTr("Close")
                 onClicked: root.close()
             }

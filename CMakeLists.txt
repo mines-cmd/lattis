@@ -88,6 +88,7 @@ qt_add_qml_module(lattis
         qml/components/RareGlow.qml
         qml/components/IconWall.qml
         qml/components/GameIcon.qml
+        qml/components/CheckList.qml
         qml/components/CollapseHeading.qml
         qml/components/Icon.qml
         qml/components/Stars.qml

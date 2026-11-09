@@ -126,26 +126,27 @@ MotionPopup {
         }
     }
 
-    component ExceptionList: ListView {
-        id: list
-        property var drops: []
-        signal toggled(string id)
-
+    component Hint: Label {
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.min(contentHeight, Theme.collections.editListHeight)
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        interactive: contentHeight > height
-        ScrollBar.vertical: SettingsScrollBar { trackless: true }
+        color: Theme.gameEditor.hintColor
+        wrapMode: Text.WordWrap
+    }
 
-        delegate: SettingsCheckBox {
-            required property var modelData
-            width: list.width
-            bordered: false
-            text: modelData.title
-            checked: !list.drops.includes(modelData.id)
-            onToggled: list.toggled(modelData.id)
-        }
+    // A game that isn't in the library has only its id: Steam's are shown as the app they name.
+    function gameRows(games) {
+        return games.map(g => {
+            const missing = g.title === g.id
+            return {
+                id: g.id,
+                title: !missing ? g.title
+                    : g.id.startsWith("steam-") ? qsTr("Steam app %1").arg(g.id.slice(6)) : g.id,
+                info: missing ? qsTr("Not in your library") : ""
+            }
+        })
+    }
+
+    function kept(games, drops) {
+        return games.map(g => g.id).filter(id => !drops.includes(id))
     }
 
     contentItem: ColumnLayout {
@@ -179,12 +180,12 @@ MotionPopup {
             contentHeight: formColumn.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: SettingsScrollBar { trackless: true }
+            ScrollBar.vertical: SettingsScrollBar { id: formBar; trackless: true }
             Keys.onEscapePressed: root.close()
 
             ColumnLayout {
                 id: formColumn
-                width: form.width
+                width: form.width - (formBar.visible ? formBar.thickness + Theme.layout.spacing : 0)
                 spacing: Theme.gameEditor.rowSpacing
 
                 SettingsCheckBox {
@@ -285,20 +286,26 @@ MotionPopup {
                 Group {
                     title: root.rulesOn ? qsTr("Added by hand") : qsTr("Games")
                     visible: root.added.length > 0
-                    ExceptionList {
-                        model: root.added
-                        drops: root.dropAdded
+                    CheckList {
+                        Layout.fillWidth: true
+                        model: root.gameRows(root.added)
+                        ticked: root.kept(root.added, root.dropAdded)
+                        maxListHeight: Theme.collections.editListHeight
                         onToggled: id => root.dropAdded = root.toggled(root.dropAdded, id)
                     }
+                    Hint { text: qsTr("Uncheck a game to take it out of the collection.") }
                 }
                 Group {
                     title: qsTr("Left out")
                     visible: root.rulesOn && root.removed.length > 0
-                    ExceptionList {
-                        model: root.removed
-                        drops: root.dropRemoved
+                    CheckList {
+                        Layout.fillWidth: true
+                        model: root.gameRows(root.removed)
+                        ticked: root.kept(root.removed, root.dropRemoved)
+                        maxListHeight: Theme.collections.editListHeight
                         onToggled: id => root.dropRemoved = root.toggled(root.dropRemoved, id)
                     }
+                    Hint { text: qsTr("Uncheck a game to let the rules include it again.") }
                 }
             }
         }
@@ -313,6 +320,7 @@ MotionPopup {
                 onClicked: root.close()
             }
             SettingsButton {
+                primary: true
                 text: root.editing ? qsTr("Save") : root.renaming ? qsTr("Rename") : qsTr("Add")
                 enabled: root.editing || root.typed !== ""
                 onClicked: root.submit()
