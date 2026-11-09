@@ -141,7 +141,10 @@ Rectangle {
         }
         if (Date.now() - statusMenu.closedAt < 200)
             return
-        popup.popup(button, 0, button.height)
+        popup.popDirection = "down"
+        // Placed from the button's unscaled geometry: the press dip scales it, and a menu parented to
+        // the button would follow its corner back out as the button springs back.
+        popup.popup(button.parent, button.x, button.y + button.height)
     }
 
     visible: buttons.length > 0
