@@ -60,6 +60,7 @@ MotionPopup {
         id: row
         property bool selected: false
         property string detail
+        property string iconPath
         signal menuRequested(real x, real y)
 
         width: parent?.width ?? 0
@@ -88,6 +89,12 @@ MotionPopup {
         contentItem: RowLayout {
             spacing: Theme.layout.spacing
 
+            Icon {
+                visible: row.iconPath !== ""
+                path: row.iconPath
+                size: Theme.controls.iconSize
+                color: row.selected ? Theme.collections.rowSelectedText : Theme.collections.rowText
+            }
             Label {
                 id: nameLabel
                 Layout.fillWidth: true
@@ -125,9 +132,10 @@ MotionPopup {
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
 
-            Column {
+            Grid {
                 id: collectionRows
                 width: collectionsFlick.width
+                columns: 2
                 spacing: Theme.collections.rowSpacing
 
                 Repeater {
@@ -135,6 +143,7 @@ MotionPopup {
 
                     CollectionRow {
                         required property var modelData
+                        width: (collectionRows.width - collectionRows.spacing) / 2
                         text: modelData.name
                         detail: modelData.count
                         selected: Library.collectionId === modelData.id
@@ -147,16 +156,25 @@ MotionPopup {
                 }
             }
         }
-        CollectionRow {
+        RowLayout {
             Layout.fillWidth: true
-            text: qsTr("New collection")
-            onClicked: root.collectionDialogRequested("new", "", "")
-        }
-        CollectionRow {
-            Layout.fillWidth: true
-            visible: Library.steam.found
-            text: qsTr("Import from Steam")
-            onClicked: root.steamImportRequested()
+            spacing: Theme.layout.spacing
+
+            CollectionRow {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                iconPath: Icons.add
+                text: qsTr("New collection")
+                onClicked: root.collectionDialogRequested("new", "", "")
+            }
+            CollectionRow {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                visible: Library.steam.found
+                iconPath: Icons.steamLine
+                text: qsTr("Import from Steam")
+                onClicked: root.steamImportRequested()
+            }
         }
 
         SettingsMenu {
