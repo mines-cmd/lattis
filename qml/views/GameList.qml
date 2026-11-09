@@ -567,6 +567,17 @@ Rectangle {
         function onClosed() { root.focusList() }
     }
 
+    Loader {
+        id: steamCollections
+        active: false
+        source: "SteamCollectionsDialog.qml"
+    }
+    Connections {
+        target: steamCollections.item
+        function onMessage(text) { root.message(text) }
+        function onClosed() { root.focusList() }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.list.padding
@@ -694,6 +705,11 @@ Rectangle {
                     function onCollectionDialogRequested(mode, id, name) {
                         filterPanel.item.close()
                         root.askCollection(mode, id, name, [])
+                    }
+                    function onSteamImportRequested() {
+                        filterPanel.item.close()
+                        steamCollections.active = true
+                        steamCollections.item.open()
                     }
                     function onCollectionDeleted(id) {
                         const error = Library.deleteCollection(id)

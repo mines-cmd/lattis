@@ -1,0 +1,10 @@
+[
+  ["NewContentRollup_1000", {"key": "NewContentRollup_1000", "timestamp": 1700000000, "value": "{\"a\":1}", "version": "1"}],
+  ["user-collections.uc-AbCdEf1", {"key": "user-collections.uc-AbCdEf1", "timestamp": 1700000001, "value": "{\"id\":\"uc-AbCdEf1\",\"name\":\"Weekend Games\",\"added\":[1145360,367520,999001],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-GhIjKl2", {"key": "user-collections.uc-GhIjKl2", "timestamp": 1700000002, "value": "{\"id\":\"uc-GhIjKl2\",\"name\":\"Couch Co-op\",\"added\":[413150,1091500],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-Dyn0004", {"key": "user-collections.uc-Dyn0004", "timestamp": 1700000004, "value": "{\"id\":\"uc-Dyn0004\",\"name\":\"Rule Based\",\"added\":[],\"removed\":[],\"filterSpec\":{\"nFormatVersion\":2,\"strSearchText\":\"\",\"filterGroups\":[]}}", "version": "5"}],
+  ["user-collections.from-tag-Roguelike", {"key": "user-collections.from-tag-Roguelike", "timestamp": 1700000006, "value": "{\"id\":\"from-tag-Roguelike\",\"name\":\"Roguelike\",\"added\":[1145360],\"removed\":[]}", "version": "5"}],
+  ["user-collections.favorite", {"key": "user-collections.favorite", "timestamp": 1700000007, "value": "{\"id\":\"favorite\",\"name\":\"Favorites\",\"added\":[730],\"removed\":[]}", "version": "5"}],
+  ["user-collections.hidden", {"key": "user-collections.hidden", "timestamp": 1700000008, "value": "{\"id\":\"hidden\",\"name\":\"Hidden\",\"added\":[367520],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-Deleted6", {"key": "user-collections.uc-Deleted6", "timestamp": 1700000009, "is_deleted": true, "version": "5"}]
+]

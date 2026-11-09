@@ -11,7 +11,7 @@ The bigger features Lattis doesn't have yet. Nothing here has a date, and the or
 - **Close to tray.** Keep Lattis running in the background with a tray icon, and hide the window instead of quitting while a game is running or Steam edits are waiting.
 - **Controller support.** Browse and launch your games with a gamepad, and a bigger layout for a TV.
 - **Multi-select.** Pick several games and hide, tag, favorite or change their emulator at once.
-- **Collections.** Saved filters, plus a "Continue playing" row.
+- **Continue playing.** A row of the games you played last, or a sort that can be your starting view. Collections (hand-picked groups and saved filters) are already in, see [Finding games](finding-games.md#collections).
 - **More save backups.** Back up before a game starts. Saves are already backed up when a game closes, emulated games' too.
 - **A command palette and drag and drop.** Jump to any game, setting or action from the keyboard, and drop ROMs or images onto the window.
 - **A command line.** Launch or add a game from a script, and make desktop shortcuts for games.

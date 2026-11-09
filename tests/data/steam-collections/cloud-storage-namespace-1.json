@@ -1,0 +1,21 @@
+[
+  ["NewContentRollup_1000", {"key": "NewContentRollup_1000", "timestamp": 1700000000, "value": "{\"a\":1}", "version": "1"}],
+  ["user-collections.uc-AbCdEf1", {"key": "user-collections.uc-AbCdEf1", "timestamp": 1700000001, "value": "{\"id\":\"uc-AbCdEf1\",\"name\":\"Weekend Games\",\"added\":[1145360,367520,999001,1145360],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-GhIjKl2", {"key": "user-collections.uc-GhIjKl2", "timestamp": 1700000002, "value": "{\"id\":\"uc-GhIjKl2\",\"name\":\"  Couch Co-op  \",\"added\":[413150,1091500],\"removed\":[730]}", "version": "5"}],
+  ["user-collections.uc-Empty03", {"key": "user-collections.uc-Empty03", "timestamp": 1700000003, "value": "{\"id\":\"uc-Empty03\",\"name\":\"Nothing Yet\",\"added\":[],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-Dyn0004", {"key": "user-collections.uc-Dyn0004", "timestamp": 1700000004, "value": "{\"id\":\"uc-Dyn0004\",\"name\":\"Rule Based\",\"added\":[],\"removed\":[],\"filterSpec\":{\"nFormatVersion\":2,\"strSearchText\":\"\",\"filterGroups\":[]}}", "version": "5"}],
+  ["user-collections.uc-Dyn0005", {"key": "user-collections.uc-Dyn0005", "timestamp": 1700000005, "value": "{\"id\":\"uc-Dyn0005\",\"name\":\"Another Rule\",\"added\":[1145360],\"removed\":[],\"filterSpec\":{\"nFormatVersion\":2}}", "version": "5"}],
+  ["user-collections.from-tag-Roguelike", {"key": "user-collections.from-tag-Roguelike", "timestamp": 1700000006, "value": "{\"id\":\"from-tag-Roguelike\",\"name\":\"Roguelike\",\"added\":[1145360],\"removed\":[]}", "version": "5"}],
+  ["user-collections.favorite", {"key": "user-collections.favorite", "timestamp": 1700000007, "value": "{\"id\":\"favorite\",\"name\":\"Favorites\",\"added\":[730],\"removed\":[]}", "version": "5"}],
+  ["user-collections.hidden", {"key": "user-collections.hidden", "timestamp": 1700000008, "value": "{\"id\":\"hidden\",\"name\":\"Hidden\",\"added\":[367520],\"removed\":[]}", "version": "5"}],
+  ["user-collections.uc-Deleted6", {"key": "user-collections.uc-Deleted6", "timestamp": 1700000009, "is_deleted": true, "version": "5"}],
+  ["user-collections.uc-Broken07", {"key": "user-collections.uc-Broken07", "timestamp": 1700000010, "value": "{\"id\":\"uc-Broken07\",\"name\":\"Cut off", "version": "5"}],
+  ["user-collections.uc-NoValue8", {"key": "user-collections.uc-NoValue8", "timestamp": 1700000011, "version": "5"}],
+  ["user-collections.uc-NoName09", {"key": "user-collections.uc-NoName09", "timestamp": 1700000012, "value": "{\"id\":\"uc-NoName09\",\"added\":[1]}", "version": "5"}],
+  ["user-collections.uc-BadList0", {"key": "user-collections.uc-BadList0", "timestamp": 1700000013, "value": "{\"id\":\"uc-BadList0\",\"name\":\"Odd List\",\"added\":\"1145360\"}", "version": "5"}],
+  ["user-collections.uc-Mixed001", {"key": "user-collections.uc-Mixed001", "timestamp": 1700000014, "value": "{\"id\":\"uc-Mixed001\",\"name\":\"Mixed Ids\",\"added\":[1245620,\"abc\",1.5,null,1462040]}", "version": "5"}],
+  ["user-collections.uc-NotObj02", {"key": "user-collections.uc-NotObj02", "timestamp": 1700000015, "value": "[1,2]", "version": "5"}],
+  ["user-collections", {"key": "user-collections", "timestamp": 1700000016, "value": "{}", "version": "1"}],
+  ["not-a-pair"],
+  "text"
+]

@@ -2,6 +2,7 @@
 
 #include "librarycache.h"
 #include "libraryundo.h"
+#include "steamcollections.h"
 
 #include <QTemporaryDir>
 
@@ -40,6 +41,10 @@ private slots:
     void renamingATagUpdatesTheRules();
     void editRulesAndExceptions();
     void editTurnsRulesOnAndOff();
+    void steamAccounts();
+    void steamImportMakesCollections();
+    void steamImportAgainReplacesGames();
+    void steamImportNamesAndFailures();
 };
 
 namespace {
@@ -805,6 +810,193 @@ void LibraryCollectionsTest::editTurnsRulesOnAndOff()
     QVERIFY(!library->store().collections().first().rules.has_value());
     QCOMPARE(library->store().collections().first().added, (QStringList{"switch-mario-tennis-aces", "switch-pikmin-4"}));
     QCOMPARE(library->collections().first().toMap().value("count").toInt(), 2);
+}
+
+namespace {
+QString steamFile(const QString &data, const QString &account)
+{
+    return steamCollectionsPath(data + QStringLiteral("/steam"), account);
+}
+
+QVariantMap rowNamed(const QVariantList &rows, const QString &name)
+{
+    for (const QVariant &row : rows) {
+        if (row.toMap().value("name").toString() == name)
+            return row.toMap();
+    }
+    return {};
+}
+}
+
+void LibraryCollectionsTest::steamAccounts()
+{
+    // One account with a file: the demo's.
+    {
+        auto library = openLibrary();
+        const QVariantList accounts = library->steamCollectionAccounts();
+        QCOMPARE(accounts.size(), 1);
+        QCOMPARE(accounts.first().toMap().value("id").toString(), QStringLiteral("39734273"));
+        QCOMPARE(accounts.first().toMap().value("name").toString(), QStringLiteral("Player One"));
+    }
+
+    // Several: the current one first, and one with no file isn't offered.
+    const QString second = steamFile(m_data, QStringLiteral("39734274"));
+    QDir().mkpath(QFileInfo(second).absolutePath());
+    writeFile(second, "[]");
+    writeFile(m_data + QStringLiteral("/steam/config/loginusers.vdf"),
+              "\"users\"\n{\n\t\"76561198000000001\"\n\t{\n\t\t\"PersonaName\"\t\"Player One\"\n\t\t\"MostRecent\"\t\"1\"\n\t\t\"Timestamp\"\t\"2\"\n\t}\n"
+              "\t\"76561198000000002\"\n\t{\n\t\t\"PersonaName\"\t\"Player Two\"\n\t\t\"MostRecent\"\t\"0\"\n\t\t\"Timestamp\"\t\"1\"\n\t}\n"
+              "\t\"76561198000000003\"\n\t{\n\t\t\"PersonaName\"\t\"Player Three\"\n\t\t\"MostRecent\"\t\"0\"\n\t\t\"Timestamp\"\t\"1\"\n\t}\n}\n");
+    auto library = openLibrary();
+    const QVariantList accounts = library->steamCollectionAccounts();
+    QCOMPARE(accounts.size(), 2);
+    QCOMPARE(accounts.at(0).toMap().value("id").toString(), QStringLiteral("39734273"));
+    QCOMPARE(accounts.at(1).toMap().value("name").toString(), QStringLiteral("Player Two"));
+
+    // A file with nothing readable is an error to show, not a crash; an account that isn't a number is refused.
+    writeFile(second, "garbage");
+    QVERIFY(!library->readSteamCollections(QStringLiteral("39734274")).value("error").toString().isEmpty());
+    QVERIFY(!library->readSteamCollections(QStringLiteral("39734275")).value("error").toString().isEmpty());
+    QVERIFY(!library->readSteamCollections(QStringLiteral("../x")).value("error").toString().isEmpty());
+    QVERIFY(!library->importSteamCollections(QStringLiteral("../x"), {"uc-AbCdEf1"}).value("error").toString().isEmpty());
+}
+
+void LibraryCollectionsTest::steamImportMakesCollections()
+{
+    auto library = openLibrary();
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    const QString account = QStringLiteral("39734273");
+    const QByteArray steamBefore = readFile(steamFile(m_data, account));
+
+    // What the dialog lists: hand-picked and from-tag ones; no dynamic, favorite, hidden or deleted one.
+    const QVariantMap read = library->readSteamCollections(account);
+    QCOMPARE(read.value("error").toString(), QString());
+    const QVariantList rows = read.value("collections").toList();
+    QCOMPARE(rows.size(), 3);
+    QCOMPARE(read.value("dynamic").toInt(), 1);
+    QCOMPARE(read.value("unreadable").toInt(), 0);
+    QCOMPARE(rowNamed(rows, "Weekend Games").value("games").toInt(), 3);
+    QCOMPARE(rowNamed(rows, "Weekend Games").value("missing").toInt(), 1);
+    QVERIFY(!rowNamed(rows, "Weekend Games").value("imported").toBool());
+    QCOMPARE(rowNamed(rows, "Roguelike").value("games").toInt(), 1);
+    QVERIFY(library->store().collections().isEmpty()); // reading changes nothing
+
+    const QVariantMap done = library->importSteamCollections(account, {"uc-AbCdEf1", "from-tag-Roguelike", "uc-nothing"});
+    QCOMPARE(done.value("error").toString(), QString());
+    QCOMPARE(done.value("added").toList().size(), 2);
+    QVERIFY(done.value("updated").toList().isEmpty());
+    QCOMPARE(done.value("dynamic").toInt(), 1);
+    QCOMPARE(done.value("missingApps").toStringList(), QStringList{"999001"});
+    QCOMPARE(library->store().collections().size(), 2);
+
+    const Collection weekend = library->store().collections().at(0);
+    QCOMPARE(weekend.name, QStringLiteral("Weekend Games"));
+    QCOMPARE(weekend.id, QStringLiteral("weekend-games"));
+    QCOMPARE(weekend.steamId, QStringLiteral("uc-AbCdEf1"));
+    QVERIFY(!weekend.rules.has_value());
+    // The games not in the library stay in the list, so one that comes back returns to it.
+    QCOMPARE(weekend.added, (QStringList{"steam-1145360", "steam-367520", "steam-999001"}));
+    QCOMPARE(library->store().collections().at(1).steamId, QStringLiteral("from-tag-Roguelike"));
+    QCOMPARE(library->collections().size(), 2);
+    QCOMPARE(rowNamed(library->collections(), "Weekend Games").value("count").toInt(), 2);
+
+    // One Undo step for the whole import, and the Steam file as it was.
+    QCOMPARE(offered.last().at(1).toString(), QStringLiteral("2 collections imported from Steam"));
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    QVERIFY(library->store().collections().isEmpty());
+    QVERIFY(!QFileInfo::exists(m_data + QStringLiteral("/library/collections.toml")));
+    QCOMPARE(readFile(steamFile(m_data, account)), steamBefore);
+
+    // Steam's favorites and hidden games don't reach Lattis: its Favorites are its own.
+    QVERIFY(!library->gameAt(library->rowOfGame(QStringLiteral("steam-730"))).value("favorite").toBool());
+}
+
+void LibraryCollectionsTest::steamImportAgainReplacesGames()
+{
+    auto library = openLibrary();
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    const QString account = QStringLiteral("39734273");
+    QCOMPARE(library->importSteamCollections(account, {"uc-AbCdEf1", "uc-GhIjKl2"}).value("error").toString(), QString());
+
+    // The user renames one and adds a game to it by hand.
+    QCOMPARE(library->renameCollection(QStringLiteral("weekend-games"), QStringLiteral("Saturdays")), QString());
+    QCOMPARE(library->setCollectionMembers({"switch-pikmin-4"}, QStringLiteral("weekend-games"), true), QString());
+    QVERIFY(rowNamed(library->readSteamCollections(account).value("collections").toList(), "Weekend Games")
+                .value("imported").toBool());
+
+    // Steam's list changes: Hades leaves Weekend Games, Hollow Knight stays.
+    QByteArray text = readFile(steamFile(m_data, account));
+    text.replace("[1145360,367520,999001]", "[367520,999001]");
+    writeFile(steamFile(m_data, account), text);
+    const int steps = offered.size();
+    const QVariantMap again = library->importSteamCollections(account, {"uc-AbCdEf1", "uc-GhIjKl2", "from-tag-Roguelike"});
+    QCOMPARE(again.value("error").toString(), QString());
+    QCOMPARE(again.value("added").toList().size(), 1);
+    QCOMPARE(again.value("updated").toList().size(), 1);
+    QCOMPARE(again.value("unchanged").toInt(), 1);
+    QCOMPARE(offered.size(), steps + 1);
+
+    const QList<Collection> all = library->store().collections();
+    QCOMPARE(all.size(), 3);
+    const auto byId = [&](const QString &id) {
+        return *std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    };
+    // Replaced by Steam's list (the game added in Lattis is gone), the rename kept, no second copy made.
+    QCOMPARE(byId("weekend-games").name, QStringLiteral("Saturdays"));
+    QCOMPARE(byId("weekend-games").added, (QStringList{"steam-367520", "steam-999001"}));
+
+    // The same again changes nothing, and offers no Undo.
+    const int quiet = offered.size();
+    const QVariantMap same = library->importSteamCollections(account, {"uc-AbCdEf1", "uc-GhIjKl2", "from-tag-Roguelike"});
+    QCOMPARE(same.value("unchanged").toInt(), 3);
+    QVERIFY(same.value("added").toList().isEmpty() && same.value("updated").toList().isEmpty());
+    QCOMPARE(offered.size(), quiet);
+
+    // Rules the user gave an imported collection stay.
+    QVariantMap rules{{"enabled", true}, {"favoritesOnly", true}};
+    QCOMPARE(library->editCollection(QStringLiteral("couch-co-op"), rules, {}, {}), QString());
+    text.replace("[413150,1091500]", "[413150]");
+    writeFile(steamFile(m_data, account), text);
+    QCOMPARE(library->importSteamCollections(account, {"uc-GhIjKl2"}).value("updated").toList().size(), 1);
+    const QList<Collection> now = library->store().collections();
+    const auto couch = std::find_if(now.cbegin(), now.cend(), [](const Collection &c) { return c.id == QLatin1String("couch-co-op"); });
+    QVERIFY(couch != now.cend());
+    QVERIFY(couch->rules.has_value());
+    QCOMPARE(couch->added, QStringList{"steam-413150"});
+}
+
+void LibraryCollectionsTest::steamImportNamesAndFailures()
+{
+    auto library = openLibrary();
+    const QString account = QStringLiteral("39734273");
+
+    // A name the user already has is never overwritten: Steam's collection arrives under another name.
+    QCOMPARE(library->addCollection(QStringLiteral("weekend games"), {"switch-pikmin-4"}), QString());
+    const QVariantMap done = library->importSteamCollections(account, {"uc-AbCdEf1"});
+    QCOMPARE(done.value("added").toList().first().toMap().value("name").toString(), QStringLiteral("Weekend Games (Steam)"));
+    QCOMPARE(library->store().collections().size(), 2);
+    QCOMPARE(library->store().collections().at(0).added, QStringList{"switch-pikmin-4"});
+    QCOMPARE(library->store().collections().at(1).id, QStringLiteral("weekend-games-steam"));
+
+    // Nothing ticked, nothing changed, no error.
+    const QVariantMap none = library->importSteamCollections(account, {});
+    QCOMPARE(none.value("error").toString(), QString());
+    QVERIFY(none.value("added").toList().isEmpty());
+
+    // The file gone or unreadable: an error, and the collections as they are.
+    writeFile(steamFile(m_data, account), "[");
+    QVERIFY(!library->importSteamCollections(account, {"uc-AbCdEf1"}).value("error").toString().isEmpty());
+    QFile::remove(steamFile(m_data, account));
+    QVERIFY(!library->importSteamCollections(account, {"uc-AbCdEf1"}).value("error").toString().isEmpty());
+    QCOMPARE(library->store().collections().size(), 2);
+
+    // A broken entry is skipped and counted; the others come in.
+    writeFile(steamFile(m_data, account),
+              "[[\"user-collections.uc-Good\",{\"value\":\"{\\\"name\\\":\\\"Good\\\",\\\"added\\\":[1145360]}\"}],"
+              "[\"user-collections.uc-Bad\",{\"value\":\"{oops\"}]]");
+    const QVariantMap mixed = library->importSteamCollections(account, {"uc-Good", "uc-Bad"});
+    QCOMPARE(mixed.value("added").toList().size(), 1);
+    QCOMPARE(mixed.value("unreadable").toInt(), 1);
 }
 
 QTEST_GUILESS_MAIN(LibraryCollectionsTest)

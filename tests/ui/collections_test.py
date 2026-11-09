@@ -136,4 +136,42 @@ SCENARIOS += [
                + "click Faves\nwait 500\nexpect 2 games\nexpect-not Hades\n", None)], with_ruled),
 ]
 
+IMPORT = OPEN_PANEL + "click Import from Steam\nwait 700\nexpect Import collections from Steam\n"
+
+
+def with_nothing_in_steam(dirs):
+    dirs.use_demo()
+    dirs.write("steam/userdata/39734273/config/cloudstorage/cloud-storage-namespace-1.json", "[]")
+
+
+# The demo's fake Steam has a cloud file: two hand-picked collections, one from a tag, a dynamic one,
+# Steam's favorite and hidden, and a deleted one. 999001 isn't a game in the demo.
+SCENARIOS += [
+    Scenario("Import from Steam lists the hand-picked collections, imports them and sums up",
+             [(FIRST + IMPORT + "expect-has Weekend Games\nexpect-has Couch Co-op\nexpect-has Roguelike\n"
+               + "expect-not-has Rule Based\nexpect-not-has Favorites\nexpect-not-has Hidden\n"
+               + "expect-has 1 collection of Steam's own rules are left out\n"
+               + "expect Nothing is changed in Steam.\nexpect-not-has imported before\n"
+               + "click Import\nwait 800\nexpect Imported from Steam\nexpect-has Added: Weekend Games, Couch Co-op, Roguelike\n"
+               + "expect-has 1 game in them aren't in your library\nexpect 999001\n"
+               + "click Close\nwait 500\n" + OPEN_PANEL + "expect Weekend Games\nexpect Couch Co-op\nexpect Roguelike\n"
+               + "click Weekend Games\nwait 500\nexpect 2 games\nexpect Hades\nexpect-not Pikmin 4\n", None)],
+             lambda dirs: dirs.use_demo()),
+    Scenario("Importing again says what is lost, keeps a rename and Undo takes the import out",
+             [(FIRST + IMPORT + "click Import\nwait 800\nexpect-has Added:\nclick Close\nwait 500\n"
+               + "expect-has 3 collections imported from Steam\nkey Ctrl+Z\nwait 600\n" + OPEN_PANEL
+               + "expect-not Weekend Games\n", None),
+              (FIRST + IMPORT + "click Import\nwait 800\nexpect-has Added:\nclick Close\nwait 500\n"
+               + OPEN_PANEL + "click Roguelike\nwait 500\nkey Menu\nwait 400\nclick Rename\nwait 500\n"
+               + "key Ctrl+A\ntype Dungeons\nkey Return\nwait 600\n", None),
+              ("expect Leave the collection\n" + LEAVE + FIRST + IMPORT + "expect-has Roguelike (1 game), imported before\n"
+               + "expect-has Games you added to them in Lattis are removed\nclick Import\nwait 800\n"
+               + "expect Nothing needed changing.\nexpect-not-has Added:\nclick Close\nwait 500\n"
+               + OPEN_PANEL + "expect Dungeons\nexpect Weekend Games\n", None)],
+             lambda dirs: dirs.use_demo()),
+    Scenario("Import from Steam with nothing to import says so",
+             [(FIRST + IMPORT + "expect This account has no collections of its own to import.\n"
+               + "click Cancel\nwait 400\n" + FIRST, None)], with_nothing_in_steam),
+]
+
 sys.exit(run_scenarios(SCENARIOS))

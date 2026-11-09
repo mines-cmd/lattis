@@ -19,7 +19,7 @@ Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, 
 
 ## Using the launcher
 
-- [Finding games](finding-games.md): search, filters, sorting and grouping.
+- [Finding games](finding-games.md): search, filters, collections, sorting and grouping.
 - [Playing](playing.md): launching, play time, and what the launcher does while a game runs.
 - [Keyboard shortcuts](keyboard.md): the default keys and how to change them.
 

@@ -9,6 +9,7 @@ MotionPopup {
     signal closedByKey()
     signal collectionDialogRequested(string mode, string id, string name)
     signal collectionDeleted(string id)
+    signal steamImportRequested()
 
     readonly property var directionNames: ({
         title: [qsTr("A to Z"), qsTr("Z to A")],
@@ -295,6 +296,11 @@ MotionPopup {
                 CollectionRow {
                     text: qsTr("New collection")
                     onClicked: root.collectionDialogRequested("new", "", "")
+                }
+                CollectionRow {
+                    visible: Library.steam.found
+                    text: qsTr("Import from Steam")
+                    onClicked: root.steamImportRequested()
                 }
             }
 

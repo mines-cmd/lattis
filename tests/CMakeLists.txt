@@ -49,6 +49,7 @@ set(STEAM_SOURCES
     ../src/steam/binaryvdf.h ../src/steam/binaryvdf.cpp
     ../src/steam/steamshortcuts.h ../src/steam/steamshortcuts.cpp
     ../src/steam/steamachievements.h ../src/steam/steamachievements.cpp
+    ../src/steam/steamcollections.h ../src/steam/steamcollections.cpp
     ../src/steam/steamwebapi.h ../src/steam/steamwebapi.cpp
     ${CORE_SOURCES}
 )
@@ -341,6 +342,9 @@ lattis_test(steam_test OFFSCREEN
             ${STEAM_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus
     DEFINES ${STEAM_DATA})
+lattis_test(steamcollections_test
+    SOURCES ../src/steam/steamcollections.h ../src/steam/steamcollections.cpp
+    DEFINES "STEAM_COLLECTIONS_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/steam-collections\"")
 lattis_test(steamstatus_test
     SOURCES ../src/steam/steamstatus.h ../src/steam/steamstatus.cpp
             ../src/steam/vdf.h ../src/steam/vdf.cpp

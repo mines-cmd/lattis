@@ -169,6 +169,9 @@ public:
                                        const QStringList &dropRemoved);
     Q_INVOKABLE QString renameCollection(const QString &id, const QString &name);
     Q_INVOKABLE QString deleteCollection(const QString &id);
+    Q_INVOKABLE QVariantList steamCollectionAccounts() const;
+    Q_INVOKABLE QVariantMap readSteamCollections(const QString &accountId) const;
+    Q_INVOKABLE QVariantMap importSteamCollections(const QString &accountId, const QStringList &steamIds);
     bool tagsOpen() const { return m_tagsOpen; }
     void setTagsOpen(bool open);
     Q_INVOKABLE void showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags);

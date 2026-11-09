@@ -14,6 +14,7 @@
 #include "searchtext.h"
 #include "steamart.h"
 #include "steamachievements.h"
+#include "steamcollections.h"
 #include "steammedia.h"
 #include "tomlpatch.h"
 #include "videothumbnails.h"
@@ -1817,6 +1818,17 @@ QString Library::addCollection(const QString &name, const QStringList &ids)
     return makeCollection(name, ids, std::nullopt);
 }
 
+namespace {
+QString freeCollectionId(const QString &name, const QSet<QString> &taken)
+{
+    const QString base = GameId::slug(name).isEmpty() ? QStringLiteral("collection") : GameId::slug(name);
+    QString id = base;
+    for (int n = 2; taken.contains(id); ++n)
+        id = QStringLiteral("%1-%2").arg(base).arg(n);
+    return id;
+}
+}
+
 QString Library::makeCollection(const QString &name, const QStringList &ids, const std::optional<CollectionRules> &rules)
 {
     const QString trimmed = name.trimmed();
@@ -1831,10 +1843,7 @@ QString Library::makeCollection(const QString &name, const QStringList &ids, con
     Collection c;
     c.name = trimmed;
     c.rules = rules;
-    const QString base = GameId::slug(trimmed).isEmpty() ? QStringLiteral("collection") : GameId::slug(trimmed);
-    c.id = base;
-    for (int n = 2; taken.contains(c.id); ++n)
-        c.id = QStringLiteral("%1-%2").arg(base).arg(n);
+    c.id = freeCollectionId(trimmed, taken);
     for (const QString &id : ids) {
         if (!c.added.contains(id))
             c.added.append(id);
@@ -1981,6 +1990,212 @@ QString Library::deleteCollection(const QString &id)
     const QString error = m_store.removeCollection(id);
     commitUndo(tr("Collection %1 deleted").arg(name));
     return error;
+}
+
+namespace {
+// Steam's app ids and a game's id: a Steam game is steam-<app id>, a non-Steam shortcut (which Steam
+// lists by its 32-bit app id, signed or not) is the game whose shortcut that is.
+struct SteamAppLookup
+{
+    QSet<QString> ids;
+    QHash<quint32, QString> shortcuts;
+
+    explicit SteamAppLookup(const QList<Game> &games)
+    {
+        for (const Game &g : games) {
+            ids.insert(g.id);
+            if (g.shortcut != 0)
+                shortcuts.insert(g.shortcut, g.id);
+        }
+    }
+
+    // The id a collection stores, empty when Steam's id can't name a game; `inLibrary` says whether the game is here.
+    QString resolve(qint64 appId, bool *inLibrary) const
+    {
+        if (appId > 0 && appId < (qint64(1) << 31)) {
+            const QString id = GameId::forSteamApp(appId);
+            *inLibrary = ids.contains(id);
+            return id;
+        }
+        const auto found = shortcuts.constFind(quint32(appId));
+        *inLibrary = found != shortcuts.cend();
+        return *inLibrary ? found.value() : QString();
+    }
+};
+
+bool onlyDigits(const QString &text)
+{
+    return !text.isEmpty() && std::all_of(text.cbegin(), text.cend(), [](QChar c) { return c.isDigit() && c.unicode() < 128; });
+}
+}
+
+QVariantList Library::steamCollectionAccounts() const
+{
+    const SteamInstall &install = m_store.snapshot().steam.install;
+    if (!m_steamSettings.enabled || !install.found())
+        return {};
+    QStringList ids;
+    if (!install.userId.isEmpty())
+        ids.append(install.userId);
+    for (const SteamUser &user : install.users) {
+        if (!ids.contains(user.accountId))
+            ids.append(user.accountId);
+    }
+    QVariantList out;
+    for (const QString &id : std::as_const(ids)) {
+        if (!onlyDigits(id) || !QFileInfo::exists(steamCollectionsPath(install.root, id)))
+            continue;
+        QString name = id;
+        for (const SteamUser &user : install.users) {
+            if (user.accountId == id)
+                name = !user.personaName.isEmpty() ? user.personaName : !user.accountName.isEmpty() ? user.accountName : id;
+        }
+        out.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("name"), name}});
+    }
+    return out;
+}
+
+QVariantMap Library::readSteamCollections(const QString &accountId) const
+{
+    const SteamInstall &install = m_store.snapshot().steam.install;
+    const auto failed = [](const QString &text) { return QVariantMap{{QStringLiteral("error"), text}}; };
+    if (!m_steamSettings.enabled || !install.found() || !onlyDigits(accountId))
+        return failed(tr("Steam wasn't found"));
+    QFile file(steamCollectionsPath(install.root, accountId));
+    if (!file.open(QIODevice::ReadOnly))
+        return failed(tr("Steam has no collections for this account"));
+    const SteamCollections parsed = parseSteamCollections(file.readAll());
+    if (!parsed.ok)
+        return failed(tr("Steam's collections couldn't be read"));
+
+    QSet<QString> imported;
+    for (const Collection &c : m_store.collections()) {
+        if (!c.steamId.isEmpty())
+            imported.insert(c.steamId);
+    }
+    const SteamAppLookup lookup(m_games);
+    QVariantList list;
+    for (const SteamCollection &c : parsed.collections) {
+        int missing = 0;
+        for (const qint64 appId : c.appIds) {
+            bool here = false;
+            lookup.resolve(appId, &here);
+            missing += here ? 0 : 1;
+        }
+        list.append(QVariantMap{{QStringLiteral("steamId"), c.steamId},
+                                {QStringLiteral("name"), c.name},
+                                {QStringLiteral("games"), int(c.appIds.size())},
+                                {QStringLiteral("missing"), missing},
+                                {QStringLiteral("imported"), imported.contains(c.steamId)}});
+    }
+    return QVariantMap{{QStringLiteral("error"), QString()},
+                       {QStringLiteral("collections"), list},
+                       {QStringLiteral("dynamic"), parsed.dynamic},
+                       {QStringLiteral("unreadable"), int(parsed.problems.size())}};
+}
+
+QVariantMap Library::importSteamCollections(const QString &accountId, const QStringList &steamIds)
+{
+    const SteamInstall &install = m_store.snapshot().steam.install;
+    const auto failed = [](const QString &text) { return QVariantMap{{QStringLiteral("error"), text}}; };
+    if (!m_steamSettings.enabled || !install.found() || !onlyDigits(accountId))
+        return failed(tr("Steam wasn't found"));
+    QFile file(steamCollectionsPath(install.root, accountId));
+    if (!file.open(QIODevice::ReadOnly))
+        return failed(tr("Steam has no collections for this account"));
+    const SteamCollections parsed = parseSteamCollections(file.readAll());
+    if (!parsed.ok)
+        return failed(tr("Steam's collections couldn't be read"));
+
+    const SteamAppLookup lookup(m_games);
+    const QList<Collection> before = m_store.collections();
+    QSet<QString> takenIds;
+    QSet<QString> takenNames;
+    QHash<QString, Collection> byStamp;
+    for (const Collection &c : before) {
+        takenIds.insert(c.id);
+        takenNames.insert(c.name.toLower());
+        if (!c.steamId.isEmpty())
+            byStamp.insert(c.steamId, c);
+    }
+
+    QVariantList added;
+    QVariantList updated;
+    QSet<qint64> missingApps;
+    QList<Collection> writes;
+    int unchanged = 0;
+    for (const SteamCollection &steam : parsed.collections) {
+        if (!steamIds.contains(steam.steamId))
+            continue;
+        QStringList games;
+        int missing = 0;
+        for (const qint64 appId : steam.appIds) {
+            bool here = false;
+            const QString id = lookup.resolve(appId, &here);
+            if (!here) {
+                ++missing;
+                missingApps.insert(appId);
+            }
+            if (!id.isEmpty() && !games.contains(id))
+                games.append(id);
+        }
+        const auto row = [&](const QString &name) {
+            return QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("games"), int(steam.appIds.size())},
+                               {QStringLiteral("missing"), missing}};
+        };
+
+        const auto old = byStamp.constFind(steam.steamId);
+        if (old != byStamp.cend()) {
+            Collection c = old.value();
+            c.added = games;
+            if (c == old.value()) {
+                ++unchanged;
+                continue;
+            }
+            writes.append(c);
+            updated.append(row(c.name));
+            continue;
+        }
+        // Steam's name may already be one of the user's: the import never touches those.
+        QString name = steam.name;
+        for (int n = 1; takenNames.contains(name.toLower()); ++n)
+            name = n == 1 ? tr("%1 (Steam)").arg(steam.name) : tr("%1 (Steam %2)").arg(steam.name).arg(n);
+        takenNames.insert(name.toLower());
+        Collection c;
+        c.name = name;
+        c.id = freeCollectionId(name, takenIds);
+        takenIds.insert(c.id);
+        c.steamId = steam.steamId;
+        c.added = games;
+        writes.append(c);
+        added.append(row(name));
+    }
+
+    QString error;
+    if (!writes.isEmpty()) {
+        m_undo.start();
+        m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+        for (const Collection &c : std::as_const(writes)) {
+            error = m_store.setCollection(c);
+            if (!error.isEmpty())
+                break;
+        }
+        commitUndo(writes.size() == 1 ? tr("1 collection imported from Steam")
+                                      : tr("%1 collections imported from Steam").arg(writes.size()));
+    }
+
+    QList<qint64> missingList(missingApps.cbegin(), missingApps.cend());
+    std::sort(missingList.begin(), missingList.end());
+    QStringList missingNames;
+    for (const qint64 appId : std::as_const(missingList))
+        missingNames.append(QString::number(appId));
+    return QVariantMap{{QStringLiteral("error"), error},
+                       {QStringLiteral("added"), added},
+                       {QStringLiteral("updated"), updated},
+                       {QStringLiteral("unchanged"), unchanged},
+                       {QStringLiteral("dynamic"), parsed.dynamic},
+                       {QStringLiteral("unreadable"), int(parsed.problems.size())},
+                       {QStringLiteral("missingApps"), missingNames}};
 }
 
 void Library::filtersEdited()

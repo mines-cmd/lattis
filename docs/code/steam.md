@@ -17,6 +17,7 @@ The `src/steam/` folder handles everything the launcher reads from or writes to 
 - [Signing in to Steam](#signing-in-to-steam)
 - [The whole library](#the-whole-library)
 - [Friends' activity](#friends-activity)
+- [Steam's collections](#steams-collections)
 - [ProtonDB chip](#protondb-chip)
 - [Files](#files)
 - [Reference](#reference)
@@ -225,6 +226,14 @@ The merge is described in [library.md](library.md#the-whole-steam-library).
 
 The `protondb` chip (a chip or an info row, off by default, Steam games with a `steam-<appid>` id, installed or not) shows a game's ProtonDB tier. `GameDetails` takes the app ID from the id (`protonDbAppId`) and asks the `ProtonDb` singleton ([metadata.md](metadata.md#protondb)) only while `General.gamePageChips` includes `protondb`, so nothing is created or requested with the chip off. States: "Checking…" while the first answer is on its way, the tier ("Platinum"…, "Native", "Pending") with the icon in `stat_chip.protondb_<tier>` (`StatChip.iconTint`; the border is unchanged), "No reports" for a 404, and "Open page" for a failed request or a tier the chip doesn't know. The click opens `https://www.protondb.com/app/<appid>` with `Qt.openUrlExternally` in every state, so the link never depends on the API. The tooltip is "Platinum from 759 reports. Open on ProtonDB", with "Trending: Gold" added when the trending tier differs. No ProtonDB logo is used; the icon is the generic `gaugeLine`.
 
+## Steam's collections
+
+Steam keeps a user's collections in the cloud storage file `userdata/<account>/config/cloudstorage/cloud-storage-namespace-1.json`, which the client writes and syncs; the launcher only reads it, with no network, and never writes it back. The format is undocumented, so `steamcollections.*` reads what was seen on real files and skips what it doesn't understand. It is pure (bytes in, a struct out), so tests give it a fixture of made-up names (`tests/data/steam-collections/`, with every kind of entry) and never a real account's file.
+
+The file is a JSON array of `[key, metadata]` pairs, most of them unrelated to collections (`NewContentRollup_*` and the like). Collections are the keys `user-collections.<id>`. The metadata has `key`, `timestamp`, `version`, and either `value` or, for a deleted one, `is_deleted: true` with no value. The value is itself JSON text (a string inside the JSON) with `id`, `name`, `added` and `removed`: `added` lists app ids as numbers. The ids are `uc-*` for the user's own, `favorite` and `hidden` (Steam's own, which Lattis has its own versions of), and `from-tag-*` (collections Steam made from its old categories, which are ordinary lists). A dynamic collection (rules, not a list) has a `filterSpec` as well. Its rules are Steam's store tags and filters and the file doesn't list the games they match (`added` and `removed` are only exceptions), so Lattis can neither run them nor copy the result.
+
+`parseSteamCollections(bytes)` returns `SteamCollections`: `ok` (false when the bytes aren't a JSON array), `collections` (`steamId`, trimmed `name` and the distinct `appIds`, in file order), `dynamic` (how many were left out) and `problems`, one line per entry it couldn't read. Deleted, `favorite` and `hidden` entries are left out without a note. An entry whose value isn't an object, has no name or has a list that isn't a list is a problem and skipped; a list with entries that aren't whole numbers keeps the others and says how many it dropped. A key listed twice uses the first. One bad entry never stops the rest. `steamCollectionsPath(root, accountId)` builds the file's path; the accounts come from `SteamInstall::users` (`loginusers.vdf`, see [Finding Steam](#finding-steam)), so a Flatpak Steam works as a native one does. The import itself, which turns this into collections, is in [library.md](library.md#importing-from-steam).
+
 ## Files
 
 | File | Contents |
@@ -246,6 +255,7 @@ The `protondb` chip (a chip or an info row, off by default, Steam games with a `
 | `steamstatus.*` | `SteamStatus`: `status`, `running`, `avatar`, `setStatus()`, `openFriends()`, `start()`, `changed()`; `Source` (install, running, open), `setup()`; `parse()` |
 | `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `listAll()`, `AppMedia`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
 | `steamachievements.*` | `SteamAchievements::Achievement`; `readAchievements()`, `steamLanguage()` |
+| `steamcollections.*` | `SteamCollection`, `SteamCollections`; `parseSteamCollections()`, `steamCollectionsPath()` |
 | `steamsync.*` | `SteamSync::Record`, `Result`, `Edit`, `ShortcutEdit`; `sync()`, `apply()`, `compare()`, `withDefaults()`, `readRecord()`, `writeRecord()` |
 
 ## Reference

@@ -236,6 +236,7 @@ qt_add_qml_module(lattis
         qml/views/ModManagerMenu.qml
         qml/views/NewTagPrompt.qml
         qml/views/CollectionDialog.qml
+        qml/views/SteamCollectionsDialog.qml
         qml/views/LogoAdjuster.qml
         qml/views/LogoMenu.qml
         qml/views/AboutDialog.qml
@@ -444,6 +445,7 @@ qt_add_qml_module(lattis
         src/steam/binaryvdf.h src/steam/binaryvdf.cpp
         src/steam/steamshortcuts.h src/steam/steamshortcuts.cpp
         src/steam/steamachievements.h src/steam/steamachievements.cpp
+        src/steam/steamcollections.h src/steam/steamcollections.cpp
         src/steam/steamsync.h src/steam/steamsync.cpp
         src/steam/steamart.h src/steam/steamart.cpp
         src/steam/steammedia.h src/steam/steammedia.cpp
