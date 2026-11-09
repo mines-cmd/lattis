@@ -240,6 +240,7 @@ qt_add_qml_module(lattis
         qml/views/ModManagerMenu.qml
         qml/views/NewTagPrompt.qml
         qml/views/CollectionDialog.qml
+        qml/views/CollectionEditForm.qml
         qml/views/SteamCollectionsDialog.qml
         qml/views/LogoAdjuster.qml
         qml/views/LogoMenu.qml

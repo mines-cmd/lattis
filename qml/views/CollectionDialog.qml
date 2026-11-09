@@ -18,100 +18,18 @@ MotionPopup {
     readonly property bool renaming: mode === "rename"
     readonly property bool editing: mode === "edit"
 
-    property bool rulesOn: false
-    property string platform
-    property bool installedOnly: false
-    property bool favoritesOnly: false
-    property var statuses: []
-    property var tags: []
-    property bool matchAllTags: false
-    property var steam: []
-    property int yearFrom: 0
-    property int yearTo: 0
-    property real minRating: -1
-    property var playTimes: []
-    property string lastPlayed: ""
-    property var achievements: []
-    property var added: []
-    property var removed: []
-    property var dropAdded: []
-    property var dropRemoved: []
-
-    readonly property var platformChoices: {
-        const choices = [{ id: "", name: qsTr("Any platform") }]
-        for (const p of Library.platforms)
-            choices.push({ id: p.id, name: p.name })
-        if (platform !== "" && !choices.some(c => c.id === platform))
-            choices.push({ id: platform, name: platform })
-        return choices
-    }
-
-    readonly property var ratingChoices: {
-        const choices = [{ value: -1, name: qsTr("Any rating") }]
-        for (let r = 0.5; r <= 5; r += 0.5)
-            choices.push({ value: r, name: qsTr("%1 or more").arg(r) })
-        return choices
-    }
-    readonly property var lastPlayedChoices: [
-        { id: "", name: qsTr("Any time") },
-        { id: "week", name: qsTr("This week") },
-        { id: "month", name: qsTr("This month") },
-        { id: "year", name: qsTr("This year") },
-        { id: "older", name: qsTr("Over a year ago") },
-        { id: "never", name: qsTr("Never played") },
-    ]
-
-    function toggled(list, value) {
-        const next = list.slice()
-        const i = next.indexOf(value)
-        if (i >= 0)
-            next.splice(i, 1)
-        else
-            next.push(value)
-        return next
-    }
-
-    function load() {
-        const d = Library.collectionDetails(collectionId)
-        rulesOn = d.enabled ?? false
-        platform = d.platform ?? ""
-        installedOnly = d.installedOnly ?? false
-        favoritesOnly = d.favoritesOnly ?? false
-        statuses = d.statuses ?? []
-        tags = d.tags ?? []
-        matchAllTags = d.matchAllTags ?? false
-        steam = d.steam ?? []
-        yearFrom = d.yearFrom ?? 0
-        yearTo = d.yearTo ?? 0
-        minRating = d.minRating ?? -1
-        playTimes = d.playTimes ?? []
-        lastPlayed = d.lastPlayed ?? ""
-        achievements = d.achievements ?? []
-        added = d.added ?? []
-        removed = d.removed ?? []
-        dropAdded = []
-        dropRemoved = []
-    }
-
-    function submit() {
-        let error = ""
-        if (editing) {
-            error = Library.editCollection(collectionId, {
-                enabled: rulesOn, platform: platform, installedOnly: installedOnly, favoritesOnly: favoritesOnly,
-                statuses: statuses, tags: tags, matchAllTags: matchAllTags && tags.length >= 2, steam: steam,
-                yearFrom: yearFrom, yearTo: yearTo, minRating: minRating, playTimes: playTimes,
-                lastPlayed: lastPlayed, achievements: achievements
-            }, dropAdded, dropRemoved)
-        } else {
-            if (typed === "")
-                return
-            error = renaming ? Library.renameCollection(collectionId, typed)
-                : mode === "save" ? Library.addCollectionFromFilters(typed)
-                : Library.addCollection(typed, ids)
-        }
+    function finish(error) {
         close()
         if (error !== "")
             message(error)
+    }
+
+    function submit() {
+        if (typed === "")
+            return
+        finish(renaming ? Library.renameCollection(collectionId, typed)
+            : mode === "save" ? Library.addCollectionFromFilters(typed)
+            : Library.addCollection(typed, ids))
     }
 
     parent: Overlay.overlay
@@ -134,8 +52,7 @@ MotionPopup {
 
     onOpened: {
         if (editing) {
-            load()
-            form.forceActiveFocus()
+            editForm.item.load()
             return
         }
         input.text = renaming ? startName : ""
@@ -143,48 +60,13 @@ MotionPopup {
         input.forceActiveFocus()
     }
 
-    component Group: ColumnLayout {
-        property string title
-        Layout.fillWidth: true
-        spacing: Theme.layout.spacing / 2
-
-        Label {
-            text: parent.title
-            color: Theme.gameEditor.headingColor
-            font.weight: Theme.font.strongWeight
-        }
-    }
-
-    component Hint: Label {
-        Layout.fillWidth: true
-        color: Theme.gameEditor.hintColor
-        wrapMode: Text.WordWrap
-    }
-
-    // A game that isn't in the library has only its id: Steam's are shown as the app they name.
-    function gameRows(games) {
-        return games.map(g => {
-            const missing = g.title === g.id
-            return {
-                id: g.id,
-                title: !missing ? g.title
-                    : g.id.startsWith("steam-") ? qsTr("Steam app %1").arg(g.id.slice(6)) : g.id,
-                info: missing ? qsTr("Not in your library") : ""
-            }
-        })
-    }
-
-    function kept(games, drops) {
-        return games.map(g => g.id).filter(id => !drops.includes(id))
-    }
-
     contentItem: ColumnLayout {
         spacing: Theme.gameEditor.rowSpacing
 
         Label {
+            visible: !root.editing
             Layout.fillWidth: true
-            text: root.editing ? qsTr("Edit collection")
-                : root.renaming ? qsTr("Rename collection")
+            text: root.renaming ? qsTr("Rename collection")
                 : root.mode === "save" ? qsTr("Save the filters as a collection")
                 : root.ids.length === 0 ? qsTr("New collection")
                 : qsTr("New collection for %n game(s)", "", root.ids.length)
@@ -200,228 +82,23 @@ MotionPopup {
             onAccepted: root.submit()
         }
 
-        Flickable {
-            id: form
+        Loader {
+            id: editForm
+            active: root.editing
             visible: root.editing
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.preferredHeight: formColumn.implicitHeight
-            contentHeight: formColumn.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: SettingsScrollBar { id: formBar; trackless: true }
-            Keys.onEscapePressed: root.close()
-
-            ColumnLayout {
-                id: formColumn
-                width: form.width - (formBar.visible ? formBar.thickness + Theme.layout.spacing : 0)
-                spacing: Theme.gameEditor.rowSpacing
-
-                SettingsCheckBox {
-                    bordered: false
-                    text: qsTr("Keep up to date with these rules")
-                    checked: root.rulesOn
-                    onToggled: root.rulesOn = checked
-                }
-
-                ColumnLayout {
-                    visible: root.rulesOn
-                    Layout.fillWidth: true
-                    spacing: Theme.gameEditor.rowSpacing
-
-                    SettingsComboBox {
-                        Layout.fillWidth: true
-                        model: root.platformChoices.map(c => c.name)
-                        currentIndex: Math.max(0, root.platformChoices.findIndex(c => c.id === root.platform))
-                        onActivated: index => root.platform = root.platformChoices[index].id
-                    }
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: Theme.layout.spacing * 2
-
-                        SettingsCheckBox {
-                            bordered: false
-                            text: qsTr("Installed")
-                            checked: root.installedOnly
-                            onToggled: root.installedOnly = checked
-                        }
-                        SettingsCheckBox {
-                            bordered: false
-                            text: qsTr("Favorites")
-                            checked: root.favoritesOnly
-                            onToggled: root.favoritesOnly = checked
-                        }
-                        SettingsCheckBox {
-                            bordered: false
-                            text: qsTr("Owned")
-                            checked: root.steam.includes("owned")
-                            onToggled: root.steam = root.toggled(root.steam, "owned")
-                        }
-                        SettingsCheckBox {
-                            bordered: false
-                            text: qsTr("Family")
-                            checked: root.steam.includes("family")
-                            onToggled: root.steam = root.toggled(root.steam, "family")
-                        }
-                    }
-                    Group {
-                        title: qsTr("Status")
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing * 2
-
-                            Repeater {
-                                model: Library.statuses
-
-                                SettingsCheckBox {
-                                    required property var modelData
-                                    bordered: false
-                                    text: modelData.name
-                                    checked: root.statuses.includes(modelData.id)
-                                    onToggled: root.statuses = root.toggled(root.statuses, modelData.id)
-                                }
-                            }
-                        }
-                    }
-                    Group {
-                        title: qsTr("Release year")
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            SettingsTextField {
-                                Layout.fillWidth: true
-                                placeholderText: qsTr("From")
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
-                                text: root.yearFrom > 0 ? String(root.yearFrom) : ""
-                                onTextEdited: root.yearFrom = text === "" ? 0 : parseInt(text)
-                            }
-                            SettingsTextField {
-                                Layout.fillWidth: true
-                                placeholderText: qsTr("To")
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
-                                text: root.yearTo > 0 ? String(root.yearTo) : ""
-                                onTextEdited: root.yearTo = text === "" ? 0 : parseInt(text)
-                            }
-                        }
-                        Hint { text: qsTr("Games with no year are left out while a year is set.") }
-                    }
-                    Group {
-                        title: qsTr("Rating")
-                        SettingsComboBox {
-                            Layout.fillWidth: true
-                            model: root.ratingChoices.map(c => c.name)
-                            currentIndex: Math.max(0, root.ratingChoices.findIndex(c => c.value === root.minRating))
-                            onActivated: index => root.minRating = root.ratingChoices[index].value
-                        }
-                    }
-                    Group {
-                        title: qsTr("Play time")
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing * 2
-
-                            Repeater {
-                                model: Library.playTimeChoices
-
-                                SettingsCheckBox {
-                                    required property var modelData
-                                    bordered: false
-                                    text: modelData.name
-                                    checked: root.playTimes.includes(modelData.id)
-                                    onToggled: root.playTimes = root.toggled(root.playTimes, modelData.id)
-                                }
-                            }
-                        }
-                    }
-                    Group {
-                        title: qsTr("Last played")
-                        SettingsComboBox {
-                            Layout.fillWidth: true
-                            model: root.lastPlayedChoices.map(c => c.name)
-                            currentIndex: Math.max(0, root.lastPlayedChoices.findIndex(c => c.id === root.lastPlayed))
-                            onActivated: index => root.lastPlayed = root.lastPlayedChoices[index].id
-                        }
-                    }
-                    Group {
-                        title: qsTr("Achievements")
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing * 2
-
-                            Repeater {
-                                model: Library.achievementChoices
-
-                                SettingsCheckBox {
-                                    required property var modelData
-                                    bordered: false
-                                    text: modelData.name
-                                    checked: root.achievements.includes(modelData.id)
-                                    onToggled: root.achievements = root.toggled(root.achievements, modelData.id)
-                                }
-                            }
-                        }
-                        Hint { text: qsTr("Achievements are read from Steam; other games have none to earn.") }
-                    }
-                    Group {
-                        title: qsTr("Tags")
-                        visible: Library.tags.length > 0
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing * 2
-
-                            Repeater {
-                                model: Library.tags
-
-                                SettingsCheckBox {
-                                    required property var modelData
-                                    bordered: false
-                                    text: modelData.name
-                                    checked: root.tags.includes(modelData.name)
-                                    onToggled: root.tags = root.toggled(root.tags, modelData.name)
-                                }
-                            }
-                        }
-                        SettingsCheckBox {
-                            visible: root.tags.length >= 2
-                            bordered: false
-                            text: qsTr("Match all selected tags")
-                            checked: root.matchAllTags
-                            onToggled: root.matchAllTags = checked
-                        }
-                    }
-                }
-
-                Group {
-                    title: root.rulesOn ? qsTr("Added by hand") : qsTr("Games")
-                    visible: root.added.length > 0
-                    CheckList {
-                        Layout.fillWidth: true
-                        model: root.gameRows(root.added)
-                        ticked: root.kept(root.added, root.dropAdded)
-                        maxListHeight: Theme.collections.editListHeight
-                        onToggled: id => root.dropAdded = root.toggled(root.dropAdded, id)
-                    }
-                    Hint { text: qsTr("Uncheck a game to take it out of the collection.") }
-                }
-                Group {
-                    title: qsTr("Left out")
-                    visible: root.rulesOn && root.removed.length > 0
-                    CheckList {
-                        Layout.fillWidth: true
-                        model: root.gameRows(root.removed)
-                        ticked: root.kept(root.removed, root.dropRemoved)
-                        maxListHeight: Theme.collections.editListHeight
-                        onToggled: id => root.dropRemoved = root.toggled(root.dropRemoved, id)
-                    }
-                    Hint { text: qsTr("Uncheck a game to let the rules include it again.") }
-                }
+            Layout.preferredHeight: item ? item.implicitHeight : 0
+            source: "CollectionEditForm.qml"
+            onLoaded: {
+                item.collectionId = Qt.binding(() => root.collectionId)
+                item.finished.connect(error => root.finish(error))
+                item.cancelled.connect(() => root.close())
             }
         }
 
         RowLayout {
+            visible: !root.editing
             Layout.fillWidth: true
             spacing: Theme.layout.spacing
 
@@ -432,8 +109,8 @@ MotionPopup {
             }
             SettingsButton {
                 primary: true
-                text: root.editing ? qsTr("Save") : root.renaming ? qsTr("Rename") : qsTr("Add")
-                enabled: root.editing || root.typed !== ""
+                text: root.renaming ? qsTr("Rename") : qsTr("Add")
+                enabled: root.typed !== ""
                 onClicked: root.submit()
             }
         }

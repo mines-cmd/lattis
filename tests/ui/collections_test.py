@@ -134,18 +134,46 @@ SCENARIOS += [
               ("expect 1 game\nexpect Hades\n" + LEAVE + "expect Hades\nexpect-not Pikmin 4\n"
                + OPEN_COLL + "expect Faves now\n", None)], with_collections),
     Scenario("Edit collection lists the exceptions, drops one, and Undo puts it back",
-             [(FIRST + OPEN_COLL + EDIT + "expect Keep up to date with these rules\nexpect Added by hand\n"
+             [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Added by hand\n"
                + "expect Left out\nexpect Hades\nclick Hades\nclick Save\nwait 600\n"
                + "expect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect Hades\nexpect Mario Tennis Aces\nexpect Pikmin 4\nexpect 3 games\n"
                + "key Ctrl+Z\nwait 600\nexpect-not Hades\nexpect 2 games\n", None)], with_ruled),
     Scenario("Edit collection can turn the rules off, leaving the games added by hand",
-             [(FIRST + OPEN_COLL + EDIT + "click Keep up to date with these rules\nwait 300\nexpect-not Left out\n"
+             [(FIRST + OPEN_COLL + EDIT + "toggle Auto-update\nwait 300\nexpect-not Left out\n"
                + "click Save\nwait 600\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect 1 game\nexpect Pikmin 4\nexpect-not Mario Tennis Aces\n", None)], with_ruled),
     Scenario("Cancel in Edit collection changes nothing",
              [(FIRST + OPEN_COLL + EDIT + "click Hades\nclick Cancel\nwait 500\n" + OPEN_COLL
                + "click Faves\nwait 500\nexpect 2 games\nexpect-not Hades\n", None)], with_ruled),
+]
+
+
+
+def with_rated(dirs):
+    dirs.use_demo()
+    dirs.write("library/collections.toml", COLLECTIONS + RULED.replace("favorites_only = true", "min_rating = 2.0"))
+
+
+SCENARIOS += [
+    Scenario("Edit collection: chips toggle, the count follows them and Save keeps them",
+             [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Library\nexpect Progress\nexpect Details\n"
+               + "expect 2 games match\nclick Installed\nwait 400\nexpect 1 game matches\n"
+               + "click Installed\nwait 400\nexpect 2 games match\nclick Installed\nwait 400\nexpect 1 game matches\n"
+               + "click Save\nwait 600\nexpect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
+               + "expect 1 game\nexpect Pikmin 4\nexpect-not Mario Tennis Aces\n", None),
+              ("expect Leave the collection\n" + OPEN_COLL + "expect Faves\nkey Escape\nwait 400\n" + EDIT
+               + "expect 1 game matches\n", None)], with_ruled),
+    Scenario("Clear rules resets them without saving, and is hidden while none is set",
+             [(FIRST + OPEN_COLL + EDIT + "expect Clear rules\nclick Clear rules\nwait 400\nexpect-not Clear rules\n"
+               + "expect-not 2 games match\nclick Installed\nwait 300\nexpect Clear rules\nclick Cancel\nwait 500\n"
+               + OPEN_COLL + "click Faves\nwait 500\nexpect 2 games\nexpect Mario Tennis Aces\n", None)], with_ruled),
+    Scenario("Rating chips hide half steps no game has, unless the collection saved one",
+             [(FIRST + OPEN_COLL + EDIT + "expect Any\nexpect 3.5+\nexpect 4.5+\nexpect-not 1+\nexpect-not 2+\n"
+               + "click 4.5+\nwait 400\nexpect 4.5+\n", None)], with_ruled),
+    Scenario("a saved rating keeps its chip even when no game has it",
+             [(FIRST + OPEN_COLL + EDIT + "expect 2+\nexpect 3.5+\nexpect-not 1+\nclick Any\nwait 400\n"
+               + "expect 2+\nclick Cancel\nwait 500\n", None)], with_rated),
 ]
 
 IMPORT = OPEN_COLL + "click Import from Steam\nwait 700\nexpect Import collections from Steam\n"
