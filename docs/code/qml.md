@@ -301,6 +301,8 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `components/ArtPlaceholder.qml` | Hue gradient for a game without hero art |
 | `components/Args.js` | Split/join program argument strings |
 | `components/FilterChip.qml` | Active-filter chip under the search box |
+| `components/ToggleChip.qml` | The check-marked toggle pill of the filter panel (`selected`, `detail`, `showCheck`, `tip`); `ChoiceChips` and the panel's `Segment` use it |
+| `components/ChoiceChips.qml` | A row of `ToggleChip`s over a `[{id, name}]` model: `multiple` or one-of-n, `current`, `picked(id)`; Tab enters a row once, arrows move within it |
 | `components/InstallProgress.qml` | An emulator install's progress bar: filled to `progress`, or a part sliding across while it is unknown (-1); a faint full bar without motion |
 | `components/InstallStatus.qml` | A running emulator install in a small space: a fixed-width `InstallProgress` and one word ("47 %", "Unpacking"), from an `Installer.emulators` row. The Emulators page's collapsed row and the setup guide use it |
 | `components/FadeImage.qml` | An Image that fades in after an asynchronous load |

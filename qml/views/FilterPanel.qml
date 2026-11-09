@@ -182,68 +182,9 @@ MotionPopup {
         font.letterSpacing: Theme.filters.headingUppercase ? 0.8 : 0
     }
 
-    component Segment: AbstractButton {
-        id: segment
-        property bool selected: false
-        property string detail
-        property bool leftAligned: detail !== ""
-        property string tip
-        property bool showCheck: false
-
-        PressDip { pressed: segment.pressed }
-
+    component Segment: ToggleChip {
         Layout.fillWidth: true
         Layout.preferredWidth: 1
-        implicitHeight: Theme.filters.sortHeight
-        leftPadding: Theme.layout.spacing
-        rightPadding: Theme.layout.spacing
-        focusPolicy: Qt.StrongFocus
-        hoverEnabled: true
-
-        HoverHandler { cursorShape: Qt.PointingHandCursor }
-        ToolTip.visible: hovered && (segment.tip !== "" || nameLabel.truncated)
-        ToolTip.delay: Theme.tooltip.delay
-        ToolTip.text: segment.tip !== "" ? segment.tip : segment.text
-
-        background: Rectangle {
-            radius: Theme.filters.sortRadius
-            color: segment.selected ? Theme.filters.sortSelected
-                 : segment.hovered ? Theme.filters.sortHover : Theme.filters.sortBackground
-        }
-        contentItem: RowLayout {
-            spacing: Theme.layout.spacing
-
-            Label {
-                id: nameLabel
-                Layout.fillWidth: true
-                text: segment.text
-                horizontalAlignment: segment.leftAligned ? Text.AlignLeft : Text.AlignHCenter
-                elide: Text.ElideRight
-                font.weight: segment.selected ? Theme.font.onAccentWeight : Font.Normal
-                color: segment.selected ? Theme.filters.sortSelectedText : Theme.filters.hintColor
-            }
-            Label {
-                visible: segment.detail !== ""
-                text: segment.detail
-                font.weight: Theme.font.emphasisWeight
-                color: Theme.filters.hintColor
-                opacity: segment.selected ? 0.75 : 1
-                // On the selected color the muted text would vanish, so it follows the selected text instead.
-                Binding on color { when: segment.selected; value: Theme.filters.sortSelectedText }
-            }
-            MarkPop {
-                shown: segment.showCheck && segment.selected
-                implicitWidth: checkIcon.implicitWidth
-                implicitHeight: checkIcon.implicitHeight
-                Icon {
-                    id: checkIcon
-                    path: Icons.check
-                    size: Theme.filters.headingFontSize + 3
-                    color: Theme.filters.sortSelectedText
-                }
-            }
-        }
-        FocusRing {}
     }
 
     component ToggleRow: Segment {
