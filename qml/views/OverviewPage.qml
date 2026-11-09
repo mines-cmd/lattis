@@ -329,13 +329,14 @@ FocusScope {
                     uniformCellWidths: true
 
                     Repeater {
-                        model: root.tiles
+                        // A count, not the array: a new array would rebuild the tiles and fade them in again.
+                        model: root.tiles.length
 
                         OverviewReveal {
                             id: tileReveal
                             shown: root.revealedCards
-                            required property var modelData
                             required property int index
+                            readonly property var modelData: root.tiles[index]
                             Layout.fillWidth: true
                             order: index
 
