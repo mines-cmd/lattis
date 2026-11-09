@@ -311,6 +311,7 @@ SettingsMenu {
             model: Library.statuses
             delegate: SettingsMenuItem {
                 required property var modelData
+                implicitHeight: Theme.menu.itemHeight
                 text: modelData.name
                 checked: root.targets.length > 0 && root.targets.every(g => (g.status || "none") === modelData.id)
                 onTriggered: {
