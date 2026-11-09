@@ -49,6 +49,22 @@ LibrarySnapshot LibraryCacheTest::sample() const
     s.content.platforms = {{"steam", "Steam", "steam"}, {"3ds", "3DS", "", {}, {}, 7, {37, 137}}};
     s.content.tags = {{"RPG", 5, {"genre:12", "keyword:jrpg"}, true}, {"Co-op", 4}, {"Solo", 1, {}, true}};
     s.content.steam = {{1145360, "Hades"}, {504230, "Celeste"}};
+    Collection filtered;
+    filtered.id = QStringLiteral("old-favorites");
+    filtered.name = QStringLiteral("Old favorites");
+    filtered.added = {"a"};
+    filtered.rules = CollectionRules{};
+    filtered.rules->tags = {"RPG"};
+    filtered.rules->yearFrom = 1990;
+    filtered.rules->yearTo = 1999;
+    filtered.rules->minRating = 3.5;
+    filtered.rules->playTimes = {"never", "10_50h"};
+    filtered.rules->lastPlayed = QStringLiteral("older");
+    filtered.rules->achievements = {"completed"};
+    Collection handPicked;
+    handPicked.id = QStringLiteral("picked");
+    handPicked.name = QStringLiteral("Picked");
+    s.content.collections = {filtered, handPicked};
     s.content.heroic = {{"epic-fez", "Fez", "epic", "FezApp", 12}, {"epic-hike", "A Short Hike", "epic", "HikeApp"}};
     s.heroic.install = {HeroicInstall::Kind::Flatpak, "/h/heroic", false, {"/bin/flatpak", {"run", "--no-gui"}, true}};
     s.heroic.installed.insert("epic-fez", {"/games/Fez", 1000});
@@ -136,6 +152,7 @@ void LibraryCacheTest::roundTrip()
     QCOMPARE(loaded->files.value("library/games/steam-1145360.toml").warnings,
              s.files.value("library/games/steam-1145360.toml").warnings);
     QCOMPARE(loaded->content.platforms, s.content.platforms);
+    QCOMPARE(loaded->content.collections, s.content.collections);
     QCOMPARE(loaded->content.tags, s.content.tags);
     QCOMPARE(loaded->content.steam, s.content.steam);
     QCOMPARE(loaded->content.heroic, s.content.heroic);

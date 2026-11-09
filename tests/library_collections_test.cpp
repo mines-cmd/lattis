@@ -28,6 +28,7 @@ private slots:
     void overviewFilterLeaves();
     void deletedWhileOpen();
     void restoredFromViewState();
+    void tagSearchMatching();
     void makeAddRemove();
     void statesOfASelection();
     void removeFromARuleBasedCollection();
@@ -40,6 +41,7 @@ private slots:
     void rulesIgnoreADeletedTag();
     void renamingATagUpdatesTheRules();
     void editRulesAndExceptions();
+    void savedFromTheMoreFilters();
     void editTurnsRulesOnAndOff();
     void steamAccounts();
     void steamImportMakesCollections();
@@ -461,6 +463,22 @@ void LibraryCollectionsTest::restoredFromViewState()
     auto second = openLibrary();
     second->setViewStateFile(state);
     QVERIFY(second->collectionId().isEmpty());
+    QVERIFY(second->tagsOpen()); // open unless the saved state says it was folded
+
+    writeFile(state, R"({"tagsOpen": false})");
+    auto folded = openLibrary();
+    folded->setViewStateFile(state);
+    QVERIFY(!folded->tagsOpen());
+}
+
+void LibraryCollectionsTest::tagSearchMatching()
+{
+    auto library = openLibrary();
+    QVERIFY(library->matchesSearch(QStringLiteral("Platformer"), QStringLiteral("PLATFÖRM")));
+    QVERIFY(library->matchesSearch(QStringLiteral("Co-op"), QStringLiteral("co op")));
+    QVERIFY(library->matchesSearch(QStringLiteral("Rôle-playing"), QStringLiteral("role")));
+    QVERIFY(library->matchesSearch(QStringLiteral("Racing"), QString()));
+    QVERIFY(!library->matchesSearch(QStringLiteral("Racing"), QStringLiteral("party")));
 }
 
 void LibraryCollectionsTest::makeAddRemove()
@@ -791,6 +809,75 @@ void LibraryCollectionsTest::editRulesAndExceptions()
 
     QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
     QCOMPARE(library->store().collections().first(), c);
+}
+
+void LibraryCollectionsTest::savedFromTheMoreFilters()
+{
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setYearFrom(2015);
+    library->setYearTo(2023);
+    library->setMinRating(3);
+    library->setPlayTimeFilter({"never", "2_10h"});
+    library->setLastPlayedFilter(QStringLiteral("year"));
+    library->setAchievementFilter({"none"});
+    QCOMPARE(library->addCollectionFromFilters(QStringLiteral("Recent")), QString());
+
+    const Collection saved = library->store().collections().first();
+    QCOMPARE(saved.rules->yearFrom, 2015);
+    QCOMPARE(saved.rules->yearTo, 2023);
+    QCOMPARE(saved.rules->minRating, 3.0);
+    QCOMPARE(saved.rules->playTimes, (QStringList{"never", "2_10h"}));
+    QCOMPARE(saved.rules->lastPlayed, QStringLiteral("year"));
+    QCOMPARE(saved.rules->achievements, QStringList{"none"});
+
+    // Each filter alone is enough to save one.
+    library->clearFilters();
+    library->setInstalledOnly(false);
+    library->setYearTo(2000);
+    QCOMPARE(library->addCollectionFromFilters(QStringLiteral("Old")), QString());
+    library->clearFilters();
+    library->setInstalledOnly(false);
+
+    // The same games open from a collection as the filters showed, and the file loads again with the same rules.
+    library->setYearFrom(2017);
+    library->setYearTo(2020);
+    const QStringList expectedIds = gameIds(*library);
+    QVERIFY(!expectedIds.isEmpty());
+    QCOMPARE(library->addCollectionFromFilters(QStringLiteral("Years")), QString());
+    library->clearFilters();
+    library->setInstalledOnly(false);
+    library->openCollection(QStringLiteral("years"));
+    QCOMPARE(sorted(gameIds(*library)), sorted(expectedIds));
+    library->closeCollection();
+    library->openCollection(QStringLiteral("old"));
+    QVERIFY(gameIds(*library).isEmpty()); // no game before 2001 in the demo; year 0 is left out
+    library->closeCollection();
+    auto again = openLibrary();
+    QCOMPARE(again->store().collections().first(), saved);
+
+    // Edit shows them and takes changes back.
+    const QVariantMap details = library->collectionDetails(QStringLiteral("recent"));
+    QCOMPARE(details.value("yearFrom").toInt(), 2015);
+    QCOMPARE(details.value("yearTo").toInt(), 2023);
+    QCOMPARE(details.value("minRating").toDouble(), 3.0);
+    QCOMPARE(details.value("playTimes").toStringList(), (QStringList{"never", "2_10h"}));
+    QCOMPARE(details.value("lastPlayed").toString(), QStringLiteral("year"));
+    QCOMPARE(details.value("achievements").toStringList(), QStringList{"none"});
+    QVariantMap rules = details;
+    rules.insert("yearFrom", 0);
+    rules.insert("yearTo", 0);
+    rules.insert("minRating", -1);
+    rules.insert("playTimes", QStringList{});
+    rules.insert("lastPlayed", QString());
+    rules.insert("achievements", QStringList{});
+    rules.insert("favoritesOnly", true);
+    QCOMPARE(library->editCollection(QStringLiteral("recent"), rules, {}, {}), QString());
+    const CollectionRules edited = *library->store().collections().first().rules;
+    QCOMPARE(edited.yearFrom, 0);
+    QCOMPARE(edited.minRating, -1.0);
+    QVERIFY(edited.playTimes.isEmpty() && edited.lastPlayed.isEmpty() && edited.achievements.isEmpty());
+    QVERIFY(edited.favoritesOnly);
 }
 
 void LibraryCollectionsTest::editTurnsRulesOnAndOff()

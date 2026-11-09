@@ -38,6 +38,7 @@
 #include <QtConcurrent>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iterator>
 #include <numeric>
@@ -181,6 +182,79 @@ QString statusOf(const Game &game)
     return game.status.isEmpty() ? QStringLiteral("none") : game.status;
 }
 
+QString playTimeName(const QString &bucket)
+{
+    if (bucket == QLatin1String("never"))
+        return Library::tr("Never");
+    if (bucket == QLatin1String("under_2h"))
+        return Library::tr("Under 2 h");
+    if (bucket == QLatin1String("2_10h"))
+        return Library::tr("2–10 h");
+    if (bucket == QLatin1String("10_50h"))
+        return Library::tr("10–50 h");
+    if (bucket == QLatin1String("50_100h"))
+        return Library::tr("50–100 h");
+    return Library::tr("Over 100 h");
+}
+
+QString achievementStateName(const QString &state)
+{
+    if (state == QLatin1String("not_started"))
+        return Library::tr("Not started");
+    if (state == QLatin1String("in_progress"))
+        return Library::tr("In progress");
+    if (state == QLatin1String("completed"))
+        return Library::tr("Completed");
+    return Library::tr("None to earn");
+}
+
+// The narrowest of the Last played filter's periods, so a game is in one group.
+QString lastPlayedGroup(const QDateTime &played, const QDateTime &now)
+{
+    if (!played.isValid())
+        return QStringLiteral("never");
+    for (const char *period : {"week", "month", "year"}) {
+        if (playedWithin(QLatin1String(period), played, now))
+            return QLatin1String(period);
+    }
+    return QStringLiteral("older");
+}
+
+QString ratingGroup(double rating)
+{
+    if (rating < 0)
+        return QStringLiteral("unrated");
+    if (rating >= 5)
+        return QStringLiteral("5");
+    if (rating >= 4)
+        return QStringLiteral("4");
+    if (rating >= 3)
+        return QStringLiteral("3");
+    return QStringLiteral("under_3");
+}
+
+QString groupHeaderName(const QString &grouping, const QString &group)
+{
+    if (grouping == QLatin1String("year"))
+        return group == QLatin1String("none") ? Library::tr("No year") : group;
+    if (grouping == QLatin1String("rating")) {
+        if (group == QLatin1String("5"))
+            return QStringLiteral("5");
+        if (group == QLatin1String("4"))
+            return Library::tr("4 – 4.5");
+        if (group == QLatin1String("3"))
+            return Library::tr("3 – 3.5");
+        return group == QLatin1String("under_3") ? Library::tr("Under 3") : Library::tr("Unrated");
+    }
+    if (group == QLatin1String("week"))
+        return Library::tr("This week");
+    if (group == QLatin1String("month"))
+        return Library::tr("This month");
+    if (group == QLatin1String("year"))
+        return Library::tr("This year");
+    return group == QLatin1String("older") ? Library::tr("Older") : Library::tr("Never");
+}
+
 QString statusName(const QString &status)
 {
     if (status == QLatin1String("playing"))
@@ -316,6 +390,13 @@ Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary new
     m_tagFilter = list.value.tags;
     m_tagMatchAll = list.value.matchAllTags;
     m_statusFilter = list.value.statuses;
+    m_yearFrom = list.value.yearFrom;
+    m_yearTo = list.value.yearTo;
+    m_minRating = list.value.minRating;
+    m_playTimeFilter = list.value.playTimes;
+    m_lastPlayedFilter = list.value.lastPlayed;
+    m_achievementFilter = list.value.achievements;
+    m_moreOpen = list.value.moreOpen;
     m_showHidden = list.value.showHidden;
     m_showSortValue = list.value.showSortValue;
     m_groupBy = list.value.groupBy;
@@ -340,6 +421,12 @@ ListSettings Library::listSettings() const
         s.tags = m_held->list.tags;
         s.matchAllTags = m_held->list.matchAllTags;
         s.statuses = m_held->list.statuses;
+        s.yearFrom = m_held->list.yearFrom;
+        s.yearTo = m_held->list.yearTo;
+        s.minRating = m_held->list.minRating;
+        s.playTimes = m_held->list.playTimes;
+        s.lastPlayed = m_held->list.lastPlayed;
+        s.achievements = m_held->list.achievements;
         s.showHidden = m_held->list.showHidden;
     }
     return s;
@@ -355,6 +442,13 @@ ListSettings Library::workingSettings() const
     s.tags = m_tagFilter;
     s.matchAllTags = m_tagMatchAll;
     s.statuses = m_statusFilter;
+    s.yearFrom = m_yearFrom;
+    s.yearTo = m_yearTo;
+    s.minRating = m_minRating;
+    s.playTimes = m_playTimeFilter;
+    s.lastPlayed = m_lastPlayedFilter;
+    s.achievements = m_achievementFilter;
+    s.moreOpen = m_moreOpen;
     s.showHidden = m_showHidden;
     s.showSortValue = m_showSortValue;
     s.groupBy = m_groupBy;
@@ -409,12 +503,24 @@ void Library::applyListSettings(const ListSettings &incoming)
         m_held->list.tags = s.tags;
         m_held->list.matchAllTags = s.matchAllTags;
         m_held->list.statuses = s.statuses;
+        m_held->list.yearFrom = s.yearFrom;
+        m_held->list.yearTo = s.yearTo;
+        m_held->list.minRating = s.minRating;
+        m_held->list.playTimes = s.playTimes;
+        m_held->list.lastPlayed = s.lastPlayed;
+        m_held->list.achievements = s.achievements;
         m_held->list.showHidden = s.showHidden;
         s.installedOnly = now.installedOnly;
         s.favoritesOnly = now.favoritesOnly;
         s.tags = now.tags;
         s.matchAllTags = now.matchAllTags;
         s.statuses = now.statuses;
+        s.yearFrom = now.yearFrom;
+        s.yearTo = now.yearTo;
+        s.minRating = now.minRating;
+        s.playTimes = now.playTimes;
+        s.lastPlayed = now.lastPlayed;
+        s.achievements = now.achievements;
         s.showHidden = now.showHidden;
     }
     if (s == now)
@@ -430,7 +536,19 @@ void Library::applyListSettings(const ListSettings &incoming)
     m_tagFilter = s.tags;
     m_tagMatchAll = s.matchAllTags;
     m_statusFilter = s.statuses;
+    m_yearFrom = s.yearFrom;
+    m_yearTo = s.yearTo;
+    m_minRating = s.minRating;
+    m_playTimeFilter = s.playTimes;
+    m_lastPlayedFilter = s.lastPlayed;
+    m_achievementFilter = s.achievements;
     m_showHidden = s.showHidden;
+    if (s.moreOpen != m_moreOpen) {
+        m_moreOpen = s.moreOpen;
+        emit moreOpenChanged();
+    }
+    if (achievementsWanted())
+        readAchievements();
     if (s.showSortValue != m_showSortValue) {
         m_showSortValue = s.showSortValue;
         emit showSortValueChanged();
@@ -1133,7 +1251,10 @@ void Library::reloadFromStore()
     m_foldedTitles.reserve(m_games.size());
     for (const Game &g : std::as_const(m_games))
         m_foldedTitles.append(SearchText::fold(g.title));
+    updateAchievementStates();
     updateOrder();
+    if (achievementsWanted())
+        readAchievements();
     updateDownloads();
     const bool platformsDiffer = updatePlatforms();
 
@@ -1329,6 +1450,8 @@ QVariant Library::data(const QModelIndex &index, int role) const
             return game->title;
         if (m_groupBy == QLatin1String("status"))
             return statusName(row.group);
+        if (m_groupBy != QLatin1String("platform"))
+            return groupHeaderName(m_groupBy, row.group);
         for (const Platform &p : m_platforms) {
             if (p.id == row.group)
                 return p.name;
@@ -1359,6 +1482,19 @@ QVariant Library::data(const QModelIndex &index, int role) const
             return shortPlayTimeText(game->groupPlayMinutes);
         if (m_sort == QLatin1String("last_played") && game->groupLastPlayed.isValid())
             return lastPlayedText(game->groupLastPlayed);
+        if (m_sort == QLatin1String("rating") && game->rating >= 0)
+            return QLocale().toString(game->rating, 'f', 1);
+        if (m_sort == QLatin1String("year") && game->year > 0)
+            return QString::number(game->year);
+        if (m_sort == QLatin1String("added") && game->added.isValid())
+            return DateFormat::shortDate(game->added);
+        if (m_sort == QLatin1String("size") && game->sizeBytes > 0)
+            return sizeText(game->sizeBytes);
+        if (m_sort == QLatin1String("achievements")) {
+            const auto it = m_achievementOf.constFind(game->id);
+            if (it != m_achievementOf.cend() && it->total > 0)
+                return QStringLiteral("%1/%2").arg(it->unlocked).arg(it->total);
+        }
         return QString();
     }
     return {};
@@ -1421,8 +1557,11 @@ void Library::setGroupBy(const QString &groupBy)
 
 const QStringList &Library::sortOrders()
 {
-    static const QStringList orders = {QStringLiteral("title"), QStringLiteral("last_played"),
-                                       QStringLiteral("play_time")};
+    static const QStringList orders = {QStringLiteral("title"),  QStringLiteral("last_played"),
+                                       QStringLiteral("play_time"), QStringLiteral("rating"),
+                                       QStringLiteral("year"),   QStringLiteral("achievements"),
+                                       QStringLiteral("added"),  QStringLiteral("size"),
+                                       QStringLiteral("platform")};
     return orders;
 }
 
@@ -1431,8 +1570,10 @@ void Library::setSort(const QString &sort)
     if (m_sort == sort || !sortOrders().contains(sort))
         return;
     m_sort = sort;
-    m_sortDescending = sort != QLatin1String("title");
+    m_sortDescending = sort != QLatin1String("title") && sort != QLatin1String("platform");
     emit sortChanged();
+    if (achievementsWanted())
+        readAchievements();
     updateOrder();
     rebuild();
     saveListSettings();
@@ -1459,13 +1600,33 @@ void Library::updateOrder()
             std::reverse(m_order.begin(), m_order.end());
         return;
     }
+    QHash<QString, int> platformPlace;
+    if (m_sort == QLatin1String("platform")) {
+        for (const Platform &p : std::as_const(m_allPlatforms))
+            platformPlace.insert(p.id, int(platformPlace.size()));
+    }
+    // Games with no value are -1; a platform the rail doesn't know goes after those it does.
     QList<qint64> value(m_games.size());
     for (int i = 0; i < m_games.size(); ++i) {
         const Game &g = m_games.at(i);
-        if (m_sort == QLatin1String("play_time"))
+        if (m_sort == QLatin1String("play_time")) {
             value[i] = g.groupPlayMinutes > 0 ? g.groupPlayMinutes : -1;
-        else
+        } else if (m_sort == QLatin1String("rating")) {
+            value[i] = g.rating >= 0 ? qint64(std::round(g.rating * 2)) : -1;
+        } else if (m_sort == QLatin1String("year")) {
+            value[i] = g.year > 0 ? g.year : -1;
+        } else if (m_sort == QLatin1String("added")) {
+            value[i] = g.added.isValid() ? g.added.toJulianDay() : -1;
+        } else if (m_sort == QLatin1String("size")) {
+            value[i] = g.sizeBytes > 0 ? g.sizeBytes : -1;
+        } else if (m_sort == QLatin1String("achievements")) {
+            const auto it = m_achievementOf.constFind(g.id);
+            value[i] = it != m_achievementOf.cend() && it->total > 0 ? it->unlocked * 1000000LL / it->total : -1;
+        } else if (m_sort == QLatin1String("platform")) {
+            value[i] = platformPlace.value(g.platform, int(platformPlace.size()));
+        } else {
             value[i] = g.groupLastPlayed.isValid() ? g.groupLastPlayed.toMSecsSinceEpoch() : -1;
+        }
     }
     std::stable_sort(m_order.begin(), m_order.end(), [&](int a, int b) {
         const qint64 va = value.at(a), vb = value.at(b);
@@ -1520,6 +1681,147 @@ void Library::setStatusFilter(const QStringList &statuses)
         return;
     m_statusFilter = known;
     filtersEdited();
+}
+
+void Library::setYearFrom(int year)
+{
+    year = qBound(0, year, 9999);
+    if (m_yearFrom == year)
+        return;
+    m_yearFrom = year;
+    filtersEdited();
+}
+
+void Library::setYearTo(int year)
+{
+    year = qBound(0, year, 9999);
+    if (m_yearTo == year)
+        return;
+    m_yearTo = year;
+    filtersEdited();
+}
+
+void Library::setMinRating(double rating)
+{
+    rating = rating < 0 ? -1 : std::round(qMin(rating, 5.0) * 2) / 2;
+    if (m_minRating == rating)
+        return;
+    m_minRating = rating;
+    filtersEdited();
+}
+
+void Library::setPlayTimeFilter(const QStringList &times)
+{
+    QStringList known;
+    for (const QString &time : times) {
+        if (listPlayTimes().contains(time) && !known.contains(time))
+            known.append(time);
+    }
+    if (m_playTimeFilter == known)
+        return;
+    m_playTimeFilter = known;
+    filtersEdited();
+}
+
+void Library::setLastPlayedFilter(const QString &period)
+{
+    if ((!period.isEmpty() && !listLastPlayed().contains(period)) || m_lastPlayedFilter == period)
+        return;
+    m_lastPlayedFilter = period;
+    filtersEdited();
+}
+
+void Library::setAchievementFilter(const QStringList &states)
+{
+    QStringList known;
+    for (const QString &state : states) {
+        if (listAchievementStates().contains(state) && !known.contains(state))
+            known.append(state);
+    }
+    if (m_achievementFilter == known)
+        return;
+    m_achievementFilter = known;
+    if (achievementsWanted())
+        readAchievements();
+    filtersEdited();
+}
+
+void Library::setMoreOpen(bool open)
+{
+    if (m_moreOpen == open)
+        return;
+    m_moreOpen = open;
+    emit moreOpenChanged();
+    saveListSettings();
+}
+
+QVariantList Library::playTimeChoices() const
+{
+    QHash<QString, int> counts;
+    for (const Game &g : m_games) {
+        if (!g.hidden)
+            ++counts[playTimeBucket(g.groupPlayMinutes)];
+    }
+    QVariantList out;
+    for (const QString &time : listPlayTimes()) {
+        out.append(QVariantMap{{QStringLiteral("id"), time}, {QStringLiteral("name"), playTimeName(time)},
+                               {QStringLiteral("games"), counts.value(time)}});
+    }
+    return out;
+}
+
+QVariantList Library::achievementChoices() const
+{
+    QHash<QString, int> counts;
+    for (const Game &g : m_games) {
+        if (!g.hidden)
+            ++counts[achievementStateOf(g)];
+    }
+    QVariantList out;
+    for (const QString &state : listAchievementStates()) {
+        out.append(QVariantMap{{QStringLiteral("id"), state}, {QStringLiteral("name"), achievementStateName(state)},
+                               {QStringLiteral("games"), counts.value(state)}});
+    }
+    return out;
+}
+
+QVariantList Library::yearHistogram() const
+{
+    QMap<int, int> counts;
+    for (const Game &g : m_games) {
+        if (!g.hidden && g.year > 0)
+            ++counts[g.year];
+    }
+    QVariantList out;
+    if (counts.isEmpty())
+        return out;
+    for (int year = counts.firstKey(); year <= counts.lastKey(); ++year)
+        out.append(QVariantMap{{QStringLiteral("year"), year}, {QStringLiteral("games"), counts.value(year)}});
+    return out;
+}
+
+// A rating counts in the half star at or below it, which is how the filter reads it: at least 3.5 takes 3.5 up.
+QVariantList Library::ratingHistogram() const
+{
+    QList<int> counts(11, 0);
+    for (const Game &g : m_games) {
+        if (!g.hidden && g.rating >= 0)
+            ++counts[qBound(0, int(std::floor(g.rating * 2)), 10)];
+    }
+    QVariantList out;
+    for (int step = 0; step <= 10; ++step)
+        out.append(QVariantMap{{QStringLiteral("rating"), step / 2.0}, {QStringLiteral("games"), counts.at(step)}});
+    return out;
+}
+
+int Library::gamesWithoutYear() const
+{
+    return int(std::count_if(m_games.cbegin(), m_games.cend(), [](const Game &g) { return !g.hidden && g.year <= 0; }));
+}
+
+int Library::gamesWithoutRating() const
+{
+    return int(std::count_if(m_games.cbegin(), m_games.cend(), [](const Game &g) { return !g.hidden && g.rating < 0; }));
 }
 
 void Library::showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags)
@@ -1584,14 +1886,16 @@ bool Library::filtersActive() const
 {
     // Installed off is how a collection starts, so there it's Installed on that counts as a filter.
     return m_installedOnly == bool(m_held) || m_favoritesOnly || m_showHidden || !effectiveTags().isEmpty()
-        || !m_statusFilter.isEmpty() || !m_steamFilter.isEmpty();
+        || !m_statusFilter.isEmpty() || !m_steamFilter.isEmpty() || m_yearFrom > 0 || m_yearTo > 0 || m_minRating >= 0
+        || !m_playTimeFilter.isEmpty() || !m_lastPlayedFilter.isEmpty() || !m_achievementFilter.isEmpty();
 }
 
 void Library::clearFilters()
 {
     const bool baseInstalled = !m_held;
     if (m_installedOnly == baseInstalled && !m_favoritesOnly && m_tagFilter.isEmpty() && !m_tagMatchAll
-        && m_statusFilter.isEmpty() && m_steamFilter.isEmpty() && !m_showHidden)
+        && m_statusFilter.isEmpty() && m_steamFilter.isEmpty() && !m_showHidden && m_yearFrom == 0 && m_yearTo == 0
+        && m_minRating < 0 && m_playTimeFilter.isEmpty() && m_lastPlayedFilter.isEmpty() && m_achievementFilter.isEmpty())
         return;
     const bool platformsDiffer = m_showHidden;
     m_installedOnly = baseInstalled;
@@ -1600,6 +1904,12 @@ void Library::clearFilters()
     m_tagMatchAll = false;
     m_statusFilter.clear();
     m_steamFilter.clear();
+    m_yearFrom = 0;
+    m_yearTo = 0;
+    m_minRating = -1;
+    m_playTimeFilter.clear();
+    m_lastPlayedFilter.clear();
+    m_achievementFilter.clear();
     m_showHidden = false;
     if (platformsDiffer && updatePlatforms())
         emit platformsChanged();
@@ -1694,6 +2004,12 @@ bool Library::enterCollection(const QString &id, bool rebuildNow)
     m_tagMatchAll = false;
     m_statusFilter.clear();
     m_steamFilter.clear();
+    m_yearFrom = 0;
+    m_yearTo = 0;
+    m_minRating = -1;
+    m_playTimeFilter.clear();
+    m_lastPlayedFilter.clear();
+    m_achievementFilter.clear();
     m_showHidden = false;
     const bool platformChanged = !m_platformFilter.isEmpty();
     m_platformFilter.clear();
@@ -1726,6 +2042,12 @@ void Library::leaveCollection(bool rebuildNow)
     m_tagMatchAll = held.list.matchAllTags;
     m_statusFilter = held.list.statuses;
     m_steamFilter = held.steam;
+    m_yearFrom = held.list.yearFrom;
+    m_yearTo = held.list.yearTo;
+    m_minRating = held.list.minRating;
+    m_playTimeFilter = held.list.playTimes;
+    m_lastPlayedFilter = held.list.lastPlayed;
+    m_achievementFilter = held.list.achievements;
     m_showHidden = held.list.showHidden;
     if (platformsDiffer && updatePlatforms())
         emit platformsChanged();
@@ -1871,6 +2193,12 @@ QString Library::addCollectionFromFilters(const QString &name)
     rules.tags = effectiveTags();
     rules.matchAllTags = m_tagMatchAll && rules.tags.size() >= 2;
     rules.steamOwnership = m_steamFilter;
+    rules.yearFrom = m_yearFrom;
+    rules.yearTo = m_yearTo;
+    rules.minRating = m_minRating;
+    rules.playTimes = m_playTimeFilter;
+    rules.lastPlayed = m_lastPlayedFilter;
+    rules.achievements = m_achievementFilter;
     if (rules == CollectionRules{})
         return tr("There are no filters to save");
     return makeCollection(name, {}, rules);
@@ -1906,6 +2234,12 @@ QVariantMap Library::collectionDetails(const QString &id) const
                        {QStringLiteral("tags"), tags},
                        {QStringLiteral("matchAllTags"), rules.matchAllTags},
                        {QStringLiteral("steam"), rules.steamOwnership},
+                       {QStringLiteral("yearFrom"), rules.yearFrom},
+                       {QStringLiteral("yearTo"), rules.yearTo},
+                       {QStringLiteral("minRating"), rules.minRating},
+                       {QStringLiteral("playTimes"), rules.playTimes},
+                       {QStringLiteral("lastPlayed"), rules.lastPlayed},
+                       {QStringLiteral("achievements"), rules.achievements},
                        {QStringLiteral("added"), titled(found->added)},
                        {QStringLiteral("removed"), titled(found->removed)}};
 }
@@ -1927,6 +2261,12 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
         r.tags = rules.value(QStringLiteral("tags")).toStringList();
         r.matchAllTags = rules.value(QStringLiteral("matchAllTags")).toBool();
         r.steamOwnership = rules.value(QStringLiteral("steam")).toStringList();
+        r.yearFrom = rules.value(QStringLiteral("yearFrom")).toInt();
+        r.yearTo = rules.value(QStringLiteral("yearTo")).toInt();
+        r.minRating = rules.value(QStringLiteral("minRating"), -1).toDouble();
+        r.playTimes = rules.value(QStringLiteral("playTimes")).toStringList();
+        r.lastPlayed = rules.value(QStringLiteral("lastPlayed")).toString();
+        r.achievements = rules.value(QStringLiteral("achievements")).toStringList();
         c.rules = r;
     } else {
         c.rules.reset();
@@ -2285,6 +2625,18 @@ bool Library::passesFilters(const Game &g, const QStringList &tags) const
         return false;
     if (!m_steamFilter.isEmpty() && !m_steamFilter.contains(g.steamOwnership))
         return false;
+    if ((m_yearFrom > 0 || m_yearTo > 0)
+        && (g.year <= 0 || (m_yearFrom > 0 && g.year < m_yearFrom) || (m_yearTo > 0 && g.year > m_yearTo)))
+        return false;
+    if (m_minRating >= 0 && (g.rating < 0 || g.rating < m_minRating))
+        return false;
+    if (!m_playTimeFilter.isEmpty() && !m_playTimeFilter.contains(playTimeBucket(g.groupPlayMinutes)))
+        return false;
+    if (!m_lastPlayedFilter.isEmpty()
+        && !playedWithin(m_lastPlayedFilter, g.groupLastPlayed, QDateTime::currentDateTimeUtc()))
+        return false;
+    if (!m_achievementFilter.isEmpty() && !m_achievementFilter.contains(achievementStateOf(g)))
+        return false;
     if (tags.isEmpty())
         return true;
     const auto has = [&](const QString &tag) {
@@ -2292,6 +2644,107 @@ bool Library::passesFilters(const Game &g, const QStringList &tags) const
     };
     return m_tagMatchAll ? std::all_of(tags.cbegin(), tags.cend(), has)
                          : std::any_of(tags.cbegin(), tags.cend(), has);
+}
+
+bool Library::collectionsWantAchievements() const
+{
+    const QList<Collection> &all = m_store.collections();
+    return std::any_of(all.cbegin(), all.cend(),
+                       [](const Collection &c) { return c.rules && !c.rules->achievements.isEmpty(); });
+}
+
+// A game whose count isn't read (yet) has none to earn.
+QString Library::achievementStateOf(const Game &g) const
+{
+    const auto it = m_achievementOf.constFind(g.id);
+    if (it == m_achievementOf.cend() || it->total <= 0)
+        return QStringLiteral("none");
+    if (it->unlocked <= 0)
+        return QStringLiteral("not_started");
+    return it->unlocked >= it->total ? QStringLiteral("completed") : QStringLiteral("in_progress");
+}
+
+void Library::updateAchievementStates()
+{
+    QHash<QString, AchievementEntry> best;
+    const auto groupOf = [](const Game &g) { return g.groupId.isEmpty() ? g.id : g.groupId; };
+    for (const Game &g : std::as_const(m_games)) {
+        if (g.platform != kSteamPlatform)
+            continue;
+        const auto cached = m_achievementCache.constFind(GameId::steamAppId(g.id));
+        if (cached == m_achievementCache.cend())
+            continue;
+        AchievementEntry &entry = best[groupOf(g)];
+        if (cached->unlocked > entry.unlocked || (cached->unlocked == entry.unlocked && cached->total > entry.total))
+            entry = *cached;
+    }
+    m_achievementOf.clear();
+    for (const Game &g : std::as_const(m_games)) {
+        const auto found = best.constFind(groupOf(g));
+        if (found != best.cend())
+            m_achievementOf.insert(g.id, *found);
+    }
+    emit achievementStatesChanged();
+}
+
+QHash<qint64, qint64> Library::achievementStamps() const
+{
+    QHash<qint64, qint64> stamps;
+    for (const Game &g : m_games) {
+        if (g.hidden || g.platform != kSteamPlatform || !(g.installed || g.playMinutes > 0 || g.lastPlayed.isValid()))
+            continue;
+        const qint64 appId = GameId::steamAppId(g.id);
+        if (appId > 0)
+            stamps.insert(appId, (qint64(g.playMinutes) << 32) | (g.lastPlayed.toSecsSinceEpoch() & 0xffffffff));
+    }
+    return stamps;
+}
+
+// What was read before is used while a game whose play changed is read again.
+void Library::readAchievements()
+{
+    const QHash<qint64, qint64> stamps = achievementStamps();
+    QList<QPair<qint64, qint64>> stale;
+    for (auto it = stamps.cbegin(); it != stamps.cend(); ++it) {
+        const auto cached = m_achievementCache.constFind(it.key());
+        if (cached == m_achievementCache.cend() || cached->stamp != it.value())
+            stale.append({it.key(), it.value()});
+    }
+    const SteamInstall install = m_store.snapshot().steam.install;
+    const bool readable = !install.userDataDir().isEmpty();
+    if (stale.isEmpty() || !readable) {
+        m_achievementsRead = true;
+        return;
+    }
+    if (m_achievementsRunning)
+        return;
+    m_achievementsRunning = true;
+    auto *pass = new QFutureWatcher<QHash<qint64, AchievementEntry>>(this);
+    connect(pass, &QFutureWatcher<QHash<qint64, AchievementEntry>>::finished, this, [this, pass] {
+        const auto read = pass->result();
+        for (auto it = read.cbegin(); it != read.cend(); ++it)
+            m_achievementCache.insert(it.key(), it.value());
+        m_achievementsRunning = false;
+        m_achievementsRead = true;
+        pass->deleteLater();
+        updateAchievementStates();
+        if (achievementsWanted()) {
+            updateCollections();
+            updateOrder();
+            rebuild();
+        }
+        emit overviewAchievementsRead();
+    });
+    pass->setFuture(QtConcurrent::run([install, stale] {
+        const QString language = SteamAchievements::steamLanguage(install, QDir::homePath());
+        QHash<qint64, AchievementEntry> read;
+        for (const auto &[appId, stamp] : stale) {
+            const auto list = SteamAchievements::readAchievements(install, appId, language);
+            const int unlocked = int(std::count_if(list.cbegin(), list.cend(), [](const auto &a) { return a.unlocked; }));
+            read.insert(appId, {unlocked, int(list.size()), stamp});
+        }
+        return read;
+    }));
 }
 
 bool Library::updatePlatforms()
@@ -2329,6 +2782,11 @@ void Library::toggleGroup(const QString &group)
         m_collapsed.insert(collapseKey(group));
     rebuildGroup(group);
     m_viewStateTimer.start();
+}
+
+bool Library::matchesSearch(const QString &text, const QString &search) const
+{
+    return SearchText::matches(SearchText::fold(text), SearchText::words(search));
 }
 
 int Library::nextGameRow(int from, int step) const
@@ -3281,7 +3739,7 @@ void Library::yearStats(int year)
 
 void Library::overview()
 {
-    QHash<qint64, qint64> stamps;
+    const QHash<qint64, qint64> stamps = achievementStamps();
     QList<LibraryOverview::Game> games;
     games.reserve(m_games.size());
     const auto &files = m_store.snapshot().content.games;
@@ -3323,8 +3781,6 @@ void Library::overview()
         }
         if (g.platform == kSteamPlatform && (g.installed || g.playMinutes > 0 || g.lastPlayed.isValid())) {
             o.steamAppId = GameId::steamAppId(g.id);
-            if (o.steamAppId > 0)
-                stamps.insert(o.steamAppId, (qint64(g.playMinutes) << 32) | (g.lastPlayed.toSecsSinceEpoch() & 0xffffffff));
         }
         o.updateWaiting = g.steamUpdate == SteamUpdate::Waiting;
         if (g.rom && g.installed) {
@@ -3353,43 +3809,14 @@ void Library::overview()
     if (m_protonUnfresh)
         m_protonPending = m_protonUnfresh(installedApps);
 
-    // What was read before is used while a game whose play changed is read again.
+    readAchievements();
     LibraryOverview::AchievementCounts counts;
-    QList<QPair<qint64, qint64>> stale;
     for (auto it = stamps.cbegin(); it != stamps.cend(); ++it) {
         const auto cached = m_achievementCache.constFind(it.key());
         if (cached != m_achievementCache.cend())
             counts.insert(it.key(), {cached->unlocked, cached->total});
-        if (cached == m_achievementCache.cend() || cached->stamp != it.value())
-            stale.append({it.key(), it.value()});
     }
-    const SteamInstall install = m_store.snapshot().steam.install;
-    const bool readable = !install.userDataDir().isEmpty();
-    if (stale.isEmpty() || !readable)
-        m_achievementsRead = true;
-    else if (!m_achievementsRunning) {
-        m_achievementsRunning = true;
-        auto *pass = new QFutureWatcher<QHash<qint64, AchievementEntry>>(this);
-        connect(pass, &QFutureWatcher<QHash<qint64, AchievementEntry>>::finished, this, [this, pass] {
-            const auto read = pass->result();
-            for (auto it = read.cbegin(); it != read.cend(); ++it)
-                m_achievementCache.insert(it.key(), it.value());
-            m_achievementsRunning = false;
-            m_achievementsRead = true;
-            pass->deleteLater();
-            emit overviewAchievementsRead();
-        });
-        pass->setFuture(QtConcurrent::run([install, stale] {
-            const QString language = SteamAchievements::steamLanguage(install, QDir::homePath());
-            QHash<qint64, AchievementEntry> read;
-            for (const auto &[appId, stamp] : stale) {
-                const auto list = SteamAchievements::readAchievements(install, appId, language);
-                const int unlocked = int(std::count_if(list.cbegin(), list.cend(), [](const auto &a) { return a.unlocked; }));
-                read.insert(appId, {unlocked, int(list.size()), stamp});
-            }
-            return read;
-        }));
-    }
+    const bool readable = !m_store.snapshot().steam.install.userDataDir().isEmpty();
     std::optional<LibraryOverview::AchievementCounts> achievementCounts;
     if (m_achievementsRead)
         achievementCounts = readable ? counts : LibraryOverview::AchievementCounts();
@@ -4277,9 +4704,10 @@ void Library::rebuild()
 
 QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled) const
 {
-    const bool byStatus = m_groupBy == QLatin1String("status");
-    const bool grouped = byStatus || (m_groupBy == QLatin1String("platform") && m_platformFilter.isEmpty());
+    const bool byPlatform = m_groupBy == QLatin1String("platform");
+    const bool grouped = m_groupBy != QLatin1String("none") && (!byPlatform || m_platformFilter.isEmpty());
     const QStringList tags = effectiveTags();
+    const QDateTime now = QDateTime::currentDateTimeUtc();
     *notInstalled = 0;
     const auto listed = [&](int i) {
         const Game &g = m_games.at(i);
@@ -4305,20 +4733,56 @@ QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled)
         return rows;
     }
 
+    const auto groupOf = [&](const Game &g) -> QString {
+        if (m_groupBy == QLatin1String("status"))
+            return statusOf(g);
+        if (m_groupBy == QLatin1String("year"))
+            return g.year > 0 ? QString::number(g.year) : QStringLiteral("none");
+        if (m_groupBy == QLatin1String("rating"))
+            return ratingGroup(g.rating);
+        if (m_groupBy == QLatin1String("last_played"))
+            return lastPlayedGroup(g.groupLastPlayed, now);
+        return g.platform;
+    };
+
     QStringList groups;
-    if (byStatus) {
-        groups = listStatuses();
-    } else {
+    if (byPlatform) {
         for (const Platform &platform : m_platforms)
             groups.append(platform.id);
     }
     QHash<QString, QList<int>> matches;
     for (int i : m_order) {
         const Game &g = m_games.at(i);
-        if (byStatus ? !m_platformFilter.isEmpty() && g.platform != m_platformFilter : !groups.contains(g.platform))
+        if (byPlatform ? !groups.contains(g.platform) : !m_platformFilter.isEmpty() && g.platform != m_platformFilter)
             continue;
         if (listed(i))
-            matches[byStatus ? statusOf(g) : g.platform].append(i);
+            matches[groupOf(g)].append(i);
+    }
+
+    // Newest, highest or most recent first, unless the list is sorted the other way by that field; games with no
+    // value stay last.
+    const bool reversed = m_sort == m_groupBy && !m_sortDescending;
+    if (m_groupBy == QLatin1String("status")) {
+        groups = listStatuses();
+    } else if (m_groupBy == QLatin1String("year")) {
+        QList<int> years;
+        for (auto it = matches.cbegin(); it != matches.cend(); ++it) {
+            if (it.key() != QLatin1String("none"))
+                years.append(it.key().toInt());
+        }
+        std::sort(years.begin(), years.end(), [&](int a, int b) { return reversed ? a < b : a > b; });
+        for (int year : years)
+            groups.append(QString::number(year));
+        groups.append(QStringLiteral("none"));
+    } else if (!byPlatform) {
+        QStringList order = m_groupBy == QLatin1String("rating")
+            ? QStringList{QStringLiteral("5"), QStringLiteral("4"), QStringLiteral("3"), QStringLiteral("under_3")}
+            : QStringList{QStringLiteral("week"), QStringLiteral("month"), QStringLiteral("year"),
+                          QStringLiteral("older")};
+        if (reversed)
+            std::reverse(order.begin(), order.end());
+        groups = order;
+        groups.append(m_groupBy == QLatin1String("rating") ? QStringLiteral("unrated") : QStringLiteral("never"));
     }
 
     const bool expanded = expandsGroups();
@@ -4836,7 +5300,7 @@ void Library::setViewStateFile(const QString &file)
     const QJsonObject saved = QJsonDocument::fromJson(f.readAll()).object();
     m_restorePlatform = saved.value(QLatin1String("platform")).toString();
     m_restoreCollection = saved.value(QLatin1String("collection")).toString();
-    m_tagsOpen = saved.value(QLatin1String("tagsOpen")).toBool();
+    m_tagsOpen = saved.value(QLatin1String("tagsOpen")).toBool(true);
     for (const QJsonValue &key : saved.value(QLatin1String("collapsed")).toArray())
         m_collapsed.insert(key.toString());
     if (!m_platforms.isEmpty()) {

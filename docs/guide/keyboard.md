@@ -32,6 +32,7 @@ Typing in the main window starts a search, so the main window's shortcuts all us
 |---|---|
 | Ctrl+F or / | Focus the search box |
 | Ctrl+Shift+F | Filters |
+| Ctrl+Shift+C | Collections |
 | Ctrl+Shift+D | Show only favorites / all games |
 | Ctrl+Shift+S | Next sort order |
 | Ctrl+Shift+Backspace | Clear filters |

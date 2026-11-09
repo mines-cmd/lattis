@@ -1,11 +1,13 @@
 #include "collection.h"
 #include "gamefile.h"
+#include "listsettings.h"
 #include "suggestion.h"
 #include "tomlsection.h"
 
 #include <toml++/toml.hpp>
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 const QStringList kKnownKeys = {QStringLiteral("id"),           QStringLiteral("name"),
@@ -14,7 +16,10 @@ const QStringList kKnownKeys = {QStringLiteral("id"),           QStringLiteral("
                                 QStringLiteral("favorites_only"), QStringLiteral("statuses"),
                                 QStringLiteral("tags"),         QStringLiteral("match_all_tags"),
                                 QStringLiteral("steam"),        QStringLiteral("added"),
-                                QStringLiteral("removed")};
+                                QStringLiteral("removed"),      QStringLiteral("year_from"),
+                                QStringLiteral("year_to"),      QStringLiteral("min_rating"),
+                                QStringLiteral("play_times"),   QStringLiteral("last_played"),
+                                QStringLiteral("achievements")};
 
 QString where(const QString &displayPath, const toml::node &node)
 {
@@ -62,6 +67,49 @@ bool readList(const toml::node &node, const QString &key, const QString &display
         const QString value = toQString(s->get());
         if (!out->contains(value))
             out->append(value);
+    }
+    return true;
+}
+
+bool readYear(const toml::node &node, const QString &key, const QString &displayPath, int *out, QStringList *warnings)
+{
+    const auto *n = node.as_integer();
+    if (n && n->get() >= 1 && n->get() <= 9999) {
+        *out = int(n->get());
+        return true;
+    }
+    warnings->append(QStringLiteral("%1: %2 must be a year, like 2015").arg(where(displayPath, node), key));
+    return false;
+}
+
+bool readRating(const toml::node &node, const QString &key, const QString &displayPath, double *out,
+                QStringList *warnings)
+{
+    const double rating = node.is_integer()        ? double(node.as_integer()->get())
+                          : node.is_floating_point() ? node.as_floating_point()->get()
+                                                     : -1;
+    if (rating >= 0 && rating <= 5) {
+        *out = std::round(rating * 2) / 2;
+        return true;
+    }
+    warnings->append(QStringLiteral("%1: %2 must be a number from 0 to 5, like 3.5").arg(where(displayPath, node), key));
+    return false;
+}
+
+// A list whose values are all from `choices`; others are skipped with a warning.
+bool readChoices(const toml::node &node, const QString &key, const QString &displayPath, const QStringList &choices,
+                 QStringList *out, QStringList *warnings)
+{
+    QStringList read;
+    if (!readList(node, key, displayPath, &read, warnings))
+        return false;
+    out->clear();
+    for (const QString &value : std::as_const(read)) {
+        if (choices.contains(value))
+            out->append(value);
+        else
+            warnings->append(QStringLiteral("%1: unknown value \"%2\" in %3; skipping it")
+                                 .arg(where(displayPath, node), value, key));
     }
     return true;
 }
@@ -142,7 +190,30 @@ Parsed<QList<Collection>> parseCollections(const QByteArray &bytes, const QStrin
                     ruleKeySeen |= readList(value, name, displayPath, &rules.tags, &out.warnings);
                 else if (name == QLatin1String("steam"))
                     ruleKeySeen |= readList(value, name, displayPath, &rules.steamOwnership, &out.warnings);
-                else
+                else if (name == QLatin1String("year_from"))
+                    ruleKeySeen |= readYear(value, name, displayPath, &rules.yearFrom, &out.warnings);
+                else if (name == QLatin1String("year_to"))
+                    ruleKeySeen |= readYear(value, name, displayPath, &rules.yearTo, &out.warnings);
+                else if (name == QLatin1String("min_rating"))
+                    ruleKeySeen |= readRating(value, name, displayPath, &rules.minRating, &out.warnings);
+                else if (name == QLatin1String("play_times"))
+                    ruleKeySeen |= readChoices(value, name, displayPath, listPlayTimes(), &rules.playTimes, &out.warnings);
+                else if (name == QLatin1String("achievements"))
+                    ruleKeySeen |= readChoices(value, name, displayPath, listAchievementStates(), &rules.achievements,
+                                               &out.warnings);
+                else if (name == QLatin1String("last_played")) {
+                    QString period;
+                    if (readString(value, name, displayPath, &period, &out.warnings)) {
+                        if (listLastPlayed().contains(period)) {
+                            rules.lastPlayed = period;
+                            ruleKeySeen = true;
+                        } else {
+                            out.warnings.append(QStringLiteral("%1: last_played must be one of %2%3")
+                                                    .arg(where(displayPath, value), listLastPlayed().join(QLatin1String(", ")),
+                                                         suggestion(period, listLastPlayed())));
+                        }
+                    }
+                } else
                     out.warnings.append(QStringLiteral("%1: unknown key %2%3")
                                             .arg(where(displayPath, value), name, suggestion(name, kKnownKeys)));
             }
@@ -192,15 +263,23 @@ CollectionValues collectionValues(const Collection &collection)
     setOrRemove(QStringLiteral("tags"), has && !rules.tags.isEmpty(), tomlList(rules.tags));
     setOrRemove(QStringLiteral("match_all_tags"), has && rules.matchAllTags, QStringLiteral("true"));
     setOrRemove(QStringLiteral("steam"), has && !rules.steamOwnership.isEmpty(), tomlList(rules.steamOwnership));
+    setOrRemove(QStringLiteral("year_from"), has && rules.yearFrom > 0, QString::number(rules.yearFrom));
+    setOrRemove(QStringLiteral("year_to"), has && rules.yearTo > 0, QString::number(rules.yearTo));
+    setOrRemove(QStringLiteral("min_rating"), has && rules.minRating >= 0, QString::number(rules.minRating, 'f', 1));
+    setOrRemove(QStringLiteral("play_times"), has && !rules.playTimes.isEmpty(), tomlList(rules.playTimes));
+    setOrRemove(QStringLiteral("last_played"), has && !rules.lastPlayed.isEmpty(), tomlString(rules.lastPlayed));
+    setOrRemove(QStringLiteral("achievements"), has && !rules.achievements.isEmpty(), tomlList(rules.achievements));
     setOrRemove(QStringLiteral("added"), !collection.added.isEmpty(), tomlList(collection.added));
     setOrRemove(QStringLiteral("removed"), !collection.removed.isEmpty(), tomlList(collection.removed));
     return out;
 }
 
-CollectionMatcher::CollectionMatcher(const Collection &collection, const QSet<QString> *knownTags)
+CollectionMatcher::CollectionMatcher(const Collection &collection, const QSet<QString> *knownTags,
+                                     AchievementState achievementState)
     : m_hasRules(collection.rules.has_value())
     , m_added(collection.added.cbegin(), collection.added.cend())
     , m_removed(collection.removed.cbegin(), collection.removed.cend())
+    , m_achievementState(std::move(achievementState))
 {
     if (m_hasRules)
         m_rules = *collection.rules;
@@ -232,6 +311,18 @@ bool CollectionMatcher::isMember(const Game &game) const
     if (!r.statuses.isEmpty() && !r.statuses.contains(statusOf(game)))
         return false;
     if (!r.steamOwnership.isEmpty() && !r.steamOwnership.contains(game.steamOwnership))
+        return false;
+    if ((r.yearFrom > 0 || r.yearTo > 0)
+        && (game.year <= 0 || (r.yearFrom > 0 && game.year < r.yearFrom) || (r.yearTo > 0 && game.year > r.yearTo)))
+        return false;
+    if (r.minRating >= 0 && (game.rating < 0 || game.rating < r.minRating))
+        return false;
+    if (!r.playTimes.isEmpty() && !r.playTimes.contains(playTimeBucket(game.groupPlayMinutes)))
+        return false;
+    if (!r.lastPlayed.isEmpty() && !playedWithin(r.lastPlayed, game.groupLastPlayed, QDateTime::currentDateTimeUtc()))
+        return false;
+    if (!r.achievements.isEmpty()
+        && !r.achievements.contains(m_achievementState ? m_achievementState(game) : QStringLiteral("none")))
         return false;
     if (r.tags.isEmpty())
         return true;

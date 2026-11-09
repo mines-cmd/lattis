@@ -84,7 +84,8 @@ static QDataStream &operator<<(QDataStream &s, const Collection &c)
     s << c.id << c.name << c.added << c.removed << c.steamId << c.rules.has_value();
     if (c.rules) {
         s << c.rules->platform << c.rules->installedOnly << c.rules->favoritesOnly << c.rules->statuses << c.rules->tags
-          << c.rules->matchAllTags << c.rules->steamOwnership;
+          << c.rules->matchAllTags << c.rules->steamOwnership << qint32(c.rules->yearFrom) << qint32(c.rules->yearTo)
+          << c.rules->minRating << c.rules->playTimes << c.rules->lastPlayed << c.rules->achievements;
     }
     return s;
 }
@@ -96,7 +97,12 @@ static QDataStream &operator>>(QDataStream &s, Collection &c)
     c.rules.reset();
     if (hasRules) {
         CollectionRules r;
-        s >> r.platform >> r.installedOnly >> r.favoritesOnly >> r.statuses >> r.tags >> r.matchAllTags >> r.steamOwnership;
+        qint32 yearFrom = 0;
+        qint32 yearTo = 0;
+        s >> r.platform >> r.installedOnly >> r.favoritesOnly >> r.statuses >> r.tags >> r.matchAllTags >> r.steamOwnership
+            >> yearFrom >> yearTo >> r.minRating >> r.playTimes >> r.lastPlayed >> r.achievements;
+        r.yearFrom = yearFrom;
+        r.yearTo = yearTo;
         c.rules = r;
     }
     return s;

@@ -67,6 +67,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/library/romdb.h ../src/library/romdb.cpp
     ../src/library/gamefile.h ../src/library/gamefile.cpp
     ../src/library/collection.h ../src/library/collection.cpp
+    ../src/library/listsettings.h ../src/library/listsettings.cpp
     ../src/library/modmanagers.h ../src/library/modmanagers.cpp
     ../src/library/gameid.h ../src/library/gameid.cpp
     ${STEAM_SOURCES}
@@ -95,7 +96,6 @@ set(LIBRARY_SOURCES
     ../src/library/librarycache.h ../src/library/librarycache.cpp
     ../src/library/romfoldermatch.h ../src/library/romfoldermatch.cpp
     ../src/library/searchtext.h ../src/library/searchtext.cpp
-    ../src/library/listsettings.h ../src/library/listsettings.cpp
     ../src/core/apppaths.h ../src/core/apppaths.cpp
     ../src/core/dateformat.h ../src/core/dateformat.cpp
     ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
@@ -503,7 +503,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding overview calendar addsession library collections bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
+    foreach(area startup onboarding overview calendar addsession library collections filters bulk steamstatus protondb friends lookup launch heroic settings export updates stress)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()

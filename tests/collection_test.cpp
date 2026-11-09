@@ -39,6 +39,8 @@ private slots:
     void valuesRoundTrip();
     void handPicked();
     void rulesAndExceptions();
+    void filterRulesRoundTrip();
+    void filterRulesMatch();
     void deletedTagsIgnored();
     void linkedCopies();
     void missingIds();
@@ -209,6 +211,122 @@ void CollectionTest::rulesAndExceptions()
     Collection all;
     all.rules = CollectionRules{};
     QVERIFY(isMember(game("anything"), all));
+}
+
+void CollectionTest::filterRulesRoundTrip()
+{
+    Collection c;
+    c.id = QStringLiteral("f");
+    c.name = QStringLiteral("Filters");
+    c.rules = rulesOf([](CollectionRules &r) {
+        r.yearFrom = 1990;
+        r.yearTo = 1999;
+        r.minRating = 3.5;
+        r.playTimes = {"never", "2_10h"};
+        r.lastPlayed = QStringLiteral("month");
+        r.achievements = {"in_progress", "none"};
+    });
+    QByteArray text = "[[collection]]\n";
+    for (const auto &[key, value] : collectionValues(c).set)
+        text += key.toUtf8() + " = " + value.toUtf8() + "\n";
+    const auto back = parseCollections(text, QStringLiteral("collections.toml"));
+    QVERIFY2(back.warnings.isEmpty(), qPrintable(back.warnings.join(u'\n')));
+    QCOMPARE(back.value, QList<Collection>{c});
+
+    // Rating 0 is a rule ("rated, however low"); the default -1 leaves the key out.
+    c.rules->minRating = 0;
+    QByteArray zero;
+    for (const auto &[key, value] : collectionValues(c).set)
+        zero += key.toUtf8() + " = " + value.toUtf8() + "\n";
+    QVERIFY(zero.contains("min_rating = 0.0"));
+    c.rules = CollectionRules{};
+    c.rules->favoritesOnly = true;
+    const CollectionValues plain = collectionValues(c);
+    for (const QString &key : {"year_from", "year_to", "min_rating", "play_times", "last_played", "achievements"})
+        QVERIFY2(plain.remove.contains(key), qPrintable(key));
+
+    // A file from before these keys has none of them; bad values are warnings and the rest loads.
+    const auto old = parseCollections("[[collection]]\nid = \"o\"\nrules = true\nfavorites_only = true\n",
+                                      QStringLiteral("collections.toml"));
+    QVERIFY(old.warnings.isEmpty());
+    QCOMPARE(old.value.first().rules->yearFrom, 0);
+    QCOMPARE(old.value.first().rules->minRating, -1.0);
+    const auto bad = parseCollections("[[collection]]\nid = \"b\"\nrules = true\nyear_from = 0\nmin_rating = 6\n"
+                                      "play_times = [\"never\", \"forever\"]\nlast_played = \"lately\"\n"
+                                      "achievements = [\"completed\", 3]\n",
+                                      QStringLiteral("collections.toml"));
+    const QString warnings = bad.warnings.join(u'\n');
+    QVERIFY(warnings.contains(QStringLiteral("year_from must be a year")));
+    QVERIFY(warnings.contains(QStringLiteral("min_rating must be a number from 0 to 5")));
+    QVERIFY(warnings.contains(QStringLiteral("unknown value \"forever\"")));
+    QVERIFY(warnings.contains(QStringLiteral("last_played must be one of")));
+    QCOMPARE(bad.value.first().rules->playTimes, QStringList{"never"});
+    QCOMPARE(bad.value.first().rules->achievements, QStringList{"completed"});
+    QVERIFY(bad.value.first().rules->lastPlayed.isEmpty());
+}
+
+void CollectionTest::filterRulesMatch()
+{
+    const auto member = [](const Game &g, const std::function<void(CollectionRules &)> &fill,
+                           const CollectionMatcher::AchievementState &state = {}) {
+        Collection c;
+        c.rules = rulesOf(fill);
+        return CollectionMatcher(c, nullptr, state).isMember(g);
+    };
+
+    // Year 0 is unknown: left out while any bound is set, and bounds are inclusive.
+    Game g = game("g");
+    const auto years = [&](int from, int to) { return member(g, [&](CollectionRules &r) { r.yearFrom = from; r.yearTo = to; }); };
+    QVERIFY(years(0, 0));
+    QVERIFY(!years(2000, 0));
+    QVERIFY(!years(0, 2020));
+    g.year = 2010;
+    QVERIFY(years(2010, 2010));
+    QVERIFY(years(2000, 0));
+    QVERIFY(years(0, 2020));
+    QVERIFY(!years(2011, 0));
+    QVERIFY(!years(0, 2009));
+
+    // Rating -1 is unrated: left out by any minimum, even 0.
+    g.rating = -1;
+    QVERIFY(member(g, [](CollectionRules &) {}));
+    QVERIFY(!member(g, [](CollectionRules &r) { r.minRating = 0; }));
+    g.rating = 0;
+    QVERIFY(member(g, [](CollectionRules &r) { r.minRating = 0; }));
+    g.rating = 3.5;
+    QVERIFY(member(g, [](CollectionRules &r) { r.minRating = 3.5; }));
+    QVERIFY(!member(g, [](CollectionRules &r) { r.minRating = 4; }));
+
+    // A linked group counts its copies' total play time and latest play.
+    g.playMinutes = 10;
+    g.groupPlayMinutes = 700;
+    g.lastPlayed = QDateTime::currentDateTimeUtc().addYears(-3);
+    g.groupLastPlayed = QDateTime::currentDateTimeUtc().addDays(-2);
+    QVERIFY(member(g, [](CollectionRules &r) { r.playTimes = {"10_50h"}; }));
+    QVERIFY(!member(g, [](CollectionRules &r) { r.playTimes = {"under_2h"}; }));
+    QVERIFY(member(g, [](CollectionRules &r) { r.lastPlayed = QStringLiteral("week"); }));
+    QVERIFY(!member(g, [](CollectionRules &r) { r.lastPlayed = QStringLiteral("older"); }));
+    Game never = game("never");
+    QVERIFY(member(never, [](CollectionRules &r) { r.playTimes = {"never"}; }));
+    QVERIFY(!member(never, [](CollectionRules &r) { r.lastPlayed = QStringLiteral("older"); }));
+
+    // Without the shared achievements pass (no lookup) every game is "none to earn", as in the filter.
+    const auto completed = [](CollectionRules &r) { r.achievements = {"completed"}; };
+    const auto none = [](CollectionRules &r) { r.achievements = {"none"}; };
+    QVERIFY(!member(g, completed));
+    QVERIFY(member(g, none));
+    const CollectionMatcher::AchievementState read = [](const Game &game) {
+        return game.id == QLatin1String("g") ? QStringLiteral("completed") : QStringLiteral("none");
+    };
+    QVERIFY(member(g, completed, read));
+    QVERIFY(!member(g, none, read));
+    QVERIFY(member(never, none, read));
+
+    // Exceptions still win over the new rules.
+    Collection c;
+    c.rules = rulesOf([](CollectionRules &r) { r.yearFrom = 2050; });
+    c.added = {"g"};
+    QVERIFY(isMember(g, c));
 }
 
 void CollectionTest::deletedTagsIgnored()

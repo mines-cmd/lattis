@@ -92,6 +92,7 @@ qt_add_qml_module(lattis
         qml/components/CollapseHeading.qml
         qml/components/Icon.qml
         qml/components/Stars.qml
+        qml/components/RangeHistogram.qml
         qml/components/CalendarPopup.qml
         qml/components/DateInput.js
         qml/components/DateTimeField.qml
@@ -249,6 +250,7 @@ qt_add_qml_module(lattis
         qml/views/GamePageMenu.qml
         qml/views/GamePageNames.qml
         qml/views/FilterPanel.qml
+        qml/views/CollectionsPopup.qml
         qml/views/Hero.qml
         qml/views/InfoPanel.qml
         qml/views/AchievementsPanel.qml

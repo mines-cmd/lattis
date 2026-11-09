@@ -10,6 +10,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -23,6 +24,12 @@ struct CollectionRules
     QStringList tags;
     bool matchAllTags = false;
     QStringList steamOwnership;
+    int yearFrom = 0; // 0 = no bound
+    int yearTo = 0;
+    double minRating = -1; // 0-5 in half steps, -1 = off
+    QStringList playTimes;
+    QString lastPlayed; // "" = any
+    QStringList achievements;
 
     bool operator==(const CollectionRules &) const = default;
 };
@@ -53,10 +60,15 @@ CollectionValues collectionValues(const Collection &collection);
 
 // Membership of many games in one collection: the id lists are looked up in sets. With `knownTags`, a
 // rule's tags that aren't in it (a deleted tag) are ignored, as the tag filter ignores them.
+//
+// `achievementState` answers a game's achievements state (not_started, in_progress, completed, none).
+// Without it every game is "none", which is also what a Steam game's count not read yet counts as.
 class CollectionMatcher
 {
 public:
-    explicit CollectionMatcher(const Collection &collection, const QSet<QString> *knownTags = nullptr);
+    using AchievementState = std::function<QString(const Game &)>;
+    explicit CollectionMatcher(const Collection &collection, const QSet<QString> *knownTags = nullptr,
+                               AchievementState achievementState = {});
     bool isMember(const Game &game) const;
 
 private:
@@ -64,6 +76,7 @@ private:
     bool m_hasRules = false;
     QSet<QString> m_added;
     QSet<QString> m_removed;
+    AchievementState m_achievementState;
 };
 
 bool isMember(const Game &game, const Collection &collection);

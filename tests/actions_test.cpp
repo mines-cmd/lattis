@@ -53,6 +53,7 @@ void ActionsTest::defaultsWithoutShortcutsSection()
     QCOMPARE(actions.keysOf("toggle_favorite"), QStringList{"Ctrl+D"});
     QCOMPARE(actions.keysOf("focus_search"), (QStringList{"Ctrl+F", "/"}));
     QCOMPARE(actions.keysOf("toggle_favorites_filter"), QStringList{"Ctrl+Shift+D"});
+    QCOMPARE(actions.keysOf("open_collections"), QStringList{"Ctrl+Shift+C"});
     QCOMPARE(actions.keysOf("cycle_sort"), QStringList{"Ctrl+Shift+S"});
     QCOMPARE(actions.keysOf("clear_filters"), QStringList{"Ctrl+Shift+Backspace"});
     QCOMPARE(actions.keysOf("look_up_missing"), QStringList{"Ctrl+Shift+L"});

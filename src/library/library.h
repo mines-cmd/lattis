@@ -59,6 +59,19 @@ class Library : public QAbstractListModel
     // "owned" and/or "family": only Steam games the account owns or borrows. Not saved: it lasts until the app quits.
     Q_PROPERTY(QStringList steamFilter READ steamFilter WRITE setSteamFilter NOTIFY filtersChanged)
     Q_PROPERTY(QVariantList statuses READ statuses NOTIFY gamesChanged)
+    Q_PROPERTY(int yearFrom READ yearFrom WRITE setYearFrom NOTIFY filtersChanged)
+    Q_PROPERTY(int yearTo READ yearTo WRITE setYearTo NOTIFY filtersChanged)
+    Q_PROPERTY(double minRating READ minRating WRITE setMinRating NOTIFY filtersChanged)
+    Q_PROPERTY(QStringList playTimeFilter READ playTimeFilter WRITE setPlayTimeFilter NOTIFY filtersChanged)
+    Q_PROPERTY(QString lastPlayedFilter READ lastPlayedFilter WRITE setLastPlayedFilter NOTIFY filtersChanged)
+    Q_PROPERTY(QStringList achievementFilter READ achievementFilter WRITE setAchievementFilter NOTIFY filtersChanged)
+    Q_PROPERTY(bool moreOpen READ moreOpen WRITE setMoreOpen NOTIFY moreOpenChanged)
+    Q_PROPERTY(QVariantList playTimeChoices READ playTimeChoices NOTIFY gamesChanged)
+    Q_PROPERTY(QVariantList achievementChoices READ achievementChoices NOTIFY achievementStatesChanged)
+    Q_PROPERTY(QVariantList yearHistogram READ yearHistogram NOTIFY gamesChanged)
+    Q_PROPERTY(QVariantList ratingHistogram READ ratingHistogram NOTIFY gamesChanged)
+    Q_PROPERTY(int gamesWithoutYear READ gamesWithoutYear NOTIFY gamesChanged)
+    Q_PROPERTY(int gamesWithoutRating READ gamesWithoutRating NOTIFY gamesChanged)
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY filtersChanged)
     Q_PROPERTY(bool filtersActive READ filtersActive NOTIFY filtersChanged)
     Q_PROPERTY(int notInstalledHidden READ notInstalledHidden NOTIFY notInstalledHiddenChanged)
@@ -148,6 +161,26 @@ public:
     QStringList steamFilter() const { return m_steamFilter; }
     void setSteamFilter(const QStringList &kinds);
     QVariantList statuses() const;
+    int yearFrom() const { return m_yearFrom; }
+    void setYearFrom(int year);
+    int yearTo() const { return m_yearTo; }
+    void setYearTo(int year);
+    double minRating() const { return m_minRating; }
+    void setMinRating(double rating);
+    QStringList playTimeFilter() const { return m_playTimeFilter; }
+    void setPlayTimeFilter(const QStringList &times);
+    QString lastPlayedFilter() const { return m_lastPlayedFilter; }
+    void setLastPlayedFilter(const QString &period);
+    QStringList achievementFilter() const { return m_achievementFilter; }
+    void setAchievementFilter(const QStringList &states);
+    bool moreOpen() const { return m_moreOpen; }
+    void setMoreOpen(bool open);
+    QVariantList playTimeChoices() const;
+    QVariantList achievementChoices() const;
+    QVariantList yearHistogram() const;
+    QVariantList ratingHistogram() const;
+    int gamesWithoutYear() const;
+    int gamesWithoutRating() const;
     bool showHidden() const { return m_showHidden; }
     void setShowHidden(bool show);
     bool showSortValue() const { return m_showSortValue; }
@@ -177,6 +210,7 @@ public:
     Q_INVOKABLE void showFiltered(const QString &platform, const QStringList &statuses, const QStringList &tags);
 
     Q_INVOKABLE void toggleGroup(const QString &group);
+    Q_INVOKABLE bool matchesSearch(const QString &text, const QString &search) const;
     Q_INVOKABLE int nextGameRow(int from, int step) const;
     Q_INVOKABLE int rowOfGame(const QString &id) const;
     Q_INVOKABLE int nextGroupRow(int from, int step) const;
@@ -366,6 +400,8 @@ signals:
     void sortChanged();
     void showSortValueChanged();
     void filtersChanged();
+    void moreOpenChanged();
+    void achievementStatesChanged();
     void collectionsChanged();
     void collectionChanged();
     void tagsOpenChanged();
@@ -437,7 +473,10 @@ private:
     ListSettings workingSettings() const;
     ListSettings listSettings() const;
     void updateCollections();
-    CollectionMatcher matcherOf(const Collection &collection) const { return CollectionMatcher(collection, &m_tagNames); }
+    CollectionMatcher matcherOf(const Collection &collection) const
+    {
+        return CollectionMatcher(collection, &m_tagNames, [this](const Game &g) { return achievementStateOf(g); });
+    }
     QString makeCollection(const QString &name, const QStringList &ids, const std::optional<CollectionRules> &rules);
     void renameTagInCollections(const QString &from, const QString &to);
     bool enterCollection(const QString &id, bool rebuildNow);
@@ -459,6 +498,15 @@ private:
     void updateDownloadBar();
     QStringList effectiveTags() const;
     bool passesFilters(const Game &game, const QStringList &tags) const;
+    QString achievementStateOf(const Game &game) const;
+    QHash<qint64, qint64> achievementStamps() const;
+    void readAchievements();
+    void updateAchievementStates();
+    bool achievementsWanted() const
+    {
+        return !m_achievementFilter.isEmpty() || m_sort == QLatin1String("achievements") || collectionsWantAchievements();
+    }
+    bool collectionsWantAchievements() const;
     QString collapseKey(const QString &group) const { return m_groupBy + u'/' + group; }
     bool expandsGroups() const { return !m_search.isEmpty() || filtersActive(); }
     QList<Row> computeRows(bool *showingGroups, int *notInstalled) const;
@@ -508,6 +556,7 @@ private:
         qint64 stamp = 0; // the game's play time and last play when it was read; a different one reads it again
     };
     QHash<qint64, AchievementEntry> m_achievementCache;
+    QHash<QString, AchievementEntry> m_achievementOf; // by game id, a linked group's best copy
     bool m_achievementsRunning = false;
     bool m_achievementsRead = false; // the first pass has finished
     QList<Platform> m_platforms;
@@ -536,6 +585,13 @@ private:
     bool m_tagMatchAll = false;
     QStringList m_statusFilter;
     QStringList m_steamFilter;
+    int m_yearFrom = 0;
+    int m_yearTo = 0;
+    double m_minRating = -1;
+    QStringList m_playTimeFilter;
+    QString m_lastPlayedFilter;
+    QStringList m_achievementFilter;
+    bool m_moreOpen = false;
     bool m_showHidden = false;
     // The filters and platform of the normal view while a collection is open; saveListSettings writes these.
     struct HeldFilters
@@ -549,7 +605,7 @@ private:
     std::optional<CollectionMatcher> m_matcher;
     QVariantList m_collections;
     QString m_restoreCollection;
-    bool m_tagsOpen = false;
+    bool m_tagsOpen = true;
     int m_allMediaGeneration = 0;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;
     bool m_showSortValue = true;

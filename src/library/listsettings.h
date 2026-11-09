@@ -3,6 +3,7 @@
 #include "parsed.h"
 
 #include <QByteArray>
+#include <QDateTime>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -22,12 +23,25 @@ struct ListSettings
     bool showSortValue = true;
     QString groupBy = QStringLiteral("platform");
     QStringList statuses;
+    int yearFrom = 0; // 0 = no bound
+    int yearTo = 0;
+    double minRating = -1; // 0-5 in half steps, -1 = off
+    QStringList playTimes;
+    QString lastPlayed; // "" = any
+    QStringList achievements;
+    bool moreOpen = false;
 
     bool operator==(const ListSettings &) const = default;
 };
 
 const QStringList &listGroupings();
 const QStringList &listStatuses();
+const QStringList &listPlayTimes();
+const QStringList &listLastPlayed();
+const QStringList &listAchievementStates();
+
+QString playTimeBucket(int minutes);
+bool playedWithin(const QString &period, const QDateTime &played, const QDateTime &now);
 
 Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &displayPath);
 

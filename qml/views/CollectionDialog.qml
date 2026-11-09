@@ -26,6 +26,12 @@ MotionPopup {
     property var tags: []
     property bool matchAllTags: false
     property var steam: []
+    property int yearFrom: 0
+    property int yearTo: 0
+    property real minRating: -1
+    property var playTimes: []
+    property string lastPlayed: ""
+    property var achievements: []
     property var added: []
     property var removed: []
     property var dropAdded: []
@@ -39,6 +45,21 @@ MotionPopup {
             choices.push({ id: platform, name: platform })
         return choices
     }
+
+    readonly property var ratingChoices: {
+        const choices = [{ value: -1, name: qsTr("Any rating") }]
+        for (let r = 0.5; r <= 5; r += 0.5)
+            choices.push({ value: r, name: qsTr("%1 or more").arg(r) })
+        return choices
+    }
+    readonly property var lastPlayedChoices: [
+        { id: "", name: qsTr("Any time") },
+        { id: "week", name: qsTr("This week") },
+        { id: "month", name: qsTr("This month") },
+        { id: "year", name: qsTr("This year") },
+        { id: "older", name: qsTr("Over a year ago") },
+        { id: "never", name: qsTr("Never played") },
+    ]
 
     function toggled(list, value) {
         const next = list.slice()
@@ -60,6 +81,12 @@ MotionPopup {
         tags = d.tags ?? []
         matchAllTags = d.matchAllTags ?? false
         steam = d.steam ?? []
+        yearFrom = d.yearFrom ?? 0
+        yearTo = d.yearTo ?? 0
+        minRating = d.minRating ?? -1
+        playTimes = d.playTimes ?? []
+        lastPlayed = d.lastPlayed ?? ""
+        achievements = d.achievements ?? []
         added = d.added ?? []
         removed = d.removed ?? []
         dropAdded = []
@@ -71,7 +98,9 @@ MotionPopup {
         if (editing) {
             error = Library.editCollection(collectionId, {
                 enabled: rulesOn, platform: platform, installedOnly: installedOnly, favoritesOnly: favoritesOnly,
-                statuses: statuses, tags: tags, matchAllTags: matchAllTags && tags.length >= 2, steam: steam
+                statuses: statuses, tags: tags, matchAllTags: matchAllTags && tags.length >= 2, steam: steam,
+                yearFrom: yearFrom, yearTo: yearTo, minRating: minRating, playTimes: playTimes,
+                lastPlayed: lastPlayed, achievements: achievements
             }, dropAdded, dropRemoved)
         } else {
             if (typed === "")
@@ -253,6 +282,88 @@ MotionPopup {
                                 }
                             }
                         }
+                    }
+                    Group {
+                        title: qsTr("Release year")
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing
+
+                            SettingsTextField {
+                                Layout.fillWidth: true
+                                placeholderText: qsTr("From")
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
+                                text: root.yearFrom > 0 ? String(root.yearFrom) : ""
+                                onTextEdited: root.yearFrom = text === "" ? 0 : parseInt(text)
+                            }
+                            SettingsTextField {
+                                Layout.fillWidth: true
+                                placeholderText: qsTr("To")
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
+                                text: root.yearTo > 0 ? String(root.yearTo) : ""
+                                onTextEdited: root.yearTo = text === "" ? 0 : parseInt(text)
+                            }
+                        }
+                        Hint { text: qsTr("Games with no year are left out while a year is set.") }
+                    }
+                    Group {
+                        title: qsTr("Rating")
+                        SettingsComboBox {
+                            Layout.fillWidth: true
+                            model: root.ratingChoices.map(c => c.name)
+                            currentIndex: Math.max(0, root.ratingChoices.findIndex(c => c.value === root.minRating))
+                            onActivated: index => root.minRating = root.ratingChoices[index].value
+                        }
+                    }
+                    Group {
+                        title: qsTr("Play time")
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing * 2
+
+                            Repeater {
+                                model: Library.playTimeChoices
+
+                                SettingsCheckBox {
+                                    required property var modelData
+                                    bordered: false
+                                    text: modelData.name
+                                    checked: root.playTimes.includes(modelData.id)
+                                    onToggled: root.playTimes = root.toggled(root.playTimes, modelData.id)
+                                }
+                            }
+                        }
+                    }
+                    Group {
+                        title: qsTr("Last played")
+                        SettingsComboBox {
+                            Layout.fillWidth: true
+                            model: root.lastPlayedChoices.map(c => c.name)
+                            currentIndex: Math.max(0, root.lastPlayedChoices.findIndex(c => c.id === root.lastPlayed))
+                            onActivated: index => root.lastPlayed = root.lastPlayedChoices[index].id
+                        }
+                    }
+                    Group {
+                        title: qsTr("Achievements")
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing * 2
+
+                            Repeater {
+                                model: Library.achievementChoices
+
+                                SettingsCheckBox {
+                                    required property var modelData
+                                    bordered: false
+                                    text: modelData.name
+                                    checked: root.achievements.includes(modelData.id)
+                                    onToggled: root.achievements = root.toggled(root.achievements, modelData.id)
+                                }
+                            }
+                        }
+                        Hint { text: qsTr("Achievements are read from Steam; other games have none to earn.") }
                     }
                     Group {
                         title: qsTr("Tags")

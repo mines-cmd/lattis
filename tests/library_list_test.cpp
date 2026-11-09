@@ -33,6 +33,22 @@ private slots:
     void statusGroupsAndFilter();
     void listSettingsFollowTagChanges();
     void emptyDataDir();
+    void newFilterSettings();
+    void newFiltersRestoredAtStartAndByHandEdit();
+    void yearAndRatingFilters();
+    void playTimeAndLastPlayedFilters();
+    void achievementFilterWaitsForThePass();
+    void achievementCollectionWaitsForThePass();
+    void achievementFilterRestoredAtStart();
+    void filterChoicesAndHistograms();
+    void newSortOrders();
+    void sortByPlatformFollowsTheRail();
+    void sortBySize();
+    void sortByAchievements();
+    void sortByAchievementsRestoredAtStart();
+    void newGroupings();
+    void newSortValues();
+    void newSortsAndGroupsInSettings();
 };
 
 void LibraryListTest::firstLoadParsesSecondUsesCache()
@@ -278,7 +294,7 @@ void LibraryListTest::sortOrders()
     QVERIFY(!library->sortDescending());
     QCOMPARE(gameIds(*library).first(), QStringLiteral("switch-animal-crossing-new-horizons"));
     sortChanged.clear();
-    library->setSort(QStringLiteral("rating"));
+    library->setSort(QStringLiteral("popularity"));
     QCOMPARE(library->sort(), QStringLiteral("title"));
     QCOMPARE(sortChanged.count(), 0);
 }
@@ -287,7 +303,7 @@ void LibraryListTest::sortTiesAndGroups()
 {
     // Numbered titles, and two games with Kid Icarus's 300 minutes.
     writeFile(gamePath("3ds-game-10"), "title = \"Game 10\"\nplatform = \"3ds\"\n");
-    writeFile(gamePath("3ds-game-2"), "title = \"Game 2\"\nplatform = \"3ds\"\n");
+    writeFile(gamePath("linux-factorio"), "title = \"Game 2\"\nplatform = \"3ds\"\n");
     writeFile(gamePath("3ds-zeta"), "title = \"Zeta\"\nplatform = \"3ds\"\nplay_minutes = 300\n");
     writeFile(gamePath("3ds-alpha"), "title = \"alpha\"\nplatform = \"3ds\"\nplay_minutes = 300\n");
     auto library = openLibrary();
@@ -295,7 +311,7 @@ void LibraryListTest::sortTiesAndGroups()
     library->setGroupBy(QStringLiteral("none"));
 
     QStringList ids = gameIds(*library);
-    QVERIFY(ids.indexOf(QStringLiteral("3ds-game-2")) < ids.indexOf(QStringLiteral("3ds-game-10")));
+    QVERIFY(ids.indexOf(QStringLiteral("linux-factorio")) < ids.indexOf(QStringLiteral("3ds-game-10")));
     QCOMPARE(ids.first(), QStringLiteral("3ds-alpha")); // case doesn't matter
 
     // Equal values go by title, A to Z, in both directions.
@@ -307,7 +323,7 @@ void LibraryListTest::sortTiesAndGroups()
     ids = gameIds(*library);
     QCOMPARE(ids.mid(0, 3), ties);
     // Never played: last, by title, whatever the direction.
-    QCOMPARE(ids.mid(ids.size() - 6), (QStringList{"steam-504230", "3ds-game-2", "3ds-game-10",
+    QCOMPARE(ids.mid(ids.size() - 6), (QStringList{"steam-504230", "linux-factorio", "3ds-game-10",
                                                     "switch-pikmin-4", "3ds-pokemon-ultra-sun", "switch-tetris"}));
 
     // Grouped: groups stay in rail order, sorted inside.
@@ -768,7 +784,7 @@ void LibraryListTest::listSettingsHandEdit()
     QVERIFY(!library->favoritesOnly());
 
     // A bad value is a problem, and keeps the default.
-    writeFile(file, "[list]\nsort = \"rating\"\n");
+    writeFile(file, "[list]\nsort = \"popularity\"\n");
     QTRY_VERIFY_WITH_TIMEOUT(anyContains(library->problems(), QStringLiteral("settings.toml:2: sort must be")), 5000);
     QCOMPARE(library->sort(), QStringLiteral("title"));
     // A syntax error keeps the list as it is.
@@ -959,6 +975,685 @@ void LibraryListTest::emptyDataDir()
     QCOMPARE(colors.size(), 24);
     QCOMPARE(*std::max_element(colors.cbegin(), colors.cend()), 23);
     QVERIFY(library.missingDefaultTags().isEmpty());
+}
+
+namespace {
+QByteArray kvText(const char *key, const QByteArray &value)
+{
+    return QByteArray("\x01") + key + QByteArray(1, '\0') + value + QByteArray(1, '\0');
+}
+
+QByteArray kvInt(const QByteArray &key, qint32 value)
+{
+    QByteArray out = QByteArray("\x02") + key + QByteArray(1, '\0');
+    for (int i = 0; i < 4; ++i)
+        out.append(char((value >> (8 * i)) & 0xff));
+    return out;
+}
+
+QByteArray kvMap(const QByteArray &key, const QList<QByteArray> &children)
+{
+    QByteArray out = QByteArray(1, '\0') + key + QByteArray(1, '\0');
+    for (const QByteArray &child : children)
+        out += child;
+    return out + QByteArray("\x08");
+}
+
+// The fixture builder's files (tests/data/steam/appcache/stats/make-fixtures.py) for a game of `count` achievements.
+void writeAchievements(const QString &steam, qint64 appId, int count, int unlocked)
+{
+    QList<QByteArray> bits;
+    for (int i = 0; i < count; ++i) {
+        const QByteArray name = "A" + QByteArray::number(i);
+        bits.append(kvMap(QByteArray::number(i),
+                          {kvText("name", name),
+                           kvMap("display", {kvMap("name", {kvText("token", name + "_NAME"), kvText("english", name)}),
+                                             kvMap("desc", {kvText("token", name + "_DESC"), kvText("english", "Do it.")}),
+                                             kvInt("hidden", 0), kvText("icon", "a.jpg"), kvText("icon_gray", "a_gray.jpg")})}));
+    }
+    const QByteArray id = QByteArray::number(appId);
+    const QString stats = steam + QStringLiteral("/appcache/stats/");
+    writeFile(stats + QStringLiteral("UserGameStatsSchema_%1.bin").arg(appId),
+              kvMap(id, {kvText("gamename", "Game"), kvInt("version", 3),
+                         kvMap("stats", {kvMap("0", {kvText("type", "ACHIEVEMENTS"), kvMap("bits", bits)})})})
+                  + QByteArray("\x08"));
+    if (unlocked < 0)
+        return;
+    QList<QByteArray> times;
+    for (int i = 0; i < unlocked; ++i)
+        times.append(kvInt(QByteArray::number(i), 1700000000 + i));
+    writeFile(stats + QStringLiteral("UserGameStats_39734273_%1.bin").arg(appId),
+              kvMap("cache", {kvInt("crc", 123456789), kvInt("PendingChanges", 0),
+                              kvMap("0", {kvInt("data", (1 << unlocked) - 1), kvMap("AchievementTimes", times)})})
+                  + QByteArray("\x08"));
+}
+
+QStringList sorted(QStringList ids)
+{
+    ids.sort();
+    return ids;
+}
+}
+
+void LibraryListTest::newFilterSettings()
+{
+    const auto parse = [](const char *text) { return parseListSettings(text, QStringLiteral("settings.toml")); };
+    Parsed<ListSettings> parsed =
+        parse("[list]\nyear_from = 2015\nyear_to = 2023\nmin_rating = 3.5\nplay_times = [\"never\", \"2_10h\", \"never\"]\n"
+              "last_played = \"month\"\nachievements = [\"completed\", \"none\"]\nmore_open = true\n");
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.yearFrom, 2015);
+    QCOMPARE(parsed.value.yearTo, 2023);
+    QCOMPARE(parsed.value.minRating, 3.5);
+    QCOMPARE(parsed.value.playTimes, (QStringList{"never", "2_10h"}));
+    QCOMPARE(parsed.value.lastPlayed, QStringLiteral("month"));
+    QCOMPARE(parsed.value.achievements, (QStringList{"completed", "none"}));
+    QVERIFY(parsed.value.moreOpen);
+    QCOMPARE(parse("[list]\nmin_rating = 4\n").value.minRating, 4.0); // a whole number
+    QCOMPARE(parse("[list]\nmin_rating = 0\n").value.minRating, 0.0); // 0 is a rating, not off
+    QCOMPARE(parse("[list]\nmin_rating = 3.7\n").value.minRating, 3.5); // half steps
+
+    parsed = parse("[list]\nyear_from = 0\nyear_to = \"soon\"\nmin_rating = 6\nplay_times = [\"weeks\"]\n"
+                   "last_played = \"today\"\nachievements = \"all\"\nmore_open = 1\n");
+    QCOMPARE(parsed.value, ListSettings());
+    QCOMPARE(parsed.warnings.size(), 7);
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:2: year_from must be a year"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:3: year_to must be a year"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:4: min_rating must be a number from 0 to 5"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:5: unknown value \"weeks\" in play_times"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:6: last_played must be"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:7: achievements must be a list"));
+    QVERIFY(anyContains(parsed.warnings, "settings.toml:8: more_open must be true or false"));
+
+    // Written when set, removed at the default; Clear filters leaves More filters as it is.
+    const QString file = m_data + QStringLiteral("/settings.toml");
+    auto library = openLibrary();
+    library->setYearFrom(2015);
+    library->setYearTo(2023);
+    library->setMinRating(3.5);
+    library->setPlayTimeFilter({"never", "2_10h"});
+    library->setLastPlayedFilter(QStringLiteral("month"));
+    library->setAchievementFilter({"completed"});
+    library->setMoreOpen(true);
+    const QByteArray written = readFile(file);
+    QVERIFY2(written.contains("year_from = 2015\n"), written.constData());
+    QVERIFY(written.contains("year_to = 2023\n"));
+    QVERIFY(written.contains("min_rating = 3.5\n"));
+    QVERIFY(written.contains("play_times = [\"never\", \"2_10h\"]\n"));
+    QVERIFY(written.contains("last_played = \"month\"\n"));
+    QVERIFY(written.contains("achievements = [\"completed\"]\n"));
+    QVERIFY(written.contains("more_open = true\n"));
+    library->clearFilters();
+    const QByteArray cleared = readFile(file);
+    for (const char *key : {"year_from", "year_to", "min_rating", "play_times", "last_played", "achievements"})
+        QVERIFY2(!cleared.contains(key), key);
+    QVERIFY(cleared.contains("more_open = true\n"));
+    library->setMoreOpen(false);
+    QVERIFY(!readFile(file).contains("more_open"));
+}
+
+void LibraryListTest::newFiltersRestoredAtStartAndByHandEdit()
+{
+    const QByteArray settings = demoSettings();
+    writeFile(m_data + QStringLiteral("/settings.toml"),
+              settings + "[list]\ninstalled_only = false\nyear_from = 2022\nmin_rating = 4\nmore_open = true\n");
+    auto library = openLibrary();
+    QCOMPARE(library->yearFrom(), 2022);
+    QCOMPARE(library->minRating(), 4.0);
+    QVERIFY(library->moreOpen());
+    QVERIFY(library->filtersActive());
+    library->setGroupBy(QStringLiteral("none"));
+    QCOMPARE(gameIds(*library), QStringList{"steam-1245620"});
+
+    writeFile(m_data + QStringLiteral("/settings.toml"),
+              settings + "[list]\ninstalled_only = false\nyear_from = 2022\nlast_played = \"yesterday\"\n");
+    QTRY_COMPARE(library->minRating(), -1.0);
+    QVERIFY(!library->moreOpen());
+    QVERIFY(library->lastPlayedFilter().isEmpty()); // an unknown period is left out with a warning
+    QVERIFY(gameIds(*library).size() > 1);
+}
+
+void LibraryListTest::yearAndRatingFilters()
+{
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const int all = library->rowCount();
+
+    // Games with no year are left out while any bound is set.
+    library->setYearFrom(2022);
+    QCOMPARE(sorted(gameIds(*library)),
+             (QStringList{"proton-diablo-iv", "steam-1086940", "steam-1245620", "switch-kirby-and-the-forgotten-land",
+                          "switch-pikmin-4", "switch-super-mario-bros-wonder",
+                          "switch-the-legend-of-zelda-tears-of-the-kingdom"}));
+    QVERIFY(!gameIds(*library).contains(QStringLiteral("linux-supertuxkart"))); // year 0
+    QVERIFY(!gameIds(*library).contains(QStringLiteral("steam-730"))); // hidden
+    library->setYearFrom(0);
+    QCOMPARE(library->rowCount(), all);
+
+    library->setYearTo(2013);
+    QCOMPARE(sorted(gameIds(*library)),
+             (QStringList{"3ds-fire-emblem-awakening", "3ds-kid-icarus-uprising",
+                          "3ds-the-legend-of-zelda-a-link-between-worlds", "proton-final-fantasy-xiv-online"}));
+    library->setYearFrom(2013);
+    QCOMPARE(sorted(gameIds(*library)),
+             (QStringList{"3ds-the-legend-of-zelda-a-link-between-worlds", "proton-final-fantasy-xiv-online"}));
+    library->setYearTo(2012); // a range that ends before it starts matches nothing
+    QVERIFY(gameIds(*library).isEmpty());
+    library->setYearFrom(2022);
+    library->setYearTo(2022);
+    QCOMPARE(sorted(gameIds(*library)), (QStringList{"steam-1245620", "switch-kirby-and-the-forgotten-land"}));
+    library->setYearFrom(-5); // out of range: no bound
+    library->setYearTo(12000); // clamped to the last year
+    QCOMPARE(library->yearFrom(), 0);
+    QCOMPARE(library->yearTo(), 9999);
+    library->clearFilters();
+    QCOMPARE(library->yearTo(), 0);
+    library->setInstalledOnly(false);
+
+    // A rating of -1 is "unrated" and never reaches a minimum, even 0; 3.7 (IGDB's) counts as 3.5.
+    QCOMPARE(library->setGameValue(QStringLiteral("switch-pikmin-4"), QStringLiteral("rating"), 3.7), QString());
+    library->setMinRating(0);
+    QCOMPARE(sorted(gameIds(*library)), (QStringList{"steam-1245620", "switch-mario-tennis-aces", "switch-pikmin-4"}));
+    library->setMinRating(3.5);
+    QCOMPARE(sorted(gameIds(*library)), (QStringList{"steam-1245620", "switch-mario-tennis-aces", "switch-pikmin-4"}));
+    library->setMinRating(3.6); // rounds to the half step, 3.5
+    QCOMPARE(library->minRating(), 3.5);
+    library->setMinRating(4);
+    QCOMPARE(gameIds(*library), QStringList{"steam-1245620"});
+    library->setMinRating(9);
+    QCOMPARE(library->minRating(), 5.0);
+    QVERIFY(gameIds(*library).isEmpty());
+    library->setMinRating(-3);
+    QCOMPARE(library->minRating(), -1.0);
+    QCOMPARE(library->rowCount(), all);
+    library->setInstalledOnly(true);
+    QVERIFY(!library->filtersActive());
+}
+
+void LibraryListTest::playTimeAndLastPlayedFilters()
+{
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const QString pikmin = QStringLiteral("switch-pikmin-4");
+    const QString tetris = QStringLiteral("switch-tetris");
+    const QString pokemon = QStringLiteral("3ds-pokemon-ultra-sun");
+    const QString kirby = QStringLiteral("switch-kirby-and-the-forgotten-land"); // 540 minutes
+    const QString key = QStringLiteral("play_minutes");
+    QCOMPARE(library->setGameValue(pikmin, key, 119), QString());
+    QCOMPARE(library->setGameValue(tetris, key, 120), QString());
+    QCOMPARE(library->setGameValue(pokemon, key, 5999), QString());
+    QCOMPARE(library->setGameValue(QStringLiteral("linux-factorio"), key, 6000), QString());
+
+    const auto matching = [&](const QStringList &times) {
+        library->setPlayTimeFilter(times);
+        return gameIds(*library);
+    };
+    QVERIFY(matching({"under_2h"}).contains(pikmin));
+    QVERIFY(!gameIds(*library).contains(tetris)); // 120 minutes is 2 h, in the next band
+    QVERIFY(matching({"2_10h"}).contains(tetris));
+    QVERIFY(gameIds(*library).contains(kirby));
+    QVERIFY(matching({"50_100h"}).contains(pokemon));
+    QVERIFY(!gameIds(*library).contains(QStringLiteral("linux-factorio")));
+    QCOMPARE(matching({"over_100h"}).contains(QStringLiteral("linux-factorio")), true);
+    const QStringList never = matching({"never"});
+    QVERIFY(never.contains(QStringLiteral("steam-504230")));
+    QVERIFY(!never.contains(pikmin) && !never.contains(kirby));
+    const QStringList either = matching({"under_2h", "2_10h", "bogus", "under_2h"});
+    QCOMPARE(library->playTimeFilter(), (QStringList{"under_2h", "2_10h"}));
+    QVERIFY(either.contains(pikmin) && either.contains(tetris) && !either.contains(pokemon));
+    library->setPlayTimeFilter({});
+
+    // A linked copy has the group's total: Pokémon at 5999 minutes, linked to Kirby, has both.
+    QCOMPARE(library->linkCopy(kirby, pokemon), QString());
+    QVERIFY(matching({"over_100h"}).contains(pokemon));
+    QVERIFY(gameIds(*library).contains(kirby));
+    QVERIFY(!matching({"2_10h"}).contains(kirby));
+    library->setPlayTimeFilter({});
+    QCOMPARE(library->unlinkCopy(pokemon), QString());
+
+    // Last played: the periods nest; a game never played matches only "never".
+    const QDateTime now = QDateTime::currentDateTime();
+    const QString older = QStringLiteral("linux-factorio");
+    QCOMPARE(library->recordPlaySession(pikmin, 1, now.addDays(-6)), QString());
+    QCOMPARE(library->recordPlaySession(tetris, 1, now.addDays(-7)), QString());
+    QCOMPARE(library->recordPlaySession(pokemon, 1, now.addDays(-30)), QString());
+    QCOMPARE(library->recordPlaySession(older, 1, now.addDays(-365)), QString());
+    const auto played = [&](const QString &period) {
+        library->setLastPlayedFilter(period);
+        return gameIds(*library);
+    };
+    QStringList ids = played(QStringLiteral("week"));
+    QVERIFY(ids.contains(pikmin) && !ids.contains(tetris));
+    ids = played(QStringLiteral("month"));
+    QVERIFY(ids.contains(pikmin) && ids.contains(tetris) && !ids.contains(pokemon));
+    ids = played(QStringLiteral("year"));
+    QVERIFY(ids.contains(pikmin) && ids.contains(tetris) && ids.contains(pokemon) && !ids.contains(older));
+    ids = played(QStringLiteral("older"));
+    QVERIFY(ids.contains(older) && !ids.contains(pikmin) && !ids.contains(pokemon));
+    for (const QString &period : {"week", "month", "year", "older"})
+        QVERIFY(!played(period).contains(QStringLiteral("steam-504230"))); // never played
+    ids = played(QStringLiteral("never"));
+    QVERIFY(ids.contains(QStringLiteral("steam-504230")) && !ids.contains(pikmin) && !ids.contains(older));
+    library->setLastPlayedFilter(QStringLiteral("yesterday")); // not a period: ignored
+    QCOMPARE(library->lastPlayedFilter(), QStringLiteral("never"));
+    library->setLastPlayedFilter({});
+    QVERIFY(gameIds(*library).contains(QStringLiteral("steam-504230")));
+}
+
+void LibraryListTest::achievementFilterWaitsForThePass()
+{
+    const QString steam = m_data + QStringLiteral("/steam");
+    writeAchievements(steam, 1145360, 5, 4); // Hades: in progress
+    writeAchievements(steam, 367520, 10, -1); // Hollow Knight: a schema, no progress: not started
+    writeAchievements(steam, 413150, 4, 4); // Stardew Valley: completed
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const int all = library->rowCount();
+    const auto counts = [&] {
+        QMap<QString, int> out;
+        for (const QVariant &choice : library->achievementChoices())
+            out.insert(choice.toMap().value("id").toString(), choice.toMap().value("games").toInt());
+        return out;
+    };
+
+    // Nothing reads them until a sort, group or filter needs them.
+    QTest::qWait(300);
+    QCOMPARE(counts().value("none"), all);
+
+    // The pass hasn't ended: every game has none to earn, and the list recomputes when it does.
+    library->setAchievementFilter({"completed", "bogus"});
+    QCOMPARE(library->achievementFilter(), QStringList{"completed"});
+    QVERIFY(gameIds(*library).isEmpty());
+    library->setAchievementFilter({"none"});
+    QCOMPARE(library->rowCount(), all);
+    library->setAchievementFilter({"completed"});
+    QTRY_COMPARE_WITH_TIMEOUT(gameIds(*library), QStringList{"steam-413150"}, 5000);
+    QCOMPARE(counts().value("completed"), 1);
+    QCOMPARE(counts().value("in_progress"), 1);
+    QCOMPARE(counts().value("not_started"), 1);
+    QCOMPARE(counts().value("none"), all - 3);
+
+    library->setAchievementFilter({"in_progress", "not_started"});
+    QCOMPARE(sorted(gameIds(*library)), (QStringList{"steam-1145360", "steam-367520"}));
+    library->setAchievementFilter({"none"});
+    QCOMPARE(library->rowCount(), all - 3);
+
+    // A game with a schema and no achievements, and one that isn't Steam's, have none to earn.
+    QVERIFY(gameIds(*library).contains(QStringLiteral("steam-1086940")));
+    QVERIFY(gameIds(*library).contains(QStringLiteral("switch-pikmin-4")));
+
+    // A linked copy has its group's best count.
+    library->setAchievementFilter({"in_progress"});
+    QCOMPARE(library->linkCopy(QStringLiteral("switch-tetris"), QStringLiteral("steam-1145360")), QString());
+    QCOMPARE(sorted(gameIds(*library)), (QStringList{"steam-1145360", "switch-tetris"}));
+}
+
+void LibraryListTest::achievementCollectionWaitsForThePass()
+{
+    const QString steam = m_data + QStringLiteral("/steam");
+    writeAchievements(steam, 413150, 4, 4); // Stardew Valley: completed
+    writeAchievements(steam, 1145360, 5, 4); // Hades: in progress
+    writeFile(m_data + QStringLiteral("/library/collections.toml"),
+              "[[collection]]\nid = \"done\"\nname = \"Done\"\nrules = true\nachievements = [\"completed\"]\n");
+
+    // A collection that needs them starts the pass at startup, with no sort or filter on; until it ends no game
+    // has an achievement, and the count follows when it does.
+    auto library = openLibrary();
+    QTRY_COMPARE_WITH_TIMEOUT(library->collections().first().toMap().value("count").toInt(), 1, 5000);
+    library->openCollection(QStringLiteral("done"));
+    QCOMPARE(gameIds(*library), QStringList{"steam-413150"});
+}
+
+void LibraryListTest::achievementFilterRestoredAtStart()
+{
+    const QString steam = m_data + QStringLiteral("/steam");
+    writeAchievements(steam, 413150, 4, 4);
+    writeFile(m_data + QStringLiteral("/settings.toml"),
+              demoSettings() + "[list]\ninstalled_only = false\ngroup_by = \"none\"\nachievements = [\"completed\"]\n");
+    auto library = openLibrary();
+    QTRY_COMPARE_WITH_TIMEOUT(gameIds(*library), QStringList{"steam-413150"}, 5000);
+}
+
+void LibraryListTest::filterChoicesAndHistograms()
+{
+    auto library = openLibrary();
+    QCOMPARE(library->setGameValue(QStringLiteral("switch-pikmin-4"), QStringLiteral("rating"), 3.7), QString());
+    const int games = library->gameCount();
+
+    int total = 0;
+    QMap<QString, int> times;
+    for (const QVariant &choice : library->playTimeChoices()) {
+        times.insert(choice.toMap().value("id").toString(), choice.toMap().value("games").toInt());
+        total += choice.toMap().value("games").toInt();
+    }
+    QCOMPARE(total, games); // every shown game is in one band; hidden games aren't counted
+    QCOMPARE(library->playTimeChoices().size(), 6);
+    QVERIFY(times.value("never") > 0);
+
+    // Years: every year from the first to the last, 2014 with none; the rest have no year.
+    const QVariantList years = library->yearHistogram();
+    QCOMPARE(years.first().toMap().value("year").toInt(), 2012);
+    QCOMPARE(years.first().toMap().value("games").toInt(), 2);
+    QCOMPARE(years.last().toMap().value("year").toInt(), 2023);
+    QCOMPARE(years.size(), 12);
+    QCOMPARE(years.at(2).toMap().value("games").toInt(), 0); // 2014
+    int dated = 0;
+    for (const QVariant &year : years)
+        dated += year.toMap().value("games").toInt();
+    QCOMPARE(dated + library->gamesWithoutYear(), games);
+    QVERIFY(library->gamesWithoutYear() >= 1);
+
+    // Ratings: eleven half steps; 3.7 is in 3.5.
+    const QVariantList ratings = library->ratingHistogram();
+    QCOMPARE(ratings.size(), 11);
+    QCOMPARE(ratings.at(7).toMap().value("rating").toDouble(), 3.5);
+    QCOMPARE(ratings.at(7).toMap().value("games").toInt(), 2);
+    QCOMPARE(ratings.at(9).toMap().value("games").toInt(), 1);
+    QCOMPARE(library->gamesWithoutRating(), games - 3);
+
+    // A hidden game is left out of every count.
+    const int withoutHidden = library->gamesWithoutYear();
+    library->setShowHidden(true);
+    QCOMPARE(library->gamesWithoutYear(), withoutHidden);
+}
+
+namespace {
+// Five games on 3ds with the values the new sorts and groups read; "Sort E" has a year and no rating or date.
+void writeSortGames(const std::function<QString(const QString &)> &gamePath, const QDateTime &now)
+{
+    const auto at = [&](int daysAgo) {
+        return now.addDays(-daysAgo).toOffsetFromUtc(now.offsetFromUtc()).toString(Qt::ISODate).toUtf8();
+    };
+    const auto game = [&](const char *id, const char *title, const QByteArray &rest) {
+        writeFile(gamePath(QString::fromLatin1(id)),
+                        QByteArray("title = \"") + title + "\"\nplatform = \"3ds\"\n" + rest);
+    };
+    game("3ds-sort-a", "Sort A", "year = 2001\nrating = 5\nadded = 2026-03-01\nlast_played = " + at(2) + "\n");
+    game("3ds-sort-b", "Sort B", "year = 2010\nrating = 4.5\nadded = 2026-03-05\nlast_played = " + at(20) + "\n");
+    game("3ds-sort-c", "Sort C", "rating = 3\nlast_played = " + at(200) + "\n");
+    game("3ds-sort-d", "Sort D", "year = 2005\nrating = 2.5\nadded = 2026-02-01\nlast_played = " + at(400) + "\n");
+    game("3ds-sort-e", "Sort E", "year = 2010\n");
+}
+
+QStringList only(const QStringList &ids)
+{
+    QStringList out;
+    for (const QString &id : ids) {
+        if (id.startsWith(QLatin1String("3ds-sort-")))
+            out.append(id.mid(9));
+    }
+    return out;
+}
+
+QStringList headerGroups(const Library &library)
+{
+    QStringList out;
+    for (int i = 0; i < library.rowCount(); ++i) {
+        if (library.data(library.index(i), Library::IsHeaderRole).toBool())
+            out.append(library.data(library.index(i), Library::GroupRole).toString());
+    }
+    return out;
+}
+}
+
+void LibraryListTest::newSortOrders()
+{
+    writeSortGames([this](const QString &id) { return gamePath(id); }, QDateTime::currentDateTime());
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const auto order = [&](const char *sort, bool descending) {
+        library->setSort(QString::fromLatin1(sort));
+        library->setSortDescending(descending);
+        return only(gameIds(*library));
+    };
+
+    // The usual direction is the high end first (title and platform: A to Z).
+    library->setSort(QStringLiteral("rating"));
+    QVERIFY(library->sortDescending());
+    library->setSort(QStringLiteral("platform"));
+    QVERIFY(!library->sortDescending());
+    for (const char *sort : {"year", "achievements", "added", "size"}) {
+        library->setSort(QString::fromLatin1(sort));
+        QVERIFY2(library->sortDescending(), sort);
+    }
+
+    // Games with no value go last by title, either way; equal values go by title.
+    QCOMPARE(order("rating", true), (QStringList{"a", "b", "c", "d", "e"}));
+    QCOMPARE(order("rating", false), (QStringList{"d", "c", "b", "a", "e"}));
+    QCOMPARE(order("year", true), (QStringList{"b", "e", "d", "a", "c"}));
+    QCOMPARE(order("year", false), (QStringList{"a", "d", "b", "e", "c"}));
+    QCOMPARE(order("added", true), (QStringList{"b", "a", "d", "c", "e"}));
+    QCOMPARE(order("added", false), (QStringList{"d", "a", "b", "c", "e"}));
+
+    // Every game on one platform: platform changes nothing, whatever the direction.
+    QCOMPARE(order("platform", false), (QStringList{"a", "b", "c", "d", "e"}));
+    QCOMPARE(order("platform", true), (QStringList{"a", "b", "c", "d", "e"}));
+}
+
+void LibraryListTest::sortByPlatformFollowsTheRail()
+{
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    QStringList rail;
+    for (const QVariant &p : library->platforms())
+        rail.append(p.toMap().value("id").toString());
+    const auto places = [&] {
+        QList<int> out;
+        for (const QString &id : gameIds(*library))
+            out.append(int(rail.indexOf(library->gameAt(library->rowOfGame(id)).value("platform").toString())));
+        return out;
+    };
+
+    library->setSort(QStringLiteral("platform"));
+    QList<int> places1 = places();
+    QVERIFY(std::is_sorted(places1.cbegin(), places1.cend()));
+    QCOMPARE(places1.first(), 0);
+    library->setSortDescending(true);
+    places1 = places();
+    QVERIFY(std::is_sorted(places1.crbegin(), places1.crend()));
+    // Within a platform, by title.
+    library->setSortDescending(false);
+    QCOMPARE(library->gameAt(0).value("title").toString().toLower()
+                 < library->gameAt(1).value("title").toString().toLower(),
+             library->gameAt(0).value("platform") == library->gameAt(1).value("platform"));
+}
+
+void LibraryListTest::sortBySize()
+{
+    const auto program = [&](const char *id, const char *title, int bytes) {
+        const QString dir = m_data + QStringLiteral("/sizes/") + QString::fromLatin1(id);
+        writeFile(dir + QStringLiteral("/data.bin"), QByteArray(bytes, 'x'));
+        writeFile(gamePath(QString::fromLatin1(id)),
+                  QByteArray("title = \"") + title + "\"\nplatform = \"linux\"\ninstall_dir = \"" + dir.toUtf8()
+                      + "\"\n");
+    };
+    program("linux-size-big", "Size Big", 9000);
+    program("linux-size-small", "Size Small", 100);
+    program("linux-size-none", "Size None", 0);
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    library->setSort(QStringLiteral("size"));
+    const auto sizes = [&] {
+        QStringList out;
+        for (const QString &id : gameIds(*library)) {
+            if (id.startsWith(QLatin1String("linux-size-")))
+                out.append(id.mid(11));
+        }
+        return out;
+    };
+    QTRY_COMPARE_WITH_TIMEOUT(sizes(), (QStringList{"big", "small", "none"}), 5000);
+    library->setSortDescending(false);
+    QCOMPARE(sizes(), (QStringList{"small", "big", "none"}));
+    const auto value = [&](const char *id) {
+        return library->data(library->index(library->rowOfGame(QString::fromLatin1(id))), Library::SortValueRole)
+            .toString();
+    };
+    QCOMPARE(value("linux-size-big"), library->sizeText(9000));
+    QCOMPARE(value("linux-size-none"), QString());
+}
+
+void LibraryListTest::sortByAchievements()
+{
+    const QString steam = m_data + QStringLiteral("/steam");
+    writeAchievements(steam, 1145360, 4, 1); // Hades: 1/4
+    writeAchievements(steam, 367520, 10, -1); // Hollow Knight: 0/10, not started
+    writeAchievements(steam, 413150, 4, 4); // Stardew Valley: 4/4
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const QStringList steamGames = {"steam-413150", "steam-1145360", "steam-367520"};
+    const auto firstThree = [&] { return gameIds(*library).mid(0, 3); };
+
+    // Nothing reads them until the sort asks; until the pass ends, games sort by title.
+    QTest::qWait(300);
+    library->setSort(QStringLiteral("achievements"));
+    QTRY_COMPARE_WITH_TIMEOUT(firstThree(), steamGames, 5000);
+    const auto value = [&](const char *id) {
+        return library->data(library->index(library->rowOfGame(QString::fromLatin1(id))), Library::SortValueRole)
+            .toString();
+    };
+    QCOMPARE(value("steam-413150"), QStringLiteral("4/4"));
+    QCOMPARE(value("steam-1145360"), QStringLiteral("1/4"));
+    QCOMPARE(value("steam-367520"), QStringLiteral("0/10"));
+    QCOMPARE(value("switch-pikmin-4"), QString()); // none to earn: last
+
+    library->setSortDescending(false);
+    QCOMPARE(firstThree(), (QStringList{"steam-367520", "steam-1145360", "steam-413150"}));
+    QCOMPARE(gameIds(*library).mid(3).contains(QStringLiteral("steam-413150")), false);
+}
+
+void LibraryListTest::sortByAchievementsRestoredAtStart()
+{
+    const QString steam = m_data + QStringLiteral("/steam");
+    writeAchievements(steam, 413150, 4, 4);
+    writeAchievements(steam, 1145360, 4, 1);
+    writeFile(m_data + QStringLiteral("/settings.toml"),
+              demoSettings() + "[list]\ninstalled_only = false\ngroup_by = \"none\"\nsort = \"achievements\"\n");
+    auto library = openLibrary();
+    QTRY_COMPARE_WITH_TIMEOUT(gameIds(*library).mid(0, 2), (QStringList{"steam-413150", "steam-1145360"}), 5000);
+}
+
+void LibraryListTest::newGroupings()
+{
+    writeSortGames([this](const QString &id) { return gamePath(id); }, QDateTime::currentDateTime());
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    library->setSearch(QStringLiteral("Sort"));
+    const auto title = [&](int row) { return library->data(library->index(row), Library::TitleRole).toString(); };
+
+    library->setGroupBy(QStringLiteral("year"));
+    QCOMPARE(headerGroups(*library), (QStringList{"2010", "2005", "2001", "none"}));
+    QCOMPARE(title(0), QStringLiteral("2010"));
+    QCOMPARE(title(library->rowCount() - 2), Library::tr("No year"));
+    QCOMPARE(library->data(library->index(0), Library::CountRole).toInt(), 2);
+    QCOMPARE(only(gameIds(*library)), (QStringList{"b", "e", "d", "a", "c"}));
+    // The grouped field's direction flips the groups; games with no year stay last.
+    library->setSort(QStringLiteral("year"));
+    library->setSortDescending(false);
+    QCOMPARE(headerGroups(*library), (QStringList{"2001", "2005", "2010", "none"}));
+    library->setSort(QStringLiteral("title"));
+    QCOMPARE(headerGroups(*library), (QStringList{"2010", "2005", "2001", "none"}));
+
+    library->setGroupBy(QStringLiteral("rating"));
+    QCOMPARE(headerGroups(*library), (QStringList{"5", "4", "3", "under_3", "unrated"}));
+    QCOMPARE(title(0), QStringLiteral("5"));
+    QCOMPARE(title(2), Library::tr("4 – 4.5"));
+    QCOMPARE(title(4), Library::tr("3 – 3.5"));
+    QCOMPARE(title(6), Library::tr("Under 3"));
+    QCOMPARE(title(8), Library::tr("Unrated"));
+    library->setSort(QStringLiteral("rating"));
+    library->setSortDescending(false);
+    QCOMPARE(headerGroups(*library), (QStringList{"under_3", "3", "4", "5", "unrated"}));
+
+    library->setSort(QStringLiteral("title"));
+    library->setGroupBy(QStringLiteral("last_played"));
+    QCOMPARE(headerGroups(*library), (QStringList{"week", "month", "year", "older", "never"}));
+    QCOMPARE(title(0), Library::tr("This week"));
+    QCOMPARE(title(2), Library::tr("This month"));
+    QCOMPARE(title(4), Library::tr("This year"));
+    QCOMPARE(title(6), Library::tr("Older"));
+    QCOMPARE(title(8), Library::tr("Never"));
+    library->setSort(QStringLiteral("last_played"));
+    library->setSortDescending(false);
+    QCOMPARE(headerGroups(*library), (QStringList{"older", "year", "month", "week", "never"}));
+
+    // With a platform selected the groups still show; a collapsed group hides its games, per grouping.
+    library->setSearch({});
+    library->setInstalledOnly(true);
+    library->setPlatformFilter(QStringLiteral("switch"));
+    library->setGroupBy(QStringLiteral("year"));
+    const QString first = headerGroups(*library).first();
+    const int shown = library->rowCount();
+    library->toggleGroup(first);
+    QVERIFY(library->rowCount() < shown - 1 || headerGroups(*library).size() == 1);
+    library->setGroupBy(QStringLiteral("rating"));
+    QCOMPARE(library->rowCount() > 0, true);
+}
+
+void LibraryListTest::newSortValues()
+{
+    const QDateTime now = QDateTime::currentDateTime();
+    writeSortGames([this](const QString &id) { return gamePath(id); }, now);
+    auto library = openLibrary();
+    library->setInstalledOnly(false);
+    const auto value = [&](const char *id) {
+        return library->data(library->index(library->rowOfGame(QString::fromLatin1(id))), Library::SortValueRole)
+            .toString();
+    };
+    library->setSort(QStringLiteral("rating"));
+    QCOMPARE(value("3ds-sort-b"), QLocale().toString(4.5, 'f', 1));
+    QCOMPARE(value("3ds-sort-e"), QString());
+    library->setSort(QStringLiteral("year"));
+    QCOMPARE(value("3ds-sort-b"), QStringLiteral("2010"));
+    QCOMPARE(value("3ds-sort-c"), QString());
+    library->setSort(QStringLiteral("added"));
+    QCOMPARE(value("3ds-sort-a"), QLocale().toString(QDate(2026, 3, 1), QLocale::ShortFormat));
+    QCOMPARE(value("3ds-sort-c"), QString());
+    library->setSort(QStringLiteral("platform"));
+    QCOMPARE(value("3ds-sort-a"), QString());
+    // Headers have none.
+    QVERIFY(library->data(library->index(0), Library::IsHeaderRole).toBool());
+    QCOMPARE(library->data(library->index(0), Library::SortValueRole).toString(), QString());
+}
+
+void LibraryListTest::newSortsAndGroupsInSettings()
+{
+    Parsed<ListSettings> parsed = parseListSettings("[list]\nsort = \"platform\"\ngroup_by = \"last_played\"\n", "settings.toml");
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.sort, QStringLiteral("platform"));
+    QVERIFY(!parsed.value.descending);
+    QCOMPARE(parsed.value.groupBy, QStringLiteral("last_played"));
+    for (const char *sort : {"rating", "year", "achievements", "added", "size"}) {
+        parsed = parseListSettings(QByteArray("[list]\nsort = \"") + sort + "\"\n", "settings.toml");
+        QVERIFY2(parsed.warnings.isEmpty(), sort);
+        QVERIFY2(parsed.value.descending, sort);
+    }
+    for (const char *group : {"year", "rating"}) {
+        parsed = parseListSettings(QByteArray("[list]\ngroup_by = \"") + group + "\"\n", "settings.toml");
+        QVERIFY2(parsed.warnings.isEmpty(), group);
+    }
+    parsed = parseListSettings("[list]\nsort = \"popularity\"\n", "settings.toml");
+    QVERIFY(parsed.warnings.at(0).contains(QStringLiteral("\"added\"")));
+
+    // Written, and read back at the next start.
+    auto library = openLibrary();
+    library->setSort(QStringLiteral("added"));
+    library->setGroupBy(QStringLiteral("year"));
+    const QString file = m_data + QStringLiteral("/settings.toml");
+    QTRY_VERIFY(readFile(file).contains("sort = \"added\"\n"));
+    QVERIFY(readFile(file).contains("group_by = \"year\"\n"));
+    QVERIFY(!readFile(file).contains("descending"));
+    library.reset();
+    library = openLibrary();
+    QCOMPARE(library->sort(), QStringLiteral("added"));
+    QVERIFY(library->sortDescending());
+    QCOMPARE(library->groupBy(), QStringLiteral("year"));
 }
 
 QTEST_GUILESS_MAIN(LibraryListTest)

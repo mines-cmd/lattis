@@ -11,6 +11,8 @@ OverviewCard {
     property bool barsGrown: false
     property int hoveredIndex: -1
 
+    signal yearRequested(int year)
+
     readonly property var years: overview.years ?? []
     readonly property int most: years.reduce((most, y) => Math.max(most, y.count), 0)
     readonly property var busiestYear: years.reduce((best, y) => best === null || y.count > best.count ? y : best, null)
@@ -27,7 +29,6 @@ OverviewCard {
         }
     }
 
-    // The library has no year filter, so the columns show their count in a tooltip while hovered and aren't clickable.
     Item {
         id: chart
         property real grow: root.barsGrown ? 1 : 0
@@ -53,6 +54,7 @@ OverviewCard {
                     required property var modelData
                     required property int index
                     readonly property bool hovered: root.hoveredIndex === index
+                    readonly property string text: qsTr("%1 · %n game(s)", "", modelData.count).arg(modelData.year)
 
                     width: Math.max(1, (chart.width - (root.years.length - 1) * Theme.overview.yearGap) / root.years.length)
                     height: chart.height
@@ -67,7 +69,14 @@ OverviewCard {
                         opacity: column.hovered ? 1 : Theme.overview.barOpacity
 
                         ToolTip.visible: column.hovered
-                        ToolTip.text: qsTr("%1 · %n game(s)", "", column.modelData.count).arg(column.modelData.year)
+                        ToolTip.delay: Theme.tooltip.delay
+                        ToolTip.text: column.text
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.yearRequested(column.modelData.year)
                     }
 
                     HoverHandler {

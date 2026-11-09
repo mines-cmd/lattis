@@ -1121,6 +1121,12 @@ ApplicationWindow {
                 Library.showFiltered(platform, statuses, tags)
                 window.setOverviewOpen(false)
             }
+            function onYearRequested(year) {
+                Library.showFiltered("", [], [])
+                Library.yearFrom = year
+                Library.yearTo = year
+                window.setOverviewOpen(false)
+            }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
             function onGameRequested(id) {
                 gameList.revealGame(id)

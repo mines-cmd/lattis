@@ -4,14 +4,18 @@
 
 #include <QHash>
 
+#include <cmath>
+
 #include <toml++/toml.hpp>
 
 namespace {
-const QStringList kSorts = {QStringLiteral("title"), QStringLiteral("last_played"), QStringLiteral("play_time")};
+const QStringList kSorts = {QStringLiteral("title"),   QStringLiteral("last_played"), QStringLiteral("play_time"),
+                            QStringLiteral("rating"),  QStringLiteral("year"),        QStringLiteral("achievements"),
+                            QStringLiteral("added"),   QStringLiteral("size"),        QStringLiteral("platform")};
 
 bool defaultDescending(const QString &sort)
 {
-    return sort != QLatin1String("title");
+    return sort != QLatin1String("title") && sort != QLatin1String("platform");
 }
 
 QString quoted(const QString &s)
@@ -33,11 +37,32 @@ QString quotedList(const QStringList &list)
         items.append(quoted(s));
     return items.join(QLatin1String(", "));
 }
+
+void parseChoices(const toml::node &node, const TomlSection &section, const QString &key, const QStringList &allowed,
+                  QStringList *out, QStringList *warnings)
+{
+    const auto *array = node.as_array();
+    if (!array || (!array->empty() && !array->is_homogeneous(toml::node_type::string))) {
+        warnings->append(QStringLiteral("%1: %2 must be a list of names, like [%3]")
+                             .arg(section.where(node), key, quoted(allowed.first())));
+        return;
+    }
+    for (const toml::node &item : *array) {
+        const QString name = toQString(item.as_string()->get());
+        if (!allowed.contains(name))
+            warnings->append(QStringLiteral("%1: unknown value \"%2\" in %3: they're %4%5")
+                                 .arg(section.where(item), name, key, quotedList(allowed), suggestion(name, allowed)));
+        else if (!out->contains(name))
+            out->append(name);
+    }
+}
 }
 
 const QStringList &listGroupings()
 {
-    static const QStringList groupings = {QStringLiteral("platform"), QStringLiteral("status"), QStringLiteral("none")};
+    static const QStringList groupings = {QStringLiteral("platform"), QStringLiteral("status"),
+                                          QStringLiteral("year"),     QStringLiteral("rating"),
+                                          QStringLiteral("last_played"), QStringLiteral("none")};
     return groupings;
 }
 
@@ -47,6 +72,27 @@ const QStringList &listStatuses()
                                          QStringLiteral("finished"),  QStringLiteral("completed"),
                                          QStringLiteral("dropped"),   QStringLiteral("none")};
     return statuses;
+}
+
+const QStringList &listPlayTimes()
+{
+    static const QStringList times = {QStringLiteral("never"),  QStringLiteral("under_2h"), QStringLiteral("2_10h"),
+                                      QStringLiteral("10_50h"), QStringLiteral("50_100h"),  QStringLiteral("over_100h")};
+    return times;
+}
+
+const QStringList &listLastPlayed()
+{
+    static const QStringList periods = {QStringLiteral("week"), QStringLiteral("month"), QStringLiteral("year"),
+                                        QStringLiteral("older"), QStringLiteral("never")};
+    return periods;
+}
+
+const QStringList &listAchievementStates()
+{
+    static const QStringList states = {QStringLiteral("not_started"), QStringLiteral("in_progress"),
+                                       QStringLiteral("completed"), QStringLiteral("none")};
+    return states;
 }
 
 Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &displayPath)
@@ -64,8 +110,9 @@ Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &d
         if (kSorts.contains(sort))
             out.value.sort = sort;
         else
-            out.warnings.append(QStringLiteral("%1: sort must be \"title\", \"last_played\" or \"play_time\"%2")
-                                    .arg(section.where(*node), s ? suggestion(sort, kSorts) : QString()));
+            out.warnings.append(QStringLiteral("%1: sort must be %2%3")
+                                    .arg(section.where(*node), quotedList(kSorts),
+                                         s ? suggestion(sort, kSorts) : QString()));
     }
     out.value.descending = defaultDescending(out.value.sort);
 
@@ -75,7 +122,11 @@ Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &d
                                QStringLiteral("installed_only"), QStringLiteral("favorites_only"),
                                QStringLiteral("tags"),           QStringLiteral("match_all_tags"),
                                QStringLiteral("statuses"),       QStringLiteral("show_hidden"),
-                               QStringLiteral("show_sort_value"), QStringLiteral("group_by")};
+                               QStringLiteral("show_sort_value"), QStringLiteral("group_by"),
+                               QStringLiteral("year_from"),      QStringLiteral("year_to"),
+                               QStringLiteral("min_rating"),     QStringLiteral("play_times"),
+                               QStringLiteral("last_played"),    QStringLiteral("achievements"),
+                               QStringLiteral("more_open")};
     const QHash<QString, bool *> bools = {
         {QStringLiteral("descending"), &out.value.descending},
         {QStringLiteral("installed_only"), &out.value.installedOnly},
@@ -83,6 +134,7 @@ Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &d
         {QStringLiteral("match_all_tags"), &out.value.matchAllTags},
         {QStringLiteral("show_hidden"), &out.value.showHidden},
         {QStringLiteral("show_sort_value"), &out.value.showSortValue},
+        {QStringLiteral("more_open"), &out.value.moreOpen},
         {QStringLiteral("group_by_platform"), &groupByPlatform},
     };
     bool groupBySet = false;
@@ -117,6 +169,34 @@ Parsed<ListSettings> parseListSettings(const QByteArray &bytes, const QString &d
                 else if (!out.value.statuses.contains(status))
                     out.value.statuses.append(status);
             }
+        } else if (key == QLatin1String("play_times")) {
+            parseChoices(node, section, key, listPlayTimes(), &out.value.playTimes, &out.warnings);
+        } else if (key == QLatin1String("achievements")) {
+            parseChoices(node, section, key, listAchievementStates(), &out.value.achievements, &out.warnings);
+        } else if (key == QLatin1String("last_played")) {
+            const auto *s = node.as_string();
+            const QString period = s ? toQString(s->get()) : QString();
+            if (listLastPlayed().contains(period))
+                out.value.lastPlayed = period;
+            else
+                out.warnings.append(QStringLiteral("%1: last_played must be %2%3")
+                                        .arg(section.where(node), quotedList(listLastPlayed()),
+                                             s ? suggestion(period, listLastPlayed()) : QString()));
+        } else if (key == QLatin1String("year_from") || key == QLatin1String("year_to")) {
+            const auto *year = node.as_integer();
+            if (year && year->get() >= 1 && year->get() <= 9999)
+                (key == QLatin1String("year_from") ? out.value.yearFrom : out.value.yearTo) = int(year->get());
+            else
+                out.warnings.append(QStringLiteral("%1: %2 must be a year, like 2015").arg(section.where(node), key));
+        } else if (key == QLatin1String("min_rating")) {
+            const double rating = node.is_integer() ? double(node.as_integer()->get())
+                : node.is_floating_point()          ? node.as_floating_point()->get()
+                                                    : -1;
+            if (rating >= 0 && rating <= 5)
+                out.value.minRating = std::round(rating * 2) / 2;
+            else
+                out.warnings.append(
+                    QStringLiteral("%1: min_rating must be a number from 0 to 5, like 3.5").arg(section.where(node)));
         } else if (bool *flag = bools.value(key)) {
             if (const auto *b = node.as_boolean())
                 *flag = b->get();
@@ -168,8 +248,49 @@ QList<std::pair<QString, QString>> listSettingsChanges(const ListSettings &from,
         boolText(to.showHidden));
     add("show_sort_value", from.showSortValue != to.showSortValue, to.showSortValue == defaults.showSortValue,
         boolText(to.showSortValue));
+    add("year_from", from.yearFrom != to.yearFrom, to.yearFrom == defaults.yearFrom, QString::number(to.yearFrom));
+    add("year_to", from.yearTo != to.yearTo, to.yearTo == defaults.yearTo, QString::number(to.yearTo));
+    add("min_rating", from.minRating != to.minRating, to.minRating == defaults.minRating,
+        QString::number(to.minRating, 'f', 1));
+    add("play_times", from.playTimes != to.playTimes, to.playTimes.isEmpty(), u'[' + quotedList(to.playTimes) + u']');
+    add("last_played", from.lastPlayed != to.lastPlayed, to.lastPlayed.isEmpty(), quoted(to.lastPlayed));
+    add("achievements", from.achievements != to.achievements, to.achievements.isEmpty(),
+        u'[' + quotedList(to.achievements) + u']');
+    add("more_open", from.moreOpen != to.moreOpen, to.moreOpen == defaults.moreOpen, boolText(to.moreOpen));
     add("group_by", from.groupBy != to.groupBy, to.groupBy == defaults.groupBy, quoted(to.groupBy));
     // The old key goes with any change of the grouping, so it can't contradict group_by.
     add("group_by_platform", from.groupBy != to.groupBy, true, {});
     return out;
+}
+
+QString playTimeBucket(int minutes)
+{
+    if (minutes <= 0)
+        return QStringLiteral("never");
+    if (minutes < 120)
+        return QStringLiteral("under_2h");
+    if (minutes < 600)
+        return QStringLiteral("2_10h");
+    if (minutes < 3000)
+        return QStringLiteral("10_50h");
+    if (minutes < 6000)
+        return QStringLiteral("50_100h");
+    return QStringLiteral("over_100h");
+}
+
+// The periods nest (this week is also this month); older is over a year ago. A game never played matches only "never".
+bool playedWithin(const QString &period, const QDateTime &played, const QDateTime &now)
+{
+    if (period == QLatin1String("never"))
+        return !played.isValid();
+    if (!played.isValid())
+        return false;
+    const qint64 days = played.secsTo(now) / 86400;
+    if (period == QLatin1String("week"))
+        return days < 7;
+    if (period == QLatin1String("month"))
+        return days < 30;
+    if (period == QLatin1String("year"))
+        return days < 365;
+    return days >= 365;
 }

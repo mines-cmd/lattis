@@ -34,6 +34,7 @@ FocusScope {
     signal galleryRequested()
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
+    signal yearRequested(int year)
     signal gameRequested(string id)
     signal playRequested(string id)
     signal statsRequested()
@@ -712,6 +713,7 @@ FocusScope {
                             regrow: root.barsGrow
                             Layout.fillWidth: true
                             overview: root.overview
+                            onYearRequested: year => root.yearRequested(year)
                         }
                     }
 

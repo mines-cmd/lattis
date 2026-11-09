@@ -205,6 +205,7 @@ Rectangle {
             search.selectAll()
             break
         case "open_filters": openFilters(); break
+        case "open_collections": openCollections(); break
         case "toggle_favorites_filter": Library.favoritesOnly = !Library.favoritesOnly; break
         case "clear_filters":
             Library.clearFilters()
@@ -420,6 +421,15 @@ Rectangle {
             filterPanel.item.open()
     }
 
+    function openCollections() {
+        collectionsPopup.active = true
+        if (collectionsPopup.item.visible) {
+            collectionsPopup.item.close()
+            focusList()
+        } else
+            collectionsPopup.item.open()
+    }
+
     readonly property var activeFilters: {
         const out = []
         const platform = General.railHidden && Library.platformFilter !== ""
@@ -439,6 +449,30 @@ Rectangle {
             if (Library.statusFilter.includes(status.id))
                 out.push({ key: "status:" + status.id, text: status.name,
                            off: () => Library.statusFilter = Library.statusFilter.filter(s => s !== status.id) })
+        }
+        if (Library.yearFrom > 0 || Library.yearTo > 0) {
+            const range = Library.yearFrom > 0 && Library.yearTo > 0
+                ? (Library.yearFrom === Library.yearTo ? String(Library.yearFrom) : Library.yearFrom + " – " + Library.yearTo)
+                : (Library.yearFrom > 0 ? qsTr("From %1").arg(Library.yearFrom) : qsTr("Up to %1").arg(Library.yearTo))
+            out.push({ key: "year", text: range, off: () => { Library.yearFrom = 0; Library.yearTo = 0 } })
+        }
+        if (Library.minRating >= 0)
+            out.push({ key: "rating", text: qsTr("Rated %1 or more").arg(Library.minRating),
+                       off: () => Library.minRating = -1 })
+        for (const time of Library.playTimeChoices) {
+            if (Library.playTimeFilter.includes(time.id))
+                out.push({ key: "playtime:" + time.id, text: qsTr("Played: %1").arg(time.name),
+                           off: () => Library.playTimeFilter = Library.playTimeFilter.filter(t => t !== time.id) })
+        }
+        if (Library.lastPlayedFilter !== "") {
+            const names = { week: qsTr("Played this week"), month: qsTr("Played this month"),
+                            year: qsTr("Played this year"), older: qsTr("Played over a year ago"), never: qsTr("Never played") }
+            out.push({ key: "lastplayed", text: names[Library.lastPlayedFilter], off: () => Library.lastPlayedFilter = "" })
+        }
+        for (const state of Library.achievementChoices) {
+            if (Library.achievementFilter.includes(state.id))
+                out.push({ key: "achievement:" + state.id, text: qsTr("Achievements: %1").arg(state.name),
+                           off: () => Library.achievementFilter = Library.achievementFilter.filter(a => a !== state.id) })
         }
         const palette = Theme.tags.palette
         let tags = 0
@@ -659,6 +693,60 @@ Rectangle {
                 }
             }
 
+            Item {
+                id: collectionsHost
+                visible: Theme.search.showFilterButton
+                implicitWidth: Theme.filterButton.size
+                implicitHeight: Theme.filterButton.size
+
+                IconButton {
+                    anchors.fill: parent
+                    icon: Icons.bookmarks
+                    iconSize: Theme.filterButton.iconSize
+                    iconColor: Theme.filterButton.icon
+                    radius: Theme.filterButton.radius
+                    fill: Theme.filterButton.background
+                    fillEnd: Theme.filterButton.backgroundEnd
+                    hoverTint: Theme.filterButton.hoverTint
+                    direction: Theme.filterButton.gradientDirection
+                    border.color: Theme.filterButton.border
+                    border.width: Theme.filterButton.borderWidth
+                    tip: Actions.tip(qsTr("Collections"), Actions.keys.open_collections)
+                    onClicked: root.openCollections()
+                }
+
+                Loader {
+                    id: collectionsPopup
+                    active: false
+                    source: "CollectionsPopup.qml"
+                    onLoaded: item.parent = collectionsHost
+                }
+                Binding {
+                    target: collectionsPopup.item
+                    property: "x"
+                    // Past the filter button too, so the popup stays clear of the list.
+                    value: collectionsHost.width + filterHost.width + 2 * Theme.layout.spacing
+                }
+                Connections {
+                    target: collectionsPopup.item
+                    function onClosedByKey() { root.focusList() }
+                    function onCollectionDialogRequested(mode, id, name) {
+                        collectionsPopup.item.close()
+                        root.askCollection(mode, id, name, [])
+                    }
+                    function onSteamImportRequested() {
+                        collectionsPopup.item.close()
+                        steamCollections.active = true
+                        steamCollections.item.open()
+                    }
+                    function onCollectionDeleted(id) {
+                        const error = Library.deleteCollection(id)
+                        if (error !== "")
+                            root.message(error)
+                    }
+                }
+            }
+
             // The panel's parent: the button dips when pressed, and a popup follows its parent's
             // scale, so the panel would shift as the button springs back.
             Item {
@@ -697,7 +785,13 @@ Rectangle {
                 Binding {
                     target: filterPanel.item
                     property: "x"
-                    value: filterHost.width + Theme.layout.spacing
+                    // Slides left when the widened panel would leave the window.
+                    value: {
+                        const wanted = filterHost.width + Theme.layout.spacing
+                        const hostX = root.width >= 0 ? filterHost.mapToItem(null, 0, 0).x : 0
+                        const room = root.Window.width - Theme.layout.margin - hostX - (filterPanel.item?.width ?? 0)
+                        return Math.max(Theme.layout.margin - hostX, Math.min(wanted, room))
+                    }
                 }
                 Connections {
                     target: filterPanel.item
@@ -705,16 +799,6 @@ Rectangle {
                     function onCollectionDialogRequested(mode, id, name) {
                         filterPanel.item.close()
                         root.askCollection(mode, id, name, [])
-                    }
-                    function onSteamImportRequested() {
-                        filterPanel.item.close()
-                        steamCollections.active = true
-                        steamCollections.item.open()
-                    }
-                    function onCollectionDeleted(id) {
-                        const error = Library.deleteCollection(id)
-                        if (error !== "")
-                            root.message(error)
                     }
                 }
             }

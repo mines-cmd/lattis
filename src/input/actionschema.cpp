@@ -42,6 +42,7 @@ constexpr Action kActions[] = {
 
     {"search", "focus_search", "Ctrl+F /", "Focus the search box"},
     {"search", "open_filters", "Ctrl+Shift+F", "Filters"},
+    {"search", "open_collections", "Ctrl+Shift+C", "Collections"},
     {"search", "toggle_favorites_filter", "Ctrl+Shift+D", "Show only favorites / all games"},
     {"search", "cycle_sort", "Ctrl+Shift+S", "Next sort order"},
     {"search", "clear_filters", "Ctrl+Shift+Backspace", "Clear filters"},

@@ -76,6 +76,13 @@ def empty_title(dirs):
                'title = ""\nplatform = "switch"\nadded = 2026-01-12\n')
 
 
+def with_list(text):
+    def setup(dirs):
+        library(dirs)
+        dirs.write("settings.toml", "[list]\n" + text)
+    return setup
+
+
 def search(text):
     return "type " + text + "\nwait 600\n"
 
@@ -109,6 +116,14 @@ SCENARIOS = [
              [("expect " + FIRST + "\nkey Ctrl+2\nwait 600\n" + search("zyxwv") + "expect " + NEEDLE
                + "\nkey Ctrl+3\nwait 600\nexpect-not " + NEEDLE + "\nkey Ctrl+1\nwait 600\nexpect " + NEEDLE + "\n",
                None)], plain),
+    Scenario("a saved sort by achievements with grouping by year lists 2500 games and scrolls",
+             [("wait 1500\nkey End\nwait 600\nkey Home\nwait 600\n" + "key Down\n" * 20
+               + "key Ctrl+Shift+S\nwait 3500\n", None)],
+             with_list('sort = "achievements"\ngroup_by = "year"\n')),
+    Scenario("a saved year range and minimum rating narrow 2500 games, which still scroll and search",
+             [("wait 1500\nexpect-not " + NEEDLE + "\nkey End\nwait 600\nkey Home\nwait 600\n"
+               + search("shadow") + "key Escape\nkey Escape\nwait 600\n", None)],
+             with_list("year_from = 2000\nyear_to = 2005\nmin_rating = 3.0\n")),
     Scenario("Japanese, accented and emoji titles show and can be searched",
              [("expect " + FIRST + "\nkey End\nwait 600\nexpect " + LAST + "\n"
                + search("Brûlée") + "expect " + ACCENTS + "\nexpect-not " + FIRST + "\nkey Escape\nkey Escape\n"

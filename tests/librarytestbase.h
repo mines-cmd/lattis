@@ -21,6 +21,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimeZone>
+
+#include <functional>
 #include <QtEndian>
 
 #include <memory>
