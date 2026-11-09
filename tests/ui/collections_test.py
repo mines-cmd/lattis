@@ -94,9 +94,10 @@ SCENARIOS = [
                + OPEN_COLL + "expect Switch picks\nclick Switch picks\nwait 500\n"
                + "expect 3 games\nexpect Metroid Dread\nexpect-not Hades\n", None),
               ("expect 3 games\n" + LEAVE + FIRST + OPEN_COLL + "expect Switch picks\n", None)], with_collections),
-    Scenario("Remove from collection takes a game out of the open collection only",
-             [(FIRST + OPEN_COLL + "click Mix\nwait 500\n" + MIX + "key Escape\nclick Hades\nkey Menu\nwait 500\n"
-               + "click Remove from collection\nwait 600\nexpect-has 1 game removed from Mix\nexpect 2 games\n"
+    Scenario("unchecking the open collection in the game menu takes the game out of it only",
+             [(FIRST + OPEN_COLL + "click Mix\nwait 500\n" + MIX + "key Escape\nclick Hades\n" + MENU
+               + "click Mix\nwait 600\nexpect-has 1 game removed from Mix\nkey Escape\nkey Escape\nwait 400\n"
+               + "expect 2 games\n"
                + "expect-not Hades\nexpect Pikmin 4\nkey Escape\nkey Ctrl+Z\nwait 600\nexpect 3 games\n"
                + "expect Hades\n", None)], with_collections),
     Scenario("New collection in the filter panel makes an empty one that stays",

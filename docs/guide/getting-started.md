@@ -52,7 +52,7 @@ Nothing is imported or scanned until you finish or skip, so your games come in w
 Two menus hold most of what isn't on screen:
 
 - **The app menu**: click or right-click the logo, or press F10. Add game, play statistics and Settings, in the rail's order (so they stay reachable when you hide their rail buttons), looking up missing info, scanning ROM folders, syncing your Steam library (when you're signed in), theme, fullscreen, hide the rail, backups, keyboard shortcuts, About and Quit.
-- **A game's menu**: right-click a game in the list, press the Menu key, or click ⋯ on its page (add that button in `[game_page] buttons` as `menu`). Launch, favorite, set its **Status** (also for several selected games), open its folder or its save folder, Properties, Hide, and Uninstall where it applies.
+- **A game's menu**: right-click a game in the list, press the Menu key, or click ⋯ on its page (add that button in `[game_page] buttons` as `menu`). In groups: Launch; favorite, collections and **Status** (also for several selected games); opening its launcher, folder or save folder; play history and Properties; Hide, and Uninstall where it applies.
 
 Press F1 at any time for the list of keyboard shortcuts.
 

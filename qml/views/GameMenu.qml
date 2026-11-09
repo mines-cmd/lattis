@@ -300,21 +300,11 @@ SettingsMenu {
             onTriggered: Qt.callLater(() => root.newCollectionRequested(root.targetIds()))
         }
     }
-    SettingsMenuItem {
-        iconPath: Icons.close
-        visible: root.inCollection
-        text: qsTr("Remove from collection")
-        onTriggered: {
-            const error = Library.setCollectionMembers(root.targetIds(), Library.collectionId, false)
-            if (error !== "")
-                root.failed(error)
-        }
-    }
     SettingsMenu {
         id: statusMenu
         pops: true
         title: qsTr("Status")
-        iconPath: Icons.check
+        iconPath: Icons.flagLine
         checkColumn: true
 
         Instantiator {
@@ -358,6 +348,7 @@ SettingsMenu {
             onObjectRemoved: (index, object) => emulatorMenu.removeItem(object)
         }
     }
+    SettingsMenuSeparator { visible: !root.multi }
     Entry {
         actionName: "open_platform"
         iconPath: root.launcher === "steam" ? Icons.steamLine
@@ -398,17 +389,30 @@ SettingsMenu {
         }
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
-    Entry {
-        actionName: "add_mod_manager"
-        iconPath: Icons.puzzle
-        visible: !root.multi && root.linkable
-        text: qsTr("Add a mod manager")
-    }
+    SettingsMenuSeparator { visible: !root.multi }
     Entry {
         actionName: "play_history"
         iconPath: Icons.history
         visible: !root.multi
         text: qsTr("Play history")
+    }
+    Entry {
+        actionName: "game_settings"
+        iconPath: Icons.settings4Line
+        visible: !root.multi
+        text: qsTr("Properties")
+    }
+    Entry {
+        actionName: "steam_properties"
+        iconPath: Icons.steamLine
+        visible: !root.multi && root.game.platform === "steam"
+        text: qsTr("Steam properties")
+    }
+    Entry {
+        actionName: "add_mod_manager"
+        iconPath: Icons.puzzle
+        visible: !root.multi && root.linkable
+        text: qsTr("Add a mod manager")
     }
     SettingsMenu {
         id: sameGameMenu
@@ -442,18 +446,6 @@ SettingsMenu {
         }
     }
     SettingsMenuSeparator {}
-    Entry {
-        actionName: "game_settings"
-        iconPath: Icons.settings4Line
-        visible: !root.multi
-        text: qsTr("Properties")
-    }
-    Entry {
-        actionName: "steam_properties"
-        iconPath: Icons.steamLine
-        visible: !root.multi && root.game.platform === "steam"
-        text: qsTr("Steam properties")
-    }
     Entry {
         actionName: "hide_game"
         iconPath: (root.multi ? !root.anyVisible : (root.game.hidden ?? false)) ? Icons.eyeLine : Icons.eyeCloseLine
