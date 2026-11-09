@@ -130,8 +130,8 @@ OverviewCard {
         Layout.fillWidth: true
         visible: root.games > 0 && root.stats.unchecked > 0
         wrapMode: Text.WordWrap
-        text: root.asking ? qsTr("%n still being asked", "", root.stats.unchecked)
-                          : qsTr("%n not asked yet", "", root.stats.unchecked)
+        text: root.asking ? qsTr("%n still being asked", "", root.stats.unchecked ?? 0)
+                          : qsTr("%n not asked yet", "", root.stats.unchecked ?? 0)
     }
 
     RowLayout {
