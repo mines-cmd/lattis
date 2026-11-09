@@ -311,6 +311,30 @@ SettingsMenu {
         }
     }
     SettingsMenu {
+        id: statusMenu
+        pops: true
+        title: qsTr("Status")
+        iconPath: Icons.check
+        checkColumn: true
+
+        Instantiator {
+            model: Library.statuses
+            delegate: SettingsMenuItem {
+                required property var modelData
+                text: modelData.name
+                checked: root.targets.length > 0 && root.targets.every(g => (g.status || "none") === modelData.id)
+                onTriggered: {
+                    const error = Library.setGamesValue(root.targetIds(), "status",
+                                                        modelData.id === "none" ? "" : modelData.id)
+                    if (error !== "")
+                        root.failed(error)
+                }
+            }
+            onObjectAdded: (index, object) => statusMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => statusMenu.removeItem(object)
+        }
+    }
+    SettingsMenu {
         id: emulatorMenu
         pops: true
         title: root.emulatorChoosable ? qsTr("Emulator") : qsTr("Emulator (ROM games of one platform)")
