@@ -105,7 +105,10 @@ SCENARIOS = [
                + "expect-not Library overview\nexpect Gallery\n", None)], demo),
     Scenario("a release year column opens the game list with that year's games, other filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
-               + "key F7\nexpect Library overview\nwait 1200\n" + DOWN + "wait 600\nclick 2013 · 2 games\nwait 500\n"
+               # The mouse is still where Dropped was, over this column: its open tooltip has the same text,
+               # and the driver would click that. A click on the card's title moves the pointer away first.
+               + "key F7\nexpect Library overview\nwait 1200\n" + DOWN + "wait 600\nclick Release years\nwait 600\n"
+               + "click 2013 · 2 games\nwait 500\n"
                + "expect-not Library overview\nexpect The Legend of Zelda: A Link Between Worlds\n"
                + "expect Final Fantasy XIV Online\nexpect-not Pikmin 4\nexpect-not Hades\nexpect 2013\n", None)], demo),
     Scenario("the Games tile opens the whole library, filters cleared",
