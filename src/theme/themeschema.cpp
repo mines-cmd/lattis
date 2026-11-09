@@ -475,6 +475,7 @@ constexpr Setting kSettings[] = {
     color("collections", "edit_section_heading", "@text_muted", "Group headings of the rules (Library, Progress, Details)"),
     color("collections", "edit_section_rule", "@border", "The line under a group heading of the rules"),
     integer("collections", "edit_year_width", "72", 40, 300, "Width of a release year field in the Edit collection dialog"),
+    integer("collections", "edit_tag_rows", "5", 1, 20, "How many matching tags the Edit collection dialog's tag search lists before it scrolls"),
     color("collections", "edit_footer_background", "#00000000", "Background of the Edit collection dialog's footer (the match count and the buttons)"),
     heading("collections", "Import from Steam dialog"),
     integer("collections", "import_list_height", "260", 40, 1000,

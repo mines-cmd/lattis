@@ -176,6 +176,26 @@ SCENARIOS += [
                + "expect 2+\nclick Cancel\nwait 500\n", None)], with_rated),
 ]
 
+def with_tagged(dirs):
+    dirs.use_demo()
+    dirs.write("library/collections.toml", COLLECTIONS + RULED.replace("favorites_only = true", 'tags = ["Racing"]'))
+
+
+SCENARIOS += [
+    Scenario("Edit collection's tag picker adds a tag from the search, ignoring case and accents, and Match shows with two",
+             [(FIRST + OPEN_COLL + EDIT + "expect Racing\nexpect-not Match\nclick Search tags to add\ntype pLATFÖRMER\nwait 400\n"
+               + "expect Platformer\nexpect-not Roguelike\nclick Platformer\nwait 400\nexpect Match\nexpect All\n"
+               + "type zzz\nwait 300\nexpect-has No other tag called\nkey Escape\nwait 300\n"
+               + "expect Edit collection\nclick All\nwait 300\nexpect 1 game matches\nclick Any\nwait 300\nexpect-not 1 game matches\nclick All\nwait 300\nclick Save\nwait 600\n", None),
+              ("expect Leave the collection\n" + OPEN_COLL + "expect Faves\nkey Escape\nwait 400\n" + EDIT
+               + "expect Racing\nexpect Platformer\nexpect Match\nexpect 1 game matches\n", None)], with_tagged),
+    Scenario("Edit collection's tag picker removes a tag with its x, hides Match under two and Return adds the first match",
+             [(FIRST + OPEN_COLL + EDIT + "click Search tags to add\ntype Plat\nkey Return\nwait 400\nexpect Match\n"
+               + "click Racing\nwait 400\nexpect-not Match\nclick Save\nwait 600\n", None),
+              ("expect Leave the collection\n" + OPEN_COLL + "key Escape\nwait 400\n" + EDIT
+               + "expect-not Match\nexpect Search tags to add\n", None)], with_tagged),
+]
+
 IMPORT = OPEN_COLL + "click Import from Steam\nwait 700\nexpect Import collections from Steam\n"
 
 

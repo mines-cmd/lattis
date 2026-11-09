@@ -99,6 +99,7 @@ qt_add_qml_module(lattis
         qml/components/DurationField.qml
         qml/components/IconButton.qml
         qml/components/Args.js
+        qml/components/TagSearch.js
         qml/components/Icons.qml
         qml/components/Motion.qml
         qml/components/MotionColor.qml

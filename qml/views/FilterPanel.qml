@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "../components/TagSearch.js" as TagSearch
 
 // See docs/code/qml.md.
 MotionPopup {
@@ -52,8 +53,7 @@ MotionPopup {
     readonly property var usableTags: Library.tags.filter(t => t.games > 0 || Library.tagFilter.includes(t.name))
     property string tagQuery: ""
     // A selected tag stays shown, so a filter that is on never hides.
-    readonly property var shownTags: tagQuery.trim() === "" ? usableTags
-        : usableTags.filter(t => Library.tagFilter.includes(t.name) || Library.matchesSearch(t.name, tagQuery))
+    readonly property var shownTags: TagSearch.matching(usableTags, tagQuery, Library.matchesSearch, Library.tagFilter)
 
     readonly property var platformCounts: ({
         total: General.railHidden ? Library.gameCounts.reduce((sum, c) => sum + c.count, 0) : 0

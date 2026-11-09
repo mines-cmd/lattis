@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "../components/TagSearch.js" as TagSearch
 
 // See docs/code/qml.md.
 ColumnLayout {
@@ -95,6 +96,25 @@ ColumnLayout {
                            tip: step === 0 ? qsTr("Any game that has a rating") : "" })
         }
         return choices
+    }
+
+    // Chosen tags are chips above the field, so the matches only offer the others.
+    property int tagHighlight: 0
+    readonly property var tagMatches: TagSearch.matching(
+        Library.tags.filter(t => t.games > 0 && !tags.includes(t.name)), tagSearch.text, Library.matchesSearch, [])
+
+    function tagColor(name) {
+        const palette = Theme.tags.palette
+        const tag = Library.tags.find(t => t.name === name)
+        return palette.length > 0 && tag ? palette[tag.color % palette.length] : "transparent"
+    }
+
+    function addTag(name) {
+        if (!name || tags.includes(name))
+            return
+        tags = tags.concat([name])
+        tagHighlight = 0
+        tagSearch.forceActiveFocus()
     }
 
     function toggled(list, value) {
@@ -428,29 +448,114 @@ ColumnLayout {
                     }
                     Rule {
                         label: qsTr("Tags")
-                        visible: Library.tags.length > 0
+                        visible: Library.tags.length > 0 || root.tags.length > 0
+
                         Flow {
+                            visible: root.tags.length > 0
                             Layout.fillWidth: true
-                            spacing: Theme.layout.spacing * 2
+                            spacing: Theme.layout.spacing
 
                             Repeater {
-                                model: Library.tags
+                                model: root.tags
 
-                                SettingsCheckBox {
-                                    required property var modelData
-                                    bordered: false
-                                    text: modelData.name
-                                    checked: root.tags.includes(modelData.name)
-                                    onToggled: root.tags = root.toggled(root.tags, modelData.name)
+                                FilterChip {
+                                    required property string modelData
+                                    text: modelData
+                                    tagColor: root.tagColor(modelData)
+                                    onClicked: root.tags = root.toggled(root.tags, modelData)
+                                    onRemoved: root.tags = root.toggled(root.tags, modelData)
                                 }
                             }
                         }
-                        SettingsCheckBox {
+                        SettingsSearchField {
+                            id: tagSearch
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: Theme.filters.tagSearchHeight
+                            placeholderText: qsTr("Search tags to add")
+                            onTextChanged: root.tagHighlight = 0
+                            Keys.onDownPressed: root.tagHighlight = Math.min(root.tagMatches.length - 1, root.tagHighlight + 1)
+                            Keys.onUpPressed: root.tagHighlight = Math.max(0, root.tagHighlight - 1)
+                            Keys.onReturnPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
+                            Keys.onEnterPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
+                            Keys.onEscapePressed: event => {
+                                event.accepted = text !== ""
+                                if (event.accepted)
+                                    clear()
+                            }
+                        }
+                        Label {
+                            visible: tagSearch.text.trim() !== "" && root.tagMatches.length === 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: qsTr("No other tag called \"%1\".").arg(tagSearch.text.trim())
+                            color: Theme.gameEditor.hintColor
+                        }
+                        Rectangle {
+                            visible: tagSearch.text.trim() !== "" && root.tagMatches.length > 0
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * Theme.tags.height
+                                                             + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2
+                            color: "transparent"
+                            radius: Theme.filters.sortRadius
+                            border.color: Theme.collections.editSectionRule
+                            clip: true
+
+                            ListView {
+                                id: matchList
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                spacing: Theme.filters.tagSpacing
+                                model: root.tagMatches
+                                boundsBehavior: Flickable.StopAtBounds
+                                ScrollBar.vertical: SettingsScrollBar { trackless: true }
+
+                                delegate: AbstractButton {
+                                    id: match
+                                    required property var modelData
+                                    required property int index
+                                    width: matchList.width
+                                    leftPadding: Theme.layout.spacing / 2
+                                    rightPadding: Theme.layout.spacing
+                                    implicitHeight: Theme.tags.height
+                                    hoverEnabled: true
+                                    onClicked: root.addTag(modelData.name)
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                                    background: Rectangle {
+                                        radius: Theme.filters.sortRadius
+                                        color: match.hovered || match.index === root.tagHighlight ? Theme.filters.sortHover : "transparent"
+                                    }
+                                    contentItem: RowLayout {
+                                        spacing: Theme.layout.spacing
+
+                                        TagChip {
+                                            name: match.modelData.name
+                                            plus: false
+                                            colorIndex: match.modelData.color
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                        Label {
+                                            text: match.modelData.games
+                                            color: Theme.gameEditor.hintColor
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        RowLayout {
                             visible: root.tags.length >= 2
-                            bordered: false
-                            text: qsTr("Match all selected tags")
-                            checked: root.matchAllTags
-                            onToggled: root.matchAllTags = checked
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing
+
+                            Label {
+                                text: qsTr("Match")
+                                color: Theme.gameEditor.hintColor
+                            }
+                            ChoiceChips {
+                                model: [{ id: "any", name: qsTr("Any") }, { id: "all", name: qsTr("All") }]
+                                current: root.matchAllTags ? "all" : "any"
+                                onPicked: id => root.matchAllTags = id === "all"
+                            }
                         }
                     }
                 }
