@@ -122,7 +122,7 @@ void EmulatorScreenshotsTest::presetsParse()
             withShots.append(e.id);
     }
     withShots.sort();
-    QCOMPARE(withShots, (QStringList{"azahar", "cemu", "dolphin", "duckstation", "mgba", "pcsx2", "ppsspp", "rmg",
+    QCOMPARE(withShots, (QStringList{"azahar", "cemu", "dolphin", "duckstation", "lichii", "mgba", "pcsx2", "ppsspp", "rmg",
                                      "rpcs3", "ryubing", "shadps4"}));
     QVERIFY(emulator(QStringLiteral("melonds")).screenshots.isEmpty());
 }

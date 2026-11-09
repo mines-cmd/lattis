@@ -229,7 +229,7 @@ void LibraryEmulatorsTest::userEmulatorEdits()
     QVERIFY(!library->setEmulatorValue("mine", "name", "  ").isEmpty());
     QVERIFY(!library->setEmulatorValue("mine", "command", QStringList{"run", "{rom}"}).isEmpty());
     QVERIFY(!library->setEmulatorValue("mine", "command", QStringList()).isEmpty());
-    QVERIFY(!library->setEmulatorValue("mine", "saves", QStringList{"x"}).isEmpty());
+    QVERIFY(!library->setEmulatorValue("mine", "keys", QStringList{"x"}).isEmpty());
     QCOMPARE(library->setEmulatorValue("mine", "command", QStringList{"{exe}", "-x", "{rom}"}), QString());
     QVERIFY(readFile(file).contains("command = [\"{exe}\", \"-x\", \"{rom}\"]"));
 
