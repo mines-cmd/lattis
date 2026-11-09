@@ -534,8 +534,8 @@ ColumnLayout {
                                 Layout.preferredHeight: Theme.filters.tagSearchHeight
                                 placeholderText: qsTr("Search tags to add")
                                 onTextChanged: root.tagHighlight = 0
-                                Keys.onDownPressed: root.tagHighlight = Math.min(root.tagMatches.length - 1, root.tagHighlight + 1)
-                                Keys.onUpPressed: root.tagHighlight = Math.max(0, root.tagHighlight - 1)
+                                Keys.onDownPressed: root.tagHighlight = Math.min(root.tagMatches.length - 1, root.tagHighlight + 3)
+                                Keys.onUpPressed: root.tagHighlight = Math.max(0, root.tagHighlight - 3)
                                 Keys.onReturnPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
                                 Keys.onEnterPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
                                 Keys.onEscapePressed: event => {
@@ -551,65 +551,48 @@ ColumnLayout {
                                 text: qsTr("No other tag called \"%1\".").arg(tagSearch.text.trim())
                                 color: Theme.gameEditor.hintColor
                             }
-                            Rectangle {
-                                visible: tagSearch.text.trim() !== "" && root.tagMatches.length > 0
+                            GridLayout {
+                                visible: (tagSearch.activeFocus || tagSearch.text.trim() !== "") && root.tagMatches.length > 0
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * matchList.rowHeight
-                                                                 + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2 * matchList.anchors.margins
-                                color: "transparent"
-                                radius: Theme.filters.sortRadius
-                                border.color: Theme.collections.editSectionRule
-                                clip: true
+                                columns: 3
+                                rowSpacing: Theme.filters.tagSpacing
+                                columnSpacing: Theme.filters.tagSpacing
 
-                                ListView {
-                                    id: matchList
-                                    readonly property int rowHeight: Theme.tags.height + 2 * Theme.collections.editTagRowPadding
-                                    anchors.fill: parent
-                                    anchors.margins: Theme.layout.spacing / 2
-                                    anchors.rightMargin: matchBar.visible ? matchBar.width + Theme.layout.spacing / 2 : anchors.margins
-                                    spacing: Theme.filters.tagSpacing
-                                    model: root.tagMatches
-                                    boundsBehavior: Flickable.StopAtBounds
-                                    ScrollBar.vertical: SettingsScrollBar {
-                                        id: matchBar
-                                        parent: matchList.parent
-                                        anchors.top: matchList.top
-                                        anchors.bottom: matchList.bottom
-                                        anchors.right: parent.right
-                                        anchors.rightMargin: Theme.layout.spacing / 2
-                                        thickness: Theme.collections.editTagScrollbarWidth
-                                        trackless: true
-                                    }
+                                Repeater {
+                                    model: parent.visible ? root.tagMatches : []
 
-                                    delegate: AbstractButton {
-                                        id: match
+                                    AbstractButton {
+                                        id: pick
                                         required property var modelData
                                         required property int index
-                                        width: matchList.width
-                                        leftPadding: Theme.layout.spacing / 2
-                                        rightPadding: Theme.layout.spacing
-                                        implicitHeight: matchList.rowHeight
+
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 1
+                                        implicitHeight: Theme.tags.height
+                                        focusPolicy: Qt.NoFocus
                                         hoverEnabled: true
                                         onClicked: root.addTag(modelData.name)
+                                        ToolTip.visible: hovered && chip.truncated
+                                        ToolTip.delay: Theme.tooltip.delay
+                                        ToolTip.text: modelData.name
                                         HoverHandler { cursorShape: Qt.PointingHandCursor }
 
-                                        background: Rectangle {
-                                            radius: Theme.filters.sortRadius
-                                            color: match.hovered || match.index === root.tagHighlight ? Theme.filters.sortHover : "transparent"
-                                        }
-                                        contentItem: RowLayout {
-                                            spacing: Theme.layout.spacing
-
-                                            TagChip {
-                                                name: match.modelData.name
-                                                plus: false
-                                                colorIndex: match.modelData.color
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                            Label {
-                                                text: match.modelData.games
-                                                color: Theme.gameEditor.hintColor
-                                            }
+                                        background: null
+                                        contentItem: TagChip {
+                                            id: chip
+                                            name: pick.modelData.name
+                                            spread: true
+                                            plus: false
+                                            detail: pick.modelData.games
+                                            textColor: Qt.hsla(chip.tagColor.hslHue, chip.tagColor.hslSaturation, Theme.filters.tagTextLightness, 1)
+                                            detailColor: Qt.alpha(textColor, Theme.filters.tagCountOpacity)
+                                            colorIndex: pick.modelData.color
+                                            outlined: true
+                                            outlineWidth: Theme.filters.tagBorderWidth
+                                            fillOpacity: pick.hovered || pick.index === root.tagHighlight ? Theme.filters.tagHoverOpacity : Theme.filters.tagOffOpacity
+                                            lit: pick.hovered || pick.index === root.tagHighlight
+                                            raised: pick.hovered
+                                            raiseBy: Theme.filters.tagHoverLift
                                         }
                                     }
                                 }
@@ -676,12 +659,21 @@ ColumnLayout {
                 text: "·"
                 color: Theme.collections.editFooterText
             }
-            SettingsButton {
+            AbstractButton {
+                id: clearButton
                 visible: root.rulesOn && root.hasRules
-                flat: true
-                textColor: Theme.collections.editFooterText
                 text: qsTr("Clear rules")
+                padding: 0
+                hoverEnabled: true
                 onClicked: root.clearRules()
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                background: null
+                contentItem: Label {
+                    text: clearButton.text
+                    color: clearButton.hovered ? Theme.gameEditor.headingColor : Theme.collections.editFooterText
+                    Behavior on color { enabled: Motion.fades; MotionColor {} }
+                }
             }
             Item { Layout.fillWidth: true }
             SettingsButton {

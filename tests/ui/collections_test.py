@@ -183,7 +183,7 @@ def with_tagged(dirs):
 
 SCENARIOS += [
     Scenario("Edit collection's tag picker adds a tag from the search, ignoring case and accents, and Match shows with two",
-             [(FIRST + OPEN_COLL + EDIT + "expect Racing\nexpect-not Match\nclick Search tags to add\ntype pLATFÖRMER\nwait 400\n"
+             [(FIRST + OPEN_COLL + EDIT + "expect Racing\nexpect-not Match\nclick Search tags to add\nwait 300\nexpect Platformer\ntype pLATFÖRMER\nwait 400\n"
                + "expect Platformer\nexpect-not Roguelike\nclick Platformer\nwait 400\nexpect Match\nexpect All\n"
                + "type zzz\nwait 300\nexpect-has No other tag called\nkey Escape\nwait 300\n"
                + "expect Edit collection\nclick All\nwait 300\nexpect-has <b>1</b></font> game matches\nclick Any\nwait 300\nexpect-not-has <b>1</b></font> game matches\nclick All\nwait 300\nclick Save\nwait 600\n", None),
