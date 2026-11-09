@@ -2204,6 +2204,30 @@ QString Library::addCollectionFromFilters(const QString &name)
     return makeCollection(name, {}, rules);
 }
 
+namespace {
+// The dialog's rules map (see collectionDetails); no rules when "enabled" is false.
+std::optional<CollectionRules> rulesFromVariant(const QVariantMap &rules)
+{
+    if (!rules.value(QStringLiteral("enabled")).toBool())
+        return std::nullopt;
+    CollectionRules r;
+    r.platform = rules.value(QStringLiteral("platform")).toString();
+    r.installedOnly = rules.value(QStringLiteral("installedOnly")).toBool();
+    r.favoritesOnly = rules.value(QStringLiteral("favoritesOnly")).toBool();
+    r.statuses = rules.value(QStringLiteral("statuses")).toStringList();
+    r.tags = rules.value(QStringLiteral("tags")).toStringList();
+    r.matchAllTags = rules.value(QStringLiteral("matchAllTags")).toBool();
+    r.steamOwnership = rules.value(QStringLiteral("steam")).toStringList();
+    r.yearFrom = rules.value(QStringLiteral("yearFrom")).toInt();
+    r.yearTo = rules.value(QStringLiteral("yearTo")).toInt();
+    r.minRating = rules.value(QStringLiteral("minRating"), -1).toDouble();
+    r.playTimes = rules.value(QStringLiteral("playTimes")).toStringList();
+    r.lastPlayed = rules.value(QStringLiteral("lastPlayed")).toString();
+    r.achievements = rules.value(QStringLiteral("achievements")).toStringList();
+    return r;
+}
+} // namespace
+
 QVariantMap Library::collectionDetails(const QString &id) const
 {
     const QList<Collection> &all = m_store.collections();
@@ -2244,6 +2268,21 @@ QVariantMap Library::collectionDetails(const QString &id) const
                        {QStringLiteral("removed"), titled(found->removed)}};
 }
 
+int Library::countCollectionMatches(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
+                                    const QStringList &dropRemoved) const
+{
+    const QList<Collection> &all = m_store.collections();
+    const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
+    if (found == all.cend())
+        return 0;
+    Collection c = *found;
+    c.rules = rulesFromVariant(rules);
+    c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
+    c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
+    const CollectionMatcher matcher = matcherOf(c);
+    return int(std::count_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return !g.hidden && matcher.isMember(g); }));
+}
+
 QString Library::editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
                                 const QStringList &dropRemoved)
 {
@@ -2252,25 +2291,7 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
     if (found == all.cend())
         return tr("That collection no longer exists");
     Collection c = *found;
-    if (rules.value(QStringLiteral("enabled")).toBool()) {
-        CollectionRules r;
-        r.platform = rules.value(QStringLiteral("platform")).toString();
-        r.installedOnly = rules.value(QStringLiteral("installedOnly")).toBool();
-        r.favoritesOnly = rules.value(QStringLiteral("favoritesOnly")).toBool();
-        r.statuses = rules.value(QStringLiteral("statuses")).toStringList();
-        r.tags = rules.value(QStringLiteral("tags")).toStringList();
-        r.matchAllTags = rules.value(QStringLiteral("matchAllTags")).toBool();
-        r.steamOwnership = rules.value(QStringLiteral("steam")).toStringList();
-        r.yearFrom = rules.value(QStringLiteral("yearFrom")).toInt();
-        r.yearTo = rules.value(QStringLiteral("yearTo")).toInt();
-        r.minRating = rules.value(QStringLiteral("minRating"), -1).toDouble();
-        r.playTimes = rules.value(QStringLiteral("playTimes")).toStringList();
-        r.lastPlayed = rules.value(QStringLiteral("lastPlayed")).toString();
-        r.achievements = rules.value(QStringLiteral("achievements")).toStringList();
-        c.rules = r;
-    } else {
-        c.rules.reset();
-    }
+    c.rules = rulesFromVariant(rules);
     c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
     c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
     if (c == *found)

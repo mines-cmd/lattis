@@ -41,6 +41,8 @@ private slots:
     void rulesIgnoreADeletedTag();
     void renamingATagUpdatesTheRules();
     void editRulesAndExceptions();
+    void countsMatchesOfUnsavedRules();
+    void countIgnoresUnknownTags();
     void savedFromTheMoreFilters();
     void editTurnsRulesOnAndOff();
     void steamAccounts();
@@ -809,6 +811,61 @@ void LibraryCollectionsTest::editRulesAndExceptions()
 
     QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
     QCOMPARE(library->store().collections().first(), c);
+}
+
+void LibraryCollectionsTest::countsMatchesOfUnsavedRules()
+{
+    auto library = openLibrary();
+    Collection c = named(QStringLiteral("fav"), QStringLiteral("Favorites"));
+    c.rules = CollectionRules{};
+    c.rules->favoritesOnly = true;
+    c.added = {"switch-pikmin-4"};
+    c.removed = {"steam-1145360"};
+    QCOMPARE(library->store().setCollection(c), QString());
+    const QString id = QStringLiteral("fav");
+    const int saved = library->collections().first().toMap().value("count").toInt();
+
+    // Unchanged rules count what the sidebar shows.
+    QVariantMap rules = library->collectionDetails(id);
+    QCOMPARE(library->countCollectionMatches(id, rules, {}, {}), saved);
+
+    // Rules off: only what was added by hand is left.
+    rules.insert("enabled", false);
+    QCOMPARE(library->countCollectionMatches(id, rules, {}, {}), 1);
+    QCOMPARE(library->countCollectionMatches(id, rules, {"switch-pikmin-4"}, {}), 0);
+
+    // A dropped left-out exception brings the game back when the rules match it.
+    rules.insert("enabled", true);
+    rules.insert("favoritesOnly", false);
+    const int everything = library->countCollectionMatches(id, rules, {}, {});
+    QCOMPARE(library->countCollectionMatches(id, rules, {}, {"steam-1145360"}), everything + 1);
+
+    // Narrower unsaved rules count fewer, without writing anything.
+    rules.insert("platform", QStringLiteral("switch"));
+    const int onSwitch = library->countCollectionMatches(id, rules, {}, {});
+    QVERIFY(onSwitch > 0 && onSwitch < everything);
+    QCOMPARE(library->store().collections().first(), c);
+
+    QCOMPARE(library->countCollectionMatches(QStringLiteral("nope"), rules, {}, {}), 0);
+}
+
+void LibraryCollectionsTest::countIgnoresUnknownTags()
+{
+    auto library = openLibrary();
+    Collection c = named(QStringLiteral("t"), QStringLiteral("T"));
+    c.rules = CollectionRules{};
+    QCOMPARE(library->store().setCollection(c), QString());
+    QVariantMap rules = library->collectionDetails(QStringLiteral("t"));
+    const int everything = library->countCollectionMatches(QStringLiteral("t"), rules, {}, {});
+    QVERIFY(everything > 0);
+
+    rules.insert("tags", QStringList{"Co-op"});
+    const int coOp = library->countCollectionMatches(QStringLiteral("t"), rules, {}, {});
+    QVERIFY(coOp > 0 && coOp < everything);
+
+    // A tag that doesn't exist is ignored, as the tag filter ignores it.
+    rules.insert("tags", QStringList{"No such tag"});
+    QCOMPARE(library->countCollectionMatches(QStringLiteral("t"), rules, {}, {}), everything);
 }
 
 void LibraryCollectionsTest::savedFromTheMoreFilters()

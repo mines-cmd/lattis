@@ -200,6 +200,8 @@ public:
     Q_INVOKABLE QVariantMap collectionDetails(const QString &id) const;
     Q_INVOKABLE QString editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
                                        const QStringList &dropRemoved);
+    Q_INVOKABLE int countCollectionMatches(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
+                                           const QStringList &dropRemoved) const;
     Q_INVOKABLE QString renameCollection(const QString &id, const QString &name);
     Q_INVOKABLE QString deleteCollection(const QString &id);
     Q_INVOKABLE QVariantList steamCollectionAccounts() const;
