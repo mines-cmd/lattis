@@ -17,7 +17,7 @@ MotionPopup {
     focus: true
     closePolicy: Popup.CloseOnPressOutsideParent
 
-    onOpened: root.forceActiveFocus(Qt.TabFocusReason)
+    onOpened: root.forceActiveFocus(Qt.PopupFocusReason)
 
     background: Surface {
         radius: Theme.filters.radius
