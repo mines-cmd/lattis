@@ -15,6 +15,7 @@ ColumnLayout {
 
     property string name
     property bool rulesOn: false
+    property string tab: "rules"
     property string platform
     property bool installedOnly: false
     property bool favoritesOnly: false
@@ -140,6 +141,7 @@ ColumnLayout {
         const d = Library.collectionDetails(collectionId)
         name = d.name ?? ""
         rulesOn = d.enabled ?? false
+        tab = "rules"
         platform = d.platform ?? ""
         installedOnly = d.installedOnly ?? false
         favoritesOnly = d.favoritesOnly ?? false
@@ -218,6 +220,39 @@ ColumnLayout {
         Layout.fillWidth: true
         color: Theme.gameEditor.hintColor
         wrapMode: Text.WordWrap
+    }
+
+    // A tab of games with a tick each. It takes the page's height when the tabs are there; without them
+    // it is as tall as its list, which the page then sizes the dialog by.
+    component ListPage: ColumnLayout {
+        id: page
+        property var games: []
+        property var drops: []
+        property string empty
+        property string hint
+        signal toggled(string id)
+
+        Layout.preferredHeight: root.rulesOn ? 0 : implicitHeight
+        spacing: Theme.layout.spacing
+
+        CheckList {
+            visible: page.games.length > 0
+            Layout.fillWidth: true
+            model: root.gameRows(page.games)
+            ticked: root.kept(page.games, page.drops)
+            maxListHeight: root.rulesOn ? page.height - pageHint.implicitHeight - page.spacing : Theme.collections.editListHeight
+            onToggled: id => page.toggled(id)
+        }
+        Hint {
+            visible: page.games.length === 0
+            text: page.empty
+        }
+        Hint {
+            id: pageHint
+            visible: page.games.length > 0
+            text: page.hint
+        }
+        Item { Layout.fillHeight: true }
     }
 
     component Group: ColumnLayout {
@@ -316,289 +351,288 @@ ColumnLayout {
         }
     }
 
-    Flickable {
-        id: form
+    TabRow {
+        visible: root.rulesOn
+        Layout.fillWidth: true
+        model: [
+            { id: "rules", name: qsTr("Rules") },
+            { id: "added", name: qsTr("Added by hand"), count: root.kept(root.added, root.dropAdded).length },
+            { id: "removed", name: qsTr("Left out"), count: root.kept(root.removed, root.dropRemoved).length },
+        ]
+        current: root.tab
+        onPicked: id => root.tab = id
+    }
+    Label {
+        visible: !root.rulesOn
+        text: qsTr("Games")
+        color: Theme.gameEditor.headingColor
+        font.weight: Theme.font.strongWeight
+    }
+
+    // The page sizes the dialog by the Rules page; with the rules off it is the list's own size.
+    StackLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.preferredHeight: formColumn.implicitHeight
-        contentHeight: formColumn.implicitHeight
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: SettingsScrollBar { id: formBar; trackless: true }
-        Keys.onEscapePressed: root.cancelled()
+        currentIndex: !root.rulesOn ? 1 : root.tab === "added" ? 1 : root.tab === "removed" ? 2 : 0
 
-        ColumnLayout {
-            id: formColumn
-            width: form.width - (formBar.visible ? formBar.thickness + Theme.layout.spacing : 0)
-            spacing: Theme.collections.editSectionGap
+        Flickable {
+            id: form
+            Layout.preferredHeight: root.rulesOn ? formColumn.implicitHeight : 0
+            contentHeight: formColumn.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: SettingsScrollBar { id: formBar; trackless: true }
+            Keys.onEscapePressed: root.cancelled()
 
             ColumnLayout {
-                visible: root.rulesOn
-                Layout.fillWidth: true
+                id: formColumn
+                width: form.width - (formBar.visible ? formBar.thickness + Theme.layout.spacing : 0)
                 spacing: Theme.collections.editSectionGap
 
-                Group {
-                    title: qsTr("Library")
+                ColumnLayout {
+                    visible: root.rulesOn
+                    Layout.fillWidth: true
+                    spacing: Theme.collections.editSectionGap
 
-                    Rule {
-                        label: qsTr("Platform")
-                        SettingsComboBox {
-                            Layout.fillWidth: true
-                            model: root.platformChoices.map(c => c.name)
-                            currentIndex: Math.max(0, root.platformChoices.findIndex(c => c.id === root.platform))
-                            onActivated: index => root.platform = root.platformChoices[index].id
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Only")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            multiple: true
-                            model: root.onlyChoices
-                            current: root.onlyPicked
-                            onPicked: id => root.pickOnly(id)
-                        }
-                    }
-                }
-                Group {
-                    title: qsTr("Progress")
+                    Group {
+                        title: qsTr("Library")
 
-                    Rule {
-                        label: qsTr("Status")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            multiple: true
-                            model: Library.statuses
-                            current: root.statuses
-                            onPicked: id => root.statuses = root.toggled(root.statuses, id)
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Play time")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            multiple: true
-                            model: root.playTimeModel
-                            current: root.playTimes
-                            onPicked: id => root.playTimes = root.toggled(root.playTimes, id)
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Last played")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            model: root.lastPlayedChoices
-                            current: root.lastPlayed
-                            onPicked: id => root.lastPlayed = id
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Achievements")
-                        tip: qsTr("Achievements are read from Steam; other games have none to earn.")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            multiple: true
-                            model: Library.achievementChoices
-                            current: root.achievements
-                            onPicked: id => root.achievements = root.toggled(root.achievements, id)
-                        }
-                    }
-                }
-                Group {
-                    title: qsTr("Details")
-
-                    Rule {
-                        label: qsTr("Released")
-                        tip: qsTr("Games with no year are left out while a year is set.")
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            SettingsTextField {
-                                Layout.preferredWidth: Theme.collections.editYearWidth
-                                placeholderText: qsTr("From")
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
-                                text: root.yearFrom > 0 ? String(root.yearFrom) : ""
-                                onTextEdited: root.yearFrom = text === "" ? 0 : parseInt(text)
-                            }
-                            Label {
-                                text: qsTr("to")
-                                color: Theme.gameEditor.hintColor
-                            }
-                            SettingsTextField {
-                                Layout.preferredWidth: Theme.collections.editYearWidth
-                                placeholderText: qsTr("To")
-                                inputMethodHints: Qt.ImhDigitsOnly
-                                validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
-                                text: root.yearTo > 0 ? String(root.yearTo) : ""
-                                onTextEdited: root.yearTo = text === "" ? 0 : parseInt(text)
-                            }
-                            Item { Layout.fillWidth: true }
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Rating")
-                        ChoiceChips {
-                            Layout.fillWidth: true
-                            model: root.ratingChoices
-                            current: root.minRating
-                            onPicked: id => root.minRating = id
-                        }
-                    }
-                    Rule {
-                        label: qsTr("Tags")
-                        visible: Library.tags.length > 0 || root.tags.length > 0
-
-                        Flow {
-                            visible: root.tags.length > 0
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            Repeater {
-                                model: root.tags
-
-                                FilterChip {
-                                    required property string modelData
-                                    text: modelData
-                                    tagColor: root.tagColor(modelData)
-                                    onClicked: root.tags = root.toggled(root.tags, modelData)
-                                    onRemoved: root.tags = root.toggled(root.tags, modelData)
-                                }
+                        Rule {
+                            label: qsTr("Platform")
+                            SettingsComboBox {
+                                Layout.fillWidth: true
+                                model: root.platformChoices.map(c => c.name)
+                                currentIndex: Math.max(0, root.platformChoices.findIndex(c => c.id === root.platform))
+                                onActivated: index => root.platform = root.platformChoices[index].id
                             }
                         }
-                        SettingsSearchField {
-                            id: tagSearch
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Theme.filters.tagSearchHeight
-                            placeholderText: qsTr("Search tags to add")
-                            onTextChanged: root.tagHighlight = 0
-                            Keys.onDownPressed: root.tagHighlight = Math.min(root.tagMatches.length - 1, root.tagHighlight + 1)
-                            Keys.onUpPressed: root.tagHighlight = Math.max(0, root.tagHighlight - 1)
-                            Keys.onReturnPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
-                            Keys.onEnterPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
-                            Keys.onEscapePressed: event => {
-                                event.accepted = text !== ""
-                                if (event.accepted)
-                                    clear()
-                            }
-                        }
-                        Label {
-                            visible: tagSearch.text.trim() !== "" && root.tagMatches.length === 0
-                            Layout.fillWidth: true
-                            wrapMode: Text.WordWrap
-                            text: qsTr("No other tag called \"%1\".").arg(tagSearch.text.trim())
-                            color: Theme.gameEditor.hintColor
-                        }
-                        Rectangle {
-                            visible: tagSearch.text.trim() !== "" && root.tagMatches.length > 0
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * Theme.tags.height
-                                                             + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2
-                            color: "transparent"
-                            radius: Theme.filters.sortRadius
-                            border.color: Theme.collections.editSectionRule
-                            clip: true
-
-                            ListView {
-                                id: matchList
-                                anchors.fill: parent
-                                anchors.margins: 1
-                                spacing: Theme.filters.tagSpacing
-                                model: root.tagMatches
-                                boundsBehavior: Flickable.StopAtBounds
-                                ScrollBar.vertical: SettingsScrollBar { trackless: true }
-
-                                delegate: AbstractButton {
-                                    id: match
-                                    required property var modelData
-                                    required property int index
-                                    width: matchList.width
-                                    leftPadding: Theme.layout.spacing / 2
-                                    rightPadding: Theme.layout.spacing
-                                    implicitHeight: Theme.tags.height
-                                    hoverEnabled: true
-                                    onClicked: root.addTag(modelData.name)
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-
-                                    background: Rectangle {
-                                        radius: Theme.filters.sortRadius
-                                        color: match.hovered || match.index === root.tagHighlight ? Theme.filters.sortHover : "transparent"
-                                    }
-                                    contentItem: RowLayout {
-                                        spacing: Theme.layout.spacing
-
-                                        TagChip {
-                                            name: match.modelData.name
-                                            plus: false
-                                            colorIndex: match.modelData.color
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: match.modelData.games
-                                            color: Theme.gameEditor.hintColor
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        RowLayout {
-                            visible: root.tags.length >= 2
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            Label {
-                                text: qsTr("Match")
-                                color: Theme.gameEditor.hintColor
-                            }
+                        Rule {
+                            label: qsTr("Only")
                             ChoiceChips {
-                                model: [{ id: "any", name: qsTr("Any") }, { id: "all", name: qsTr("All") }]
-                                current: root.matchAllTags ? "all" : "any"
-                                onPicked: id => root.matchAllTags = id === "all"
+                                Layout.fillWidth: true
+                                multiple: true
+                                model: root.onlyChoices
+                                current: root.onlyPicked
+                                onPicked: id => root.pickOnly(id)
+                            }
+                        }
+                    }
+                    Group {
+                        title: qsTr("Progress")
+
+                        Rule {
+                            label: qsTr("Status")
+                            ChoiceChips {
+                                Layout.fillWidth: true
+                                multiple: true
+                                model: Library.statuses
+                                current: root.statuses
+                                onPicked: id => root.statuses = root.toggled(root.statuses, id)
+                            }
+                        }
+                        Rule {
+                            label: qsTr("Play time")
+                            ChoiceChips {
+                                Layout.fillWidth: true
+                                multiple: true
+                                model: root.playTimeModel
+                                current: root.playTimes
+                                onPicked: id => root.playTimes = root.toggled(root.playTimes, id)
+                            }
+                        }
+                        Rule {
+                            label: qsTr("Last played")
+                            ChoiceChips {
+                                Layout.fillWidth: true
+                                model: root.lastPlayedChoices
+                                current: root.lastPlayed
+                                onPicked: id => root.lastPlayed = id
+                            }
+                        }
+                        Rule {
+                            label: qsTr("Achievements")
+                            tip: qsTr("Achievements are read from Steam; other games have none to earn.")
+                            ChoiceChips {
+                                Layout.fillWidth: true
+                                multiple: true
+                                model: Library.achievementChoices
+                                current: root.achievements
+                                onPicked: id => root.achievements = root.toggled(root.achievements, id)
+                            }
+                        }
+                    }
+                    Group {
+                        title: qsTr("Details")
+
+                        Rule {
+                            label: qsTr("Released")
+                            tip: qsTr("Games with no year are left out while a year is set.")
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing
+
+                                SettingsTextField {
+                                    Layout.preferredWidth: Theme.collections.editYearWidth
+                                    placeholderText: qsTr("From")
+                                    inputMethodHints: Qt.ImhDigitsOnly
+                                    validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
+                                    text: root.yearFrom > 0 ? String(root.yearFrom) : ""
+                                    onTextEdited: root.yearFrom = text === "" ? 0 : parseInt(text)
+                                }
+                                Label {
+                                    text: qsTr("to")
+                                    color: Theme.gameEditor.hintColor
+                                }
+                                SettingsTextField {
+                                    Layout.preferredWidth: Theme.collections.editYearWidth
+                                    placeholderText: qsTr("To")
+                                    inputMethodHints: Qt.ImhDigitsOnly
+                                    validator: RegularExpressionValidator { regularExpression: /[0-9]{0,4}/ }
+                                    text: root.yearTo > 0 ? String(root.yearTo) : ""
+                                    onTextEdited: root.yearTo = text === "" ? 0 : parseInt(text)
+                                }
+                                Item { Layout.fillWidth: true }
+                            }
+                        }
+                        Rule {
+                            label: qsTr("Rating")
+                            ChoiceChips {
+                                Layout.fillWidth: true
+                                model: root.ratingChoices
+                                current: root.minRating
+                                onPicked: id => root.minRating = id
+                            }
+                        }
+                        Rule {
+                            label: qsTr("Tags")
+                            visible: Library.tags.length > 0 || root.tags.length > 0
+
+                            Flow {
+                                visible: root.tags.length > 0
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing
+
+                                Repeater {
+                                    model: root.tags
+
+                                    FilterChip {
+                                        required property string modelData
+                                        text: modelData
+                                        tagColor: root.tagColor(modelData)
+                                        onClicked: root.tags = root.toggled(root.tags, modelData)
+                                        onRemoved: root.tags = root.toggled(root.tags, modelData)
+                                    }
+                                }
+                            }
+                            SettingsSearchField {
+                                id: tagSearch
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Theme.filters.tagSearchHeight
+                                placeholderText: qsTr("Search tags to add")
+                                onTextChanged: root.tagHighlight = 0
+                                Keys.onDownPressed: root.tagHighlight = Math.min(root.tagMatches.length - 1, root.tagHighlight + 1)
+                                Keys.onUpPressed: root.tagHighlight = Math.max(0, root.tagHighlight - 1)
+                                Keys.onReturnPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
+                                Keys.onEnterPressed: root.addTag(root.tagMatches[root.tagHighlight]?.name)
+                                Keys.onEscapePressed: event => {
+                                    event.accepted = text !== ""
+                                    if (event.accepted)
+                                        clear()
+                                }
+                            }
+                            Label {
+                                visible: tagSearch.text.trim() !== "" && root.tagMatches.length === 0
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: qsTr("No other tag called \"%1\".").arg(tagSearch.text.trim())
+                                color: Theme.gameEditor.hintColor
+                            }
+                            Rectangle {
+                                visible: tagSearch.text.trim() !== "" && root.tagMatches.length > 0
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.min(matchList.contentHeight, Theme.collections.editTagRows * Theme.tags.height
+                                                                 + (Theme.collections.editTagRows - 1) * matchList.spacing) + 2
+                                color: "transparent"
+                                radius: Theme.filters.sortRadius
+                                border.color: Theme.collections.editSectionRule
+                                clip: true
+
+                                ListView {
+                                    id: matchList
+                                    anchors.fill: parent
+                                    anchors.margins: 1
+                                    spacing: Theme.filters.tagSpacing
+                                    model: root.tagMatches
+                                    boundsBehavior: Flickable.StopAtBounds
+                                    ScrollBar.vertical: SettingsScrollBar { trackless: true }
+
+                                    delegate: AbstractButton {
+                                        id: match
+                                        required property var modelData
+                                        required property int index
+                                        width: matchList.width
+                                        leftPadding: Theme.layout.spacing / 2
+                                        rightPadding: Theme.layout.spacing
+                                        implicitHeight: Theme.tags.height
+                                        hoverEnabled: true
+                                        onClicked: root.addTag(modelData.name)
+                                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                                        background: Rectangle {
+                                            radius: Theme.filters.sortRadius
+                                            color: match.hovered || match.index === root.tagHighlight ? Theme.filters.sortHover : "transparent"
+                                        }
+                                        contentItem: RowLayout {
+                                            spacing: Theme.layout.spacing
+
+                                            TagChip {
+                                                name: match.modelData.name
+                                                plus: false
+                                                colorIndex: match.modelData.color
+                                            }
+                                            Item { Layout.fillWidth: true }
+                                            Label {
+                                                text: match.modelData.games
+                                                color: Theme.gameEditor.hintColor
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            RowLayout {
+                                visible: root.tags.length >= 2
+                                Layout.fillWidth: true
+                                spacing: Theme.layout.spacing
+
+                                Label {
+                                    text: qsTr("Match")
+                                    color: Theme.gameEditor.hintColor
+                                }
+                                ChoiceChips {
+                                    model: [{ id: "any", name: qsTr("Any") }, { id: "all", name: qsTr("All") }]
+                                    current: root.matchAllTags ? "all" : "any"
+                                    onPicked: id => root.matchAllTags = id === "all"
+                                }
                             }
                         }
                     }
                 }
             }
+        }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-                visible: root.added.length > 0
-
-                Label {
-                    text: root.rulesOn ? qsTr("Added by hand") : qsTr("Games")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                }
-                CheckList {
-                    Layout.fillWidth: true
-                    model: root.gameRows(root.added)
-                    ticked: root.kept(root.added, root.dropAdded)
-                    maxListHeight: Theme.collections.editListHeight
-                    onToggled: id => root.dropAdded = root.toggled(root.dropAdded, id)
-                }
-                Hint { text: qsTr("Uncheck a game to take it out of the collection.") }
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-                visible: root.rulesOn && root.removed.length > 0
-
-                Label {
-                    text: qsTr("Left out")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                }
-                CheckList {
-                    Layout.fillWidth: true
-                    model: root.gameRows(root.removed)
-                    ticked: root.kept(root.removed, root.dropRemoved)
-                    maxListHeight: Theme.collections.editListHeight
-                    onToggled: id => root.dropRemoved = root.toggled(root.dropRemoved, id)
-                }
-                Hint { text: qsTr("Uncheck a game to let the rules include it again.") }
-            }
+        ListPage {
+            games: root.added
+            drops: root.dropAdded
+            empty: root.rulesOn ? qsTr("No games were added by hand.") : qsTr("No games.")
+            hint: qsTr("Uncheck a game to take it out of the collection.")
+            onToggled: id => root.dropAdded = root.toggled(root.dropAdded, id)
+        }
+        ListPage {
+            games: root.removed
+            drops: root.dropRemoved
+            empty: qsTr("No games are left out.")
+            hint: qsTr("Uncheck a game to let the rules include it again.")
+            onToggled: id => root.dropRemoved = root.toggled(root.dropRemoved, id)
         }
     }
 

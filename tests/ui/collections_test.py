@@ -135,7 +135,7 @@ SCENARIOS += [
                + OPEN_COLL + "expect Faves now\n", None)], with_collections),
     Scenario("Edit collection lists the exceptions, drops one, and Undo puts it back",
              [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Added by hand\n"
-               + "expect Left out\nexpect Hades\nclick Hades\nclick Save\nwait 600\n"
+               + "expect Left out\nexpect-not Hades\nclick Left out\nwait 300\nexpect Hades\nclick Hades\nclick Save\nwait 600\n"
                + "expect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect Hades\nexpect Mario Tennis Aces\nexpect Pikmin 4\nexpect 3 games\n"
                + "key Ctrl+Z\nwait 600\nexpect-not Hades\nexpect 2 games\n", None)], with_ruled),
@@ -144,7 +144,7 @@ SCENARIOS += [
                + "click Save\nwait 600\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect 1 game\nexpect Pikmin 4\nexpect-not Mario Tennis Aces\n", None)], with_ruled),
     Scenario("Cancel in Edit collection changes nothing",
-             [(FIRST + OPEN_COLL + EDIT + "click Hades\nclick Cancel\nwait 500\n" + OPEN_COLL
+             [(FIRST + OPEN_COLL + EDIT + "click Left out\nwait 300\nclick Hades\nclick Cancel\nwait 500\n" + OPEN_COLL
                + "click Faves\nwait 500\nexpect 2 games\nexpect-not Hades\n", None)], with_ruled),
 ]
 
@@ -194,6 +194,36 @@ SCENARIOS += [
                + "click Racing\nwait 400\nexpect-not Match\nclick Save\nwait 600\n", None),
               ("expect Leave the collection\n" + OPEN_COLL + "key Escape\nwait 400\n" + EDIT
                + "expect-not Match\nexpect Search tags to add\n", None)], with_tagged),
+]
+
+TABS = "expect Rules\nexpect Added by hand\nexpect Left out\nexpect Library\n"
+LEFT_HINT = "expect Uncheck a game to let the rules include it again.\n"
+ADDED_HINT = "expect Uncheck a game to take it out of the collection.\n"
+
+SCENARIOS += [
+    Scenario("Edit collection's tabs switch between the rules and the two lists of exceptions",
+             [(FIRST + OPEN_COLL + EDIT + TABS
+               + "click Left out\nwait 300\nexpect Hades\nexpect-not Library\n" + LEFT_HINT
+               + "click Added by hand\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
+               + "click Rules\nwait 300\nexpect Library\nexpect-not Uncheck a game to take it out of the collection.\n", None)], with_ruled),
+    Scenario("Edit collection's tab counts follow the ticks, and the footer count follows them too",
+             [(FIRST + OPEN_COLL + EDIT + "expect 2 games match\nclick Left out\nwait 300\nclick Hades\nwait 400\n"
+               + "expect 3 games match\nexpect 0\nclick Added by hand\nwait 300\nclick Pikmin 4\nwait 400\n"
+               + "expect 2 games match\nclick Cancel\nwait 500\n", None)], with_ruled),
+    Scenario("Edit collection's tabs follow the keyboard: Tab reaches the open one after the switch, arrows change the tab",
+             [(FIRST + OPEN_COLL + EDIT + "key Tab\nkey Tab\nkey Right\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
+               + "key Right\nwait 300\nexpect Hades\n" + LEFT_HINT
+               + "key Left\nkey Left\nwait 300\nexpect Library\n", None)], with_ruled),
+    Scenario("Edit collection with Auto-update off has no tabs, just the Games, and turning it on again keeps the rules",
+             [(FIRST + OPEN_COLL + EDIT + "toggle Auto-update\nwait 300\nexpect Games\nexpect Pikmin 4\n" + ADDED_HINT
+               + "expect-not Rules\nexpect-not Left out\nexpect-not Library\n"
+               + "toggle Auto-update\nwait 300\nexpect Rules\nexpect Left out\nexpect Library\nexpect-not Games\n"
+               + "click Added by hand\nwait 300\nexpect Pikmin 4\nclick Cancel\nwait 400\n", None)], with_ruled),
+    Scenario("Edit collection's tab with nothing in it says so",
+             [(FIRST + OPEN_COLL + "expect Nothing yet\nclick Nothing yet\nwait 400\nkey Menu\nwait 400\nclick Edit\nwait 600\n"
+               + "toggle Auto-update\nwait 300\nclick Left out\nwait 300\n"
+               + "expect No games are left out.\nclick Added by hand\nwait 300\nexpect No games were added by hand.\n", None)],
+             with_collections),
 ]
 
 IMPORT = OPEN_COLL + "click Import from Steam\nwait 700\nexpect Import collections from Steam\n"
