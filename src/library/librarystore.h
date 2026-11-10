@@ -1,5 +1,6 @@
 #pragma once
 
+#include "artimage.h"
 #include "librarycache.h"
 #include "libraryversion.h"
 #include "heroicmerge.h"
@@ -83,8 +84,8 @@ struct ArtShrinkJob
     QString path;
     QString temporary;
     qint64 modified = 0;
-    QSize before;
-    QSize after;
+    ArtImage::Header before;
+    ArtImage::Header after;
     QString error;
     bool changed = true;
 };

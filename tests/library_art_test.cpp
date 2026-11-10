@@ -2,6 +2,7 @@
 
 #include <QImage>
 #include <QImageReader>
+#include <QRandomGenerator>
 #include <QSignalSpy>
 
 // Finding art that is larger than the app shows it (see ArtImage::maxSide()), and shrinking it.
@@ -18,6 +19,7 @@ private slots:
     void foundAtLoadFromTheCache();
     void oversizedArtIsShrunkInItsFormatKeepingTransparency();
     void logoMarginsAreTrimmedOnce();
+    void pngTextIsStripped();
     void artWithinTheLimitIsNotTouched();
     void shownGameWaitsUntilTheSelectionMoves();
     void readOnlyLibraryIsLeftAlone();
@@ -187,6 +189,28 @@ void LibraryArtTest::logoMarginsAreTrimmedOnce()
     file.close();
     Library again(m_data, m_cache);
     QVERIFY(again.store().artToShrink(id).isEmpty());
+}
+
+void LibraryArtTest::pngTextIsStripped()
+{
+    const QString id = QStringLiteral("switch-pikmin-4");
+    const QString path = m_data + QStringLiteral("/art/") + id + QStringLiteral("/cover.png");
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QImage image(60, 90, QImage::Format_RGB32);
+    image.fill(Qt::red);
+    // Random, so compression can't bring it under the limit.
+    QByteArray noise(ArtImage::kMaxPngText * 2, Qt::Uninitialized);
+    QRandomGenerator(7).fillRange(reinterpret_cast<quint32 *>(noise.data()), noise.size() / 4);
+    image.setText(QStringLiteral("XML:com.adobe.xmp"), QString::fromLatin1(noise.toBase64()));
+    QVERIFY(image.save(path));
+    QVERIFY(ArtImage::readHeader(path).pngText > ArtImage::kMaxPngText);
+    QCOMPARE(ArtImage::readHeader(path).size, QSize(60, 90));
+
+    auto library = openLibrary();
+    QTRY_COMPARE(ArtImage::readHeader(path).pngText, 0);
+    QCOMPARE(ArtImage::readHeader(path).size, QSize(60, 90));
+    QCOMPARE(QImage(path).pixel(5, 5), QColor(Qt::red).rgb());
+    QTRY_VERIFY(oversized(*library, id).isEmpty());
 }
 
 void LibraryArtTest::artWithinTheLimitIsNotTouched()

@@ -163,7 +163,8 @@ struct ArtSet
     bool operator==(const ArtSet &) const = default;
 };
 
-// Which of an art set's files were over ArtImage::maxSide() when the scan read their headers.
+// Which of an art set's files were over ArtImage::maxSide(), or carried over ArtImage::kMaxPngText of
+// PNG text, when the scan read their headers.
 // Valid only while `art` equals the game's current ArtSet.
 struct ArtCheck
 {

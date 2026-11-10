@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QBuffer>
 #include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
@@ -40,6 +41,72 @@ QRect visibleBounds(const QImage &image)
         return image.rect();
     return QRect(QPoint(left, top), QPoint(right, bottom));
 }
+
+constexpr char kPngSignature[] = "\x89PNG\r\n\x1a\n";
+constexpr qsizetype kPngSignatureSize = 8;
+
+quint32 bigEndian(const char *bytes)
+{
+    const auto *b = reinterpret_cast<const uchar *>(bytes);
+    return quint32(b[0]) << 24 | quint32(b[1]) << 16 | quint32(b[2]) << 8 | quint32(b[3]);
+}
+
+bool isPngText(QByteArrayView type)
+{
+    return type == "tEXt" || type == "zTXt" || type == "iTXt";
+}
+
+// Chunk by chunk, so a damaged file is copied as far as it goes and the decoder reports the rest.
+QByteArray stripPngText(const QByteArray &png)
+{
+    if (!png.startsWith(QByteArrayView(kPngSignature, kPngSignatureSize)))
+        return png;
+    QByteArray out = png.first(kPngSignatureSize);
+    qsizetype at = kPngSignatureSize;
+    while (at + 12 <= png.size()) {
+        const qsizetype chunk = 12 + qsizetype(bigEndian(png.constData() + at));
+        if (chunk < 12 || at + chunk > png.size())
+            break;
+        if (!isPngText(QByteArrayView(png.constData() + at + 4, 4)))
+            out.append(png.constData() + at, chunk);
+        at += chunk;
+    }
+    out.append(png.sliced(at));
+    return out;
+}
+}
+
+Header readHeader(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    if (file.read(kPngSignatureSize) != QByteArrayView(kPngSignature, kPngSignatureSize)) {
+        return {QImageReader(path).size()};
+    }
+    Header header;
+    while (true) {
+        const QByteArray head = file.read(8);
+        if (head.size() < 8)
+            break;
+        const qint64 length = bigEndian(head.constData());
+        const QByteArrayView type(head.constData() + 4, 4);
+        if (type == "IHDR" && length >= 8) {
+            const QByteArray ihdr = file.read(8);
+            if (ihdr.size() == 8)
+                header.size = QSize(int(bigEndian(ihdr.constData())), int(bigEndian(ihdr.constData() + 4)));
+            if (!file.seek(file.pos() + length - 8 + 4))
+                break;
+            continue;
+        }
+        if (type == "IDAT" || type == "IEND")
+            break;
+        if (isPngText(type))
+            header.pngText += length;
+        if (!file.seek(file.pos() + length + 4))
+            break;
+    }
+    return header;
 }
 
 void allowLargeImages()
@@ -64,18 +131,30 @@ QString copy(const QString &source, const QString &target, const QString &kind, 
     if (changed)
         *changed = true;
     const QString name = QFileInfo(source).fileName();
-    QImageReader reader(source);
+    QFile in(source);
+    if (!in.open(QIODevice::ReadOnly))
+        return tr("Could not copy %1").arg(name);
+    const QByteArray original = in.readAll();
+    in.close();
+    QByteArray bytes = stripPngText(original);
+    const bool stripText = original.size() - bytes.size() > kMaxPngText;
+    QBuffer buffer(&bytes);
+    QImageReader reader(&buffer);
     const QSize size = reader.size();
     const int limit = maxSide(kind);
     const bool trim = kind == u"logo";
     const bool oversized = size.isValid() && (size.width() > limit || size.height() > limit);
     const auto copyAsIs = [&] {
-        if (changed) {
+        if (changed && !stripText) {
             *changed = false;
             return QString();
         }
         QFile::remove(target);
-        return QFile::copy(source, target) ? QString() : tr("Could not copy %1").arg(name);
+        QFile out(target);
+        if (out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size() && out.flush())
+            return QString();
+        out.remove();
+        return tr("Could not copy %1").arg(name);
     };
     if (!size.isValid() || (!oversized && !trim))
         return copyAsIs();

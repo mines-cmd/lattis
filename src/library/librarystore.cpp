@@ -18,6 +18,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QImageReader>
+#include <QLocale>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QTimeZone>
@@ -216,9 +217,9 @@ QHash<QString, ArtCheck> checkArt(const QHash<QString, ArtSet> &art, const QHash
         for (qsizetype i = 0; i < kArtKinds.size(); ++i) {
             if (paths[i].isEmpty())
                 continue;
-            const QSize size = QImageReader(paths[i]).size();
+            const ArtImage::Header header = ArtImage::readHeader(paths[i]);
             const int limit = ArtImage::maxSide(kArtKinds.at(i));
-            if (size.width() > limit || size.height() > limit)
+            if (header.size.width() > limit || header.size.height() > limit || header.pngText > ArtImage::kMaxPngText)
                 check.oversized.append(kArtKinds.at(i));
         }
         out.insert(it.key(), check);
@@ -3155,10 +3156,10 @@ bool LibraryStore::shrinkArt(const QString &id, const QString &kind)
     job.modified = QFileInfo(job.path).lastModified(QTimeZone::UTC).toMSecsSinceEpoch();
     m_shrink.setFuture(QtConcurrent::run([job]() mutable {
         ArtImage::allowLargeImages();
-        job.before = QImageReader(job.path).size();
+        job.before = ArtImage::readHeader(job.path);
         job.error = ArtImage::copy(job.path, job.temporary, job.kind, &job.changed);
         if (job.error.isEmpty())
-            job.after = job.changed ? QImageReader(job.temporary).size() : job.before;
+            job.after = job.changed ? ArtImage::readHeader(job.temporary) : job.before;
         return job;
     }));
     return true;
@@ -3209,10 +3210,12 @@ void LibraryStore::onShrinkFinished()
     const ArtSet art = scanArtFolder(QFileInfo(job.path).absolutePath());
     settle(art);
     m_snapshot.art.insert(job.id, art);
-    qCInfo(lcLibrary).noquote() << QStringLiteral("art/%1/%2: %3×%4 → %5×%6")
-                                       .arg(job.id, QFileInfo(job.path).fileName())
-                                       .arg(job.before.width()).arg(job.before.height())
-                                       .arg(job.after.width()).arg(job.after.height());
+    QString change = QStringLiteral("%1×%2 → %3×%4")
+                         .arg(job.before.size.width()).arg(job.before.size.height())
+                         .arg(job.after.size.width()).arg(job.after.size.height());
+    if (job.before.pngText > ArtImage::kMaxPngText)
+        change += QStringLiteral(", %1 of PNG text removed").arg(QLocale::c().formattedDataSize(job.before.pngText));
+    qCInfo(lcLibrary).noquote() << QStringLiteral("art/%1/%2: %3").arg(job.id, QFileInfo(job.path).fileName(), change);
     changedHere();
     emit artShrunk();
 }
