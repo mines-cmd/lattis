@@ -190,6 +190,7 @@ constexpr Setting kSettings[] = {
     integer("layout", "margin", "16", 0, 200, "Distance from the top of the window to the logo and search box"),
     integer("layout", "spacing", "8", 0, 100,
             "Gap below the logo/search row; the rail, list and hero start there"),
+    integer("layout", "spacing_small", "4", 0, 50, "Tighter gap for items that belong together: icon and label, rows in a list, tags"),
     integer("layout", "toolbar_height", "40", 16, 200, "Height of the logo and search box"),
     integer("layout", "border_width", "2", 0, 20, "Outline thickness for everything with an outline; 0 = no outlines"),
     integer("layout", "hairline_width", "1", 0, 10, "Thin outlines: swatches, small tags, a selected thumbnail; 0 = none"),
