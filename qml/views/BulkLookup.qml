@@ -267,17 +267,88 @@ ApplicationWindow {
         font.pixelSize: Theme.gameEditor.hintFontSize
     }
 
-    component SideHeading: RowLayout {
-        property alias text: headingLabel.text
+    property var foldedSections: ({})
+
+    component SideCard: Surface {
+        default property alias content: inner.data
+        readonly property int inset: Theme.layout.spacing / 2 + Theme.layout.borderWidth
+
+        radius: Theme.radius.large
+        fill: Theme.gameEditor.cardBackground
+        fillEnd: Theme.gameEditor.cardBackgroundEnd
+        direction: Theme.gameEditor.gradientDirection
+        border.color: Theme.gameEditor.cardBorder
+        border.width: Theme.layout.borderWidth
+
+        ColumnLayout {
+            id: inner
+            anchors.fill: parent
+            anchors.margins: parent.inset
+            spacing: Theme.layout.spacing
+        }
+    }
+
+    component SideSection: ColumnLayout {
+        id: section
+
+        property string title
         property string note
+        default property alias body: unfold.content
+        readonly property bool folded: root.foldedSections[title] === true
+        property alias bodySpacing: unfold.spacing
+
         Layout.fillWidth: true
-        Layout.leftMargin: Theme.layout.spacing
-        Layout.rightMargin: Theme.layout.spacing
-        Layout.topMargin: Theme.layout.spacing / 2
-        Layout.bottomMargin: Theme.layout.spacing * 0.75
-        Caption { id: headingLabel }
-        Item { Layout.fillWidth: true }
-        Muted { visible: note !== ""; text: note }
+        spacing: 2
+
+        AbstractButton {
+            id: foldButton
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.layout.spacing / 2
+            Layout.rightMargin: Theme.layout.spacing
+            Layout.topMargin: Theme.layout.spacing / 2
+            Layout.bottomMargin: Theme.layout.spacing / 2
+            implicitHeight: headingRow.implicitHeight
+            hoverEnabled: true
+            focusPolicy: Qt.StrongFocus
+            onClicked: {
+                const next = Object.assign({}, root.foldedSections)
+                next[section.title] = !section.folded
+                root.foldedSections = next
+            }
+
+            HoverHandler { cursorShape: Qt.PointingHandCursor }
+            ToolTip.visible: hovered
+            ToolTip.delay: Theme.tooltip.delay
+            ToolTip.text: section.folded ? qsTr("Expand") : qsTr("Collapse")
+
+            background: Rectangle {
+                radius: Theme.radius.small
+                color: "transparent"
+                border.color: Theme.controls.inputBorderFocus
+                border.width: foldButton.visualFocus ? Theme.controls.inputBorderWidth : 0
+            }
+            contentItem: RowLayout {
+                id: headingRow
+                spacing: Theme.layout.spacing / 2
+
+                Icon {
+                    path: Icons.chevronRight
+                    size: Theme.gameEditor.hintFontSize + 2
+                    color: Theme.gameEditor.hintColor
+                    rotation: section.folded ? 0 : 90
+                    Behavior on rotation { enabled: Motion.on; MotionNumber {} }
+                }
+                Caption { text: section.title }
+                Item { Layout.fillWidth: true }
+                Muted { visible: section.note !== ""; text: section.note }
+            }
+        }
+        Unfold {
+            id: unfold
+            Layout.fillWidth: true
+            open: !section.folded
+            spacing: 2
+        }
     }
 
     BulkTagsPopup {
@@ -888,12 +959,11 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     spacing: Theme.gameEditor.columnSpacing / 2
 
-                    ColumnLayout {
+                    SideCard {
                         Layout.preferredWidth: Theme.gameEditor.bulkSidebarWidth
                         Layout.minimumWidth: Theme.gameEditor.bulkSidebarWidth
                         Layout.maximumWidth: Theme.gameEditor.bulkSidebarWidth
                         Layout.fillHeight: true
-                        spacing: Theme.layout.spacing
 
                         Flickable {
                             id: sidebar
@@ -909,10 +979,8 @@ ApplicationWindow {
                                 width: sidebar.width - scrollGap
                                 spacing: Theme.gameEditor.rowSpacing
 
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    SideHeading { text: qsTr("Show"); Layout.topMargin: 0 }
+                                SideSection {
+                                    title: qsTr("Show")
                                     SegmentedToggle {
                                         Layout.fillWidth: true
                                         Layout.leftMargin: Theme.layout.spacing / 2
@@ -947,15 +1015,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                ColumnLayout {
+                                SideSection {
                                     visible: !lookupModel.includeComplete
-                                    Layout.fillWidth: true
-                                    spacing: 2
+                                    title: lookupModel.replaceExisting ? qsTr("Look for") : qsTr("Missing")
+                                    note: lookupModel.replaceExisting ? qsTr("set or not") : ""
 
-                                    SideHeading {
-                                        text: lookupModel.replaceExisting ? qsTr("Look for") : qsTr("Missing")
-                                        note: lookupModel.replaceExisting ? qsTr("set or not") : ""
-                                    }
                                     Repeater {
                                         model: [{ id: "description", name: qsTr("Description") }, { id: "year", name: qsTr("Year") },
                                                 { id: "rating", name: qsTr("Rating") }, { id: "art", name: qsTr("Art") }]
@@ -974,11 +1038,8 @@ ApplicationWindow {
                                     }
                                 }
 
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-
-                                    SideHeading { text: qsTr("Platform") }
+                                SideSection {
+                                    title: qsTr("Platform")
                                     BulkOption {
                                         Layout.fillWidth: true
                                         radio: true
@@ -1004,15 +1065,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                ColumnLayout {
+                                SideSection {
                                     visible: lookupModel.allTags.length > 0
-                                    Layout.fillWidth: true
-                                    spacing: 2
+                                    title: qsTr("Tags")
+                                    note: lookupModel.tags.length > 0 ? qsTr("any of %1").arg(lookupModel.tags.length) : ""
 
-                                    SideHeading {
-                                        text: qsTr("Tags")
-                                        note: lookupModel.tags.length > 0 ? qsTr("any of %1").arg(lookupModel.tags.length) : ""
-                                    }
                                     AbstractButton {
                                         id: tagsButton
                                         Layout.fillWidth: true
@@ -1330,11 +1387,15 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     spacing: Theme.gameEditor.columnSpacing / 2
 
-                    Flickable {
-                        id: reviewSidebar
+                    SideCard {
                         Layout.preferredWidth: Theme.gameEditor.bulkSidebarWidth
                         Layout.minimumWidth: Theme.gameEditor.bulkSidebarWidth
                         Layout.maximumWidth: Theme.gameEditor.bulkSidebarWidth
+                        Layout.fillHeight: true
+
+                    Flickable {
+                        id: reviewSidebar
+                        Layout.fillWidth: true
                         Layout.fillHeight: true
                         contentHeight: reviewColumn.implicitHeight
                         clip: true
@@ -1381,11 +1442,8 @@ ApplicationWindow {
                                 }
                             }
 
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                SideHeading { text: qsTr("Show") }
+                            SideSection {
+                                title: qsTr("Show")
                                 Repeater {
                                     model: [{ id: "", count: "all", name: qsTr("All results") },
                                             { id: "matched", name: qsTr("Matched") },
@@ -1410,11 +1468,8 @@ ApplicationWindow {
                                 }
                             }
 
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                SideHeading { text: qsTr("For every match") }
+                            SideSection {
+                                title: qsTr("For every match")
                                 CategoryGroup {
                                     title: qsTr("Replace existing")
                                     tip: qsTr("IGDB's values and SteamGridDB's art in place of the games' own")
@@ -1439,11 +1494,9 @@ ApplicationWindow {
                                 }
                             }
 
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: Theme.layout.spacing
-
-                                SideHeading { text: qsTr("View") }
+                            SideSection {
+                                title: qsTr("View")
+                                bodySpacing: Theme.layout.spacing
                                 SettingsButton {
                                     Layout.fillWidth: true
                                     Layout.leftMargin: Theme.layout.spacing / 2
@@ -1465,6 +1518,7 @@ ApplicationWindow {
                                 }
                             }
                         }
+                    }
                     }
 
                     ListView {
