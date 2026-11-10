@@ -69,6 +69,9 @@ private slots:
     void linuxGameSkipsWindowsOnlyEntries();
     void protonGameExpandsIntoItsPrefix();
     void protonPrefixFindsPathsWhateverTheirCase();
+    void wineUserPicksTheUserFolder();
+    void storeFolderComesBeforeTheManifest();
+    void storeFolderStaysInsideItsPrefix();
     void missingPathsAreSkipped();
     void globsExpandWithoutFollowingLinks();
     void doubleStarMatchesZeroOrMoreFolders();
@@ -350,6 +353,83 @@ void SavesFinderTest::noMatchNoPaths()
     const Found found = find(matcher, {q}, m_env);
     QVERIFY(found.matched.isEmpty());
     QVERIFY(found.paths.isEmpty());
+}
+
+void SavesFinderTest::wineUserPicksTheUserFolder()
+{
+    SavesIndex index;
+    index.games << game("Wined", {"<winAppData>/Wined", "<home>/Documents/Wined", "<winDrive>/users/<osUserName>/Wined"});
+    const Matcher matcher(index);
+    const QString steam = m_prefix + "/drive_c/users/steamuser";
+    const QString real = m_prefix + "/drive_c/users/someone";
+    touch(steam + "/AppData/Roaming/Wined/steam.sav");
+    touch(steam + "/Documents/Wined/steam.sav");
+    touch(real + "/AppData/Roaming/Wined/real.sav");
+    touch(real + "/Documents/Wined/real.sav");
+
+    Query q;
+    q.title = "Wined";
+    q.prefix = m_prefix;
+    QCOMPARE(find(matcher, {q}, m_env).paths,
+             (QStringList{steam + "/AppData/Roaming/Wined", steam + "/Documents/Wined"}));
+
+    q.wineUser = "someone";
+    QCOMPARE(find(matcher, {q}, m_env).paths,
+             (QStringList{real + "/AppData/Roaming/Wined", real + "/Documents/Wined"}));
+}
+
+void SavesFinderTest::storeFolderComesBeforeTheManifest()
+{
+    const SavesIndex index = fixtureIndex();
+    const Matcher matcher(index);
+    const QString steam = m_prefix + "/drive_c/users/steamuser";
+    const QString real = m_prefix + "/drive_c/users/someone";
+    touch(steam + "/AppData/Roaming/Celeste/Saves/steam.celeste");
+    touch(real + "/AppData/Roaming/Celeste/Saves/real.celeste");
+    touch(real + "/AppData/LocalLow/Studio/Celeste/slot.sav");
+
+    Query q;
+    q.id = "epic-app";
+    q.title = "Celeste";
+    q.prefix = m_prefix;
+    q.wineUser = "someone";
+    q.storeFolders = {real + "/AppData/LocalLow/Studio/Celeste"};
+    q.saveFolder = m_env.home + "/mine";
+    touch(m_env.home + "/mine/own.sav");
+
+    // The title would match the manifest, but Epic's folder is used instead; the user's own paths still count.
+    Found found = find(matcher, {q}, m_env);
+    QCOMPARE(found.match, Match::Epic);
+    QVERIFY(found.matched.isEmpty());
+    QCOMPARE(found.paths, (QStringList{real + "/AppData/LocalLow/Studio/Celeste", m_env.home + "/mine"}));
+
+    // No store folder: the manifest, in the same user's folder.
+    q.storeFolders.clear();
+    found = find(matcher, {q}, m_env);
+    QCOMPARE(found.match, Match::Title);
+    QCOMPARE(found.paths, (QStringList{real + "/AppData/Roaming/Celeste/Saves", m_env.home + "/mine"}));
+
+    // A store folder that isn't there yet doesn't bring the manifest back.
+    q.storeFolders = {real + "/AppData/LocalLow/Nobody"};
+    found = find(matcher, {q}, m_env);
+    QCOMPARE(found.match, Match::Epic);
+    QCOMPARE(found.paths, QStringList{m_env.home + "/mine"});
+}
+
+void SavesFinderTest::storeFolderStaysInsideItsPrefix()
+{
+    const SavesIndex index = fixtureIndex();
+    const Matcher matcher(index);
+    touch(m_prefix + "/drive_c/users/steamuser/documents/my games/Cased/A.sav");
+
+    Query q;
+    q.prefix = m_prefix;
+    q.storeFolders = {m_prefix + "/drive_c/users/steamuser/Documents/My Games/*"};
+    QCOMPARE(find(matcher, {q}, m_env).paths,
+             QStringList{m_prefix + "/drive_c/users/steamuser/documents/my games/Cased"});
+
+    q.storeFolders = {m_prefix + "/drive_c/users/steamuser", m_prefix + "/drive_c/../x", "relative/path"};
+    QVERIFY(find(matcher, {q}, m_env).paths.isEmpty());
 }
 
 QTEST_MAIN(SavesFinderTest)

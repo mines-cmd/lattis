@@ -11,7 +11,7 @@
 
 namespace SavesFinder {
 namespace {
-const QString kWineUser = QStringLiteral("steamuser");
+const QString kDefaultWineUser = QStringLiteral("steamuser");
 
 bool hasWildcard(const QString &segment)
 {
@@ -40,14 +40,15 @@ struct Context
     const SavesGame *game;
     bool windows;
     QString drive; // <prefix>/drive_c
-    QString user;  // …/users/steamuser
+    QString wineUserName;
+    QString user; // …/users/<wine user>
 
     QStringList values(const QString &name) const
     {
         if (name == QLatin1String("home"))
             return {windows ? user : env.home};
         if (name == QLatin1String("osUserName"))
-            return {windows ? kWineUser : env.user};
+            return {windows ? wineUserName : env.user};
         if (name == QLatin1String("storeUserId"))
             return {QStringLiteral("*")};
         if (name == QLatin1String("storeGameId"))
@@ -294,16 +295,24 @@ Found find(const Matcher &matcher, const QList<Query> &copies, const Env &env)
     QStringList paths;
     for (const Query &query : copies) {
         Match how = Match::None;
-        const SavesGame *game = matcher.find(query, &how);
+        const bool store = !query.storeFolders.isEmpty();
+        const SavesGame *game = store ? nullptr : matcher.find(query, &how);
         if (game && found.matched.isEmpty()) {
             found.matched = game->name;
             found.match = how;
+        } else if (store && found.match == Match::None) {
+            found.match = Match::Epic;
         }
 
-        Context ctx{env, query, game, !query.prefix.isEmpty(), {}, {}};
+        Context ctx{env, query, game, !query.prefix.isEmpty(), {}, {}, {}};
         if (ctx.windows) {
             ctx.drive = QDir::cleanPath(query.prefix) + QStringLiteral("/drive_c");
-            ctx.user = ctx.drive + QStringLiteral("/users/") + kWineUser;
+            ctx.wineUserName = query.wineUser.isEmpty() ? kDefaultWineUser : query.wineUser;
+            ctx.user = ctx.drive + QStringLiteral("/users/") + ctx.wineUserName;
+        }
+        for (const QString &folder : query.storeFolders) {
+            if (!tooBroad(folder, env, ctx))
+                addPaths(paths, folder, ctx.windows);
         }
         if (game) {
             for (const SavesPath &entry : game->paths) {

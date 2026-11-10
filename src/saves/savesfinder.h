@@ -28,12 +28,14 @@ struct Query
     int steamAppId = 0; // 0 = none
     QString savesGame;  // the manifest name the user chose
     QString baseDir;    // the game's install folder
-    QString prefix;     // its Proton prefix (…/pfx); empty = it runs natively
+    QString prefix;     // its Wine prefix (a Proton one ends in /pfx); empty = it runs natively
+    QString wineUser;   // the prefix's user folder; empty = steamuser
     QString saveFolder; // the user's own paths, `~` allowed
     QStringList savePaths;
+    QStringList storeFolders; // the store's own save folders, absolute globs already expanded; used instead of the manifest
 };
 
-enum class Match { None, SteamId, Title, Chosen };
+enum class Match { None, SteamId, Title, Chosen, Epic };
 
 struct Found
 {

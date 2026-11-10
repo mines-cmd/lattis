@@ -25,6 +25,7 @@ QString matchName(SavesFinder::Match match)
     case SavesFinder::Match::SteamId: return QStringLiteral("steam");
     case SavesFinder::Match::Title: return QStringLiteral("title");
     case SavesFinder::Match::Chosen: return QStringLiteral("chosen");
+    case SavesFinder::Match::Epic: return QStringLiteral("epic");
     }
     return {};
 }
