@@ -121,7 +121,10 @@ Item {
                         return index === 0 ? root.credits.slice(0, half) : root.credits.slice(half)
                     }
                     Layout.alignment: Qt.AlignTop
-                    Layout.fillWidth: index === 1
+                    Layout.fillWidth: true
+                    // Without an equal share, the left column takes its unwrapped width and leaves the
+                    // right one narrower than its longest word.
+                    Layout.preferredWidth: 1
                     columns: 2
                     columnSpacing: Theme.about.labelSpacing
                     rowSpacing: Theme.about.rowSpacing

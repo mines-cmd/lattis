@@ -1782,7 +1782,7 @@ constexpr Setting kSettings[] = {
     color("calendar", "picked_background", "@accent", "Behind the date the field holds"),
     color("calendar", "picked_text", "@on_accent", "The date the field holds"),
 
-    integer("about", "width", "480", 280, 1200, "Width of the dialog, at most the window's"),
+    integer("about", "width", "645", 280, 1200, "Width of the dialog, at most the window's"),
     integer("about", "close_size", "18", 8, 100, "The close button (×) in the top right corner"),
     integer("about", "close_margin", "16", 0, 100, "Distance from the close button to the dialog's corner"),
     color("about", "close_color", "@text_muted", "The close button"),
@@ -1802,7 +1802,7 @@ constexpr Setting kSettings[] = {
     color("about", "label_color", "@text_muted", "The credits' labels (Built with, Game info)"),
     integer("about", "label_spacing", "16", 0, 100, "Space between a credit's label and its links"),
     integer("about", "row_spacing", "6", 0, 100, "Space between the credits' rows"),
-    integer("about", "column_spacing", "32", 0, 200, "Space between the credits' two columns"),
+    integer("about", "column_spacing", "0", 0, 200, "Space between the credits' two columns"),
     color("about", "divider", "@border", "Line above the credits"),
 
     heading("settings_window", "Window"),
