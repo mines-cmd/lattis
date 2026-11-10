@@ -1110,7 +1110,7 @@ constexpr Setting kSettings[] = {
     color("media", "badge_text", "@text", "A clip's length"),
     integer("media", "badge_icon_size", "16", 0, 48, "The play icon before a clip's length; 0 hides it"),
     color("media", "favorite_badge_background", "#000000b3", "Behind the star on a favorite's thumbnail"),
-    color("media", "favorite_badge_icon", "@icon_button.icon_active", "The star on a favorite's thumbnail"),
+    color("media", "favorite_badge_icon", "@text", "The star on a favorite's thumbnail"),
     integer("media", "favorite_badge_size", "24", 0, 64, "Side of the badge with that star, in the thumbnail's top-right corner; 0 hides it"),
     heading("media", "Viewer"),
     integer("media", "viewer_margin", "48", 0, 400, "Space between the video and the window's left and right edges"),
