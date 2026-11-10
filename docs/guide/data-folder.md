@@ -12,6 +12,7 @@ Everything Lattis keeps lives in one folder, `~/.local/share/lattis/`. **Open** 
 | `library/tags.toml` | Your tags and their colors |
 | `library/games/` | One file per game, holding what you've set on it |
 | `library/history/` | Each game's play sessions, one file per game, made with its first session; `steam-seen.toml` holds the play time last seen in Steam, so only new play counts |
+| `library/media.toml` | The clips and screenshots you marked as favorites, by file path |
 | `library/roms/`, `library/steam.toml`, `library/heroic.toml` | The games found in your ROM folders, in Steam and in Heroic |
 | `art/<game>/` | Each game's hero, cover, logo and icon |
 

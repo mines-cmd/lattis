@@ -49,7 +49,7 @@ Typing in the main window starts a search, so the main window's shortcuts all us
 | Alt+Enter | Properties |
 | Menu or Shift+F10 | The game's menu (the selection's, with several selected) |
 
-With several games selected, Ctrl+D adds them to favorites, or removes them when every one is a favorite.
+With several games selected, Ctrl+D adds them to favorites, or removes them when every one is a favorite. In the clip and screenshot viewer, Ctrl+D marks the item shown instead.
 
 Open save folder, Open mod manager (with several managers it opens a menu of them), Steam properties, Hide and Uninstall have no keys at first; give them some on Settings → Keyboard if you use them often.
 

@@ -51,7 +51,9 @@ The labels and colors are theme settings: the `update_*`, `updating_*`, `install
 
 ## Clips and screenshots
 
-A Steam game's page (and a Proton game's, once it's added to Steam) shows your own Steam clips (Steam's Game Recording) and screenshots in a **Media** row under the description, above the tags, mixed together, newest first. A clip shows its length. Click one to open it in Lattis, or right-click it for **Show in folder**. Lattis only reads Steam's files; it never changes them.
+A Steam game's page (and a Proton game's, once it's added to Steam) shows your own Steam clips (Steam's Game Recording) and screenshots in a **Media** row under the description, above the tags, mixed together, newest first. A clip shows its length. Click one to open it in Lattis, or right-click it for **Add to favorites** (or **Remove from favorites**) and **Show in folder**. Lattis only reads Steam's files; it never changes them.
+
+- **Favorites:** mark the clips and screenshots you like with the star in the viewer's top bar, **Ctrl+D** while it is open, or the right-click menu. A favorite shows a small star in its tile's top right corner (`[media] favorite_badge_size` 0 hides it), and the Gallery's **Favorites only** filter lists just them. The mark is kept in `library/media.toml` by the file's path, so a file that is moved or deleted loses it.
 
 - **Stepping through:** the ‹ and › buttons at the viewer's sides, or Page Up and Page Down, go to the previous or next item in the row. On a screenshot, Left and Right do the same.
 - **Zoom:** on a screenshot, scroll the wheel to zoom toward the pointer (up to 8×) or use the slider in the picture's bottom right corner (it shows while the pointer moves over the picture), and drag to move the zoomed picture. `+` and `-` zoom from the middle and `0` or the magnifier beside the slider goes back to the whole picture; stepping to another item resets it.
