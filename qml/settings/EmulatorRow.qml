@@ -191,519 +191,524 @@ ColumnLayout {
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
         spacing: Theme.settingsWindow.rowPadding * 1.5
+        lazyContent: Component {
+            ColumnLayout {
+                spacing: details.spacing
 
-        EmulatorInstallTop {
-            visible: !root.own && (root.installing || root.installFailed || root.canInstall || root.byApp)
-            Layout.fillWidth: true
-            row: root
-        }
-
-        ColumnLayout {
-            visible: root.own
-            Layout.fillWidth: true
-            spacing: 6
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                SectionTitle {
+                EmulatorInstallTop {
+                    visible: !root.own && (root.installing || root.installFailed || root.canInstall || root.byApp)
                     Layout.fillWidth: true
-                    text: qsTr("Name")
+                    row: root
                 }
-                // The id, which the name isn't: renaming changes only what the app shows.
-                AbstractButton {
-                    id: idHelp
-                    hoverEnabled: true
-                    focusPolicy: Qt.NoFocus
-                    background: null
-                    contentItem: Icon {
-                        path: Icons.help
-                        size: Theme.controls.descriptionFontSize
-                        color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
-                    }
-                    ToolTip.visible: hovered
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: qsTr("Platforms and games refer to it as \"%1\", which stays when you rename it.").arg(root.emulator.id)
-                }
-            }
-            SettingsTextField {
-                id: nameField
-                Layout.fillWidth: true
-                implicitHeight: Theme.controls.inputHeight
-                text: root.emulator.name
-                onEditingFinished: {
-                    if (text.trim() === root.emulator.name)
-                        return
-                    root.save("name", text)
-                    if (root.error !== "")
-                        text = root.emulator.name
-                }
-                Connections {
-                    target: root
-                    function onEmulatorChanged() { if (!nameField.activeFocus) nameField.text = root.emulator.name }
-                }
-            }
-        }
 
-        GridLayout {
-            visible: root.own
-            Layout.fillWidth: true
-            columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
-            columnSpacing: Theme.settingsWindow.rowPadding * 2
-            rowSpacing: Theme.settingsWindow.rowPadding * 1.5
+                ColumnLayout {
+                    visible: root.own
+                    Layout.fillWidth: true
+                    spacing: 6
 
-            Section {
-                title: qsTr("Platforms")
-                note: qsTr("Settings → Platforms says which emulators each platform uses.")
-                actions: ListAction {
-                    id: addPlatform
-                    text: qsTr("Add platform")
-                    onClicked: platformsMenu.popup(addPlatform, addPlatform.width - platformsMenu.width, addPlatform.height)
+                    RowLayout {
+                        Layout.fillWidth: true
 
-                    SettingsMenu {
-                        id: platformsMenu
-
-                        Instantiator {
-                            model: root.unusedPlatforms.length > 0
-                                   ? root.unusedPlatforms
-                                   : [{ id: "", name: qsTr("It runs every platform already") }]
-                            delegate: Action {
-                                required property var modelData
-                                text: modelData.name
-                                enabled: modelData.id !== ""
-                                onTriggered: root.save("platforms", root.emulator.platformIds.concat([modelData.id]))
+                        SectionTitle {
+                            Layout.fillWidth: true
+                            text: qsTr("Name")
+                        }
+                        // The id, which the name isn't: renaming changes only what the app shows.
+                        AbstractButton {
+                            id: idHelp
+                            hoverEnabled: true
+                            focusPolicy: Qt.NoFocus
+                            background: null
+                            contentItem: Icon {
+                                path: Icons.help
+                                size: Theme.controls.descriptionFontSize
+                                color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
                             }
-                            onObjectAdded: (index, object) => platformsMenu.insertAction(index, object)
-                            onObjectRemoved: (index, object) => platformsMenu.removeAction(object)
+                            ToolTip.visible: hovered
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: qsTr("Platforms and games refer to it as \"%1\", which stays when you rename it.").arg(root.emulator.id)
+                        }
+                    }
+                    SettingsTextField {
+                        id: nameField
+                        Layout.fillWidth: true
+                        implicitHeight: Theme.controls.inputHeight
+                        text: root.emulator.name
+                        onEditingFinished: {
+                            if (text.trim() === root.emulator.name)
+                                return
+                            root.save("name", text)
+                            if (root.error !== "")
+                                text = root.emulator.name
+                        }
+                        Connections {
+                            target: root
+                            function onEmulatorChanged() { if (!nameField.activeFocus) nameField.text = root.emulator.name }
                         }
                     }
                 }
 
-                Repeater {
-                    model: root.emulator.platformIds
+                GridLayout {
+                    visible: root.own
+                    Layout.fillWidth: true
+                    columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
+                    columnSpacing: Theme.settingsWindow.rowPadding * 2
+                    rowSpacing: Theme.settingsWindow.rowPadding * 1.5
 
+                    Section {
+                        title: qsTr("Platforms")
+                        note: qsTr("Settings → Platforms says which emulators each platform uses.")
+                        actions: ListAction {
+                            id: addPlatform
+                            text: qsTr("Add platform")
+                            onClicked: platformsMenu.popup(addPlatform, addPlatform.width - platformsMenu.width, addPlatform.height)
+
+                            SettingsMenu {
+                                id: platformsMenu
+
+                                Instantiator {
+                                    model: root.unusedPlatforms.length > 0
+                                           ? root.unusedPlatforms
+                                           : [{ id: "", name: qsTr("It runs every platform already") }]
+                                    delegate: Action {
+                                        required property var modelData
+                                        text: modelData.name
+                                        enabled: modelData.id !== ""
+                                        onTriggered: root.save("platforms", root.emulator.platformIds.concat([modelData.id]))
+                                    }
+                                    onObjectAdded: (index, object) => platformsMenu.insertAction(index, object)
+                                    onObjectRemoved: (index, object) => platformsMenu.removeAction(object)
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: root.emulator.platformIds
+
+                            ListRow {
+                                id: platformItem
+                                required property string modelData
+                                required property int index
+                                last: index === root.emulator.platformIds.length - 1
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: root.platformChoices.find(c => c.id === platformItem.modelData)?.name ?? platformItem.modelData
+                                    color: Theme.controls.labelColor
+                                    elide: Text.ElideRight
+                                }
+                                ListButton {
+                                    iconPath: Icons.close
+                                    tip: qsTr("It no longer runs this platform's games")
+                                    onClicked: root.save("platforms", root.emulator.platformIds.filter(id => id !== platformItem.modelData))
+                                }
+                            }
+                        }
+                        ListRow {
+                            visible: root.emulator.platformIds.length === 0
+                            last: true
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: qsTr("None yet: add the platforms it runs games for.")
+                                color: Theme.controls.descriptionColor
+                                font.pixelSize: Theme.controls.descriptionFontSize
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.alignment: Qt.AlignTop
+                        spacing: 6
+
+                        SectionTitle { text: qsTr("ROM extensions") }
+                        SettingsTextField {
+                            id: extensionsField
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.controls.inputHeight
+                            text: root.emulator.extensions.join(" ")
+                            placeholderText: qsTr("e.g. 3ds cci cxi")
+                            onEditingFinished: {
+                                const extensions = text.split(/[\s,]+/).filter(e => e !== "")
+                                if (extensions.join(" ").toLowerCase().replace(/\./g, "") !== root.emulator.extensions.join(" "))
+                                    root.save("extensions", extensions)
+                            }
+                            Connections {
+                                target: root
+                                function onEmulatorChanged() {
+                                    if (!extensionsField.activeFocus) extensionsField.text = root.emulator.extensions.join(" ")
+                                }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("The files in ROM folders that are its games, separated by spaces.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
+                EmulatorProgramField {
+                    Layout.fillWidth: true
+                    emulator: root.emulator
+                    title: root.canInstall && !root.installing ? qsTr("Already have it somewhere else?") : qsTr("Program")
+                    onSaved: error => root.error = error
+                }
+
+                ColumnLayout {
+                    visible: root.own
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    SectionTitle { text: qsTr("Flatpak app id") }
+                    SettingsTextField {
+                        id: flatpakField
+                        Layout.fillWidth: true
+                        implicitHeight: Theme.controls.inputHeight
+                        text: root.emulator.flatpak
+                        placeholderText: qsTr("e.g. org.citra_emu.citra")
+                        onEditingFinished: if (text.trim() !== root.emulator.flatpak) root.save("flatpak", text)
+                        Connections {
+                            target: root
+                            function onEmulatorChanged() { if (!flatpakField.activeFocus) flatpakField.text = root.emulator.flatpak }
+                        }
+                    }
+                }
+
+                GridLayout {
+                    id: commandGrid
+                    Layout.fillWidth: true
+                    columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
+                    columnSpacing: Theme.settingsWindow.rowPadding * 2
+                    rowSpacing: Theme.settingsWindow.rowPadding * 1.5
+
+                    ColumnLayout {
+                        visible: root.own
+                        Layout.fillWidth: true
+                        Layout.columnSpan: commandGrid.columns
+                        Layout.alignment: Qt.AlignTop
+                        spacing: 6
+
+                        SectionTitle { text: qsTr("Command") }
+                        SettingsTextField {
+                            id: commandField
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.controls.inputHeight
+                            text: Args.join(root.emulator.commandArgs)
+                            placeholderText: "{exe} {args} {rom}"
+                            onEditingFinished: {
+                                const command = Args.split(text)
+                                if (Args.join(command) === Args.join(root.emulator.commandArgs))
+                                    return
+                                root.save("command", command)
+                                if (root.error !== "")
+                                    text = Args.join(root.emulator.commandArgs)
+                            }
+                            Connections {
+                                target: root
+                                function onEmulatorChanged() {
+                                    if (!commandField.activeFocus) commandField.text = Args.join(root.emulator.commandArgs)
+                                }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("{exe} is the program, {args} the arguments, {rom} the game.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    ColumnLayout {
+                        visible: root.own || root.emulator.found
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.alignment: Qt.AlignTop
+                        spacing: 6
+
+                        RowLayout {
+                            Layout.fillWidth: true
+
+                            SectionTitle {
+                                Layout.fillWidth: true
+                                text: qsTr("Arguments")
+                            }
+                            ListAction {
+                                visible: !root.own && root.emulator.custom.includes("args")
+                                iconPath: Icons.undo
+                                text: qsTr("Reset")
+                                tip: qsTr("Back to the built-in arguments")
+                                onClicked: root.save("args", undefined)
+                            }
+                        }
+                        SettingsTextField {
+                            id: argsField
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.controls.inputHeight
+                            text: Args.join(root.emulator.args)
+                            placeholderText: qsTr("None")
+                            onEditingFinished: {
+                                const args = Args.split(text)
+                                if (Args.join(args) !== Args.join(root.emulator.args))
+                                    root.save("args", args)
+                            }
+                            Connections {
+                                target: root
+                                function onEmulatorChanged() { if (!argsField.activeFocus) argsField.text = Args.join(root.emulator.args) }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("Added for every game, like --fullscreen.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    ColumnLayout {
+                        visible: root.own || root.emulator.found
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.alignment: Qt.AlignTop
+                        spacing: 6
+
+                        SectionTitle { text: qsTr("Runs") }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: Math.max(Theme.controls.inputHeight, runsText.implicitHeight + 12)
+                            radius: Theme.controls.inputRadius
+                            color: Theme.controls.inputBackground
+                            border.color: Theme.controls.inputBorder
+                            border.width: Theme.controls.inputBorderWidth
+
+                            TextEdit {
+                                id: runsText
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.margins: 8
+                                text: root.emulator.command
+                                readOnly: true
+                                selectByMouse: true
+                                wrapMode: TextEdit.WrapAnywhere
+                                color: Theme.controls.descriptionColor
+                                selectionColor: Theme.controls.inputBorderFocus
+                                font.family: Theme.font.monoFamily
+                                font.pixelSize: Theme.controls.descriptionFontSize
+                            }
+                        }
+                    }
+                }
+
+                Section {
+                    visible: root.own || root.emulator.found
+                    title: qsTr("Screenshot folders")
+                    note: qsTr("The game page shows the screenshots it saved here.")
+                    actions: RowLayout {
+                        spacing: Theme.controls.controlSpacing
+
+                        ListAction {
+                            visible: !root.own && root.emulator.custom.includes("screenshot_folders")
+                            iconPath: Icons.undo
+                            text: qsTr("Reset")
+                            tip: qsTr("Back to the built-in folders")
+                            onClicked: root.save("screenshot_folders", undefined)
+                        }
+                        ListAction {
+                            text: qsTr("Add folder")
+                            onClicked: screenshotFolderDialog.active = true
+                        }
+                    }
+
+                    Repeater {
+                        model: root.emulator.screenshotFolders
+
+                        ListRow {
+                            id: folderItem
+                            required property string modelData
+                            required property int index
+                            last: index === root.emulator.screenshotFolders.length - 1
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: folderItem.modelData === "{romdir}" ? qsTr("Next to each game's ROM") : folderItem.modelData
+                                color: Theme.controls.descriptionColor
+                                elide: Text.ElideMiddle
+                            }
+                            ListButton {
+                                visible: !folderItem.modelData.startsWith("{romdir}")
+                                iconPath: Icons.folderOpenLine
+                                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                tip: qsTr("Open the folder")
+                                onClicked: root.error = GameRunner.openPath(folderItem.modelData)
+                            }
+                            ListButton {
+                                iconPath: Icons.close
+                                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                tip: qsTr("Stop looking here")
+                                onClicked: root.save("screenshot_folders",
+                                                     root.emulator.screenshotFolders.filter(f => f !== folderItem.modelData))
+                            }
+                        }
+                    }
                     ListRow {
-                        id: platformItem
-                        required property string modelData
-                        required property int index
-                        last: index === root.emulator.platformIds.length - 1
+                        visible: root.emulator.screenshotFolders.length === 0
+                        last: true
 
                         Label {
                             Layout.fillWidth: true
-                            text: root.platformChoices.find(c => c.id === platformItem.modelData)?.name ?? platformItem.modelData
-                            color: Theme.controls.labelColor
-                            elide: Text.ElideRight
-                        }
-                        ListButton {
-                            iconPath: Icons.close
-                            tip: qsTr("It no longer runs this platform's games")
-                            onClicked: root.save("platforms", root.emulator.platformIds.filter(id => id !== platformItem.modelData))
+                            text: qsTr("None: add the folder it saves screenshots in.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                            wrapMode: Text.WordWrap
                         }
                     }
                 }
-                ListRow {
-                    visible: root.emulator.platformIds.length === 0
-                    last: true
 
-                    Label {
+                Section {
+                    visible: root.own || root.emulator.found
+                    title: qsTr("Save folders")
+                    note: qsTr("Backups take the saves in these folders.")
+                    actions: RowLayout {
+                        spacing: Theme.controls.controlSpacing
+
+                        ListAction {
+                            visible: !root.own && root.emulator.custom.includes("saves")
+                            iconPath: Icons.undo
+                            text: qsTr("Reset")
+                            tip: qsTr("Back to the built-in folders")
+                            onClicked: root.save("saves", undefined)
+                        }
+                        ListAction {
+                            text: qsTr("Add folder")
+                            onClicked: saveFolderDialog.active = true
+                        }
+                    }
+
+                    Repeater {
+                        model: root.emulator.saveFolders
+
+                        ListRow {
+                            id: saveItem
+                            required property string modelData
+                            required property int index
+                            last: index === root.emulator.saveFolders.length - 1
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: saveItem.modelData
+                                color: Theme.controls.descriptionColor
+                                elide: Text.ElideMiddle
+                            }
+                            ListButton {
+                                iconPath: Icons.folderOpenLine
+                                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                tip: qsTr("Open the folder")
+                                onClicked: root.error = GameRunner.openPath(saveItem.modelData)
+                            }
+                            ListButton {
+                                iconPath: Icons.close
+                                textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                tip: qsTr("Stop backing up this folder")
+                                onClicked: root.save("saves", root.emulator.saveFolders.filter(f => f !== saveItem.modelData))
+                            }
+                        }
+                    }
+                    ListRow {
+                        visible: root.emulator.saveFolders.length === 0
+                        last: true
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("None: add the folder it keeps saves in.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
+                Label {
+                    visible: root.error !== ""
+                    Layout.fillWidth: true
+                    text: root.error
+                    color: Theme.controls.problemsText
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
+                }
+
+                ColumnLayout {
+                    visible: root.byApp
+                    Layout.fillWidth: true
+                    spacing: Theme.settingsWindow.rowPadding
+
+                    Rectangle {
                         Layout.fillWidth: true
-                        text: qsTr("None yet: add the platforms it runs games for.")
-                        color: Theme.controls.descriptionColor
-                        font.pixelSize: Theme.controls.descriptionFontSize
-                        wrapMode: Text.WordWrap
+                        implicitHeight: Math.max(1, Theme.controls.inputBorderWidth)
+                        color: Theme.controls.inputBorder
                     }
-                }
-            }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.controls.controlSpacing
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.preferredWidth: 1
-                Layout.alignment: Qt.AlignTop
-                spacing: 6
-
-                SectionTitle { text: qsTr("ROM extensions") }
-                SettingsTextField {
-                    id: extensionsField
-                    Layout.fillWidth: true
-                    implicitHeight: Theme.controls.inputHeight
-                    text: root.emulator.extensions.join(" ")
-                    placeholderText: qsTr("e.g. 3ds cci cxi")
-                    onEditingFinished: {
-                        const extensions = text.split(/[\s,]+/).filter(e => e !== "")
-                        if (extensions.join(" ").toLowerCase().replace(/\./g, "") !== root.emulator.extensions.join(" "))
-                            root.save("extensions", extensions)
-                    }
-                    Connections {
-                        target: root
-                        function onEmulatorChanged() {
-                            if (!extensionsField.activeFocus) extensionsField.text = root.emulator.extensions.join(" ")
+                        SettingsButton {
+                            visible: root.otherRoute !== ""
+                            flat: true
+                            enabled: !root.installing
+                            text: root.otherRoute === "flatpak" ? qsTr("Install the Flatpak instead") : qsTr("Install the AppImage instead")
+                            tip: root.otherRoute === "flatpak" ? qsTr("Flatpak from Flathub, updated by your system")
+                                                               : qsTr("AppImage from %1, the newest build").arg(root.installInfo?.source ?? "")
+                            onClicked: Installer.install(root.emulator.id, root.otherRoute)
+                        }
+                        Item { Layout.fillWidth: true }
+                        Label {
+                            text: qsTr("Your saves and keys stay.")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
+                        }
+                        SettingsButton {
+                            danger: true
+                            enabled: !root.installing
+                            text: qsTr("Uninstall")
+                            onClicked: uninstallDialog.active = true
                         }
                     }
                 }
+
                 Label {
+                    visible: root.own
                     Layout.fillWidth: true
-                    text: qsTr("The files in ROM folders that are its games, separated by spaces.")
+                    text: root.emulator.fileOnly.length > 0
+                          ? qsTr("Also set in emulators.toml: %1.").arg(root.emulator.fileOnly.join(", "))
+                          : qsTr("Saves and keys, for backups, are set in emulators.toml.")
                     color: Theme.controls.descriptionColor
                     font.pixelSize: Theme.controls.descriptionFontSize
                     wrapMode: Text.WordWrap
                 }
-            }
-        }
-
-        EmulatorProgramField {
-            Layout.fillWidth: true
-            emulator: root.emulator
-            title: root.canInstall && !root.installing ? qsTr("Already have it somewhere else?") : qsTr("Program")
-            onSaved: error => root.error = error
-        }
-
-        ColumnLayout {
-            visible: root.own
-            Layout.fillWidth: true
-            spacing: 6
-
-            SectionTitle { text: qsTr("Flatpak app id") }
-            SettingsTextField {
-                id: flatpakField
-                Layout.fillWidth: true
-                implicitHeight: Theme.controls.inputHeight
-                text: root.emulator.flatpak
-                placeholderText: qsTr("e.g. org.citra_emu.citra")
-                onEditingFinished: if (text.trim() !== root.emulator.flatpak) root.save("flatpak", text)
-                Connections {
-                    target: root
-                    function onEmulatorChanged() { if (!flatpakField.activeFocus) flatpakField.text = root.emulator.flatpak }
-                }
-            }
-        }
-
-        GridLayout {
-            id: commandGrid
-            Layout.fillWidth: true
-            columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
-            columnSpacing: Theme.settingsWindow.rowPadding * 2
-            rowSpacing: Theme.settingsWindow.rowPadding * 1.5
-
-            ColumnLayout {
-                visible: root.own
-                Layout.fillWidth: true
-                Layout.columnSpan: commandGrid.columns
-                Layout.alignment: Qt.AlignTop
-                spacing: 6
-
-                SectionTitle { text: qsTr("Command") }
-                SettingsTextField {
-                    id: commandField
-                    Layout.fillWidth: true
-                    implicitHeight: Theme.controls.inputHeight
-                    text: Args.join(root.emulator.commandArgs)
-                    placeholderText: "{exe} {args} {rom}"
-                    onEditingFinished: {
-                        const command = Args.split(text)
-                        if (Args.join(command) === Args.join(root.emulator.commandArgs))
-                            return
-                        root.save("command", command)
-                        if (root.error !== "")
-                            text = Args.join(root.emulator.commandArgs)
-                    }
-                    Connections {
-                        target: root
-                        function onEmulatorChanged() {
-                            if (!commandField.activeFocus) commandField.text = Args.join(root.emulator.commandArgs)
-                        }
-                    }
-                }
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("{exe} is the program, {args} the arguments, {rom} the game.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            ColumnLayout {
-                visible: root.own || root.emulator.found
-                Layout.fillWidth: true
-                Layout.preferredWidth: 1
-                Layout.alignment: Qt.AlignTop
-                spacing: 6
-
                 RowLayout {
-                    Layout.fillWidth: true
+                    visible: root.own
+                    Layout.alignment: Qt.AlignRight
+                    spacing: Theme.controls.controlSpacing
 
-                    SectionTitle {
-                        Layout.fillWidth: true
-                        text: qsTr("Arguments")
+                    SettingsButton {
+                        text: qsTr("Open emulators.toml")
+                        iconPath: Icons.openExternal
+                        onClicked: root.openFileRequested()
                     }
-                    ListAction {
-                        visible: !root.own && root.emulator.custom.includes("args")
-                        iconPath: Icons.undo
-                        text: qsTr("Reset")
-                        tip: qsTr("Back to the built-in arguments")
-                        onClicked: root.save("args", undefined)
-                    }
-                }
-                SettingsTextField {
-                    id: argsField
-                    Layout.fillWidth: true
-                    implicitHeight: Theme.controls.inputHeight
-                    text: Args.join(root.emulator.args)
-                    placeholderText: qsTr("None")
-                    onEditingFinished: {
-                        const args = Args.split(text)
-                        if (Args.join(args) !== Args.join(root.emulator.args))
-                            root.save("args", args)
-                    }
-                    Connections {
-                        target: root
-                        function onEmulatorChanged() { if (!argsField.activeFocus) argsField.text = Args.join(root.emulator.args) }
+                    SettingsButton {
+                        danger: true
+                        text: qsTr("Remove emulator")
+                        tip: qsTr("Platforms stop using it; games pinned to it use their platform's emulators")
+                        onClicked: removeDialog.active = true
                     }
                 }
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Added for every game, like --fullscreen.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            ColumnLayout {
-                visible: root.own || root.emulator.found
-                Layout.fillWidth: true
-                Layout.preferredWidth: 1
-                Layout.alignment: Qt.AlignTop
-                spacing: 6
-
-                SectionTitle { text: qsTr("Runs") }
-                Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: Math.max(Theme.controls.inputHeight, runsText.implicitHeight + 12)
-                    radius: Theme.controls.inputRadius
-                    color: Theme.controls.inputBackground
-                    border.color: Theme.controls.inputBorder
-                    border.width: Theme.controls.inputBorderWidth
-
-                    TextEdit {
-                        id: runsText
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.margins: 8
-                        text: root.emulator.command
-                        readOnly: true
-                        selectByMouse: true
-                        wrapMode: TextEdit.WrapAnywhere
-                        color: Theme.controls.descriptionColor
-                        selectionColor: Theme.controls.inputBorderFocus
-                        font.family: Theme.font.monoFamily
-                        font.pixelSize: Theme.controls.descriptionFontSize
-                    }
-                }
-            }
-        }
-
-        Section {
-            visible: root.own || root.emulator.found
-            title: qsTr("Screenshot folders")
-            note: qsTr("The game page shows the screenshots it saved here.")
-            actions: RowLayout {
-                spacing: Theme.controls.controlSpacing
-
-                ListAction {
-                    visible: !root.own && root.emulator.custom.includes("screenshot_folders")
-                    iconPath: Icons.undo
-                    text: qsTr("Reset")
-                    tip: qsTr("Back to the built-in folders")
-                    onClicked: root.save("screenshot_folders", undefined)
-                }
-                ListAction {
-                    text: qsTr("Add folder")
-                    onClicked: screenshotFolderDialog.active = true
-                }
-            }
-
-            Repeater {
-                model: root.emulator.screenshotFolders
-
-                ListRow {
-                    id: folderItem
-                    required property string modelData
-                    required property int index
-                    last: index === root.emulator.screenshotFolders.length - 1
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: folderItem.modelData === "{romdir}" ? qsTr("Next to each game's ROM") : folderItem.modelData
-                        color: Theme.controls.descriptionColor
-                        elide: Text.ElideMiddle
-                    }
-                    ListButton {
-                        visible: !folderItem.modelData.startsWith("{romdir}")
-                        iconPath: Icons.folderOpenLine
-                        textColor: hovered ? foreground : Theme.controls.descriptionColor
-                        tip: qsTr("Open the folder")
-                        onClicked: root.error = GameRunner.openPath(folderItem.modelData)
-                    }
-                    ListButton {
-                        iconPath: Icons.close
-                        textColor: hovered ? foreground : Theme.controls.descriptionColor
-                        tip: qsTr("Stop looking here")
-                        onClicked: root.save("screenshot_folders",
-                                             root.emulator.screenshotFolders.filter(f => f !== folderItem.modelData))
-                    }
-                }
-            }
-            ListRow {
-                visible: root.emulator.screenshotFolders.length === 0
-                last: true
-
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("None: add the folder it saves screenshots in.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-            }
-        }
-
-        Section {
-            visible: root.own || root.emulator.found
-            title: qsTr("Save folders")
-            note: qsTr("Backups take the saves in these folders.")
-            actions: RowLayout {
-                spacing: Theme.controls.controlSpacing
-
-                ListAction {
-                    visible: !root.own && root.emulator.custom.includes("saves")
-                    iconPath: Icons.undo
-                    text: qsTr("Reset")
-                    tip: qsTr("Back to the built-in folders")
-                    onClicked: root.save("saves", undefined)
-                }
-                ListAction {
-                    text: qsTr("Add folder")
-                    onClicked: saveFolderDialog.active = true
-                }
-            }
-
-            Repeater {
-                model: root.emulator.saveFolders
-
-                ListRow {
-                    id: saveItem
-                    required property string modelData
-                    required property int index
-                    last: index === root.emulator.saveFolders.length - 1
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: saveItem.modelData
-                        color: Theme.controls.descriptionColor
-                        elide: Text.ElideMiddle
-                    }
-                    ListButton {
-                        iconPath: Icons.folderOpenLine
-                        textColor: hovered ? foreground : Theme.controls.descriptionColor
-                        tip: qsTr("Open the folder")
-                        onClicked: root.error = GameRunner.openPath(saveItem.modelData)
-                    }
-                    ListButton {
-                        iconPath: Icons.close
-                        textColor: hovered ? foreground : Theme.controls.descriptionColor
-                        tip: qsTr("Stop backing up this folder")
-                        onClicked: root.save("saves", root.emulator.saveFolders.filter(f => f !== saveItem.modelData))
-                    }
-                }
-            }
-            ListRow {
-                visible: root.emulator.saveFolders.length === 0
-                last: true
-
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("None: add the folder it keeps saves in.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-            }
-        }
-
-        Label {
-            visible: root.error !== ""
-            Layout.fillWidth: true
-            text: root.error
-            color: Theme.controls.problemsText
-            font.pixelSize: Theme.controls.descriptionFontSize
-            wrapMode: Text.WordWrap
-        }
-
-        ColumnLayout {
-            visible: root.byApp
-            Layout.fillWidth: true
-            spacing: Theme.settingsWindow.rowPadding
-
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: Math.max(1, Theme.controls.inputBorderWidth)
-                color: Theme.controls.inputBorder
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
-
-                SettingsButton {
-                    visible: root.otherRoute !== ""
-                    flat: true
-                    enabled: !root.installing
-                    text: root.otherRoute === "flatpak" ? qsTr("Install the Flatpak instead") : qsTr("Install the AppImage instead")
-                    tip: root.otherRoute === "flatpak" ? qsTr("Flatpak from Flathub, updated by your system")
-                                                       : qsTr("AppImage from %1, the newest build").arg(root.installInfo?.source ?? "")
-                    onClicked: Installer.install(root.emulator.id, root.otherRoute)
-                }
-                Item { Layout.fillWidth: true }
-                Label {
-                    text: qsTr("Your saves and keys stay.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                }
-                SettingsButton {
-                    danger: true
-                    enabled: !root.installing
-                    text: qsTr("Uninstall")
-                    onClicked: uninstallDialog.active = true
-                }
-            }
-        }
-
-        Label {
-            visible: root.own
-            Layout.fillWidth: true
-            text: root.emulator.fileOnly.length > 0
-                  ? qsTr("Also set in emulators.toml: %1.").arg(root.emulator.fileOnly.join(", "))
-                  : qsTr("Saves and keys, for backups, are set in emulators.toml.")
-            color: Theme.controls.descriptionColor
-            font.pixelSize: Theme.controls.descriptionFontSize
-            wrapMode: Text.WordWrap
-        }
-        RowLayout {
-            visible: root.own
-            Layout.alignment: Qt.AlignRight
-            spacing: Theme.controls.controlSpacing
-
-            SettingsButton {
-                text: qsTr("Open emulators.toml")
-                iconPath: Icons.openExternal
-                onClicked: root.openFileRequested()
-            }
-            SettingsButton {
-                danger: true
-                text: qsTr("Remove emulator")
-                tip: qsTr("Platforms stop using it; games pinned to it use their platform's emulators")
-                onClicked: removeDialog.active = true
             }
         }
     }

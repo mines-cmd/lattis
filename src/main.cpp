@@ -53,6 +53,10 @@
 
 #include <atomic>
 
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
+
 namespace {
 void logMemory()
 {
@@ -113,6 +117,13 @@ int main(int argc, char *argv[])
     // Art the library copies is shrunk, but art put in art/ by hand can be huge. Images are
     // shown through sourceSize, so only the scaled copy stays in memory.
     ArtImage::allowLargeImages();
+#ifdef __GLIBC__
+    // glibc keeps what the image, video and worker threads free for reuse, about 50 MB after
+    // a few game pages. Handing it back takes under 2 ms.
+    QTimer trimTimer;
+    trimTimer.callOnTimeout([] { malloc_trim(0); });
+    trimTimer.start(std::chrono::minutes(1));
+#endif
 
     if (qEnvironmentVariableIsEmpty("LATTIS_DATA")) {
         const auto moved = OldName::move(OldName::folders(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)));
@@ -735,15 +746,26 @@ int main(int argc, char *argv[])
                     });
                 }
                 QTimer::singleShot(actualDelay, window, [settingsScreenshot] {
+                    QWindow *settings = nullptr;
                     for (QWindow *w : QGuiApplication::allWindows()) {
                         if (w->objectName() == QStringLiteral("settingsWindow")) {
+                            settings = w;
                             if (auto *quick = qobject_cast<QQuickWindow *>(w))
                                 quick->grabWindow().save(settingsScreenshot);
                             break;
                         }
                     }
                     logMemory();
-                    QCoreApplication::quit();
+                    if (!settings || qEnvironmentVariableIntValue("LATTIS_CLOSE_SETTINGS") != 1) {
+                        QCoreApplication::quit();
+                        return;
+                    }
+                    logHook("closeSettings");
+                    settings->hide();
+                    QTimer::singleShot(3000, [] {
+                        logMemory();
+                        QCoreApplication::quit();
+                    });
                 });
             });
         }

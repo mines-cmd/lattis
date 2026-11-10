@@ -37,7 +37,24 @@ ApplicationWindow {
         WindowState.track(this, "settings")
         shownCategory = currentCategory
     }
-    onVisibleChanged: if (visible) Theme.beginEditSession()
+    // The pages hold about 270 MB once all are loaded; a closed window keeps only the open one.
+    onVisibleChanged: {
+        if (visible) {
+            Theme.beginEditSession()
+            return
+        }
+        for (const category of categories) {
+            if (!category.page.current)
+                category.page.visited = false
+        }
+        releaseTimer.restart()
+    }
+    // A Loader deletes its page with deleteLater().
+    Timer {
+        id: releaseTimer
+        interval: 500
+        onTriggered: WindowState.releaseMemory(root)
+    }
     title: qsTr("Settings")
     // Transparent so the background's rounded corners show: only some compositors (Hyprland)
     // round frameless windows themselves, KWin doesn't.

@@ -346,295 +346,300 @@ ColumnLayout {
         topPadding: Theme.settingsWindow.rowPadding * 1.5
         bottomPadding: Theme.settingsWindow.rowPadding * 1.5
         spacing: Theme.settingsWindow.rowPadding * 1.5
+        lazyContent: Component {
+            ColumnLayout {
+                spacing: details.spacing
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 6
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                SectionTitle {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: qsTr("Name and icon")
-                }
-                // The id, which the name isn't: renaming changes only what the app shows.
-                AbstractButton {
-                    id: idHelp
-                    hoverEnabled: true
-                    focusPolicy: Qt.NoFocus
-                    background: null
-                    contentItem: Icon {
-                        path: Icons.help
-                        size: Theme.controls.descriptionFontSize
-                        color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
-                    }
-                    ToolTip.visible: hovered
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: qsTr("Game files refer to it as \"%1\", which stays when you rename it.").arg(root.platform.id)
-                }
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
+                    spacing: 6
 
-                SettingsTextField {
-                    id: nameField
-                    Layout.fillWidth: true
-                    implicitHeight: Theme.controls.inputHeight
-                    text: root.platform.name
-                    onEditingFinished: if (text.trim() !== root.platform.name) root.save("name", text)
-                }
-                SettingsButton {
-                    id: iconButton
-                    iconPath: Icons.forPlatform(root.platform.icon)
-                    text: "▾"
-                    tip: qsTr("Icon: %1").arg(Icons.platformIconLabel(root.platform.icon))
-                    onClicked: iconPopup.open()
+                    RowLayout {
+                        Layout.fillWidth: true
 
-                    MotionPopup {
-                        id: iconPopup
-                        y: iconButton.height + 4
-                        x: iconButton.width - width
-                        padding: 6
-                        background: Rectangle {
-                            radius: Theme.controls.inputRadius
-                            color: Theme.menu.popupBackground
-                            border.color: Theme.controls.inputBorder
-                            border.width: Math.max(1, Theme.controls.inputBorderWidth)
+                        SectionTitle {
+                            Layout.fillWidth: true
+                            text: qsTr("Name and icon")
                         }
+                        // The id, which the name isn't: renaming changes only what the app shows.
+                        AbstractButton {
+                            id: idHelp
+                            hoverEnabled: true
+                            focusPolicy: Qt.NoFocus
+                            background: null
+                            contentItem: Icon {
+                                path: Icons.help
+                                size: Theme.controls.descriptionFontSize
+                                color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
+                            }
+                            ToolTip.visible: hovered
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: qsTr("Game files refer to it as \"%1\", which stays when you rename it.").arg(root.platform.id)
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.controls.controlSpacing
 
-                        Grid {
-                            columns: 6
-                            spacing: 6
+                        SettingsTextField {
+                            id: nameField
+                            Layout.fillWidth: true
+                            implicitHeight: Theme.controls.inputHeight
+                            text: root.platform.name
+                            onEditingFinished: if (text.trim() !== root.platform.name) root.save("name", text)
+                        }
+                        SettingsButton {
+                            id: iconButton
+                            iconPath: Icons.forPlatform(root.platform.icon)
+                            text: "▾"
+                            tip: qsTr("Icon: %1").arg(Icons.platformIconLabel(root.platform.icon))
+                            onClicked: iconPopup.open()
 
-                            Repeater {
-                                model: Icons.platformIconNames
+                            MotionPopup {
+                                id: iconPopup
+                                y: iconButton.height + 4
+                                x: iconButton.width - width
+                                padding: 6
+                                background: Rectangle {
+                                    radius: Theme.controls.inputRadius
+                                    color: Theme.menu.popupBackground
+                                    border.color: Theme.controls.inputBorder
+                                    border.width: Math.max(1, Theme.controls.inputBorderWidth)
+                                }
 
-                                SettingsButton {
-                                    required property string modelData
+                                Grid {
+                                    columns: 6
+                                    spacing: 6
 
-                                    leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
-                                    rightPadding: leftPadding
-                                    iconPath: Icons.forPlatform(modelData)
-                                    primary: root.platform.icon === modelData
-                                    tip: Icons.platformIconLabel(modelData)
-                                    onClicked: {
-                                        iconPopup.close()
-                                        if (!primary)
-                                            root.save("icon", modelData)
+                                    Repeater {
+                                        model: Icons.platformIconNames
+
+                                        SettingsButton {
+                                            required property string modelData
+
+                                            leftPadding: (implicitHeight - Theme.controls.iconSize) / 2
+                                            rightPadding: leftPadding
+                                            iconPath: Icons.forPlatform(modelData)
+                                            primary: root.platform.icon === modelData
+                                            tip: Icons.platformIconLabel(modelData)
+                                            onClicked: {
+                                                iconPopup.close()
+                                                if (!primary)
+                                                    root.save("icon", modelData)
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-        }
 
-        GridLayout {
-            Layout.fillWidth: true
-            columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
-            columnSpacing: Theme.settingsWindow.rowPadding * 2
-            rowSpacing: Theme.settingsWindow.rowPadding * 1.5
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: width >= Theme.settingsWindow.platformColumnsMinWidth ? 2 : 1
+                    columnSpacing: Theme.settingsWindow.rowPadding * 2
+                    rowSpacing: Theme.settingsWindow.rowPadding * 1.5
 
-            Section {
-                title: qsTr("Emulators")
-                actions: ListAction {
-                    id: addEmulator
-                    text: qsTr("Add emulator")
-                    onClicked: openMenu()
-                    function openMenu() {
-                        emulatorMenu.popup(addEmulator, addEmulator.width - emulatorMenu.width, addEmulator.height)
+                    Section {
+                        title: qsTr("Emulators")
+                        actions: ListAction {
+                            id: addEmulator
+                            text: qsTr("Add emulator")
+                            onClicked: openMenu()
+                            function openMenu() {
+                                emulatorMenu.popup(addEmulator, addEmulator.width - emulatorMenu.width, addEmulator.height)
+                            }
+
+                            SettingsMenu {
+                                id: emulatorMenu
+
+                                Instantiator {
+                                    model: root.addableEmulators.length > 0
+                                           ? root.addableEmulators
+                                           : [{ id: "", name: qsTr("No other emulators are made for %1").arg(root.platform.name) }]
+                                    delegate: Action {
+                                        required property var modelData
+                                        text: modelData.name
+                                        enabled: modelData.id !== ""
+                                        onTriggered: root.save("emulators", root.platform.emulators.concat([modelData.id]))
+                                    }
+                                    onObjectAdded: (index, object) => emulatorMenu.insertAction(index, object)
+                                    onObjectRemoved: (index, object) => emulatorMenu.removeAction(object)
+                                }
+                                MenuSeparator {
+                                    contentItem: Rectangle {
+                                        implicitHeight: 1
+                                        color: Theme.settingsWindow.rowDivider
+                                    }
+                                }
+                                Action {
+                                    text: root.showAllEmulators ? qsTr("Only those made for %1").arg(root.platform.name)
+                                                                : qsTr("Show those made for other platforms")
+                                    onTriggered: {
+                                        root.showAllEmulators = !root.showAllEmulators
+                                        Qt.callLater(addEmulator.openMenu)
+                                    }
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: root.platform.emulators
+
+                            ListRow {
+                                id: emulatorItem
+                                required property string modelData
+                                required property int index
+                                readonly property var info: root.emulatorInfo(modelData)
+                                last: index === root.platform.emulators.length - 1
+
+                                Label {
+                                    text: emulatorItem.index + 1
+                                    color: Theme.controls.descriptionColor
+                                    font.pixelSize: Theme.controls.descriptionFontSize
+                                }
+                                Label {
+                                    text: emulatorItem.info ? emulatorItem.info.name : emulatorItem.modelData
+                                    color: Theme.controls.inputText
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: !emulatorItem.info ? qsTr("unknown emulator id; see emulators.reference.toml")
+                                        : emulatorItem.info.detecting ? ""
+                                        : !emulatorItem.info.found ? qsTr("not installed")
+                                        : emulatorItem.index === 0 ? qsTr("default") : ""
+                                    color: emulatorItem.info && emulatorItem.info.found ? Theme.controls.descriptionColor
+                                                                                         : Theme.settingsWindow.installMissing
+                                    font.pixelSize: Theme.controls.descriptionFontSize
+                                    elide: Text.ElideRight
+                                }
+                                ListButton {
+                                    visible: root.platform.emulators.length > 1
+                                    enabled: emulatorItem.index > 0
+                                    iconPath: Icons.chevronRight
+                                    iconRotation: -90
+                                    tip: qsTr("Prefer it over the one above")
+                                    onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, -1))
+                                }
+                                ListButton {
+                                    visible: root.platform.emulators.length > 1
+                                    enabled: emulatorItem.index < root.platform.emulators.length - 1
+                                    iconPath: Icons.chevronRight
+                                    iconRotation: 90
+                                    tip: qsTr("Prefer the one below over it")
+                                    onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 1))
+                                }
+                                ListButton {
+                                    iconPath: Icons.close
+                                    textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                    tip: qsTr("Remove from this platform")
+                                    onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 0))
+                                }
+                            }
+                        }
+                        ListRow {
+                            visible: root.platform.emulators.length === 0
+                            last: true
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: qsTr("None: this platform's games don't launch in an emulator.")
+                                color: Theme.controls.descriptionColor
+                                font.pixelSize: Theme.controls.descriptionFontSize
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                        note: root.platform.emulators.length > 1 ? qsTr("A game launches in the first one that's installed.") : ""
                     }
 
-                    SettingsMenu {
-                        id: emulatorMenu
+                    Section {
+                        title: qsTr("ROM folders")
+                        actions: Row {
+                            spacing: Theme.controls.controlSpacing
 
-                        Instantiator {
-                            model: root.addableEmulators.length > 0
-                                   ? root.addableEmulators
-                                   : [{ id: "", name: qsTr("No other emulators are made for %1").arg(root.platform.name) }]
-                            delegate: Action {
-                                required property var modelData
-                                text: modelData.name
-                                enabled: modelData.id !== ""
-                                onTriggered: root.save("emulators", root.platform.emulators.concat([modelData.id]))
+                            ListAction {
+                                visible: Library.readsNames(root.platform.id) && root.platform.romFolders.length > 0
+                                enabled: !Library.updatingNames
+                                text: qsTr("Update names")
+                                iconPath: Icons.fileSearchLine
+                                tip: qsTr("Read the games' real names from their files, for games not named that way yet. Games you renamed keep their names.")
+                                onClicked: Library.updateRomNames(root.platform.id)
                             }
-                            onObjectAdded: (index, object) => emulatorMenu.insertAction(index, object)
-                            onObjectRemoved: (index, object) => emulatorMenu.removeAction(object)
-                        }
-                        MenuSeparator {
-                            contentItem: Rectangle {
-                                implicitHeight: 1
-                                color: Theme.settingsWindow.rowDivider
+                            ListAction {
+                                text: qsTr("Add folder")
+                                tip: qsTr("Its games are found now and at every start, subfolders included")
+                                onClicked: folderDialog.active = true
                             }
                         }
-                        Action {
-                            text: root.showAllEmulators ? qsTr("Only those made for %1").arg(root.platform.name)
-                                                        : qsTr("Show those made for other platforms")
-                            onTriggered: {
-                                root.showAllEmulators = !root.showAllEmulators
-                                Qt.callLater(addEmulator.openMenu)
+
+                        Repeater {
+                            model: root.platform.romFolders
+
+                            ListRow {
+                                id: folderItem
+                                required property string modelData
+                                required property int index
+                                last: index === root.platform.romFolders.length - 1
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: folderItem.modelData
+                                    color: Theme.controls.inputText
+                                    font.family: Theme.font.monoFamily
+                                    font.pixelSize: Theme.controls.pathFontSize
+                                    elide: Text.ElideMiddle
+                                }
+                                ListButton {
+                                    iconPath: Icons.close
+                                    textColor: hovered ? foreground : Theme.controls.descriptionColor
+                                    tip: qsTr("Stop scanning this folder; its games stay, as \"ROM not found\"")
+                                    onClicked: root.save("rom_folders", root.edited(root.platform.romFolders, folderItem.index, 0))
+                                }
+                            }
+                        }
+                        ListRow {
+                            visible: root.platform.romFolders.length === 0
+                            last: true
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: root.platform.emulators.length > 0 ? qsTr("None yet: add the folder this platform's ROMs are in.")
+                                                                         : qsTr("None.")
+                                color: Theme.controls.descriptionColor
+                                font.pixelSize: Theme.controls.descriptionFontSize
+                                wrapMode: Text.WordWrap
                             }
                         }
                     }
                 }
 
-                Repeater {
-                    model: root.platform.emulators
-
-                    ListRow {
-                        id: emulatorItem
-                        required property string modelData
-                        required property int index
-                        readonly property var info: root.emulatorInfo(modelData)
-                        last: index === root.platform.emulators.length - 1
-
-                        Label {
-                            text: emulatorItem.index + 1
-                            color: Theme.controls.descriptionColor
-                            font.pixelSize: Theme.controls.descriptionFontSize
-                        }
-                        Label {
-                            text: emulatorItem.info ? emulatorItem.info.name : emulatorItem.modelData
-                            color: Theme.controls.inputText
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: !emulatorItem.info ? qsTr("unknown emulator id; see emulators.reference.toml")
-                                : emulatorItem.info.detecting ? ""
-                                : !emulatorItem.info.found ? qsTr("not installed")
-                                : emulatorItem.index === 0 ? qsTr("default") : ""
-                            color: emulatorItem.info && emulatorItem.info.found ? Theme.controls.descriptionColor
-                                                                                 : Theme.settingsWindow.installMissing
-                            font.pixelSize: Theme.controls.descriptionFontSize
-                            elide: Text.ElideRight
-                        }
-                        ListButton {
-                            visible: root.platform.emulators.length > 1
-                            enabled: emulatorItem.index > 0
-                            iconPath: Icons.chevronRight
-                            iconRotation: -90
-                            tip: qsTr("Prefer it over the one above")
-                            onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, -1))
-                        }
-                        ListButton {
-                            visible: root.platform.emulators.length > 1
-                            enabled: emulatorItem.index < root.platform.emulators.length - 1
-                            iconPath: Icons.chevronRight
-                            iconRotation: 90
-                            tip: qsTr("Prefer the one below over it")
-                            onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 1))
-                        }
-                        ListButton {
-                            iconPath: Icons.close
-                            textColor: hovered ? foreground : Theme.controls.descriptionColor
-                            tip: qsTr("Remove from this platform")
-                            onClicked: root.save("emulators", root.edited(root.platform.emulators, emulatorItem.index, 0))
-                        }
-                    }
+                Label {
+                    visible: root.error !== ""
+                    Layout.fillWidth: true
+                    text: root.error
+                    color: Theme.controls.problemsText
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    wrapMode: Text.WordWrap
                 }
-                ListRow {
-                    visible: root.platform.emulators.length === 0
-                    last: true
 
-                    Label {
-                        Layout.fillWidth: true
-                        text: qsTr("None: this platform's games don't launch in an emulator.")
-                        color: Theme.controls.descriptionColor
-                        font.pixelSize: Theme.controls.descriptionFontSize
-                        wrapMode: Text.WordWrap
-                    }
-                }
-                note: root.platform.emulators.length > 1 ? qsTr("A game launches in the first one that's installed.") : ""
-            }
-
-            Section {
-                title: qsTr("ROM folders")
-                actions: Row {
+                RowLayout {
+                    Layout.fillWidth: true
                     spacing: Theme.controls.controlSpacing
 
-                    ListAction {
-                        visible: Library.readsNames(root.platform.id) && root.platform.romFolders.length > 0
-                        enabled: !Library.updatingNames
-                        text: qsTr("Update names")
-                        iconPath: Icons.fileSearchLine
-                        tip: qsTr("Read the games' real names from their files, for games not named that way yet. Games you renamed keep their names.")
-                        onClicked: Library.updateRomNames(root.platform.id)
-                    }
-                    ListAction {
-                        text: qsTr("Add folder")
-                        tip: qsTr("Its games are found now and at every start, subfolders included")
-                        onClicked: folderDialog.active = true
-                    }
-                }
-
-                Repeater {
-                    model: root.platform.romFolders
-
-                    ListRow {
-                        id: folderItem
-                        required property string modelData
-                        required property int index
-                        last: index === root.platform.romFolders.length - 1
-
-                        Label {
-                            Layout.fillWidth: true
-                            text: folderItem.modelData
-                            color: Theme.controls.inputText
-                            font.family: Theme.font.monoFamily
-                            font.pixelSize: Theme.controls.pathFontSize
-                            elide: Text.ElideMiddle
-                        }
-                        ListButton {
-                            iconPath: Icons.close
-                            textColor: hovered ? foreground : Theme.controls.descriptionColor
-                            tip: qsTr("Stop scanning this folder; its games stay, as \"ROM not found\"")
-                            onClicked: root.save("rom_folders", root.edited(root.platform.romFolders, folderItem.index, 0))
-                        }
-                    }
-                }
-                ListRow {
-                    visible: root.platform.romFolders.length === 0
-                    last: true
-
-                    Label {
+                    SettingsCheckBox {
                         Layout.fillWidth: true
-                        text: root.platform.emulators.length > 0 ? qsTr("None yet: add the folder this platform's ROMs are in.")
-                                                                 : qsTr("None.")
-                        color: Theme.controls.descriptionColor
-                        font.pixelSize: Theme.controls.descriptionFontSize
-                        wrapMode: Text.WordWrap
+                        text: qsTr("Show in the rail")
+                        checked: root.platform.inRail
+                        onToggled: root.save("in_rail", checked)
+                    }
+                    SettingsButton {
+                        danger: true
+                        text: qsTr("Remove platform")
+                        tip: qsTr("Its games stay in the library")
+                        onClicked: root.removeRequested()
                     }
                 }
-            }
-        }
-
-        Label {
-            visible: root.error !== ""
-            Layout.fillWidth: true
-            text: root.error
-            color: Theme.controls.problemsText
-            font.pixelSize: Theme.controls.descriptionFontSize
-            wrapMode: Text.WordWrap
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.controls.controlSpacing
-
-            SettingsCheckBox {
-                Layout.fillWidth: true
-                text: qsTr("Show in the rail")
-                checked: root.platform.inRail
-                onToggled: root.save("in_rail", checked)
-            }
-            SettingsButton {
-                danger: true
-                text: qsTr("Remove platform")
-                tip: qsTr("Its games stay in the library")
-                onClicked: root.removeRequested()
             }
         }
     }

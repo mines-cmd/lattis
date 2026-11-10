@@ -11,6 +11,13 @@ Item {
     property real rightPadding: 0
     property alias spacing: column.spacing
     default property alias content: column.data
+    // Made the first time it opens, then kept so it can fold away. A list of rows that each build
+    // their whole expanded part up front costs about 100 MB on the Emulators page.
+    property Component lazyContent: null
+
+    property bool opened: false
+    onOpenChanged: if (open) opened = true
+    Component.onCompleted: if (open) opened = true
 
     property real progress: open ? 1 : 0
     Behavior on progress { enabled: Motion.on; MotionNumber { speed: "normal" } }
@@ -29,5 +36,12 @@ Item {
         // out at their real width from the first frame of unfolding.
         visible: root.progress > 0
         opacity: root.progress
+
+        Loader {
+            active: root.lazyContent !== null && root.opened
+            visible: active
+            sourceComponent: root.lazyContent
+            Layout.fillWidth: true
+        }
     }
 }

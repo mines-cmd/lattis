@@ -56,6 +56,8 @@ A name that isn't a choice is dropped with a warning in `General.problems`; a ch
 
 The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
 
+**Memory.** glibc keeps memory that threads free for reuse instead of returning it, so what the image reader, video decoding and worker threads use stays counted after they're done (about 50 MB after a few game pages). `main.cpp` calls `malloc_trim(0)` once a minute (under 2 ms), and a window that drops a lot of QML at once calls `WindowState.releaseMemory()` (the Settings window when it closes).
+
 **Window sizes.** `WindowState` is a QML singleton that persists each window's size and maximized state across starts in `~/.local/state/lattis/windows-<key>.toml`. QML reads the saved sizes in its property initializers — before the first frame — so the window opens at the right size immediately rather than snapping after paint. `track()` wires up the change signals and saves on quit. The Settings window ignores its saved size when `settings_window.remember_size` is off and opens at `settings_window.width` and `height` instead (applied on slider release, to the open window too, via `applyFixedSize()`); the schema flag `onRelease` marks settings whose slider applies on release.
 
 `canMinimize` is false on tiling compositors (Hyprland, sway, niri, river) that do nothing useful when a window is minimized, so the window-controls component omits the minimize button on those desktops. `fillsScreen()` guards the maximized check: tiling compositors mark floating windows maximized to suppress client-side decorations, so a window only counts as maximized if it also fills its screen.
@@ -260,6 +262,7 @@ Block{ array: "platform", key: "id", value: "switch" }
 | `maximized(name)` | Whether the window was maximized |
 | `fillsScreen(window)` | True if the window fills its screen (guards maximized check) |
 | `track(window, name)` | Watch and persist this window's state |
+| `releaseMemory(context)` | Runs the JS garbage collector of `context`'s engine, then `malloc_trim(0)` a second later (glibc only), so a window that just dropped a lot of QML gives the memory back instead of glibc keeping it |
 | `compositorRounding()` | Hyprland's `decoration:rounding` (asked once through `hyprctl`), or -1 outside Hyprland or when it can't be read |
 
 Property: `canMinimize` — false on tiling compositors that ignore minimize.

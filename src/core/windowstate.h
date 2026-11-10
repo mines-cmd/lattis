@@ -37,6 +37,10 @@ public:
 
     Q_INVOKABLE void track(QWindow *window, const QString &name);
 
+    // For a window that just dropped a lot of QML: runs the JS garbage collector, then hands
+    // the freed heap back to the system, which glibc otherwise keeps for reuse.
+    Q_INVOKABLE void releaseMemory(QObject *context);
+
 private:
     struct Entry
     {

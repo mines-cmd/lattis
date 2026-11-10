@@ -8,12 +8,17 @@
 #include <QJsonObject>
 #include <QLoggingCategory>
 #include <QProcess>
+#include <QQmlEngine>
 #include <QSaveFile>
 #include <QScreen>
 
 #include <toml++/toml.hpp>
 
 #include <sstream>
+
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 Q_LOGGING_CATEGORY(lcWindowState, "launcher.windowstate")
 
@@ -81,6 +86,16 @@ bool WindowState::canMinimize()
         return true;
     }();
     return can;
+}
+
+void WindowState::releaseMemory(QObject *context)
+{
+    if (QQmlEngine *engine = qmlEngine(context))
+        engine->collectGarbage();
+#ifdef __GLIBC__
+    // The collector deletes the objects it frees later, with deleteLater().
+    QTimer::singleShot(1000, this, [] { malloc_trim(0); });
+#endif
 }
 
 void WindowState::track(QWindow *window, const QString &name)
