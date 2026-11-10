@@ -32,69 +32,34 @@ Item {
 
     onEmulatorChanged: if (emulator?.found && dialog.opened) dialog.close()
 
-    MotionPopup {
+    AppDialog {
         id: dialog
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
+        carded: true
+        size: "medium"
+        title: qsTr("Install %1").arg(root.emulator?.name ?? "")
         width: Math.min(Theme.gameEditor.installWidth, parent.width - 2 * Theme.layout.margin)
-        modal: true
-        focus: true
-        padding: Theme.gameEditor.padding
         closePolicy: Popup.CloseOnEscape
 
-        Overlay.modal: Scrim {}
-
-        background: Surface {
-            radius: Theme.gameEditor.radius
-            fill: Theme.gameEditor.background
-            fillEnd: Theme.gameEditor.backgroundEnd
-            direction: Theme.gameEditor.gradientDirection
-            border.color: Theme.gameEditor.border
-            border.width: Theme.gameEditor.borderWidth
+        EmulatorInstallTop {
+            visible: !root.awaitingDetection && (root.installing || root.installFailed || root.hasRoutes)
+            Layout.fillWidth: true
+            row: root
         }
 
-        contentItem: ColumnLayout {
-            spacing: Theme.gameEditor.rowSpacing
+        Label {
+            visible: root.awaitingDetection
+            Layout.fillWidth: true
+            text: qsTr("Looking for %1…").arg(root.emulator?.name ?? "")
+            color: Theme.controls.descriptionColor
+        }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Install %1").arg(root.emulator?.name ?? "")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                    font.pixelSize: Theme.gameEditor.headingFontSize
-                    elide: Text.ElideRight
-                }
-                WindowControls {
-                    Layout.alignment: Qt.AlignTop
-                    dialog: dialog
-                }
-            }
-
-            EmulatorInstallTop {
-                visible: !root.awaitingDetection && (root.installing || root.installFailed || root.hasRoutes)
-                Layout.fillWidth: true
-                row: root
-            }
-
-            Label {
-                visible: root.awaitingDetection
-                Layout.fillWidth: true
-                text: qsTr("Looking for %1…").arg(root.emulator?.name ?? "")
-                color: Theme.controls.descriptionColor
-            }
-
-            EmulatorProgramField {
-                visible: !root.installing && root.emulator !== null
-                Layout.fillWidth: true
-                emulator: root.emulator
-                title: root.hasRoutes ? qsTr("Already have it somewhere else?") : qsTr("Program")
-                onSaved: error => { if (error !== "") root.error(error) }
-            }
+        EmulatorProgramField {
+            visible: !root.installing && root.emulator !== null
+            Layout.fillWidth: true
+            emulator: root.emulator
+            title: root.hasRoutes ? qsTr("Already have it somewhere else?") : qsTr("Program")
+            onSaved: error => { if (error !== "") root.error(error) }
         }
     }
 }

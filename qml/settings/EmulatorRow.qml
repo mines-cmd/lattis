@@ -740,8 +740,11 @@ ColumnLayout {
     Loader {
         id: removeDialog
         active: false
-        sourceComponent: MotionPopup {
+        sourceComponent: AppDialog {
             id: popup
+
+            carded: false
+            title: qsTr("Remove %1?").arg(root.emulator.name)
 
             readonly property int pinned: Library.pinnedGames(root.emulator.id)
             property string error: ""
@@ -749,121 +752,76 @@ ColumnLayout {
             Component.onCompleted: open()
             onClosed: removeDialog.active = false
 
-            parent: Overlay.overlay
-            anchors.centerIn: parent
-            modal: true
-            Overlay.modal: Scrim {}
-            padding: Theme.menu.dialogPadding
-            width: 380
-            background: Rectangle {
-                color: Theme.menu.popupBackground
-                border.color: Theme.controls.inputBorder
-                border.width: Theme.controls.inputBorderWidth
-                radius: Theme.controls.inputRadius
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Its block is removed from emulators.toml, and it's taken off the platforms that use it.")
+                      + (popup.pinned > 0
+                         ? " " + (popup.pinned === 1 ? qsTr("1 game is pinned to it and will use its platform's emulators.")
+                                                     : qsTr("%1 games are pinned to it and will use their platform's emulators.").arg(popup.pinned))
+                         : "")
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
+                wrapMode: Text.WordWrap
+            }
+            Label {
+                visible: popup.error !== ""
+                Layout.fillWidth: true
+                text: popup.error
+                color: Theme.controls.problemsText
+                font.pixelSize: Theme.controls.descriptionFontSize
+                wrapMode: Text.WordWrap
             }
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 10
-
-                Label {
-                    text: qsTr("Remove %1?").arg(root.emulator.name)
-                    color: Theme.controls.labelColor
-                    font.weight: Theme.font.strongWeight
-                }
-                Label {
-                    Layout.fillWidth: true
-                    text: qsTr("Its block is removed from emulators.toml, and it's taken off the platforms that use it.")
-                          + (popup.pinned > 0
-                             ? " " + (popup.pinned === 1 ? qsTr("1 game is pinned to it and will use its platform's emulators.")
-                                                         : qsTr("%1 games are pinned to it and will use their platform's emulators.").arg(popup.pinned))
-                             : "")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-                Label {
-                    visible: popup.error !== ""
-                    Layout.fillWidth: true
-                    text: popup.error
-                    color: Theme.controls.problemsText
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-                RowLayout {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: Theme.controls.controlSpacing
-                    SettingsButton { text: qsTr("Cancel"); onClicked: popup.close() }
-                    SettingsButton {
-                        danger: true
-                        text: qsTr("Remove")
-                        onClicked: {
-                            popup.error = Library.removeEmulator(root.emulator.id)
-                            if (popup.error === "")
-                                popup.close()
-                        }
+            footer: [
+                SettingsButton { text: qsTr("Cancel"); onClicked: popup.close() },
+                SettingsButton {
+                    danger: true
+                    text: qsTr("Remove")
+                    onClicked: {
+                        popup.error = Library.removeEmulator(root.emulator.id)
+                        if (popup.error === "")
+                            popup.close()
                     }
                 }
-            }
+            ]
         }
     }
 
     Loader {
         id: uninstallDialog
         active: false
-        sourceComponent: MotionPopup {
+        sourceComponent: AppDialog {
             id: confirm
+
+            carded: false
+            title: qsTr("Uninstall %1?").arg(root.emulator.name)
 
             readonly property bool flatpak: root.installInfo?.route === "flatpak"
 
             Component.onCompleted: open()
             onClosed: uninstallDialog.active = false
 
-            parent: Overlay.overlay
-            anchors.centerIn: parent
-            modal: true
-            Overlay.modal: Scrim {}
-            padding: Theme.menu.dialogPadding
-            width: 380
-            background: Rectangle {
-                color: Theme.menu.popupBackground
-                border.color: Theme.controls.inputBorder
-                border.width: Theme.controls.inputBorderWidth
-                radius: Theme.controls.inputRadius
+            Label {
+                Layout.fillWidth: true
+                text: (confirm.flatpak ? qsTr("The Flatpak %1 is removed from your user installation.").arg(root.installInfo?.file ?? "")
+                                       : qsTr("%1 goes to the trash.").arg((root.installInfo?.file ?? "").split("/").pop()))
+                      + " " + qsTr("Your saves and keys stay, so installing it again picks up where you left off.")
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.descriptionFontSize
+                wrapMode: Text.WordWrap
             }
 
-            ColumnLayout {
-                width: parent.width
-                spacing: 10
-
-                Label {
-                    text: qsTr("Uninstall %1?").arg(root.emulator.name)
-                    color: Theme.controls.labelColor
-                    font.weight: Theme.font.strongWeight
-                }
-                Label {
-                    Layout.fillWidth: true
-                    text: (confirm.flatpak ? qsTr("The Flatpak %1 is removed from your user installation.").arg(root.installInfo?.file ?? "")
-                                           : qsTr("%1 goes to the trash.").arg((root.installInfo?.file ?? "").split("/").pop()))
-                          + " " + qsTr("Your saves and keys stay, so installing it again picks up where you left off.")
-                    color: Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                    wrapMode: Text.WordWrap
-                }
-                RowLayout {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: Theme.controls.controlSpacing
-                    SettingsButton { text: qsTr("Cancel"); onClicked: confirm.close() }
-                    SettingsButton {
-                        danger: true
-                        text: qsTr("Uninstall")
-                        onClicked: {
-                            Installer.uninstall(root.emulator.id)
-                            confirm.close()
-                        }
+            footer: [
+                SettingsButton { text: qsTr("Cancel"); onClicked: confirm.close() },
+                SettingsButton {
+                    danger: true
+                    text: qsTr("Uninstall")
+                    onClicked: {
+                        Installer.uninstall(root.emulator.id)
+                        confirm.close()
                     }
                 }
-            }
+            ]
         }
     }
 }

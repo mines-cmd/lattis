@@ -91,16 +91,14 @@ Item {
         }
     }
 
-    MotionPopup {
+    AppDialog {
         id: popup
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
+        carded: true
+        size: "large"
+        title: qsTr("Look up %1 in IGDB").arg(root.gameTitle)
         width: Math.min(Theme.gameEditor.detailedWidth, parent.width - 2 * Theme.layout.margin)
         height: parent.height * Theme.gameEditor.detailedMaxHeight
-        modal: true
-        focus: true
-        padding: Theme.gameEditor.padding
         closePolicy: Popup.CloseOnEscape
         onOpened: nameField.forceActiveFocus()
         onClosed: {
@@ -109,315 +107,266 @@ Item {
             root.closed()
         }
 
-        Overlay.modal: Scrim {}
-        background: Surface {
-            radius: Theme.gameEditor.radius
-            fill: Theme.gameEditor.background
-            fillEnd: Theme.gameEditor.backgroundEnd
-            direction: Theme.gameEditor.gradientDirection
-            border.color: Theme.gameEditor.border
-            border.width: Theme.gameEditor.borderWidth
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
+
+            SettingsTextField {
+                id: nameField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Name to look up")
+                onAccepted: root.search()
+                Keys.onDownPressed: list.forceActiveFocus()
+            }
+            SettingsComboBox {
+                id: platformBox
+                Layout.preferredWidth: Theme.gameEditor.detailedDetailsWidth
+                model: root.platformChoices.map(c => c.label)
+                currentIndex: root.platformIndex
+                onActivated: index => {
+                    root.platformIndex = index
+                    root.search()
+                }
+            }
+            SettingsButton {
+                text: qsTr("Search")
+                enabled: nameField.text.trim() !== ""
+                onClicked: root.search()
+            }
         }
 
-        contentItem: ColumnLayout {
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             spacing: Theme.gameEditor.rowSpacing
 
-            Label {
-                Layout.fillWidth: true
-                Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
-                text: qsTr("Look up %1 in IGDB").arg(root.gameTitle)
-                color: Theme.gameEditor.headingColor
-                font.weight: Theme.font.strongWeight
-                font.pixelSize: Theme.gameEditor.headingFontSize
-                elide: Text.ElideRight
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-
-                SettingsTextField {
-                    id: nameField
-                    Layout.fillWidth: true
-                    placeholderText: qsTr("Name to look up")
-                    onAccepted: root.search()
-                    Keys.onDownPressed: list.forceActiveFocus()
-                }
-                SettingsComboBox {
-                    id: platformBox
-                    Layout.preferredWidth: Theme.gameEditor.detailedDetailsWidth
-                    model: root.platformChoices.map(c => c.label)
-                    currentIndex: root.platformIndex
-                    onActivated: index => {
-                        root.platformIndex = index
-                        root.search()
-                    }
-                }
-                SettingsButton {
-                    text: qsTr("Search")
-                    enabled: nameField.text.trim() !== ""
-                    onClicked: root.search()
-                }
-            }
-
-            RowLayout {
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: Theme.gameEditor.rowSpacing
 
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    ListView {
-                        id: list
-                        anchors.fill: parent
-                        clip: true
-                        opacity: root.request !== 0 ? Theme.gameEditor.detailedBusyOpacity : 1
-                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                        model: root.results
-                        currentIndex: root.selected
-                        keyNavigationEnabled: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        ScrollBar.vertical: SettingsScrollBar {}
-                        onCurrentIndexChanged: root.selected = currentIndex
-                        Keys.onReturnPressed: root.use(root.selected)
-                        Keys.onEnterPressed: root.use(root.selected)
-
-                        delegate: Rectangle {
-                            id: row
-                            required property var modelData
-                            required property int index
-                            width: ListView.view.width - Theme.layout.spacing
-                            height: rowLayout.implicitHeight + Theme.layout.spacing
-                            radius: Theme.controls.inputRadius
-                            color: root.selected === index ? Theme.gameEditor.detailedSelected
-                                 : rowMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
-                            Behavior on color { enabled: Motion.fades; MotionColor {} }
-
-                            RowLayout {
-                                id: rowLayout
-                                anchors.fill: parent
-                                anchors.margins: Theme.layout.spacing / 2
-                                anchors.leftMargin: Theme.layout.spacing
-                                spacing: Theme.layout.spacing
-
-                                Rectangle {
-                                    implicitHeight: Theme.gameEditor.detailedCoverHeight
-                                    implicitWidth: implicitHeight * 3 / 4
-                                    radius: Theme.controls.inputRadius
-                                    color: Theme.gameEditor.artPreviewBackground
-                                    clip: true
-                                    FadeImage {
-                                        anchors.fill: parent
-                                        source: row.modelData.cover
-                                        sourceSize.height: parent.height * 2
-                                        fillMode: Image.PreserveAspectCrop
-                                    }
-                                }
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: row.modelData.name
-                                        color: Theme.gameEditor.lookupText
-                                        font.weight: Theme.font.strongWeight
-                                        elide: Text.ElideRight
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: [row.modelData.year > 0 ? String(row.modelData.year) : qsTr("Year unknown")]
-                                                  .concat(row.modelData.platforms).join(" · ")
-                                        color: Theme.gameEditor.hintColor
-                                        font.pixelSize: Theme.gameEditor.hintFontSize
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                            }
-                            MouseArea {
-                                id: rowMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.selected = row.index
-                                    list.forceActiveFocus()
-                                }
-                                onDoubleClicked: root.use(row.index)
-                            }
-                        }
-                    }
-
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        width: parent.width - 2 * Theme.gameEditor.padding
-                        visible: (root.request !== 0 && root.results.length === 0) || root.error !== ""
-                                 || (root.request === 0 && root.results.length === 0 && root.searchedName !== "")
-                        spacing: Theme.layout.spacing
-
-                        Icon {
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.request !== 0
-                            path: Icons.loader
-                            size: Theme.controls.iconSize
-                            color: Theme.gameEditor.hintColor
-                            RotationAnimation on rotation {
-                                running: root.request !== 0
-                                from: 0
-                                to: 360
-                                duration: Theme.iconButton.spinDuration
-                                loops: Animation.Infinite
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                            text: root.request !== 0 ? qsTr("Looking up %1…").arg(root.searchedName)
-                                : root.error !== "" ? root.error
-                                : root.searchedPlatforms !== "" ? qsTr("IGDB has nothing called %1 on %2.").arg(root.searchedName).arg(root.searchedPlatforms)
-                                : qsTr("IGDB has nothing called %1.").arg(root.searchedName)
-                            color: root.error !== "" && root.request === 0 ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
-                        }
-                        SettingsButton {
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.request === 0 && (root.error !== "" || root.searchedPlatforms !== "")
-                            text: root.error !== "" ? qsTr("Retry") : qsTr("Search every platform")
-                            onClicked: root.error !== "" ? root.search() : root.searchEveryPlatform()
-                        }
-                    }
-                }
-
-                Flickable {
-                    id: details
-                    Layout.preferredWidth: Theme.gameEditor.detailedDetailsWidth
-                    Layout.fillHeight: true
-                    visible: root.current !== null
+                ListView {
+                    id: list
+                    anchors.fill: parent
                     clip: true
-                    contentHeight: detailsColumn.implicitHeight
+                    opacity: root.request !== 0 ? Theme.gameEditor.detailedBusyOpacity : 1
+                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                    model: root.results
+                    currentIndex: root.selected
+                    keyNavigationEnabled: true
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: SettingsScrollBar {}
+                    onCurrentIndexChanged: root.selected = currentIndex
+                    Keys.onReturnPressed: root.use(root.selected)
+                    Keys.onEnterPressed: root.use(root.selected)
 
-                    ColumnLayout {
-                        id: detailsColumn
-                        width: details.width - Theme.layout.spacing
-                        spacing: Theme.layout.spacing
+                    delegate: Rectangle {
+                        id: row
+                        required property var modelData
+                        required property int index
+                        width: ListView.view.width - Theme.layout.spacing
+                        height: rowLayout.implicitHeight + Theme.layout.spacing
+                        radius: Theme.controls.inputRadius
+                        color: root.selected === index ? Theme.gameEditor.detailedSelected
+                             : rowMouse.containsMouse ? Theme.gameEditor.pickHover : "transparent"
+                        Behavior on color { enabled: Motion.fades; MotionColor {} }
 
-                        MotionNumber {
-                            id: detailsFade
-                            target: detailsColumn
-                            property: "opacity"
+                        RowLayout {
+                            id: rowLayout
+                            anchors.fill: parent
+                            anchors.margins: Theme.layout.spacing / 2
+                            anchors.leftMargin: Theme.layout.spacing
+                            spacing: Theme.layout.spacing
+
+                            Rectangle {
+                                implicitHeight: Theme.gameEditor.detailedCoverHeight
+                                implicitWidth: implicitHeight * 3 / 4
+                                radius: Theme.controls.inputRadius
+                                color: Theme.gameEditor.artPreviewBackground
+                                clip: true
+                                FadeImage {
+                                    anchors.fill: parent
+                                    source: row.modelData.cover
+                                    sourceSize.height: parent.height * 2
+                                    fillMode: Image.PreserveAspectCrop
+                                }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: row.modelData.name
+                                    color: Theme.gameEditor.lookupText
+                                    font.weight: Theme.font.strongWeight
+                                    elide: Text.ElideRight
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: [row.modelData.year > 0 ? String(row.modelData.year) : qsTr("Year unknown")]
+                                              .concat(row.modelData.platforms).join(" · ")
+                                    color: Theme.gameEditor.hintColor
+                                    font.pixelSize: Theme.gameEditor.hintFontSize
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                        MouseArea {
+                            id: rowMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.selected = row.index
+                                list.forceActiveFocus()
+                            }
+                            onDoubleClicked: root.use(row.index)
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    width: parent.width - 2 * Theme.gameEditor.padding
+                    visible: (root.request !== 0 && root.results.length === 0) || root.error !== ""
+                             || (root.request === 0 && root.results.length === 0 && root.searchedName !== "")
+                    spacing: Theme.layout.spacing
+
+                    Icon {
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: root.request !== 0
+                        path: Icons.loader
+                        size: Theme.controls.iconSize
+                        color: Theme.gameEditor.hintColor
+                        RotationAnimation on rotation {
+                            running: root.request !== 0
                             from: 0
-                            to: 1
-                            linear: true
+                            to: 360
+                            duration: Theme.iconButton.spinDuration
+                            loops: Animation.Infinite
                         }
-                        Connections {
-                            target: root
-                            function onCurrentChanged() {
-                                if (Motion.on && popup.opened)
-                                    detailsFade.restart()
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.alignment: Qt.AlignHCenter
-                            implicitHeight: Theme.gameEditor.detailedLargeCoverHeight
-                            implicitWidth: implicitHeight * 3 / 4
-                            radius: Theme.controls.inputRadius
-                            color: Theme.gameEditor.artPreviewBackground
-                            clip: true
-                            FadeImage {
-                                anchors.fill: parent
-                                source: root.current?.coverLarge ?? ""
-                                sourceSize.height: parent.height * 2
-                                fillMode: Image.PreserveAspectCrop
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: root.current?.name ?? ""
-                            color: Theme.gameEditor.headingColor
-                            font.weight: Theme.font.strongWeight
-                            wrapMode: Text.WordWrap
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: {
-                                const c = root.current
-                                if (!c)
-                                    return ""
-                                const parts = [c.year > 0 ? String(c.year) : qsTr("Year unknown")]
-                                if (c.rating >= 0)
-                                    parts.push(qsTr("%1 of 5 stars").arg(c.rating))
-                                return parts.join(" · ")
-                            }
-                            color: Theme.gameEditor.hintColor
-                            wrapMode: Text.WordWrap
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            visible: text !== ""
-                            text: (root.current?.platforms ?? []).join(", ")
-                            color: Theme.gameEditor.hintColor
-                            wrapMode: Text.WordWrap
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: (root.current?.summary ?? "") !== "" ? root.current.summary : qsTr("No description")
-                            color: (root.current?.summary ?? "") !== "" ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor
-                            wrapMode: Text.WordWrap
-                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: root.request !== 0 ? qsTr("Looking up %1…").arg(root.searchedName)
+                            : root.error !== "" ? root.error
+                            : root.searchedPlatforms !== "" ? qsTr("IGDB has nothing called %1 on %2.").arg(root.searchedName).arg(root.searchedPlatforms)
+                            : qsTr("IGDB has nothing called %1.").arg(root.searchedName)
+                        color: root.error !== "" && root.request === 0 ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
+                    }
+                    SettingsButton {
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: root.request === 0 && (root.error !== "" || root.searchedPlatforms !== "")
+                        text: root.error !== "" ? qsTr("Retry") : qsTr("Search every platform")
+                        onClicked: root.error !== "" ? root.search() : root.searchEveryPlatform()
                     }
                 }
             }
 
-            RowLayout {
+            Flickable {
+                id: details
+                Layout.preferredWidth: Theme.gameEditor.detailedDetailsWidth
+                Layout.fillHeight: true
+                visible: root.current !== null
+                clip: true
+                contentHeight: detailsColumn.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: SettingsScrollBar {}
+
+                ColumnLayout {
+                    id: detailsColumn
+                    width: details.width - Theme.layout.spacing
+                    spacing: Theme.layout.spacing
+
+                    MotionNumber {
+                        id: detailsFade
+                        target: detailsColumn
+                        property: "opacity"
+                        from: 0
+                        to: 1
+                        linear: true
+                    }
+                    Connections {
+                        target: root
+                        function onCurrentChanged() {
+                            if (Motion.on && popup.opened)
+                                detailsFade.restart()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        implicitHeight: Theme.gameEditor.detailedLargeCoverHeight
+                        implicitWidth: implicitHeight * 3 / 4
+                        radius: Theme.controls.inputRadius
+                        color: Theme.gameEditor.artPreviewBackground
+                        clip: true
+                        FadeImage {
+                            anchors.fill: parent
+                            source: root.current?.coverLarge ?? ""
+                            sourceSize.height: parent.height * 2
+                            fillMode: Image.PreserveAspectCrop
+                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: root.current?.name ?? ""
+                        color: Theme.gameEditor.headingColor
+                        font.weight: Theme.font.strongWeight
+                        wrapMode: Text.WordWrap
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: {
+                            const c = root.current
+                            if (!c)
+                                return ""
+                            const parts = [c.year > 0 ? String(c.year) : qsTr("Year unknown")]
+                            if (c.rating >= 0)
+                                parts.push(qsTr("%1 of 5 stars").arg(c.rating))
+                            return parts.join(" · ")
+                        }
+                        color: Theme.gameEditor.hintColor
+                        wrapMode: Text.WordWrap
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: (root.current?.platforms ?? []).join(", ")
+                        color: Theme.gameEditor.hintColor
+                        wrapMode: Text.WordWrap
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: (root.current?.summary ?? "") !== "" ? root.current.summary : qsTr("No description")
+                        color: (root.current?.summary ?? "") !== "" ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor
+                        wrapMode: Text.WordWrap
+                    }
+                }
+            }
+        }
+
+        footerStart: [
+            Label {
                 Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-
-                Label {
-                    Layout.fillWidth: true
-                    visible: root.results.length > 0
-                    text: root.results.length === 1 ? qsTr("1 game") : qsTr("%1 games").arg(root.results.length)
-                    color: Theme.gameEditor.hintColor
-                    elide: Text.ElideRight
-                }
-                Item { Layout.fillWidth: true; visible: root.results.length === 0 }
-                SettingsButton {
-                    text: qsTr("Cancel")
-                    onClicked: popup.close()
-                }
-                SettingsButton {
-                    text: qsTr("Use this game")
-                    primary: true
-                    enabled: root.current !== null
-                    onClicked: root.use(root.selected)
-                }
+                visible: root.results.length > 0
+                text: root.results.length === 1 ? qsTr("1 game") : qsTr("%1 games").arg(root.results.length)
+                color: Theme.gameEditor.hintColor
+                elide: Text.ElideRight
             }
-        }
-
-        Icon {
-            parent: popup.background
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: Theme.gameEditor.padding
-            path: Icons.close
-            size: Theme.about.closeSize
-            color: closeMouse.containsMouse ? Theme.about.closeHoverColor : Theme.about.closeColor
-
-            MouseArea {
-                id: closeMouse
-                anchors.fill: parent
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
+        ]
+        footer: [
+            SettingsButton {
+                text: qsTr("Cancel")
                 onClicked: popup.close()
+            },
+            SettingsButton {
+                text: qsTr("Use this game")
+                primary: true
+                enabled: root.current !== null
+                onClicked: root.use(root.selected)
             }
-
-            ToolTip.visible: closeMouse.containsMouse
-            ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: qsTr("Close")
-        }
+        ]
     }
 }

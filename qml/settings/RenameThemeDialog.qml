@@ -2,8 +2,11 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: false
+    title: qsTr("Rename %1").arg(name)
 
     property string kind: "colors"
     property string name
@@ -45,66 +48,38 @@ MotionPopup {
         close()
     }
 
-    anchors.centerIn: parent
-    modal: true
-    Overlay.modal: Scrim {}
-    padding: Theme.menu.dialogPadding
-    width: 340
-
-    background: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
+    Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
+    SettingsTextField {
+        id: field
+        Layout.fillWidth: true
+        implicitHeight: Theme.controls.inputHeight
+        onAccepted: if (renameButton.enabled) root.rename()
+    }
+    Label {
+        visible: root.error !== ""
+        Layout.fillWidth: true
+        text: root.error
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
+    }
+    Label {
+        visible: root.themes.length > 0 || root.files.length > 0
+        Layout.fillWidth: true
+        text: root.themes.length > 0 && root.files.length > 0
+              ? qsTr("%1 and %2 use it and follow the new name.").arg(root.names(root.themes)).arg(root.names(root.files))
+              : qsTr("%1 uses it and follows the new name.").arg(root.names(root.themes.length > 0 ? root.themes : root.files))
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
     }
 
-    ColumnLayout {
-        width: parent.width
-        spacing: 10
-
-        Label {
-            Layout.fillWidth: true
-            text: qsTr("Rename %1").arg(root.name)
-            color: Theme.controls.labelColor
-            font.weight: Theme.font.strongWeight
-            elide: Text.ElideRight
+    footer: [
+        SettingsButton { text: qsTr("Cancel"); onClicked: root.close() },
+        SettingsButton {
+            id: renameButton
+            primary: true
+            text: qsTr("Rename")
+            enabled: root.error === ""
+            onClicked: root.rename()
         }
-
-        Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
-        SettingsTextField {
-            id: field
-            Layout.fillWidth: true
-            implicitHeight: Theme.controls.inputHeight
-            onAccepted: if (renameButton.enabled) root.rename()
-        }
-        Label {
-            visible: root.error !== ""
-            Layout.fillWidth: true
-            text: root.error
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-        Label {
-            visible: root.themes.length > 0 || root.files.length > 0
-            Layout.fillWidth: true
-            text: root.themes.length > 0 && root.files.length > 0
-                  ? qsTr("%1 and %2 use it and follow the new name.").arg(root.names(root.themes)).arg(root.names(root.files))
-                  : qsTr("%1 uses it and follows the new name.").arg(root.names(root.themes.length > 0 ? root.themes : root.files))
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: Theme.controls.controlSpacing
-            SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
-            SettingsButton {
-                id: renameButton
-                primary: true
-                text: qsTr("Rename")
-                enabled: root.error === ""
-                onClicked: root.rename()
-            }
-        }
-    }
+    ]
 }

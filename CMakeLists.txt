@@ -118,6 +118,7 @@ qt_add_qml_module(lattis
         qml/components/MenuPopExit.qml
         qml/components/Unfold.qml
         qml/components/LogoScrim.qml
+        qml/components/AppDialog.qml
         qml/components/Scrim.qml
         qml/components/PopoverBackground.qml
         qml/components/ScreenSwap.qml

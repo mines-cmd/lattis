@@ -745,6 +745,12 @@ int main(int argc, char *argv[])
                         QMetaObject::invokeMethod(window, "dragPlatformInSettings", Q_ARG(QVariant, spec));
                     });
                 }
+                if (const QString kind = qEnvironmentVariable("LATTIS_THEME_DIALOG"); !kind.isEmpty()) {
+                    QTimer::singleShot(actualDelay / 2, window, [window, kind] {
+                        logHook("themeDialogInSettings", kind);
+                        QMetaObject::invokeMethod(window, "themeDialogInSettings", Q_ARG(QVariant, kind));
+                    });
+                }
                 QTimer::singleShot(actualDelay, window, [settingsScreenshot] {
                     QWindow *settings = nullptr;
                     for (QWindow *w : QGuiApplication::allWindows()) {

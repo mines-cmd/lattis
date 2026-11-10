@@ -338,7 +338,7 @@ Item {
             titleField.forceActiveFocus()
             titleField.selectAll()
         } else {
-            content.forceActiveFocus()
+            dialog.contentItem.forceActiveFocus()
         }
     }
 
@@ -800,16 +800,14 @@ Item {
         removed(next)
     }
 
-    MotionPopup {
+    AppDialog {
         id: dialog
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
+        carded: true
+        size: "large"
+        title: root.adding ? qsTr("Add a game") : qsTr("Properties")
         width: Math.min(Theme.gameEditor.width, parent.width - 2 * Theme.layout.margin)
         height: Math.min(root.adding ? implicitHeight : Theme.gameEditor.height, parent.height * Theme.gameEditor.maxHeight)
-        modal: true
-        focus: true
-        padding: Theme.gameEditor.padding
         closePolicy: Popup.CloseOnEscape
         onClosed: {
             confirmRemove.close()
@@ -821,419 +819,359 @@ Item {
             root.closed()
         }
 
-        Overlay.modal: Scrim {}
+        // A click on no field takes the focus from the one that has it. The form needs its
+        // own handler: the ScrollView takes the clicks inside it.
+        TapHandler { onTapped: dialog.contentItem.forceActiveFocus() }
 
-        background: Surface {
-            radius: Theme.gameEditor.radius
-            fill: Theme.gameEditor.background
-            fillEnd: Theme.gameEditor.backgroundEnd
-            direction: Theme.gameEditor.gradientDirection
-            border.color: Theme.gameEditor.border
-            border.width: Theme.gameEditor.borderWidth
+        Shortcut {
+            sequence: "Ctrl+Tab"
+            enabled: dialog.opened && !root.adding
+            onActivated: root.stepTab(1)
+        }
+        Shortcut {
+            sequence: "Ctrl+Shift+Tab"
+            enabled: dialog.opened && !root.adding
+            onActivated: root.stepTab(-1)
         }
 
-        contentItem: ColumnLayout {
-            id: content
-            spacing: Theme.gameEditor.rowSpacing
-
-            // A click on no field takes the focus from the one that has it. The form needs its
-            // own handler: the ScrollView takes the clicks inside it.
-            TapHandler { onTapped: content.forceActiveFocus() }
-
-            Shortcut {
-                sequence: "Ctrl+Tab"
-                enabled: dialog.opened && !root.adding
-                onActivated: root.stepTab(1)
+        LookupRow {
+            id: lookupRow
+            Layout.fillWidth: true
+            match: root.lookupMatch
+            candidates: root.lookupCandidates
+            differs: root.lookupDiffers.map(key => root.fieldNames[key])
+            filledAny: Object.keys(root.lookupFilled).length > 0 || tagsEditor.marked.length > 0
+            canChooseArt: Metadata.hasSteamGridDbKey
+            onChooseArt: root.chooseArt()
+            onCancel: root.lookUp()
+            onUndo: {
+                root.undoFill()
+                phase = ""
             }
-            Shortcut {
-                sequence: "Ctrl+Shift+Tab"
-                enabled: dialog.opened && !root.adding
-                onActivated: root.stepTab(-1)
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-
-                Label {
-                    Layout.fillWidth: true
-                    text: root.adding ? qsTr("Add a game") : qsTr("Properties")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                    font.pixelSize: Theme.gameEditor.headingFontSize
-                    elide: Text.ElideRight
-                }
-                WindowControls {
-                    Layout.alignment: Qt.AlignTop
-                    dialog: dialog
-                }
-            }
-
-            LookupRow {
-                id: lookupRow
-                Layout.fillWidth: true
-                match: root.lookupMatch
-                candidates: root.lookupCandidates
-                differs: root.lookupDiffers.map(key => root.fieldNames[key])
-                filledAny: Object.keys(root.lookupFilled).length > 0 || tagsEditor.marked.length > 0
-                canChooseArt: Metadata.hasSteamGridDbKey
-                onChooseArt: root.chooseArt()
-                onCancel: root.lookUp()
-                onUndo: {
+            onNotThisGame: {
+                if (root.lookupCandidates.length > 1) {
+                    phase = "pick"
+                } else {
                     root.undoFill()
-                    phase = ""
+                    root.lookUp(true)
                 }
-                onNotThisGame: {
-                    if (root.lookupCandidates.length > 1) {
-                        phase = "pick"
-                    } else {
-                        root.undoFill()
-                        root.lookUp(true)
-                    }
-                }
-                onReplaceToo: root.replaceToo()
-                onPicked: candidate => root.applyMatch(candidate)
-                onNoneOfThese: {
-                    root.undoFill()
-                    phase = ""
-                }
-                onNotOnIgdb: {
-                    root.undoFill()
-                    root.lookupIds = { igdb: 0 }
-                    hint = qsTr("Marked as not on IGDB; saving remembers it, so looking up missing info skips this game.")
-                    phase = "hint"
-                }
-                onDetailedLookup: root.openDetailedLookup()
-                onDismissed: phase = ""
             }
+            onReplaceToo: root.replaceToo()
+            onPicked: candidate => root.applyMatch(candidate)
+            onNoneOfThese: {
+                root.undoFill()
+                phase = ""
+            }
+            onNotOnIgdb: {
+                root.undoFill()
+                root.lookupIds = { igdb: 0 }
+                hint = qsTr("Marked as not on IGDB; saving remembers it, so looking up missing info skips this game.")
+                phase = "hint"
+            }
+            onDetailedLookup: root.openDetailedLookup()
+            onDismissed: phase = ""
+        }
 
-            RowLayout {
-                Layout.fillWidth: true
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: Theme.gameEditor.railGap
+
+            Item {
+                id: rail
+                visible: !root.adding
+                Layout.preferredWidth: Theme.gameEditor.railWidth
                 Layout.fillHeight: true
-                spacing: Theme.gameEditor.railGap
+                activeFocusOnTab: true
+                // A click gives the rail focus for the arrow keys but draws no ring.
+                property bool clicked: false
+                onActiveFocusChanged: if (!activeFocus) clicked = false
+                Keys.onUpPressed: { clicked = false; root.stepTab(-1) }
+                Keys.onDownPressed: { clicked = false; root.stepTab(1) }
 
-                Item {
-                    id: rail
-                    visible: !root.adding
-                    Layout.preferredWidth: Theme.gameEditor.railWidth
-                    Layout.fillHeight: true
-                    activeFocusOnTab: true
-                    // A click gives the rail focus for the arrow keys but draws no ring.
-                    property bool clicked: false
-                    onActiveFocusChanged: if (!activeFocus) clicked = false
-                    Keys.onUpPressed: { clicked = false; root.stepTab(-1) }
-                    Keys.onDownPressed: { clicked = false; root.stepTab(1) }
+                Surface {
+                    anchors.fill: parent
+                    radius: Theme.gameEditor.railRadius
+                    fill: Theme.gameEditor.railBackground
+                    fillEnd: Theme.gameEditor.railBackgroundEnd
+                    direction: Theme.controls.gradientDirection
+                    border.color: Theme.gameEditor.railBorder
+                    border.width: Theme.gameEditor.railBorderWidth
+                }
 
-                    Surface {
-                        anchors.fill: parent
-                        radius: Theme.gameEditor.railRadius
-                        fill: Theme.gameEditor.railBackground
-                        fillEnd: Theme.gameEditor.railBackgroundEnd
-                        direction: Theme.controls.gradientDirection
-                        border.color: Theme.gameEditor.railBorder
-                        border.width: Theme.gameEditor.railBorderWidth
-                    }
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: Theme.gameEditor.railPadding
+                    spacing: Theme.gameEditor.railSpacing
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: Theme.gameEditor.railPadding
-                        spacing: Theme.gameEditor.railSpacing
+                    Repeater {
+                        model: root.tabs
 
-                        Repeater {
-                            model: root.tabs
+                        Surface {
+                            id: tabItem
+                            required property var modelData
+                            required property int index
+                            readonly property bool selected: root.tab === index
 
-                            Surface {
-                                id: tabItem
-                                required property var modelData
-                                required property int index
-                                readonly property bool selected: root.tab === index
+                            visible: modelData.shown
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            Layout.preferredHeight: Theme.gameEditor.railItemHeight
+                            radius: Theme.gameEditor.railItemRadius
+                            fill: selected ? Theme.gameEditor.railSelectedBackground
+                                : tabMouse.containsMouse ? Theme.controls.hover
+                                : Qt.alpha(Theme.controls.hover, 0)
+                            fillEnd: selected ? Theme.gameEditor.railSelectedBackgroundEnd
+                                   : tabMouse.containsMouse ? Theme.controls.hover
+                                   : Qt.alpha(Theme.controls.hover, 0)
+                            direction: Theme.controls.gradientDirection
+                            border.color: Theme.gameEditor.railFocusRing
+                            border.width: selected && rail.activeFocus && !rail.clicked
+                                          ? Theme.gameEditor.railFocusRingWidth : 0
 
-                                visible: modelData.shown
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignTop
-                                Layout.preferredHeight: Theme.gameEditor.railItemHeight
-                                radius: Theme.gameEditor.railItemRadius
-                                fill: selected ? Theme.gameEditor.railSelectedBackground
-                                    : tabMouse.containsMouse ? Theme.controls.hover
-                                    : Qt.alpha(Theme.controls.hover, 0)
-                                fillEnd: selected ? Theme.gameEditor.railSelectedBackgroundEnd
-                                       : tabMouse.containsMouse ? Theme.controls.hover
-                                       : Qt.alpha(Theme.controls.hover, 0)
-                                direction: Theme.controls.gradientDirection
-                                border.color: Theme.gameEditor.railFocusRing
-                                border.width: selected && rail.activeFocus && !rail.clicked
-                                              ? Theme.gameEditor.railFocusRingWidth : 0
+                            Behavior on fill { enabled: Motion.fades; MotionColor {} }
+                            Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
 
-                                Behavior on fill { enabled: Motion.fades; MotionColor {} }
-                                Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
+                            Rectangle {
+                                // Its text is what the UI tests find, and the tooltip's.
+                                readonly property string text: qsTr("Unsaved changes in %1").arg(tabItem.modelData.name)
+                                visible: root.dirtyTabs[tabItem.index] ?? false
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                width: Theme.gameEditor.changedDotSize
+                                height: width
+                                radius: width / 2
+                                color: tabItem.selected ? Theme.gameEditor.changedDotSelected : Theme.gameEditor.changedDot
+                            }
 
-                                Rectangle {
-                                    // Its text is what the UI tests find, and the tooltip's.
-                                    readonly property string text: qsTr("Unsaved changes in %1").arg(tabItem.modelData.name)
-                                    visible: root.dirtyTabs[tabItem.index] ?? false
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 12
-                                    width: Theme.gameEditor.changedDotSize
-                                    height: width
-                                    radius: width / 2
-                                    color: tabItem.selected ? Theme.gameEditor.changedDotSelected : Theme.gameEditor.changedDot
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: (root.dirtyTabs[tabItem.index] ?? false) ? 12 + Theme.gameEditor.changedDotSize + 6 : 10
+                                spacing: 10
+
+                                Icon {
+                                    path: tabItem.modelData.icon
+                                    size: Theme.gameEditor.railIconSize
+                                    color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
+
+                                    Behavior on color { enabled: Motion.fades; MotionColor {} }
                                 }
 
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 10
-                                    anchors.rightMargin: (root.dirtyTabs[tabItem.index] ?? false) ? 12 + Theme.gameEditor.changedDotSize + 6 : 10
-                                    spacing: 10
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: tabItem.modelData.name
+                                    color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
+                                    elide: Text.ElideRight
+                                    font.weight: tabItem.selected ? Theme.font.onAccentWeight : Font.Normal
 
-                                    Icon {
-                                        path: tabItem.modelData.icon
-                                        size: Theme.gameEditor.railIconSize
-                                        color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
-
-                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
-                                    }
-
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: tabItem.modelData.name
-                                        color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText
-                                        elide: Text.ElideRight
-                                        font.weight: tabItem.selected ? Theme.font.onAccentWeight : Font.Normal
-
-                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
-                                    }
+                                    Behavior on color { enabled: Motion.fades; MotionColor {} }
                                 }
+                            }
 
-                                MouseArea {
-                                    id: tabMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        root.tab = tabItem.index
-                                        rail.forceActiveFocus()
-                                        rail.clicked = true
-                                    }
+                            MouseArea {
+                                id: tabMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.tab = tabItem.index
+                                    rail.forceActiveFocus()
+                                    rail.clicked = true
                                 }
                             }
                         }
-
-                        Item { Layout.fillHeight: true }
-                    }
-                }
-
-                ScrollView {
-                    id: scroll
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    implicitHeight: form.implicitHeight
-                    contentWidth: availableWidth
-                    clip: true
-
-                    // Beside the cards, not over them: the form makes room while it shows, so the
-                    // cards line up with the buttons below when nothing scrolls.
-                    ScrollBar.vertical: SettingsScrollBar {
-                        id: scrollBar
-                        parent: scroll
-                        x: scroll.width - width
-                        y: scroll.topPadding
-                        height: scroll.availableHeight
                     }
 
-                    ColumnLayout {
-                        id: form
-
-                        // Kept once the scroll bar has shown: content that only overflows at the narrower
-                        // width would otherwise hide the bar, widen, fit, and show it again, without end.
-                        property bool scrollRoom: false
-                        Connections {
-                            target: scrollBar
-                            function onVisibleChanged() { if (scrollBar.visible) form.scrollRoom = true }
-                        }
-
-                        width: scroll.availableWidth - (scrollRoom || scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
-                        spacing: Theme.gameEditor.cardSpacing
-
-                        TapHandler { onTapped: content.forceActiveFocus() }
-
-                        EditorGeneralPage {
-                            id: generalPage
-                            editor: root
-                            visible: root.pageShown(0)
-                        }
-
-                        EditorLaunchPage {
-                            id: launchPage
-                            editor: root
-                            visible: root.pageShown(2)
-                        }
-
-                        EditorSavesPage {
-                            id: savesPage
-                            editor: root
-                            visible: root.pageShown(3)
-                        }
-
-                        EditorImagesPage {
-                            id: imagesPage
-                            editor: root
-                            visible: root.pageShown(1)
-                        }
-                    }
+                    Item { Layout.fillHeight: true }
                 }
             }
 
-            Label {
-                id: error
-                visible: text !== ""
+            ScrollView {
+                id: scroll
                 Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                color: Theme.gameEditor.errorColor
-            }
+                Layout.fillHeight: true
+                implicitHeight: form.implicitHeight
+                contentWidth: availableWidth
+                clip: true
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
+                // Beside the cards, not over them: the form makes room while it shows, so the
+                // cards line up with the buttons below when nothing scrolls.
+                ScrollBar.vertical: SettingsScrollBar {
+                    id: scrollBar
+                    parent: scroll
+                    x: scroll.width - width
+                    y: scroll.topPadding
+                    height: scroll.availableHeight
+                }
 
-                SettingsButton {
-                    id: removeButton
-                    visible: !root.adding
-                    text: (root.game.hidden ?? false) ? qsTr("Unhide") : qsTr("Hide game")
-                    onClicked: {
-                        if (root.game.hidden ?? false) {
-                            root.unhide()
-                            return
-                        }
-                        wipe.checked = false
-                        confirmRemove.open()
+                ColumnLayout {
+                    id: form
+
+                    // Kept once the scroll bar has shown: content that only overflows at the narrower
+                    // width would otherwise hide the bar, widen, fit, and show it again, without end.
+                    property bool scrollRoom: false
+                    Connections {
+                        target: scrollBar
+                        function onVisibleChanged() { if (scrollBar.visible) form.scrollRoom = true }
                     }
-                }
-                SettingsButton {
-                    visible: !root.adding && (root.game.platform === "steam" ? (root.game.steamUninstallable ?? false)
-                                              : root.programGame)
-                    text: qsTr("Uninstall")
-                    danger: true
-                    onClicked: root.uninstall()
-                }
-                Item { Layout.fillWidth: true }
-                SettingsButton {
-                    text: qsTr("Cancel")
-                    onClicked: dialog.close()
-                }
-                SettingsButton {
-                    text: root.adding ? qsTr("Add") : qsTr("Save")
-                    primary: true
-                    enabled: !root.adding || root.platformId !== ""
-                    onClicked: root.save()
+
+                    width: scroll.availableWidth - (scrollRoom || scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
+                    spacing: Theme.gameEditor.cardSpacing
+
+                    TapHandler { onTapped: dialog.contentItem.forceActiveFocus() }
+
+                    EditorGeneralPage {
+                        id: generalPage
+                        editor: root
+                        visible: root.pageShown(0)
+                    }
+
+                    EditorLaunchPage {
+                        id: launchPage
+                        editor: root
+                        visible: root.pageShown(2)
+                    }
+
+                    EditorSavesPage {
+                        id: savesPage
+                        editor: root
+                        visible: root.pageShown(3)
+                    }
+
+                    EditorImagesPage {
+                        id: imagesPage
+                        editor: root
+                        visible: root.pageShown(1)
+                    }
                 }
             }
         }
 
-        MotionPopup {
+        Label {
+            id: error
+            visible: text !== ""
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.errorColor
+        }
+
+        footerStart: [
+            SettingsButton {
+                id: removeButton
+                visible: !root.adding
+                text: (root.game.hidden ?? false) ? qsTr("Unhide") : qsTr("Hide game")
+                onClicked: {
+                    if (root.game.hidden ?? false) {
+                        root.unhide()
+                        return
+                    }
+                    wipe.checked = false
+                    confirmRemove.open()
+                }
+            },
+            SettingsButton {
+                visible: !root.adding && (root.game.platform === "steam" ? (root.game.steamUninstallable ?? false)
+                                          : root.programGame)
+                text: qsTr("Uninstall")
+                danger: true
+                onClicked: root.uninstall()
+            }
+        ]
+        footer: [
+            SettingsButton {
+                text: qsTr("Cancel")
+                onClicked: dialog.close()
+            },
+            SettingsButton {
+                text: root.adding ? qsTr("Add") : qsTr("Save")
+                primary: true
+                enabled: !root.adding || root.platformId !== ""
+                onClicked: root.save()
+            }
+        ]
+
+        AppDialog {
             id: confirmRemove
+
+            carded: false
+            scrim: false
+            title: qsTr("Hide %1?").arg(root.game.title ?? "")
 
             readonly property bool wipeDeletes: root.game.removeDeletes ?? false
             readonly property bool proton: root.game.platform === "proton"
 
-            anchors.centerIn: parent
-            width: Math.min(Theme.gameEditor.confirmWidth, dialog.width)
-            modal: true
-            padding: Theme.gameEditor.padding
-            Overlay.modal: Rectangle { color: "transparent" }
-            background: Surface {
-                radius: Theme.gameEditor.radius
-                fill: Theme.gameEditor.background
-                fillEnd: Theme.gameEditor.backgroundEnd
-                direction: Theme.gameEditor.gradientDirection
-                border.color: Theme.gameEditor.border
-                border.width: Theme.gameEditor.borderWidth
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: Theme.gameEditor.labelColor
+                text: confirmRemove.proton
+                      ? qsTr("It leaves the game list until you unhide it in Settings → Library. It stays in "
+                             + "Steam. To remove it or its files, use Uninstall.")
+                      : qsTr("It leaves the game list until you unhide it in Settings → Library.")
             }
-
-            contentItem: ColumnLayout {
-                spacing: Theme.gameEditor.rowSpacing
-
-                Label {
-                    text: qsTr("Hide %1?").arg(root.game.title ?? "")
-                    color: Theme.gameEditor.headingColor
-                    font.weight: Theme.font.strongWeight
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                }
-                Label {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    color: Theme.gameEditor.labelColor
-                    text: confirmRemove.proton
-                          ? qsTr("It leaves the game list until you unhide it in Settings → Library. It stays in "
-                                 + "Steam. To remove it or its files, use Uninstall.")
-                          : qsTr("It leaves the game list until you unhide it in Settings → Library.")
-                }
-                AbstractButton {
-                    id: wipe
-                    visible: !confirmRemove.proton
-                    Layout.fillWidth: true
-                    checkable: true
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    contentItem: RowLayout {
-                        spacing: Theme.layout.spacing
-
-                        Rectangle {
-                            Layout.alignment: Qt.AlignTop
-                            implicitWidth: Theme.gameEditor.checkSize
-                            implicitHeight: Theme.gameEditor.checkSize
-                            radius: Theme.controls.inputRadius / 2
-                            color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBackground
-                            border.color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBorder
-                            border.width: Theme.controls.inputBorderWidth
-                            Icon {
-                                anchors.centerIn: parent
-                                visible: wipe.checked
-                                path: Icons.check
-                                size: parent.width - 4
-                                color: Theme.gameEditor.checkMark
-                            }
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Label {
-                                Layout.fillWidth: true
-                                text: qsTr("Also delete its info and art")
-                                color: Theme.gameEditor.headingColor
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                text: confirmRemove.wipeDeletes
-                                      ? qsTr("Its game file and images are deleted for good: it can't be unhidden. The game's own files stay.")
-                                      : qsTr("Play time, description, tags, rating and images go; unhiding brings it back fresh. The game's own files stay.")
-                                color: Theme.gameEditor.hintColor
-                                font.pixelSize: Theme.gameEditor.hintFontSize
-                            }
-                        }
-                    }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
+            AbstractButton {
+                id: wipe
+                visible: !confirmRemove.proton
+                Layout.fillWidth: true
+                checkable: true
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                contentItem: RowLayout {
                     spacing: Theme.layout.spacing
 
-                    Item { Layout.fillWidth: true }
-                    SettingsButton {
-                        text: qsTr("Cancel")
-                        onClicked: confirmRemove.close()
+                    Rectangle {
+                        Layout.alignment: Qt.AlignTop
+                        implicitWidth: Theme.gameEditor.checkSize
+                        implicitHeight: Theme.gameEditor.checkSize
+                        radius: Theme.controls.inputRadius / 2
+                        color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBackground
+                        border.color: wipe.checked ? Theme.gameEditor.checkOn : Theme.controls.inputBorder
+                        border.width: Theme.controls.inputBorderWidth
+                        Icon {
+                            anchors.centerIn: parent
+                            visible: wipe.checked
+                            path: Icons.check
+                            size: parent.width - 4
+                            color: Theme.gameEditor.checkMark
+                        }
                     }
-                    SettingsButton {
-                        text: !wipe.checked ? qsTr("Hide") : confirmRemove.wipeDeletes ? qsTr("Delete") : qsTr("Hide and delete")
-                        primary: !wipe.checked
-                        danger: wipe.checked
-                        onClicked: {
-                            confirmRemove.close()
-                            root.remove(wipe.checked)
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Label {
+                            Layout.fillWidth: true
+                            text: qsTr("Also delete its info and art")
+                            color: Theme.gameEditor.headingColor
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: confirmRemove.wipeDeletes
+                                  ? qsTr("Its game file and images are deleted for good: it can't be unhidden. The game's own files stay.")
+                                  : qsTr("Play time, description, tags, rating and images go; unhiding brings it back fresh. The game's own files stay.")
+                            color: Theme.gameEditor.hintColor
+                            font.pixelSize: Theme.gameEditor.hintFontSize
                         }
                     }
                 }
             }
+
+            footer: [
+                SettingsButton {
+                    text: qsTr("Cancel")
+                    onClicked: confirmRemove.close()
+                },
+                SettingsButton {
+                    text: !wipe.checked ? qsTr("Hide") : confirmRemove.wipeDeletes ? qsTr("Delete") : qsTr("Hide and delete")
+                    primary: !wipe.checked
+                    danger: wipe.checked
+                    onClicked: {
+                        confirmRemove.close()
+                        root.remove(wipe.checked)
+                    }
+                }
+            ]
         }
     }
 

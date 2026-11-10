@@ -149,13 +149,6 @@ Item {
             error.text = Library.renameTag(from, to.trim())
     }
 
-    component DialogBackground: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
-    }
-
     component SectionHeader: Label {
         Layout.topMargin: Theme.settingsWindow.sectionSpacing / 2
         Layout.bottomMargin: Theme.layout.spacing
@@ -194,95 +187,59 @@ Item {
         wrapMode: Text.WordWrap
     }
 
-    MotionPopup {
+    AppDialog {
         id: deleteDialog
+
+        carded: false
+        title: qsTr("Delete the tag %1?").arg(deleteDialog.tag.name)
 
         property var tag: ({ name: "", games: 0 })
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.contentPadding / 2
-        width: Theme.gameEditor.confirmWidth
-        background: DialogBackground {}
+        Muted {
+            Layout.fillWidth: true
+            text: deleteDialog.tag.games > 0
+                  ? (deleteDialog.tag.games === 1 ? qsTr("1 game loses it. The game itself stays.")
+                     : qsTr("%1 games lose it. The games themselves stay.").arg(deleteDialog.tag.games))
+                  : qsTr("No game has it.")
+        }
 
-        ColumnLayout {
-            width: parent.width
-            spacing: Theme.layout.spacing
-
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Delete the tag %1?").arg(deleteDialog.tag.name)
-                color: Theme.controls.labelColor
-                font.weight: Theme.font.strongWeight
-                wrapMode: Text.WordWrap
-            }
-            Muted {
-                Layout.fillWidth: true
-                text: deleteDialog.tag.games > 0
-                      ? (deleteDialog.tag.games === 1 ? qsTr("1 game loses it. The game itself stays.")
-                         : qsTr("%1 games lose it. The games themselves stay.").arg(deleteDialog.tag.games))
-                      : qsTr("No game has it.")
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.layout.spacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: deleteDialog.close() }
-                SettingsButton {
-                    danger: true
-                    text: qsTr("Delete")
-                    onClicked: {
-                        error.text = Window.window.change(() => Library.removeTag(deleteDialog.tag.name))
-                        deleteDialog.close()
-                    }
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: deleteDialog.close() },
+            SettingsButton {
+                danger: true
+                text: qsTr("Delete")
+                onClicked: {
+                    error.text = Window.window.change(() => Library.removeTag(deleteDialog.tag.name))
+                    deleteDialog.close()
                 }
             }
-        }
+        ]
     }
 
-    MotionPopup {
+    AppDialog {
         id: trashDialog
+
+        carded: false
+        title: qsTr("Move %1 to the trash?").arg(trashDialog.entry.places)
 
         property var entry: ({ index: -1, places: "" })
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.settingsWindow.contentPadding / 2
-        width: Theme.gameEditor.confirmWidth
-        background: DialogBackground {}
+        Muted {
+            Layout.fillWidth: true
+            text: qsTr("What you had before the import. What was restored stays.")
+        }
 
-        ColumnLayout {
-            width: parent.width
-            spacing: Theme.layout.spacing
-
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Move %1 to the trash?").arg(trashDialog.entry.places)
-                color: Theme.controls.labelColor
-                font.weight: Theme.font.strongWeight
-                wrapMode: Text.WordWrap
-            }
-            Muted {
-                Layout.fillWidth: true
-                text: qsTr("What you had before the import. What was restored stays.")
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.layout.spacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: trashDialog.close() }
-                SettingsButton {
-                    danger: true
-                    text: qsTr("Move to trash")
-                    onClicked: {
-                        error.text = Backups.deleteMovedAside(trashDialog.entry.index)
-                        trashDialog.close()
-                    }
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: trashDialog.close() },
+            SettingsButton {
+                danger: true
+                text: qsTr("Move to trash")
+                onClicked: {
+                    error.text = Backups.deleteMovedAside(trashDialog.entry.index)
+                    trashDialog.close()
                 }
             }
-        }
+        ]
     }
 
     TagPalettePopup {

@@ -2,8 +2,11 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: false
+    title: qsTr("Description of %1").arg(name)
 
     property string name
 
@@ -23,53 +26,25 @@ MotionPopup {
         close()
     }
 
-    anchors.centerIn: parent
-    modal: true
-    Overlay.modal: Scrim {}
-    padding: Theme.menu.dialogPadding
-    width: 340
-
-    background: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
+    SettingsTextField {
+        id: field
+        Layout.fillWidth: true
+        implicitHeight: Theme.controls.inputHeight
+        maximumLength: 48
+        onAccepted: root.save()
+    }
+    Label {
+        Layout.alignment: Qt.AlignRight
+        text: field.length + "/48"
+        color: Theme.controls.descriptionColor
     }
 
-    ColumnLayout {
-        width: parent.width
-        spacing: 10
-
-        Label {
-            Layout.fillWidth: true
-            text: qsTr("Description of %1").arg(root.name)
-            color: Theme.controls.labelColor
-            font.weight: Theme.font.strongWeight
-            elide: Text.ElideRight
+    footer: [
+        SettingsButton { text: qsTr("Cancel"); onClicked: root.close() },
+        SettingsButton {
+            primary: true
+            text: qsTr("Save")
+            onClicked: root.save()
         }
-
-        SettingsTextField {
-            id: field
-            Layout.fillWidth: true
-            implicitHeight: Theme.controls.inputHeight
-            maximumLength: 48
-            onAccepted: root.save()
-        }
-        Label {
-            Layout.alignment: Qt.AlignRight
-            text: field.length + "/48"
-            color: Theme.controls.descriptionColor
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: Theme.controls.controlSpacing
-            SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
-            SettingsButton {
-                primary: true
-                text: qsTr("Save")
-                onClicked: root.save()
-            }
-        }
-    }
+    ]
 }

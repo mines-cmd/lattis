@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
 
     property var ids: []
@@ -22,57 +22,31 @@ MotionPopup {
             message(error)
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
-    width: Math.min(Theme.gameEditor.confirmWidth, parent.width - 2 * Theme.gameEditor.padding)
-    modal: true
-    focus: true
-    padding: Theme.gameEditor.padding
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-    }
+    carded: false
+    title: qsTr("New tag for %1 games").arg(ids.length)
 
     onOpened: {
         input.text = ""
         input.forceActiveFocus()
     }
 
-    contentItem: ColumnLayout {
-        spacing: Theme.gameEditor.rowSpacing
-
-        Label {
-            Layout.fillWidth: true
-            text: qsTr("New tag for %1 games").arg(root.ids.length)
-            color: Theme.gameEditor.headingColor
-            font.weight: Theme.font.strongWeight
-            wrapMode: Text.WordWrap
-        }
-        SettingsTextField {
-            id: input
-            Layout.fillWidth: true
-            placeholderText: qsTr("Name of the new tag")
-            onAccepted: root.add()
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Item { Layout.fillWidth: true }
-            SettingsButton {
-                text: qsTr("Cancel")
-                onClicked: root.close()
-            }
-            SettingsButton {
-                text: qsTr("Add")
-                enabled: root.typed !== ""
-                onClicked: root.add()
-            }
-        }
+    SettingsTextField {
+        id: input
+        Layout.fillWidth: true
+        placeholderText: qsTr("Name of the new tag")
+        onAccepted: root.add()
     }
+
+    footer: [
+        SettingsButton {
+            text: qsTr("Cancel")
+            onClicked: root.close()
+        },
+        SettingsButton {
+            primary: true
+            text: qsTr("Add")
+            enabled: root.typed !== ""
+            onClicked: root.add()
+        }
+    ]
 }

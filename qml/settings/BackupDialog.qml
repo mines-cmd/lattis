@@ -4,8 +4,13 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: true
+    size: "medium"
+    title: library ? qsTr("Back up library") : qsTr("Back up saves")
+    closable: !busy
 
     property string kind: "library"
     readonly property bool library: kind === "library"
@@ -78,23 +83,8 @@ MotionPopup {
         error.text = Backups.setTaken(rows.map(r => r.id), taken)
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
-    width: Math.min(Theme.gameEditor.backupWidth, parent.width - 2 * Theme.gameEditor.padding)
     height: Math.min(implicitHeight, parent.height - 2 * Theme.gameEditor.padding)
-    modal: true
-    focus: true
-    padding: Theme.gameEditor.padding
     closePolicy: root.busy ? Popup.NoAutoClose : Popup.CloseOnEscape
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-    }
 
     Connections {
         target: Backups
@@ -255,366 +245,354 @@ MotionPopup {
         }
     }
 
-    contentItem: ColumnLayout {
-        spacing: Theme.gameEditor.rowSpacing
+    Flickable {
+        id: flick
+        visible: !root.busy && root.done === null
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredHeight: parts.implicitHeight
+        contentHeight: parts.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: SettingsScrollBar { id: scrollBar }
 
-        Label {
-            Layout.fillWidth: true
-            text: root.library ? qsTr("Back up library") : qsTr("Back up saves")
-            color: Theme.gameEditor.headingColor
-            font.weight: Theme.font.strongWeight
-        }
+        ColumnLayout {
+            id: parts
+            width: flick.width - (scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
+            spacing: Theme.gameEditor.rowSpacing
 
-        Flickable {
-            id: flick
-            visible: !root.busy && root.done === null
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.preferredHeight: parts.implicitHeight
-            contentHeight: parts.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: SettingsScrollBar { id: scrollBar }
+            Card {
+                visible: root.library
 
-            ColumnLayout {
-                id: parts
-                width: flick.width - (scrollBar.visible ? scrollBar.width + Theme.layout.spacing : 0)
-                spacing: Theme.gameEditor.rowSpacing
-
-                Card {
-                    visible: root.library
-
-                    PartRow {
-                        name: qsTr("Library and settings")
-                        detail: root.size(root.plan.dataBytes ?? -1)
-                        PathHint { text: root.plan.dataDir ?? "" }
-                        Hint {
-                            text: qsTr("%n game(s), with their art, play time and tags; themes, platforms, emulators and settings.",
-                                       "", root.plan.games ?? 0)
-                        }
+                PartRow {
+                    name: qsTr("Library and settings")
+                    detail: root.size(root.plan.dataBytes ?? -1)
+                    PathHint { text: root.plan.dataDir ?? "" }
+                    Hint {
+                        text: qsTr("%n game(s), with their art, play time and tags; themes, platforms, emulators and settings.",
+                                   "", root.plan.games ?? 0)
                     }
-                    ColumnLayout {
-                        visible: root.plan.credentials?.exists ?? false
+                }
+                ColumnLayout {
+                    visible: root.plan.credentials?.exists ?? false
+                    Layout.fillWidth: true
+                    spacing: 2
+                    RowLayout {
                         Layout.fillWidth: true
-                        spacing: 2
-                        RowLayout {
+                        SettingsCheckBox {
                             Layout.fillWidth: true
-                            SettingsCheckBox {
-                                Layout.fillWidth: true
-                                text: qsTr("API keys (IGDB, SteamGridDB)")
-                                checked: root.choices.credentials
-                                onToggled: error.text = Backups.setChoice("credentials", checked)
-                            }
-                            Label {
-                                text: root.size(root.plan.credentials?.bytes ?? -1)
-                                color: Theme.gameEditor.hintColor
-                                font.pixelSize: Theme.gameEditor.hintFontSize
-                            }
+                            text: qsTr("API keys (IGDB, SteamGridDB)")
+                            checked: root.choices.credentials
+                            onToggled: error.text = Backups.setChoice("credentials", checked)
                         }
-                        BoxHint { text: qsTr("credentials.toml. Anyone with the file can use them.") }
+                        Label {
+                            text: root.size(root.plan.credentials?.bytes ?? -1)
+                            color: Theme.gameEditor.hintColor
+                            font.pixelSize: Theme.gameEditor.hintFontSize
+                        }
                     }
-                    Repeater {
-                        model: root.library ? (root.plan.roms ?? []) : []
+                    BoxHint { text: qsTr("credentials.toml. Anyone with the file can use them.") }
+                }
+                Repeater {
+                    model: root.library ? (root.plan.roms ?? []) : []
+                    Hint {
+                        required property var modelData
+                        text: qsTr("ROMs in %1 aren't included (%2).").arg(modelData.path).arg(root.size(modelData.bytes))
+                    }
+                }
+            }
+
+            RowLayout {
+                visible: !root.library
+                Layout.fillWidth: true
+                SettingsCheckBox {
+                    Layout.fillWidth: true
+                    visible: root.saveRows.length > 0
+                    text: qsTr("Emulator saves")
+                    checkState: root.rowsState(root.saveRows)
+                    partial: checkState === Qt.PartiallyChecked
+                    checked: checkState === Qt.Checked
+                    onToggled: root.setRows(root.saveRows, root.rowsState(root.saveRows) !== Qt.Checked)
+                }
+                Heading { visible: root.saveRows.length === 0; text: qsTr("Emulator saves") }
+            }
+            Card {
+                id: savesCard
+                visible: !root.library
+                readonly property var shown: (root.plan.emulators ?? []).filter(
+                    e => !(e.skipped === "notInstalled" && e.saves.length === 0 && e.besideRoms === 0))
+                Hint {
+                    visible: savesCard.shown.length === 0
+                    text: qsTr("No platform lists an installed emulator, and no game picks one.")
+                }
+                Repeater {
+                    model: root.library ? [] : savesCard.shown
+                    PartRow {
+                        required property var modelData
+                        readonly property bool nothing: modelData.saves.length === 0 && modelData.besideRoms === 0
+                        name: modelData.name
+                        skipped: nothing
+                        reserve: true
+                        toggleable: !nothing && modelData.skipped !== "noSaves"
+                        taken: modelData.takeSaves
+                        onToggled: taken => root.setRows([{ id: "saves:" + modelData.id }], taken)
+                        detail: modelData.skipped === "noSaves" ? qsTr("Doesn't say where it keeps its saves")
+                              : nothing && (root.plan.measured ?? false) ? qsTr("No saves yet")
+                              : root.size(modelData.savesBytes < 0 || modelData.besideBytes < 0 ? -1
+                                          : modelData.savesBytes + modelData.besideBytes)
+                        Repeater {
+                            model: modelData.saves
+                            PathHint { required property string modelData; text: modelData }
+                        }
                         Hint {
-                            required property var modelData
-                            text: qsTr("ROMs in %1 aren't included (%2).").arg(modelData.path).arg(root.size(modelData.bytes))
+                            visible: modelData.besideRoms > 0
+                            text: qsTr("Saves next to %n ROM(s)", "", modelData.besideRoms)
+                        }
+                        Hint {
+                            visible: modelData.skipped === "noSaves"
+                            text: qsTr("Set its saves in emulators.toml to back them up.")
                         }
                     }
                 }
+            }
 
-                RowLayout {
-                    visible: !root.library
+            RowLayout {
+                visible: !root.library
+                Layout.fillWidth: true
+                SettingsCheckBox {
                     Layout.fillWidth: true
-                    SettingsCheckBox {
-                        Layout.fillWidth: true
-                        visible: root.saveRows.length > 0
-                        text: qsTr("Emulator saves")
-                        checkState: root.rowsState(root.saveRows)
-                        partial: checkState === Qt.PartiallyChecked
-                        checked: checkState === Qt.Checked
-                        onToggled: root.setRows(root.saveRows, root.rowsState(root.saveRows) !== Qt.Checked)
-                    }
-                    Heading { visible: root.saveRows.length === 0; text: qsTr("Emulator saves") }
+                    text: qsTr("Keys and firmware")
+                    enabled: root.keyRows.length > 0
+                    checkState: root.rowsState(root.keyRows)
+                    partial: checkState === Qt.PartiallyChecked
+                    checked: checkState === Qt.Checked
+                    onToggled: root.setRows(root.keyRows, root.rowsState(root.keyRows) !== Qt.Checked)
                 }
-                Card {
-                    id: savesCard
-                    visible: !root.library
-                    readonly property var shown: (root.plan.emulators ?? []).filter(
-                        e => !(e.skipped === "notInstalled" && e.saves.length === 0 && e.besideRoms === 0))
-                    Hint {
-                        visible: savesCard.shown.length === 0
-                        text: qsTr("No platform lists an installed emulator, and no game picks one.")
-                    }
-                    Repeater {
-                        model: root.library ? [] : savesCard.shown
-                        PartRow {
-                            required property var modelData
-                            readonly property bool nothing: modelData.saves.length === 0 && modelData.besideRoms === 0
-                            name: modelData.name
-                            skipped: nothing
-                            reserve: true
-                            toggleable: !nothing && modelData.skipped !== "noSaves"
-                            taken: modelData.takeSaves
-                            onToggled: taken => root.setRows([{ id: "saves:" + modelData.id }], taken)
-                            detail: modelData.skipped === "noSaves" ? qsTr("Doesn't say where it keeps its saves")
-                                  : nothing && (root.plan.measured ?? false) ? qsTr("No saves yet")
-                                  : root.size(modelData.savesBytes < 0 || modelData.besideBytes < 0 ? -1
-                                              : modelData.savesBytes + modelData.besideBytes)
-                            Repeater {
-                                model: modelData.saves
-                                PathHint { required property string modelData; text: modelData }
-                            }
-                            Hint {
-                                visible: modelData.besideRoms > 0
-                                text: qsTr("Saves next to %n ROM(s)", "", modelData.besideRoms)
-                            }
-                            Hint {
-                                visible: modelData.skipped === "noSaves"
-                                text: qsTr("Set its saves in emulators.toml to back them up.")
-                            }
+            }
+            Hint {
+                visible: !root.library
+                text: qsTr("They're your console's; don't share this file.")
+            }
+            Card {
+                id: keysCard
+                readonly property var withKeys: (root.plan.emulators ?? []).filter(e => e.keys.length > 0)
+                visible: !root.library && withKeys.length > 0
+                Repeater {
+                    model: keysCard.withKeys
+                    PartRow {
+                        required property var modelData
+                        name: modelData.name
+                        toggleable: true
+                        taken: modelData.takeKeys
+                        onToggled: taken => root.setRows([{ id: "keys:" + modelData.id }], taken)
+                        detail: root.size(modelData.keysBytes)
+                        Repeater {
+                            model: modelData.keys
+                            PathHint { required property string modelData; text: modelData }
                         }
                     }
                 }
+            }
 
-                RowLayout {
-                    visible: !root.library
+            RowLayout {
+                visible: !root.library
+                Layout.fillWidth: true
+                SettingsCheckBox {
                     Layout.fillWidth: true
-                    SettingsCheckBox {
-                        Layout.fillWidth: true
-                        text: qsTr("Keys and firmware")
-                        enabled: root.keyRows.length > 0
-                        checkState: root.rowsState(root.keyRows)
-                        partial: checkState === Qt.PartiallyChecked
-                        checked: checkState === Qt.Checked
-                        onToggled: root.setRows(root.keyRows, root.rowsState(root.keyRows) !== Qt.Checked)
-                    }
+                    text: qsTr("Games' saves")
+                    enabled: root.gameRows.length > 0
+                    checkState: root.rowsState(root.gameRows)
+                    partial: checkState === Qt.PartiallyChecked
+                    checked: checkState === Qt.Checked
+                    onToggled: root.setRows(root.gameRows, root.rowsState(root.gameRows) !== Qt.Checked)
                 }
+            }
+            Hint {
+                visible: !root.library
+                text: qsTr("Just the saves of each Linux, Steam and Proton game that the saves list knows, or that you gave a save folder.")
+            }
+            RowLayout {
+                visible: root.listMissing
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacing
                 Hint {
-                    visible: !root.library
-                    text: qsTr("They're your console's; don't share this file.")
-                }
-                Card {
-                    id: keysCard
-                    readonly property var withKeys: (root.plan.emulators ?? []).filter(e => e.keys.length > 0)
-                    visible: !root.library && withKeys.length > 0
-                    Repeater {
-                        model: keysCard.withKeys
-                        PartRow {
-                            required property var modelData
-                            name: modelData.name
-                            toggleable: true
-                            taken: modelData.takeKeys
-                            onToggled: taken => root.setRows([{ id: "keys:" + modelData.id }], taken)
-                            detail: root.size(modelData.keysBytes)
-                            Repeater {
-                                model: modelData.keys
-                                PathHint { required property string modelData; text: modelData }
-                            }
-                        }
-                    }
-                }
-
-                RowLayout {
-                    visible: !root.library
-                    Layout.fillWidth: true
-                    SettingsCheckBox {
-                        Layout.fillWidth: true
-                        text: qsTr("Games' saves")
-                        enabled: root.gameRows.length > 0
-                        checkState: root.rowsState(root.gameRows)
-                        partial: checkState === Qt.PartiallyChecked
-                        checked: checkState === Qt.Checked
-                        onToggled: root.setRows(root.gameRows, root.rowsState(root.gameRows) !== Qt.Checked)
-                    }
-                }
-                Hint {
-                    visible: !root.library
-                    text: qsTr("Just the saves of each Linux, Steam and Proton game that the saves list knows, or that you gave a save folder.")
-                }
-                RowLayout {
-                    visible: root.listMissing
-                    Layout.fillWidth: true
-                    spacing: Theme.layout.spacing
-                    Hint {
-                        text: root.listUpdating ? qsTr("Downloading the saves list…")
-                              : qsTr("Update the saves list to include Linux and Steam games.")
-                    }
-                    SettingsButton {
-                        text: qsTr("Update the saves list")
-                        enabled: !root.listUpdating
-                        onClicked: SavesSettings.ensureManifest()
-                    }
-                }
-                Card {
-                    visible: !root.library && (root.plan.games ?? []).length > 0
-                    Repeater {
-                        model: root.library ? [] : (root.plan.games ?? [])
-                        PartRow {
-                            required property var modelData
-                            name: modelData.title
-                            skipped: modelData.tooBig
-                            reserve: true
-                            toggleable: !modelData.tooBig
-                            taken: modelData.take
-                            onToggled: taken => root.setRows([{ id: "game:" + modelData.id }], taken)
-                            detail: modelData.tooBig ? qsTr("Too big, skipped (%1)").arg(root.size(modelData.bytes))
-                                                     : root.size(modelData.bytes)
-                            Repeater {
-                                model: modelData.paths
-                                PathHint { required property string modelData; text: modelData }
-                            }
-                        }
-                    }
-                }
-
-                RowLayout {
-                    visible: !root.library
-                    Layout.fillWidth: true
-                    SettingsCheckBox {
-                        Layout.fillWidth: true
-                        text: qsTr("Proton games' saves")
-                        enabled: root.protonRows.length > 0
-                        checkState: root.rowsState(root.protonRows)
-                        partial: checkState === Qt.PartiallyChecked
-                        checked: checkState === Qt.Checked
-                        onToggled: root.setRows(root.protonRows, root.rowsState(root.protonRows) !== Qt.Checked)
-                    }
-                }
-                Hint {
-                    visible: !root.library
-                    text: qsTr("For a launcher Proton game the saves list doesn't know: what it keeps in its Wine prefix, without the files Proton put there.")
-                }
-                Card {
-                    visible: !root.library && (root.plan.proton ?? []).length > 0
-                    Repeater {
-                        model: root.library ? [] : (root.plan.proton ?? [])
-                        PartRow {
-                            required property var modelData
-                            name: modelData.title
-                            skipped: modelData.skipped !== ""
-                            reserve: true
-                            toggleable: modelData.skipped === ""
-                            taken: modelData.take
-                            onToggled: taken => root.setRows([{ id: "proton:" + modelData.id }], taken)
-                            detail: modelData.skipped === "neverLaunched" ? qsTr("Never launched")
-                                  : modelData.skipped === "uninstalled" ? qsTr("Not installed")
-                                  : modelData.skipped === "unlisted" ? qsTr("Its Proton doesn't list its files")
-                                  : root.size(modelData.bytes)
-                        }
-                    }
-                }
-
-                Heading { text: qsTr("Not in this backup") }
-                Hint {
-                    text: (root.library ? qsTr("Saves: they're in their own backup.") + "\n" : qsTr("The library: it's in its own backup.") + "\n")
-                          + qsTr("ROMs.") + "\n"
-                          + qsTr("Steam games' Proton prefixes, and what Steam Cloud keeps.") + "\n"
-                          + qsTr("Saves of games the saves list doesn't know, unless you gave them a save folder.") + "\n"
-                          + qsTr("The cache, window sizes and the Steam sync record.")
-                    opacity: Theme.gameEditor.readOnlyOpacity
+                    text: root.listUpdating ? qsTr("Downloading the saves list…")
+                          : qsTr("Update the saves list to include Linux and Steam games.")
                 }
                 SettingsButton {
-                    text: root.library ? qsTr("Back up saves") : qsTr("Back up library")
-                    onClicked: root.ask(root.library ? "saves" : "library")
+                    text: qsTr("Update the saves list")
+                    enabled: !root.listUpdating
+                    onClicked: SavesSettings.ensureManifest()
                 }
             }
-        }
-
-        ColumnLayout {
-            visible: root.busy
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Label {
-                Layout.fillWidth: true
-                text: Backups.total > 0 ? qsTr("Backing up: %1 of %2").arg(Backups.sizeText(Backups.bytes)).arg(Backups.sizeText(Backups.total))
-                                        : qsTr("Backing up: %1").arg(Backups.sizeText(Backups.bytes))
-                color: Theme.gameEditor.labelColor
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: Theme.gameEditor.progressHeight
-                radius: Theme.gameEditor.progressRadius
-                color: Theme.gameEditor.progressTrack
-                Rectangle {
-                    height: parent.height
-                    radius: parent.radius
-                    width: Backups.total > 0 ? parent.width * Math.min(1, Backups.bytes / Backups.total) : 0
-                    color: Theme.gameEditor.progressFill
+            Card {
+                visible: !root.library && (root.plan.games ?? []).length > 0
+                Repeater {
+                    model: root.library ? [] : (root.plan.games ?? [])
+                    PartRow {
+                        required property var modelData
+                        name: modelData.title
+                        skipped: modelData.tooBig
+                        reserve: true
+                        toggleable: !modelData.tooBig
+                        taken: modelData.take
+                        onToggled: taken => root.setRows([{ id: "game:" + modelData.id }], taken)
+                        detail: modelData.tooBig ? qsTr("Too big, skipped (%1)").arg(root.size(modelData.bytes))
+                                                 : root.size(modelData.bytes)
+                        Repeater {
+                            model: modelData.paths
+                            PathHint { required property string modelData; text: modelData }
+                        }
+                    }
                 }
             }
-            Hint { text: Backups.part }
-            Hint { text: qsTr("You can keep using the app meanwhile.") }
-        }
 
-        ColumnLayout {
-            visible: root.done !== null && !root.busy
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Label {
+            RowLayout {
+                visible: !root.library
                 Layout.fillWidth: true
-                text: qsTr("Backed up.")
-                color: Theme.gameEditor.labelColor
-            }
-            PathHint { text: root.done?.path ?? "" }
-        }
-
-        Label {
-            id: error
-            visible: text !== ""
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: Theme.gameEditor.errorColor
-        }
-        Label {
-            visible: root.blocked !== "" && !root.busy && root.done === null
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: Theme.gameEditor.errorColor
-            text: root.blocked
-        }
-        Hint {
-            visible: !root.library && !root.busy && root.done === null
-            text: qsTr("Close any emulator you started outside the launcher first.")
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Label {
-                Layout.fillWidth: true
-                visible: !root.busy && root.done === null
-                text: root.totalBytes < 0 ? qsTr("Adding up…")
-                                          : root.library ? qsTr("%1 before compression").arg(Backups.sizeText(root.totalBytes))
-                                          : qsTr("%1 before compression · %2 of %3 selected").arg(Backups.sizeText(root.totalBytes))
-                                                .arg(root.selectedRows).arg(root.allRows)
-                color: Theme.gameEditor.hintColor
-                font.pixelSize: Theme.gameEditor.hintFontSize
-            }
-            Item { Layout.fillWidth: true; visible: root.busy || root.done !== null }
-            SettingsButton {
-                visible: root.done !== null && !root.busy
-                text: qsTr("Show")
-                onClicked: Qt.openUrlExternally(root.done.folder)
-            }
-            SettingsButton {
-                text: root.busy ? qsTr("Cancel") : root.done !== null ? qsTr("Close") : qsTr("Cancel")
-                onClicked: root.busy ? Backups.cancel() : root.close()
-            }
-            SettingsButton {
-                visible: !root.busy && root.done === null
-                primary: true
-                text: qsTr("Back up")
-                enabled: root.blocked === "" && !Backups.running && (root.library || root.selectedRows > 0)
-                onClicked: {
-                    const file = Backups.defaultFile(root.kind)
-                    saveDialog.currentFolder = file.toString().substring(0, file.toString().lastIndexOf("/"))
-                    saveDialog.selectedFile = file
-                    saveDialog.open()
+                SettingsCheckBox {
+                    Layout.fillWidth: true
+                    text: qsTr("Proton games' saves")
+                    enabled: root.protonRows.length > 0
+                    checkState: root.rowsState(root.protonRows)
+                    partial: checkState === Qt.PartiallyChecked
+                    checked: checkState === Qt.Checked
+                    onToggled: root.setRows(root.protonRows, root.rowsState(root.protonRows) !== Qt.Checked)
                 }
+            }
+            Hint {
+                visible: !root.library
+                text: qsTr("For a launcher Proton game the saves list doesn't know: what it keeps in its Wine prefix, without the files Proton put there.")
+            }
+            Card {
+                visible: !root.library && (root.plan.proton ?? []).length > 0
+                Repeater {
+                    model: root.library ? [] : (root.plan.proton ?? [])
+                    PartRow {
+                        required property var modelData
+                        name: modelData.title
+                        skipped: modelData.skipped !== ""
+                        reserve: true
+                        toggleable: modelData.skipped === ""
+                        taken: modelData.take
+                        onToggled: taken => root.setRows([{ id: "proton:" + modelData.id }], taken)
+                        detail: modelData.skipped === "neverLaunched" ? qsTr("Never launched")
+                              : modelData.skipped === "uninstalled" ? qsTr("Not installed")
+                              : modelData.skipped === "unlisted" ? qsTr("Its Proton doesn't list its files")
+                              : root.size(modelData.bytes)
+                    }
+                }
+            }
+
+            Heading { text: qsTr("Not in this backup") }
+            Hint {
+                text: (root.library ? qsTr("Saves: they're in their own backup.") + "\n" : qsTr("The library: it's in its own backup.") + "\n")
+                      + qsTr("ROMs.") + "\n"
+                      + qsTr("Steam games' Proton prefixes, and what Steam Cloud keeps.") + "\n"
+                      + qsTr("Saves of games the saves list doesn't know, unless you gave them a save folder.") + "\n"
+                      + qsTr("The cache, window sizes and the Steam sync record.")
+                opacity: Theme.gameEditor.readOnlyOpacity
+            }
+            SettingsButton {
+                text: root.library ? qsTr("Back up saves") : qsTr("Back up library")
+                onClicked: root.ask(root.library ? "saves" : "library")
             }
         }
     }
+
+    ColumnLayout {
+        visible: root.busy
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        Label {
+            Layout.fillWidth: true
+            text: Backups.total > 0 ? qsTr("Backing up: %1 of %2").arg(Backups.sizeText(Backups.bytes)).arg(Backups.sizeText(Backups.total))
+                                    : qsTr("Backing up: %1").arg(Backups.sizeText(Backups.bytes))
+            color: Theme.gameEditor.labelColor
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Theme.gameEditor.progressHeight
+            radius: Theme.gameEditor.progressRadius
+            color: Theme.gameEditor.progressTrack
+            Rectangle {
+                height: parent.height
+                radius: parent.radius
+                width: Backups.total > 0 ? parent.width * Math.min(1, Backups.bytes / Backups.total) : 0
+                color: Theme.gameEditor.progressFill
+            }
+        }
+        Hint { text: Backups.part }
+        Hint { text: qsTr("You can keep using the app meanwhile.") }
+    }
+
+    ColumnLayout {
+        visible: root.done !== null && !root.busy
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("Backed up.")
+            color: Theme.gameEditor.labelColor
+        }
+        PathHint { text: root.done?.path ?? "" }
+    }
+
+    Label {
+        id: error
+        visible: text !== ""
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.errorColor
+    }
+    Label {
+        visible: root.blocked !== "" && !root.busy && root.done === null
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.errorColor
+        text: root.blocked
+    }
+    Hint {
+        visible: !root.library && !root.busy && root.done === null
+        text: qsTr("Close any emulator you started outside the launcher first.")
+    }
+
+    footerStart: [
+        Label {
+            Layout.fillWidth: true
+            visible: !root.busy && root.done === null
+            text: root.totalBytes < 0 ? qsTr("Adding up…")
+                                      : root.library ? qsTr("%1 before compression").arg(Backups.sizeText(root.totalBytes))
+                                      : qsTr("%1 before compression · %2 of %3 selected").arg(Backups.sizeText(root.totalBytes))
+                                            .arg(root.selectedRows).arg(root.allRows)
+            color: Theme.gameEditor.hintColor
+            font.pixelSize: Theme.gameEditor.hintFontSize
+        }
+    ]
+
+    footer: [
+        SettingsButton {
+            visible: root.done !== null && !root.busy
+            text: qsTr("Show")
+            onClicked: Qt.openUrlExternally(root.done.folder)
+        },
+        SettingsButton {
+            text: root.busy ? qsTr("Cancel") : root.done !== null ? qsTr("Close") : qsTr("Cancel")
+            onClicked: root.busy ? Backups.cancel() : root.close()
+        },
+        SettingsButton {
+            visible: !root.busy && root.done === null
+            primary: true
+            text: qsTr("Back up")
+            enabled: root.blocked === "" && !Backups.running && (root.library || root.selectedRows > 0)
+            onClicked: {
+                const file = Backups.defaultFile(root.kind)
+                saveDialog.currentFolder = file.toString().substring(0, file.toString().lastIndexOf("/"))
+                saveDialog.selectedFile = file
+                saveDialog.open()
+            }
+        }
+    ]
 }

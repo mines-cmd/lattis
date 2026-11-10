@@ -428,16 +428,13 @@ Item {
     ListModel { id: logoModel }
     ListModel { id: iconModel }
 
-    MotionPopup {
+    AppDialog {
         id: popup
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
+        carded: true
+        size: "large"
         width: Math.min(Theme.gameEditor.browserWidth, parent.width - 2 * Theme.layout.margin)
         height: parent.height * Theme.gameEditor.browserMaxHeight
-        modal: true
-        focus: true
-        padding: Theme.gameEditor.padding
         closePolicy: Popup.CloseOnEscape
         onOpened: if (root.searching) searchField.forceActiveFocus()
         onClosed: {
@@ -454,49 +451,11 @@ Item {
             root.closed()
         }
 
-        Overlay.modal: Scrim {}
-        background: Surface {
-            radius: Theme.gameEditor.radius
-            fill: Theme.gameEditor.background
-            fillEnd: Theme.gameEditor.backgroundEnd
-            direction: Theme.gameEditor.gradientDirection
-            border.color: Theme.gameEditor.border
-            border.width: Theme.gameEditor.borderWidth
-        }
-
-        Icon {
-            parent: popup.background
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: Theme.gameEditor.padding
-            path: Icons.close
-            size: Theme.about.closeSize
-            color: closeMouse.containsMouse ? Theme.about.closeHoverColor : Theme.about.closeColor
-
-            MouseArea {
-                id: closeMouse
-                anchors.fill: parent
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: popup.close()
-            }
-
-            ToolTip.visible: closeMouse.containsMouse
-            ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: qsTr("Close")
-        }
-
-        contentItem: ColumnLayout {
-            spacing: Theme.gameEditor.rowSpacing
-
+        header: Component {
             RowLayout {
-                Layout.fillWidth: true
-                Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
                 spacing: Theme.layout.spacing
 
                 Label {
-                    Layout.fillWidth: true
                     Layout.maximumWidth: implicitWidth
                     text: (root.bulk ? qsTr("%1 of %2 · ").arg(root.stepIndex + 1).arg(root.steps.length) : "")
                           + (root.other ? qsTr("Art from %1") : qsTr("Art for %1")).arg(root.gameTitle)
@@ -516,565 +475,564 @@ Item {
                 }
                 Item { Layout.fillWidth: true }
             }
+        }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
 
-                Repeater {
-                    model: root.tabList
+            Repeater {
+                model: root.tabList
 
-                    AbstractButton {
-                        id: tabButton
-                        required property var modelData
-                        readonly property bool current: root.kind === modelData.id
-                        implicitHeight: Theme.controls.buttonHeight
-                        implicitWidth: tabRow.implicitWidth + 24
-                        hoverEnabled: true
-                        onClicked: {
-                            if (root.noGame) {
-                                root.kind = modelData.id
-                                return
-                            }
-                            root.closeSearch()
-                            root.kind = modelData.id
-                            if (modelData.id === "steam")
-                                root.loadSteam()
-                            else
-                                root.load(modelData.id)
-                        }
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-
-                        background: Rectangle {
-                            radius: Theme.controls.inputRadius
-                            color: tabButton.current ? Theme.controls.buttonBackground
-                                 : tabButton.hovered ? Theme.controls.hover : "transparent"
-                        }
-                        contentItem: Item {
-                            RowLayout {
-                                id: tabRow
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Label {
-                                    text: tabButton.modelData.name
-                                    color: Theme.controls.buttonText
-                                    font.weight: tabButton.current ? Theme.font.strongWeight : Font.Normal
-                                }
-                                Rectangle {
-                                    visible: tabButton.modelData.id === "steam"
-                                             ? Object.values(root.picks).some(p => p.steam === true)
-                                             : root.picks[tabButton.modelData.id] !== undefined
-                                    implicitWidth: 7
-                                    implicitHeight: 7
-                                    radius: height / 2
-                                    color: Theme.gameEditor.selectedColor
-                                }
-                            }
-                        }
-                    }
-                }
-                Item { Layout.fillWidth: true }
-                SettingsTextField {
-                    id: searchField
-                    visible: root.searching
-                    // Not the row's own width: that sets off a recursive rearrange when it opens searching.
-                    Layout.preferredWidth: popup.availableWidth / 2
+                AbstractButton {
+                    id: tabButton
+                    required property var modelData
+                    readonly property bool current: root.kind === modelData.id
                     implicitHeight: Theme.controls.buttonHeight
-                    leftPadding: Theme.controls.iconSize + 22
-                    rightPadding: Theme.controls.iconSize + 22
-                    placeholderText: qsTr("Search SteamGridDB")
-                    text: root.searchText
-                    onTextEdited: {
-                        root.searchText = text
-                        root.searchSoon()
-                    }
-                    Keys.onEscapePressed: root.closeSearch()
-                    Keys.onUpPressed: root.moveHighlight(-1)
-                    Keys.onDownPressed: root.moveHighlight(1)
-                    Keys.onReturnPressed: root.pickHighlighted()
-                    Keys.onEnterPressed: root.pickHighlighted()
-
-                    Icon {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        path: Icons.search
-                        size: Theme.controls.iconSize
-                        color: Theme.controls.iconColor
-                    }
-                    Icon {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        path: Icons.close
-                        size: Theme.controls.iconSize
-                        color: searchCloseMouse.containsMouse ? Theme.controls.inputText : Theme.controls.iconColor
-
-                        MouseArea {
-                            id: searchCloseMouse
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (!root.noGame) {
-                                    root.closeSearch()
-                                    return
-                                }
-                                root.searchText = ""
-                                root.searchSoon()
-                                searchField.forceActiveFocus()
-                            }
+                    implicitWidth: tabRow.implicitWidth + 24
+                    hoverEnabled: true
+                    onClicked: {
+                        if (root.noGame) {
+                            root.kind = modelData.id
+                            return
                         }
+                        root.closeSearch()
+                        root.kind = modelData.id
+                        if (modelData.id === "steam")
+                            root.loadSteam()
+                        else
+                            root.load(modelData.id)
                     }
-                }
-                Label {
-                    visible: !root.searching && root.kind !== "steam"
-                    text: qsTr("Style")
-                    color: Theme.gameEditor.labelColor
-                }
-                SettingsComboBox {
-                    id: styleBox
-                    visible: !root.searching && root.kind !== "steam"
-                    readonly property var styles: [{ id: "", name: qsTr("All styles") }].concat(Metadata.styles(root.kind))
-                    Layout.preferredWidth: 170
-                    model: styles.map(s => s.name)
-                    currentIndex: Math.max(0, styles.findIndex(s => s.id === (root.tab.style ?? "")))
-                    onActivated: index => {
-                        root.setTab(root.kind, { style: styles[index].id })
-                        root.load(root.kind, true)
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                    background: Rectangle {
+                        radius: Theme.controls.inputRadius
+                        color: tabButton.current ? Theme.controls.buttonBackground
+                             : tabButton.hovered ? Theme.controls.hover : "transparent"
                     }
-                }
-                SettingsButton {
-                    visible: !root.searching && root.kind !== "steam"
-                    text: qsTr("Other game")
-                    tip: qsTr("Browse art from a different SteamGridDB game, such as a remaster")
-                    onClicked: root.openSearch()
-                }
-            }
-
-            Surface {
-                id: results
-                visible: root.searching
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Theme.gameEditor.cardRadius
-                fill: Theme.gameEditor.cardBackground
-                fillEnd: Theme.gameEditor.cardBackgroundEnd
-                direction: Theme.gameEditor.gradientDirection
-                border.color: Theme.gameEditor.cardBorder
-                border.width: Theme.gameEditor.cardBorderWidth
-
-                ListView {
-                    id: resultList
-                    anchors.fill: parent
-                    anchors.margins: Theme.gameEditor.cardBorderWidth
-                    clip: true
-                    model: root.searchResults
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: SettingsScrollBar {}
-
-                    delegate: Item {
-                        id: resultRow
-                        required property var modelData
-                        required property int index
-                        readonly property bool highlighted: root.searchHighlight === index
-                        width: ListView.view.width
-                        height: Theme.settingsWindow.toolbarHeight
-
-                        Rectangle {
-                            readonly property real corner: Math.max(0, Theme.gameEditor.cardRadius - Theme.gameEditor.cardBorderWidth)
-                            anchors.fill: parent
-                            topLeftRadius: resultRow.index === 0 ? corner : 0
-                            topRightRadius: topLeftRadius
-                            bottomLeftRadius: resultRow.index === root.searchResults.length - 1 && resultList.contentHeight >= resultList.height ? corner : 0
-                            bottomRightRadius: bottomLeftRadius
-                            color: resultRow.highlighted ? Theme.controls.hover : "transparent"
-                        }
-                        Rectangle {
-                            visible: resultRow.index < root.searchResults.length - 1
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            height: Theme.gameEditor.cardBorderWidth
-                            color: Theme.gameEditor.cardBorder
-                        }
+                    contentItem: Item {
                         RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: Theme.layout.spacing
-                            anchors.rightMargin: Theme.layout.spacing
-                            spacing: Theme.layout.spacing
-
+                            id: tabRow
+                            anchors.centerIn: parent
+                            spacing: 6
                             Label {
-                                Layout.fillWidth: true
-                                text: resultRow.modelData.name
+                                text: tabButton.modelData.name
                                 color: Theme.controls.buttonText
-                                elide: Text.ElideRight
+                                font.weight: tabButton.current ? Theme.font.strongWeight : Font.Normal
                             }
                             Rectangle {
-                                visible: resultRow.modelData.steamgriddb === root.ownId
-                                Layout.rightMargin: Theme.layout.spacing
-                                implicitWidth: thisGameLabel.implicitWidth + 2 * Theme.layout.spacing
-                                implicitHeight: thisGameLabel.implicitHeight + Theme.layout.spacing
+                                visible: tabButton.modelData.id === "steam"
+                                         ? Object.values(root.picks).some(p => p.steam === true)
+                                         : root.picks[tabButton.modelData.id] !== undefined
+                                implicitWidth: 7
+                                implicitHeight: 7
                                 radius: height / 2
-                                color: Qt.alpha(Theme.gameEditor.selectedColor, Theme.gameEditor.bulkBadgeOpacity)
-
-                                Label {
-                                    id: thisGameLabel
-                                    anchors.centerIn: parent
-                                    text: qsTr("This game")
-                                    color: Qt.lighter(Theme.gameEditor.selectedColor, Theme.segmented.lightBrightness)
-                                    font.pixelSize: Theme.gameEditor.hintFontSize
-                                }
+                                color: Theme.gameEditor.selectedColor
                             }
-                            Label {
-                                text: resultRow.modelData.year > 0 ? resultRow.modelData.year : qsTr("–")
-                                color: Theme.gameEditor.hintColor
-                                font.weight: Theme.font.emphasisWeight
-                            }
-                            Icon {
-                                path: Icons.chevronRight
-                                size: Theme.controls.iconSize
-                                color: Theme.controls.iconColor
-                            }
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: root.searchHighlight = resultRow.index
-                            onClicked: root.pickGame(resultRow.modelData)
                         }
                     }
                 }
+            }
+            Item { Layout.fillWidth: true }
+            SettingsTextField {
+                id: searchField
+                visible: root.searching
+                // Not the row's own width: that sets off a recursive rearrange when it opens searching.
+                Layout.preferredWidth: popup.availableWidth / 2
+                implicitHeight: Theme.controls.buttonHeight
+                leftPadding: Theme.controls.iconSize + 22
+                rightPadding: Theme.controls.iconSize + 22
+                placeholderText: qsTr("Search SteamGridDB")
+                text: root.searchText
+                onTextEdited: {
+                    root.searchText = text
+                    root.searchSoon()
+                }
+                Keys.onEscapePressed: root.closeSearch()
+                Keys.onUpPressed: root.moveHighlight(-1)
+                Keys.onDownPressed: root.moveHighlight(1)
+                Keys.onReturnPressed: root.pickHighlighted()
+                Keys.onEnterPressed: root.pickHighlighted()
 
                 Icon {
-                    id: searchSpinner
-                    readonly property bool waiting: root.searchRequest !== 0 || searchTimer.running
-                    anchors.centerIn: parent
-                    visible: waiting && root.searchText.trim() !== ""
-                    path: Icons.loader
-                    size: Theme.controls.iconSize * 1.5
-                    color: Theme.gameEditor.hintColor
-                    RotationAnimation on rotation {
-                        running: searchSpinner.visible
-                        from: 0
-                        to: 360
-                        duration: Theme.iconButton.spinDuration
-                        loops: Animation.Infinite
-                    }
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    path: Icons.search
+                    size: Theme.controls.iconSize
+                    color: Theme.controls.iconColor
                 }
-                Label {
-                    anchors.centerIn: parent
-                    width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    visible: !searchSpinner.visible && root.searchResults.length === 0
-                    text: root.searchError !== "" ? root.searchError
-                        : root.searchText.trim() === "" ? qsTr("Search SteamGridDB for a game whose art you want")
-                        : qsTr("No games match \"%1\"").arg(root.searchedText)
-                    color: root.searchError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
-                }
-            }
+                Icon {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    path: Icons.close
+                    size: Theme.controls.iconSize
+                    color: searchCloseMouse.containsMouse ? Theme.controls.inputText : Theme.controls.iconColor
 
-            GridView {
-                id: grid
-                visible: !root.searching && root.kind !== "steam"
-
-                readonly property real thumbHeight: root.thumbHeight(root.kind)
-                readonly property real thumbWidth: root.thumbWidth(root.kind)
-
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                model: root.models[root.kind]
-                cellWidth: thumbWidth + Theme.gameEditor.browserSpacing
-                cellHeight: thumbHeight + Theme.gameEditor.browserSpacing
-                boundsBehavior: Flickable.StopAtBounds
-                cacheBuffer: 0
-                ScrollBar.vertical: SettingsScrollBar {}
-
-                MotionNumber {
-                    id: tabFade
-                    target: grid
-                    property: "opacity"
-                    from: 0
-                    to: 1
-                    linear: true
-                }
-                Connections {
-                    target: root
-                    function onKindChanged() {
-                        if (Motion.on && popup.opened)
-                            tabFade.restart()
-                    }
-                }
-
-                delegate: Item {
-                    id: thumb
-                    required property var model
-                    readonly property bool picked: root.picks[root.kind]?.id === model.id
-                    width: grid.thumbWidth
-                    height: grid.thumbHeight
-
-                    Checker {
-                        anchors.fill: parent
-                        visible: root.kind === "logo" || root.kind === "icon"
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        visible: root.kind === "cover" || root.kind === "hero"
-                        color: Theme.gameEditor.artPreviewBackground
-                    }
-                    FadeImage {
-                        anchors.fill: parent
-                        anchors.margins: root.kind === "logo" ? 6 : 0
-                        source: thumb.model.thumbnail
-                        sourceSize.width: width * 2
-                        fillMode: root.kind === "cover" || root.kind === "hero" ? Image.PreserveAspectCrop
-                                                                               : Image.PreserveAspectFit
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "transparent"
-                        border.color: Theme.gameEditor.selectedColor
-                        border.width: Theme.gameEditor.selectedWidth
-                        opacity: thumb.picked ? 1 : 0
-                        visible: opacity > 0
-                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                    }
-                    MarkPop {
-                        shown: thumb.picked
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.margins: 6
-                        width: 22
-                        height: 22
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: height / 2
-                            color: Theme.gameEditor.selectedColor
-                            Icon {
-                                anchors.centerIn: parent
-                                path: Icons.check
-                                size: 16
-                                color: Theme.controls.buttonPrimaryText
-                            }
-                        }
-                    }
                     MouseArea {
-                        id: thumbMouse
+                        id: searchCloseMouse
                         anchors.fill: parent
+                        anchors.margins: -6
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.toggle({ id: thumb.model.id, url: thumb.model.url, thumbnail: thumb.model.thumbnail,
-                                                 width: thumb.model.width, height: thumb.model.height,
-                                                 style: thumb.model.style, author: thumb.model.author }, root.kind)
-                    }
-                    ToolTip.visible: thumbMouse.containsMouse
-                    ToolTip.delay: Theme.tooltip.delay
-                    ToolTip.text: (thumb.model.width > 0 ? qsTr("%1 × %2").arg(thumb.model.width).arg(thumb.model.height) : "")
-                                  + (thumb.model.author !== "" ? qsTr(" · by %1").arg(thumb.model.author) : "")
-                }
-
-                footer: Item {
-                    width: grid.width
-                    height: loadMore.visible || status.visible ? loadMore.implicitHeight + 2 * Theme.layout.spacing : 0
-
-                    SettingsButton {
-                        id: loadMore
-                        anchors.centerIn: parent
-                        visible: !root.tab.end && !root.tab.loading && (root.tab.error ?? "") === "" && grid.count > 0
-                        text: qsTr("Load more")
-                        onClicked: root.load(root.kind)
-                    }
-                    Label {
-                        id: status
-                        anchors.centerIn: parent
-                        visible: root.tab.loading || grid.count === 0 || (root.tab.error ?? "") !== ""
-                        text: (root.tab.error ?? "") !== "" ? root.tab.error
-                            : root.tab.loading ? qsTr("Loading…")
-                            : root.tab.style !== "" ? qsTr("No images in this style")
-                            : qsTr("SteamGridDB has no images of this kind for this game")
-                        color: (root.tab.error ?? "") !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
+                        onClicked: {
+                            if (!root.noGame) {
+                                root.closeSearch()
+                                return
+                            }
+                            root.searchText = ""
+                            root.searchSoon()
+                            searchField.forceActiveFocus()
+                        }
                     }
                 }
             }
+            Label {
+                visible: !root.searching && root.kind !== "steam"
+                text: qsTr("Style")
+                color: Theme.gameEditor.labelColor
+            }
+            SettingsComboBox {
+                id: styleBox
+                visible: !root.searching && root.kind !== "steam"
+                readonly property var styles: [{ id: "", name: qsTr("All styles") }].concat(Metadata.styles(root.kind))
+                Layout.preferredWidth: 170
+                model: styles.map(s => s.name)
+                currentIndex: Math.max(0, styles.findIndex(s => s.id === (root.tab.style ?? "")))
+                onActivated: index => {
+                    root.setTab(root.kind, { style: styles[index].id })
+                    root.load(root.kind, true)
+                }
+            }
+            SettingsButton {
+                visible: !root.searching && root.kind !== "steam"
+                text: qsTr("Other game")
+                tip: qsTr("Browse art from a different SteamGridDB game, such as a remaster")
+                onClicked: root.openSearch()
+            }
+        }
 
-            Item {
-                id: steamView
-                visible: !root.searching && root.kind === "steam"
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+        Surface {
+            id: results
+            visible: root.searching
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            radius: Theme.gameEditor.cardRadius
+            fill: Theme.gameEditor.cardBackground
+            fillEnd: Theme.gameEditor.cardBackgroundEnd
+            direction: Theme.gameEditor.gradientDirection
+            border.color: Theme.gameEditor.cardBorder
+            border.width: Theme.gameEditor.cardBorderWidth
 
-                Flow {
-                    width: parent.width
-                    spacing: Theme.gameEditor.browserSpacing
+            ListView {
+                id: resultList
+                anchors.fill: parent
+                anchors.margins: Theme.gameEditor.cardBorderWidth
+                clip: true
+                model: root.searchResults
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: SettingsScrollBar {}
 
-                    Repeater {
-                        model: root.shownSteamImages
+                delegate: Item {
+                    id: resultRow
+                    required property var modelData
+                    required property int index
+                    readonly property bool highlighted: root.searchHighlight === index
+                    width: ListView.view.width
+                    height: Theme.settingsWindow.toolbarHeight
 
-                        ColumnLayout {
-                            id: steamThumb
-                            required property var modelData
-                            readonly property bool picked: root.picks[modelData.kind]?.id === modelData.url
-                            readonly property bool checkered: modelData.kind === "logo"
-                            spacing: Theme.layout.spacing / 2
+                    Rectangle {
+                        readonly property real corner: Math.max(0, Theme.gameEditor.cardRadius - Theme.gameEditor.cardBorderWidth)
+                        anchors.fill: parent
+                        topLeftRadius: resultRow.index === 0 ? corner : 0
+                        topRightRadius: topLeftRadius
+                        bottomLeftRadius: resultRow.index === root.searchResults.length - 1 && resultList.contentHeight >= resultList.height ? corner : 0
+                        bottomRightRadius: bottomLeftRadius
+                        color: resultRow.highlighted ? Theme.controls.hover : "transparent"
+                    }
+                    Rectangle {
+                        visible: resultRow.index < root.searchResults.length - 1
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: Theme.gameEditor.cardBorderWidth
+                        color: Theme.gameEditor.cardBorder
+                    }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.layout.spacing
+                        anchors.rightMargin: Theme.layout.spacing
+                        spacing: Theme.layout.spacing
 
-                            Item {
-                                implicitWidth: root.thumbWidth(steamThumb.modelData.kind)
-                                implicitHeight: root.thumbHeight(steamThumb.modelData.kind)
+                        Label {
+                            Layout.fillWidth: true
+                            text: resultRow.modelData.name
+                            color: Theme.controls.buttonText
+                            elide: Text.ElideRight
+                        }
+                        Rectangle {
+                            visible: resultRow.modelData.steamgriddb === root.ownId
+                            Layout.rightMargin: Theme.layout.spacing
+                            implicitWidth: thisGameLabel.implicitWidth + 2 * Theme.layout.spacing
+                            implicitHeight: thisGameLabel.implicitHeight + Theme.layout.spacing
+                            radius: height / 2
+                            color: Qt.alpha(Theme.gameEditor.selectedColor, Theme.gameEditor.bulkBadgeOpacity)
 
-                                Checker {
-                                    anchors.fill: parent
-                                    visible: steamThumb.checkered
-                                }
-                                Rectangle {
-                                    anchors.fill: parent
-                                    visible: !steamThumb.checkered
-                                    color: Theme.gameEditor.artPreviewBackground
-                                }
-                                FadeImage {
-                                    anchors.fill: parent
-                                    anchors.margins: steamThumb.checkered ? 6 : 0
-                                    source: steamThumb.modelData.thumbnail
-                                    sourceSize.width: width * 2
-                                    fillMode: steamThumb.checkered ? Image.PreserveAspectFit : Image.PreserveAspectCrop
-                                    onStatusChanged: if (status === Image.Error && steamThumb.modelData.kind === "logo")
-                                        root.dropSteamImage(steamThumb.modelData.url)
-                                }
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: Theme.gameEditor.selectedColor
-                                    border.width: Theme.gameEditor.selectedWidth
-                                    opacity: steamThumb.picked ? 1 : 0
-                                    visible: opacity > 0
-                                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                                }
-                                MarkPop {
-                                    shown: steamThumb.picked
-                                    anchors.top: parent.top
-                                    anchors.right: parent.right
-                                    anchors.margins: 6
-                                    width: 22
-                                    height: 22
-
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        radius: height / 2
-                                        color: Theme.gameEditor.selectedColor
-                                        Icon {
-                                            anchors.centerIn: parent
-                                            path: Icons.check
-                                            size: 16
-                                            color: Theme.controls.buttonPrimaryText
-                                        }
-                                    }
-                                }
-                                MouseArea {
-                                    id: steamMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.toggle({ id: steamThumb.modelData.url, url: steamThumb.modelData.url,
-                                                             thumbnail: steamThumb.modelData.thumbnail,
-                                                             width: steamThumb.modelData.width, height: steamThumb.modelData.height,
-                                                             style: "", author: "", steam: true }, steamThumb.modelData.kind)
-                                }
-                                ToolTip.visible: steamMouse.containsMouse && steamThumb.modelData.width > 0
-                                ToolTip.delay: Theme.tooltip.delay
-                                ToolTip.text: qsTr("%1 × %2").arg(steamThumb.modelData.width).arg(steamThumb.modelData.height)
-                            }
                             Label {
-                                text: root.kinds.find(k => k.id === steamThumb.modelData.kind)?.name ?? ""
-                                color: Theme.gameEditor.hintColor
+                                id: thisGameLabel
+                                anchors.centerIn: parent
+                                text: qsTr("This game")
+                                color: Qt.lighter(Theme.gameEditor.selectedColor, Theme.segmented.lightBrightness)
                                 font.pixelSize: Theme.gameEditor.hintFontSize
                             }
                         }
+                        Label {
+                            text: resultRow.modelData.year > 0 ? resultRow.modelData.year : qsTr("–")
+                            color: Theme.gameEditor.hintColor
+                            font.weight: Theme.font.emphasisWeight
+                        }
+                        Icon {
+                            path: Icons.chevronRight
+                            size: Theme.controls.iconSize
+                            color: Theme.controls.iconColor
+                        }
                     }
-                }
-
-                Icon {
-                    id: steamSpinner
-                    anchors.centerIn: parent
-                    visible: root.steamLoading
-                    path: Icons.loader
-                    size: Theme.controls.iconSize * 1.5
-                    color: Theme.gameEditor.hintColor
-                    RotationAnimation on rotation {
-                        running: steamSpinner.visible
-                        from: 0
-                        to: 360
-                        duration: Theme.iconButton.spinDuration
-                        loops: Animation.Infinite
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: root.searchHighlight = resultRow.index
+                        onClicked: root.pickGame(resultRow.modelData)
                     }
-                }
-                Label {
-                    anchors.centerIn: parent
-                    width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    visible: !root.steamLoading && (root.steamError !== "" || (root.steamLoaded && root.shownSteamImages.length === 0))
-                    text: root.steamError !== "" ? root.steamError
-                        : root.steamApp <= 0 ? qsTr("Steam has no game called \"%1\"").arg(root.ownTitle)
-                        : qsTr("Steam has no library art for this game")
-                    color: root.steamError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
                 }
             }
 
+            Icon {
+                id: searchSpinner
+                readonly property bool waiting: root.searchRequest !== 0 || searchTimer.running
+                anchors.centerIn: parent
+                visible: waiting && root.searchText.trim() !== ""
+                path: Icons.loader
+                size: Theme.controls.iconSize * 1.5
+                color: Theme.gameEditor.hintColor
+                RotationAnimation on rotation {
+                    running: searchSpinner.visible
+                    from: 0
+                    to: 360
+                    duration: Theme.iconButton.spinDuration
+                    loops: Animation.Infinite
+                }
+            }
             Label {
-                id: error
-                visible: text !== ""
-                Layout.fillWidth: true
+                anchors.centerIn: parent
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
-                color: Theme.gameEditor.errorColor
+                visible: !searchSpinner.visible && root.searchResults.length === 0
+                text: root.searchError !== "" ? root.searchError
+                    : root.searchText.trim() === "" ? qsTr("Search SteamGridDB for a game whose art you want")
+                    : qsTr("No games match \"%1\"").arg(root.searchedText)
+                color: root.searchError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
+            }
+        }
+
+        GridView {
+            id: grid
+            visible: !root.searching && root.kind !== "steam"
+
+            readonly property real thumbHeight: root.thumbHeight(root.kind)
+            readonly property real thumbWidth: root.thumbWidth(root.kind)
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            model: root.models[root.kind]
+            cellWidth: thumbWidth + Theme.gameEditor.browserSpacing
+            cellHeight: thumbHeight + Theme.gameEditor.browserSpacing
+            boundsBehavior: Flickable.StopAtBounds
+            cacheBuffer: 0
+            ScrollBar.vertical: SettingsScrollBar {}
+
+            MotionNumber {
+                id: tabFade
+                target: grid
+                property: "opacity"
+                from: 0
+                to: 1
+                linear: true
+            }
+            Connections {
+                target: root
+                function onKindChanged() {
+                    if (Motion.on && popup.opened)
+                        tabFade.restart()
+                }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
+            delegate: Item {
+                id: thumb
+                required property var model
+                readonly property bool picked: root.picks[root.kind]?.id === model.id
+                width: grid.thumbWidth
+                height: grid.thumbHeight
 
+                Checker {
+                    anchors.fill: parent
+                    visible: root.kind === "logo" || root.kind === "icon"
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    visible: root.kind === "cover" || root.kind === "hero"
+                    color: Theme.gameEditor.artPreviewBackground
+                }
+                FadeImage {
+                    anchors.fill: parent
+                    anchors.margins: root.kind === "logo" ? 6 : 0
+                    source: thumb.model.thumbnail
+                    sourceSize.width: width * 2
+                    fillMode: root.kind === "cover" || root.kind === "hero" ? Image.PreserveAspectCrop
+                                                                           : Image.PreserveAspectFit
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.color: Theme.gameEditor.selectedColor
+                    border.width: Theme.gameEditor.selectedWidth
+                    opacity: thumb.picked ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                }
+                MarkPop {
+                    shown: thumb.picked
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 6
+                    width: 22
+                    height: 22
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: height / 2
+                        color: Theme.gameEditor.selectedColor
+                        Icon {
+                            anchors.centerIn: parent
+                            path: Icons.check
+                            size: 16
+                            color: Theme.controls.buttonPrimaryText
+                        }
+                    }
+                }
+                MouseArea {
+                    id: thumbMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.toggle({ id: thumb.model.id, url: thumb.model.url, thumbnail: thumb.model.thumbnail,
+                                             width: thumb.model.width, height: thumb.model.height,
+                                             style: thumb.model.style, author: thumb.model.author }, root.kind)
+                }
+                ToolTip.visible: thumbMouse.containsMouse
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: (thumb.model.width > 0 ? qsTr("%1 × %2").arg(thumb.model.width).arg(thumb.model.height) : "")
+                              + (thumb.model.author !== "" ? qsTr(" · by %1").arg(thumb.model.author) : "")
+            }
+
+            footer: Item {
+                width: grid.width
+                height: loadMore.visible || status.visible ? loadMore.implicitHeight + 2 * Theme.layout.spacing : 0
+
+                SettingsButton {
+                    id: loadMore
+                    anchors.centerIn: parent
+                    visible: !root.tab.end && !root.tab.loading && (root.tab.error ?? "") === "" && grid.count > 0
+                    text: qsTr("Load more")
+                    onClicked: root.load(root.kind)
+                }
                 Label {
-                    Layout.fillWidth: true
-                    text: Object.keys(root.downloading).length > 0 ? qsTr("Downloading…")
-                        : root.bulk ? qsTr("The picked image of each kind is used; unpick one to leave that kind out.")
-                        : qsTr("Pick one image per tab. They're saved with the game.")
-                    color: Theme.gameEditor.hintColor
-                    elide: Text.ElideRight
-                }
-                SettingsButton {
-                    visible: root.bulk
-                    text: qsTr("Previous game")
-                    enabled: root.stepIndex > 0
-                    onClicked: root.showStep(root.stepIndex - 1, root.kind)
-                }
-                SettingsButton {
-                    visible: root.bulk
-                    text: qsTr("Next game")
-                    enabled: root.stepIndex < root.steps.length - 1
-                    onClicked: root.showStep(root.stepIndex + 1, root.kind)
-                }
-                SettingsButton {
-                    visible: root.bulk
-                    primary: true
-                    text: qsTr("Done")
-                    onClicked: popup.close()
-                }
-                SettingsButton {
-                    visible: !root.bulk
-                    text: qsTr("Cancel")
-                    onClicked: popup.close()
-                }
-                SettingsButton {
-                    visible: !root.bulk
-                    text: qsTr("Use selected")
-                    primary: true
-                    enabled: Object.keys(root.picks).length > 0 && Object.keys(root.downloading).length === 0
-                    onClicked: root.useSelected()
+                    id: status
+                    anchors.centerIn: parent
+                    visible: root.tab.loading || grid.count === 0 || (root.tab.error ?? "") !== ""
+                    text: (root.tab.error ?? "") !== "" ? root.tab.error
+                        : root.tab.loading ? qsTr("Loading…")
+                        : root.tab.style !== "" ? qsTr("No images in this style")
+                        : qsTr("SteamGridDB has no images of this kind for this game")
+                    color: (root.tab.error ?? "") !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
                 }
             }
         }
+
+        Item {
+            id: steamView
+            visible: !root.searching && root.kind === "steam"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Flow {
+                width: parent.width
+                spacing: Theme.gameEditor.browserSpacing
+
+                Repeater {
+                    model: root.shownSteamImages
+
+                    ColumnLayout {
+                        id: steamThumb
+                        required property var modelData
+                        readonly property bool picked: root.picks[modelData.kind]?.id === modelData.url
+                        readonly property bool checkered: modelData.kind === "logo"
+                        spacing: Theme.layout.spacing / 2
+
+                        Item {
+                            implicitWidth: root.thumbWidth(steamThumb.modelData.kind)
+                            implicitHeight: root.thumbHeight(steamThumb.modelData.kind)
+
+                            Checker {
+                                anchors.fill: parent
+                                visible: steamThumb.checkered
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                visible: !steamThumb.checkered
+                                color: Theme.gameEditor.artPreviewBackground
+                            }
+                            FadeImage {
+                                anchors.fill: parent
+                                anchors.margins: steamThumb.checkered ? 6 : 0
+                                source: steamThumb.modelData.thumbnail
+                                sourceSize.width: width * 2
+                                fillMode: steamThumb.checkered ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+                                onStatusChanged: if (status === Image.Error && steamThumb.modelData.kind === "logo")
+                                    root.dropSteamImage(steamThumb.modelData.url)
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: Theme.gameEditor.selectedColor
+                                border.width: Theme.gameEditor.selectedWidth
+                                opacity: steamThumb.picked ? 1 : 0
+                                visible: opacity > 0
+                                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                            }
+                            MarkPop {
+                                shown: steamThumb.picked
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.margins: 6
+                                width: 22
+                                height: 22
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: height / 2
+                                    color: Theme.gameEditor.selectedColor
+                                    Icon {
+                                        anchors.centerIn: parent
+                                        path: Icons.check
+                                        size: 16
+                                        color: Theme.controls.buttonPrimaryText
+                                    }
+                                }
+                            }
+                            MouseArea {
+                                id: steamMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggle({ id: steamThumb.modelData.url, url: steamThumb.modelData.url,
+                                                         thumbnail: steamThumb.modelData.thumbnail,
+                                                         width: steamThumb.modelData.width, height: steamThumb.modelData.height,
+                                                         style: "", author: "", steam: true }, steamThumb.modelData.kind)
+                            }
+                            ToolTip.visible: steamMouse.containsMouse && steamThumb.modelData.width > 0
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: qsTr("%1 × %2").arg(steamThumb.modelData.width).arg(steamThumb.modelData.height)
+                        }
+                        Label {
+                            text: root.kinds.find(k => k.id === steamThumb.modelData.kind)?.name ?? ""
+                            color: Theme.gameEditor.hintColor
+                            font.pixelSize: Theme.gameEditor.hintFontSize
+                        }
+                    }
+                }
+            }
+
+            Icon {
+                id: steamSpinner
+                anchors.centerIn: parent
+                visible: root.steamLoading
+                path: Icons.loader
+                size: Theme.controls.iconSize * 1.5
+                color: Theme.gameEditor.hintColor
+                RotationAnimation on rotation {
+                    running: steamSpinner.visible
+                    from: 0
+                    to: 360
+                    duration: Theme.iconButton.spinDuration
+                    loops: Animation.Infinite
+                }
+            }
+            Label {
+                anchors.centerIn: parent
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                visible: !root.steamLoading && (root.steamError !== "" || (root.steamLoaded && root.shownSteamImages.length === 0))
+                text: root.steamError !== "" ? root.steamError
+                    : root.steamApp <= 0 ? qsTr("Steam has no game called \"%1\"").arg(root.ownTitle)
+                    : qsTr("Steam has no library art for this game")
+                color: root.steamError !== "" ? Theme.gameEditor.errorColor : Theme.gameEditor.hintColor
+            }
+        }
+
+        Label {
+            id: error
+            visible: text !== ""
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.errorColor
+        }
+
+        footerStart: [
+            Label {
+                Layout.fillWidth: true
+                text: Object.keys(root.downloading).length > 0 ? qsTr("Downloading…")
+                    : root.bulk ? qsTr("The picked image of each kind is used; unpick one to leave that kind out.")
+                    : qsTr("Pick one image per tab. They're saved with the game.")
+                color: Theme.gameEditor.hintColor
+                elide: Text.ElideRight
+            }
+        ]
+        footer: [
+            SettingsButton {
+                visible: root.bulk
+                text: qsTr("Previous game")
+                enabled: root.stepIndex > 0
+                onClicked: root.showStep(root.stepIndex - 1, root.kind)
+            },
+            SettingsButton {
+                visible: root.bulk
+                text: qsTr("Next game")
+                enabled: root.stepIndex < root.steps.length - 1
+                onClicked: root.showStep(root.stepIndex + 1, root.kind)
+            },
+            SettingsButton {
+                visible: root.bulk
+                primary: true
+                text: qsTr("Done")
+                onClicked: popup.close()
+            },
+            SettingsButton {
+                visible: !root.bulk
+                text: qsTr("Cancel")
+                onClicked: popup.close()
+            },
+            SettingsButton {
+                visible: !root.bulk
+                text: qsTr("Use selected")
+                primary: true
+                enabled: Object.keys(root.picks).length > 0 && Object.keys(root.downloading).length === 0
+                onClicked: root.useSelected()
+            }
+        ]
     }
 }

@@ -108,15 +108,11 @@ Item {
         }
     }
 
-    component DialogBackground: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
-    }
-
-    MotionPopup {
+    AppDialog {
         id: addDialog
+
+        carded: false
+        title: qsTr("Add emulator")
 
         readonly property string id: Library.emulatorIdFor(nameField.text)
         readonly property bool taken: Library.emulators.some(e => e.id === id)
@@ -143,78 +139,61 @@ Item {
             }
         }
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.menu.dialogPadding
-        width: 380
-        background: DialogBackground {}
-
-        ColumnLayout {
-            width: parent.width
-            spacing: 10
-
-            Label { text: qsTr("Add emulator"); color: Theme.controls.labelColor; font.weight: Theme.font.strongWeight }
-
-            Label { text: qsTr("Start from"); color: Theme.controls.descriptionColor }
-            SettingsComboBox {
-                id: startFrom
-                Layout.fillWidth: true
-                model: addDialog.starts
-                textRole: "name"
-            }
-            Label {
-                Layout.fillWidth: true
-                text: startFrom.currentIndex === 0 ? qsTr("A blank emulator has no platforms, ROM extensions or program yet; you fill them in next.")
-                                                   : qsTr("Copies its platforms, ROM extensions and command, but not where it is installed or its saves, which a fork keeps elsewhere.")
-                color: Theme.controls.descriptionColor
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
-            SettingsTextField {
-                id: nameField
-                Layout.fillWidth: true
-                implicitHeight: Theme.controls.inputHeight
-                placeholderText: qsTr("e.g. Citra")
-                onAccepted: addDialog.add()
-            }
-
-            Label {
-                Layout.fillWidth: true
-                text: nameField.text.trim() === "" ? qsTr("The emulator's id is made from its name, and can't change later; the name can.")
-                    : addDialog.id === "" ? qsTr("The id is made from the letters a-z and digits in the name; this one has none.")
-                    : addDialog.taken ? qsTr("There's already an emulator with the id %1.").arg(addDialog.id)
-                    : qsTr("Id: %1. It can't change later; the name can.").arg(addDialog.id)
-                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
-                                                                        : Theme.controls.problemsText
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            Label {
-                id: addError
-                visible: text !== ""
-                Layout.fillWidth: true
-                color: Theme.controls.problemsText
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.controls.controlSpacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() }
-                SettingsButton {
-                    primary: true
-                    text: qsTr("Add")
-                    enabled: addDialog.canAdd
-                    onClicked: addDialog.add()
-                }
-            }
+        Label { text: qsTr("Start from"); color: Theme.controls.descriptionColor }
+        SettingsComboBox {
+            id: startFrom
+            Layout.fillWidth: true
+            model: addDialog.starts
+            textRole: "name"
         }
+        Label {
+            Layout.fillWidth: true
+            text: startFrom.currentIndex === 0 ? qsTr("A blank emulator has no platforms, ROM extensions or program yet; you fill them in next.")
+                                               : qsTr("Copies its platforms, ROM extensions and command, but not where it is installed or its saves, which a fork keeps elsewhere.")
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
+
+        Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
+        SettingsTextField {
+            id: nameField
+            Layout.fillWidth: true
+            implicitHeight: Theme.controls.inputHeight
+            placeholderText: qsTr("e.g. Citra")
+            onAccepted: addDialog.add()
+        }
+
+        Label {
+            Layout.fillWidth: true
+            text: nameField.text.trim() === "" ? qsTr("The emulator's id is made from its name, and can't change later; the name can.")
+                : addDialog.id === "" ? qsTr("The id is made from the letters a-z and digits in the name; this one has none.")
+                : addDialog.taken ? qsTr("There's already an emulator with the id %1.").arg(addDialog.id)
+                : qsTr("Id: %1. It can't change later; the name can.").arg(addDialog.id)
+            color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
+                                                                    : Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
+
+        Label {
+            id: addError
+            visible: text !== ""
+            Layout.fillWidth: true
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
+
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() },
+            SettingsButton {
+                primary: true
+                text: qsTr("Add")
+                enabled: addDialog.canAdd
+                onClicked: addDialog.add()
+            }
+        ]
     }
 
     component Heading: Label {

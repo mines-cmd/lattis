@@ -178,6 +178,16 @@ Item {
     function askRename(half) { renameDialog.openFor(half, activeName(half)) }
     function askDescription() { descriptionDialog.openFor(Theme.activeStyle) }
 
+    function dialogForScreenshot(kind) {
+        switch (kind) {
+        case "new": newItem("colors"); break
+        case "rename": askRename("style"); break
+        case "delete": askDelete("style"); break
+        case "reset": askReset("style"); break
+        case "description": askDescription(); break
+        }
+    }
+
     // Dialogs open once the popover has started closing, so it doesn't sit over their scrim.
     function fromPopover(fn) {
         themePopup.close()

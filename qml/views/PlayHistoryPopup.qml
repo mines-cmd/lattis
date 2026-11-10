@@ -2,8 +2,12 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: true
+    size: "medium"
+    width: Math.min(Theme.playHistory.width, parent.width - 2 * Theme.gameEditor.padding)
 
     property string gameId
     property string gameTitle
@@ -207,12 +211,7 @@ MotionPopup {
             message(text)
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
-    width: Math.min(Theme.playHistory.width, parent.width - 2 * Theme.gameEditor.padding)
     height: Math.min(implicitHeight, parent.height * Theme.playHistory.maxHeight)
-    modal: true
-    focus: true
     // The selection goes first on Esc, as in the game list; the popup is one more away.
     closePolicy: selectionCount > 0 ? Popup.CloseOnPressOutside : Popup.CloseOnEscape | Popup.CloseOnPressOutside
     Shortcut {
@@ -220,48 +219,15 @@ MotionPopup {
         enabled: root.opened && root.selectionCount > 0
         onActivated: root.clearSelection()
     }
-    padding: Theme.gameEditor.padding
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-
-        // Over the Close row's free space. The main window's toast sits under this popup's scrim,
-        // and one parented to the overlay leaves the window deaf to clicks once the popup closes.
-        Toast {
-            id: toast
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            anchors.leftMargin: Theme.gameEditor.padding
-            anchors.bottomMargin: Theme.gameEditor.padding
-        }
-    }
-
-    Icon {
+    // Over the footer's free space. The main window's toast sits under this popup's scrim,
+    // and one parented to the overlay leaves the window deaf to clicks once the popup closes.
+    Toast {
+        id: toast
         parent: root.background
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: Theme.gameEditor.padding
-        path: Icons.close
-        size: Theme.about.closeSize
-        color: closeMouse.containsMouse ? Theme.about.closeHoverColor : Theme.about.closeColor
-
-        MouseArea {
-            id: closeMouse
-            anchors.fill: parent
-            anchors.margins: -6
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.close()
-        }
-
-        ToolTip.visible: closeMouse.containsMouse
-        ToolTip.delay: Theme.tooltip.delay
-        ToolTip.text: qsTr("Close")
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: Theme.gameEditor.padding
+        anchors.bottomMargin: Theme.gameEditor.padding
     }
 
     onOpened: closeButton.forceActiveFocus()
@@ -326,12 +292,8 @@ MotionPopup {
         }
     }
 
-    contentItem: ColumnLayout {
-        spacing: Theme.gameEditor.rowSpacing
-
+    header: Component {
         RowLayout {
-            Layout.fillWidth: true
-            Layout.rightMargin: Theme.about.closeSize + Theme.gameEditor.columnSpacing
             spacing: Theme.gameEditor.columnSpacing
 
             GameIcon {
@@ -359,281 +321,275 @@ MotionPopup {
                 }
             }
         }
+    }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.gameEditor.rowSpacing
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Theme.gameEditor.rowSpacing
 
-            Figure { label: qsTr("Total"); minutes: root.history.total ?? 0; primary: true }
-            Figure { label: qsTr("This week"); minutes: root.history.week ?? 0 }
-            Figure { label: qsTr("This month"); minutes: root.history.month ?? 0 }
-            Figure {
-                visible: (root.history.before ?? 0) > 0
-                label: qsTr("Before history")
-                minutes: root.history.before ?? 0
+        Figure { label: qsTr("Total"); minutes: root.history.total ?? 0; primary: true }
+        Figure { label: qsTr("This week"); minutes: root.history.week ?? 0 }
+        Figure { label: qsTr("This month"); minutes: root.history.month ?? 0 }
+        Figure {
+            visible: (root.history.before ?? 0) > 0
+            label: qsTr("Before history")
+            minutes: root.history.before ?? 0
+        }
+    }
+
+    Card {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        readonly property real headerSpace: root.sessions.length > 0 ? header.height + Theme.playHistory.headerGap : 0
+        Layout.preferredHeight: Math.max(list.contentHeight, 2 * Theme.playHistory.rowHeight) + headerSpace + 2 * Theme.gameEditor.cardPadding
+        Layout.minimumHeight: Math.min(Layout.preferredHeight, 2 * Theme.playHistory.rowHeight + headerSpace + 2 * Theme.gameEditor.cardPadding)
+
+        // In an item, not directly in the popup: a menu declared in a Popup leaves the window
+        // ignoring clicks once the popup closes.
+        SettingsMenu {
+            id: sessionMenu
+            pops: true
+            property var session: ({})
+
+            SettingsMenuItem {
+                text: qsTr("Delete session")
+                iconPath: Icons.deleteBin6Line
+                danger: true
+                onTriggered: root.deleteSession(sessionMenu.session)
             }
         }
 
-        Card {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            readonly property real headerSpace: root.sessions.length > 0 ? header.height + Theme.playHistory.headerGap : 0
-            Layout.preferredHeight: Math.max(list.contentHeight, 2 * Theme.playHistory.rowHeight) + headerSpace + 2 * Theme.gameEditor.cardPadding
-            Layout.minimumHeight: Math.min(Layout.preferredHeight, 2 * Theme.playHistory.rowHeight + headerSpace + 2 * Theme.gameEditor.cardPadding)
+        Loader {
+            id: addSessionLoader
+            active: false
+            source: "AddSessionDialog.qml"
+        }
+        Connections {
+            target: addSessionLoader.item
+            function onAdded(owner, session) { root.sessionAdded(owner, session) }
+            function onClosed() { closeButton.forceActiveFocus() }
+        }
 
-            // In an item, not directly in the popup: a menu declared in a Popup leaves the window
-            // ignoring clicks once the popup closes.
-            SettingsMenu {
-                id: sessionMenu
-                pops: true
-                property var session: ({})
-
-                SettingsMenuItem {
-                    text: qsTr("Delete session")
-                    iconPath: Icons.deleteBin6Line
-                    danger: true
-                    onTriggered: root.deleteSession(sessionMenu.session)
-                }
-            }
-
-            Loader {
-                id: addSessionLoader
-                active: false
-                source: "AddSessionDialog.qml"
-            }
-            Connections {
-                target: addSessionLoader.item
-                function onAdded(owner, session) { root.sessionAdded(owner, session) }
-                function onClosed() { closeButton.forceActiveFocus() }
-            }
-
-            Label {
-                anchors.centerIn: parent
-                visible: root.sessions.length === 0
-                text: qsTr("No sessions yet")
-                color: Theme.playHistory.noteColor
-            }
-
-            RowLayout {
-                id: header
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.topMargin: Theme.gameEditor.cardPadding
-                anchors.leftMargin: Theme.gameEditor.cardPadding + 10
-                anchors.rightMargin: Theme.gameEditor.cardPadding + 10
-                spacing: Theme.layout.spacing
-                visible: root.sessions.length > 0
-
-                component HeaderLabel: CaptionLabel {
-                    color: Theme.gameEditor.labelColor
-                    font.pixelSize: Theme.playHistory.headerSize
-                }
-
-                HeaderLabel {
-                    Layout.preferredWidth: Theme.playHistory.dateColumnWidth
-                    text: qsTr("Date")
-                }
-                HeaderLabel {
-                    Layout.fillWidth: true
-                    text: qsTr("Time")
-                }
-                HeaderLabel {
-                    Layout.preferredWidth: Theme.playHistory.platformColumnWidth
-                    visible: root.linked
-                    text: qsTr("Platform")
-                }
-                HeaderLabel {
-                    Layout.preferredWidth: Theme.playHistory.durationColumnWidth
-                    horizontalAlignment: Text.AlignRight
-                    text: qsTr("Length")
-                }
-                Item { Layout.preferredWidth: Theme.playHistory.deleteSize }
-            }
-
-            ListView {
-                id: list
-                anchors.fill: parent
-                anchors.margins: Theme.gameEditor.cardPadding
-                anchors.topMargin: root.sessions.length > 0
-                    ? Theme.gameEditor.cardPadding + header.height + Theme.playHistory.headerGap
-                    : Theme.gameEditor.cardPadding
-                clip: true
-                model: sessionModel
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar {}
-
-                delegate: Item {
-                    id: row
-                    required property var model
-                    required property int index
-                    readonly property bool leaving: model.leaving
-                    readonly property bool selected: root.selection[model.key] === true
-                    readonly property var session: ({ end: model.end, key: model.key, gameId: model.gameId,
-                                                      source: model.source, startMs: model.startMs,
-                                                      endMs: model.endMs, merged: model.merged, manual: model.manual,
-                                                      minutes: model.minutes })
-
-                    // A session that comes back while the popup is open unfolds, the way a deleted one
-                    // folds away; the rows made on opening, or for another game, are there at once.
-                    property bool present: !root.opened || sessionModel.rebuilt
-                    Component.onCompleted: present = true
-
-                    width: ListView.view.width
-                    height: leaving || !present ? 0 : Theme.playHistory.rowHeight
-                    opacity: leaving || !present ? 0 : 1
-                    clip: true
-                    Behavior on height { enabled: Motion.on; MotionNumber { speed: "normal" } }
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "normal"; linear: true } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: Theme.playHistory.rowRadius
-                        color: row.selected ? Theme.playHistory.rowSelected
-                             : rowHover.hovered && !row.leaving ? Theme.playHistory.rowHover : "transparent"
-                        Behavior on color { enabled: Motion.fades; MotionColor {} }
-                    }
-
-                    Rectangle {
-                        visible: row.index + 1 < sessionModel.count
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        anchors.bottom: parent.bottom
-                        height: 1
-                        color: Theme.playHistory.separator
-                    }
-
-                    HoverHandler { id: rowHover }
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: !row.leaving
-                        acceptedButtons: Qt.LeftButton
-                        onClicked: mouse => root.clickSession(row.index, mouse.modifiers)
-                    }
-                    TapHandler {
-                        acceptedButtons: Qt.RightButton
-                        onTapped: eventPoint => {
-                            sessionMenu.session = row.session
-                            const p = row.mapToItem(list, eventPoint.position)
-                            sessionMenu.popup(list, p.x, p.y)
-                            sessionMenu.popDirection = Qt.binding(() => sessionMenu.y < p.y ? "up" : "down")
-                        }
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: Theme.layout.spacing
-
-                        Label {
-                            Layout.preferredWidth: Theme.playHistory.dateColumnWidth
-                            text: root.sessionDay(row.session)
-                            color: Theme.palette.text
-                            elide: Text.ElideRight
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: root.sessionTime(row.session)
-                            color: row.session.merged ? Theme.playHistory.noteColor : Theme.palette.text
-                            elide: Text.ElideRight
-                        }
-                        Label {
-                            Layout.preferredWidth: Theme.playHistory.platformColumnWidth
-                            visible: root.linked
-                            text: row.session.source
-                            color: Theme.playHistory.noteColor
-                            elide: Text.ElideRight
-                        }
-                        Item {
-                            Layout.preferredWidth: Theme.playHistory.durationColumnWidth
-                            Layout.fillHeight: true
-
-                            Label {
-                                id: durationLabel
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: row.session.merged ? "" : root.durationText(row.session.minutes)
-                                color: Theme.playHistory.durationColor
-                            }
-                            Icon {
-                                id: manualMark
-                                visible: row.session.manual
-                                anchors.right: durationLabel.left
-                                anchors.rightMargin: Theme.layout.spacing
-                                anchors.verticalCenter: parent.verticalCenter
-                                path: Icons.editLine
-                                size: Theme.playHistory.deleteIconSize
-                                color: Theme.playHistory.manualMarkColor
-
-                                HoverHandler { id: manualHover }
-                                ToolTip.visible: manualHover.hovered
-                                ToolTip.delay: Theme.tooltip.delay
-                                ToolTip.text: qsTr("Added by hand")
-                            }
-                        }
-                        Item {
-                            Layout.preferredWidth: Theme.playHistory.deleteSize
-                            Layout.preferredHeight: Theme.playHistory.deleteSize
-                            opacity: rowHover.hovered ? 1 : 0
-                            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-
-                            Icon {
-                                anchors.centerIn: parent
-                                path: Icons.close
-                                size: Theme.playHistory.deleteIconSize
-                                color: deleteMouse.containsMouse ? Theme.playHistory.deleteHoverColor : Theme.playHistory.deleteColor
-                            }
-                            MouseArea {
-                                id: deleteMouse
-                                anchors.fill: parent
-                                enabled: rowHover.hovered
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.deleteSession(row.session)
-                            }
-                            ToolTip.visible: deleteMouse.containsMouse
-                            ToolTip.delay: Theme.tooltip.delay
-                            ToolTip.text: qsTr("Delete session")
-                        }
-                    }
-                }
-            }
+        Label {
+            anchors.centerIn: parent
+            visible: root.sessions.length === 0
+            text: qsTr("No sessions yet")
+            color: Theme.playHistory.noteColor
         }
 
         RowLayout {
-            Layout.fillWidth: true
+            id: header
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: Theme.gameEditor.cardPadding
+            anchors.leftMargin: Theme.gameEditor.cardPadding + 10
+            anchors.rightMargin: Theme.gameEditor.cardPadding + 10
+            spacing: Theme.layout.spacing
+            visible: root.sessions.length > 0
 
-            Item {
+            component HeaderLabel: CaptionLabel {
+                color: Theme.gameEditor.labelColor
+                font.pixelSize: Theme.playHistory.headerSize
+            }
+
+            HeaderLabel {
+                Layout.preferredWidth: Theme.playHistory.dateColumnWidth
+                text: qsTr("Date")
+            }
+            HeaderLabel {
                 Layout.fillWidth: true
-                Layout.preferredHeight: deleteSelected.implicitHeight
+                text: qsTr("Time")
+            }
+            HeaderLabel {
+                Layout.preferredWidth: Theme.playHistory.platformColumnWidth
+                visible: root.linked
+                text: qsTr("Platform")
+            }
+            HeaderLabel {
+                Layout.preferredWidth: Theme.playHistory.durationColumnWidth
+                horizontalAlignment: Text.AlignRight
+                text: qsTr("Length")
+            }
+            Item { Layout.preferredWidth: Theme.playHistory.deleteSize }
+        }
 
-                SettingsButton {
-                    id: deleteSelected
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: qsTr("Delete selected")
-                    iconPath: Icons.deleteBin6Line
-                    danger: true
-                    visible: opacity > 0
-                    opacity: root.selectionCount > 0 ? 1 : 0
-                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                    onClicked: root.deleteSelected()
+        ListView {
+            id: list
+            anchors.fill: parent
+            anchors.margins: Theme.gameEditor.cardPadding
+            anchors.topMargin: root.sessions.length > 0
+                ? Theme.gameEditor.cardPadding + header.height + Theme.playHistory.headerGap
+                : Theme.gameEditor.cardPadding
+            clip: true
+            model: sessionModel
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar {}
+
+            delegate: Item {
+                id: row
+                required property var model
+                required property int index
+                readonly property bool leaving: model.leaving
+                readonly property bool selected: root.selection[model.key] === true
+                readonly property var session: ({ end: model.end, key: model.key, gameId: model.gameId,
+                                                  source: model.source, startMs: model.startMs,
+                                                  endMs: model.endMs, merged: model.merged, manual: model.manual,
+                                                  minutes: model.minutes })
+
+                // A session that comes back while the popup is open unfolds, the way a deleted one
+                // folds away; the rows made on opening, or for another game, are there at once.
+                property bool present: !root.opened || sessionModel.rebuilt
+                Component.onCompleted: present = true
+
+                width: ListView.view.width
+                height: leaving || !present ? 0 : Theme.playHistory.rowHeight
+                opacity: leaving || !present ? 0 : 1
+                clip: true
+                Behavior on height { enabled: Motion.on; MotionNumber { speed: "normal" } }
+                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "normal"; linear: true } }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Theme.playHistory.rowRadius
+                    color: row.selected ? Theme.playHistory.rowSelected
+                         : rowHover.hovered && !row.leaving ? Theme.playHistory.rowHover : "transparent"
+                    Behavior on color { enabled: Motion.fades; MotionColor {} }
                 }
-            }
-            SettingsButton {
-                id: addSessionButton
-                visible: root.addable.length > 0
-                text: qsTr("Add session")
-                iconPath: Icons.add
-                onClicked: root.addSession()
-            }
-            SettingsButton {
-                id: closeButton
-                text: qsTr("Close")
-                onClicked: root.close()
+
+                Rectangle {
+                    visible: row.index + 1 < sessionModel.count
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    anchors.bottom: parent.bottom
+                    height: 1
+                    color: Theme.playHistory.separator
+                }
+
+                HoverHandler { id: rowHover }
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: !row.leaving
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: mouse => root.clickSession(row.index, mouse.modifiers)
+                }
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: eventPoint => {
+                        sessionMenu.session = row.session
+                        const p = row.mapToItem(list, eventPoint.position)
+                        sessionMenu.popup(list, p.x, p.y)
+                        sessionMenu.popDirection = Qt.binding(() => sessionMenu.y < p.y ? "up" : "down")
+                    }
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: Theme.layout.spacing
+
+                    Label {
+                        Layout.preferredWidth: Theme.playHistory.dateColumnWidth
+                        text: root.sessionDay(row.session)
+                        color: Theme.palette.text
+                        elide: Text.ElideRight
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: root.sessionTime(row.session)
+                        color: row.session.merged ? Theme.playHistory.noteColor : Theme.palette.text
+                        elide: Text.ElideRight
+                    }
+                    Label {
+                        Layout.preferredWidth: Theme.playHistory.platformColumnWidth
+                        visible: root.linked
+                        text: row.session.source
+                        color: Theme.playHistory.noteColor
+                        elide: Text.ElideRight
+                    }
+                    Item {
+                        Layout.preferredWidth: Theme.playHistory.durationColumnWidth
+                        Layout.fillHeight: true
+
+                        Label {
+                            id: durationLabel
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: row.session.merged ? "" : root.durationText(row.session.minutes)
+                            color: Theme.playHistory.durationColor
+                        }
+                        Icon {
+                            id: manualMark
+                            visible: row.session.manual
+                            anchors.right: durationLabel.left
+                            anchors.rightMargin: Theme.layout.spacing
+                            anchors.verticalCenter: parent.verticalCenter
+                            path: Icons.editLine
+                            size: Theme.playHistory.deleteIconSize
+                            color: Theme.playHistory.manualMarkColor
+
+                            HoverHandler { id: manualHover }
+                            ToolTip.visible: manualHover.hovered
+                            ToolTip.delay: Theme.tooltip.delay
+                            ToolTip.text: qsTr("Added by hand")
+                        }
+                    }
+                    Item {
+                        Layout.preferredWidth: Theme.playHistory.deleteSize
+                        Layout.preferredHeight: Theme.playHistory.deleteSize
+                        opacity: rowHover.hovered ? 1 : 0
+                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+
+                        Icon {
+                            anchors.centerIn: parent
+                            path: Icons.close
+                            size: Theme.playHistory.deleteIconSize
+                            color: deleteMouse.containsMouse ? Theme.playHistory.deleteHoverColor : Theme.playHistory.deleteColor
+                        }
+                        MouseArea {
+                            id: deleteMouse
+                            anchors.fill: parent
+                            enabled: rowHover.hovered
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.deleteSession(row.session)
+                        }
+                        ToolTip.visible: deleteMouse.containsMouse
+                        ToolTip.delay: Theme.tooltip.delay
+                        ToolTip.text: qsTr("Delete session")
+                    }
+                }
             }
         }
     }
+
+    footerStart: [
+        SettingsButton {
+            id: deleteSelected
+            text: qsTr("Delete selected")
+            iconPath: Icons.deleteBin6Line
+            danger: true
+            visible: opacity > 0
+            opacity: root.selectionCount > 0 ? 1 : 0
+            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+            onClicked: root.deleteSelected()
+        }
+    ]
+    footer: [
+        SettingsButton {
+            id: addSessionButton
+            visible: root.addable.length > 0
+            text: qsTr("Add session")
+            iconPath: Icons.add
+            onClicked: root.addSession()
+        },
+        SettingsButton {
+            id: closeButton
+            text: qsTr("Close")
+            onClicked: root.close()
+        }
+    ]
 }

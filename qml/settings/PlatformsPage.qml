@@ -72,15 +72,11 @@ Item {
         function onPlatformSettingsChanged() { drag.reset() }
     }
 
-    component DialogBackground: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
-    }
-
-    MotionPopup {
+    AppDialog {
         id: addDialog
+
+        carded: false
+        title: qsTr("Add platform")
 
         readonly property string id: Library.platformIdFor(nameField.text)
         readonly property var existing: root.platforms.find(p => p.id === id)
@@ -103,69 +99,55 @@ Item {
             }
         }
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.menu.dialogPadding
-        width: 380
-        background: DialogBackground {}
-
-        ColumnLayout {
-            width: parent.width
-            spacing: 10
-
-            Label { text: qsTr("Add platform"); color: Theme.controls.labelColor; font.weight: Theme.font.strongWeight }
-
-            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
-            SettingsTextField {
-                id: nameField
-                Layout.fillWidth: true
-                implicitHeight: Theme.controls.inputHeight
-                placeholderText: qsTr("e.g. GameCube")
-                onAccepted: addDialog.add()
-            }
-
-            Label {
-                Layout.fillWidth: true
-                text: nameField.text.trim() === "" ? qsTr("Games refer to their platform by an id made from its name.")
-                    : addDialog.id === "" ? qsTr("The id is made from the letters a-z and digits in the name; this one has none.")
-                    : addDialog.existing?.defined ? qsTr("There's already a platform with the id %1.").arg(addDialog.id)
-                    : addDialog.existing ? qsTr("Id: %1. %2 already use it, and will show on this platform.")
-                                               .arg(addDialog.id)
-                                               .arg(addDialog.existing.games === 1 ? qsTr("1 game") : qsTr("%1 games").arg(addDialog.existing.games))
-                    : qsTr("Id: %1. Games refer to their platform by id, so it can't change later; the name can.").arg(addDialog.id)
-                color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
-                                                                        : Theme.controls.problemsText
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            Label {
-                id: addError
-                visible: text !== ""
-                Layout.fillWidth: true
-                color: Theme.controls.problemsText
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.controls.controlSpacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() }
-                SettingsButton {
-                    primary: true
-                    text: qsTr("Add")
-                    enabled: addDialog.canAdd
-                    onClicked: addDialog.add()
-                }
-            }
+        Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
+        SettingsTextField {
+            id: nameField
+            Layout.fillWidth: true
+            implicitHeight: Theme.controls.inputHeight
+            placeholderText: qsTr("e.g. GameCube")
+            onAccepted: addDialog.add()
         }
+
+        Label {
+            Layout.fillWidth: true
+            text: nameField.text.trim() === "" ? qsTr("Games refer to their platform by an id made from its name.")
+                : addDialog.id === "" ? qsTr("The id is made from the letters a-z and digits in the name; this one has none.")
+                : addDialog.existing?.defined ? qsTr("There's already a platform with the id %1.").arg(addDialog.id)
+                : addDialog.existing ? qsTr("Id: %1. %2 already use it, and will show on this platform.")
+                                           .arg(addDialog.id)
+                                           .arg(addDialog.existing.games === 1 ? qsTr("1 game") : qsTr("%1 games").arg(addDialog.existing.games))
+                : qsTr("Id: %1. Games refer to their platform by id, so it can't change later; the name can.").arg(addDialog.id)
+            color: addDialog.canAdd || nameField.text.trim() === "" ? Theme.controls.descriptionColor
+                                                                    : Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
+
+        Label {
+            id: addError
+            visible: text !== ""
+            Layout.fillWidth: true
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
+
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: addDialog.close() },
+            SettingsButton {
+                primary: true
+                text: qsTr("Add")
+                enabled: addDialog.canAdd
+                onClicked: addDialog.add()
+            }
+        ]
     }
 
-    MotionPopup {
+    AppDialog {
         id: removeDialog
+
+        carded: false
+        title: qsTr("Remove %1?").arg(removeDialog.platform.name)
 
         property var platform: ({ id: "", name: "", games: 0, romFolders: [] })
 
@@ -175,59 +157,39 @@ Item {
             open()
         }
 
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.menu.dialogPadding
-        width: 380
-        background: DialogBackground {}
+        Label {
+            Layout.fillWidth: true
+            text: (removeDialog.platform.games > 0
+                   ? qsTr("Its games stay in the library, with their favorites and play time, under the id %1. Add a platform with that id to show them in the rail again.")
+                         .arg(removeDialog.platform.id)
+                   : qsTr("It has no games."))
+                  + (removeDialog.platform.romFolders.length > 0 ? " " + qsTr("Its ROM folders won't be scanned.") : "")
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 10
+        Label {
+            id: removeError
+            visible: text !== ""
+            Layout.fillWidth: true
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
+        }
 
-            Label {
-                text: qsTr("Remove %1?").arg(removeDialog.platform.name)
-                color: Theme.controls.labelColor
-                font.weight: Theme.font.strongWeight
-            }
-            Label {
-                Layout.fillWidth: true
-                text: (removeDialog.platform.games > 0
-                       ? qsTr("Its games stay in the library, with their favorites and play time, under the id %1. Add a platform with that id to show them in the rail again.")
-                             .arg(removeDialog.platform.id)
-                       : qsTr("It has no games."))
-                      + (removeDialog.platform.romFolders.length > 0 ? " " + qsTr("Its ROM folders won't be scanned.") : "")
-                color: Theme.controls.descriptionColor
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            Label {
-                id: removeError
-                visible: text !== ""
-                Layout.fillWidth: true
-                color: Theme.controls.problemsText
-                font.pixelSize: Theme.controls.descriptionFontSize
-                wrapMode: Text.WordWrap
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.controls.controlSpacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: removeDialog.close() }
-                SettingsButton {
-                    danger: true
-                    text: qsTr("Remove")
-                    onClicked: {
-                        removeError.text = Library.removePlatform(removeDialog.platform.id)
-                        if (removeError.text === "")
-                            removeDialog.close()
-                    }
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: removeDialog.close() },
+            SettingsButton {
+                danger: true
+                text: qsTr("Remove")
+                onClicked: {
+                    removeError.text = Library.removePlatform(removeDialog.platform.id)
+                    if (removeError.text === "")
+                        removeDialog.close()
                 }
             }
-        }
+        ]
     }
 
     ColumnLayout {

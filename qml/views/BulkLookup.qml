@@ -817,52 +817,31 @@ ApplicationWindow {
         }
     }
 
-    MotionPopup {
+    AppDialog {
         id: confirmDiscard
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        width: Theme.gameEditor.confirmWidth
-        modal: true
-        padding: Theme.gameEditor.padding
-        Overlay.modal: Scrim {}
-        background: Surface {
-            radius: Theme.gameEditor.radius
-            fill: Theme.gameEditor.background
-            fillEnd: Theme.gameEditor.backgroundEnd
-            direction: Theme.gameEditor.gradientDirection
-            border.color: Theme.gameEditor.border
-            border.width: Theme.gameEditor.borderWidth
+
+        carded: false
+        title: qsTr("Discard the results?")
+
+        Label {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.labelColor
+            text: qsTr("Nothing has been written yet. Closing drops what was found.")
         }
-        contentItem: ColumnLayout {
-            spacing: Theme.gameEditor.rowSpacing
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Discard the results?")
-                color: Theme.gameEditor.headingColor
-                font.weight: Theme.font.emphasisWeight
-            }
-            Label {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                color: Theme.gameEditor.labelColor
-                text: qsTr("Nothing has been written yet. Closing drops what was found.")
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-                Item { Layout.fillWidth: true }
-                SettingsButton { text: qsTr("Keep reviewing"); onClicked: confirmDiscard.close() }
-                SettingsButton {
-                    primary: true
-                    text: qsTr("Discard")
-                    onClicked: {
-                        confirmDiscard.close()
-                        root.closeAnyway = true
-                        root.close()
-                    }
+
+        footer: [
+            SettingsButton { text: qsTr("Keep reviewing"); onClicked: confirmDiscard.close() },
+            SettingsButton {
+                primary: true
+                text: qsTr("Discard")
+                onClicked: {
+                    confirmDiscard.close()
+                    root.closeAnyway = true
+                    root.close()
                 }
             }
-        }
+        ]
     }
 
     ColumnLayout {

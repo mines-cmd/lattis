@@ -87,6 +87,10 @@ ApplicationWindow {
         settingsWindow.dragPlatformForScreenshot(id, parseInt(offset))
     }
 
+    function themeDialogInSettings(kind) {
+        settingsWindow.themeDialogForScreenshot(kind)
+    }
+
     function makeUndoableChange(kind) {
         const game = gameList.currentGame
         switch (kind) {

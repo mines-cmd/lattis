@@ -3,8 +3,12 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: true
+    size: "medium"
+    title: editing ? qsTr("Edit mod manager") : qsTr("Add mod manager")
 
     property string editId: ""
     property var linkable: []
@@ -103,22 +107,8 @@ MotionPopup {
         }
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
     width: Math.min(Theme.settingsWindow.pickerWidth, parent.width - 2 * Theme.gameEditor.padding)
     height: Math.min(implicitHeight, parent.height - 2 * Theme.gameEditor.padding)
-    modal: true
-    focus: true
-    padding: Theme.gameEditor.padding
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-    }
 
     component FieldLabel: Label {
         color: Theme.gameEditor.labelColor
@@ -130,8 +120,11 @@ MotionPopup {
         wrapMode: Text.WordWrap
     }
 
-    contentItem: Flickable {
+    Flickable {
         id: flick
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredHeight: form.implicitHeight
         clip: true
         contentHeight: form.implicitHeight
         implicitHeight: form.implicitHeight
@@ -142,12 +135,6 @@ MotionPopup {
             id: form
             width: flick.width - 12
             spacing: Theme.gameEditor.rowSpacing
-
-            Label {
-                text: root.editing ? qsTr("Edit mod manager") : qsTr("Add mod manager")
-                color: Theme.gameEditor.headingColor
-                font.weight: Theme.font.strongWeight
-            }
 
             FieldLabel { text: qsTr("Name") }
             SettingsTextField {
@@ -396,19 +383,16 @@ MotionPopup {
                 color: Theme.controls.problemsText
                 wrapMode: Text.WordWrap
             }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing
-                Item { Layout.fillWidth: true }
-                SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
-                SettingsButton {
-                    primary: true
-                    text: root.editing ? qsTr("Save") : qsTr("Add")
-                    enabled: root.canSave
-                    onClicked: root.save()
-                }
-            }
         }
     }
+
+    footer: [
+        SettingsButton { text: qsTr("Cancel"); onClicked: root.close() },
+        SettingsButton {
+            primary: true
+            text: root.editing ? qsTr("Save") : qsTr("Add")
+            enabled: root.canSave
+            onClicked: root.save()
+        }
+    ]
 }

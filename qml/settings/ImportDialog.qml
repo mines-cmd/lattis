@@ -4,8 +4,16 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: true
+    size: "medium"
+    // The plan is gone once done: what was imported names it then.
+    readonly property string kind: root.done !== "" ? root.done : (root.plan.kind ?? "")
+    title: kind === "library" ? qsTr("Import library") : kind === "saves" ? qsTr("Import saves")
+         : kind === "game-saves" ? qsTr("Import game saves") : qsTr("Import")
+    closable: !busy && done !== "library"
 
     readonly property var plan: Backups.importPlan
     readonly property bool library: plan.kind === "library"
@@ -50,23 +58,8 @@ MotionPopup {
         return target.bytes < 0 ? "" : qsTr("%1 now").arg(Backups.sizeText(target.bytes))
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
-    width: Math.min(Theme.gameEditor.backupWidth, parent.width - 2 * Theme.gameEditor.padding)
     height: Math.min(implicitHeight, parent.height - 2 * Theme.gameEditor.padding)
-    modal: true
-    focus: true
-    padding: Theme.gameEditor.padding
     closePolicy: root.busy || root.done === "library" ? Popup.NoAutoClose : Popup.CloseOnEscape
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-    }
 
     Connections {
         target: Backups
@@ -208,212 +201,197 @@ MotionPopup {
         }
     }
 
-    contentItem: ColumnLayout {
-        spacing: Theme.gameEditor.rowSpacing
-
-        Label {
-            Layout.fillWidth: true
-            // The plan is gone once done: what was imported names it then.
-            readonly property string kind: root.done !== "" ? root.done : (root.plan.kind ?? "")
-            text: kind === "library" ? qsTr("Import library") : kind === "saves" ? qsTr("Import saves")
-                : kind === "game-saves" ? qsTr("Import game saves") : qsTr("Import")
-            color: Theme.gameEditor.headingColor
-            font.weight: Theme.font.strongWeight
-        }
-
-        Flickable {
-            id: flick
-            visible: root.plan.kind !== undefined && !root.busy && root.done === ""
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.preferredHeight: content.implicitHeight
-            contentHeight: content.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: SettingsScrollBar { id: scrollBar }
-
-            ColumnLayout {
-                id: content
-                width: flick.width - scrollBar.width - Theme.layout.spacing
-                spacing: Theme.gameEditor.rowSpacing
-
-                Card {
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.layout.spacing
-                        Label {
-                            Layout.fillWidth: true
-                            text: root.plan.file ?? ""
-                            color: Theme.gameEditor.labelColor
-                            elide: Text.ElideMiddle
-                        }
-                        Label {
-                            visible: root.library && (root.parts[0]?.bytes ?? -1) >= 0
-                            text: Backups.sizeText(root.parts[0]?.bytes ?? 0)
-                            color: Theme.gameEditor.hintColor
-                            font.pixelSize: Theme.gameEditor.hintFontSize
-                        }
-                    }
-                    Hint {
-                        text: root.library && (root.plan.games ?? -1) >= 0
-                              ? qsTr("%n game(s), made %1", "", root.plan.games).arg(root.plan.made ?? "")
-                              : qsTr("Made %1").arg(root.plan.made ?? "")
-                    }
-                    Hint {
-                        visible: !root.gameSaves
-                        text: root.plan.sameLibrary ? qsTr("From this library.")
-                            : root.library ? qsTr("From another library.")
-                            : qsTr("From another library: saves of games that aren't in yours stay in the backup. Import its library first to restore them.")
-                    }
-                    Label {
-                        visible: text !== ""
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        color: Theme.gameEditor.warningColor
-                        font.pixelSize: Theme.gameEditor.hintFontSize
-                        text: root.plan.warning ?? ""
-                    }
-                }
-
-                Heading { visible: root.library; text: qsTr("Replaces your library") }
-                Card {
-                    visible: root.library
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.layout.spacing
-                        Label {
-                            Layout.fillWidth: true
-                            text: qsTr("%n game(s) now", "", root.plan.gamesNow ?? 0)
-                            color: Theme.gameEditor.labelColor
-                        }
-                        Label {
-                            text: root.library && root.parts.length > 0 ? root.now(root.parts[0].targets[0]) : ""
-                            color: Theme.gameEditor.hintColor
-                            font.pixelSize: Theme.gameEditor.hintFontSize
-                        }
-                    }
-                    Hint {
-                        text: root.plan.dataDir ?? ""
-                        font.family: Theme.font.monoFamily
-                        font.pixelSize: Theme.gameEditor.pathFontSize
-                        wrapMode: Text.WrapAnywhere
-                    }
-                    Hint {
-                        visible: (root.plan.carriedOver ?? []).length > 0
-                        text: qsTr("Kept, as the backup doesn't have them: %1.").arg((root.plan.carriedOver ?? []).join(", "))
-                    }
-                }
-
-                PartGroup {
-                    visible: members.length > 0
-                    title: qsTr("Game saves")
-                    kinds: ["gameSaves"]
-                }
-                PartGroup {
-                    visible: !root.library && members.length > 0
-                    title: qsTr("Emulator saves")
-                    kinds: ["saves", "besideRoms"]
-                }
-                PartGroup {
-                    visible: !root.library && members.length > 0
-                    title: qsTr("Keys and firmware")
-                    kinds: ["keys"]
-                }
-                PartGroup {
-                    visible: !root.library && members.length > 0
-                    title: qsTr("Proton games' saves")
-                    kinds: ["proton"]
-                }
-                Hint {
-                    visible: !root.library && root.parts.length === 0
-                    text: qsTr("This backup holds no saves.")
-                }
-
-                Hint {
-                    text: root.library ? qsTr("What you have now is moved aside, not deleted: %1. The app restarts when it's done.").arg(root.plan.aside ?? "")
-                                       : qsTr("What you have now is moved aside, not deleted, next to where it is.")
-                }
-            }
-        }
+    Flickable {
+        id: flick
+        visible: root.plan.kind !== undefined && !root.busy && root.done === ""
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredHeight: content.implicitHeight
+        contentHeight: content.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: SettingsScrollBar { id: scrollBar }
 
         ColumnLayout {
-            visible: root.busy
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
+            id: content
+            width: flick.width - scrollBar.width - Theme.layout.spacing
+            spacing: Theme.gameEditor.rowSpacing
 
-            Label {
-                Layout.fillWidth: true
-                text: Backups.importTotal > 0 ? qsTr("Importing: %1 of %2").arg(Backups.sizeText(Backups.importBytes)).arg(Backups.sizeText(Backups.importTotal))
-                                              : qsTr("Importing: %1").arg(Backups.sizeText(Backups.importBytes))
-                color: Theme.gameEditor.labelColor
-            }
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: Theme.gameEditor.progressHeight
-                radius: Theme.gameEditor.progressRadius
-                color: Theme.gameEditor.progressTrack
-                Rectangle {
-                    height: parent.height
-                    radius: parent.radius
-                    width: Backups.importTotal > 0 ? parent.width * Math.min(1, Backups.importBytes / Backups.importTotal) : 0
-                    color: Theme.gameEditor.progressFill
+            Card {
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.layout.spacing
+                    Label {
+                        Layout.fillWidth: true
+                        text: root.plan.file ?? ""
+                        color: Theme.gameEditor.labelColor
+                        elide: Text.ElideMiddle
+                    }
+                    Label {
+                        visible: root.library && (root.parts[0]?.bytes ?? -1) >= 0
+                        text: Backups.sizeText(root.parts[0]?.bytes ?? 0)
+                        color: Theme.gameEditor.hintColor
+                        font.pixelSize: Theme.gameEditor.hintFontSize
+                    }
+                }
+                Hint {
+                    text: root.library && (root.plan.games ?? -1) >= 0
+                          ? qsTr("%n game(s), made %1", "", root.plan.games).arg(root.plan.made ?? "")
+                          : qsTr("Made %1").arg(root.plan.made ?? "")
+                }
+                Hint {
+                    visible: !root.gameSaves
+                    text: root.plan.sameLibrary ? qsTr("From this library.")
+                        : root.library ? qsTr("From another library.")
+                        : qsTr("From another library: saves of games that aren't in yours stay in the backup. Import its library first to restore them.")
+                }
+                Label {
+                    visible: text !== ""
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    color: Theme.gameEditor.warningColor
+                    font.pixelSize: Theme.gameEditor.hintFontSize
+                    text: root.plan.warning ?? ""
                 }
             }
-            Hint { text: qsTr("Nothing changes until all of it is in; Cancel leaves everything as it was.") }
-        }
 
-        Label {
-            visible: root.done !== "" && !root.busy
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            text: root.done === "library" ? qsTr("Imported. Restarting…")
-                                          : qsTr("Imported. The notice on the main window shows where what you had went.")
-            color: Theme.gameEditor.labelColor
-        }
-
-        Label {
-            id: error
-            visible: text !== ""
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: Theme.gameEditor.errorColor
-        }
-        Label {
-            visible: root.blocked !== "" && root.plan.kind !== undefined && !root.busy && root.done === ""
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            color: Theme.gameEditor.errorColor
-            text: root.blocked
-        }
-        Hint {
-            visible: !root.library && root.plan.kind !== undefined && !root.busy && root.done === ""
-            text: root.gameSaves ? qsTr("Close the game first.") : qsTr("Close any emulator you started outside the launcher first.")
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Label {
-                Layout.fillWidth: true
-                visible: root.plan.kind !== undefined && !root.busy && root.done === ""
-                text: (root.plan.bytes ?? 0) > 0 ? qsTr("%1 to restore").arg(Backups.sizeText(root.plan.bytes)) : ""
-                color: Theme.gameEditor.hintColor
-                font.pixelSize: Theme.gameEditor.hintFontSize
+            Heading { visible: root.library; text: qsTr("Replaces your library") }
+            Card {
+                visible: root.library
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.layout.spacing
+                    Label {
+                        Layout.fillWidth: true
+                        text: qsTr("%n game(s) now", "", root.plan.gamesNow ?? 0)
+                        color: Theme.gameEditor.labelColor
+                    }
+                    Label {
+                        text: root.library && root.parts.length > 0 ? root.now(root.parts[0].targets[0]) : ""
+                        color: Theme.gameEditor.hintColor
+                        font.pixelSize: Theme.gameEditor.hintFontSize
+                    }
+                }
+                Hint {
+                    text: root.plan.dataDir ?? ""
+                    font.family: Theme.font.monoFamily
+                    font.pixelSize: Theme.gameEditor.pathFontSize
+                    wrapMode: Text.WrapAnywhere
+                }
+                Hint {
+                    visible: (root.plan.carriedOver ?? []).length > 0
+                    text: qsTr("Kept, as the backup doesn't have them: %1.").arg((root.plan.carriedOver ?? []).join(", "))
+                }
             }
-            Item { Layout.fillWidth: true; visible: !(root.plan.kind !== undefined && !root.busy && root.done === "") }
-            SettingsButton {
-                visible: root.done !== "library"
-                text: root.busy ? qsTr("Cancel") : root.done !== "" || root.plan.kind === undefined ? qsTr("Close") : qsTr("Cancel")
-                onClicked: root.busy ? Backups.cancelImport() : root.close()
+
+            PartGroup {
+                visible: members.length > 0
+                title: qsTr("Game saves")
+                kinds: ["gameSaves"]
             }
-            SettingsButton {
-                visible: root.plan.kind !== undefined && !root.busy && root.done === ""
-                primary: true
-                text: root.library ? qsTr("Import and restart") : qsTr("Import")
-                enabled: root.blocked === "" && !Backups.running && (root.plan.anyChecked ?? false)
-                onClicked: root.start()
+            PartGroup {
+                visible: !root.library && members.length > 0
+                title: qsTr("Emulator saves")
+                kinds: ["saves", "besideRoms"]
+            }
+            PartGroup {
+                visible: !root.library && members.length > 0
+                title: qsTr("Keys and firmware")
+                kinds: ["keys"]
+            }
+            PartGroup {
+                visible: !root.library && members.length > 0
+                title: qsTr("Proton games' saves")
+                kinds: ["proton"]
+            }
+            Hint {
+                visible: !root.library && root.parts.length === 0
+                text: qsTr("This backup holds no saves.")
+            }
+
+            Hint {
+                text: root.library ? qsTr("What you have now is moved aside, not deleted: %1. The app restarts when it's done.").arg(root.plan.aside ?? "")
+                                   : qsTr("What you have now is moved aside, not deleted, next to where it is.")
             }
         }
     }
+
+    ColumnLayout {
+        visible: root.busy
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        Label {
+            Layout.fillWidth: true
+            text: Backups.importTotal > 0 ? qsTr("Importing: %1 of %2").arg(Backups.sizeText(Backups.importBytes)).arg(Backups.sizeText(Backups.importTotal))
+                                          : qsTr("Importing: %1").arg(Backups.sizeText(Backups.importBytes))
+            color: Theme.gameEditor.labelColor
+        }
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Theme.gameEditor.progressHeight
+            radius: Theme.gameEditor.progressRadius
+            color: Theme.gameEditor.progressTrack
+            Rectangle {
+                height: parent.height
+                radius: parent.radius
+                width: Backups.importTotal > 0 ? parent.width * Math.min(1, Backups.importBytes / Backups.importTotal) : 0
+                color: Theme.gameEditor.progressFill
+            }
+        }
+        Hint { text: qsTr("Nothing changes until all of it is in; Cancel leaves everything as it was.") }
+    }
+
+    Label {
+        visible: root.done !== "" && !root.busy
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        text: root.done === "library" ? qsTr("Imported. Restarting…")
+                                      : qsTr("Imported. The notice on the main window shows where what you had went.")
+        color: Theme.gameEditor.labelColor
+    }
+
+    Label {
+        id: error
+        visible: text !== ""
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.errorColor
+    }
+    Label {
+        visible: root.blocked !== "" && root.plan.kind !== undefined && !root.busy && root.done === ""
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.errorColor
+        text: root.blocked
+    }
+    Hint {
+        visible: !root.library && root.plan.kind !== undefined && !root.busy && root.done === ""
+        text: root.gameSaves ? qsTr("Close the game first.") : qsTr("Close any emulator you started outside the launcher first.")
+    }
+
+    footerStart: [
+        Label {
+            Layout.fillWidth: true
+            visible: root.plan.kind !== undefined && !root.busy && root.done === ""
+            text: (root.plan.bytes ?? 0) > 0 ? qsTr("%1 to restore").arg(Backups.sizeText(root.plan.bytes)) : ""
+            color: Theme.gameEditor.hintColor
+            font.pixelSize: Theme.gameEditor.hintFontSize
+        }
+    ]
+
+    footer: [
+        SettingsButton {
+            visible: root.done !== "library"
+            text: root.busy ? qsTr("Cancel") : root.done !== "" || root.plan.kind === undefined ? qsTr("Close") : qsTr("Cancel")
+            onClicked: root.busy ? Backups.cancelImport() : root.close()
+        },
+        SettingsButton {
+            visible: root.plan.kind !== undefined && !root.busy && root.done === ""
+            primary: true
+            text: root.library ? qsTr("Import and restart") : qsTr("Import")
+            enabled: root.blocked === "" && !Backups.running && (root.plan.anyChecked ?? false)
+            onClicked: root.start()
+        }
+    ]
 }

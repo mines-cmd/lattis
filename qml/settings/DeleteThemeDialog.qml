@@ -2,8 +2,11 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: false
+    title: permanent ? qsTr("Delete %1 for good?").arg(name) : qsTr("Delete %1?").arg(name)
 
     property string kind: "colors"
     property string name
@@ -47,73 +50,46 @@ MotionPopup {
         }
     }
 
-    anchors.centerIn: parent
-    modal: true
-    Overlay.modal: Scrim {}
-    padding: Theme.menu.dialogPadding
-    width: 380
-
-    background: Rectangle {
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-        radius: Theme.controls.inputRadius
+    Label {
+        Layout.fillWidth: true
+        text: root.permanent
+              ? qsTr("There is no trash to move %1 to. Deleting it can't be undone.").arg(root.file)
+              : qsTr("This moves %1 to the trash.").arg(root.file)
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
+    }
+    Label {
+        visible: root.themes.length > 0
+        Layout.fillWidth: true
+        text: root.themes.length === 1
+              ? qsTr("Used by the theme %1, which will fall back to %2 until you pick another.")
+                    .arg(root.names(root.themes)).arg(root.fallback)
+              : qsTr("Used by the themes %1, which will fall back to %2 until you pick others.")
+                    .arg(root.names(root.themes)).arg(root.fallback)
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
+    }
+    Label {
+        visible: root.files.length > 0
+        Layout.fillWidth: true
+        text: qsTr("Extended by %1, which will fall back the same way.").arg(root.names(root.files))
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
+    }
+    Label {
+        visible: root.active
+        Layout.fillWidth: true
+        text: qsTr("It is in use now; %1 takes its place.").arg(root.fallback)
+        wrapMode: Text.WordWrap
+        color: Theme.controls.descriptionColor
     }
 
-    ColumnLayout {
-        width: parent.width
-        spacing: 10
-
-        Label {
-            Layout.fillWidth: true
-            text: root.permanent ? qsTr("Delete %1 for good?").arg(root.name) : qsTr("Delete %1?").arg(root.name)
-            color: Theme.controls.labelColor
-            font.weight: Theme.font.strongWeight
-            elide: Text.ElideRight
+    footer: [
+        SettingsButton { text: qsTr("Cancel"); onClicked: root.close() },
+        SettingsButton {
+            danger: true
+            text: root.permanent ? qsTr("Delete for good") : qsTr("Delete")
+            onClicked: root.remove()
         }
-        Label {
-            Layout.fillWidth: true
-            text: root.permanent
-                  ? qsTr("There is no trash to move %1 to. Deleting it can't be undone.").arg(root.file)
-                  : qsTr("This moves %1 to the trash.").arg(root.file)
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-        Label {
-            visible: root.themes.length > 0
-            Layout.fillWidth: true
-            text: root.themes.length === 1
-                  ? qsTr("Used by the theme %1, which will fall back to %2 until you pick another.")
-                        .arg(root.names(root.themes)).arg(root.fallback)
-                  : qsTr("Used by the themes %1, which will fall back to %2 until you pick others.")
-                        .arg(root.names(root.themes)).arg(root.fallback)
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-        Label {
-            visible: root.files.length > 0
-            Layout.fillWidth: true
-            text: qsTr("Extended by %1, which will fall back the same way.").arg(root.names(root.files))
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-        Label {
-            visible: root.active
-            Layout.fillWidth: true
-            text: qsTr("It is in use now; %1 takes its place.").arg(root.fallback)
-            wrapMode: Text.WordWrap
-            color: Theme.controls.descriptionColor
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            spacing: Theme.controls.controlSpacing
-            SettingsButton { text: qsTr("Cancel"); onClicked: root.close() }
-            SettingsButton {
-                danger: true
-                text: root.permanent ? qsTr("Delete for good") : qsTr("Delete")
-                onClicked: root.remove()
-            }
-        }
-    }
+    ]
 }

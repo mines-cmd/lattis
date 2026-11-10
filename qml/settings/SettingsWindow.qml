@@ -822,6 +822,11 @@ ApplicationWindow {
         (currentPage === gamePage.item ? gamePage.item : platforms.item)?.dragForScreenshot(id, offset)
     }
 
+    function themeDialogForScreenshot(kind) {
+        showCategory("customize")
+        customizePage.item?.dialogForScreenshot(kind)
+    }
+
     function showMessage(text, link) { settingsToast.show(text, link) }
 
     Connections {

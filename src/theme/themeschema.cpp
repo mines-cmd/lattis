@@ -1431,6 +1431,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "padding", "12", 0, 100, "Space between the dialog's edge and its content"),
     integer("game_editor", "radius", "@radius.large", 0, 100, "Corner radius"),
     color("game_editor", "background", "@settings_window.background", "Background, behind the cards"),
+    color("game_editor", "plain_background", "@menu.popup_background", "Background of a dialog whose content isn't in cards (a question, About)"),
     color("game_editor", "background_end", "@game_editor.background", "Gradient end; game editor background = flat"),
     color("game_editor", "border", "@border", "Border"),
     integer("game_editor", "border_width", "@layout.border_width", 0, 20, "Outline thickness"),

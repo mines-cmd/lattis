@@ -277,13 +277,11 @@ Item {
         onRenamed: text => root.message(text, null)
     }
 
-    MotionPopup {
+    AppDialog {
         id: saveDialog
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.menu.dialogPadding
-        width: 320
+
+        carded: false
+        title: qsTr("Save as theme")
 
         function openFresh() {
             saveName.text = Theme.activeTheme !== "" ? "" : Theme.activeColors + " " + Theme.activeStyle
@@ -298,105 +296,65 @@ Item {
             }
         }
 
-        background: Rectangle {
-            color: Theme.menu.popupBackground
-            border.color: Theme.controls.inputBorder
-            border.width: Theme.controls.inputBorderWidth
-            radius: Theme.controls.inputRadius
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("%1 colors with the %2 style").arg(Theme.activeColors).arg(Theme.activeStyle)
+            color: Theme.controls.descriptionColor
+            wrapMode: Text.WordWrap
         }
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 10
-
-            Label {
-                text: qsTr("Save as theme")
-                color: Theme.controls.labelColor
-                font.weight: Theme.font.strongWeight
-            }
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("%1 colors with the %2 style").arg(Theme.activeColors).arg(Theme.activeStyle)
-                color: Theme.controls.descriptionColor
-                wrapMode: Text.WordWrap
-            }
-
-            Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
-            SettingsTextField {
-                id: saveName
-                Layout.fillWidth: true
-                implicitHeight: Theme.controls.inputHeight
-                onAccepted: if (saveButton.enabled) saveButton.clicked()
-            }
-            Label {
-                readonly property string error: Theme.nameError("theme", saveName.text)
-                visible: error !== ""
-                Layout.fillWidth: true
-                text: error
-                wrapMode: Text.WordWrap
-                color: Theme.controls.descriptionColor
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.controls.controlSpacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: saveDialog.close() }
-                SettingsButton {
-                    id: saveButton
-                    primary: true
-                    text: qsTr("Save")
-                    enabled: Theme.nameError("theme", saveName.text) === ""
-                    onClicked: Theme.themeExists(saveName.text) ? replaceDialog.open() : saveDialog.save(false)
-                }
-            }
+        Label { text: qsTr("Name"); color: Theme.controls.descriptionColor }
+        SettingsTextField {
+            id: saveName
+            Layout.fillWidth: true
+            implicitHeight: Theme.controls.inputHeight
+            onAccepted: if (saveButton.enabled) saveButton.clicked()
         }
+        Label {
+            readonly property string error: Theme.nameError("theme", saveName.text)
+            visible: error !== ""
+            Layout.fillWidth: true
+            text: error
+            wrapMode: Text.WordWrap
+            color: Theme.controls.descriptionColor
+        }
+
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: saveDialog.close() },
+            SettingsButton {
+                id: saveButton
+                primary: true
+                text: qsTr("Save")
+                enabled: Theme.nameError("theme", saveName.text) === ""
+                onClicked: Theme.themeExists(saveName.text) ? replaceDialog.open() : saveDialog.save(false)
+            }
+        ]
     }
 
-    MotionPopup {
+    AppDialog {
         id: replaceDialog
-        anchors.centerIn: parent
-        modal: true
-        Overlay.modal: Scrim {}
-        padding: Theme.menu.dialogPadding
-        width: 320
 
-        background: Rectangle {
-            color: Theme.menu.popupBackground
-            border.color: Theme.controls.inputBorder
-            border.width: Theme.controls.inputBorderWidth
-            radius: Theme.controls.inputRadius
+        carded: false
+        title: qsTr("Replace %1?").arg(saveName.text)
+
+        Label {
+            Layout.fillWidth: true
+            text: qsTr("There is already a theme with this name. It will name %1 colors and the %2 style instead.")
+                      .arg(Theme.activeColors).arg(Theme.activeStyle)
+            wrapMode: Text.WordWrap
+            color: Theme.controls.descriptionColor
         }
 
-        ColumnLayout {
-            width: parent.width
-            spacing: 10
-
-            Label {
-                text: qsTr("Replace %1?").arg(saveName.text)
-                color: Theme.controls.labelColor
-                font.weight: Theme.font.strongWeight
-            }
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("There is already a theme with this name. It will name %1 colors and the %2 style instead.")
-                          .arg(Theme.activeColors).arg(Theme.activeStyle)
-                wrapMode: Text.WordWrap
-                color: Theme.controls.descriptionColor
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                spacing: Theme.controls.controlSpacing
-                SettingsButton { text: qsTr("Cancel"); onClicked: replaceDialog.close() }
-                SettingsButton {
-                    primary: true
-                    text: qsTr("Replace")
-                    onClicked: {
-                        replaceDialog.close()
-                        saveDialog.save(true)
-                    }
+        footer: [
+            SettingsButton { text: qsTr("Cancel"); onClicked: replaceDialog.close() },
+            SettingsButton {
+                primary: true
+                text: qsTr("Replace")
+                onClicked: {
+                    replaceDialog.close()
+                    saveDialog.save(true)
                 }
             }
-        }
+        ]
     }
 }

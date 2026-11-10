@@ -2,8 +2,12 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-MotionPopup {
+AppDialog {
     id: root
+
+    carded: false
+    size: "medium"
+    title: qsTr("Add session")
 
     // The play history popup this opened from: its words for days, times and lengths.
     property var popup
@@ -43,7 +47,7 @@ MotionPopup {
             return qsTr("The start can't be in the future")
         if (endDate > now)
             return qsTr("The end can't be in the future")
-        if (copySessions.some(s => Math.floor(s.endMs / 1000) === Math.floor(endDate.getTime() / 1000)))
+        if (endDate && copySessions.some(s => Math.floor(s.endMs / 1000) === Math.floor(endDate.getTime() / 1000)))
             return qsTr("Another session of this game ends at that time")
         return ""
     }
@@ -109,21 +113,7 @@ MotionPopup {
         added(owner, result.session)
     }
 
-    parent: Overlay.overlay
-    anchors.centerIn: parent
     width: Math.min(implicitWidth, parent.width - 2 * Theme.gameEditor.padding)
-    modal: true
-    focus: true
-    padding: Theme.gameEditor.padding
-    Overlay.modal: Scrim {}
-    background: Surface {
-        radius: Theme.gameEditor.radius
-        fill: Theme.gameEditor.background
-        fillEnd: Theme.gameEditor.backgroundEnd
-        direction: Theme.gameEditor.gradientDirection
-        border.color: Theme.gameEditor.border
-        border.width: Theme.gameEditor.borderWidth
-    }
 
     onOpened: {
         error.text = ""
@@ -152,105 +142,88 @@ MotionPopup {
         SettingsButton { text: qsTr("Yesterday"); onClicked: buttons.pick(-1) }
     }
 
-    contentItem: ColumnLayout {
-        spacing: Theme.gameEditor.rowSpacing
+    GridLayout {
+        Layout.fillWidth: true
+        columns: 3
+        columnSpacing: Theme.gameEditor.columnSpacing
+        rowSpacing: Theme.gameEditor.rowSpacing
 
-        Label {
+        FieldLabel { text: qsTr("Copy"); visible: root.copies.length > 1 }
+        SettingsComboBox {
+            visible: root.copies.length > 1
+            Layout.columnSpan: 2
             Layout.fillWidth: true
-            text: qsTr("Add session")
-            color: Theme.gameEditor.headingColor
-            font.pixelSize: Theme.gameEditor.headingFontSize
-            font.weight: Theme.font.strongWeight
-            elide: Text.ElideRight
+            model: root.copies.map(c => c.platformName ? qsTr("%1 (%2)").arg(c.title).arg(c.platformName) : c.title)
+            currentIndex: root.copyIndex
+            onActivated: index => root.copyIndex = index
         }
 
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 3
-            columnSpacing: Theme.gameEditor.columnSpacing
-            rowSpacing: Theme.gameEditor.rowSpacing
+        FieldLabel { text: qsTr("Start") }
+        DateTimeField {
+            id: startField
+            maximumDate: root.now
+            onEdited: root.startEdited()
+            onAccepted: root.add()
+        }
+        DayButtons { field: startField }
 
-            FieldLabel { text: qsTr("Copy"); visible: root.copies.length > 1 }
-            SettingsComboBox {
-                visible: root.copies.length > 1
-                Layout.columnSpan: 2
-                Layout.fillWidth: true
-                model: root.copies.map(c => c.platformName ? qsTr("%1 (%2)").arg(c.title).arg(c.platformName) : c.title)
-                currentIndex: root.copyIndex
-                onActivated: index => root.copyIndex = index
+        FieldLabel { text: qsTr("Length") }
+        DurationField {
+            id: lengthField
+            Layout.columnSpan: 2
+            onEdited: {
+                root.leading = "length"
+                root.followLength()
             }
-
-            FieldLabel { text: qsTr("Start") }
-            DateTimeField {
-                id: startField
-                maximumDate: root.now
-                onEdited: root.startEdited()
-                onAccepted: root.add()
-            }
-            DayButtons { field: startField }
-
-            FieldLabel { text: qsTr("Length") }
-            DurationField {
-                id: lengthField
-                Layout.columnSpan: 2
-                onEdited: {
-                    root.leading = "length"
-                    root.followLength()
-                }
-                onAccepted: root.add()
-            }
-
-            FieldLabel { text: qsTr("End") }
-            DateTimeField {
-                id: endField
-                maximumDate: root.now
-                onEdited: {
-                    root.leading = "end"
-                    root.followLength()
-                }
-                onAccepted: root.add()
-            }
-            DayButtons { field: endField }
+            onAccepted: root.add()
         }
 
-        Label {
-            Layout.fillWidth: true
-            Layout.preferredWidth: 0
-            visible: root.copy.launcher === "heroic"
-            text: qsTr("Play through Heroic is counted already")
-            color: Theme.playHistory.noteColor
-            wrapMode: Text.WordWrap
-        }
-
-        Label {
-            id: result
-            Layout.fillWidth: true
-            Layout.preferredWidth: 0
-            text: error.text !== "" ? error.text : root.resultText
-            color: error.text !== "" || root.refusal !== "" ? Theme.gameEditor.errorColor
-                 : root.overlap ? Theme.gameEditor.warningColor : Theme.gameEditor.labelColor
-            wrapMode: Text.WordWrap
-        }
-        QtObject {
-            id: error
-            property string text: ""
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Item { Layout.fillWidth: true }
-            SettingsButton {
-                text: qsTr("Cancel")
-                onClicked: root.close()
+        FieldLabel { text: qsTr("End") }
+        DateTimeField {
+            id: endField
+            maximumDate: root.now
+            onEdited: {
+                root.leading = "end"
+                root.followLength()
             }
-            SettingsButton {
-                text: qsTr("Add")
-                primary: true
-                enabled: root.refusal === ""
-                onClicked: root.add()
-            }
+            onAccepted: root.add()
         }
+        DayButtons { field: endField }
     }
+
+    Label {
+        Layout.fillWidth: true
+        Layout.preferredWidth: 0
+        visible: root.copy.launcher === "heroic"
+        text: qsTr("Play through Heroic is counted already")
+        color: Theme.playHistory.noteColor
+        wrapMode: Text.WordWrap
+    }
+
+    Label {
+        id: result
+        Layout.fillWidth: true
+        Layout.preferredWidth: 0
+        text: error.text !== "" ? error.text : root.resultText
+        color: error.text !== "" || root.refusal !== "" ? Theme.gameEditor.errorColor
+             : root.overlap ? Theme.gameEditor.warningColor : Theme.gameEditor.labelColor
+        wrapMode: Text.WordWrap
+    }
+    QtObject {
+        id: error
+        property string text: ""
+    }
+
+    footer: [
+        SettingsButton {
+            text: qsTr("Cancel")
+            onClicked: root.close()
+        },
+        SettingsButton {
+            text: qsTr("Add")
+            primary: true
+            enabled: root.refusal === ""
+            onClicked: root.add()
+        }
+    ]
 }
