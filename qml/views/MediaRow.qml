@@ -215,12 +215,64 @@ ColumnLayout {
                 }
 
                 Rectangle {
+                    id: moreTile
                     visible: root.hiddenCount > 0
                     width: Theme.media.thumbHeight * 16 / 9
                     height: Theme.media.thumbHeight
                     radius: Theme.media.thumbRadius
-                    color: more.containsMouse ? Theme.media.moreHoverBackground : Theme.media.moreBackground
-                    Behavior on color { enabled: Motion.fades; MotionColor {} }
+                    color: nextPicture.status === Image.Ready ? "transparent" : Theme.media.moreBackground
+
+                    // Drawn twice the blur's reach past the tile (its mip levels spread past blurMax), so the
+                    // blur's see-through edges fall outside the rounded mask. The scrim is inside the masked
+                    // source: a rounded scrim on top leaves a half-darkened ring where its edge is antialiased.
+                    Item {
+                        id: nextFrame
+                        x: -2 * Theme.media.moreBlur
+                        y: -2 * Theme.media.moreBlur
+                        width: moreTile.width + 4 * Theme.media.moreBlur
+                        height: moreTile.height + 4 * Theme.media.moreBlur
+                        visible: false
+
+                        Image {
+                            id: nextPicture
+                            anchors.fill: parent
+                            source: root.hiddenCount > 0 ? root.shown[root.strip.length].thumbnail ?? "" : ""
+                            sourceSize.height: Math.ceil(Theme.media.thumbHeight / 128) * 128
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                        Rectangle {
+                            anchors.fill: parent
+                            color: more.containsMouse ? Theme.media.moreHoverScrim : Theme.media.moreScrim
+                            opacity: more.containsMouse ? Theme.media.moreHoverScrimOpacity : Theme.media.moreScrimOpacity
+                            Behavior on color { enabled: Motion.fades; MotionColor {} }
+                            Behavior on opacity { enabled: Motion.fades; MotionNumber {} }
+                        }
+                    }
+                    Item {
+                        id: moreMask
+                        anchors.fill: nextFrame
+                        visible: false
+                        layer.enabled: true
+                        Rectangle {
+                            x: 2 * Theme.media.moreBlur
+                            y: 2 * Theme.media.moreBlur
+                            width: moreTile.width
+                            height: moreTile.height
+                            radius: moreTile.radius
+                        }
+                    }
+                    MultiEffect {
+                        anchors.fill: nextFrame
+                        source: nextFrame
+                        visible: nextPicture.status === Image.Ready
+                        autoPaddingEnabled: false
+                        blurEnabled: Theme.media.moreBlur > 0
+                        blur: 1
+                        blurMax: Theme.media.moreBlur
+                        maskEnabled: true
+                        maskSource: moreMask
+                    }
 
                     Label {
                         anchors.centerIn: parent
