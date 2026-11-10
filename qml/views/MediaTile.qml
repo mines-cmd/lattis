@@ -129,7 +129,7 @@ ArtThumb {
     MarkPop {
         id: favoriteBadge
         shown: tile.favorite && Theme.media.favoriteBadgeSize > 0
-        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.layout.spacing
         width: Theme.media.favoriteBadgeSize
