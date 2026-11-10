@@ -461,8 +461,8 @@ AppDialog {
                     visible: row.index + 1 < sessionModel.count
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
+                    anchors.leftMargin: Theme.layout.spacing
+                    anchors.rightMargin: Theme.layout.spacing
                     anchors.bottom: parent.bottom
                     height: 1
                     color: Theme.playHistory.separator
@@ -487,8 +487,8 @@ AppDialog {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
+                    anchors.leftMargin: Theme.layout.spacing
+                    anchors.rightMargin: Theme.layout.spacing
                     spacing: Theme.layout.spacing
 
                     Label {

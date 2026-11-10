@@ -514,7 +514,7 @@ Item {
                         RowLayout {
                             id: tabRow
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: Theme.layout.spacingSmall
                             Label {
                                 text: tabButton.modelData.name
                                 color: Theme.controls.buttonText
@@ -556,7 +556,7 @@ Item {
 
                 Icon {
                     anchors.left: parent.left
-                    anchors.leftMargin: 12
+                    anchors.leftMargin: Theme.layout.spacing
                     anchors.verticalCenter: parent.verticalCenter
                     path: Icons.search
                     size: Theme.controls.iconSize
@@ -564,7 +564,7 @@ Item {
                 }
                 Icon {
                     anchors.right: parent.right
-                    anchors.rightMargin: 12
+                    anchors.rightMargin: Theme.layout.spacing
                     anchors.verticalCenter: parent.verticalCenter
                     path: Icons.close
                     size: Theme.controls.iconSize
@@ -807,7 +807,7 @@ Item {
                     shown: thumb.picked
                     anchors.top: parent.top
                     anchors.right: parent.right
-                    anchors.margins: 6
+                    anchors.margins: Theme.layout.spacingSmall
                     width: 22
                     height: 22
 
@@ -917,7 +917,7 @@ Item {
                                 shown: steamThumb.picked
                                 anchors.top: parent.top
                                 anchors.right: parent.right
-                                anchors.margins: 6
+                                anchors.margins: Theme.layout.spacingSmall
                                 width: 22
                                 height: 22
 

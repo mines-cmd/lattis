@@ -1730,7 +1730,7 @@ FocusScope {
                                         }
                                         ColumnLayout {
                                             Layout.fillWidth: true
-                                            spacing: 4
+                                            spacing: Theme.layout.spacingSmall
 
                                             RowLayout {
                                                 Layout.fillWidth: true
@@ -1953,7 +1953,7 @@ FocusScope {
                                             }
                                             ColumnLayout {
                                                 Layout.fillWidth: true
-                                                spacing: 4
+                                                spacing: Theme.layout.spacingSmall
 
                                                 RowLayout {
                                                     Layout.fillWidth: true

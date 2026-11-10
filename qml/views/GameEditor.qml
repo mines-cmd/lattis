@@ -938,7 +938,7 @@ Item {
                                 visible: root.dirtyTabs[tabItem.index] ?? false
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.right: parent.right
-                                anchors.rightMargin: 12
+                                anchors.rightMargin: Theme.layout.spacing
                                 width: Theme.gameEditor.changedDotSize
                                 height: width
                                 radius: width / 2
@@ -947,9 +947,9 @@ Item {
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 10
+                                anchors.leftMargin: Theme.layout.spacing
                                 anchors.rightMargin: (root.dirtyTabs[tabItem.index] ?? false) ? 12 + Theme.gameEditor.changedDotSize + 6 : 10
-                                spacing: 10
+                                spacing: Theme.layout.spacing
 
                                 Icon {
                                     path: tabItem.modelData.icon

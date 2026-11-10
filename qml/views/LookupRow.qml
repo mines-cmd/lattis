@@ -33,8 +33,8 @@ Rectangle {
 
     component Action: SettingsButton {
         implicitHeight: Theme.controls.buttonHeight
-        leftPadding: 10
-        rightPadding: 10
+        leftPadding: Theme.layout.spacing
+        rightPadding: Theme.layout.spacing
     }
 
     component Cover: Rectangle {

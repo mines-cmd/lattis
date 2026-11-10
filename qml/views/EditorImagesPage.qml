@@ -55,8 +55,8 @@ ColumnLayout {
 
                 Label {
                     anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
+                    anchors.leftMargin: Theme.layout.spacing
+                    anchors.rightMargin: Theme.layout.spacing
                     verticalAlignment: Text.AlignVCenter
                     readonly property int count: editor.mediaFoldersShown.length
                     readonly property string folders: count === 1 ? qsTr("1 folder")

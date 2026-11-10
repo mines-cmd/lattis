@@ -169,8 +169,8 @@ FocusScope {
         id: skipButton
         implicitHeight: Theme.onboarding.buttonHeight
         implicitWidth: skipLabel.implicitWidth + leftPadding + rightPadding
-        leftPadding: 12
-        rightPadding: 12
+        leftPadding: Theme.layout.spacing
+        rightPadding: Theme.layout.spacing
         hoverEnabled: true
         HoverHandler { cursorShape: Qt.PointingHandCursor }
         contentItem: Label {
@@ -361,8 +361,8 @@ FocusScope {
                             Rectangle {
                                 visible: !step.last
                                 Layout.fillWidth: true
-                                Layout.leftMargin: 4
-                                Layout.rightMargin: 4
+                                Layout.leftMargin: Theme.layout.spacingSmall
+                                Layout.rightMargin: Theme.layout.spacingSmall
                                 implicitHeight: 2
                                 color: Theme.onboarding.stepLine
                             }
@@ -503,7 +503,7 @@ FocusScope {
                                             ColumnLayout {
                                                 Layout.fillWidth: true
                                                 Layout.alignment: Qt.AlignTop
-                                                spacing: 6
+                                                spacing: Theme.layout.spacingSmall
 
                                                 Label {
                                                     Layout.fillWidth: true

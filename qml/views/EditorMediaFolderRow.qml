@@ -28,8 +28,8 @@ Rectangle {
     RowLayout {
         id: rowContent
         anchors.fill: parent
-        anchors.leftMargin: 8
-        anchors.rightMargin: 4
+        anchors.leftMargin: Theme.layout.spacing
+        anchors.rightMargin: Theme.layout.spacingSmall
         spacing: Theme.controls.controlSpacing
 
         Icon {

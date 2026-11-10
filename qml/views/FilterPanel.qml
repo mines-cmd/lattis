@@ -251,7 +251,7 @@ MotionPopup {
 
                         background: null
                         contentItem: Row {
-                            spacing: 4
+                            spacing: Theme.layout.spacingSmall
 
                             Icon {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -274,8 +274,8 @@ MotionPopup {
                     id: sortRow
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: root.sortOrders
@@ -298,8 +298,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: root.groupings
@@ -322,8 +322,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
     
                     ToggleRow {
                         text: qsTr("Installed")
@@ -363,8 +363,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Segment {
                         text: qsTr("All")
@@ -398,8 +398,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Segment {
                         text: qsTr("Owned")
@@ -424,8 +424,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: Library.statuses
@@ -664,7 +664,7 @@ MotionPopup {
                 onClicked: Library.moreOpen = false
                 background: null
                 contentItem: RowLayout {
-                    spacing: 4
+                    spacing: Theme.layout.spacingSmall
                     Icon {
                         path: Icons.chevronLeft
                         size: Theme.filters.headingFontSize + 3
@@ -773,8 +773,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: Library.playTimeChoices
@@ -798,8 +798,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 3
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: root.lastPlayedChoices
@@ -822,8 +822,8 @@ MotionPopup {
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 2
-                    rowSpacing: 4
-                    columnSpacing: 4
+                    rowSpacing: Theme.layout.spacingSmall
+                    columnSpacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: Library.achievementChoices

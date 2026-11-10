@@ -1297,7 +1297,7 @@ ApplicationWindow {
                 : ""
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 28
+        anchors.bottomMargin: 3 * Theme.layout.spacing
     }
 
     WindowControls {

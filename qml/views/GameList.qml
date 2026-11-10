@@ -884,8 +884,8 @@ Rectangle {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 4
+                anchors.leftMargin: Theme.layout.spacing
+                anchors.rightMargin: Theme.layout.spacingSmall
                 spacing: Theme.layout.spacing
 
                 Label {
@@ -902,8 +902,8 @@ Rectangle {
                 }
                 AbstractButton {
                     id: leaveButton
-                    Layout.rightMargin: 4
-                    padding: 6
+                    Layout.rightMargin: Theme.layout.spacingSmall
+                    padding: Theme.layout.spacingSmall
                     text: qsTr("Leave the collection")
                     hoverEnabled: true
                     focusPolicy: Qt.NoFocus
@@ -1229,10 +1229,10 @@ Rectangle {
                 RowLayout {
                     visible: row.isHeader
                     anchors.fill: parent
-                    anchors.leftMargin: 4
-                    anchors.rightMargin: 8
+                    anchors.leftMargin: Theme.layout.spacingSmall
+                    anchors.rightMargin: Theme.layout.spacing
                     anchors.topMargin: row.headerGap
-                    spacing: 6
+                    spacing: Theme.layout.spacingSmall
 
                     Icon {
                         path: Icons.chevronRight
@@ -1272,9 +1272,9 @@ Rectangle {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 10
+                        anchors.leftMargin: Theme.layout.spacing
+                        anchors.rightMargin: Theme.layout.spacing
+                        spacing: Theme.layout.spacing
                         opacity: row.installed && !row.hidden ? 1 : Theme.list.uninstalledOpacity
 
                         GameIcon {
@@ -1285,7 +1285,7 @@ Rectangle {
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 6
+                            spacing: Theme.layout.spacingSmall
                             Layout.preferredWidth: 0
                             Label {
                                 id: titleLabel
@@ -1396,8 +1396,8 @@ Rectangle {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 4
+                anchors.leftMargin: Theme.layout.spacing
+                anchors.rightMargin: Theme.layout.spacingSmall
                 spacing: Theme.layout.spacing
 
                 Label {
@@ -1407,7 +1407,7 @@ Rectangle {
                     elide: Text.ElideRight
                 }
                 Icon {
-                    Layout.rightMargin: 4
+                    Layout.rightMargin: Theme.layout.spacingSmall
                     path: Icons.close
                     size: Theme.list.sortValueFontSize + 2
                     color: Theme.list.selectionBarText
@@ -1440,8 +1440,8 @@ Rectangle {
         Row {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
-            anchors.leftMargin: 8
-            spacing: 6
+            anchors.leftMargin: Theme.layout.spacing
+            spacing: Theme.layout.spacingSmall
 
             Label {
                 text: qsTr("%n not installed", "", Library.notInstalledHidden)

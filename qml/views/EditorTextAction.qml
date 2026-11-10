@@ -30,7 +30,7 @@ Item {
         HoverHandler { cursorShape: Qt.PointingHandCursor }
         background: null
         contentItem: Row {
-            spacing: 4
+            spacing: Theme.layout.spacingSmall
 
             Icon {
                 id: actionIcon

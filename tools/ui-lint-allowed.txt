@@ -1,13 +1,2 @@
 # rule  file-or-setting  count; written by tools/ui-lint.py --update, only ever lower these
-spacing qml/Main.qml 1
-spacing qml/views/ArtBrowser.qml 5
-spacing qml/views/EditorImagesPage.qml 2
-spacing qml/views/EditorMediaFolderRow.qml 2
-spacing qml/views/EditorTextAction.qml 1
-spacing qml/views/FilterPanel.qml 20
-spacing qml/views/GameEditor.qml 3
-spacing qml/views/GameList.qml 17
-spacing qml/views/LookupRow.qml 2
-spacing qml/views/PlayHistoryPopup.qml 4
-spacing qml/views/SetupGuide.qml 5
-spacing qml/views/StatsPage.qml 2
+spacing qml/views/GameList.qml 1
