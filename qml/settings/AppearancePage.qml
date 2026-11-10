@@ -73,7 +73,7 @@ Item {
         readonly property bool removable: !Theme.builtInThemes.includes(modelData)
 
         implicitWidth: 156
-        padding: 8
+        padding: Theme.layout.spacing
         hoverEnabled: true
         HoverHandler { cursorShape: Qt.PointingHandCursor }
         Accessible.checkable: true
@@ -117,7 +117,7 @@ Item {
         }
 
         contentItem: ColumnLayout {
-            spacing: 8
+            spacing: Theme.layout.spacing
 
             Rectangle {
                 id: mock
@@ -177,7 +177,7 @@ Item {
                 }
                 IconButton {
                     visible: card.removable && (card.hovered || card.modelData === root.hoverTheme)
-                    anchors { top: parent.top; right: parent.right; margins: 4 }
+                    anchors { top: parent.top; right: parent.right; margins: Theme.layout.spacingSmall }
                     implicitWidth: Theme.settingsWindow.smallButtonSize
                     implicitHeight: Theme.settingsWindow.smallButtonSize
                     iconSize: Theme.settingsWindow.smallIconSize

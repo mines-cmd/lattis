@@ -21,8 +21,8 @@ AbstractButton {
 
     implicitHeight: text === "" ? Theme.controls.inputHeight : Theme.controls.buttonHeight
     implicitWidth: content.implicitWidth + leftPadding + rightPadding
-    leftPadding: 14
-    rightPadding: 14
+    leftPadding: 2 * Theme.layout.spacing
+    rightPadding: 2 * Theme.layout.spacing
 
     ToolTip.visible: tip !== "" && hovered
     ToolTip.delay: Theme.tooltip.delay

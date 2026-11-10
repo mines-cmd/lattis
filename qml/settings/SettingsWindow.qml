@@ -354,7 +354,7 @@ ApplicationWindow {
                     x: Theme.settingsWindow.sidebarPadding
                     y: Theme.settingsWindow.sidebarPadding
                     width: sidebar.width - 2 * Theme.settingsWindow.sidebarPadding
-                    spacing: 4
+                    spacing: Theme.layout.spacingSmall
 
                     Repeater {
                         model: root.categories
@@ -388,9 +388,9 @@ ApplicationWindow {
 
                                 RowLayout {
                                     anchors.fill: parent
-                                    anchors.leftMargin: 10
-                                    anchors.rightMargin: 10
-                                    spacing: 10
+                                    anchors.leftMargin: Theme.layout.spacing
+                                    anchors.rightMargin: Theme.layout.spacing
+                                    spacing: Theme.layout.spacing
 
                                     Icon {
                                         path: category.modelData.icon
@@ -517,7 +517,7 @@ ApplicationWindow {
 
                                                 Label {
                                                     anchors.fill: parent
-                                                    anchors.leftMargin: 10
+                                                    anchors.leftMargin: Theme.layout.spacing
                                                     anchors.rightMargin: entry.subsections.length > 0 ? 10 + chevron.width + 4 : 10
                                                     verticalAlignment: Text.AlignVCenter
                                                     text: entry.modelData.title
@@ -532,7 +532,7 @@ ApplicationWindow {
                                                     id: chevron
                                                     visible: entry.subsections.length > 0
                                                     anchors.right: parent.right
-                                                    anchors.rightMargin: 10
+                                                    anchors.rightMargin: Theme.layout.spacing
                                                     anchors.verticalCenter: parent.verticalCenter
                                                     path: Icons.chevronRight
                                                     size: Theme.controls.iconSize
@@ -602,8 +602,8 @@ ApplicationWindow {
 
                                                             Label {
                                                                 anchors.fill: parent
-                                                                anchors.leftMargin: 10
-                                                                anchors.rightMargin: 10
+                                                                anchors.leftMargin: Theme.layout.spacing
+                                                                anchors.rightMargin: Theme.layout.spacing
                                                                 verticalAlignment: Text.AlignVCenter
                                                                 text: subLink.modelData.title
                                                                 color: subLink.current || subMouse.containsMouse
@@ -649,7 +649,7 @@ ApplicationWindow {
                 Layout.topMargin: parent.inset
                 Layout.rightMargin: parent.inset
                 Layout.leftMargin: Theme.settingsWindow.contentPadding
-                spacing: 10
+                spacing: Theme.layout.spacing
 
                 Item {
                     Layout.fillWidth: true
@@ -840,7 +840,7 @@ ApplicationWindow {
     Toast {
         id: settingsToast
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 24
+        anchors.bottomMargin: 3 * Theme.layout.spacing
         anchors.horizontalCenter: parent.horizontalCenter
     }
 

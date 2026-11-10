@@ -11,7 +11,7 @@ ColumnLayout {
     Layout.fillWidth: true
     Layout.preferredWidth: 1
     Layout.alignment: Qt.AlignTop
-    spacing: 6
+    spacing: Theme.layout.spacingSmall
 
     RowLayout {
         Layout.fillWidth: true

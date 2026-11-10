@@ -31,10 +31,10 @@ Rectangle {
         y: parent.height + 4
         x: parent.width - width
         width: 420
-        padding: 12
+        padding: Theme.layout.spacing
         background: PopoverBackground { fill: Theme.controls.problemsBackground }
         contentItem: ColumnLayout {
-            spacing: 4
+            spacing: Theme.layout.spacingSmall
             Repeater {
                 model: root.problems
                 RowLayout {
@@ -42,7 +42,7 @@ Rectangle {
                     required property string modelData
                     readonly property string file: GameRunner.problemFile(modelData)
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: Theme.layout.spacing
 
                     Label {
                         Layout.fillWidth: true

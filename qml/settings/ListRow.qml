@@ -13,8 +13,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: 10
-        anchors.rightMargin: 4
+        anchors.leftMargin: Theme.layout.spacing
+        anchors.rightMargin: Theme.layout.spacingSmall
         spacing: Theme.controls.controlSpacing
     }
     Rectangle {
@@ -22,8 +22,8 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 10
-        anchors.rightMargin: 10
+        anchors.leftMargin: Theme.layout.spacing
+        anchors.rightMargin: Theme.layout.spacing
         height: 1
         color: Theme.settingsWindow.rowDivider
     }

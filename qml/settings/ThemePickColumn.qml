@@ -52,8 +52,8 @@ ColumnLayout {
             textColor: Theme.settingsWindow.themePopupHeaderColor
             flat: true
             implicitHeight: Theme.settingsWindow.themePopupButtonHeight
-            leftPadding: 6
-            rightPadding: 6
+            leftPadding: Theme.layout.spacingSmall
+            rightPadding: Theme.layout.spacingSmall
             enabled: root.canReset || root.canDelete
             tip: qsTr("Reset, rename or delete")
             onClicked: moreMenu.opened ? moreMenu.close() : moreMenu.open()

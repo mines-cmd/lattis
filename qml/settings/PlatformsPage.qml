@@ -195,12 +195,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.settingsWindow.contentPadding
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             SettingsSearchField {
                 id: search

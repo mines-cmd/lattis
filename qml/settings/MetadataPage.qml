@@ -223,7 +223,7 @@ Item {
                             spacing: Theme.layout.spacing
 
                             RowLayout {
-                                spacing: 6
+                                spacing: Theme.layout.spacingSmall
 
                                 Icon {
                                     visible: missing.missingCount === 0
@@ -249,7 +249,7 @@ Item {
                             Flow {
                                 visible: missing.missingCount > 0
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Theme.layout.spacingSmall
 
                                 Repeater {
                                     model: [

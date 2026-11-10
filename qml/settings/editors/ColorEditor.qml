@@ -45,8 +45,8 @@ RowLayout {
     SettingsTextField {
         id: field
         Layout.preferredWidth: 90
-        leftPadding: 8
-        rightPadding: 8
+        leftPadding: Theme.layout.spacing
+        rightPadding: Theme.layout.spacing
 
         Connections {
             target: root

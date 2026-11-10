@@ -10,7 +10,7 @@ ColumnLayout {
 
     signal saved(string error)
 
-    spacing: 6
+    spacing: Theme.layout.spacingSmall
 
     function save(value) {
         root.saved(Library.setEmulatorValue(root.emulator.id, "path", value))

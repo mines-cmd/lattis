@@ -120,7 +120,7 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: Theme.settingsWindow.rowPadding
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             DragGrip {
                 id: grip
@@ -155,7 +155,7 @@ ColumnLayout {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Theme.layout.spacing
 
                     Label {
                         Layout.fillWidth: !inlineProblems.visible
@@ -232,7 +232,7 @@ ColumnLayout {
                 id: positionField
                 visible: root.editable
                 Layout.preferredWidth: Theme.settingsWindow.toolbarHeight + 12
-                leftPadding: 16
+                leftPadding: 2 * Theme.layout.spacing
                 rightPadding: 2
                 implicitHeight: Theme.controls.inputHeight
                 horizontalAlignment: TextInput.AlignHCenter
@@ -243,7 +243,7 @@ ColumnLayout {
                 ToolTip.text: qsTr("Place in the rail: type another to move it there")
 
                 Text {
-                    anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                    anchors { left: parent.left; leftMargin: Theme.layout.spacingSmall; verticalCenter: parent.verticalCenter }
                     text: "#"
                     font: positionField.font
                     color: Theme.controls.placeholderColor
@@ -276,7 +276,7 @@ ColumnLayout {
         Layout.leftMargin: Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize
         Layout.rightMargin: Theme.settingsWindow.rowPadding
         Layout.bottomMargin: Theme.settingsWindow.rowPadding
-        spacing: 6
+        spacing: Theme.layout.spacingSmall
 
         Repeater {
             model: problemList.withCommand
@@ -286,7 +286,7 @@ ColumnLayout {
                 required property var modelData
 
                 Layout.fillWidth: true
-                spacing: 4
+                spacing: Theme.layout.spacingSmall
 
                 Label {
                     Layout.fillWidth: true
@@ -313,7 +313,7 @@ ColumnLayout {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            anchors.margins: 8
+                            anchors.margins: Theme.layout.spacing
                             text: problem.modelData.command
                             readOnly: true
                             selectByMouse: true
@@ -352,7 +352,7 @@ ColumnLayout {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Theme.layout.spacingSmall
 
                     RowLayout {
                         Layout.fillWidth: true
@@ -399,12 +399,12 @@ ColumnLayout {
                                 id: iconPopup
                                 y: iconButton.height + 4
                                 x: iconButton.width - width
-                                padding: 6
+                                padding: Theme.layout.spacingSmall
                                 background: PopoverBackground {}
 
                                 Grid {
                                     columns: 6
-                                    spacing: 6
+                                    spacing: Theme.layout.spacingSmall
 
                                     Repeater {
                                         model: Icons.platformIconNames

@@ -210,12 +210,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.settingsWindow.contentPadding
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             SettingsSearchField {
                 id: search
@@ -264,8 +264,8 @@ Item {
                 implicitWidth: Math.ceil(Math.min(themeMetrics.advanceWidth, 200)) + 1 + Theme.controls.iconSize + Theme.controls.controlSpacing + leftPadding + rightPadding
                 Layout.preferredWidth: implicitWidth
                 Layout.minimumWidth: 70
-                leftPadding: 12
-                rightPadding: 10
+                leftPadding: Theme.layout.spacing
+                rightPadding: Theme.layout.spacing
                 tip: qsTr("Colors and style")
                 onClicked: themePopup.opened ? themePopup.close() : themePopup.open()
 
@@ -360,8 +360,8 @@ Item {
                 implicitWidth: showLabel.implicitWidth + Theme.controls.iconSize + Theme.controls.controlSpacing + leftPadding + rightPadding
                 Layout.minimumWidth: implicitWidth
                 primary: root.filters.length > 0
-                leftPadding: 12
-                rightPadding: 10
+                leftPadding: Theme.layout.spacing
+                rightPadding: Theme.layout.spacing
                 tip: qsTr("Choose what the list shows")
                 onClicked: showPopup.opened ? showPopup.close() : showPopup.open()
 
@@ -388,7 +388,7 @@ Item {
                     id: showPopup
                     x: showButton.width - width
                     y: showButton.height + Theme.controls.controlSpacing
-                    padding: 10
+                    padding: Theme.layout.spacing
                     width: 260
                     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
@@ -399,7 +399,7 @@ Item {
 
                     ColumnLayout {
                         width: parent.width
-                        spacing: 10
+                        spacing: Theme.layout.spacing
 
                         CaptionLabel {
                             Layout.fillWidth: true
@@ -446,7 +446,7 @@ Item {
                                     Label {
                                         id: groupLabel
                                         anchors.left: parent.left
-                                        anchors.leftMargin: 8
+                                        anchors.leftMargin: Theme.layout.spacing
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: groupRow.modelData.title
                                         color: Theme.controls.descriptionColor
@@ -454,7 +454,7 @@ Item {
                                     }
                                     Label {
                                         anchors.right: parent.right
-                                        anchors.rightMargin: 8
+                                        anchors.rightMargin: Theme.layout.spacing
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: groupRow.modelData.count
                                         color: Theme.controls.descriptionColor
@@ -477,7 +477,7 @@ Item {
 
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 8
+                            spacing: Theme.layout.spacing
 
                             Label {
                                 Layout.fillWidth: true
@@ -493,7 +493,7 @@ Item {
 
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 8
+                            spacing: Theme.layout.spacing
 
                             ColumnLayout {
                                 Layout.fillWidth: true
@@ -578,7 +578,7 @@ Item {
                             Icon {
                                 id: chipClose
                                 anchors.right: parent.right
-                                anchors.rightMargin: 4
+                                anchors.rightMargin: Theme.layout.spacingSmall
                                 anchors.verticalCenter: parent.verticalCenter
                                 size: Theme.settingsWindow.sourceTagFontSize + 2
                                 path: Icons.close

@@ -70,7 +70,7 @@ Rectangle {
             Row {
                 id: keys
                 anchors.right: parent.right
-                spacing: 6
+                spacing: Theme.layout.spacingSmall
 
                 Repeater {
                     model: root.recording ? [] : root.keyLabels
@@ -134,7 +134,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: controls.left
         anchors.leftMargin: Theme.settingsWindow.rowPadding
-        anchors.rightMargin: 16
+        anchors.rightMargin: 2 * Theme.layout.spacing
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
 

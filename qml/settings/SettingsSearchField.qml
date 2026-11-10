@@ -11,7 +11,7 @@ SettingsTextField {
 
     Icon {
         anchors.left: parent.left
-        anchors.leftMargin: 12
+        anchors.leftMargin: Theme.layout.spacing
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.search
         size: Theme.controls.iconSize
@@ -22,7 +22,7 @@ SettingsTextField {
         id: clearIcon
         visible: root.text !== ""
         anchors.right: parent.right
-        anchors.rightMargin: 12
+        anchors.rightMargin: Theme.layout.spacing
         anchors.verticalCenter: parent.verticalCenter
         path: Icons.close
         size: Theme.controls.iconSize

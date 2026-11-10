@@ -112,7 +112,7 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: Theme.settingsWindow.rowPadding
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             Icon {
                 path: Icons.chevronRight
@@ -204,7 +204,7 @@ ColumnLayout {
                 ColumnLayout {
                     visible: root.own
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Theme.layout.spacingSmall
 
                     RowLayout {
                         Layout.fillWidth: true
@@ -322,7 +322,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
                         Layout.alignment: Qt.AlignTop
-                        spacing: 6
+                        spacing: Theme.layout.spacingSmall
 
                         SectionTitle { text: qsTr("ROM extensions") }
                         SettingsTextField {
@@ -363,7 +363,7 @@ ColumnLayout {
                 ColumnLayout {
                     visible: root.own
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Theme.layout.spacingSmall
 
                     SectionTitle { text: qsTr("Flatpak app id") }
                     SettingsTextField {
@@ -392,7 +392,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.columnSpan: commandGrid.columns
                         Layout.alignment: Qt.AlignTop
-                        spacing: 6
+                        spacing: Theme.layout.spacingSmall
 
                         SectionTitle { text: qsTr("Command") }
                         SettingsTextField {
@@ -430,7 +430,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
                         Layout.alignment: Qt.AlignTop
-                        spacing: 6
+                        spacing: Theme.layout.spacingSmall
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -477,7 +477,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
                         Layout.alignment: Qt.AlignTop
-                        spacing: 6
+                        spacing: Theme.layout.spacingSmall
 
                         SectionTitle { text: qsTr("Runs") }
                         Rectangle {
@@ -493,7 +493,7 @@ ColumnLayout {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                anchors.margins: 8
+                                anchors.margins: Theme.layout.spacing
                                 text: root.emulator.command
                                 readOnly: true
                                 selectByMouse: true

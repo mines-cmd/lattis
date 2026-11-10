@@ -27,7 +27,7 @@ RowLayout {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 10
+            anchors.leftMargin: Theme.layout.spacing
             anchors.margins: box.border.width
             spacing: 0
 
@@ -35,7 +35,7 @@ RowLayout {
                 id: pathLabel
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.rightMargin: 10
+                Layout.rightMargin: Theme.layout.spacing
                 verticalAlignment: Text.AlignVCenter
                 readonly property string home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
                                                    .toString().replace(/^file:\/\//, "")

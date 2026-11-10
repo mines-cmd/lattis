@@ -64,7 +64,7 @@ MotionPopup {
     onAlphaChanged: pickFromStrips()
 
     padding: Theme.colorPicker.padding
-    margins: 8
+    margins: Theme.layout.spacing
     modal: false
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
@@ -222,9 +222,9 @@ MotionPopup {
             id: themeGrid
             readonly property real cell: Math.floor((pickerRow.implicitWidth - (columns - 1) * spacing) / columns)
             visible: root.themeColors.length > 0
-            Layout.topMargin: 4
+            Layout.topMargin: Theme.layout.spacingSmall
             columns: Theme.colorPicker.themeColumns
-            spacing: 4
+            spacing: Theme.layout.spacingSmall
 
             Repeater {
                 model: root.themeColors
@@ -276,7 +276,7 @@ MotionPopup {
         SettingsButton {
             visible: root.removable
             Layout.fillWidth: true
-            Layout.topMargin: 4
+            Layout.topMargin: Theme.layout.spacingSmall
             danger: true
             iconPath: Icons.close
             text: qsTr("Remove color")

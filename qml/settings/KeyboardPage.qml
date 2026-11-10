@@ -61,12 +61,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.settingsWindow.contentPadding
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             SettingsSearchField {
                 id: search
@@ -129,7 +129,7 @@ Item {
                 Label {
                     visible: model.firstInGroup
                     Layout.topMargin: index === 0 ? 0 : Theme.settingsWindow.sectionSpacing
-                    Layout.bottomMargin: 10
+                    Layout.bottomMargin: Theme.layout.spacing
                     text: model.groupTitle
                     color: Theme.settingsWindow.sectionHeaderColor
                     font.pixelSize: Theme.settingsWindow.sectionHeaderFontSize

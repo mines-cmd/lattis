@@ -40,7 +40,7 @@ ColumnLayout {
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             background: null
             contentItem: Row {
-                spacing: 4
+                spacing: Theme.layout.spacingSmall
 
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter

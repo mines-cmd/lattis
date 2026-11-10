@@ -155,8 +155,8 @@ ListView {
             visible: model.firstInSection
             Layout.fillWidth: true
             Layout.topMargin: index === 0 ? 0 : Theme.settingsWindow.sectionSpacing
-            Layout.bottomMargin: 10
-            spacing: 4
+            Layout.bottomMargin: Theme.layout.spacing
+            spacing: Theme.layout.spacingSmall
 
             Label {
                 text: model.sectionTitle
@@ -178,8 +178,8 @@ ListView {
             visible: model.firstInCard && model.subsection !== ""
             Layout.fillWidth: true
             Layout.topMargin: model.firstInSection ? 0 : Theme.settingsWindow.subsectionSpacing
-            Layout.bottomMargin: 8
-            spacing: 8
+            Layout.bottomMargin: Theme.layout.spacing
+            spacing: Theme.layout.spacing
 
             Label {
                 text: model.subsection

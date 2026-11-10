@@ -44,12 +44,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.settingsWindow.contentPadding
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             Item { Layout.fillWidth: true }
 
@@ -160,7 +160,7 @@ Item {
                                 }
                                 Flow {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: Theme.layout.spacingSmall
                                     Label {
                                         visible: row.modelData.games.length === 0
                                         text: qsTr("No games")

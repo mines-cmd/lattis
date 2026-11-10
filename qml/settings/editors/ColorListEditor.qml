@@ -12,8 +12,8 @@ GridLayout {
     readonly property int cellWidth: Math.floor((width - columnSpacing * (columns - 1)) / columns)
 
     columns: Math.max(1, Theme.colorPicker.paletteColumns)
-    columnSpacing: 6
-    rowSpacing: 6
+    columnSpacing: Theme.layout.spacingSmall
+    rowSpacing: Theme.layout.spacingSmall
 
     function commit(list) { Theme.setValue(root.section, root.key, list) }
     function formatHex(c) {
@@ -58,7 +58,7 @@ GridLayout {
             onModelDataChanged: if (!field.activeFocus) field.text = root.formatHex(modelData)
 
             Layout.preferredWidth: root.cellWidth
-            spacing: 4
+            spacing: Theme.layout.spacingSmall
 
             function openPicker() { picker.openFor(swatch, entry.modelData) }
 
@@ -110,8 +110,8 @@ GridLayout {
             SettingsTextField {
                 id: field
                 Layout.fillWidth: true
-                leftPadding: 4
-                rightPadding: 4
+                leftPadding: Theme.layout.spacingSmall
+                rightPadding: Theme.layout.spacingSmall
                 horizontalAlignment: TextInput.AlignHCenter
                 font.pixelSize: Theme.controls.descriptionFontSize
                 Component.onCompleted: text = root.formatHex(entry.modelData)

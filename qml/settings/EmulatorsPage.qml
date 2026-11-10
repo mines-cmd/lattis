@@ -205,12 +205,12 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.settingsWindow.contentPadding
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             SettingsSearchField {
                 id: search
@@ -272,7 +272,7 @@ Item {
 
                 Heading {
                     visible: root.presets.length > 0
-                    Layout.bottomMargin: 10
+                    Layout.bottomMargin: Theme.layout.spacing
                     text: qsTr("Built in")
                 }
 
@@ -284,7 +284,7 @@ Item {
                 Heading {
                     visible: root.query === "" || root.own.length > 0
                     Layout.topMargin: root.presets.length > 0 ? Theme.settingsWindow.sectionSpacing : 0
-                    Layout.bottomMargin: 10
+                    Layout.bottomMargin: Theme.layout.spacing
                     text: qsTr("Yours")
                 }
 
@@ -296,7 +296,7 @@ Item {
                 RowLayout {
                     visible: root.query === "" && root.own.length === 0
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Theme.layout.spacing
 
                     Label {
                         Layout.fillWidth: true

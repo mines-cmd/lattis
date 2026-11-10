@@ -113,7 +113,7 @@ Rectangle {
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.margins: Theme.settingsWindow.rowPadding
-                    spacing: 10
+                    spacing: Theme.layout.spacing
 
                     DragGrip {
                         id: grip

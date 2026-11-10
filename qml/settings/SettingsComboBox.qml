@@ -10,7 +10,7 @@ ComboBox {
     property color iconColor: Theme.controls.iconColor
 
     implicitHeight: Theme.controls.inputHeight
-    leftPadding: 12
+    leftPadding: Theme.layout.spacing
     rightPadding: Theme.controls.iconSize + 20
     hoverEnabled: true
 
@@ -51,7 +51,7 @@ ComboBox {
 
         width: ListView.view.width
         height: Theme.menu.itemHeight
-        leftPadding: 10
+        leftPadding: Theme.layout.spacing
         highlighted: root.highlightedIndex === index
         hoverEnabled: true
 
@@ -84,7 +84,7 @@ ComboBox {
         onAboutToHide: showing = false
         width: root.width
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
-        padding: 4
+        padding: Theme.layout.spacingSmall
 
         // The list keeps its full height while the popup drops down, and slides down with its bottom edge
         // (the popup clips it) like a drawer. Squeezed with it, the list would scroll to keep the current

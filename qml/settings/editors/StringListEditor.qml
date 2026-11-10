@@ -12,7 +12,7 @@ ColumnLayout {
 
     readonly property var remaining: (root.choices && root.value) ? root.choices.filter(c => root.value.indexOf(c) === -1) : []
 
-    spacing: 4
+    spacing: Theme.layout.spacingSmall
 
     function commit(list) { Theme.setValue(root.section, root.key, list) }
     function move(i, delta) {

@@ -74,7 +74,7 @@ ColumnLayout {
             ColumnLayout {
                 id: jobColumn
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Theme.layout.spacingSmall
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -141,7 +141,7 @@ ColumnLayout {
     ColumnLayout {
         visible: row.canInstall && !row.installing
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Theme.layout.spacingSmall
 
         GridLayout {
             id: tiles
@@ -178,10 +178,10 @@ ColumnLayout {
                         id: tileColumn
                         anchors.fill: parent
                         anchors.margins: Theme.settingsWindow.installTilePadding
-                        spacing: 4
+                        spacing: Theme.layout.spacingSmall
 
                         RowLayout {
-                            spacing: 8
+                            spacing: Theme.layout.spacing
 
                             Label {
                                 text: head.routeName(tile.modelData)
@@ -237,7 +237,7 @@ ColumnLayout {
                         }
                         Item { Layout.fillHeight: true }
                         SettingsButton {
-                            Layout.topMargin: 4
+                            Layout.topMargin: Theme.layout.spacingSmall
                             primary: tile.index === 0
                             fillOverride: tile.index === 0 ? "transparent" : Theme.settingsWindow.installTileButtonBackground
                             text: qsTr("Install %1").arg(head.routeName(tile.modelData))

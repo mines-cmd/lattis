@@ -190,7 +190,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.settingsWindow.toolbarHeight
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             SettingsSearchField {
                 id: search
