@@ -1,4 +1,3 @@
-| `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `expandCloudSaveFolder()` |
 # Heroic integration (`src/heroic/`)
 
 The `src/heroic/` folder finds Heroic Games Launcher and reads its Epic files into plain structs. It never writes to Heroic's files and has no UI or library code. What the library does with the result is in [library.md](library.md#games-from-heroic), and launching is in [launch.md](launch.md#epic-games).
@@ -39,4 +38,5 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 |---|---|
 | `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `launchArgs()`, `openArgs()` |
 | `heroicscan.*` | `HeroicState`, `HeroicGame`, `HeroicPlayTime`, `HeroicListing`; `scan()`, `lastPlayed()`, `cachedImage()` |
+| `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `expandCloudSaveFolder()` |
 | `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` |

@@ -61,4 +61,16 @@ An Epic game's play time and last played are kept by Lattis, and you can correct
 
 The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Wine, launch options and updates for the game are in Heroic. Tags, art, status and the rest work as for any game.
 
-Automatic save backups don't cover Epic games.
+## Automatic save backups
+
+Epic games can have their saves backed up when they close, like Steam and Linux games: switch on **Back up saves** on the Epic row of Settings → Platforms, or choose On in a game's Properties → **Backup when the game closes**. It's off until you do. The [backups page](backups.md#automatic-save-backups) explains the rest.
+
+Lattis finds an Epic game's saves from what Heroic and Epic's own files say, and changes none of them:
+
+- **The game's Wine prefix** is the one Heroic uses for that game, else Heroic's default prefix. Which Windows user folder inside it is looked in depends on the Wine version the game runs with (`steamuser` for Proton, your own user name for Wine).
+- **Epic's save folder** (the one Epic's cloud saves use) is the first choice when Heroic has it for the game. Otherwise the game is looked up in the saves list by its title, as a Proton game is.
+- **A game with neither** gets no backup, and Properties → Saves says so. Choose a save folder there to back one up anyway.
+
+If Heroic's cloud saves are on for the game, it may download Epic's copy over a save you restored, the next time you launch it. The restore question warns about it; turn the game's cloud sync off in Heroic first if you want the restored save to stay.
+
+Backups of cloud saves themselves, and of GOG or Amazon games, aren't made.
