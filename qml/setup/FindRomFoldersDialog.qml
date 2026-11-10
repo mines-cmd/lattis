@@ -89,7 +89,7 @@ AppDialog {
     ColumnLayout {
         visible: root.matched.length > 0
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Theme.layout.spacingSmall
 
         Label {
             text: qsTr("Matched")
@@ -109,7 +109,7 @@ AppDialog {
                 id: matchedColumn
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.margins: 4
+                anchors.margins: Theme.layout.spacingSmall
                 spacing: 0
 
                 Repeater {
@@ -158,7 +158,7 @@ AppDialog {
     ColumnLayout {
         visible: root.unmatched.length > 0
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Theme.layout.spacingSmall
 
         Label {
             text: qsTr("Not matched")
@@ -168,7 +168,7 @@ AppDialog {
         }
         Flow {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: Theme.layout.spacingSmall
 
             Repeater {
                 model: root.unmatched

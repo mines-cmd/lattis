@@ -92,8 +92,8 @@ ColumnLayout {
     RowLayout {
         visible: root.ready.length > 0
         Layout.fillWidth: true
-        Layout.bottomMargin: 10
-        spacing: 10
+        Layout.bottomMargin: Theme.layout.spacing
+        spacing: Theme.layout.spacing
 
         Heading {
             Layout.fillWidth: true
@@ -115,13 +115,13 @@ ColumnLayout {
     Heading {
         visible: root.toInstall.length > 0
         Layout.topMargin: root.ready.length > 0 ? Theme.settingsWindow.sectionSpacing : 0
-        Layout.bottomMargin: 4
+        Layout.bottomMargin: Theme.layout.spacingSmall
         text: qsTr("Install an emulator")
     }
     Label {
         visible: root.toInstall.length > 0
         Layout.fillWidth: true
-        Layout.bottomMargin: 10
+        Layout.bottomMargin: Theme.layout.spacing
         text: qsTr("Lattis downloads these for you, as an AppImage or from Flathub. Installs carry on while you go to the next step.")
         color: Theme.onboarding.descriptionColor
         font.pixelSize: Theme.controls.descriptionFontSize

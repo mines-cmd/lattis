@@ -64,7 +64,7 @@ Item {
 
         contentItem: ColumnLayout {
             id: choiceColumn
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             Rectangle {
                 implicitWidth: Theme.onboarding.choiceIconSize

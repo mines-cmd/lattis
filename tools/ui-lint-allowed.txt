@@ -30,10 +30,6 @@ spacing qml/settings/editors/ColorEditor.qml 2
 spacing qml/settings/editors/ColorListEditor.qml 5
 spacing qml/settings/editors/ColorPickerPopup.qml 4
 spacing qml/settings/editors/StringListEditor.qml 1
-spacing qml/setup/FindRomFoldersDialog.qml 4
-spacing qml/setup/SetupEmulators.qml 4
-spacing qml/setup/SetupPlatformRow.qml 1
-spacing qml/setup/SetupWelcome.qml 1
 spacing qml/views/ArtBrowser.qml 5
 spacing qml/views/EditorImagesPage.qml 2
 spacing qml/views/EditorMediaFolderRow.qml 2

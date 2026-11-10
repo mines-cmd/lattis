@@ -105,7 +105,7 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: Theme.settingsWindow.rowPadding
-            spacing: 10
+            spacing: Theme.layout.spacing
 
             Icon {
                 path: Icons.chevronRight
