@@ -558,6 +558,7 @@ Item {
     }
 
     // Qt Multimedia loads with the viewer, when the first clip or screenshot is opened.
+    readonly property bool viewerOpen: mediaViewer.item !== null && mediaViewer.item.opened
     Loader {
         id: mediaViewer
         active: false

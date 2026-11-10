@@ -14,6 +14,12 @@ SettingsMenu {
 
     atPointer: true
 
+    readonly property bool favorite: Library.mediaFavoriteRevision >= 0 && Library.isMediaFavorite(media.path ?? "")
+
+    SettingsMenuItem {
+        text: root.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
+        onTriggered: Library.setMediaFavorite(root.media.path, !root.favorite)
+    }
     SettingsMenuItem {
         text: qsTr("Show in folder")
         onTriggered: {

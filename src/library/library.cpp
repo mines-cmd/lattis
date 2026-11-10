@@ -3435,6 +3435,14 @@ QSharedPointer<MediaFavoriteState> Library::mediaFavoriteState()
     return m_mediaFavorites;
 }
 
+bool Library::isMediaFavorite(const QString &path) const
+{
+    if (!m_mediaFavorites)
+        return false;
+    const QMutexLocker lock(&m_mediaFavorites->mutex);
+    return m_mediaFavorites->loaded && m_mediaFavorites->set.contains(path);
+}
+
 void Library::setMediaFavorite(const QString &path, bool on)
 {
     if (path.isEmpty())
@@ -3450,6 +3458,7 @@ void Library::setMediaFavorite(const QString &path, bool on)
         else
             state->set.remove(path);
     }
+    ++m_mediaFavoriteRevision;
     emit mediaFavoriteChanged(path, on);
     // Each write takes the set as it is then, so writes that run out of order still end on the latest one.
     QThreadPool::globalInstance()->start([state] {

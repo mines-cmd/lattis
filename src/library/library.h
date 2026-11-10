@@ -55,6 +55,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(bool showSortValue READ showSortValue WRITE setShowSortValue NOTIFY showSortValueChanged)
     Q_PROPERTY(bool installedOnly READ installedOnly WRITE setInstalledOnly NOTIFY filtersChanged)
     Q_PROPERTY(bool favoritesOnly READ favoritesOnly WRITE setFavoritesOnly NOTIFY filtersChanged)
+    Q_PROPERTY(int mediaFavoriteRevision READ mediaFavoriteRevision NOTIFY mediaFavoriteChanged)
     Q_PROPERTY(QStringList tagFilter READ tagFilter WRITE setTagFilter NOTIFY filtersChanged)
     Q_PROPERTY(bool tagMatchAll READ tagMatchAll WRITE setTagMatchAll NOTIFY filtersChanged)
     Q_PROPERTY(QStringList statusFilter READ statusFilter WRITE setStatusFilter NOTIFY filtersChanged)
@@ -236,6 +237,9 @@ public:
     Q_INVOKABLE QVariantMap mediaGames(const QStringList &ids) const;
     Q_INVOKABLE QString mediaKey(const QString &id) const;
     Q_INVOKABLE void setMediaFavorite(const QString &path, bool on);
+    // Reads the set the media workers loaded; false before that. Bind it together with mediaFavoriteRevision.
+    Q_INVOKABLE bool isMediaFavorite(const QString &path) const;
+    int mediaFavoriteRevision() const { return m_mediaFavoriteRevision; }
     Q_INVOKABLE void achievements(const QString &id);
     // Looks up how many percent of all players unlocked each achievement of an app, by API name; never called back
     // when the lookup fails.
@@ -614,6 +618,7 @@ private:
     QString m_restoreCollection;
     bool m_tagsOpen = true;
     int m_allMediaGeneration = 0;
+    int m_mediaFavoriteRevision = 0;
     QSharedPointer<MediaFavoriteState> m_mediaFavorites;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;
     bool m_showSortValue = true;

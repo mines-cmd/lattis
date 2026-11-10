@@ -198,6 +198,22 @@ MotionPopup {
         window.toggleFullscreen()
     }
 
+    readonly property bool favorite: Library.mediaFavoriteRevision >= 0 && Library.isMediaFavorite(current.path ?? "")
+
+    function toggleFavorite() {
+        if (current.path !== undefined)
+            Library.setMediaFavorite(current.path, !favorite)
+    }
+
+    Connections {
+        target: Actions
+        enabled: root.opened
+        function onTriggered(name) {
+            if (name === "toggle_favorite")
+                root.toggleFavorite()
+        }
+    }
+
     function goToGame(id) {
         close()
         gameRequested(id)
@@ -798,6 +814,16 @@ MotionPopup {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.goToGame(root.current.gameId)
+                                }
+                            }
+                            ControlPill {
+                                ViewerButton {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    icon: Icons.star
+                                    iconColor: root.favorite ? Theme.iconButton.iconActive : Theme.media.viewerControlColor
+                                    tip: Actions.tip(root.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites"),
+                                                     Actions.keys.toggle_favorite)
+                                    onClicked: root.toggleFavorite()
                                 }
                             }
                             ControlPill {

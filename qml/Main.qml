@@ -659,6 +659,9 @@ ApplicationWindow {
     }
 
     function run(name) {
+        // The viewer's own handler toggles the open item's favorite instead.
+        if (name === "toggle_favorite" && (details.viewerOpen || (galleryPage.item?.viewerOpen ?? false)))
+            return
         if (name.startsWith("show_platform_")) {
             const platform = Library.platforms[parseInt(name.slice("show_platform_".length)) - 1]
             if (platform !== undefined)

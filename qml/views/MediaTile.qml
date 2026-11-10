@@ -15,6 +15,7 @@ ArtThumb {
     readonly property bool hovered: area.containsMouse
     readonly property bool isClip: media.kind === "clip" || media.kind === "video"
     property real hoverScale: Theme.media.thumbHoverScale
+    readonly property bool favorite: Library.mediaFavoriteRevision >= 0 && Library.isMediaFavorite(media.path ?? "")
 
     z: hovered ? 1 : 0
     scale: hovered && Motion.on ? hoverScale : 1
@@ -122,6 +123,28 @@ ArtThumb {
                 color: Theme.media.badgeText
                 font.pixelSize: Theme.details.headingFontSize
             }
+        }
+    }
+
+    MarkPop {
+        id: favoriteBadge
+        shown: tile.favorite && Theme.media.favoriteBadgeSize > 0
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.margins: Theme.layout.spacing
+        width: Theme.media.favoriteBadgeSize
+        height: width
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.radius.tiny
+            color: Theme.media.favoriteBadgeBackground
+        }
+        Icon {
+            anchors.centerIn: parent
+            path: Icons.star
+            size: Math.round(parent.width * 0.62)
+            color: Theme.media.favoriteBadgeIcon
         }
     }
 
