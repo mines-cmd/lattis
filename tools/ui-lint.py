@@ -42,7 +42,7 @@ RULES = {
     "spacing": "literal spacing, margin or padding above 2; use layout.spacing or a theme setting",
     "color": "literal color; use Theme.*",
     "schema-type": "text size default doesn't end at a type step in [font]",
-    "schema-border": "border width default doesn't end at layout.border_width or 0",
+    "schema-border": "border width default doesn't end at layout.border_width, hairline_width, ring_width or 0",
     "schema-radius": "radius default doesn't end at a [radius] tier, 0 or 1",
 }
 
@@ -132,7 +132,7 @@ def lint_schema(hits):
             if not (end.startswith("font.") or end == "hero.title_max_font_size"):
                 found.add(("schema-type", end))
         elif name.endswith("border_width"):
-            if end != "layout.border_width" and value != "0":
+            if end not in ("layout.border_width", "layout.hairline_width", "layout.ring_width") and value != "0":
                 found.add(("schema-border", end))
         elif name.endswith("radius") and section != "radius":
             if not end.startswith("radius.") and value not in ("0", "1"):
