@@ -29,6 +29,8 @@ class Installer : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(QVariantMap emulators READ emulators NOTIFY emulatorsChanged)
+    // {id, name, version, state} of each emulator Lattis installed that has a newer release.
+    Q_PROPERTY(QVariantList updates READ updates NOTIFY emulatorsChanged)
 
 public:
     struct Setup
@@ -54,6 +56,10 @@ public:
     ~Installer() override;
 
     QVariantMap emulators() const { return m_emulators; }
+    QVariantList updates() const { return m_updateList; }
+
+    // Checks for updates after delayMs, then once a day, while autoCheck says so.
+    void startDailyCheck(std::function<bool()> autoCheck, int delayMs = 10000);
 
     Q_INVOKABLE void install(const QString &id, const QString &route = QStringLiteral("appimage"));
     Q_INVOKABLE void update(const QString &id);
@@ -140,6 +146,9 @@ private:
     QSet<QString> m_upToDate;
     InstallRecords::Records m_records;
     QVariantMap m_emulators;
+    QVariantList m_updateList;
     QTimer m_changed;
+    QTimer m_daily;
+    std::function<bool()> m_autoCheck;
     quint64 m_serial = 0;
 };

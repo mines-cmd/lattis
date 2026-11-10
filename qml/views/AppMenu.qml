@@ -49,7 +49,19 @@ SettingsMenu {
             : qsTr("Update to %1").arg(AppUpdate.latestVersion)
         onTriggered: Qt.callLater(() => root.chosen("update_app"))
     }
-    SettingsMenuSeparator { visible: AppUpdate.notify }
+    SettingsMenuItem {
+        readonly property var updates: Installer.updates
+        readonly property var waiting: updates.filter(u => u.state === "idle" || u.state === "failed")
+        iconPath: Icons.download
+        visible: updates.length > 0
+        enabled: waiting.length > 0
+        text: waiting.length === 0
+              ? (updates.length === 1 ? qsTr("Updating %1").arg(updates[0].name) : qsTr("Updating emulators"))
+            : waiting.length === 1 ? qsTr("Update %1 to %2").arg(waiting[0].name).arg(waiting[0].version)
+            : qsTr("Update %1 emulators").arg(waiting.length)
+        onTriggered: waiting.forEach(u => Installer.update(u.id))
+    }
+    SettingsMenuSeparator { visible: AppUpdate.notify || Installer.updates.length > 0 }
     Instantiator {
         model: General.railButtonOrder.filter(name => name !== "steam_friends")
         delegate: Entry {
@@ -63,7 +75,7 @@ SettingsMenu {
                 : modelData === "play_statistics" ? qsTr("Play statistics")
                 : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
         }
-        onObjectAdded: (index, object) => root.insertItem(index + 4, object)
+        onObjectAdded: (index, object) => root.insertItem(index + 5, object)
         onObjectRemoved: (index, object) => root.removeItem(object)
     }
     SettingsMenuSeparator {}

@@ -14,8 +14,14 @@ Item {
     signal undoable(string text, var link)
     signal editPlatform(string id)
 
-    // AppUpdate is only touched after the first frame.
+    // AppUpdate and Installer are only touched after the first frame.
     property bool startedUp: false
+    readonly property var emulatorUpdates: startedUp ? Installer.updates : []
+    readonly property string updateTip: !startedUp ? ""
+        : AppUpdate.notify ? qsTr("Update to %1 available").arg(AppUpdate.latestVersion)
+        : emulatorUpdates.length === 1 ? qsTr("%1 update available").arg(emulatorUpdates[0].name)
+        : emulatorUpdates.length > 1 ? qsTr("%1 emulator updates available").arg(emulatorUpdates.length)
+        : ""
     property string dragId: ""
     property int dragFrom: -1
     property int dragTo: -1
@@ -505,7 +511,7 @@ Item {
             }
 
             Rectangle {
-                visible: root.startedUp && AppUpdate.notify
+                visible: root.updateTip !== ""
                 width: Theme.rail.updateDotSize
                 height: width
                 radius: width / 2
@@ -520,7 +526,7 @@ Item {
 
             ToolTip.visible: logoMouse.containsMouse && !(appMenu.item?.visible ?? false)
             ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: root.startedUp && AppUpdate.notify ? qsTr("Menu · Update to %1 available").arg(AppUpdate.latestVersion)
+            ToolTip.text: root.updateTip !== "" ? qsTr("Menu · %1").arg(root.updateTip)
                           : Actions.tip(qsTr("Menu"), Actions.keys.app_menu)
         }
 

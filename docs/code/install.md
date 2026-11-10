@@ -129,7 +129,9 @@ State changes update it at once; progress is coalesced to about 12 updates a sec
 
 ## Updates
 
-Only for an AppImage Lattis installed; Flatpaks are updated by the system. Nothing is checked at startup or in the main window.
+Only for an AppImage Lattis installed; Flatpaks are updated by the system. `startDailyCheck(autoCheck)`, called from `main.cpp` after the first frame (which makes the Installer), runs a quiet `checkUpdates()` 10 s later and then once a day, while `autoCheck` (`[general] check_for_updates`) is on; the hour-long release cache keeps it from asking GitHub more often.
+
+`updates` lists `{id, name, version, state}` for every emulator with an `updateVersion`, for the rail logo's dot and the app menu's update entry.
 
 `checkUpdates(id)` fetches the latest release of one emulator (state `checking`, an error shown in the row), and `checkUpdates()` of every installed AppImage, quietly (a failure is only logged). The answer is cached an hour in `<cache dir>/releases/<release value with ":" and "/" as "-">.json` (GitHub allows 60 unauthenticated requests an hour); only checks read the cache, an update always asks again.
 

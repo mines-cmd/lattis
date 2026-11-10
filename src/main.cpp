@@ -403,6 +403,9 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(0, syncMenuEntry);
                 // Not before the first frame, and its own 10 s after it.
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
+                QTimer::singleShot(0, [&general] {
+                    Installer::instance()->startDailyCheck([&general] { return general.checkForUpdates(); });
+                });
                 QTimer::singleShot(0, [&library] { SavesSettings::startDailyCheck([&library] { return SavesBackup::anyOn(library); }); });
                 QTimer::singleShot(0, [] { SteamLibrarySync::instance()->startDaily(); });
                 QTimer::singleShot(0, [] { SteamFriends::instance()->startDaily(); });

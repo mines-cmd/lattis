@@ -293,8 +293,8 @@ Item {
                     LabeledRow {
                         label: qsTr("Check for updates")
                         note: AppUpdate.available
-                            ? qsTr("Once a day Lattis asks api.github.com for the latest release. Nothing else is sent.")
-                            : qsTr("Updates are only checked by a release AppImage; this build never checks.")
+                            ? qsTr("Once a day Lattis asks api.github.com for its latest release and those of the emulators it installed. Nothing else is sent.")
+                            : qsTr("Once a day Lattis asks for the latest releases of the emulators it installed. Only a release AppImage checks for its own.")
                         SettingsSwitch {
                             checked: General.checkForUpdates
                             onToggled: {

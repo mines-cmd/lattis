@@ -36,6 +36,7 @@ QString versionText(const QString &tag, bool prerelease)
 constexpr qint64 FixtureAssetSize = 2 * 1024 * 1024;
 constexpr int FixtureSteps = 40;
 constexpr qint64 ReleaseCacheSeconds = 3600;
+constexpr int DayMs = 24 * 60 * 60 * 1000;
 
 QSet<QString> userFlatpaks(const Installer::Setup &setup)
 {
@@ -76,10 +77,22 @@ Installer::Installer(const Setup &setup, QObject *parent)
                 cancel(id);
         });
     }
+    m_daily.setSingleShot(true);
+    connect(&m_daily, &QTimer::timeout, this, [this] {
+        if (m_autoCheck && m_autoCheck())
+            checkUpdates();
+        m_daily.start(DayMs);
+    });
     refresh();
 }
 
 Installer::~Installer() = default;
+
+void Installer::startDailyCheck(std::function<bool()> autoCheck, int delayMs)
+{
+    m_autoCheck = std::move(autoCheck);
+    m_daily.start(delayMs);
+}
 
 QNetworkAccessManager *Installer::network()
 {
@@ -126,6 +139,7 @@ std::optional<InstallRecord> Installer::installedByApp(const QString &id) const
 void Installer::rebuild()
 {
     QVariantMap out;
+    QVariantList updateList;
     const QList<EmulatorDef> defs = m_setup.emulators ? m_setup.emulators() : QList<EmulatorDef>();
     const QSet<QString> flatpaks = userFlatpaks(m_setup);
     for (const EmulatorDef &def : defs) {
@@ -157,6 +171,11 @@ void Installer::rebuild()
                 updateVersion = update->release.tag.isEmpty() ? update->asset.date
                                                                : versionText(update->release.tag, update->release.prerelease);
         }
+        if (!updateVersion.isEmpty())
+            updateList.append(QVariantMap{{QStringLiteral("id"), def.id},
+                                          {QStringLiteral("name"), def.name},
+                                          {QStringLiteral("version"), updateVersion},
+                                          {QStringLiteral("state"), stateName(job.state)}});
         out.insert(def.id, QVariantMap{
                                {QStringLiteral("state"), stateName(job.state)},
                                {QStringLiteral("progress"), job.progress},
@@ -183,6 +202,7 @@ void Installer::rebuild()
     }
     if (out != m_emulators) {
         m_emulators = out;
+        m_updateList = updateList;
         emit emulatorsChanged();
     }
 }
