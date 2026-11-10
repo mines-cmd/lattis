@@ -41,12 +41,13 @@ FocusScope {
     // `all` sorted, before the filters.
     property var sorted: []
     // What is ticked in each section, as {key: true}; empty = no filter from that section.
+    property var favSel: ({})
     property var typeSel: ({})
     property var platformSel: ({})
     property var gameSel: ({})
     property var monthSel: ({})
     // How many items each entry would show given the other sections' choices: {section: {key: n}}.
-    property var counts: ({ type: {}, platform: {}, game: {}, month: {} })
+    property var counts: ({ favorites: {}, type: {}, platform: {}, game: {}, month: {} })
     // Every entry the sidebar lists, from all the items found, so a filter grays an entry out instead of removing it.
     property var platformList: []
     property var gameList: []
@@ -66,7 +67,7 @@ FocusScope {
     readonly property real sidebarWidth: Math.min(Theme.gallery.sidebarWidth, width - sidebarX - sideMargin)
     readonly property real gridX: hasSidebar && !compact ? sidebarX + sidebarWidth + sideMargin : sideMargin
     readonly property real gridWidth: width - gridX - sideMargin
-    readonly property bool filtersActive: Object.keys(typeSel).length + Object.keys(platformSel).length
+    readonly property bool filtersActive: Object.keys(favSel).length + Object.keys(typeSel).length + Object.keys(platformSel).length
                                           + Object.keys(gameSel).length + Object.keys(monthSel).length > 0
     readonly property real tileTarget: dragWidth > 0 ? dragWidth
                                        : General.galleryTileWidth > 0 ? General.galleryTileWidth : Theme.gallery.tileWidth
@@ -105,6 +106,7 @@ FocusScope {
 
     function start(gameId = "") {
         isOpen = true
+        favSel = ({})
         typeSel = ({})
         platformSel = ({})
         gameSel = gameId === "" ? ({}) : ({ [Library.mediaKey(gameId)]: true })
@@ -123,7 +125,7 @@ FocusScope {
             sorted = []
             shown = []
             rows = []
-            counts = { type: {}, platform: {}, game: {}, month: {} }
+            counts = { favorites: {}, type: {}, platform: {}, game: {}, month: {} }
             platformList = []
             gameList = []
             yearList = []
@@ -288,20 +290,25 @@ FocusScope {
     // One pass: the items every section lets through, and for each section how many it would show if
     // only the other sections counted.
     function applyFilters() {
-        const tally = { type: {}, platform: {}, game: {}, month: {} }
+        const tally = { favorites: {}, type: {}, platform: {}, game: {}, month: {} }
         const out = []
+        const useFav = Object.keys(favSel).length > 0
         const useType = Object.keys(typeSel).length > 0
         const usePlatform = Object.keys(platformSel).length > 0
         const useGame = Object.keys(gameSel).length > 0
         const useMonth = Object.keys(monthSel).length > 0
         for (const item of sorted) {
+            const isFav = Library.isMediaFavorite(item.path)
+            const okFav = !useFav || isFav
             const okType = !useType || typeSel[item.type] === true
             const okPlatform = !usePlatform || platformSel[item.platform] === true
             const okGame = !useGame || gameSel[item.gameId] === true
             const okMonth = !useMonth || monthSel[item.month] === true
-            const failing = (okType ? 0 : 1) + (okPlatform ? 0 : 1) + (okGame ? 0 : 1) + (okMonth ? 0 : 1)
+            const failing = (okFav ? 0 : 1) + (okType ? 0 : 1) + (okPlatform ? 0 : 1) + (okGame ? 0 : 1) + (okMonth ? 0 : 1)
             if (failing === 0)
                 out.push(item)
+            if (isFav && (failing === 0 || (failing === 1 && !okFav)))
+                tally.favorites.only = (tally.favorites.only ?? 0) + 1
             if (failing === 0 || (failing === 1 && !okType))
                 tally.type[item.type] = (tally.type[item.type] ?? 0) + 1
             if (failing === 0 || (failing === 1 && !okPlatform))
@@ -317,11 +324,13 @@ FocusScope {
     }
 
     function selection(section: string): var {
-        return section === "type" ? typeSel : section === "platform" ? platformSel : section === "game" ? gameSel : monthSel
+        return section === "favorites" ? favSel : section === "type" ? typeSel : section === "platform" ? platformSel : section === "game" ? gameSel : monthSel
     }
 
     function setSelection(section: string, value: var) {
-        if (section === "type")
+        if (section === "favorites")
+            favSel = value
+        else if (section === "type")
             typeSel = value
         else if (section === "platform")
             platformSel = value
@@ -358,6 +367,7 @@ FocusScope {
     }
 
     function clearAll() {
+        favSel = ({})
         typeSel = ({})
         platformSel = ({})
         gameSel = ({})
@@ -605,6 +615,7 @@ FocusScope {
     Connections {
         target: Library
         function onGamesChanged() { root.checkWarm() }
+        function onMediaFavoriteChanged() { if (root.sorted.length > 0) root.applyFilters() }
         function onAllMediaReady(batch, done) {
             if (root.quiet) {
                 root.pending = root.pending.concat(root.prepare(batch))

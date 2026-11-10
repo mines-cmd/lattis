@@ -16,8 +16,8 @@ const QStringList &gallerySorts()
 
 const QStringList &gallerySections()
 {
-    static const QStringList sections = {QStringLiteral("type"), QStringLiteral("platform"), QStringLiteral("game"),
-                                         QStringLiteral("date")};
+    static const QStringList sections = {QStringLiteral("favorites"), QStringLiteral("type"), QStringLiteral("platform"),
+                                         QStringLiteral("game"), QStringLiteral("date")};
     return sections;
 }
 

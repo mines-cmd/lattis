@@ -290,6 +290,20 @@ FocusScope {
             spacing: Theme.gallery.sidebarSpacing
 
             FilterSection {
+                id: favoritesSection
+                name: "favorites"
+                title: qsTr("Favorites")
+                active: Object.keys(root.page.favSel).length > 0
+
+                Entry {
+                    text: qsTr("Favorites only")
+                    mark: root.page.favSel.only ? 2 : 0
+                    amount: root.count("favorites", "only")
+                    onClicked: root.page.toggle("favorites", "only")
+                }
+            }
+
+            FilterSection {
                 id: typeSection
                 name: "type"
                 title: qsTr("Type")
@@ -334,8 +348,8 @@ FocusScope {
 
                 // The sidebar's height less everything but the game list, summed from the parts rather
                 // than from `sections`, whose height includes the list's own.
-                readonly property real listRoom: flick.height - typeSection.implicitHeight - platformSection.implicitHeight
-                                                 - dateSection.implicitHeight - 3 * sections.spacing
+                readonly property real listRoom: flick.height - favoritesSection.implicitHeight - typeSection.implicitHeight - platformSection.implicitHeight
+                                                 - dateSection.implicitHeight - 4 * sections.spacing
                                                  - headerHeight - spacing - gameSearch.implicitHeight
                                                  - gameSearch.Layout.bottomMargin - bodySpacing
 
@@ -389,8 +403,8 @@ FocusScope {
                     Layout.fillWidth: true
                     // Room left once the game section keeps its minimum; summed from parts, not from
                     // gameSection.implicitHeight, which depends on this list's height.
-                    readonly property real room: flick.height - typeSection.implicitHeight - platformSection.implicitHeight
-                                                 - 3 * sections.spacing - dateSection.headerHeight - dateSection.spacing
+                    readonly property real room: flick.height - favoritesSection.implicitHeight - typeSection.implicitHeight - platformSection.implicitHeight
+                                                 - 4 * sections.spacing - dateSection.headerHeight - dateSection.spacing
                                                  - dateSection.bodySpacing - gameSection.headerHeight - gameSection.spacing
                                                  - (gameSection.folded ? 0
                                                     : gameSearch.implicitHeight + gameSearch.Layout.bottomMargin
