@@ -24,10 +24,8 @@ schema-border settings_window.theme_popup_swatch_border_width 1
 schema-border settings_window.window_border_width 1
 schema-border toolbar.status_border_width 1
 schema-radius filters.chip_radius 1
-schema-radius filters.histogram_bar_radius 1
 schema-radius media.viewer_pill_radius 1
 schema-radius rail.logo_radius 1
-schema-radius settings_window.preview_dot_radius 1
 schema-radius toolbar.background_radius 1
 schema-radius toolbar.radius 1
 schema-type details.count_font_size 1

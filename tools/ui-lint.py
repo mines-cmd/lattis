@@ -21,6 +21,15 @@ BACKGROUND_OWNERS = {
 }
 POPUP_TYPES = {"Popup", "MotionPopup", "Dialog", "Drawer", "Menu"}
 
+# Theme settings whose default stays a fixed number, with why. Keep this short.
+SCHEMA_EXEMPT = {
+    "filters.histogram_bar_radius": "2 px bars; a tier (4 at least) would round them into dots",
+    "settings_window.preview_dot_radius": "a 4 px dot; the smallest tier is as wide as the dot",
+}
+
+# A line ends with `// ui-lint: allow <why>` when the literal is data, not styling.
+ALLOW = re.compile(r"//\s*ui-lint:\s*allow\s+\S")
+
 NUMBER = r"(-?\d+(?:\.\d+)?)\s*$"
 STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 OPEN = re.compile(r"(?:([\w.]+)\s*:\s*)?([A-Za-z_][\w.]*)?\s*$")
@@ -57,8 +66,11 @@ def lint_qml(path, rel, hits):
         if "/*" in raw:
             raw, in_comment = raw[:raw.find("/*")], True
 
+        allowed_here = bool(ALLOW.search(raw))
+
         def hit(rule):
-            hits.append((rule, rel, number, raw.strip()))
+            if not allowed_here:
+                hits.append((rule, rel, number, raw.strip()))
 
         if re.search(r'"#[0-9a-fA-F]{3,8}"|\bQt\.(rgba|hsla|hsva)\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+', raw):
             hit("color")
@@ -126,6 +138,8 @@ def lint_schema(hits):
             if not end.startswith("radius.") and value not in ("0", "1"):
                 found.add(("schema-radius", end))
     for rule, key in found:
+        if key in SCHEMA_EXEMPT:
+            continue
         hits.append((rule, key, 0, key + " = " + defaults.get(key, "?")))
 
 
