@@ -88,22 +88,11 @@ MotionPopup {
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
-    background: Item {
-        RectangularShadow {
-            visible: Theme.menu.popupShadowSize > 0
-            anchors.fill: parent
-            offset.y: Theme.menu.popupShadowSize / 6
-            radius: Theme.calendar.radius
-            blur: Theme.menu.popupShadowSize
-            color: Theme.menu.popupShadowColor
-        }
-        Rectangle {
-            anchors.fill: parent
-            color: Theme.calendar.background
-            border.color: Theme.calendar.border
-            border.width: Theme.calendar.borderWidth
-            radius: Theme.calendar.radius
-        }
+    background: PopoverBackground {
+        radius: Theme.calendar.radius
+        fill: Theme.calendar.background
+        borderColor: Theme.calendar.border
+        borderWidth: Theme.calendar.borderWidth
     }
 
     contentItem: Item {

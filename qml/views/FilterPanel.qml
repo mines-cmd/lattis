@@ -145,13 +145,13 @@ MotionPopup {
     onOpened: root.forceActiveFocus(Qt.TabFocusReason)
     onClosed: tagQuery = ""
 
-    background: Surface {
+    background: PopoverBackground {
         radius: Theme.filters.radius
         fill: Theme.filters.background
         fillEnd: Theme.filters.backgroundEnd
         direction: Theme.filters.gradientDirection
-        border.color: Theme.filters.border
-        border.width: Theme.filters.borderWidth
+        borderColor: Theme.filters.border
+        borderWidth: Theme.filters.borderWidth
     }
 
     component PressDip: Item {

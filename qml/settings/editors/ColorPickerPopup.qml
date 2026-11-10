@@ -63,17 +63,16 @@ MotionPopup {
     onValChanged: pickFromStrips()
     onAlphaChanged: pickFromStrips()
 
-    padding: 12
+    padding: Theme.colorPicker.padding
     margins: 8
     modal: false
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
-    background: Rectangle {
-        color: Theme.colorPicker.background
-        border.color: Theme.colorPicker.border
-        border.width: Theme.colorPicker.borderWidth
-        radius: Theme.controls.inputRadius
+    background: PopoverBackground {
+        fill: Theme.colorPicker.background
+        borderColor: Theme.colorPicker.border
+        borderWidth: Theme.colorPicker.borderWidth
     }
 
     component Marker: Rectangle {

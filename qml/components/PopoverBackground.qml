@@ -1,20 +1,34 @@
 import QtQuick
 import QtQuick.Effects
 
+// See docs/code/qml.md.
 Item {
+    id: root
+
+    property int radius: Theme.popover.radius
+    property color fill: Theme.popover.background
+    property color fillEnd: fill
+    property string direction: "down"
+    property color borderColor: Theme.popover.border
+    property int borderWidth: Theme.popover.borderWidth
+    property int shadowSize: Theme.popover.shadowSize
+    property color shadowColor: Theme.popover.shadowColor
+
     RectangularShadow {
-        visible: Theme.menu.popupShadowSize > 0
+        visible: root.shadowSize > 0
         anchors.fill: parent
-        offset.y: Theme.menu.popupShadowSize / 6
-        radius: Theme.controls.inputRadius
-        blur: Theme.menu.popupShadowSize
-        color: Theme.menu.popupShadowColor
+        offset.y: root.shadowSize / 6
+        radius: root.radius
+        blur: root.shadowSize
+        color: root.shadowColor
     }
-    Rectangle {
+    Surface {
         anchors.fill: parent
-        color: Theme.menu.popupBackground
-        border.color: Theme.settingsWindow.cardBorder
-        border.width: Theme.settingsWindow.cardBorderWidth
-        radius: Theme.controls.inputRadius
+        radius: root.radius
+        fill: root.fill
+        fillEnd: root.fillEnd
+        direction: root.direction
+        border.color: root.borderColor
+        border.width: root.borderWidth
     }
 }

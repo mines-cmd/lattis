@@ -53,22 +53,9 @@ MotionPopup {
     onOpened: field.forceActiveFocus()
     onClosed: anchorItem?.forceActiveFocus()
 
-    background: Item {
-        RectangularShadow {
-            visible: Theme.gameEditor.bulkPopupShadowSize > 0
-            anchors.fill: parent
-            offset.y: Theme.gameEditor.bulkPopupShadowSize / 6
-            radius: Theme.gameEditor.cardRadius
-            blur: Theme.gameEditor.bulkPopupShadowSize
-            color: Theme.gameEditor.bulkPopupShadowColor
-        }
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.gameEditor.cardRadius
-            color: Theme.menu.popupBackground
-            border.color: Theme.gameEditor.cardBorder
-            border.width: Theme.gameEditor.cardBorderWidth
-        }
+    background: PopoverBackground {
+        shadowSize: Theme.gameEditor.bulkPopupShadowSize
+        shadowColor: Theme.gameEditor.bulkPopupShadowColor
     }
 
     contentItem: ColumnLayout {

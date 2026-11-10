@@ -15,12 +15,7 @@ MotionPopup {
     }
 
     padding: Theme.layout.spacing
-    background: Rectangle {
-        radius: Theme.controls.inputRadius
-        color: Theme.menu.popupBackground
-        border.color: Theme.controls.inputBorder
-        border.width: Theme.controls.inputBorderWidth
-    }
+    background: PopoverBackground {}
 
     contentItem: Grid {
         columns: Theme.colorPicker.paletteColumns

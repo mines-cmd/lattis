@@ -88,13 +88,13 @@ MotionPopup {
 
     onOpened: contentItem.forceActiveFocus(Qt.TabFocusReason)
 
-    background: Surface {
+    background: PopoverBackground {
         radius: Theme.filters.radius
         fill: Theme.filters.background
         fillEnd: Theme.filters.backgroundEnd
         direction: Theme.filters.gradientDirection
-        border.color: Theme.filters.border
-        border.width: Theme.filters.borderWidth
+        borderColor: Theme.filters.border
+        borderWidth: Theme.filters.borderWidth
     }
 
     component Cell: Rectangle {
