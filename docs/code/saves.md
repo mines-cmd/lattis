@@ -6,7 +6,7 @@ Finding where each game keeps its saves, from the [Ludusavi manifest](https://gi
 
 `SavesIndexFile::parse(yaml)` reads the manifest into a `SavesIndex`: per game with saves its `name`, `aliases` (other manifest entries that are only `alias: <name>`), `steamId`, `gogId`, `installDirs` and `paths`. A path is the manifest's text with its placeholders (`<home>`, `<base>`, `<winAppData>`…) and the `when` constraints (`os`, `store`; empty = any) that apply to Linux or Windows.
 
-Kept: `files` entries tagged `save` (or untagged). Left out: entries tagged only `config`, entries only for macOS or DOS, the registry, games with no kept path. A file that is not a manifest (not YAML, not a map, no games) is `ok = false` with a warning; one unreadable game is skipped and counted in the warnings.
+Kept: `files` entries tagged `save` (or untagged). Left out: entries tagged only `config`, entries only for macOS or DOS, the registry, games with no kept path. A file that is not a manifest (not YAML, not a map, no games) is `ok = false` with a warning. It is read from the parser's events one game at a time, not loaded whole: a yaml-cpp node tree of the manifest takes about 800 MB.
 
 `SavesIndexFile::save(path, index)` / `load(path)` write and read the index with `QDataStream` (atomically). `load` returns nothing for a missing, cut or other-format file; bump `kFormatVersion` when what `parse` keeps changes.
 

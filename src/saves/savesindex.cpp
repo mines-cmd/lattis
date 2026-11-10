@@ -6,39 +6,139 @@
 #include <QHash>
 #include <QSaveFile>
 
+#include <yaml-cpp/eventhandler.h>
 #include <yaml-cpp/yaml.h>
+
+#include <functional>
+#include <istream>
+#include <streambuf>
+#include <string_view>
+#include <vector>
 
 namespace {
 constexpr quint32 kMagic = 0x4c534958;
 constexpr QDataStream::Version kStreamVersion = QDataStream::Qt_6_8;
 
-// Indexing a missing key gives a node that throws when asked its type; this gives a null one.
-YAML::Node child(const YAML::Node &node, const char *key)
+struct Node
 {
-    if (!node.IsMap())
-        return YAML::Node();
-    const YAML::Node value = node[key];
-    return value.IsDefined() ? value : YAML::Node();
+    enum Kind { Null, Scalar, Sequence, Map };
+    Kind kind = Null;
+    std::string scalar;
+    std::vector<Node> items; // a map's keys and values, alternating
+};
+
+// YAML::Load builds the whole manifest as yaml-cpp nodes, about 800 MB that the allocator keeps
+// afterwards. This builds one game at a time from the parser's events and hands it on.
+class ManifestReader : public YAML::EventHandler
+{
+public:
+    using Entry = std::function<void(const Node &key, const Node &value)>;
+
+    explicit ManifestReader(Entry entry)
+        : m_entry(std::move(entry))
+    {
+    }
+
+    Node::Kind rootKind() const { return m_rootKind; }
+
+    void OnDocumentStart(const YAML::Mark &) override {}
+    void OnDocumentEnd() override {}
+    void OnNull(const YAML::Mark &, YAML::anchor_t) override { add(Node()); }
+    void OnAlias(const YAML::Mark &, YAML::anchor_t) override { add(Node()); }
+    void OnScalar(const YAML::Mark &, const std::string &, YAML::anchor_t, const std::string &value) override
+    {
+        add(Node{Node::Scalar, value, {}});
+    }
+    void OnSequenceStart(const YAML::Mark &, const std::string &, YAML::anchor_t, YAML::EmitterStyle::value) override
+    {
+        m_stack.push_back(Node{Node::Sequence, {}, {}});
+    }
+    void OnSequenceEnd() override { close(); }
+    void OnMapStart(const YAML::Mark &, const std::string &, YAML::anchor_t, YAML::EmitterStyle::value) override
+    {
+        if (m_stack.empty() && m_rootKind == Node::Null && !m_inRoot) {
+            m_inRoot = true;
+            m_rootKind = Node::Map;
+            return;
+        }
+        m_stack.push_back(Node{Node::Map, {}, {}});
+    }
+    void OnMapEnd() override
+    {
+        if (m_stack.empty())
+            m_inRoot = false;
+        else
+            close();
+    }
+
+private:
+    void close()
+    {
+        Node node = std::move(m_stack.back());
+        m_stack.pop_back();
+        add(std::move(node));
+    }
+
+    void add(Node node)
+    {
+        if (!m_stack.empty()) {
+            m_stack.back().items.push_back(std::move(node));
+        } else if (!m_inRoot) {
+            m_rootKind = node.kind;
+        } else if (!m_key) {
+            m_key = std::move(node);
+        } else {
+            m_entry(*m_key, node);
+            m_key.reset();
+        }
+    }
+
+    Entry m_entry;
+    std::vector<Node> m_stack;
+    std::optional<Node> m_key;
+    Node::Kind m_rootKind = Node::Null;
+    bool m_inRoot = false;
+};
+
+class ByteArrayBuffer : public std::streambuf
+{
+public:
+    explicit ByteArrayBuffer(const QByteArray &bytes)
+    {
+        char *data = const_cast<char *>(bytes.constData());
+        setg(data, data, data + bytes.size());
+    }
+};
+
+const Node *child(const Node *node, std::string_view key)
+{
+    if (!node || node->kind != Node::Map)
+        return nullptr;
+    for (size_t i = 0; i + 1 < node->items.size(); i += 2) {
+        if (node->items[i].kind == Node::Scalar && node->items[i].scalar == key)
+            return &node->items[i + 1];
+    }
+    return nullptr;
 }
 
-QString text(const YAML::Node &node)
+QString text(const Node *node)
 {
-    return node.IsScalar() ? QString::fromStdString(node.Scalar()) : QString();
+    return node && node->kind == Node::Scalar ? QString::fromStdString(node->scalar) : QString();
 }
 
-int number(const YAML::Node &node)
+int number(const Node *node)
 {
     bool ok = false;
     const int value = text(node).toInt(&ok);
     return ok && value > 0 ? value : 0;
 }
 
-bool isSave(const YAML::Node &tags)
+bool isSave(const Node *tags)
 {
-    if (!tags.IsSequence() || tags.size() == 0)
+    if (!tags || tags->kind != Node::Sequence || tags->items.empty())
         return true;
-    for (const YAML::Node &tag : tags) {
-        if (text(tag) == QLatin1String("save"))
+    for (const Node &tag : tags->items) {
+        if (text(&tag) == QLatin1String("save"))
             return true;
     }
     return false;
@@ -50,18 +150,18 @@ bool wantedOs(const QString &os)
     return os.isEmpty() || os == QLatin1String("linux") || os == QLatin1String("windows");
 }
 
-std::optional<SavesPath> parsePath(const QString &path, const YAML::Node &entry)
+std::optional<SavesPath> parsePath(const QString &path, const Node &entry)
 {
-    if (path.isEmpty() || !entry.IsMap() || !isSave(child(entry, "tags")))
+    if (path.isEmpty() || entry.kind != Node::Map || !isSave(child(&entry, "tags")))
         return std::nullopt;
     SavesPath out;
     out.path = path;
-    const YAML::Node when = child(entry, "when");
+    const Node *when = child(&entry, "when");
     bool wanted = true;
-    if (when.IsSequence() && when.size() > 0) {
+    if (when && when->kind == Node::Sequence && !when->items.empty()) {
         wanted = false;
-        for (const YAML::Node &constraint : when) {
-            SavesWhen w{text(child(constraint, "os")), text(child(constraint, "store"))};
+        for (const Node &constraint : when->items) {
+            SavesWhen w{text(child(&constraint, "os")), text(child(&constraint, "store"))};
             if (!wantedOs(w.os))
                 continue;
             wanted = true;
@@ -73,26 +173,24 @@ std::optional<SavesPath> parsePath(const QString &path, const YAML::Node &entry)
     return out;
 }
 
-SavesGame parseGame(const QString &name, const YAML::Node &node)
+SavesGame parseGame(const QString &name, const Node &node)
 {
     SavesGame game;
     game.name = name;
-    game.steamId = number(child(child(node, "steam"), "id"));
-    game.gogId = number(child(child(node, "gog"), "id"));
+    game.steamId = number(child(child(&node, "steam"), "id"));
+    game.gogId = number(child(child(&node, "gog"), "id"));
 
-    const YAML::Node installDir = child(node, "installDir");
-    if (installDir.IsMap()) {
-        for (auto it = installDir.begin(); it != installDir.end(); ++it) {
-            const QString dir = text(it->first);
+    if (const Node *installDir = child(&node, "installDir"); installDir && installDir->kind == Node::Map) {
+        for (size_t i = 0; i + 1 < installDir->items.size(); i += 2) {
+            const QString dir = text(&installDir->items[i]);
             if (!dir.isEmpty())
                 game.installDirs.append(dir);
         }
     }
 
-    const YAML::Node files = child(node, "files");
-    if (files.IsMap()) {
-        for (auto it = files.begin(); it != files.end(); ++it) {
-            if (auto path = parsePath(text(it->first), it->second))
+    if (const Node *files = child(&node, "files"); files && files->kind == Node::Map) {
+        for (size_t i = 0; i + 1 < files->items.size(); i += 2) {
+            if (auto path = parsePath(text(&files->items[i]), files->items[i + 1]))
                 game.paths.append(*path);
         }
     }
@@ -104,39 +202,35 @@ namespace SavesIndexFile {
 Parsed<SavesIndex> parse(const QByteArray &yaml)
 {
     Parsed<SavesIndex> result;
-    YAML::Node root;
+    QHash<QString, QStringList> aliases;
+    ManifestReader reader([&](const Node &key, const Node &value) {
+        const QString name = text(&key);
+        if (name.isEmpty() || value.kind != Node::Map)
+            return;
+        const QString target = text(child(&value, "alias"));
+        if (!target.isEmpty()) {
+            aliases[target].append(name);
+            return;
+        }
+        SavesGame game = parseGame(name, value);
+        if (!game.paths.isEmpty())
+            result.value.games.append(game);
+    });
+
+    ByteArrayBuffer buffer(yaml);
+    std::istream stream(&buffer);
     try {
-        root = YAML::Load(std::string(yaml.constData(), size_t(yaml.size())));
+        YAML::Parser parser(stream);
+        parser.HandleNextDocument(reader);
     } catch (const YAML::Exception &e) {
+        result.value.games.clear();
         result.warnings << QStringLiteral("not a manifest: %1").arg(QString::fromStdString(e.msg));
         return result;
     }
-    if (!root.IsMap()) {
+    if (reader.rootKind() != Node::Map) {
         result.warnings << QStringLiteral("not a manifest: the top level is not a list of games");
         return result;
     }
-
-    QHash<QString, QStringList> aliases;
-    int skipped = 0;
-    for (auto it = root.begin(); it != root.end(); ++it) {
-        try {
-            const QString name = text(it->first);
-            if (name.isEmpty() || !it->second.IsMap())
-                continue;
-            const QString target = text(child(it->second, "alias"));
-            if (!target.isEmpty()) {
-                aliases[target].append(name);
-                continue;
-            }
-            SavesGame game = parseGame(name, it->second);
-            if (!game.paths.isEmpty())
-                result.value.games.append(game);
-        } catch (const YAML::Exception &) {
-            ++skipped;
-        }
-    }
-    if (skipped > 0)
-        result.warnings << QStringLiteral("%1 games in the manifest could not be read").arg(skipped);
 
     for (SavesGame &game : result.value.games)
         game.aliases = aliases.value(game.name);
