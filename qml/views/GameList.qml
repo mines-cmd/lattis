@@ -660,7 +660,7 @@ Rectangle {
 
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
-                    x: 11
+                    x: Theme.layout.spacing + Theme.layout.spacingSmall
                     size: Theme.search.iconSize
                     path: Icons.search
                     color: Theme.search.icon
@@ -670,7 +670,7 @@ Rectangle {
                     visible: search.text.length > 0
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
-                    anchors.rightMargin: 11
+                    anchors.rightMargin: Theme.layout.spacing + Theme.layout.spacingSmall
                     size: Theme.search.iconSize
                     path: Icons.close
                     color: searchClearMouse.containsMouse ? Theme.palette.text : Theme.search.icon

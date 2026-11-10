@@ -1,2 +1,1 @@
 # rule  file-or-setting  count; written by tools/ui-lint.py --update, only ever lower these
-spacing qml/views/GameList.qml 1
