@@ -10,6 +10,8 @@ ColumnLayout {
     property var game: ({})
     property var items: []
     readonly property var shown: items.filter(i => i.kind === "screenshot" ? General.showScreenshots : General.showVideo)
+    readonly property var strip: General.mediaLimit > 0 ? shown.slice(0, General.mediaLimit) : shown
+    readonly property int hiddenCount: shown.length - strip.length
     readonly property bool hasClips: shown.some(i => i.kind === "clip")
     property bool limited: false
     property bool limitedNext: false
@@ -198,7 +200,7 @@ ColumnLayout {
                 spacing: Theme.media.thumbGap
 
                 Repeater {
-                    model: root.shown
+                    model: root.strip
 
                     MediaTile {
                         id: tile
@@ -209,6 +211,29 @@ ColumnLayout {
                         implicitHeight: Theme.media.thumbHeight
                         onClicked: root.mediaRequested(modelData, root.shown)
                         onMenuRequested: position => root.menuRequested(modelData, tile, position)
+                    }
+                }
+
+                Rectangle {
+                    visible: root.hiddenCount > 0
+                    width: Theme.media.thumbHeight * 16 / 9
+                    height: Theme.media.thumbHeight
+                    radius: Theme.media.thumbRadius
+                    color: more.containsMouse ? Theme.media.moreHoverBackground : Theme.media.moreBackground
+                    Behavior on color { enabled: Motion.fades; MotionColor {} }
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: qsTr("+%1 more").arg(root.hiddenCount)
+                        color: Theme.media.moreText
+                        font.pixelSize: Theme.media.moreFontSize
+                    }
+                    MouseArea {
+                        id: more
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.showAllRequested(root.game.id)
                     }
                 }
             }

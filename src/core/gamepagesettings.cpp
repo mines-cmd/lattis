@@ -159,7 +159,8 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     const qsizetype listKeys = known.size();
     known += {QStringLiteral("recent_period"), QStringLiteral("play_time_format"),
               QStringLiteral("chips_without_icon"), QStringLiteral("collapsed_sections"),
-              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("friends_groups")};
+              QStringLiteral("show_screenshots"), QStringLiteral("show_video"), QStringLiteral("friends_groups"),
+              QStringLiteral("media_limit")};
     // Before `panels`, the achievements panel had a switch; a false one still hides it when `panels` isn't set.
     known += QStringLiteral("show_achievements");
     bool achievementsHiddenByFlag = false;
@@ -217,6 +218,13 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
                 (key == QLatin1String("show_video") ? out.value.showVideo : out.value.showScreenshots) = b->get();
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
+        } else if (key == QLatin1String("media_limit")) {
+            const std::optional<int64_t> limit = node.value<int64_t>();
+            if (limit && *limit >= 0 && *limit <= 1000)
+                out.value.mediaLimit = int(*limit);
+            else
+                out.warnings.append(
+                    QStringLiteral("%1: media_limit must be a whole number from 0 to 1000").arg(section.where(node)));
         } else if (key == QLatin1String("show_achievements")) {
             if (const auto *b = node.as_boolean())
                 achievementsHiddenByFlag = !b->get();

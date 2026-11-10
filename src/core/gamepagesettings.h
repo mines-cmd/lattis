@@ -25,6 +25,7 @@ struct GamePageSettings
     QString playTimeFormat = QStringLiteral("hours");
     bool showScreenshots = true;
     bool showVideo = true;
+    int mediaLimit = 10;
     QStringList friendsGroups = friendsGroupNames();
 
     bool operator==(const GamePageSettings &) const = default;

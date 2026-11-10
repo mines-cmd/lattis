@@ -363,7 +363,8 @@ Item {
                 }
                 readonly property bool screenshotsShown: root.matches(qsTr("Show screenshots"))
                 readonly property bool videoShown: root.matches(qsTr("Show video"))
-                readonly property bool mediaShown: screenshotsShown || videoShown
+                readonly property bool limitShown: root.matches(qsTr("Thumbnails shown"))
+                readonly property bool mediaShown: screenshotsShown || videoShown || limitShown
                 SectionHeader { visible: content.mediaShown; text: qsTr("Media row") }
                 SectionNote { visible: content.mediaShown; text: qsTr("What the Media row shows.") }
                 SettingsCard {
@@ -385,6 +386,24 @@ Item {
                         SettingsSwitch {
                             checked: General.showVideo
                             onToggled: root.report(General.setShowVideo(checked))
+                        }
+                    }
+                    LabeledRow {
+                        visible: content.limitShown
+                        label: qsTr("Thumbnails shown")
+                        note: qsTr("The rest are a click away in the Gallery. 0 shows them all.")
+                        SettingsTextField {
+                            Layout.preferredWidth: Theme.settingsWindow.toolbarHeight + 12
+                            implicitHeight: Theme.controls.inputHeight
+                            horizontalAlignment: TextInput.AlignHCenter
+                            validator: IntValidator { bottom: 0; top: 1000 }
+                            text: General.mediaLimit
+                            onEditingFinished: {
+                                if (parseInt(text) !== General.mediaLimit) {
+                                    root.report(General.setMediaLimit(parseInt(text)))
+                                    text = Qt.binding(() => General.mediaLimit)
+                                }
+                            }
                         }
                     }
                 }

@@ -349,6 +349,20 @@ QString General::setShowVideo(bool on)
     return setMediaFlag(QStringLiteral("show_video"), on);
 }
 
+QString General::setMediaLimit(int limit)
+{
+    limit = std::clamp(limit, 0, 1000);
+    QString error;
+    if (limit == GamePageSettings{}.mediaLimit)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("media_limit"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("game_page"), QStringLiteral("media_limit"),
+                                  QString::number(limit), &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
 QString General::setFriendsGroup(const QString &name, bool on)
 {
     const QStringList choices = GamePageSettings::friendsGroupNames();
