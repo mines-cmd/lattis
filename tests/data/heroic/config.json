@@ -1,0 +1,7 @@
+{
+  "version": "v0",
+  "defaultSettings": {
+    "winePrefix": "/home/test/Games/Heroic/Prefixes/default",
+    "wineVersion": { "name": "Wine-GE-8", "type": "wine", "bin": "/home/test/wine/bin/wine" }
+  }
+}

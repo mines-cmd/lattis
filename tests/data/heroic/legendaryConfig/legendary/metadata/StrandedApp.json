@@ -1,0 +1,8 @@
+{
+  "app_name": "StrandedApp",
+  "metadata": {
+    "customAttributes": {
+      "CloudSaveFolder": { "type": "STRING", "value": "{AppData}/../LocalLow/Beam Team Games/Stranded Deep/" }
+    }
+  }
+}

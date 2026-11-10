@@ -1,0 +1,8 @@
+{
+  "app_name": "WineApp",
+  "metadata": {
+    "customAttributes": {
+      "CloudSaveFolder": { "type": "STRING", "value": "{UserDir}/My Games/Wine Game" }
+    }
+  }
+}

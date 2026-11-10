@@ -446,6 +446,10 @@ lattis_test(savesmanifest_test
             ../src/core/apppaths.h ../src/core/apppaths.cpp ../src/library/parsed.h
     LIBS Qt6::Network yaml-cpp::yaml-cpp
     DEFINES ${SAVES_FIXTURE})
+lattis_test(heroicsaves_test
+    SOURCES ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
+    LIBS Qt6::Core
+    DEFINES "HEROIC_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/heroic\"")
 lattis_test(savesfinder_test
     SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
             ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp

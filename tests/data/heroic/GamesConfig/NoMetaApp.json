@@ -1,0 +1,6 @@
+{
+  "NoMetaApp": {
+    "winePrefix": "/home/test/Games/Heroic/Prefixes/A Short Hike",
+    "wineVersion": { "name": "Proton-GE", "type": "proton" }
+  }
+}

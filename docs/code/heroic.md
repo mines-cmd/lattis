@@ -1,3 +1,4 @@
+| `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `expandCloudSaveFolder()` |
 # Heroic integration (`src/heroic/`)
 
 The `src/heroic/` folder finds Heroic Games Launcher and reads its Epic files into plain structs. It never writes to Heroic's files and has no UI or library code. What the library does with the result is in [library.md](library.md#games-from-heroic), and launching is in [launch.md](launch.md#epic-games).
@@ -25,6 +26,12 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 `HeroicState::games()` joins the two lists, with `installed.json` deciding what's installed, as the cache only changes on a refresh. `watchPaths()` is what `LibraryStore` watches: all three files. `lastPlayed()` reads one game's date for a running session. `cachedImage()` finds an image in `images-cache/`, where Heroic names a copy by the SHA-256 of its URL plus its resize parameters.
 
 `HeroicListing` is the part of a scan the disk cache keeps. It's keyed by game id and holds no art URLs, so the first frame doesn't read them.
+
+## Where a game keeps its saves
+
+`HeroicSaves::read(root, appName, systemUser)` reads three files and writes nothing. The Wine prefix is the game's own `GamesConfig/<appName>.json` `winePrefix`, else `config.json`'s `defaultSettings.winePrefix` (a prefix can be shared by many games; a Proton prefix's `pfx` links back to the folder itself, so `drive_c` is directly in it). The Wine user is `steamuser` when the game's `wineVersion.type` (else the default's) is `proton`, and `systemUser` otherwise; a prefix can hold both folders, so the type decides, not what exists. Epic's save folder is `CloudSaveFolder` in Legendary's `metadata/<appName>.json`, returned as written. A file that isn't JSON adds a warning and counts as empty.
+
+`expandCloudSaveFolder()` fills `{AppData}` (`AppData/Local`), `{UserDir}` (`Documents`), `{UserSavedGames}`, `{InstallDir}` and `{EpicID}` (`*`, a glob) and cleans the `..` out. It returns nothing when a variable can't be resolved (one under the prefix with no prefix, or an unknown one).
 
 ## Files
 

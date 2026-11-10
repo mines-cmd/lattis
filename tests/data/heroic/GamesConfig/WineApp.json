@@ -1,0 +1,8 @@
+{
+  "WineApp": {
+    "winePrefix": "~/Games/Heroic/Prefixes/Wine Game",
+    "wineVersion": { "name": "Wine-GE-8", "type": "wine", "bin": "/home/test/wine/bin/wine" }
+  },
+  "version": "v0",
+  "explicit": true
+}

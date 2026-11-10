@@ -1,0 +1,8 @@
+{
+  "app_name": "SharedApp",
+  "metadata": {
+    "customAttributes": {
+      "CloudSaveFolder": { "type": "STRING", "value": "{AppData}/Shared Game/{EpicID}" }
+    }
+  }
+}
