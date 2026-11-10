@@ -105,6 +105,7 @@ GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_p
         {QStringLiteral("matched"), found.matched},
         {QStringLiteral("match"), matchName(found.match)},
         {QStringLiteral("paths"), paths},
+        {QStringLiteral("cloudSync"), found.cloudSync},
         {QStringLiteral("fallback"), fallback},
         {QStringLiteral("backups"), backups},
         {QStringLiteral("folder"), BackupPlan::tilde(input.options.folder + u'/' + id, home)},

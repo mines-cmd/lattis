@@ -11,6 +11,10 @@ struct HeroicSavesInfo
     QString wineUser;
     // Epic's CloudSaveFolder as Legendary has it, variables unexpanded; empty when its metadata has none.
     QString cloudSaveFolder;
+    // Heroic's autoSyncSaves for the game (its own setting over the default): it may download Epic's copy on launch.
+    bool autoSync = false;
+    // installed.json says the game is a native Linux build: no prefix.
+    bool native = false;
     QStringList warnings;
 
     bool operator==(const HeroicSavesInfo &) const = default;

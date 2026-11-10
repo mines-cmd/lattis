@@ -108,6 +108,7 @@ set(LIBRARY_SOURCES
 set(BACKUP_SOURCES
     ../src/saves/savesindex.h ../src/saves/savesindex.cpp
     ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+    ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
     ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
     ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
     ../src/core/apppaths.h ../src/core/apppaths.cpp
@@ -453,12 +454,14 @@ lattis_test(heroicsaves_test
 lattis_test(savesfinder_test
     SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
             ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+            ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
             ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h
     LIBS yaml-cpp::yaml-cpp
     DEFINES ${SAVES_FIXTURE})
 lattis_test(savesbackup_test
     SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
             ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+            ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
             ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
             ../src/saves/savesbackup.h ../src/saves/savesbackup.cpp
             ../src/library/searchtext.h ../src/library/searchtext.cpp ../src/library/parsed.h

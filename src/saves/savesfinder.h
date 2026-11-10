@@ -33,6 +33,10 @@ struct Query
     QString saveFolder; // the user's own paths, `~` allowed
     QStringList savePaths;
     QStringList storeFolders; // the store's own save folders, absolute globs already expanded; used instead of the manifest
+    // An Epic game run by Heroic: find() reads its prefix, user and Epic's folder from this root, where the
+    // worker thread is, and fills the three fields above.
+    QString heroicRoot;
+    QString heroicApp;
 };
 
 enum class Match { None, SteamId, Title, Chosen, Epic };
@@ -42,6 +46,7 @@ struct Found
     QString gameId; // the first copy's
     QString matched; // the manifest game's name
     Match match = Match::None;
+    bool cloudSync = false; // an Epic copy has Heroic's autoSyncSaves on
     QStringList paths; // existing, absolute, none inside another
 };
 

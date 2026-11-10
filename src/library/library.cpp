@@ -3901,7 +3901,8 @@ void Library::overview()
             && ((g.description.trimmed().isEmpty() && !marked.contains(QStringLiteral("description")))
                 || (g.year <= 0 && !marked.contains(QStringLiteral("year")))
                 || (g.rating < 0 && !marked.contains(QStringLiteral("rating"))));
-        if (!g.rom && (g.platform == kSteamPlatform || g.platform == kProtonPlatform || g.platform == kLinuxPlatform))
+        if (!g.rom && (g.platform == kSteamPlatform || g.platform == kEpicPlatform || g.platform == kProtonPlatform
+            || g.platform == kLinuxPlatform))
             o.backupKey = g.groupId.isEmpty() ? g.id : g.groupId;
         games.append(o);
     }

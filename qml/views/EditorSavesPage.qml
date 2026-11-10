@@ -9,14 +9,18 @@ ColumnLayout {
     required property var editor
     property alias autoBackupBox: autoBackupBox
     readonly property var savePaths: editor.saves.paths ?? []
-    readonly property bool matchShown: (editor.saves.matched ?? "") !== "" && !(editor.saves.fallback ?? false)
-    readonly property bool canChangeMatch: editor.saves.hasManifest ?? false
+    readonly property bool epicFolder: editor.saves.match === "epic"
+    readonly property bool matchShown: ((editor.saves.matched ?? "") !== "" || epicFolder)
+                                       && !(editor.saves.fallback ?? false)
+    // Epic's own folder is used instead of the manifest, so choosing a manifest game would change nothing.
+    readonly property bool canChangeMatch: (editor.saves.hasManifest ?? false) && !epicFolder
 
     function matchText() {
         switch (editor.saves.match) {
         case "steam": return qsTr("Found by its Steam ID")
         case "title": return qsTr("Found by its title")
         case "chosen": return qsTr("The game you chose")
+        case "epic": return qsTr("Epic's save folder")
         }
         return ""
     }
@@ -121,7 +125,7 @@ ColumnLayout {
             spacing: Theme.layout.spacing
 
             Label {
-                visible: page.matchShown
+                visible: page.matchShown && !page.epicFolder
                 Layout.maximumWidth: matchRow.width / 2
                 text: editor.saves.matched ?? ""
                 color: Theme.palette.text

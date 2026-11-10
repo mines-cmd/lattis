@@ -30,6 +30,13 @@ private slots:
         QCOMPARE(info.wineUser, QStringLiteral("steamuser"));
         QCOMPARE(info.cloudSaveFolder, QStringLiteral("{AppData}/../LocalLow/Beam Team Games/Stranded Deep/"));
         QVERIFY(info.warnings.isEmpty());
+        QVERIFY(info.autoSync);
+        QVERIFY(!info.native);
+    }
+
+    void autoSyncIsOffWhenNeitherTheGameNorTheDefaultsSetIt()
+    {
+        QVERIFY(!read(QStringLiteral("WineApp")).autoSync);
     }
 
     void wineUsesTheSystemUserAndExpandsATildePrefix()

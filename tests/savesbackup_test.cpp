@@ -1,5 +1,6 @@
 #include "savesbackup.h"
 #include "backuparchive.h"
+#include "savesmanifest.h"
 
 #include <QDir>
 #include <QFile>
@@ -110,6 +111,8 @@ private slots:
     void twoGamesOfOneEmulatorShareOneBackup();
 
     void aSessionEndMakesTheBackup();
+    void anEpicGameSessionEndBacksUpEpicsSaveFolder();
+    void aNativeEpicGameUsesTheManifestWithoutAPrefix();
     void aSessionShorterThanTheMinimumMakesNone();
     void waitsForTheGameAndItsManagersToClose();
     void aGameWithBackupOffMakesNone();
@@ -372,6 +375,59 @@ void SavesBackupTest::aSessionEndMakesTheBackup()
     service.ended("linux-celeste"); // a second end without a start makes nothing
     QTest::qWait(50);
     QCOMPARE(finished.size(), 1);
+}
+
+void SavesBackupTest::anEpicGameSessionEndBacksUpEpicsSaveFolder()
+{
+    const QString root = m_dir.filePath("heroic");
+    const QString prefix = m_dir.filePath("prefix");
+    write(root + "/GamesConfig/EpicApp.json",
+          QByteArray(R"({"EpicApp": {"winePrefix": ")") + prefix.toUtf8()
+              + R"(", "autoSyncSaves": true, "wineVersion": {"type": "proton"}}})");
+    write(root + "/legendaryConfig/legendary/metadata/EpicApp.json",
+          R"({"metadata": {"customAttributes": {"CloudSaveFolder": {"value": "{AppData}/../LocalLow/Studio/Game/"}}}})");
+    write(prefix + "/drive_c/users/steamuser/AppData/LocalLow/Studio/Game/slot.sav", "epic");
+    // The title also finds a manifest game, whose file must stay out of an Epic folder's backup.
+    saveSlot();
+
+    Input in = input();
+    in.gameId = in.copies[0].id = QStringLiteral("epic-celeste");
+    in.copies[0].heroicRoot = root;
+    in.copies[0].heroicApp = QStringLiteral("EpicApp");
+    Service service([&](const QString &) -> std::optional<Input> { return in; }, {}, [] { return 0; });
+    QSignalSpy finished(&service, &Service::finished);
+
+    service.started("epic-celeste");
+    service.ended("epic-celeste");
+    QVERIFY(finished.wait(10000));
+    const Result result = finished.first().first().value<Result>();
+    QCOMPARE(result.status, Status::Written);
+    QCOMPARE(result.files, 1);
+    QCOMPARE(backups(m_folder, "epic-celeste").size(), 1);
+
+    const SavesIndex none;
+    const SavesFinder::Found found = SavesFinder::find(SavesFinder::Matcher(none), in.copies, in.env);
+    QCOMPARE(found.match, SavesFinder::Match::Epic);
+    QVERIFY(found.cloudSync);
+}
+
+void SavesBackupTest::aNativeEpicGameUsesTheManifestWithoutAPrefix()
+{
+    const QString root = m_dir.filePath("heroic");
+    write(root + "/GamesConfig/NativeApp.json", R"({"NativeApp": {"winePrefix": "/nowhere"}})");
+    write(root + "/legendaryConfig/legendary/installed.json", R"({"NativeApp": {"platform": "Linux"}})");
+    write(root + "/legendaryConfig/legendary/metadata/NativeApp.json",
+          R"({"metadata": {"customAttributes": {"CloudSaveFolder": {"value": "{AppData}/Studio"}}}})");
+    saveSlot();
+
+    Input in = input();
+    in.copies[0].heroicRoot = root;
+    in.copies[0].heroicApp = QStringLiteral("NativeApp");
+    SavesIndex index = *SavesManifest::loadIndex(m_manifestDir);
+    const SavesFinder::Found found = SavesFinder::find(SavesFinder::Matcher(index), in.copies, in.env);
+    QCOMPARE(found.match, SavesFinder::Match::Title);
+    QCOMPARE(found.paths, QStringList{m_home + "/.local/share/Celeste/Saves"});
+    QVERIFY(!found.cloudSync);
 }
 
 void SavesBackupTest::aSessionShorterThanTheMinimumMakesNone()

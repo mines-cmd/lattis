@@ -1,5 +1,6 @@
 #include "savesfinder.h"
 
+#include "heroicsaves.h"
 #include "searchtext.h"
 
 #include <QDir>
@@ -224,6 +225,28 @@ QStringList withoutNested(QStringList paths)
     }
     return out;
 }
+
+// An Epic game's Wine prefix, user and Epic's folder, read here (not when the query is made) so the main
+// thread never opens Heroic's files.
+Query resolved(const Query &given, const Env &env, bool *cloudSync)
+{
+    if (given.heroicApp.isEmpty())
+        return given;
+    Query query = given;
+    const HeroicSavesInfo info = HeroicSaves::read(query.heroicRoot, query.heroicApp, env.user);
+    if (info.autoSync && cloudSync)
+        *cloudSync = true;
+    // A native build has no prefix and no Epic folder: its saves come from the manifest's Linux entries.
+    if (info.native)
+        return query;
+    query.prefix = info.prefix;
+    query.wineUser = info.wineUser;
+    if (const QString folder = HeroicSaves::expandCloudSaveFolder(info.cloudSaveFolder, info.prefix, info.wineUser,
+                                                                  query.baseDir);
+        !folder.isEmpty())
+        query.storeFolders = {folder};
+    return query;
+}
 }
 
 Env Env::system()
@@ -293,7 +316,8 @@ Found find(const Matcher &matcher, const QList<Query> &copies, const Env &env)
     found.gameId = copies.first().id;
 
     QStringList paths;
-    for (const Query &query : copies) {
+    for (const Query &given : copies) {
+        const Query query = resolved(given, env, &found.cloudSync);
         Match how = Match::None;
         const bool store = !query.storeFolders.isEmpty();
         const SavesGame *game = store ? nullptr : matcher.find(query, &how);

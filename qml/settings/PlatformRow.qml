@@ -37,7 +37,7 @@ ColumnLayout {
     }
 
     readonly property bool romBackup: (platform.emulators ?? []).length > 0
-    readonly property bool savesBackup: ["steam", "proton", "linux"].includes(platform.id) || romBackup
+    readonly property bool savesBackup: ["steam", "epic", "proton", "linux"].includes(platform.id) || romBackup
 
     function setAutoBackup(on) {
         let e = ""

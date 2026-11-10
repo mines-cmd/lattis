@@ -52,11 +52,24 @@ QString steamPrefix(const QStringList &libraries, int appId)
     return {};
 }
 
+bool usesManifest(const QString &platform)
+{
+    return platform == kSteamPlatform || platform == kProtonPlatform || platform == kLinuxPlatform
+           || platform == kEpicPlatform;
+}
+
 bool eligible(const Game &game)
 {
-    return !game.rom
-           && (game.platform == kSteamPlatform || game.platform == kProtonPlatform
-               || game.platform == kLinuxPlatform);
+    return !game.rom && usesManifest(game.platform);
+}
+
+QString heroicAppName(const LibrarySnapshot &snapshot, const QString &gameId)
+{
+    for (const HeroicEntry &entry : snapshot.content.heroic) {
+        if (entry.id == gameId)
+            return entry.appName;
+    }
+    return {};
 }
 
 QList<SavesFinder::Query> copiesOf(const Library &library, const LibrarySnapshot &snapshot, const QString &main)
@@ -83,6 +96,9 @@ QList<SavesFinder::Query> copiesOf(const Library &library, const LibrarySnapshot
                 query.prefix = prefix + QStringLiteral("/pfx");
         } else if (query.steamAppId > 0) {
             query.prefix = steamPrefix(snapshot.steam.libraries, query.steamAppId);
+        } else if (copy->platform == kEpicPlatform && snapshot.heroic.install.found()) {
+            query.heroicRoot = snapshot.heroic.install.root;
+            query.heroicApp = heroicAppName(snapshot, id);
         }
         out.append(query);
     }
@@ -108,9 +124,6 @@ bool anyOn(const Library &library)
 {
     const LibraryContent &content = library.store().snapshot().content;
     // Emulator backups need no manifest, so only the other games' choices count.
-    const auto usesManifest = [](const QString &platform) {
-        return platform == kSteamPlatform || platform == kProtonPlatform || platform == kLinuxPlatform;
-    };
     for (const Platform &platform : content.platforms) {
         if (platform.autoBackup && usesManifest(platform.id))
             return true;
@@ -131,8 +144,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
                               const QString &appVersion, bool ignoreChoice)
 {
     const Game *game = library.game(gameId);
-    if (!game || (!game->rom && game->platform != kSteamPlatform && game->platform != kProtonPlatform
-                  && game->platform != kLinuxPlatform))
+    if (!game || (!game->rom && !usesManifest(game->platform)))
         return std::nullopt;
     const LibraryStore &store = library.store();
     const LibrarySnapshot &snapshot = store.snapshot();

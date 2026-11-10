@@ -57,6 +57,16 @@ HeroicSavesInfo read(const QString &root, const QString &appName, const QString 
     QString type = wineType(own);
     if (type.isEmpty())
         type = wineType(defaults);
+    const QJsonValue sync = own.contains(QLatin1String("autoSyncSaves")) ? own.value(QLatin1String("autoSyncSaves"))
+                                                                         : defaults.value(QLatin1String("autoSyncSaves"));
+    info.autoSync = sync.toBool();
+    info.native = readObject(root + QStringLiteral("/legendaryConfig/legendary/installed.json"), info.warnings)
+                      .value(appName)
+                      .toObject()
+                      .value(QLatin1String("platform"))
+                      .toString()
+                      .compare(QLatin1String("linux"), Qt::CaseInsensitive)
+                  == 0;
     info.wineUser = type == QLatin1String("proton") ? QStringLiteral("steamuser") : systemUser;
 
     const QString metadataPath = root + QStringLiteral("/legendaryConfig/legendary/metadata/") + appName

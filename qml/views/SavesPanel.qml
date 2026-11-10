@@ -69,6 +69,7 @@ ColumnLayout {
             color: Theme.gameEditor.hintColor
             font.pixelSize: Theme.gameEditor.hintFontSize
             text: root.emulator !== "" ? qsTr("%1 hasn't made any saves on this computer yet.").arg(root.emulator)
+                : root.saves.match === "epic" ? qsTr("Epic's save folder for this game doesn't exist on this computer yet. Choose its save folder to back up another one.")
                 : root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
                 : qsTr("Pick this game from the Ludusavi list, or choose its save folder.")
         }
@@ -261,6 +262,14 @@ ColumnLayout {
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
                             text: qsTr("They're moved aside next to where they are first.")
+                            color: Theme.gameEditor.hintColor
+                            font.pixelSize: Theme.gameEditor.hintFontSize
+                        }
+                        Label {
+                            visible: root.saves.cloudSync ?? false
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: qsTr("Heroic syncs this game's saves with Epic; turn sync off in Heroic first or it may overwrite this.")
                             color: Theme.gameEditor.hintColor
                             font.pixelSize: Theme.gameEditor.hintFontSize
                         }

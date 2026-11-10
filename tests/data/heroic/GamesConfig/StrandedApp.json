@@ -1,6 +1,7 @@
 {
   "StrandedApp": {
     "winePrefix": "/home/test/Games/Heroic/Prefixes/Stranded Deep",
+    "autoSyncSaves": true,
     "wineVersion": { "name": "Proton-GE", "type": "proton", "bin": "/home/test/proton/proton" }
   },
   "version": "v0",
