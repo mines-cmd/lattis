@@ -18,6 +18,7 @@
 #include <QHash>
 #include <QList>
 #include <QSet>
+#include <QSharedPointer>
 #include <QStringList>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
@@ -26,6 +27,7 @@
 #include <functional>
 #include <optional>
 
+struct MediaFavoriteState;
 class VideoThumbnailMaker;
 class QJSEngine;
 class QQmlEngine;
@@ -233,6 +235,7 @@ public:
     Q_INVOKABLE void allMedia();
     Q_INVOKABLE QVariantMap mediaGames(const QStringList &ids) const;
     Q_INVOKABLE QString mediaKey(const QString &id) const;
+    Q_INVOKABLE void setMediaFavorite(const QString &path, bool on);
     Q_INVOKABLE void achievements(const QString &id);
     // Looks up how many percent of all players unlocked each achievement of an app, by API name; never called back
     // when the lookup fails.
@@ -436,6 +439,7 @@ signals:
     void mediaLimited(const QString &id);
     void videoThumbnailReady(const QString &file, const QString &thumbnail, const QString &length);
     void allMediaReady(const QVariantList &batch, bool done);
+    void mediaFavoriteChanged(const QString &path, bool on);
     void achievementsReady(const QString &id, const QVariantList &achievements);
     void clipPrepared(const QString &token, const QString &path, const QString &error);
     void historyChanged(const QStringList &ids);
@@ -446,6 +450,7 @@ signals:
 private:
     RarityFetcher m_rarityFetcher;
     void requestVideoThumbnails(const QVariantList &items);
+    QSharedPointer<MediaFavoriteState> mediaFavoriteState();
     static QString gameFileOf(const QString &id);
     QString editGames(const QStringList &ids, const QString &text, const std::function<QString(const QString &)> &change);
     quint64 commitUndo(const QString &text);
@@ -609,6 +614,7 @@ private:
     QString m_restoreCollection;
     bool m_tagsOpen = true;
     int m_allMediaGeneration = 0;
+    QSharedPointer<MediaFavoriteState> m_mediaFavorites;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;
     bool m_showSortValue = true;
     int m_notInstalledHidden = 0;

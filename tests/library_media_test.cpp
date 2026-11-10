@@ -1,5 +1,6 @@
 #include "librarytestbase.h"
 
+#include "mediafavorites.h"
 #include "mediafolders.h"
 
 #include <QSignalSpy>
@@ -22,6 +23,7 @@ private slots:
     void aHugeFolderIsLimited();
     void videoThumbnailsArriveAfterTheList();
     void allMediaIncludesOwnFolders();
+    void favoritesMarkItemsAndSurviveARestart();
 
 private:
     struct Result
@@ -351,6 +353,55 @@ void LibraryMediaTest::allMediaIncludesOwnFolders()
         kinds.sort();
     QCOMPARE(perGame.value(u"linux-supertuxkart"_s), (QStringList{u"screenshot"_s, u"video"_s}));
     QCOMPARE(perGame.value(u"steam-1145360"_s), (QStringList{u"screenshot"_s})); // Steam's, once
+}
+
+void LibraryMediaTest::favoritesMarkItemsAndSurviveARestart()
+{
+    const HomeGuard home(m_installs.home);
+    const QString shots = m_data + QStringLiteral("/steam/userdata/39734273/760/remote/1145360/screenshots/");
+    touch(shots + QStringLiteral("20260301120000_1.jpg"));
+    touch(shots + QStringLiteral("20260302120000_1.jpg"));
+    const QString id = QStringLiteral("steam-1145360");
+    const QString favoritesFile = m_data + QStringLiteral("/library/media.toml");
+
+    QString marked;
+    {
+        auto library = openLibrary();
+        QVariantList items = media(*library, id);
+        QVERIFY(items.size() >= 2);
+        for (const QVariant &v : std::as_const(items)) {
+            QVERIFY(!v.toMap().value("path").toString().isEmpty());
+            QVERIFY(!v.toMap().value("favorite").toBool());
+        }
+        marked = items.first().toMap().value("path").toString();
+
+        QSignalSpy changed(library.get(), &Library::mediaFavoriteChanged);
+        library->setMediaFavorite(marked, true);
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.first().at(0).toString(), marked);
+        QCOMPARE(changed.first().at(1).toBool(), true);
+        library->setMediaFavorite(marked, true);
+        QCOMPARE(changed.count(), 1);
+        QTRY_VERIFY(QFileInfo::exists(favoritesFile));
+
+        int favorites = 0;
+        items = media(*library, id);
+        for (const QVariant &v : std::as_const(items))
+            favorites += v.toMap().value("favorite").toBool();
+        QCOMPARE(favorites, 1);
+
+        favorites = 0;
+        for (const QVariant &v : collect(*library).items)
+            favorites += v.toMap().value("favorite").toBool();
+        QCOMPARE(favorites, 1);
+    }
+
+    auto library = openLibrary();
+    for (const QVariant &v : media(*library, id))
+        QCOMPARE(v.toMap().value("favorite").toBool(), v.toMap().value("path").toString() == marked);
+
+    library->setMediaFavorite(marked, false);
+    QTRY_VERIFY(MediaFavorites::read(favoritesFile, QDir::homePath()).isEmpty());
 }
 
 QTEST_MAIN(LibraryMediaTest)

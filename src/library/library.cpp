@@ -8,6 +8,7 @@
 #include "launchcommand.h"
 #include "libraryoverview.h"
 #include "managericon.h"
+#include "mediafavorites.h"
 #include "mediafolders.h"
 #include "romfoldermatch.h"
 #include "romscan.h"
@@ -35,6 +36,7 @@
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QUrl>
+#include <QMutex>
 #include <QtConcurrent>
 
 #include <algorithm>
@@ -3133,11 +3135,46 @@ QVariantMap Library::pageHistory(const QString &id)
     return {{QStringLiteral("pending"), true}};
 }
 
+struct MediaFavoriteState
+{
+    QMutex mutex;
+    bool loaded = false;
+    QSet<QString> set;
+    QString file;
+    QString home;
+
+    // Read on first use, on whichever media worker asks first.
+    QSet<QString> snapshot()
+    {
+        const QMutexLocker lock(&mutex);
+        load();
+        return set;
+    }
+
+    void load() // with the mutex held
+    {
+        if (!loaded) {
+            set = MediaFavorites::read(file, home);
+            loaded = true;
+        }
+    }
+};
+
 namespace {
+void markFavorites(QVariantList &items, const QSet<QString> &favorites)
+{
+    for (QVariant &v : items) {
+        QVariantMap item = v.toMap();
+        item.insert(QStringLiteral("favorite"), favorites.contains(item.value(QStringLiteral("path")).toString()));
+        v = item;
+    }
+}
+
 QVariantMap clipItem(const SteamMedia::Clip &c, const QString &gameId = {})
 {
     QVariantMap item{{QStringLiteral("kind"), QStringLiteral("clip")},
                      {QStringLiteral("id"), c.id},
+                     {QStringLiteral("path"), c.folder},
                      {QStringLiteral("folder"), c.folder},
                      {QStringLiteral("videoDir"), c.videoDir},
                      {QStringLiteral("thumbnail"),
@@ -3190,6 +3227,7 @@ QVariantMap screenshotItem(const QString &id, const QString &path, const QDateTi
     const QString cached = screenshotThumbnailPath(path);
     QVariantMap item{{QStringLiteral("kind"), QStringLiteral("screenshot")},
                      {QStringLiteral("id"), id},
+                     {QStringLiteral("path"), path},
                      {QStringLiteral("folder"), QFileInfo(path).absolutePath()},
                      {QStringLiteral("thumbnail"), QFileInfo::exists(cached) ? QUrl::fromLocalFile(cached).toString() : url},
                      {QStringLiteral("image"), url},
@@ -3203,6 +3241,7 @@ QVariantMap videoItem(const MediaFolders::File &f, const VideoThumbnails::Cached
 {
     QVariantMap item{{QStringLiteral("kind"), QStringLiteral("video")},
                      {QStringLiteral("id"), f.path},
+                     {QStringLiteral("path"), f.path},
                      {QStringLiteral("folder"), f.folder},
                      {QStringLiteral("file"), QUrl::fromLocalFile(f.path).toString()},
                      {QStringLiteral("thumbnail"),
@@ -3364,7 +3403,7 @@ void Library::media(const QString &id)
         emit mediaReady(id, result.items);
         watcher->deleteLater();
     });
-    watcher->setFuture(QtConcurrent::run([jobs = std::move(jobs)] {
+    watcher->setFuture(QtConcurrent::run([jobs = std::move(jobs), favorites = mediaFavoriteState()] {
         Result merged;
         QSet<QString> seen;
         for (const Job &job : jobs) {
@@ -3381,8 +3420,43 @@ void Library::media(const QString &id)
             return a.toMap().value(QStringLiteral("time")).toDateTime()
                    > b.toMap().value(QStringLiteral("time")).toDateTime();
         });
+        markFavorites(merged.items, favorites->snapshot());
         return merged;
     }));
+}
+
+QSharedPointer<MediaFavoriteState> Library::mediaFavoriteState()
+{
+    if (!m_mediaFavorites) {
+        m_mediaFavorites = QSharedPointer<MediaFavoriteState>::create();
+        m_mediaFavorites->file = m_store.dataDir() + QStringLiteral("/library/media.toml");
+        m_mediaFavorites->home = QDir::homePath();
+    }
+    return m_mediaFavorites;
+}
+
+void Library::setMediaFavorite(const QString &path, bool on)
+{
+    if (path.isEmpty())
+        return;
+    const QSharedPointer<MediaFavoriteState> state = mediaFavoriteState();
+    {
+        const QMutexLocker lock(&state->mutex);
+        state->load();
+        if (state->set.contains(path) == on)
+            return;
+        if (on)
+            state->set.insert(path);
+        else
+            state->set.remove(path);
+    }
+    emit mediaFavoriteChanged(path, on);
+    // Each write takes the set as it is then, so writes that run out of order still end on the latest one.
+    QThreadPool::globalInstance()->start([state] {
+        const QMutexLocker lock(&state->mutex);
+        if (!MediaFavorites::write(state->file, state->set, state->home))
+            qCWarning(lcLibrary).noquote() << QStringLiteral("could not write %1").arg(state->file);
+    });
 }
 
 QString Library::mediaKey(const QString &id) const
@@ -3471,8 +3545,9 @@ void Library::allMedia()
     }
     const auto seen = QSharedPointer<QSet<QString>>::create();
     const auto missing = QSharedPointer<QList<std::pair<QDateTime, QString>>>::create();
-    const auto deliver = [self = QPointer<Library>(this), generation, keys, seen,
-                          missing](QVariantList batch, bool done, QStringList limited = {}) {
+    const auto deliver = [self = QPointer<Library>(this), generation, keys, seen, missing,
+                          favorites = mediaFavoriteState()](QVariantList batch, bool done, QStringList limited = {}) {
+        markFavorites(batch, favorites->snapshot());
         for (const QVariant &v : std::as_const(batch)) {
             const QVariantMap item = v.toMap();
             if (item.value(QStringLiteral("kind")) == QLatin1String("screenshot")

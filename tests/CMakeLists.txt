@@ -89,6 +89,7 @@ set(LIBRARY_SOURCES
     ../src/library/libraryoverview.h ../src/library/libraryoverview.cpp
     ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
     ../src/library/mediafolders.h ../src/library/mediafolders.cpp
+    ../src/library/mediafavorites.h ../src/library/mediafavorites.cpp
     ../src/library/videothumbnails.h ../src/library/videothumbnails.cpp
     ../src/library/artimage.h ../src/library/artimage.cpp
     ../src/library/herocache.h ../src/library/herocache.cpp
@@ -278,6 +279,9 @@ lattis_test(mediafolders_test
     SOURCES ../src/library/mediafolders.h ../src/library/mediafolders.cpp ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus
     DEFINES ${MEDIA_HOME})
+lattis_test(mediafavorites_test
+    SOURCES ../src/library/mediafavorites.h ../src/library/mediafavorites.cpp ${LIBRARY_FILE_SOURCES}
+    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
 lattis_test(videothumbnails_test OFFSCREEN
     SOURCES ../src/library/videothumbnails.h ../src/library/videothumbnails.cpp
     LIBS Qt6::Gui Qt6::Multimedia

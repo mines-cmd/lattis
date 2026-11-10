@@ -393,6 +393,7 @@ qt_add_qml_module(lattis
         src/library/emulators.h src/library/emulators.cpp
         src/library/emulatorscreenshots.h src/library/emulatorscreenshots.cpp
         src/library/mediafolders.h src/library/mediafolders.cpp
+        src/library/mediafavorites.h src/library/mediafavorites.cpp
         src/library/videothumbnails.h src/library/videothumbnails.cpp
         src/install/releasesource.h src/install/releasesource.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
