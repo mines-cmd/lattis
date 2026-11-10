@@ -741,9 +741,9 @@ void InstallTest::recordRoundTrip()
     QVERIFY(InstallRecords::read(path).value.isEmpty());
 
     InstallRecords::Records records;
-    records.insert("mgba", {"appimage", "/home/x/Applications/mGBA-0.10.5.appimage", "0.10.5", "", "12",
+    records.insert("mgba", {"appimage", "/home/x/Applications/mGBA-0.10.5.appimage", "0.10.5", false, "", "12",
                             "2026-09-01T10:02:00Z", "2026-10-22"});
-    records.insert("cemu", {"appimage", "/home/x/Applications/Cemu \"2.6\".AppImage", "v2.6", "abc", "3", "", "2026-10-21"});
+    records.insert("cemu", {"appimage", "/home/x/Applications/Cemu \"2.6\".AppImage", "v2.6", false, "abc", "3", "", "2026-10-21"});
     QString error;
     QVERIFY2(InstallRecords::write(path, records, &error), qPrintable(error));
     const auto back = InstallRecords::read(path);
