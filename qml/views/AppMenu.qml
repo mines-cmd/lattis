@@ -59,7 +59,7 @@ SettingsMenu {
               ? (updates.length === 1 ? qsTr("Updating %1").arg(updates[0].name) : qsTr("Updating emulators"))
             : waiting.length === 1 ? qsTr("Update %1 to %2").arg(waiting[0].name).arg(waiting[0].version)
             : qsTr("Update %1 emulators").arg(waiting.length)
-        onTriggered: waiting.forEach(u => Installer.update(u.id))
+        onTriggered: Qt.callLater(() => root.chosen("update_emulators"))
     }
     SettingsMenuSeparator { visible: AppUpdate.notify || Installer.updates.length > 0 }
     Instantiator {

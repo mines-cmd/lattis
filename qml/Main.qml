@@ -748,6 +748,14 @@ ApplicationWindow {
             aboutDialog.item.open()
             break
         case "update_app": openUpdate(); break
+        case "update_emulators": {
+            const waiting = Installer.updates.filter(u => u.state === "idle" || u.state === "failed")
+            waiting.forEach(u => Installer.update(u.id))
+            if (waiting.length > 0)
+                toast.show(waiting.length === 1 ? qsTr("Downloading %1 %2…").arg(waiting[0].name).arg(waiting[0].version)
+                                                : qsTr("Downloading %1 emulator updates…").arg(waiting.length))
+            break
+        }
         case "whats_new": openWhatsNew(); break
         case "open_data_folder": {
             const error = GameRunner.openDataFolder()
