@@ -85,7 +85,7 @@ Surface {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 12
+        spacing: Theme.layout.spacing
 
         Label {
             id: label

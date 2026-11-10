@@ -80,7 +80,7 @@ Surface {
     RowLayout {
         id: row
         anchors.centerIn: parent
-        spacing: 10
+        spacing: Theme.layout.spacing
 
         Icon {
             visible: Theme.statChip.showIcons && root.icon !== ""

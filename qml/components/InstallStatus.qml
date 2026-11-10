@@ -23,7 +23,7 @@ RowLayout {
         return ""
     }
 
-    spacing: 8
+    spacing: Theme.layout.spacing
 
     InstallProgress {
         Layout.preferredWidth: Theme.settingsWindow.installMiniProgressWidth

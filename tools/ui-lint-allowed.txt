@@ -1,8 +1,5 @@
 # rule  file-or-setting  count; written by tools/ui-lint.py --update, only ever lower these
 spacing qml/Main.qml 1
-spacing qml/components/InstallStatus.qml 1
-spacing qml/components/StatChip.qml 1
-spacing qml/components/Toast.qml 1
 spacing qml/settings/AppearancePage.qml 3
 spacing qml/settings/CustomizePage.qml 13
 spacing qml/settings/EmulatorInstallTop.qml 5
