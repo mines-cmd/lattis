@@ -77,6 +77,9 @@ radius = 4
 [backdrop]
 area = "details"
 
+[stats]
+card_border_width = 0
+
 [window_controls]
 margin = 2
 radius = 4

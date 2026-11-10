@@ -16,7 +16,7 @@ CardFrame {
     implicitHeight: inner.implicitHeight + 2 * padding
     fill: framed ? Theme.stats.cardBackground : "transparent"
     fillEnd: framed ? Theme.stats.cardBackgroundEnd : "transparent"
-    border.width: framed ? Theme.layout.borderWidth : 0
+    border.width: framed ? Theme.stats.cardBorderWidth : 0
 
     Loader {
         anchors.fill: parent

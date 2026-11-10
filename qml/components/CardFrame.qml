@@ -7,5 +7,5 @@ Surface {
     fillEnd: Theme.stats.cardBackgroundEnd
     direction: Theme.layout.gradientDirection
     border.color: Theme.stats.cardBorder
-    border.width: Theme.layout.borderWidth
+    border.width: Theme.stats.cardBorderWidth
 }

@@ -52,7 +52,7 @@ MotionPopup {
     background: Rectangle {
         color: Theme.menu.popupBackground
         border.color: Theme.onboarding.cardBorder
-        border.width: 1
+        border.width: Theme.layout.borderWidth
         radius: Theme.onboarding.cardRadius
     }
 
