@@ -32,10 +32,7 @@ Rectangle {
         x: parent.width - width
         width: 420
         padding: 12
-        background: Rectangle {
-            color: Theme.controls.problemsBackground
-            radius: Theme.controls.inputRadius
-        }
+        background: PopoverBackground { fill: Theme.controls.problemsBackground }
         contentItem: ColumnLayout {
             spacing: 4
             Repeater {

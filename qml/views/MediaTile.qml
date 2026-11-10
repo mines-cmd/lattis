@@ -66,8 +66,8 @@ ArtThumb {
         gradient: Theme.media.thumbScrimStyle === "full" ? null : scrimGradient
         Gradient {
             id: scrimGradient
-            GradientStop { position: 0; color: scrim.fromTop ? Theme.media.thumbScrim : Qt.rgba(0, 0, 0, 0) }
-            GradientStop { position: 1; color: scrim.fromTop ? Qt.rgba(0, 0, 0, 0) : Theme.media.thumbScrim }
+            GradientStop { position: 0; color: scrim.fromTop ? Theme.media.thumbScrim : "transparent" }
+            GradientStop { position: 1; color: scrim.fromTop ? "transparent" : Theme.media.thumbScrim }
         }
     }
     Rectangle {

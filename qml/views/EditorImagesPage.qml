@@ -104,12 +104,8 @@ ColumnLayout {
                     onAboutToHide: flatten(true)
                     onClosed: flatten(false)
 
-                    background: Rectangle {
+                    background: PopoverBackground {
                         transform: Translate { y: mediaMenu.slide }
-                        radius: Theme.controls.inputRadius
-                        color: Theme.menu.popupBackground
-                        border.color: Theme.controls.inputBorder
-                        border.width: Math.max(1, Theme.controls.inputBorderWidth)
                     }
                     contentItem: ColumnLayout {
                         transform: Translate { y: mediaMenu.slide }

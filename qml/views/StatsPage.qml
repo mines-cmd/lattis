@@ -928,7 +928,7 @@ FocusScope {
                         radius: Theme.stats.barRadius * 2
                         color: Theme.tooltip.background
                         border.color: Theme.tooltip.border
-                        border.width: 1
+                        border.width: Theme.layout.hairlineWidth
 
                         ColumnLayout {
                             id: monthTipColumn
@@ -1490,7 +1490,7 @@ FocusScope {
                                     radius: Theme.stats.barRadius * 2
                                     color: Theme.tooltip.background
                                     border.color: Theme.tooltip.border
-                                    border.width: 1
+                                    border.width: Theme.layout.hairlineWidth
 
                                     ColumnLayout {
                                         id: tipColumn

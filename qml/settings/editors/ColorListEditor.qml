@@ -141,7 +141,7 @@ GridLayout {
         // Adds a copy of the last color, then opens the new swatch's picker: the picker stays
         // with its swatch while this button moves along to the next cell.
         onClicked: {
-            const last = root.value.length > 0 ? root.value[root.value.length - 1] : Qt.color("#808080")
+            const last = root.value.length > 0 ? root.value[root.value.length - 1] : Qt.color("#808080")  // ui-lint: allow a neutral gray start for a new entry is data, not styling
             root.commit(root.value.concat([last]))
             Qt.callLater(() => entries.itemAt(entries.count - 1)?.openPicker())
         }

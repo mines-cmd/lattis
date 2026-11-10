@@ -78,14 +78,14 @@ MotionPopup {
     component Marker: Rectangle {
         color: "transparent"
         border.color: Theme.colorPicker.markerOutline
-        border.width: 1
+        border.width: Theme.layout.hairlineWidth
         Rectangle {
             anchors.fill: parent
             anchors.margins: 1
             color: "transparent"
             radius: Math.max(0, parent.radius - 1)
             border.color: Theme.colorPicker.marker
-            border.width: 2
+            border.width: 2  // ui-lint: allow the marker's inner ring must stay visible on any picked color
         }
     }
 
@@ -118,7 +118,7 @@ MotionPopup {
         y: position * strip.height - height / 2
         width: strip.width + 6
         height: 7
-        radius: 2
+        radius: 2  // ui-lint: allow marker geometry on a 7 px strip handle, not a corner style
     }
 
     component StripArea: MouseArea {
@@ -150,15 +150,15 @@ MotionPopup {
                     anchors.fill: parent
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0; color: "#ffffffff" }
-                        GradientStop { position: 1; color: "#00ffffff" }
+                        GradientStop { position: 0; color: "#ffffffff" }  // ui-lint: allow the saturation/value masks are the picker's math, not styling
+                        GradientStop { position: 1; color: "#00ffffff" }  // ui-lint: allow the saturation/value masks are the picker's math, not styling
                     }
                 }
                 Rectangle {
                     anchors.fill: parent
                     gradient: Gradient {
-                        GradientStop { position: 0; color: "#00000000" }
-                        GradientStop { position: 1; color: "#ff000000" }
+                        GradientStop { position: 0; color: "#00000000" }  // ui-lint: allow the saturation/value masks are the picker's math, not styling
+                        GradientStop { position: 1; color: "#ff000000" }  // ui-lint: allow the saturation/value masks are the picker's math, not styling
                     }
                 }
                 MouseArea {
@@ -174,7 +174,7 @@ MotionPopup {
                 Marker {
                     x: root.sat * svSquare.width - width / 2
                     y: (1 - root.val) * svSquare.height - height / 2
-                    width: 12; height: 12; radius: 6
+                    width: 12; height: 12; radius: 6  // ui-lint: allow half of the 12 px marker: a circle
                 }
             }
 

@@ -254,7 +254,7 @@ Item {
                 anchors.fill: parent
                 radius: Theme.onboarding.welcomeArtRadius
                 color: "transparent"
-                border.width: 1
+                border.width: Theme.layout.hairlineWidth
                 border.color: Theme.onboarding.panelBorder
             }
         }

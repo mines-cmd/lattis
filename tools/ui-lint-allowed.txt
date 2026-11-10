@@ -1,15 +1,4 @@
 # rule  file-or-setting  count; written by tools/ui-lint.py --update, only ever lower these
-border-width qml/settings/editors/ColorPickerPopup.qml 2
-border-width qml/setup/SetupDone.qml 1
-border-width qml/setup/SetupWelcome.qml 1
-border-width qml/views/StatsPage.qml 2
-color qml/settings/editors/ColorListEditor.qml 1
-color qml/settings/editors/ColorPickerPopup.qml 4
-color qml/views/MediaTile.qml 2
-popup-background qml/settings/PlatformRow.qml 1
-popup-background qml/settings/ProblemsButton.qml 1
-popup-background qml/views/EditorImagesPage.qml 1
-radius qml/settings/editors/ColorPickerPopup.qml 2
 spacing qml/Main.qml 1
 spacing qml/components/InstallStatus.qml 1
 spacing qml/components/StatChip.qml 1

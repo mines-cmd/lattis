@@ -400,12 +400,7 @@ ColumnLayout {
                                 y: iconButton.height + 4
                                 x: iconButton.width - width
                                 padding: 6
-                                background: Rectangle {
-                                    radius: Theme.controls.inputRadius
-                                    color: Theme.menu.popupBackground
-                                    border.color: Theme.controls.inputBorder
-                                    border.width: Math.max(1, Theme.controls.inputBorderWidth)
-                                }
+                                background: PopoverBackground {}
 
                                 Grid {
                                     columns: 6

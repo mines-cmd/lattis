@@ -140,7 +140,7 @@ ColumnLayout {
                         fillEnd: Theme.onboarding.tileBackgroundEnd
                         direction: Theme.onboarding.gradientDirection
                         border.color: Theme.onboarding.panelBorder
-                        border.width: 1
+                        border.width: Theme.layout.hairlineWidth
 
                         ColumnLayout {
                             id: tile
