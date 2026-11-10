@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# Checks the QML and the theme defaults for the look rules: sizes, borders, radii, spacing and colors
+# come from the theme, and popups use the shared backgrounds. Existing breaks are counted in
+# ui-lint-allowed.txt; the check fails when a count grows, and when it shrinks so the list stays exact.
+# Usage: ui-lint.py [--update]   (from anywhere; paths are relative to the repo; ctest runs it as ui_lint)
+import re
+import sys
+from collections import Counter
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+ALLOWED = ROOT / "tools" / "ui-lint-allowed.txt"
+
+# Base components whose job is to draw a popup's background.
+BACKGROUND_OWNERS = {
+    "qml/components/AppDialog.qml",
+    "qml/components/MotionPopup.qml",
+    "qml/components/PopoverBackground.qml",
+    "qml/settings/SettingsComboBox.qml",
+    "qml/settings/SettingsMenu.qml",
+}
+POPUP_TYPES = {"Popup", "MotionPopup", "Dialog", "Drawer", "Menu"}
+
+NUMBER = r"(-?\d+(?:\.\d+)?)\s*$"
+STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
+OPEN = re.compile(r"(?:([\w.]+)\s*:\s*)?([A-Za-z_][\w.]*)?\s*$")
+
+RULES = {
+    "popup-background": "a popup draws its own background; use the shared dialog or popover one",
+    "border-width": "literal border width; use layout.border_width or a theme setting",
+    "font-size": "literal font size; use a type step (@font.*) through a theme setting",
+    "radius": "literal radius above 1; use a [radius] tier through a theme setting",
+    "spacing": "literal spacing, margin or padding above 2; use layout.spacing or a theme setting",
+    "color": "literal color; use Theme.*",
+    "schema-type": "text size default doesn't end at a type step in [font]",
+    "schema-border": "border width default doesn't end at layout.border_width or 0",
+    "schema-radius": "radius default doesn't end at a [radius] tier, 0 or 1",
+}
+
+
+def code_of(line):
+    line = STRING.sub('""', line)
+    cut = line.find("//")
+    return line if cut < 0 else line[:cut]
+
+
+def lint_qml(path, rel, hits):
+    stack = []  # (property, type) for each open brace
+    in_comment = False
+    for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if in_comment:
+            end = raw.find("*/")
+            if end < 0:
+                continue
+            raw, in_comment = raw[end + 2:], False
+        raw = re.sub(r"/\*.*?\*/", "", raw)
+        if "/*" in raw:
+            raw, in_comment = raw[:raw.find("/*")], True
+
+        def hit(rule):
+            hits.append((rule, rel, number, raw.strip()))
+
+        if re.search(r'"#[0-9a-fA-F]{3,8}"|\bQt\.(rgba|hsla|hsva)\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+', raw):
+            hit("color")
+        for part in re.split(r"([{};])", code_of(raw)):
+            if part == "}":
+                if stack:
+                    stack.pop()
+            elif part == "{":
+                opener = OPEN.search(previous)
+                name, kind = (opener.group(1), opener.group(2)) if opener else (None, None)
+                if kind and not kind[0].isupper() and kind not in ("border", "font", "anchors"):
+                    kind = None
+                if (name == "background" and kind in ("Rectangle", "Item") and stack
+                        and stack[-1][1] in POPUP_TYPES and rel not in BACKGROUND_OWNERS):
+                    hit("popup-background")
+                stack.append((name, kind))
+            elif part != ";":
+                check_property(part, stack[-1][1] if stack else None, hit)
+            previous = part
+
+
+def check_property(statement, group, hit):
+    prop = re.match(r"\s*([\w.]+)\s*:\s*" + NUMBER, statement)
+    if not prop:
+        return
+    name, value = prop.group(1), float(prop.group(2))
+    if group in ("border", "font"):
+        name = group + "." + name
+    leaf = name.split(".")[-1].lower()
+    if name == "border.width" and value != 0:
+        hit("border-width")
+    elif name in ("font.pixelSize", "font.pointSize"):
+        hit("font-size")
+    elif leaf == "radius" and value > 1:
+        hit("radius")
+    elif leaf.endswith(("spacing", "margin", "margins", "padding")) and value > 2:
+        hit("spacing")
+
+
+def lint_schema(hits):
+    source = (ROOT / "src" / "theme" / "themeschema.cpp").read_text(encoding="utf-8")
+    defaults = {}
+    for m in re.finditer(r'\binteger(?:OnRelease)?\(\s*"(\w+)",\s*"(\w+)",\s*"([^"]*)"', source):
+        defaults[m.group(1) + "." + m.group(2)] = m.group(3)
+
+    def chain_end(key):
+        seen = set()
+        while defaults.get(key, "").startswith("@") and key not in seen:
+            seen.add(key)
+            key = defaults[key][1:]
+        return key
+
+    found = set()
+    for key in defaults:
+        section, name = key.split(".", 1)
+        end = chain_end(key)
+        value = defaults.get(end)
+        if section != "font" and re.search(r"(font|title|header|heading|label)_size$", name):
+            if not (end.startswith("font.") or end == "hero.title_max_font_size"):
+                found.add(("schema-type", end))
+        elif name.endswith("border_width"):
+            if end != "layout.border_width" and value != "0":
+                found.add(("schema-border", end))
+        elif name.endswith("radius") and section != "radius":
+            if not end.startswith("radius.") and value not in ("0", "1"):
+                found.add(("schema-radius", end))
+    for rule, key in found:
+        hits.append((rule, key, 0, key + " = " + defaults.get(key, "?")))
+
+
+def main():
+    update = "--update" in sys.argv
+
+    hits = []
+    for path in sorted((ROOT / "qml").rglob("*.qml")):
+        lint_qml(path, path.relative_to(ROOT).as_posix(), hits)
+    lint_schema(hits)
+    counts = Counter((rule, where) for rule, where, _, _ in hits)
+
+    if update:
+        lines = ["# rule  file-or-setting  count; written by tools/ui-lint.py --update, only ever lower these"]
+        lines += [f"{rule} {where} {n}" for (rule, where), n in sorted(counts.items())]
+        ALLOWED.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"ui-lint: wrote {len(counts)} entries to {ALLOWED.relative_to(ROOT)}")
+        return 0
+
+    allowed = Counter()
+    for line in ALLOWED.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            rule, where, n = line.split()
+            allowed[(rule, where)] = int(n)
+
+    errors = []
+    for (rule, where), n in sorted(counts.items()):
+        if n > allowed[(rule, where)]:
+            errors.append(f"{where}: {RULES[rule]} ({rule}, {n} found, {allowed[(rule, where)]} allowed)")
+            errors += [f"    {line}: {text}" for r, w, line, text in hits if (r, w) == (rule, where) and line]
+            errors += [f"    {text}" for r, w, line, text in hits if (r, w) == (rule, where) and not line]
+    fixed = [f"{where}: {rule} is down to {counts[(rule, where)]} from {n}"
+             for (rule, where), n in sorted(allowed.items()) if counts[(rule, where)] < n]
+    if fixed:
+        errors.append("Fewer breaks than allowed; run tools/ui-lint.py --update to lower the counts:")
+        errors += ["    " + line for line in fixed]
+    if errors:
+        print("ui-lint: the UI breaks the look rules", file=sys.stderr)
+        print("\n".join(errors), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

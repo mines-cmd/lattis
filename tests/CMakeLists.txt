@@ -508,3 +508,9 @@ if(PYTHON3)
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE)
     endforeach()
 endif()
+
+# The look rules for QML and the theme defaults.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(NAME ui_lint COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/../tools/ui-lint.py)
+endif()
