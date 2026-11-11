@@ -374,6 +374,7 @@ ColumnLayout {
 
     Flow {
         id: chipFlow
+        visible: root.showChips
         width: parent.width
         spacing: Theme.filters.chipSpacing
 
