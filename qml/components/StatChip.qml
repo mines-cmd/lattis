@@ -16,6 +16,16 @@ Surface {
     property bool clickable: false
     property bool leftAligned: false
     property real contentInset: Theme.statChip.padding
+    property bool valueFirst: false
+    property bool showIcon: Theme.statChip.showIcons
+    property int iconSize: Theme.statChip.iconSize
+    property int valueFontSize: Theme.font.size
+    property int labelFontSize: Theme.statChip.labelFontSize
+    property bool uppercaseLabels: Theme.statChip.uppercaseLabels
+    property color valueColor: Theme.statChip.valueColor
+    property color labelColor: Theme.statChip.labelColor
+    property color hoverValueColor: Theme.statChip.hoverValueColor
+    property color hoverLabelColor: Theme.statChip.hoverLabelColor
     readonly property real fitWidth: row.implicitWidth + 2 * contentInset
     property string tip
     // A rating shown as stars in the tooltip instead of tip; -1 for none.
@@ -87,29 +97,33 @@ Surface {
         spacing: Theme.layout.spacing
 
         Icon {
-            visible: Theme.statChip.showIcons && root.icon !== ""
+            visible: root.showIcon && root.icon !== ""
             path: root.icon
-            size: Theme.statChip.iconSize
+            size: root.iconSize
             color: root.attention ? (root.attentionColor ?? Theme.notice.icon)
                  : root.iconTint !== undefined ? root.iconTint
                  : root.lit ? Theme.statChip.hoverIconColor : Theme.statChip.iconColor
             Behavior on color { enabled: Motion.fades; MotionColor {} }
         }
 
-        ColumnLayout {
-            spacing: 1
+        GridLayout {
+            columns: 1
+            rowSpacing: 1
 
             Label {
-                text: Theme.statChip.uppercaseLabels ? root.label.toUpperCase() : root.label
-                color: root.lit ? Theme.statChip.hoverLabelColor : Theme.statChip.labelColor
+                Layout.row: root.valueFirst ? 1 : 0
+                text: root.uppercaseLabels ? root.label.toUpperCase() : root.label
+                color: root.lit ? root.hoverLabelColor : root.labelColor
                 Behavior on color { enabled: Motion.fades; MotionColor {} }
-                font.pixelSize: Theme.statChip.labelFontSize
-                font.letterSpacing: Theme.statChip.uppercaseLabels ? 1 : 0
+                font.pixelSize: root.labelFontSize
+                font.letterSpacing: root.uppercaseLabels ? 1 : 0
             }
             Label {
+                Layout.row: root.valueFirst ? 0 : 1
                 text: root.value
-                color: root.lit ? Theme.statChip.hoverValueColor : Theme.statChip.valueColor
+                color: root.lit ? root.hoverValueColor : root.valueColor
                 Behavior on color { enabled: Motion.fades; MotionColor {} }
+                font.pixelSize: root.valueFontSize
             }
         }
     }

@@ -255,23 +255,68 @@ Rectangle {
                         onTapped: point => root.openPageMenu("grid_chips", chipsHost, point.position)
                     }
 
+                    Surface {
+                        visible: chipGrid.strip
+                        anchors.fill: chipGrid
+                        radius: Theme.statChip.radius
+                        fill: Theme.grid.chipBackground
+                        fillOpacity: Theme.grid.cardOpacity
+                        border.color: Theme.grid.chipBorder
+                        border.width: Theme.grid.chipBorderWidth
+                    }
+
+                    Repeater {
+                        model: chipGrid.strip ? chipRepeater.count : 0
+
+                        Item {
+                            required property int index
+                            readonly property int column: index % chipGrid.columns
+                            readonly property int row: Math.floor(index / chipGrid.columns)
+                            readonly property real cellWidth: chipGrid.width / chipGrid.columns
+                            readonly property real inset: Theme.grid.stripPadding
+                            x: column * cellWidth
+                            y: row * Theme.statChip.height
+                            width: cellWidth
+                            height: Theme.statChip.height
+
+                            Rectangle {
+                                visible: parent.column > 0
+                                x: -width / 2
+                                y: parent.inset
+                                width: Theme.grid.stripDividerWidth
+                                height: parent.height - 2 * parent.inset
+                                color: Theme.grid.stripDivider
+                            }
+                            Rectangle {
+                                visible: parent.row > 0
+                                x: parent.inset
+                                y: -height / 2
+                                width: parent.width - 2 * parent.inset
+                                height: Theme.grid.stripDividerWidth
+                                color: Theme.grid.stripDivider
+                            }
+                        }
+                    }
+
                     GridLayout {
                         id: chipGrid
                         width: parent.width
+                        readonly property bool strip: Theme.grid.chipStyle === "strip"
                         columns: {
                             const n = chipRepeater.count
-                            const gap = Theme.grid.panelSpacing
+                            const gap = strip ? 0 : Theme.grid.panelSpacing
                             const fit = Math.floor((width + gap) / (widestChip + gap))
                             const most = Math.max(1, Math.min(3, fit))
                             // Spread over as few rows as the widest fit allows, then balance them: 4 chips go 2 + 2, not 3 + 1.
                             return Math.max(1, Math.ceil(n / Math.ceil(n / most)))
                         }
                         // Cards fill equal columns; bare chips keep their own width and share the space left between the columns.
-                        readonly property bool spread: !Theme.grid.chipCards
+                        readonly property bool spread: Theme.grid.chipStyle === "bare"
                         uniformCellWidths: !spread
-                        columnSpacing: spread && columns > 1 ? Math.max(Theme.grid.panelSpacing, (width - columnsWidth) / (columns - 1))
-                                                             : Theme.grid.panelSpacing
-                        rowSpacing: Theme.layout.spacing
+                        columnSpacing: strip ? 0
+                                     : spread && columns > 1 ? Math.max(Theme.grid.panelSpacing, (width - columnsWidth) / (columns - 1))
+                                     : Theme.grid.panelSpacing
+                        rowSpacing: strip ? 0 : Theme.layout.spacing
 
                         property real widestChip: 0
                         property var chipWidths: []
@@ -305,11 +350,12 @@ Rectangle {
                                 onFitWidthChanged: chipGrid.measureChips()
                                 required property string modelData
                                 name: modelData
-                                carded: Theme.grid.chipCards
+                                carded: Theme.grid.chipStyle === "cards"
+                                inStrip: chipGrid.strip
                                 fillOpacity: Theme.grid.cardOpacity
                                 leftAligned: true
                                 // Without a visible surface the padding reads as a misalignment with the buttons above.
-                                contentInset: border.width === 0 && fill.a === 0 && fillEnd.a === 0 ? 0 : Theme.statChip.padding
+                                contentInset: !inStrip && border.width === 0 && fill.a === 0 && fillEnd.a === 0 ? 0 : inStrip ? Theme.grid.stripPadding : Theme.statChip.padding
                                 Layout.fillWidth: !chipGrid.spread
                                 Layout.preferredWidth: chipGrid.spread ? fitWidth : 1
                                 fields: gameFields
