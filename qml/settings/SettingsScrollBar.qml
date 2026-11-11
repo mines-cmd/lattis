@@ -5,6 +5,8 @@ ScrollBar {
     id: root
 
     property int thickness: Theme.controls.scrollbarWidth
+    // Room a view leaves at its edge so the bar sits beside the content, not over it.
+    readonly property real reserve: thickness + Theme.layout.spacingSmall
     property bool trackless: false
     property color handleColor: Theme.controls.scrollbarHandle
     property color handleHoverColor: Theme.controls.scrollbarHandleHover

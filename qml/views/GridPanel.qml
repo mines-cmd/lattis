@@ -158,6 +158,7 @@ Rectangle {
             contentHeight: content.implicitHeight
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: SettingsScrollBar {
+                id: panelBar
                 thickness: Theme.gameEditor.bulkScrollbarWidth
                 trackless: true
                 handleColor: Theme.list.scrollbarHandle
@@ -166,7 +167,7 @@ Rectangle {
 
             ColumnLayout {
                 id: content
-                width: flick.width
+                width: flick.width - panelBar.reserve
                 spacing: Theme.grid.panelSpacing
 
                 Item {
