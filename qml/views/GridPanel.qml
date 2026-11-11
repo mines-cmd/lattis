@@ -228,7 +228,7 @@ Rectangle {
 
                     GridLayout {
                         id: chipGrid
-                        anchors.horizontalCenter: parent.horizontalCenter
+                        x: 0
                         width: Theme.grid.chipCards ? parent.width : implicitWidth
                         columns: 2
                         uniformCellWidths: Theme.grid.chipCards
