@@ -11,6 +11,9 @@ Item {
     property color background: Theme.palette.background
     property real strength: Theme.backdrop.opacity
     property real saturation: Theme.backdrop.saturation
+    property real heightFraction: Theme.backdrop.height
+    property real blurAmount: Theme.backdrop.blur
+    property real fadeStart: Theme.backdrop.fadeStart
     readonly property real dim: 1 - strength
 
     clip: true
@@ -90,8 +93,8 @@ Item {
                 source: art
                 visible: art.status === Image.Ready
                 autoPaddingEnabled: false
-                blurEnabled: Theme.backdrop.blur > 0
-                blur: Theme.backdrop.blur
+                blurEnabled: root.blurAmount > 0
+                blur: root.blurAmount
                 blurMax: Theme.backdrop.blurMax
                 saturation: root.saturation
             }
@@ -109,7 +112,7 @@ Item {
         const direction = Theme.palette.gradientDirection
         if (direction !== "down" && direction !== "up")
             return root.background
-        const t = direction === "down" ? Theme.backdrop.height : 1 - Theme.backdrop.height
+        const t = direction === "down" ? root.heightFraction : 1 - root.heightFraction
         const s = Theme.palette.background
         const e = Theme.palette.backgroundEnd
         return Qt.rgba(s.r + (e.r - s.r) * t, s.g + (e.g - s.g) * t, s.b + (e.b - s.b) * t, 1)
@@ -120,7 +123,7 @@ Item {
         property color background: root.background
         property color target: root.fadeTarget
         property real dim: root.dim
-        property real fadeStart: Theme.backdrop.fadeStart
+        property real fadeStart: root.fadeStart
         property real smoothFade: Theme.backdrop.fadeCurve === "smooth" ? 1 : 0
         property real dither: Theme.backdrop.dither
         fragmentShader: "qrc:/qt/qml/Launcher/qml/shaders/backdropfade.frag.qsb"

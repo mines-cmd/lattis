@@ -1090,11 +1090,17 @@ ApplicationWindow {
     }
 
     Backdrop {
-        visible: Theme.backdrop.enabled && !window.pageCovering
+        readonly property bool on: window.gridView ? Theme.grid.backdropEnabled : Theme.backdrop.enabled
+        visible: on && !window.pageCovering
         x: Theme.backdrop.area === "details" && !window.gridView ? listDetails.x : 0
         width: parent.width - x
-        height: parent.height * Theme.backdrop.height
-        game: !Theme.backdrop.enabled ? ({})
+        height: parent.height * heightFraction
+        heightFraction: window.gridView ? Theme.grid.backdropHeight : Theme.backdrop.height
+        strength: window.gridView ? Theme.grid.backdropOpacity : Theme.backdrop.opacity
+        saturation: window.gridView ? Theme.grid.backdropSaturation : Theme.backdrop.saturation
+        blurAmount: window.gridView ? Theme.grid.backdropBlur : Theme.backdrop.blur
+        fadeStart: window.gridView ? Theme.grid.backdropFadeStart : Theme.backdrop.fadeStart
+        game: !on ? ({})
             : window.gridView && !window.gamePageOpen ? window.gridHeroGame
             : (details?.shownHeroGame ?? ({}))
     }
