@@ -89,6 +89,7 @@ Rectangle {
         Item {
             id: logoBox
             Layout.fillWidth: true
+            Layout.topMargin: Theme.grid.panelLogoTopGap
             Layout.bottomMargin: Theme.grid.panelLogoGap
             Layout.preferredHeight: Math.max(Theme.grid.panelLogoMinHeight,
                                              hasLogo ? Math.min(Theme.grid.panelLogoHeight, width * aspect) : titleLabel.implicitHeight)
@@ -154,6 +155,7 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
+            Layout.bottomMargin: Theme.grid.panelButtonsGap
             spacing: Theme.grid.panelSpacing
 
             SettingsButton {
