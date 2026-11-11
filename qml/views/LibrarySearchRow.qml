@@ -10,6 +10,11 @@ ColumnLayout {
     property real reach: 0
     property real extraTop: 0
     property bool ready: false
+    property bool showChips: true
+    // Grid view: the open collection's banner sits in the button row, `inlineWidth` being the width
+    // the search box and the buttons keep.
+    property real inlineWidth: 0
+    readonly property bool bannerInline: inlineWidth > 0
     property alias field: search
 
     signal message(string text)
@@ -123,12 +128,14 @@ ColumnLayout {
         dialog.open()
     }
     RowLayout {
+        id: topRow
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
 
         TextField {
             id: search
-            Layout.fillWidth: true
+            Layout.fillWidth: !root.bannerInline
+            Layout.preferredWidth: root.bannerInline ? root.inlineWidth - 2 * (Theme.filterButton.size + Theme.layout.spacing) : -1
             implicitHeight: Theme.search.height
             leftPadding: Theme.search.iconSize + 19
             rightPadding: Theme.search.iconSize + 19
@@ -336,7 +343,7 @@ ColumnLayout {
             function onClosed() { root.focusList() }
         }
 
-        readonly property real wanted: Theme.search.showFilterChips && (root.activeFilters.length > 0 || chipModel.count > 0) ? 1 : 0
+        readonly property real wanted: root.showChips && Theme.search.showFilterChips && (root.activeFilters.length > 0 || chipModel.count > 0) ? 1 : 0
         property real space: wanted
         property real flowHeight: 0
         Binding on flowHeight {
@@ -401,11 +408,12 @@ ColumnLayout {
 
     // The open collection: its name and size, and × to leave it.
     Rectangle {
+        parent: root.bannerInline ? topRow : root
         visible: Library.collectionId !== ""
         Layout.fillWidth: true
         Layout.leftMargin: -root.reach
-        Layout.topMargin: root.extraTop - Theme.layout.spacing
-        Layout.preferredHeight: Theme.collections.bannerHeight
+        Layout.topMargin: root.bannerInline ? 0 : root.extraTop - Theme.layout.spacing
+        Layout.preferredHeight: root.bannerInline ? Theme.filterButton.size : Theme.collections.bannerHeight
         radius: Theme.collections.bannerRadius
         color: Theme.collections.bannerBackground
 

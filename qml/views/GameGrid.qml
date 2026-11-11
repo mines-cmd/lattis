@@ -29,6 +29,9 @@ Item {
     property string anchorId
 
     property int coverWidth: General.gridCoverWidth
+    property real toolbarLeft: -1
+    // Level with the top of the hero in the list view.
+    readonly property real contentTop: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.details.marginTop
     readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Theme.grid.margin
     readonly property real usable: grid.width - leftEdge - Theme.grid.margin + Theme.grid.gap - gridBar.reserve
     readonly property int columns: Math.max(1, Math.floor(usable / (coverWidth + Theme.grid.gap)))
@@ -471,8 +474,13 @@ Item {
         id: searchRow
         x: Theme.list.padding
         y: Theme.layout.margin
-        width: Theme.list.width - 2 * Theme.list.padding
+        // The banner shrinks to stay clear of the toolbar.
+        width: Library.collectionId === "" ? inlineWidth
+               : Math.max(inlineWidth, Math.min(2 * inlineWidth + Theme.layout.spacing,
+                                                (root.toolbarLeft < 0 ? Infinity : root.toolbarLeft - Theme.layout.spacing) - x))
         ready: root.ready
+        showChips: false
+        inlineWidth: Theme.list.width - 2 * Theme.list.padding
         onMessage: text => root.message(text)
         onFocusRequested: root.focusList()
     }
@@ -490,7 +498,7 @@ Item {
         id: grid
 
         x: General.railHidden ? -Theme.rail.width : 0
-        y: searchRow.y + searchRow.height + Theme.layout.spacing
+        y: searchRow.y + searchRow.height
         width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin + Theme.grid.margin : 0)
         height: parent.height - y - Theme.grid.panelMargin
         clip: true
@@ -503,13 +511,13 @@ Item {
         cellHeight: root.cellH
         leftMargin: root.leftEdge
         rightMargin: Theme.grid.margin - Theme.grid.gap + gridBar.reserve
-        topMargin: Theme.grid.margin
+        topMargin: Math.max(0, root.contentTop - y)
         bottomMargin: root.pillHeight + 2 * Theme.grid.margin
         cacheBuffer: root.cellH
 
         ScrollBar.vertical: SettingsScrollBar {
             id: gridBar
-            topPadding: Theme.grid.margin
+            topPadding: grid.topMargin
             thickness: Theme.gameEditor.bulkScrollbarWidth
             trackless: true
             handleColor: Theme.list.scrollbarHandle
@@ -851,7 +859,7 @@ Item {
         id: panel
         visible: root.slide > 0
         x: root.width - root.slide * (width + Theme.grid.panelMargin)
-        y: grid.y + Theme.grid.margin
+        y: grid.y + grid.topMargin
         height: root.height - y - Theme.grid.panelMargin
         game: root.currentGame
         onLaunchRequested: root.launchRequested()

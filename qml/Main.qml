@@ -1135,6 +1135,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             sourceComponent: GameGrid {
+                toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
                 onLaunchRequested: window.launch(currentGame)
                 onStopRequested: window.askForceClose(currentGame)
                 onMessage: text => toast.show(text)
