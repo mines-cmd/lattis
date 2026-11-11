@@ -2,7 +2,6 @@
 
 The bigger features Lattis doesn't have yet. Nothing here has a date, and the order means nothing. Plans change as I use the launcher.
 
-- **Grid view.** Your games as a wall of covers next to the list, for browsing a large library by sight.
 - **More from Heroic.** Show and launch your GOG and Amazon games alongside the rest, as your Epic games are now.
 - **Different versions of a game,** and the same game from several sources shown as one entry.
 - **Installing games.** Move an install to another drive and back, run Windows `.exe` installers, and download games from sources you set up through plugins.

@@ -72,6 +72,16 @@ Click a group's header to collapse it (or press Left; Right expands). While you 
 
 Lattis remembers the sort, the grouping and the filters, the platform you were on and which groups you had collapsed, and opens the way you left it.
 
+## Grid view
+
+Grid view shows your games as a wall of covers, for browsing a large library by sight. Switch to it with the view button in the toolbar (it shows the other view's icon), **Grid view** in the app menu, Ctrl+G, or the **Library view** choice in Settings → General and in the setup guide's Look step. The same switch takes you back to **List view**. Your search, filters, selection and current game carry over both ways, and Lattis remembers the view you used last.
+
+- **Covers:** every game in one flat list, with no group headers; the sort order runs across all platforms. A game without a cover shows its title on a colored tile. A star, an update arrow or a play mark in the corner shows a favorite, a game with an update waiting or a running game. Uninstalled and hidden games are dimmed. Hover a cover for its title, or turn on titles under the covers in `[general] grid_show_titles`.
+- **Size:** the slider at the bottom, Ctrl+scroll, or Ctrl+= and Ctrl+- make the covers bigger or smaller. The columns stretch to fill the width, and Lattis keeps the size.
+- **Selecting:** click a cover to select it, Ctrl+click and Shift+click to select several (a bar with the count replaces the slider), double-click to launch, right-click for the game's menu. The arrow keys move between covers (Up and Down by a row), Page Up, Page Down, Home and End jump, Enter launches, and typing starts a search.
+- **The side panel:** the current game's logo, **Launch**, **Properties** and **More** (the game's menu), its chips, and its panels (the info panel by default, and Friends, Achievements and tags if you add them). Hide or show it with the button left of the window controls, or Ctrl+B. Right-click the chips or a panel to choose what shows, or use Settings → Game page and pick **Grid view** at the top: the Grid view keeps its own lists. The panel's colors, cards and the blurred backdrop are in `[grid]` (see [Themes](themes.md)).
+- **Open game page** under the panel (or Ctrl+Enter, or in a game's menu) shows the game's full page over the grid; **Back to games** or Escape returns to the same place in the grid.
+
 ## Selecting several games
 
 - **Ctrl+click** adds a game to the selection or takes it out. **Shift+click** selects every game from the last one you clicked to this one (headers and collapsed groups are skipped); Ctrl+Shift+click adds that range. **Shift+Up** and **Shift+Down** grow or shrink the range from the keyboard, and **Ctrl+A** selects every listed game.

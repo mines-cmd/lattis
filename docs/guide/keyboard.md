@@ -18,6 +18,21 @@ Typing in the main window starts a search, so the main window's shortcuts all us
 | Ctrl+A | Select every listed game |
 | Escape | With several games selected, select only the current one |
 
+## Grid view
+
+| Keys | Action |
+|---|---|
+| Ctrl+G | Switch between List view and Grid view |
+| Left / Right | Previous / next cover |
+| Up / Down | The cover a row above / below |
+| Page Up / Page Down | Up / down a page of rows |
+| Home / End | First / last game |
+| Shift with any of these | Select the games in between too |
+| Enter | Launch |
+| Ctrl+Enter | Open the game's page over the grid (Escape returns) |
+| Ctrl+B | Show or hide the side panel |
+| Ctrl+= / Ctrl+- (or Ctrl+scroll) | Bigger / smaller covers |
+
 ## Views
 
 | Keys | Action |
