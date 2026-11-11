@@ -16,7 +16,7 @@ ColumnLayout {
     property real inlineWidth: 0
     readonly property bool bannerInline: inlineWidth > 0
     readonly property bool joined: Theme.search.joinedButtons && Theme.search.showFilterButton
-    readonly property real buttonGap: joined ? 0 : Theme.layout.spacingSmall
+    readonly property real buttonGap: joined ? 0 : Theme.search.buttonSpacing
     property alias field: search
 
     signal message(string text)
@@ -160,11 +160,11 @@ ColumnLayout {
                 Behavior on border.color { enabled: Motion.fades; MotionColor {} }
 
                 Rectangle {
-                    width: search.width
+                    width: root.joined ? parent.width : search.width
                     height: parent.height
                     radius: parent.radius
                     color: Theme.search.hoverTint
-                    opacity: search.hovered ? 1 : 0
+                    opacity: search.hovered || (root.joined && (filterButton.hovered || collectionsButton.hovered)) ? 1 : 0
                     Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
                 }
             }
@@ -218,6 +218,7 @@ ColumnLayout {
             implicitHeight: Theme.filterButton.size
 
             IconButton {
+                id: filterButton
                 anchors.fill: parent
                 icon: Icons.filter
                 iconSize: Theme.filterButton.iconSize
@@ -225,7 +226,7 @@ ColumnLayout {
                 radius: Theme.filterButton.radius
                 fill: root.joined ? "transparent" : Theme.filterButton.background
                 fillEnd: root.joined ? "transparent" : Theme.filterButton.backgroundEnd
-                hoverTint: Theme.filterButton.hoverTint
+                hoverTint: root.joined ? "transparent" : Theme.filterButton.hoverTint
                 direction: Theme.filterButton.gradientDirection
                 border.color: Theme.filterButton.border
                 border.width: root.joined ? 0 : Theme.filterButton.borderWidth
@@ -272,6 +273,7 @@ ColumnLayout {
             implicitHeight: Theme.filterButton.size
 
             IconButton {
+                id: collectionsButton
                 anchors.fill: parent
                 icon: Icons.bookmarks
                 iconSize: Theme.filterButton.iconSize
@@ -279,7 +281,7 @@ ColumnLayout {
                 radius: Theme.filterButton.radius
                 fill: root.joined ? "transparent" : Theme.filterButton.background
                 fillEnd: root.joined ? "transparent" : Theme.filterButton.backgroundEnd
-                hoverTint: Theme.filterButton.hoverTint
+                hoverTint: root.joined ? "transparent" : Theme.filterButton.hoverTint
                 direction: Theme.filterButton.gradientDirection
                 border.color: Theme.filterButton.border
                 border.width: root.joined ? 0 : Theme.filterButton.borderWidth
