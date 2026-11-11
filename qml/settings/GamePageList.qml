@@ -6,7 +6,7 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    // "chips", "buttons", "info_rows", "sections" or "panels".
+    // "chips", "buttons", "info_rows", "sections" or "panels", or the grid view's "grid_chips" or "grid_panels".
     required property string place
     // name → { name, icon, hint }
     required property var entries
@@ -29,7 +29,9 @@ Rectangle {
     readonly property var shown: place === "chips" ? General.gamePageChips
                                : place === "buttons" ? General.gamePageButtons
                                : place === "sections" ? General.gamePageSections
-                               : place === "panels" ? General.gamePagePanels : General.gamePageInfoRows
+                               : place === "panels" ? General.gamePagePanels
+                               : place === "grid_chips" ? General.gamePageGridChips
+                               : place === "grid_panels" ? General.gamePageGridPanels : General.gamePageInfoRows
 
     readonly property bool searching: query !== ""
     function matches(name) {
@@ -160,7 +162,7 @@ Rectangle {
 
                     IconButton {
                         readonly property bool iconShown: !General.chipsWithoutIcon.includes(entry.modelData)
-                        visible: root.place === "chips"
+                        visible: root.place === "chips" || root.place === "grid_chips"
                         Layout.preferredWidth: Theme.settingsWindow.smallButtonSize
                         Layout.preferredHeight: Theme.settingsWindow.smallButtonSize
                         Layout.alignment: Qt.AlignVCenter

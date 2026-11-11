@@ -8,12 +8,14 @@ Surface {
 
     property var game: ({})
     property bool active: true
+    // The panels list of the page or view that shows it.
+    property var panels: General.gamePagePanels
     readonly property int appId: {
         const m = /^steam-(\d+)$/.exec(game.id ?? "")
         return m ? parseInt(m[1]) : 0
     }
     readonly property var groups: General.friendsGroups
-    readonly property bool wanted: active && General.gamePagePanels.includes("friends") && appId > 0 && groups.length > 0
+    readonly property bool wanted: active && panels.includes("friends") && appId > 0 && groups.length > 0
 
     property var activity: ({ playing: [], recent: [], previous: [] })
     readonly property var playing: groups.includes("playing") ? activity.playing : []

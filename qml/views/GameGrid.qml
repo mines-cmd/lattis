@@ -16,6 +16,12 @@ Item {
     signal gameAction(string name, var game)
     signal gamesAction(string name, var ids)
     signal modManagerRequested(string id)
+    signal stopRequested()
+    signal emulatorMessage(string text, string gameId)
+    signal editRequested()
+    signal historyRequested()
+    signal steamUndoRequested()
+    signal customizeRequested()
 
     property var selection: ({})
     readonly property int selectionCount: Object.keys(selection).length
@@ -31,6 +37,15 @@ Item {
     readonly property real cellH: coverH + titleH + Theme.grid.gap
     readonly property real pillHeight: Theme.iconButton.size + 2 * Theme.layout.spacingSmall
     property bool ready: false
+
+    // The panel hides without changing the saved setting when there is no game to show.
+    readonly property bool panelWanted: General.gridPanel && currentGame.id !== undefined
+    property real slide: panelWanted ? 1 : 0
+    // Hiding slides the panel out first and widens the grid after; showing narrows the grid first. The covers reflow in one step.
+    property bool panelReserved: panelWanted
+    onPanelWantedChanged: if (panelWanted) panelReserved = true
+    onSlideChanged: if (slide === 0) panelReserved = false
+    Behavior on slide { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
 
     Binding { target: Library; property: "flat"; value: true }
 
@@ -474,7 +489,7 @@ Item {
 
         x: General.railHidden ? -Theme.rail.width : 0
         y: searchRow.y + searchRow.height + Theme.layout.spacing
-        width: parent.width - x
+        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin : 0)
         height: parent.height - y
         clip: true
         model: Library
@@ -826,5 +841,35 @@ Item {
                 }
             }
         }
+    }
+
+    GridPanel {
+        id: panel
+        visible: root.slide > 0
+        x: root.width - root.slide * (width + Theme.grid.panelMargin)
+        y: grid.y + Theme.grid.margin
+        height: root.height - y - Theme.grid.panelMargin
+        game: root.currentGame
+        onLaunchRequested: root.launchRequested()
+        onStopRequested: root.stopRequested()
+        onMessage: text => root.message(text)
+        onEmulatorMessage: (text, gameId) => root.emulatorMessage(text, gameId)
+        onEditRequested: root.editRequested()
+        onMenuRequested: button => root.openMenuBelow(Library.rowOfGame(root.currentGame.id), button)
+        onHistoryRequested: root.historyRequested()
+        onSteamUndoRequested: root.steamUndoRequested()
+        onCustomizeRequested: root.customizeRequested()
+    }
+
+    function openInstallDialog() {
+        panel.openInstallDialog()
+    }
+
+    function openPanelMenu() {
+        panel.openMenu()
+    }
+
+    function pageMenuForScreenshot(place) {
+        panel.pageMenuForScreenshot(place)
     }
 }

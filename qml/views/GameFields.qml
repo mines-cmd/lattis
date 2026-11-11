@@ -7,6 +7,8 @@ QtObject {
     property var game: ({})
     // The Launch button's update state, which tints the Steam update entry.
     property bool updateAction: false
+    // The chips the owner shows: only what a shown chip or info row needs is read or asked for.
+    property var chipNames: General.gamePageChips
 
     readonly property var periodLabels: ({
         week: qsTr("This week"),
@@ -73,7 +75,7 @@ QtObject {
              : qsTr("Shared with you")
     })
 
-    readonly property bool wantsLastBackup: General.gamePageChips.includes("last_backup")
+    readonly property bool wantsLastBackup: chipNames.includes("last_backup")
         || General.gamePageInfoRows.includes("last_backup")
     onWantsLastBackupChanged: loadLastBackup()
     onGameChanged: loadLastBackup()
@@ -90,7 +92,7 @@ QtObject {
         const m = /^steam-(\d+)$/.exec(game.id ?? "")
         return m ? parseInt(m[1]) : 0
     }
-    readonly property bool protonDbWanted: (General.gamePageChips.includes("protondb")
+    readonly property bool protonDbWanted: (chipNames.includes("protondb")
                                             || General.gamePageInfoRows.includes("protondb")) && protonDbAppId > 0
     // Asks ProtonDb (which starts its request) only while the entry is wanted; the singleton isn't built before.
     property int protonDbRevision: 0
@@ -133,7 +135,7 @@ QtObject {
     }
 
     readonly property bool friendsPlayingWanted: protonDbAppId > 0
-        && (General.gamePageChips.includes("friends_playing") || General.gamePageInfoRows.includes("friends_playing"))
+        && (chipNames.includes("friends_playing") || General.gamePageInfoRows.includes("friends_playing"))
     property int friendsRevision: 0
     property Connections friendsWatch: Connections {
         target: root.friendsPlayingWanted ? FriendsActivity : null
@@ -158,7 +160,7 @@ QtObject {
     // The history file is read only while a field needs it, and again only when the game's play changed:
     // the game map is replaced on every change to the game (a download's progress among them).
     readonly property var historyFields: ["times_played", "first_played", "recent_play_time"]
-    property bool needsHistory: General.gamePageChips.concat(General.gamePageInfoRows)
+    property bool needsHistory: chipNames.concat(General.gamePageInfoRows)
         .some(name => historyFields.includes(name))
     readonly property string playedKey: needsHistory
         ? [game.id ?? "", game.playTimeText ?? "", game.lastPlayedText ?? ""].join("\n") : ""

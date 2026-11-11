@@ -40,51 +40,8 @@ Item {
     property string descriptionExpandedFor: ""
     readonly property string launcher: game.launcher ?? ""
 
-    // An emulated game none of whose emulators is found: Launch installs the first one, if it can be.
-    // The Installer is only touched then, so it isn't made for a page that doesn't need it.
-    readonly property string missingEmulator: {
-        void game.launchTip
-        void Library.emulators
-        return hasGame && game.installed ? GameRunner.missingEmulator(game.id) : ""
-    }
-    readonly property var emulatorRow: missingEmulator !== "" ? Installer.emulators[missingEmulator] : undefined
-    readonly property bool emulatorInstallable: (emulatorRow?.routes?.length ?? 0) > 0
-    readonly property string emulatorName: emulatorInstallable
-        ? (Library.emulators.find(e => e.id === missingEmulator)?.name ?? "") : ""
-    readonly property string emulatorState: emulatorRow?.state ?? "idle"
-    readonly property string emulatorStep: {
-        switch (emulatorState) {
-        case "checking": return qsTr("Checking")
-        case "downloading": return emulatorRow.progress >= 0 ? qsTr("%1 %").arg(Math.round(emulatorRow.progress * 100)) : qsTr("Downloading")
-        case "extracting": return qsTr("Unpacking")
-        case "installing": return qsTr("Installing")
-        default: return ""
-        }
-    }
-    // Tells of a failure that happened here, not one left over from before this game was shown.
-    property bool emulatorWasBusy: false
     function openInstallDialog() {
-        if (emulatorName === "")
-            return
-        installDialog.active = true
-        installDialog.item.openFor(missingEmulator)
-    }
-
-    Loader {
-        id: installDialog
-        active: false
-        source: "EmulatorInstallDialog.qml"
-    }
-    Connections {
-        target: installDialog.item
-        function onError(text) { root.message(text) }
-    }
-
-    onEmulatorStepChanged: {
-        const busy = emulatorStep !== ""
-        if (emulatorWasBusy && !busy && emulatorState === "failed" && !(installDialog.item?.dialog.visible ?? false))
-            emulatorMessage(emulatorRow.error, game.id)
-        emulatorWasBusy = busy
+        launchButton.openInstallDialog()
     }
 
     signal launchRequested()
@@ -910,30 +867,17 @@ Item {
                 columnSpacing: Theme.details.actionSpacing
                 rowSpacing: Theme.details.actionSpacing
 
-                LaunchButton {
+                GameLaunchButton {
                     id: launchButton
                     Layout.row: 0
                     Layout.column: 0
                     Layout.fillWidth: !actionRow.oneLine && actionRow.launchShrinks
                     Layout.maximumWidth: implicitWidth
                     Layout.minimumWidth: !actionRow.oneLine ? Math.min(implicitWidth, Theme.launchButton.height * 2) : implicitWidth
-                    installed: root.game.installed ?? true
-                    updateState: root.game.steamUpdate ?? "none"
-                    rom: root.game.rom ?? false
-                    gameNotFound: root.game.gameNotFound ?? false
-                    locatable: root.game.platform === "proton" || root.game.platform === "linux"
-                    installable: root.launcher !== "" && !locatable
-                    running: GameRunner.running.includes(root.game.id ?? "")
-                    emulatorName: root.emulatorName
-                    emulatorStep: root.emulatorStep
-                    tip: root.emulatorName !== "" ? qsTr("Install %1; Lattis finds it afterwards").arg(root.emulatorName)
-                       : (root.game.launchTip ?? "") !== "" ? Actions.tip(root.game.launchTip, Actions.keys.launch) : ""
-                    onClicked: {
-                        if (root.emulatorName === "")
-                            root.launchRequested()
-                        else
-                            root.openInstallDialog()
-                    }
+                    game: root.game
+                    onLaunchRequested: root.launchRequested()
+                    onMessage: text => root.message(text)
+                    onEmulatorMessage: (text, gameId) => root.emulatorMessage(text, gameId)
                     onStopRequested: root.stopRequested()
                 }
 
@@ -995,49 +939,12 @@ Item {
 
                             Component {
                                 id: fieldChip
-                                StatChip {
-                                    id: entry
-                                    readonly property var field: gameFields.all[chip.name]
-                                    readonly property bool opensHistory: field.history ?? false
-                                    readonly property bool opensUrl: (field.action ?? "") === "url"
-                                    attention: field.attention ?? false
-                                    attentionColor: field.attentionColor
-                                    iconTint: field.iconTint
-                                    icon: General.chipsWithoutIcon.includes(chip.name) ? "" : field.icon
-                                    label: field.label
-                                    value: field.value
-                                    clickable: !chip.leaving && (opensHistory || opensUrl || (field.filterPlatform ?? "") !== "")
-                                    tip: clickable ? field.tip ?? "" : ""
-                                    tipStars: field.stars ?? -1
-                                    ToolTip.visible: chipHover.hovered && (field.hoverTip ?? "") !== ""
-                                    ToolTip.text: field.hoverTip ?? ""
-                                    ToolTip.delay: 500
-                                    onClicked: {
-                                        if (opensHistory)
-                                            root.historyRequested()
-                                        else if (opensUrl)
-                                            Qt.openUrlExternally(field.url)
-                                        else
-                                            Library.platformFilter = field.filterPlatform
-                                    }
-
-                                    HoverHandler { id: chipHover }
-
-                                    SettingsButton {
-                                        id: pendingButton
-                                        visible: (entry.field.action ?? "") === "pending"
-                                        implicitHeight: Theme.statChip.buttonHeight
-                                        flat: true
-                                        leftPadding: text === "" ? 0 : 14
-                                        rightPadding: leftPadding
-                                        implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
-                                        text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
-                                        iconPath: GameRunner.closingSteam ? "" : Icons.chevronRight
-                                        iconRotation: pendingMenu.showing ? -90 : 90
-                                        enabled: !GameRunner.closingSteam
-                                        tip: entry.field.tip ?? ""
-                                        onClicked: pendingMenu.popup(pendingButton, 0, pendingButton.height)
-                                    }
+                                FieldChip {
+                                    name: chip.name
+                                    fields: gameFields
+                                    steamMenu: pendingMenu
+                                    leaving: chip.leaving
+                                    onHistoryRequested: root.historyRequested()
                                 }
                             }
                         }

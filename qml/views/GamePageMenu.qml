@@ -6,7 +6,7 @@ import Qt.labs.qmlmodels
 SettingsMenu {
     id: root
 
-    // chips, buttons, info_rows, sections, panels or friends
+    // chips, buttons, info_rows, sections, panels, friends, or the grid view's grid_chips or grid_panels
     property string place: "chips"
 
     signal customizeRequested()
@@ -18,7 +18,9 @@ SettingsMenu {
     readonly property var shown: place === "chips" ? General.gamePageChips
                                : place === "buttons" ? General.gamePageButtons
                                : place === "sections" ? General.gamePageSections
-                               : place === "panels" ? General.gamePagePanels : General.gamePageInfoRows
+                               : place === "panels" ? General.gamePagePanels
+                               : place === "grid_chips" ? General.gamePageGridChips
+                               : place === "grid_panels" ? General.gamePageGridPanels : General.gamePageInfoRows
 
     // Every choice, hidden ones included. Replaced only when the order changes, so a toggle doesn't
     // rebuild the rows under the pointer.

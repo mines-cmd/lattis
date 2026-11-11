@@ -492,7 +492,10 @@ ApplicationWindow {
     }
 
     function installDialogForScreenshot() {
-        details.openInstallDialog()
+        if (gridView)
+            browser.openInstallDialog()
+        else
+            details.openInstallDialog()
     }
 
     function logoForScreenshot(mode) {
@@ -501,7 +504,9 @@ ApplicationWindow {
 
     function gameMenuForScreenshot(spec) {
         const [id, submenu] = spec.split("/")
-        if (id === "page")
+        if (id === "page" && gridView)
+            browser.openPanelMenu()
+        else if (id === "page")
             details.openMenu()
         else
             browser.openMenu(Library.rowOfGame(id))
@@ -511,7 +516,10 @@ ApplicationWindow {
 
     function gamePageMenuForScreenshot(spec) {
         const [place, submenu] = spec.split("/")
-        details.pageMenuForScreenshot(place, submenu)
+        if (gridView)
+            browser.pageMenuForScreenshot(place === "chips" ? "grid_chips" : "grid_panels")
+        else
+            details.pageMenuForScreenshot(place, submenu)
     }
 
     function clipForScreenshot(spec) {
@@ -702,7 +710,7 @@ ApplicationWindow {
             runOn(name, browser.currentGame)
             break
         case "game_menu":
-            if (details.hasGame)
+            if (browser.currentGame.id !== undefined)
                 browser.openMenu(Library.rowOfGame(browser.currentGame.id))
             break
         case "app_menu": rail.openMenu(); break
@@ -714,6 +722,14 @@ ApplicationWindow {
         case "toggle_fullscreen": toggleFullscreen(); break
         case "toggle_rail": {
             const error = General.setRailHidden(!General.railHidden)
+            if (error.length > 0)
+                toast.show(error)
+            break
+        }
+        case "toggle_grid_panel": {
+            if (!gridView)
+                break
+            const error = General.setGridPanel(!General.gridPanel)
             if (error.length > 0)
                 toast.show(error)
             break
@@ -995,12 +1011,27 @@ ApplicationWindow {
         direction: Theme.palette.gradientDirection
     }
 
+    // The grid's backdrop follows the selection after the hero's delay, so holding an arrow key doesn't decode every image on the way.
+    readonly property var gridCurrent: gridLoader.item?.currentGame ?? ({})
+    property var gridHeroGame: ({})
+    onGridCurrentChanged: {
+        if (gridHeroGame.id === undefined || Theme.hero.loadDelay === 0)
+            gridHeroGame = gridCurrent
+        else
+            gridHeroTimer.restart()
+    }
+    Timer {
+        id: gridHeroTimer
+        interval: Theme.hero.loadDelay
+        onTriggered: window.gridHeroGame = window.gridCurrent
+    }
+
     Backdrop {
         visible: Theme.backdrop.enabled && !window.pageCovering
-        x: Theme.backdrop.area === "details" ? details.x : 0
+        x: Theme.backdrop.area === "details" && !window.gridView ? details.x : 0
         width: parent.width - x
         height: parent.height * Theme.backdrop.height
-        game: Theme.backdrop.enabled ? details.shownHeroGame : ({})
+        game: !Theme.backdrop.enabled ? ({}) : window.gridView ? window.gridHeroGame : details.shownHeroGame
     }
 
     RowLayout {
@@ -1033,10 +1064,16 @@ ApplicationWindow {
             Layout.fillHeight: true
             sourceComponent: GameGrid {
                 onLaunchRequested: window.launch(currentGame)
+                onStopRequested: window.askForceClose(currentGame)
                 onMessage: text => toast.show(text)
+                onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
                 onGameAction: (name, game) => window.runOn(name, game)
                 onGamesAction: (name, ids) => window.runOnMany(name, ids)
                 onModManagerRequested: id => window.openModManager(id)
+                onEditRequested: window.editGame(currentGame.id)
+                onHistoryRequested: window.openPlayHistory(currentGame)
+                onSteamUndoRequested: window.askSteamUndo()
+                onCustomizeRequested: window.openSettingsAt("game_page")
             }
         }
 
@@ -1233,8 +1270,10 @@ ApplicationWindow {
     TopToolbar {
         id: toolbar
         Component.onCompleted: window.toolbarHovered = Qt.binding(() => toolbar.hovered)
-        readonly property real low: details.x + Theme.details.marginLeft
-        readonly property real high: windowControls.visible ? windowControls.x - Theme.layout.spacing
+        readonly property real low: window.gridView ? (General.railHidden ? 0 : Theme.rail.width) + Theme.grid.margin
+                                                    : details.x + Theme.details.marginLeft
+        readonly property real high: panelButton.visible ? panelButton.x - Theme.layout.spacing
+                                   : windowControls.visible ? windowControls.x - Theme.layout.spacing
                                                             : window.width - Theme.layout.margin
         x: high - low < width ? low + (high - low - width) / 2
                               : Math.max(low, Math.min(high - width, (window.width - width) / 2))
@@ -1336,6 +1375,35 @@ ApplicationWindow {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Theme.windowControls.margin
+    }
+
+    Rectangle {
+        id: panelButton
+        visible: window.gridView && !setupGuide.active
+        x: (windowControls.visible ? windowControls.x : window.width - Theme.windowControls.margin) - width - Theme.windowControls.spacing
+        y: windowControls.y + (windowControls.height - height) / 2
+        width: Theme.windowControls.size
+        height: Theme.windowControls.size
+        radius: Theme.windowControls.radius
+        color: panelMouse.containsMouse ? Theme.windowControls.hoverBackground : Qt.alpha(Theme.windowControls.hoverBackground, 0)
+        Behavior on color { enabled: Motion.fades; MotionColor {} }
+
+        Icon {
+            anchors.centerIn: parent
+            path: Icons.layoutSidebarRight
+            size: Theme.windowControls.iconSize
+            strokeWidth: Theme.windowControls.iconStroke
+            color: Theme.windowControls.icon
+        }
+        MouseArea {
+            id: panelMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: window.run("toggle_grid_panel")
+        }
+        ToolTip.visible: panelMouse.containsMouse
+        ToolTip.delay: Theme.tooltip.delay
+        ToolTip.text: Actions.tip(General.gridPanel ? qsTr("Hide panel") : qsTr("Show panel"), Actions.keys.toggle_grid_panel)
     }
 
     WindowFrame {}

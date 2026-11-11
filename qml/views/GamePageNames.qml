@@ -43,10 +43,12 @@ QtObject {
     readonly property var panels: ({
         info: qsTr("Info panel"),
         friends: qsTr("Friends"),
-        achievements: qsTr("Achievements")
+        achievements: qsTr("Achievements"),
+        tags: qsTr("Tags")
     })
 
     function forPlace(place) {
-        return place === "buttons" ? buttons : place === "sections" ? sections : place === "panels" ? panels : fields
+        return place === "buttons" ? buttons : place === "sections" ? sections
+             : place === "panels" || place === "grid_panels" ? panels : fields
     }
 }

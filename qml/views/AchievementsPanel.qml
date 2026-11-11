@@ -9,8 +9,10 @@ Surface {
     property var game: ({})
     property var items: []
     property bool active: true
+    // The panels list of the page or view that shows it.
+    property var panels: General.gamePagePanels
     property int settledCount: 0
-    readonly property bool wanted: active && General.showAchievements && (game.platform ?? "") === "steam" && (game.id ?? "") !== ""
+    readonly property bool wanted: active && panels.includes("achievements") && (game.platform ?? "") === "steam" && (game.id ?? "") !== ""
     readonly property int unlocked: items.filter(a => a.unlocked).length
     readonly property bool complete: items.length > 0 && unlocked === items.length
     readonly property int perRow: Math.max(1, Math.floor((icons.width + Theme.achievements.iconGap)

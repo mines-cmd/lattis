@@ -114,6 +114,11 @@ Item {
         achievements: { icon: Icons.medal, hint: qsTr("Only for a Steam game with achievements") }
     })
 
+    readonly property var tagsPanelDef: ({ icon: Icons.tagLine, hint: qsTr("The game's tags. Click one to show only the games with it") })
+
+    // Which view's chips and panels the lists below edit; opens on the view in use, and is not saved.
+    property bool gridLists: General.view === "grid"
+
     GamePageNames { id: names }
 
     function named(defs, labels) {
@@ -126,6 +131,7 @@ Item {
     readonly property var buttonEntries: named(buttonDefs, names.buttons)
     readonly property var sectionEntries: named(sectionDefs, names.sections)
     readonly property var panelEntries: named(panelDefs, names.panels)
+    readonly property var gridPanelEntries: named(Object.assign({ tags: tagsPanelDef }, panelDefs), names.panels)
 
     readonly property string query: search.text.trim().toLowerCase()
     function matches(...texts) {
@@ -198,6 +204,14 @@ Item {
                 placeholderText: qsTr("Search the game page settings")
             }
 
+            SegmentedToggle {
+                accessibleName: qsTr("View")
+                choices: [{ id: "list", text: qsTr("List view") },
+                          { id: "grid", text: qsTr("Grid view") }]
+                current: root.gridLists ? "grid" : "list"
+                onPicked: id => root.gridLists = id === "grid"
+            }
+
             ProblemsButton {
                 problems: General.gamePageProblems
             }
@@ -230,11 +244,13 @@ Item {
                 SectionHeader { visible: chips.visible; text: qsTr("Chips") }
                 SectionNote {
                     visible: chips.visible
-                    text: qsTr("Beside the Launch button. A chip with nothing to show for the game is left out. The eye hides or shows a chip's icon.")
+                    text: root.gridLists
+                          ? qsTr("In the side panel, in two columns under the Properties and More buttons. A chip with nothing to show for the game is left out. The eye hides or shows a chip's icon.")
+                          : qsTr("Beside the Launch button. A chip with nothing to show for the game is left out. The eye hides or shows a chip's icon.")
                 }
                 GamePageList {
                     id: chips
-                    place: "chips"
+                    place: root.gridLists ? "grid_chips" : "chips"
                     entries: root.fieldEntries
                     query: root.query
                     flickable: flick
@@ -246,6 +262,7 @@ Item {
                 GamePageList {
                     id: buttons
                     place: "buttons"
+                    visible: !root.gridLists && matching.length > 0
                     entries: root.buttonEntries
                     query: root.query
                     flickable: flick
@@ -255,12 +272,14 @@ Item {
                 SectionHeader { visible: panels.visible; text: qsTr("Panels") }
                 SectionNote {
                     visible: panels.visible
-                    text: qsTr("Beside the description, or below it in a narrow window, in this order. One with nothing to show for the game is left out.")
+                    text: root.gridLists
+                          ? qsTr("In the side panel, under the chips, in this order. One with nothing to show for the game is left out.")
+                          : qsTr("Beside the description, or below it in a narrow window, in this order. One with nothing to show for the game is left out.")
                 }
                 GamePageList {
                     id: panels
-                    place: "panels"
-                    entries: root.panelEntries
+                    place: root.gridLists ? "grid_panels" : "panels"
+                    entries: root.gridLists ? root.gridPanelEntries : root.panelEntries
                     query: root.query
                     flickable: flick
                     onFailed: text => root.report(text)
@@ -356,6 +375,7 @@ Item {
                 GamePageList {
                     id: sections
                     place: "sections"
+                    visible: !root.gridLists && matching.length > 0
                     entries: root.sectionEntries
                     query: root.query
                     flickable: flick
