@@ -33,7 +33,9 @@ Item {
     // Level with the top of the hero in the list view.
     readonly property real contentTop: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.details.marginTop
     readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Theme.grid.margin
-    readonly property real usable: grid.width - leftEdge - Theme.grid.margin + Theme.grid.gap - gridBar.reserve
+    // The scrollbar sits in the right margin, centered in it, so it touches neither the covers nor the panel.
+    readonly property real barGap: Math.max(0, (Theme.grid.margin - gridBar.thickness) / 2)
+    readonly property real usable: grid.width - leftEdge - (Theme.grid.margin - barGap) + Theme.grid.gap
     readonly property int columns: Math.max(1, Math.floor(usable / (coverWidth + Theme.grid.gap)))
     readonly property real cellW: usable / columns
     readonly property real coverW: cellW - Theme.grid.gap
@@ -499,7 +501,7 @@ Item {
 
         x: General.railHidden ? -Theme.rail.width : 0
         y: searchRow.y + searchRow.height
-        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin + Theme.grid.margin : 0)
+        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin : 0) - root.barGap
         height: parent.height - y - Theme.grid.panelMargin
         clip: true
         model: Library
@@ -510,7 +512,7 @@ Item {
         cellWidth: root.cellW
         cellHeight: root.cellH
         leftMargin: root.leftEdge
-        rightMargin: Theme.grid.margin - Theme.grid.gap + gridBar.reserve
+        rightMargin: Theme.grid.margin - root.barGap - Theme.grid.gap
         topMargin: Math.max(0, root.contentTop - y)
         bottomMargin: root.pillHeight + 2 * Theme.grid.margin
         cacheBuffer: root.cellH

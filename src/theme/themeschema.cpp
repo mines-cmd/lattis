@@ -582,7 +582,7 @@ constexpr Setting kSettings[] = {
 
     heading("grid", "Covers"),
     integer("grid", "gap", "@layout.spacing", 0, 100, "Space between covers, across and down"),
-    integer("grid", "margin", "@layout.spacing", 0, 200, "Space between the covers and the edges of the grid area"),
+    integer("grid", "margin", "16", 0, 200, "Space between the covers and the edges of the grid area"),
     integer("grid", "radius", "@radius.medium", 0, 100, "Cover corner radius"),
     integer("grid", "min_cover_width", "120", 40, 600, "Narrowest a cover gets with the size slider"),
     integer("grid", "max_cover_width", "400", 40, 1200, "Widest a cover gets with the size slider"),
@@ -661,7 +661,7 @@ constexpr Setting kSettings[] = {
     heading("details", "Layout"),
     integer("details", "margin_left", "32", 0, 1000, "Gap between the game list and the details"),
     integer("details", "margin_right", "72", 0, 1000, "Right margin"),
-    integer("details", "margin_top", "8", 0, 400, "Space between the toolbar and the hero; 0 puts the hero level with the bottom of the toolbar buttons"),
+    integer("details", "margin_top", "16", 0, 400, "Space between the toolbar and the hero; 0 puts the hero level with the bottom of the toolbar buttons"),
     integer("details", "margin_bottom", "32", 0, 1000, "Space below the content when scrolled to the end"),
     integer("details", "padding", "32", 0, 400, "Extra horizontal padding on both sides of the content, inside the margins"),
     integer("details", "spacing", "22", 0, 200, "Vertical space between the hero, action row and body"),
