@@ -14,6 +14,7 @@ Surface {
     // The icon's color when set; attention wins over it.
     property var iconTint: undefined
     property bool clickable: false
+    property bool leftAligned: false
     property string tip
     // A rating shown as stars in the tooltip instead of tip; -1 for none.
     property real tipStars: -1
@@ -79,7 +80,8 @@ Surface {
 
     RowLayout {
         id: row
-        anchors.centerIn: parent
+        x: root.leftAligned ? Theme.statChip.padding : (root.width - width) / 2
+        y: (root.height - height) / 2
         spacing: Theme.layout.spacing
 
         Icon {
