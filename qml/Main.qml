@@ -215,10 +215,17 @@ ApplicationWindow {
     property bool gamePageOpen: false
     readonly property bool gamePageCovering: gamePageOpen && gamePage.opacity === 1
 
+    // Kept as the grid changes it: by the time gridView turns false the grid may already be gone.
+    property var gridSelection: ({ id: "", ids: [] })
+
     onGridViewChanged: {
         if (!gridView) {
             gamePageOpen = false
             pageDetails.active = false
+            if (gridSelection.id !== "") {
+                gameList.selectGame(gridSelection.id)
+                gameList.setSelection(gridSelection.ids)
+            }
         }
         Qt.callLater(() => browser.focusList())
     }
@@ -1137,6 +1144,11 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             sourceComponent: GameGrid {
+                // Start from the list's selection; the grid's first own pick replaces these bindings.
+                selectedId: gameList.selectedId
+                selection: gameList.selection
+                onSelectedIdChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
+                onSelectionChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
                 toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
                 onLaunchRequested: window.launch(currentGame)
                 onStopRequested: window.askForceClose(currentGame)
