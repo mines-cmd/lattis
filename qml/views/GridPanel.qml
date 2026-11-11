@@ -132,6 +132,7 @@ Rectangle {
 
             SettingsButton {
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 bordered: true
                 text: qsTr("Properties")
                 tip: Actions.tip((root.game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
@@ -142,6 +143,7 @@ Rectangle {
             SettingsButton {
                 id: moreButton
                 Layout.fillWidth: true
+                Layout.preferredWidth: 1
                 bordered: true
                 text: qsTr("More")
                 tip: Actions.tip(qsTr("Game menu"), Actions.keys.game_menu)
