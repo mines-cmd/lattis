@@ -15,6 +15,8 @@ ColumnLayout {
     // the search box and the buttons keep.
     property real inlineWidth: 0
     readonly property bool bannerInline: inlineWidth > 0
+    readonly property bool joined: Theme.search.joinedButtons && Theme.search.showFilterButton
+    readonly property real buttonGap: joined ? 0 : Theme.layout.spacingSmall
     property alias field: search
 
     signal message(string text)
@@ -130,12 +132,12 @@ ColumnLayout {
     RowLayout {
         id: topRow
         Layout.fillWidth: true
-        spacing: Theme.layout.spacing
+        spacing: root.buttonGap
 
         TextField {
             id: search
             Layout.fillWidth: !root.bannerInline
-            Layout.preferredWidth: root.bannerInline ? root.inlineWidth - 2 * (Theme.filterButton.size + Theme.layout.spacing) : -1
+            Layout.preferredWidth: root.bannerInline ? root.inlineWidth - 2 * (Theme.filterButton.size + root.buttonGap) : -1
             implicitHeight: Theme.search.height
             leftPadding: Theme.search.iconSize + 19
             rightPadding: Theme.search.iconSize + 19
@@ -145,6 +147,9 @@ ColumnLayout {
             selectionColor: Theme.palette.accent
             selectedTextColor: Theme.palette.onAccent
             background: Surface {
+                // Joined: reaches under the buttons, which sit after the field and draw on top.
+                width: root.joined ? search.width + filterHost.width + collectionsHost.width : search.width
+                height: search.height
                 radius: Theme.search.radius
                 fill: Theme.search.background
                 fillEnd: Theme.search.backgroundEnd
@@ -155,7 +160,8 @@ ColumnLayout {
                 Behavior on border.color { enabled: Motion.fades; MotionColor {} }
 
                 Rectangle {
-                    anchors.fill: parent
+                    width: search.width
+                    height: parent.height
                     radius: parent.radius
                     color: Theme.search.hoverTint
                     opacity: search.hovered ? 1 : 0
@@ -203,60 +209,6 @@ ColumnLayout {
             }
         }
 
-        Item {
-            id: collectionsHost
-            visible: Theme.search.showFilterButton
-            implicitWidth: Theme.filterButton.size
-            implicitHeight: Theme.filterButton.size
-
-            IconButton {
-                anchors.fill: parent
-                icon: Icons.bookmarks
-                iconSize: Theme.filterButton.iconSize
-                iconColor: Theme.filterButton.icon
-                radius: Theme.filterButton.radius
-                fill: Theme.filterButton.background
-                fillEnd: Theme.filterButton.backgroundEnd
-                hoverTint: Theme.filterButton.hoverTint
-                direction: Theme.filterButton.gradientDirection
-                border.color: Theme.filterButton.border
-                border.width: Theme.filterButton.borderWidth
-                tip: Actions.tip(qsTr("Collections"), Actions.keys.open_collections)
-                onClicked: root.openCollections()
-            }
-
-            Loader {
-                id: collectionsPopup
-                active: false
-                source: "CollectionsPopup.qml"
-                onLoaded: item.parent = collectionsHost
-            }
-            Binding {
-                target: collectionsPopup.item
-                property: "x"
-                // Past the filter button too, so the popup stays clear of the list.
-                value: collectionsHost.width + filterHost.width + 2 * Theme.layout.spacing
-            }
-            Connections {
-                target: collectionsPopup.item
-                function onClosedByKey() { root.focusList() }
-                function onCollectionDialogRequested(mode, id, name) {
-                    collectionsPopup.item.close()
-                    root.askCollection(mode, id, name, [])
-                }
-                function onSteamImportRequested() {
-                    collectionsPopup.item.close()
-                    steamCollections.active = true
-                    steamCollections.item.open()
-                }
-                function onCollectionDeleted(id) {
-                    const error = Library.deleteCollection(id)
-                    if (error !== "")
-                        root.message(error)
-                }
-            }
-        }
-
         // The panel's parent: the button dips when pressed, and a popup follows its parent's
         // scale, so the panel would shift as the button springs back.
         Item {
@@ -271,12 +223,12 @@ ColumnLayout {
                 iconSize: Theme.filterButton.iconSize
                 iconColor: Theme.filterButton.icon
                 radius: Theme.filterButton.radius
-                fill: Theme.filterButton.background
-                fillEnd: Theme.filterButton.backgroundEnd
+                fill: root.joined ? "transparent" : Theme.filterButton.background
+                fillEnd: root.joined ? "transparent" : Theme.filterButton.backgroundEnd
                 hoverTint: Theme.filterButton.hoverTint
                 direction: Theme.filterButton.gradientDirection
                 border.color: Theme.filterButton.border
-                border.width: Theme.filterButton.borderWidth
+                border.width: root.joined ? 0 : Theme.filterButton.borderWidth
                 badgeColor: Theme.filterButton.badge
                 badge: Library.filtersActive || (General.railHidden && Library.platformFilter !== "")
                 tip: Actions.tip(root.activeFilters.length > 0
@@ -297,7 +249,7 @@ ColumnLayout {
                 property: "x"
                 // Slides left when the widened panel would leave the window.
                 value: {
-                    const wanted = filterHost.width + Theme.layout.spacing
+                    const wanted = filterHost.width + collectionsHost.width + 2 * root.buttonGap
                     const hostX = root.width >= 0 ? filterHost.mapToItem(null, 0, 0).x : 0
                     const room = root.Window.width - Theme.layout.margin - hostX - (filterPanel.item?.width ?? 0)
                     return Math.max(Theme.layout.margin - hostX, Math.min(wanted, room))
@@ -309,6 +261,59 @@ ColumnLayout {
                 function onCollectionDialogRequested(mode, id, name) {
                     filterPanel.item.close()
                     root.askCollection(mode, id, name, [])
+                }
+            }
+        }
+
+        Item {
+            id: collectionsHost
+            visible: Theme.search.showFilterButton
+            implicitWidth: Theme.filterButton.size
+            implicitHeight: Theme.filterButton.size
+
+            IconButton {
+                anchors.fill: parent
+                icon: Icons.bookmarks
+                iconSize: Theme.filterButton.iconSize
+                iconColor: Theme.filterButton.icon
+                radius: Theme.filterButton.radius
+                fill: root.joined ? "transparent" : Theme.filterButton.background
+                fillEnd: root.joined ? "transparent" : Theme.filterButton.backgroundEnd
+                hoverTint: Theme.filterButton.hoverTint
+                direction: Theme.filterButton.gradientDirection
+                border.color: Theme.filterButton.border
+                border.width: root.joined ? 0 : Theme.filterButton.borderWidth
+                tip: Actions.tip(qsTr("Collections"), Actions.keys.open_collections)
+                onClicked: root.openCollections()
+            }
+
+            Loader {
+                id: collectionsPopup
+                active: false
+                source: "CollectionsPopup.qml"
+                onLoaded: item.parent = collectionsHost
+            }
+            Binding {
+                target: collectionsPopup.item
+                property: "x"
+                value: collectionsHost.width + root.buttonGap
+            }
+            Connections {
+                target: collectionsPopup.item
+                function onClosedByKey() { root.focusList() }
+                function onCollectionDialogRequested(mode, id, name) {
+                    collectionsPopup.item.close()
+                    root.askCollection(mode, id, name, [])
+                }
+                function onSteamImportRequested() {
+                    collectionsPopup.item.close()
+                    steamCollections.active = true
+                    steamCollections.item.open()
+                }
+                function onCollectionDeleted(id) {
+                    const error = Library.deleteCollection(id)
+                    if (error !== "")
+                        root.message(error)
                 }
             }
         }

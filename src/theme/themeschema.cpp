@@ -378,6 +378,8 @@ constexpr Setting kSettings[] = {
     real("rail", "drag_scale", "1.15", 1, 2, "Size of a platform button that is held or dragged; 1 = its usual size"),
 
     boolean("search", "show_filter_button", "true", "Show the filter button next to the search box"),
+    boolean("search", "joined_buttons", "false",
+            "Draw the filter and collections buttons inside the search box's background instead of as separate buttons"),
     boolean("search", "show_filter_chips", "true",
             "Show the filters that are on as chips under the search box; the filter button shows a dot either way"),
     text("search", "placeholder", "Search", "Text shown when empty"),
