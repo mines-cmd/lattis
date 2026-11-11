@@ -1479,6 +1479,10 @@ QVariant Library::data(const QModelIndex &index, int role) const
         return game ? game->coverUrl : QUrl();
     case FavoriteRole:
         return game ? game->favorite : false;
+    case PlatformIconRole: {
+        const Platform *p = game ? platform(game->platform) : nullptr;
+        return p ? p->icon : QString();
+    }
     case HiddenRole:
         return game ? game->hidden : false;
     case SortValueRole:
@@ -1524,6 +1528,7 @@ QHash<int, QByteArray> Library::roleNames() const
         {SortValueRole, "sortValue"},
         {CoverUrlRole, "coverUrl"},
         {FavoriteRole, "favorite"},
+        {PlatformIconRole, "platformIcon"},
     };
 }
 

@@ -617,13 +617,14 @@ Item {
             required property bool hidden
             required property bool updating
             required property bool favorite
+            required property string platformIcon
             required property real hue
             required property url coverUrl
 
             readonly property bool running: GameRunner.running.includes(gameId)
             readonly property bool current: GridView.isCurrentItem
             readonly property bool selected: root.selection[gameId] === true
-            readonly property bool hovered: mouse.containsMouse || root.menuRow === index
+            readonly property bool hovered: mouse.containsMouse || playMouse.containsMouse || root.menuRow === index
 
             width: GridView.view.cellWidth
             height: GridView.view.cellHeight
@@ -691,9 +692,11 @@ Item {
                             retainOnResize: true
                         }
 
-                        Rectangle {
+                        Surface {
                             anchors.fill: parent
-                            color: Theme.grid.hoverOverlay
+                            fill: Theme.grid.hoverOverlay
+                            fillEnd: Theme.grid.hoverOverlayEnd
+                            direction: Theme.grid.hoverGradientDirection
                             opacity: cell.hovered ? 1 : 0
                             Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
                         }
@@ -719,10 +722,22 @@ Item {
                     opacity: cell.current ? 1 : Theme.grid.selectedOpacity
                 }
 
+                Badge {
+                    id: platformBadge
+                    visible: Theme.grid.platformIcon !== "off" && opacity > 0
+                    opacity: Theme.grid.platformIcon === "always" || cell.hovered ? face.opacity : 0
+                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                    anchors.top: face.top
+                    anchors.left: face.left
+                    anchors.margins: Theme.grid.platformIconMargin
+                    width: Theme.grid.platformIconSize
+                    iconPath: Icons.forPlatform(cell.platformIcon)
+                }
+
                 Row {
                     anchors.top: face.top
                     anchors.right: face.right
-                    anchors.margins: Theme.layout.spacingSmall
+                    anchors.margins: Theme.grid.badgeMargin
                     spacing: Theme.layout.spacingSmall
                     layoutDirection: Qt.RightToLeft
 
@@ -757,6 +772,61 @@ Item {
                     color: Theme.list.text
                     font.pixelSize: Theme.grid.titleSize
                     opacity: face.opacity
+                }
+            }
+
+            Surface {
+                id: playButton
+                z: 1
+                readonly property bool shown: Theme.grid.playButton !== "off" && cell.hovered && !cell.running
+                visible: opacity > 0
+                opacity: shown ? 1 : 0
+                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                x: card.x + (Theme.grid.playButton === "center" ? (root.coverW - width) / 2
+                                                                : root.coverW - width - Theme.grid.playButtonMargin)
+                y: Theme.grid.playButton === "center" ? (root.coverH - height) / 2
+                                                      : root.coverH - height - Theme.grid.playButtonMargin
+                width: Theme.grid.playButtonLabel === "" ? height : playRow.implicitWidth + height / 2
+                height: Theme.grid.playButtonSize
+                radius: height / 2
+                fill: Theme.grid.playButtonBackground
+                fillEnd: Theme.grid.playButtonBackgroundEnd
+                direction: Theme.layout.gradientDirection
+                scale: playMouse.pressed ? Theme.motion.pressScale : 1
+                Behavior on scale { enabled: Motion.on; MotionNumber {} }
+
+                Row {
+                    id: playRow
+                    anchors.centerIn: parent
+                    spacing: Theme.layout.spacingSmall
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        path: Icons.playFill
+                        size: playButton.height * 0.5
+                        color: Theme.grid.playButtonIconColor
+                    }
+                    Label {
+                        visible: text !== ""
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Theme.grid.playButtonLabel
+                        color: Theme.grid.playButtonIconColor
+                        font.pixelSize: Theme.grid.playButtonFontSize
+                        font.bold: Theme.launchButton.bold
+                    }
+                }
+
+                MouseArea {
+                    id: playMouse
+                    anchors.fill: parent
+                    enabled: playButton.shown
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.clickRow(cell.index, 0)
+                        grid.forceActiveFocus()
+                        root.launchRequested()
+                    }
                 }
             }
 
