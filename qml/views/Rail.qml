@@ -165,7 +165,7 @@ Item {
     readonly property var bottomDefs: ({
         steam_friends: { icon: Icons.users, tip: qsTr("Steam friends"), friends: true },
         add_game: { icon: Icons.add, tip: Actions.tip(qsTr("Add game"), Actions.keys.add_game), run: () => root.addGame() },
-        overview: { icon: Icons.layoutGrid, tip: Actions.tip(qsTr("Library overview"), Actions.keys.overview),
+        overview: { icon: Icons.book, tip: Actions.tip(qsTr("Library overview"), Actions.keys.overview),
                     run: () => root.action("overview") },
         play_statistics: { icon: Icons.barChartFill, tip: Actions.tip(qsTr("Play statistics"), Actions.keys.play_statistics),
                            run: () => root.action("play_statistics") },

@@ -86,8 +86,7 @@ QtObject {
     readonly property string searchEyeLine: "stroke:M10 12 C10 13.105 10.895 14 12 14 C13.105 14 14 13.105 14 12 C14 10.895 13.105 10 12 10 C10.895 10 10 10.895 10 12 Z M12 18 C11.672 18 11.348 17.983 11.03 17.95 C7.858 17.618 5.18 15.635 3 12 C5.4 8 8.4 6 12 6 C15.465 6 18.374 7.853 20.727 11.558 M15 18 C15 19.657 16.343 21 18 21 C19.657 21 21 19.657 21 18 C21 16.343 19.657 15 18 15 C16.343 15 15 16.343 15 18 Z M20.2 20.2 L22 22" // eye-search
     readonly property string loopRightLine: "stroke:M4 12 L4 9 C4 7.343 5.343 6 7 6 L20 6 M17 3 L20 6 L17 9 M20 12 L20 15 C20 16.657 18.657 18 17 18 L4 18 M7 21 L4 18 L7 15" // repeat
     readonly property string layoutGrid: "stroke:M4 4h6v6h-6zM14 4h6v6h-6zM4 14h6v6h-6zM14 14h6v6h-6z" // layout-grid
-    readonly property string layoutGridFill: "M9 3a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2zM19 3a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2zM9 13a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2zM19 13a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2z" // layout-grid (filled)
-    readonly property string viewCovers: "stroke:M4 5h4v6h-4zM10 5h4v6h-4zM16 5h4v6h-4zM4 14h4v5h-4zM10 14h4v5h-4zM16 14h4v5h-4z"
+    readonly property string book: "stroke:M3 19 a9 9 0 0 1 9 0 a9 9 0 0 1 9 0 M3 6 a9 9 0 0 1 9 0 a9 9 0 0 1 9 0 M3 6 L3 19 M12 6 L12 19 M21 6 L21 19" // book
     readonly property string viewList: "stroke:M9 6 L20 6 M9 12 L20 12 M9 18 L20 18 M3.5 6 L5 6 M3.5 12 L5 12 M3.5 18 L5 18"
     readonly property string layoutSidebarRight: "stroke:M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2zM15 4v16" // layout-sidebar-right
     readonly property string layoutMasonryLine: "stroke:M4 7 C4 5.343 5.343 4 7 4 L17 4 C18.657 4 20 5.343 20 7 L20 17 C20 18.657 18.657 20 17 20 L7 20 C5.343 20 4 18.657 4 17 Z M4 9 L12 9 M12 15 L20 15 M12 4 L12 20" // layout-board, corners rounded to 3

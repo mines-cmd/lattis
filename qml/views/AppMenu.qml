@@ -67,7 +67,7 @@ SettingsMenu {
         delegate: Entry {
             required property string modelData
             actionName: modelData
-            iconPath: modelData === "add_game" ? Icons.add : modelData === "overview" ? Icons.layoutGrid
+            iconPath: modelData === "add_game" ? Icons.add : modelData === "overview" ? Icons.book
                     : modelData === "play_statistics" ? Icons.barChartFill
                     : modelData === "gallery" ? Icons.image : Icons.gear
             text: modelData === "add_game" ? qsTr("Add game")
@@ -131,7 +131,7 @@ SettingsMenu {
     }
     Entry {
         actionName: "toggle_view"
-        iconPath: General.view === "grid" ? Icons.viewList : Icons.viewCovers
+        iconPath: General.view === "grid" ? Icons.viewList : Icons.layoutGrid
         text: General.view === "grid" ? qsTr("List view") : qsTr("Grid view")
     }
     Entry {

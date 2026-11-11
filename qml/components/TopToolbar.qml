@@ -17,10 +17,10 @@ Rectangle {
 
     readonly property var fixedButtons: ({
         add_game: { icon: Icons.add, tip: qsTr("Add game"), action: "add_game" },
-        overview: { icon: Icons.layoutGrid, checkedIcon: Icons.layoutGridFill, tip: qsTr("Library overview"), action: "overview" },
+        overview: { icon: Icons.book, tip: qsTr("Library overview"), action: "overview" },
         play_statistics: { icon: Icons.barChartFill, tip: qsTr("Play statistics"), action: "play_statistics" },
         gallery: { icon: Icons.image, checkedIcon: Icons.imageFill, tip: qsTr("Gallery"), action: "gallery" },
-        toggle_view: { icon: Icons.viewCovers, gridIcon: Icons.viewList, tip: qsTr("Grid view"), gridTip: qsTr("List view"),
+        toggle_view: { icon: Icons.layoutGrid, gridIcon: Icons.viewList, tip: qsTr("Grid view"), gridTip: qsTr("List view"),
                        menuText: qsTr("Switch view"), action: "toggle_view" },
         open_settings: { icon: Icons.gear, tip: qsTr("Settings"), action: "open_settings" }
     })
