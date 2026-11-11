@@ -1248,7 +1248,7 @@ constexpr Setting kSettings[] = {
     integer("window_controls", "resize_border", "6", 0, 50,
             "Width of the window edges you drag to resize the window; 0 = off"),
 
-    integer("toolbar", "margin_top", "14", 0, 200, "Distance from the top of the window to the toolbar"),
+    integer("toolbar", "margin_top", "16", 0, 200, "Distance from the top of the window to the toolbar"),
     integer("toolbar", "size", "32", 16, 100, "Button size"),
     integer("toolbar", "icon_size", "20", 8, 64, "Icon size"),
     integer("toolbar", "spacing", "4", 0, 50, "Space between the buttons"),
@@ -1260,7 +1260,7 @@ constexpr Setting kSettings[] = {
     color("toolbar", "checked_icon", "@on_accent", "Icon color of a button whose view is open"),
     color("toolbar", "background", "@search.background", "Panel behind the buttons; transparent = they float"),
     color("toolbar", "border", "@search.border", "Outline of that panel"),
-    integer("toolbar", "padding", "6", 0, 50, "Space between that panel's edge and the buttons"),
+    integer("toolbar", "padding", "4", 0, 50, "Space between that panel's edge and the buttons"),
     integer("toolbar", "background_radius", "@radius.pill", 0, 999, "That panel's corner radius"),
     real("toolbar", "drag_opacity", "@rail.drag_opacity", 0, 1, "Opacity of a button that is dragged"),
     real("toolbar", "drag_scale", "@rail.drag_scale", 1, 2, "Size of a button that is dragged; 1 = its usual size"),
