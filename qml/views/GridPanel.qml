@@ -199,7 +199,9 @@ Rectangle {
                     GridLayout {
                         id: chipGrid
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: Theme.grid.chipCards ? parent.width : implicitWidth
                         columns: 2
+                        uniformCellWidths: Theme.grid.chipCards
                         columnSpacing: Theme.layout.spacing
                         rowSpacing: Theme.layout.spacing
 
@@ -210,6 +212,8 @@ Rectangle {
                                 required property string modelData
                                 name: modelData
                                 carded: Theme.grid.chipCards
+                                Layout.fillWidth: Theme.grid.chipCards
+                                Layout.preferredWidth: Theme.grid.chipCards ? 1 : implicitWidth
                                 fields: gameFields
                                 steamMenu: pendingMenu
                                 onHistoryRequested: root.historyRequested()

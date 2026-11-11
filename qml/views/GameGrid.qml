@@ -29,7 +29,8 @@ Item {
     property string anchorId
 
     property int coverWidth: General.gridCoverWidth
-    readonly property real usable: grid.width - 2 * Theme.grid.margin + Theme.grid.gap - gridBar.reserve
+    readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Theme.grid.margin
+    readonly property real usable: grid.width - leftEdge - Theme.grid.margin + Theme.grid.gap - gridBar.reserve
     readonly property int columns: Math.max(1, Math.floor(usable / (coverWidth + Theme.grid.gap)))
     readonly property real cellW: usable / columns
     readonly property real coverW: cellW - Theme.grid.gap
@@ -500,7 +501,7 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         cellWidth: root.cellW
         cellHeight: root.cellH
-        leftMargin: Theme.grid.margin
+        leftMargin: root.leftEdge
         rightMargin: Theme.grid.margin - Theme.grid.gap + gridBar.reserve
         topMargin: Theme.grid.margin
         bottomMargin: root.pillHeight + 2 * Theme.grid.margin
