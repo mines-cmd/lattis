@@ -1154,7 +1154,7 @@ ApplicationWindow {
         GameList {
             id: gameList
             visible: !window.gridView
-            reach: General.railHidden ? Theme.rail.width + Theme.list.padding - Theme.list.railHiddenMargin
+            reach: General.railHidden ? Theme.rail.width + Theme.list.padding - Theme.rail.containerMargin - Theme.list.railHiddenMargin
                                       : Theme.list.padding - Theme.list.railMargin
             extraTop: General.railHidden ? Theme.list.railHiddenTopMargin : Theme.list.railTopMargin
             Layout.fillHeight: true

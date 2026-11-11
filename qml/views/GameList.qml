@@ -492,7 +492,7 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.leftMargin: Theme.list.padding
+        anchors.leftMargin: Theme.list.padding - Theme.rail.containerMargin
         anchors.rightMargin: Theme.list.padding
         anchors.topMargin: Theme.layout.margin
         spacing: Theme.layout.spacing

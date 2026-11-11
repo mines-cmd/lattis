@@ -519,7 +519,7 @@ constexpr Setting kSettings[] = {
 
     heading("list", "Layout"),
     integer("list", "width", "420", 120, 1600, "Width of the game list"),
-    integer("list", "padding", "12", 0, 200, "Horizontal padding"),
+    integer("list", "padding", "16", 0, 200, "Horizontal padding"),
     integer("list", "rail_margin", "@list.padding", 0, 200, "Space left of the list, from the rail's edge, while the rail shows"),
     integer("list", "rail_top_margin", "10", 0, 200, "Extra space above the list, under the search box, while the rail shows"),
     integer("list", "rail_hidden_margin", "30", 0, 200, "Space left of the list, from the window's edge, while the rail is hidden"),

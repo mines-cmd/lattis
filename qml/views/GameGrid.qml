@@ -474,7 +474,7 @@ Item {
 
     LibrarySearchRow {
         id: searchRow
-        x: General.railHidden ? Theme.list.padding : root.leftEdge
+        x: Math.max(0, Theme.grid.margin - Theme.rail.containerMargin)
         y: Theme.layout.margin
         // The banner shrinks to stay clear of the toolbar.
         width: Library.collectionId === "" ? inlineWidth
@@ -482,7 +482,7 @@ Item {
                                                 (root.toolbarLeft < 0 ? Infinity : root.toolbarLeft - Theme.layout.spacing) - x))
         ready: root.ready
         showChips: false
-        inlineWidth: Theme.list.width - 2 * Theme.list.padding
+        inlineWidth: Theme.list.width - 2 * Theme.list.padding + Theme.rail.containerMargin
         onMessage: text => root.message(text)
         onFocusRequested: root.focusList()
     }
