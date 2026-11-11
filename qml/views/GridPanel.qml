@@ -17,6 +17,7 @@ Rectangle {
     signal historyRequested()
     signal steamUndoRequested()
     signal customizeRequested()
+    signal pageRequested()
 
     function openInstallDialog() {
         launchButton.openInstallDialog()
@@ -308,6 +309,11 @@ Rectangle {
                     }
                 }
             }
+        }
+
+        TextLink {
+            text: qsTr("Open game page →")
+            onClicked: root.pageRequested()
         }
     }
 }

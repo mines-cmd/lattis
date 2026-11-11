@@ -472,7 +472,7 @@ void GeneralTest::toolbarSettings()
     QVERIFY(!general.toolbar());
     QVERIFY(general.toolbarHiddenButtons().isEmpty());
     QCOMPARE(general.toolbarButtonOrder(), toolbarButtons());
-    QCOMPARE(toolbarButtons(), (QStringList{"steam_friends", "add_game", "overview", "play_statistics", "gallery", "open_settings"}));
+    QCOMPARE(toolbarButtons(), (QStringList{"steam_friends", "add_game", "overview", "play_statistics", "gallery", "toggle_view", "open_settings"}));
 
     const auto bad = parseGeneralSettings(
         "[general]\ntoolbar = true\ntoolbar_hidden_buttons = [\"settings\", \"gallery\"]\n"
@@ -485,7 +485,7 @@ void GeneralTest::toolbarSettings()
     QVERIFY(warnings.contains(QLatin1String("unknown toolbar button \"settings\"")));
     QVERIFY(warnings.contains(QLatin1String("\"open_settings\"")));
     QCOMPARE(orderedToolbarButtons(bad.value.toolbarButtonOrder),
-             (QStringList{"open_settings", "steam_friends", "add_game", "overview", "play_statistics", "gallery"}));
+             (QStringList{"open_settings", "steam_friends", "add_game", "overview", "play_statistics", "gallery", "toggle_view"}));
 
     const auto wrongType = parseGeneralSettings("[general]\ntoolbar = \"yes\"\ntoolbar_button_order = 3\n",
                                                 QStringLiteral("settings.toml"));

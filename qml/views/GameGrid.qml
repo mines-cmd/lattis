@@ -22,6 +22,7 @@ Item {
     signal historyRequested()
     signal steamUndoRequested()
     signal customizeRequested()
+    signal pageRequested()
 
     property var selection: ({})
     readonly property int selectionCount: Object.keys(selection).length
@@ -861,6 +862,7 @@ Item {
         onHistoryRequested: root.historyRequested()
         onSteamUndoRequested: root.steamUndoRequested()
         onCustomizeRequested: root.customizeRequested()
+        onPageRequested: root.pageRequested()
     }
 
     function openInstallDialog() {

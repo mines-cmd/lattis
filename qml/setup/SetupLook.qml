@@ -275,87 +275,118 @@ ColumnLayout {
     Item {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.minimumHeight: styleRow.implicitHeight
+        Layout.minimumHeight: lookRows.implicitHeight
 
-        RowLayout {
-            id: styleRow
+        ColumnLayout {
+            id: lookRows
             width: parent.width
             anchors.verticalCenter: parent.verticalCenter
             // The column's spacing above the Item makes the space above bigger, so it's shared out.
             anchors.verticalCenterOffset: -root.spacing / 2
             spacing: Theme.onboarding.spacing
 
-            Label {
-                text: qsTr("Style")
-                color: Theme.palette.text
-                font.pixelSize: Theme.onboarding.themeNameSize
-                font.weight: Theme.font.strongWeight
-            }
-            Flow {
-                spacing: Theme.layout.spacing
+            RowLayout {
+                id: styleRow
+                Layout.fillWidth: true
+                spacing: Theme.onboarding.spacing
 
-                Repeater {
-                    model: Theme.availableStyles
-                    AbstractButton {
-                        id: styleButton
-                        required property string modelData
-                        readonly property bool active: modelData === Theme.activeStyle
+                Label {
+                    text: qsTr("Style")
+                    color: Theme.palette.text
+                    font.pixelSize: Theme.onboarding.themeNameSize
+                    font.weight: Theme.font.strongWeight
+                }
+                Flow {
+                    spacing: Theme.layout.spacing
 
-                        text: modelData
-                        padding: Theme.onboarding.themeCardPadding
-                        leftPadding: padding * 1.5
-                        rightPadding: padding * 1.5
-                        hoverEnabled: true
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        Accessible.checkable: true
-                        Accessible.checked: active
-                        onClicked: Theme.setStyle(modelData)
+                    Repeater {
+                        model: Theme.availableStyles
+                        AbstractButton {
+                            id: styleButton
+                            required property string modelData
+                            readonly property bool active: modelData === Theme.activeStyle
 
-                        background: Surface {
-                            radius: Theme.controls.inputRadius
-                            fill: Theme.onboarding.panelBackground
-                            fillEnd: Theme.onboarding.panelBackgroundEnd
-                            direction: Theme.onboarding.gradientDirection
-                            border.width: styleButton.active || styleButton.visualFocus ? 2 : 1
-                            border.color: styleButton.active || styleButton.visualFocus
-                                          ? Theme.onboarding.choiceSelectedBorder : Theme.onboarding.panelBorder
-                            Behavior on border.color { enabled: Motion.fades; MotionColor {} }
+                            text: modelData
+                            padding: Theme.onboarding.themeCardPadding
+                            leftPadding: padding * 1.5
+                            rightPadding: padding * 1.5
+                            hoverEnabled: true
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            Accessible.checkable: true
+                            Accessible.checked: active
+                            onClicked: Theme.setStyle(modelData)
 
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: parent.radius
-                                opacity: styleButton.hovered && !styleButton.active ? 1 : 0
-                                visible: opacity > 0
-                                color: Theme.palette.hoverOverlay
-                                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                            background: Surface {
+                                radius: Theme.controls.inputRadius
+                                fill: Theme.onboarding.panelBackground
+                                fillEnd: Theme.onboarding.panelBackgroundEnd
+                                direction: Theme.onboarding.gradientDirection
+                                border.width: styleButton.active || styleButton.visualFocus ? 2 : 1
+                                border.color: styleButton.active || styleButton.visualFocus
+                                              ? Theme.onboarding.choiceSelectedBorder : Theme.onboarding.panelBorder
+                                Behavior on border.color { enabled: Motion.fades; MotionColor {} }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: parent.radius
+                                    opacity: styleButton.hovered && !styleButton.active ? 1 : 0
+                                    visible: opacity > 0
+                                    color: Theme.palette.hoverOverlay
+                                    Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                                }
                             }
-                        }
-                        contentItem: Label {
-                            text: styleButton.text
-                            color: Theme.palette.text
-                            font.weight: styleButton.active ? Theme.font.strongWeight : Font.Normal
-                            horizontalAlignment: Text.AlignHCenter
+                            contentItem: Label {
+                                text: styleButton.text
+                                color: Theme.palette.text
+                                font.weight: styleButton.active ? Theme.font.strongWeight : Font.Normal
+                                horizontalAlignment: Text.AlignHCenter
+                            }
                         }
                     }
                 }
+
+                Label {
+                    Layout.leftMargin: Theme.onboarding.spacing
+                    text: qsTr("Show toolbar")
+                    color: Theme.palette.text
+                    font.pixelSize: Theme.onboarding.themeNameSize
+                    font.weight: Theme.font.strongWeight
+                }
+                SettingsSwitch {
+                    checked: General.toolbar
+                    onToggled: General.setToolbar(checked)
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Above the game's page")
+                    color: Theme.onboarding.descriptionColor
+                    wrapMode: Text.Wrap
+                }
             }
 
-            Label {
-                Layout.leftMargin: Theme.onboarding.spacing
-                text: qsTr("Show toolbar")
-                color: Theme.palette.text
-                font.pixelSize: Theme.onboarding.themeNameSize
-                font.weight: Theme.font.strongWeight
-            }
-            SettingsSwitch {
-                checked: General.toolbar
-                onToggled: General.setToolbar(checked)
-            }
-            Label {
+            RowLayout {
                 Layout.fillWidth: true
-                text: qsTr("Above the game's page")
-                color: Theme.onboarding.descriptionColor
-                wrapMode: Text.Wrap
+                spacing: Theme.onboarding.spacing
+
+                Label {
+                    text: qsTr("Library view")
+                    color: Theme.palette.text
+                    font.pixelSize: Theme.onboarding.themeNameSize
+                    font.weight: Theme.font.strongWeight
+                }
+                SegmentedToggle {
+                    accessibleName: qsTr("Library view")
+                    choices: [{ id: "list", text: qsTr("List") },
+                              { id: "grid", text: qsTr("Grid") }]
+                    current: General.view
+                    onPicked: id => General.setView(id)
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("A list beside the game's page, or covers with a side panel")
+                    color: Theme.onboarding.descriptionColor
+                    wrapMode: Text.Wrap
+                }
             }
         }
     }

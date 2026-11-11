@@ -25,7 +25,7 @@ const QStringList &toolbarButtons()
 {
     static const QStringList buttons = {QStringLiteral("steam_friends"), QStringLiteral("add_game"),
                                         QStringLiteral("overview"), QStringLiteral("play_statistics"), QStringLiteral("gallery"),
-                                        QStringLiteral("open_settings")};
+                                        QStringLiteral("toggle_view"), QStringLiteral("open_settings")};
     return buttons;
 }
 

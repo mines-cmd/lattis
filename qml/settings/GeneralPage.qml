@@ -125,6 +125,20 @@ Item {
                 SettingsCard {
                     spacing: Theme.layout.spacing * 2
                     LabeledRow {
+                        label: qsTr("Library view")
+                        note: qsTr("List view shows the list beside the game's page; Grid view shows covers with the game's details in a side panel.")
+                        SegmentedToggle {
+                            accessibleName: qsTr("Library view")
+                            choices: [{ id: "list", text: qsTr("List") },
+                                      { id: "grid", text: qsTr("Grid") }]
+                            current: General.view
+                            onPicked: id => {
+                                const err = General.setView(id)
+                                if (err !== "") error.text = err
+                            }
+                        }
+                    }
+                    LabeledRow {
                         label: qsTr("Show toolbar")
                         note: qsTr("Add game, statistics, gallery and settings above the game's page. Right-click it to choose the buttons.")
                         SettingsSwitch {

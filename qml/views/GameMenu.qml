@@ -392,6 +392,12 @@ SettingsMenu {
     }
     SettingsMenuSeparator { visible: !root.multi }
     Entry {
+        actionName: "open_game_page"
+        iconPath: Icons.arrowRight
+        visible: !root.multi && General.view === "grid"
+        text: qsTr("Open game page")
+    }
+    Entry {
         actionName: "play_history"
         iconPath: Icons.history
         visible: !root.multi

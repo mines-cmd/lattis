@@ -130,6 +130,11 @@ SettingsMenu {
         text: qsTr("Fullscreen")
     }
     Entry {
+        actionName: "toggle_view"
+        iconPath: General.view === "grid" ? Icons.viewList : Icons.viewCovers
+        text: General.view === "grid" ? qsTr("List view") : qsTr("Grid view")
+    }
+    Entry {
         actionName: "toggle_toolbar"
         iconPath: General.toolbar ? Icons.eyeCloseLine : Icons.eyeLine
         text: General.toolbar ? qsTr("Hide toolbar") : qsTr("Show toolbar")

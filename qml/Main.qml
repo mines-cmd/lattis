@@ -145,6 +145,7 @@ ApplicationWindow {
             return
         if (open) {
             const below = openPage
+            gamePageOpen = false
             setGalleryOpen(false, "", true)
             setOverviewOpen(false, true)
             pageBelow = below
@@ -168,6 +169,7 @@ ApplicationWindow {
             return
         if (open) {
             const below = openPage
+            gamePageOpen = false
             setStatsOpen(false, true)
             setGalleryOpen(false, "", true)
             pageBelow = below
@@ -207,12 +209,63 @@ ApplicationWindow {
     readonly property bool pageCovering: statsCovering || galleryCovering || overviewCovering
     readonly property bool gridView: General.view === "grid"
     readonly property Item browser: gridLoader.item ?? gameList
+    readonly property Item details: gridView ? pageDetails.item : listDetails.item
+    property bool gamePageOpen: false
+    readonly property bool gamePageCovering: gamePageOpen && gamePage.opacity === 1
+
+    onGridViewChanged: {
+        if (!gridView) {
+            gamePageOpen = false
+            pageDetails.active = false
+        }
+        Qt.callLater(() => browser.focusList())
+    }
+
+    function setGamePageOpen(open) {
+        if (open === gamePageOpen)
+            return
+        if (open) {
+            if (!gridView || browser.currentGame.id === undefined)
+                return
+            setStatsOpen(false, true)
+            setGalleryOpen(false, "", true)
+            setOverviewOpen(false, true)
+            pageDetails.active = true
+            gamePageOpen = true
+            gamePage.forceActiveFocus()
+        } else {
+            gamePageOpen = false
+            browser.focusList()
+        }
+    }
+
+    function switchView() {
+        const next = gridView ? "list" : "grid"
+        const apply = () => {
+            const error = General.setView(next)
+            if (error.length > 0)
+                toast.show(error)
+        }
+        if (!Motion.fades || setupGuide.active || pageCovering || gamePageCovering) {
+            apply()
+            return
+        }
+        libraryLayout.grabToImage(result => {
+            viewSnapshot.holding = true
+            viewSnapshot.source = result.url
+            viewSnapshot.opacity = 1
+            viewSnapshot.holding = false
+            apply()
+            viewSnapshot.opacity = 0
+        })
+    }
 
     function setGalleryOpen(open, gameId = "", switching = false) {
         if (open === galleryOpen)
             return
         if (open) {
             const below = openPage
+            gamePageOpen = false
             setStatsOpen(false, true)
             setOverviewOpen(false, true)
             pageBelow = below
@@ -495,11 +548,11 @@ ApplicationWindow {
         if (gridView)
             browser.openInstallDialog()
         else
-            details.openInstallDialog()
+            details?.openInstallDialog()
     }
 
     function logoForScreenshot(mode) {
-        details.logoForScreenshot(mode)
+        details?.logoForScreenshot(mode)
     }
 
     function gameMenuForScreenshot(spec) {
@@ -507,7 +560,7 @@ ApplicationWindow {
         if (id === "page" && gridView)
             browser.openPanelMenu()
         else if (id === "page")
-            details.openMenu()
+            details?.openMenu()
         else
             browser.openMenu(Library.rowOfGame(id))
         if (submenu !== undefined)
@@ -519,11 +572,11 @@ ApplicationWindow {
         if (gridView)
             browser.pageMenuForScreenshot(place === "chips" ? "grid_chips" : "grid_panels")
         else
-            details.pageMenuForScreenshot(place, submenu)
+            details?.pageMenuForScreenshot(place, submenu)
     }
 
     function clipForScreenshot(spec) {
-        details.clipForScreenshot(spec)
+        details?.clipForScreenshot(spec)
     }
 
     function selectGamesForScreenshot(ids) {
@@ -670,7 +723,7 @@ ApplicationWindow {
 
     function run(name) {
         // The viewer's own handler toggles the open item's favorite instead.
-        if (name === "toggle_favorite" && (details.viewerOpen || (galleryPage.item?.viewerOpen ?? false)))
+        if (name === "toggle_favorite" && ((details?.viewerOpen ?? false) || (galleryPage.item?.viewerOpen ?? false)))
             return
         if (name.startsWith("show_platform_")) {
             const platform = Library.platforms[parseInt(name.slice("show_platform_".length)) - 1]
@@ -726,6 +779,8 @@ ApplicationWindow {
                 toast.show(error)
             break
         }
+        case "toggle_view": switchView(); break
+        case "open_game_page": setGamePageOpen(true); break
         case "toggle_grid_panel": {
             if (!gridView)
                 break
@@ -790,16 +845,24 @@ ApplicationWindow {
         }
     }
 
+    // The button logic lives in GameDetails, which grid view doesn't create until it needs it.
+    function activateOn(button, game) {
+        if (details === null)
+            pageDetails.active = true
+        details.activate(button, game)
+    }
+
     function runOn(name, game) {
         if (game.id === undefined)
             return
         switch (name) {
         case "launch": launch(game); break
-        case "toggle_favorite": details.activate("favorite", game); break
-        case "open_platform": details.activate("open_platform", game); break
-        case "open_folder": details.activate("folder", game); break
-        case "open_save_folder": details.activate("save_folder", game); break
-        case "open_mod_manager": details.activate("mod_manager", game); break
+        case "toggle_favorite": activateOn("favorite", game); break
+        case "open_platform": activateOn("open_platform", game); break
+        case "open_folder": activateOn("folder", game); break
+        case "open_save_folder": activateOn("save_folder", game); break
+        case "open_mod_manager": activateOn("mod_manager", game); break
+        case "open_game_page": setGamePageOpen(true); break
         case "add_mod_manager": addModManager(game.id); break
         case "game_settings": editGame(game.id); break
         case "hide_game": hideGame(game); break
@@ -1028,17 +1091,20 @@ ApplicationWindow {
 
     Backdrop {
         visible: Theme.backdrop.enabled && !window.pageCovering
-        x: Theme.backdrop.area === "details" && !window.gridView ? details.x : 0
+        x: Theme.backdrop.area === "details" && !window.gridView ? listDetails.x : 0
         width: parent.width - x
         height: parent.height * Theme.backdrop.height
-        game: !Theme.backdrop.enabled ? ({}) : window.gridView ? window.gridHeroGame : details.shownHeroGame
+        game: !Theme.backdrop.enabled ? ({})
+            : window.gridView && !window.gamePageOpen ? window.gridHeroGame
+            : (details?.shownHeroGame ?? ({}))
     }
 
     RowLayout {
+        id: libraryLayout
         anchors.fill: parent
         spacing: 0
         enabled: !setupGuide.active
-        visible: !window.pageCovering
+        visible: !window.pageCovering && !window.gamePageCovering
 
         Rail {
             id: rail
@@ -1074,6 +1140,7 @@ ApplicationWindow {
                 onHistoryRequested: window.openPlayHistory(currentGame)
                 onSteamUndoRequested: window.askSteamUndo()
                 onCustomizeRequested: window.openSettingsAt("game_page")
+                onPageRequested: window.setGamePageOpen(true)
             }
         }
 
@@ -1092,16 +1159,25 @@ ApplicationWindow {
             onModManagerRequested: id => window.openModManager(id)
         }
 
-        GameDetails {
-            id: details
-            visible: !window.gridView
+        Loader {
+            id: listDetails
+            active: !window.gridView
+            visible: active
             Layout.fillWidth: true
             Layout.fillHeight: true
+            sourceComponent: detailsComponent
+        }
+    }
+
+    Component {
+        id: detailsComponent
+
+        GameDetails {
             game: browser.currentGame
             allCollapsed: browser.allCollapsed
             dragReserve: windowControls.width + 2 * Theme.windowControls.margin
             startedUp: window.startedUp
-            toolbarLeft: toolbar.visible ? toolbar.x - x : -1
+            toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
             onMessage: text => toast.show(text)
@@ -1119,6 +1195,18 @@ ApplicationWindow {
             onGalleryRequested: id => window.setGalleryOpen(true, id)
             onModManagerRequested: id => window.openModManager(id)
         }
+    }
+
+    Image {
+        id: viewSnapshot
+        property bool holding: false
+        anchors.fill: parent
+        visible: opacity > 0
+        opacity: 0
+        cache: false
+        fillMode: Image.Stretch
+
+        Behavior on opacity { enabled: Motion.fades && !viewSnapshot.holding; MotionNumber { fade: true; speed: "normal" } }
     }
 
     // Its own stacking context, so a page can drop below the other without going under the game page.
@@ -1252,6 +1340,38 @@ ApplicationWindow {
                 window.setGalleryOpen(false)
             }
         }
+
+        FocusScope {
+            id: gamePage
+            anchors.fill: parent
+            visible: opacity > 0
+            opacity: window.gamePageOpen ? 1 : 0
+            layer.enabled: opacity > 0 && opacity < 1
+            enabled: !setupGuide.active
+            Keys.onEscapePressed: window.setGamePageOpen(false)
+
+            Behavior on opacity {
+                enabled: Motion.fades
+                MotionNumber { fade: true; speed: "normal"; linear: true }
+            }
+
+            Loader {
+                id: pageDetails
+                anchors.fill: parent
+                active: false
+                sourceComponent: detailsComponent
+            }
+
+            ChromeButton {
+                x: Theme.layout.margin
+                y: Theme.layout.margin
+                icon: Icons.arrowUp
+                iconRotation: -90
+                label: qsTr("Back to games")
+                tip: qsTr("Back to games (Esc)")
+                onClicked: window.setGamePageOpen(false)
+            }
+        }
     }
 
     // A click anywhere outside the list clears a multi-selection. Passive, so the click still
@@ -1270,8 +1390,9 @@ ApplicationWindow {
     TopToolbar {
         id: toolbar
         Component.onCompleted: window.toolbarHovered = Qt.binding(() => toolbar.hovered)
-        readonly property real low: window.gridView ? (General.railHidden ? 0 : Theme.rail.width) + Theme.grid.margin
-                                                    : details.x + Theme.details.marginLeft
+        readonly property real low: window.gridView && !window.gamePageOpen
+                                    ? (General.railHidden ? 0 : Theme.rail.width) + Theme.grid.margin
+                                    : (window.gridView ? 0 : listDetails.x) + Theme.details.marginLeft
         readonly property real high: panelButton.visible ? panelButton.x - Theme.layout.spacing
                                    : windowControls.visible ? windowControls.x - Theme.layout.spacing
                                                             : window.width - Theme.layout.margin
@@ -1379,7 +1500,7 @@ ApplicationWindow {
 
     Rectangle {
         id: panelButton
-        visible: window.gridView && !setupGuide.active
+        visible: window.gridView && !window.gamePageOpen && !setupGuide.active
         x: (windowControls.visible ? windowControls.x : window.width - Theme.windowControls.margin) - width - Theme.windowControls.spacing
         y: windowControls.y + (windowControls.height - height) / 2
         width: Theme.windowControls.size

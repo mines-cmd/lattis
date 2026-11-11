@@ -22,7 +22,7 @@ SettingsMenu {
         delegate: MenuCheckRow {
             id: row
             required property string modelData
-            text: root.known[modelData].tip
+            text: root.known[modelData].menuText ?? root.known[modelData].tip
             checked: !General.toolbarHiddenButtons.includes(modelData)
             onToggled: {
                 const shown = General.toolbarButtonOrder.filter(name => root.known[name] !== undefined

@@ -20,6 +20,8 @@ Rectangle {
         overview: { icon: Icons.layoutGrid, checkedIcon: Icons.layoutGridFill, tip: qsTr("Library overview"), action: "overview" },
         play_statistics: { icon: Icons.barChartFill, tip: qsTr("Play statistics"), action: "play_statistics" },
         gallery: { icon: Icons.image, checkedIcon: Icons.imageFill, tip: qsTr("Gallery"), action: "gallery" },
+        toggle_view: { icon: Icons.viewCovers, gridIcon: Icons.viewList, tip: qsTr("Grid view"), gridTip: qsTr("List view"),
+                       menuText: qsTr("Switch view"), action: "toggle_view" },
         open_settings: { icon: Icons.gear, tip: qsTr("Settings"), action: "open_settings" }
     })
     readonly property var known: steamFound
@@ -254,7 +256,8 @@ Rectangle {
                     visible: !face.item
                     size: Theme.toolbar.iconSize
                     color: button.checked ? Theme.toolbar.checkedIcon : Theme.toolbar.icon
-                    path: button.checked && button.info.checkedIcon ? button.info.checkedIcon : button.info.icon
+                    path: button.checked && button.info.checkedIcon ? button.info.checkedIcon
+                        : button.info.gridIcon && General.view === "grid" ? button.info.gridIcon : button.info.icon
 
                     Behavior on color { enabled: Motion.fades; MotionColor {} }
                 }
@@ -314,7 +317,9 @@ Rectangle {
                     && !(button.info.friends && statusMenu.item?.visible)
                 ToolTip.delay: Theme.tooltip.delay
                 ToolTip.text: button.info.friends ? (face.item?.text ?? button.info.tip)
-                                                  : Actions.tip(button.info.tip, Actions.keys[button.info.action] ?? [])
+                                                  : Actions.tip(button.info.gridTip && General.view === "grid" ? button.info.gridTip
+                                                                                                              : button.info.tip,
+                                                                Actions.keys[button.info.action] ?? [])
             }
         }
     }
