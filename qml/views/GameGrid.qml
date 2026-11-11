@@ -489,7 +489,7 @@ Item {
 
         x: General.railHidden ? -Theme.rail.width : 0
         y: searchRow.y + searchRow.height + Theme.layout.spacing
-        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin : 0)
+        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin + Theme.grid.margin : 0)
         height: parent.height - y
         clip: true
         model: Library
