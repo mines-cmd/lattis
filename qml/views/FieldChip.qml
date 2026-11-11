@@ -9,6 +9,7 @@ StatChip {
     required property GameFields fields
     required property SteamPendingMenu steamMenu
     property bool leaving: false
+    property bool carded: false
 
     readonly property var field: fields.all[name]
     readonly property bool opensHistory: field.history ?? false
@@ -16,6 +17,10 @@ StatChip {
 
     signal historyRequested()
 
+    fill: carded ? Theme.grid.chipBackground : Theme.statChip.background
+    fillEnd: carded ? Theme.grid.chipBackground : Theme.statChip.backgroundEnd
+    border.color: attention ? (attentionColor ?? Theme.notice.border) : carded ? Theme.grid.chipBorder : Theme.statChip.border
+    border.width: attention ? Theme.notice.borderWidth : carded ? Theme.grid.chipBorderWidth : Theme.statChip.borderWidth
     attention: field.attention ?? false
     attentionColor: field.attentionColor
     iconTint: field.iconTint

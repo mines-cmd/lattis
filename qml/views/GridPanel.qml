@@ -87,22 +87,34 @@ Rectangle {
         spacing: Theme.grid.panelSpacing
 
         Item {
+            id: logoBox
             Layout.fillWidth: true
-            Layout.preferredHeight: Theme.grid.panelLogoHeight
+            Layout.bottomMargin: Theme.grid.panelLogoGap
+            Layout.preferredHeight: hasLogo ? Math.min(Theme.grid.panelLogoHeight, width * aspect) : titleLabel.implicitHeight
 
             readonly property bool hasLogo: logo.status === Image.Ready || logo.status === Image.Loading
+            // Another game's logo keeps the old aspect until it has loaded, so the panel doesn't jump twice.
+            property real aspect: 0.3
+
+            Connections {
+                target: logo
+                function onStatusChanged() {
+                    if (logo.status === Image.Ready && logo.implicitWidth > 0)
+                        logoBox.aspect = logo.implicitHeight / logo.implicitWidth
+                }
+            }
 
             Image {
                 id: logo
                 anchors.fill: parent
                 source: root.game.logoUrl ?? ""
-                sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
-                                    Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
+                sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32, 0)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 smooth: true
             }
             Label {
+                id: titleLabel
                 anchors.fill: parent
                 visible: root.game.id !== undefined && !parent.hasLogo
                 horizontalAlignment: Text.AlignHCenter
@@ -197,6 +209,7 @@ Rectangle {
                             FieldChip {
                                 required property string modelData
                                 name: modelData
+                                carded: Theme.grid.chipCards
                                 fields: gameFields
                                 steamMenu: pendingMenu
                                 onHistoryRequested: root.historyRequested()
