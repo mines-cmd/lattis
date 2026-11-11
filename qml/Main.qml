@@ -208,6 +208,8 @@ ApplicationWindow {
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
     readonly property bool pageCovering: statsCovering || galleryCovering || overviewCovering
     readonly property bool gridView: General.view === "grid"
+    // Here rather than in GameGrid: a Binding destroyed with its Loader item doesn't restore the value.
+    Binding { target: Library; property: "flat"; value: window.gridView }
     readonly property Item browser: gridLoader.item ?? gameList
     readonly property Item details: gridView ? pageDetails.item : listDetails.item
     property bool gamePageOpen: false

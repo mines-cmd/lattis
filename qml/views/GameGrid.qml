@@ -63,8 +63,6 @@ Item {
         onTriggered: root.reflowing = false
     }
 
-    Binding { target: Library; property: "flat"; value: true }
-
     function syncSelection() {
         let row = Library.rowOfGame(selectedId)
         if (row < 0)
