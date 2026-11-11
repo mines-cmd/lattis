@@ -32,7 +32,7 @@ Item {
     property real toolbarLeft: -1
     // Level with the top of the hero in the list view.
     readonly property real contentTop: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.details.marginTop
-    readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Theme.grid.margin
+    readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Math.max(0, Theme.grid.margin - Theme.rail.containerMargin)
     // The scrollbar sits in the right margin, centered in it, so it touches neither the covers nor the panel.
     readonly property real barGap: Math.max(0, (Theme.grid.margin - gridBar.thickness) / 2)
     readonly property real usable: grid.width - leftEdge - (Theme.grid.margin - barGap) + Theme.grid.gap
@@ -474,7 +474,7 @@ Item {
 
     LibrarySearchRow {
         id: searchRow
-        x: Theme.list.padding
+        x: General.railHidden ? Theme.list.padding : root.leftEdge
         y: Theme.layout.margin
         // The banner shrinks to stay clear of the toolbar.
         width: Library.collectionId === "" ? inlineWidth
