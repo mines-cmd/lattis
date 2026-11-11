@@ -122,28 +122,6 @@ ColumnLayout {
         dialog.ids = ids
         dialog.open()
     }
-    Loader {
-        id: collectionDialog
-        active: false
-        source: "CollectionDialog.qml"
-    }
-    Connections {
-        target: collectionDialog.item
-        function onMessage(text) { root.message(text) }
-        function onClosed() { root.focusList() }
-    }
-
-    Loader {
-        id: steamCollections
-        active: false
-        source: "SteamCollectionsDialog.qml"
-    }
-    Connections {
-        target: steamCollections.item
-        function onMessage(text) { root.message(text) }
-        function onClosed() { root.focusList() }
-    }
-
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
@@ -334,6 +312,30 @@ ColumnLayout {
     // step: the last chip pops out first, then the list eases up.
     Item {
         id: chipRow
+
+        // Here and not beside the row, where each idle Loader would be a cell and add a gap.
+        Loader {
+            id: collectionDialog
+            active: false
+            source: "CollectionDialog.qml"
+        }
+        Connections {
+            target: collectionDialog.item
+            function onMessage(text) { root.message(text) }
+            function onClosed() { root.focusList() }
+        }
+
+        Loader {
+            id: steamCollections
+            active: false
+            source: "SteamCollectionsDialog.qml"
+        }
+        Connections {
+            target: steamCollections.item
+            function onMessage(text) { root.message(text) }
+            function onClosed() { root.focusList() }
+        }
+
         readonly property real wanted: Theme.search.showFilterChips && (root.activeFilters.length > 0 || chipModel.count > 0) ? 1 : 0
         property real space: wanted
         property real flowHeight: 0
