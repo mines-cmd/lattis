@@ -549,7 +549,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 
 ### Roles
 
-`isHeader`, `gameId`, `title` (a header's is its group's name), `platform`, `group` (the platform or status id that `toggleGroup()` takes), `count`, `collapsed`, `installed`, `hue`, `iconUrl`, `coverUrl`, `hidden`, `sortValue` (what the list is sorted by, as shown on the row: "3 days ago", "12 h").
+`isHeader`, `gameId`, `title` (a header's is its group's name), `platform`, `group` (the platform or status id that `toggleGroup()` takes), `count`, `collapsed`, `installed`, `hue`, `iconUrl`, `coverUrl`, `favorite`, `hidden`, `sortValue` (what the list is sorted by, as shown on the row: "3 days ago", "12 h").
 
 ### List navigation
 

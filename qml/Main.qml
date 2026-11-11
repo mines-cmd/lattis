@@ -92,7 +92,7 @@ ApplicationWindow {
     }
 
     function makeUndoableChange(kind) {
-        const game = gameList.currentGame
+        const game = browser.currentGame
         switch (kind) {
         case "hide": hideGame(game); break
         case "save": Library.saveGame(game.id, { description: "Changed for the screenshot" }); break
@@ -108,8 +108,8 @@ ApplicationWindow {
     }
 
     function playHistoryForScreenshot(id) {
-        gameList.selectGame(id)
-        openPlayHistory(gameList.currentGame)
+        browser.selectGame(id)
+        openPlayHistory(browser.currentGame)
     }
 
     property bool steamSyncAsked: false
@@ -159,7 +159,7 @@ ApplicationWindow {
             pageBelow = ""
             if (!switching)
                 statsPage.item.leave()
-            gameList.focusList()
+            browser.focusList()
         }
     }
 
@@ -183,7 +183,7 @@ ApplicationWindow {
             pageBelow = ""
             if (!switching)
                 overviewPage.item.leave()
-            gameList.focusList()
+            browser.focusList()
         }
     }
 
@@ -205,6 +205,8 @@ ApplicationWindow {
     }
     readonly property bool galleryCovering: galleryOpen && galleryPage.opacity === 1
     readonly property bool pageCovering: statsCovering || galleryCovering || overviewCovering
+    readonly property bool gridView: General.view === "grid"
+    readonly property Item browser: gridLoader.item ?? gameList
 
     function setGalleryOpen(open, gameId = "", switching = false) {
         if (open === galleryOpen)
@@ -225,7 +227,7 @@ ApplicationWindow {
             pageBelow = ""
             if (!switching)
                 galleryPage.item.leave()
-            gameList.focusList()
+            browser.focusList()
         }
     }
 
@@ -252,15 +254,15 @@ ApplicationWindow {
     }
 
     function selectGame(id) {
-        gameList.selectGame(id)
+        browser.selectGame(id)
     }
 
     function scrollList(pixelsPerSecond) {
-        gameList.scrollThrough(pixelsPerSecond)
+        browser.scrollThrough(pixelsPerSecond)
     }
 
     function selectAndLaunch(id) {
-        gameList.selectGame(id)
+        browser.selectGame(id)
         launch(Library.gameAt(Library.rowOfGame(id)))
     }
 
@@ -272,7 +274,7 @@ ApplicationWindow {
     Connections {
         target: steamPrompt.item
         function onMessage(text) { toast.show(text) }
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
     }
 
     Connections {
@@ -291,7 +293,7 @@ ApplicationWindow {
     Connections {
         target: forceClosePrompt.item
         function onMessage(text) { toast.show(text) }
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
     }
 
     Loader {
@@ -302,7 +304,7 @@ ApplicationWindow {
     Connections {
         target: steamUndo.item
         function onMessage(text) { toast.show(text) }
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
     }
 
     Loader {
@@ -314,7 +316,7 @@ ApplicationWindow {
         target: playHistory.item
         function onMessage(text) { toast.show(text) }
         function onUndoHandedOver(text, link, duration) { toast.show(text, link, duration) }
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
     }
 
     Loader {
@@ -465,7 +467,7 @@ ApplicationWindow {
     // The screenshot hook's "<game id>[/general|images|launch|saves]".
     function selectAndEdit(spec) {
         const [id, tab] = spec.split("/")
-        gameList.selectGame(id)
+        browser.selectGame(id)
         editGame(id, Math.max(0, ["general", "images", "launch", "saves"].indexOf(tab)))
     }
 
@@ -502,9 +504,9 @@ ApplicationWindow {
         if (id === "page")
             details.openMenu()
         else
-            gameList.openMenu(Library.rowOfGame(id))
+            browser.openMenu(Library.rowOfGame(id))
         if (submenu !== undefined)
-            gameList.openMenuSubmenu(submenu)
+            browser.openMenuSubmenu(submenu)
     }
 
     function gamePageMenuForScreenshot(spec) {
@@ -517,7 +519,7 @@ ApplicationWindow {
     }
 
     function selectGamesForScreenshot(ids) {
-        gameList.selectGames(ids.split(","))
+        browser.selectGames(ids.split(","))
     }
 
     function platformMenuForScreenshot(id) {
@@ -560,10 +562,10 @@ ApplicationWindow {
     }
     Connections {
         target: editorLoader.item
-        function onClosed() { gameList.focusList() }
-        function onSaved(id) { gameList.selectGame(id) }
-        function onSelectRequested(id) { gameList.selectGame(id) }
-        function onRemoved(next) { gameList.selectGame(next) }
+        function onClosed() { browser.focusList() }
+        function onSaved(id) { browser.selectGame(id) }
+        function onSelectRequested(id) { browser.selectGame(id) }
+        function onRemoved(next) { browser.selectGame(next) }
         function onMessage(text) { toast.show(text) }
         function onAddModManagerRequested(gameId) { addModManager(gameId) }
         function onShortcutFound(text) {
@@ -620,7 +622,7 @@ ApplicationWindow {
     function openSettings() {
         if (settingsWindow === null) {
             settingsWindow = createWindow("settings/SettingsWindow.qml")
-            settingsWindow.game = Qt.binding(() => gameList.currentGame)
+            settingsWindow.game = Qt.binding(() => browser.currentGame)
             settingsWindow.lookUpMissing.connect(() => openBulkLookup(settingsWindow))
             settingsWindow.suggestTagsFromIgdb.connect(() => openBulkLookup(settingsWindow, true))
             settingsWindow.openUpdate.connect(() => {
@@ -682,11 +684,11 @@ ApplicationWindow {
         }
         case "toggle_favorite":
         case "hide_game":
-            if (gameList.selectionCount > 0) {
-                runOnMany(name, gameList.selectedIds())
+            if (browser.selectionCount > 0) {
+                runOnMany(name, browser.selectedIds())
                 break
             }
-            runOn(name, gameList.currentGame)
+            runOn(name, browser.currentGame)
             break
         case "launch":
         case "open_platform":
@@ -697,11 +699,11 @@ ApplicationWindow {
         case "play_history":
         case "steam_properties":
         case "uninstall_game":
-            runOn(name, gameList.currentGame)
+            runOn(name, browser.currentGame)
             break
         case "game_menu":
             if (details.hasGame)
-                gameList.openMenu(Library.rowOfGame(gameList.currentGame.id))
+                browser.openMenu(Library.rowOfGame(browser.currentGame.id))
             break
         case "app_menu": rail.openMenu(); break
         case "undo": toast.undo(); break
@@ -768,7 +770,7 @@ ApplicationWindow {
         case "import_backup": openSettingsAt("library", "import"); break
         case "show_shortcuts": openSettingsAt("keyboard"); break
         case "quit": Qt.quit(); break
-        default: gameList.run(name)
+        default: browser.run(name)
         }
     }
 
@@ -800,10 +802,10 @@ ApplicationWindow {
             break
         case "hide_game": {
             const hide = games.some(g => !g.hidden)
-            const next = hide && !Library.showHidden ? gameList.neighborOutside(ids) : ""
+            const next = hide && !Library.showHidden ? browser.neighborOutside(ids) : ""
             error = Library.setGamesValue(ids, "hidden", hide)
             if (error === "" && next !== "")
-                gameList.selectGame(next)
+                browser.selectGame(next)
             break
         }
         }
@@ -818,14 +820,14 @@ ApplicationWindow {
                 toast.show(error)
             return
         }
-        const next = game.id === gameList.selectedId && !Library.showHidden ? gameList.neighborOf(game.id) : ""
+        const next = game.id === browser.selectedId && !Library.showHidden ? browser.neighborOf(game.id) : ""
         const error = Library.removeGame(game.id, false)
         if (error !== "") {
             toast.show(error)
             return
         }
         if (next !== "")
-            gameList.selectGame(next)
+            browser.selectGame(next)
     }
 
     function showError(error) {
@@ -839,7 +841,7 @@ ApplicationWindow {
             steamUninstall.item.ask(game)
         } else if (game.platform === "proton" || game.platform === "linux") {
             protonUninstall.active = true
-            protonUninstall.next = game.id === gameList.selectedId ? gameList.neighborOf(game.id) : ""
+            protonUninstall.next = game.id === browser.selectedId ? browser.neighborOf(game.id) : ""
             protonUninstall.item.ask(game)
         }
     }
@@ -862,7 +864,7 @@ ApplicationWindow {
     }
     Connections {
         target: whatsNewDialog.item
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
     }
 
     Loader {
@@ -872,7 +874,7 @@ ApplicationWindow {
     }
     Connections {
         target: aboutDialog.item
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
         function onUpdateRequested() { window.openUpdate() }
     }
 
@@ -883,7 +885,7 @@ ApplicationWindow {
     }
     Connections {
         target: updateDialog.item
-        function onClosed() { gameList.focusList() }
+        function onClosed() { browser.focusList() }
         function onMessage(text) { toast.show(text) }
     }
 
@@ -898,7 +900,7 @@ ApplicationWindow {
         target: protonUninstall.item
         function onDone(removedGame) {
             if (removedGame && protonUninstall.next !== "")
-                gameList.selectGame(protonUninstall.next)
+                browser.selectGame(protonUninstall.next)
         }
     }
 
@@ -1023,8 +1025,24 @@ ApplicationWindow {
             onEditPlatform: id => window.openSettingsAt("platforms", id)
         }
 
+        Loader {
+            id: gridLoader
+            active: window.gridView
+            visible: active
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            sourceComponent: GameGrid {
+                onLaunchRequested: window.launch(currentGame)
+                onMessage: text => toast.show(text)
+                onGameAction: (name, game) => window.runOn(name, game)
+                onGamesAction: (name, ids) => window.runOnMany(name, ids)
+                onModManagerRequested: id => window.openModManager(id)
+            }
+        }
+
         GameList {
             id: gameList
+            visible: !window.gridView
             reach: General.railHidden ? Theme.rail.width + Theme.list.padding - Theme.list.railHiddenMargin
                                       : Theme.list.padding - Theme.list.railMargin
             extraTop: General.railHidden ? Theme.list.railHiddenTopMargin : Theme.list.railTopMargin
@@ -1039,10 +1057,11 @@ ApplicationWindow {
 
         GameDetails {
             id: details
+            visible: !window.gridView
             Layout.fillWidth: true
             Layout.fillHeight: true
-            game: gameList.currentGame
-            allCollapsed: gameList.allCollapsed
+            game: browser.currentGame
+            allCollapsed: browser.allCollapsed
             dragReserve: windowControls.width + 2 * Theme.windowControls.margin
             startedUp: window.startedUp
             toolbarLeft: toolbar.visible ? toolbar.x - x : -1
@@ -1051,14 +1070,14 @@ ApplicationWindow {
             onMessage: text => toast.show(text)
             onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
             onClicked: {
-                gameList.clearSelection()
-                gameList.focusList()
+                browser.clearSelection()
+                browser.focusList()
             }
             onEditRequested: window.editGame(game.id)
             onAddRequested: window.addGame()
             onSteamUndoRequested: window.askSteamUndo()
             onHistoryRequested: window.openPlayHistory(game)
-            onMenuRequested: button => gameList.openMenuBelow(Library.rowOfGame(game.id), button)
+            onMenuRequested: button => browser.openMenuBelow(Library.rowOfGame(game.id), button)
             onCustomizeRequested: window.openSettingsAt("game_page")
             onGalleryRequested: id => window.setGalleryOpen(true, id)
             onModManagerRequested: id => window.openModManager(id)
@@ -1099,7 +1118,7 @@ ApplicationWindow {
             target: statsPage.item
             function onCloseRequested() { window.setStatsOpen(false) }
             function onGameRequested(id) {
-                gameList.revealGame(id)
+                browser.revealGame(id)
                 window.setStatsOpen(false)
             }
         }
@@ -1144,7 +1163,7 @@ ApplicationWindow {
             }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
             function onGameRequested(id) {
-                gameList.revealGame(id)
+                browser.revealGame(id)
                 window.setOverviewOpen(false)
             }
             function onAttentionRequested(kind) {
@@ -1192,7 +1211,7 @@ ApplicationWindow {
                     toast.show(text)
             }
             function onGameRequested(id) {
-                gameList.revealGame(id)
+                browser.revealGame(id)
                 window.setGalleryOpen(false)
             }
         }
@@ -1204,10 +1223,10 @@ ApplicationWindow {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         gesturePolicy: TapHandler.ReleaseWithinBounds
         grabPermissions: PointerHandler.ApprovesTakeOverByAnything
-        enabled: gameList.selectionCount > 0
+        enabled: browser.selectionCount > 0
         onTapped: eventPoint => {
-            if (!gameList.contains(gameList.mapFromItem(null, eventPoint.scenePosition)))
-                gameList.clearSelection()
+            if (!browser.contains(browser.mapFromItem(null, eventPoint.scenePosition)))
+                browser.clearSelection()
         }
     }
 
@@ -1249,7 +1268,7 @@ ApplicationWindow {
         function onClosed() {
             Qt.callLater(() => {
                 setupGuide.active = false
-                gameList.focusList()
+                browser.focusList()
             })
         }
     }

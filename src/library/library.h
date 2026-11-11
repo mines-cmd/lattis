@@ -113,6 +113,7 @@ public:
         UpdatingRole,
         SortValueRole,
         CoverUrlRole,
+        FavoriteRole,
     };
 
     Library(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary = NewLibrary::Plain,

@@ -238,7 +238,9 @@ qt_add_qml_module(lattis
         qml/views/ImageFileDialog.qml
         qml/views/TagAddPopup.qml
         qml/views/TagsEditor.qml
+        qml/views/GameGrid.qml
         qml/views/GameList.qml
+        qml/views/LibrarySearchRow.qml
         qml/views/GameMenu.qml
         qml/views/ModManagerMenu.qml
         qml/views/NewTagPrompt.qml

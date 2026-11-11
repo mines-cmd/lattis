@@ -1477,6 +1477,8 @@ QVariant Library::data(const QModelIndex &index, int role) const
         return game ? game->steamUpdate != SteamUpdate::None : false;
     case CoverUrlRole:
         return game ? game->coverUrl : QUrl();
+    case FavoriteRole:
+        return game ? game->favorite : false;
     case HiddenRole:
         return game ? game->hidden : false;
     case SortValueRole:
@@ -1521,6 +1523,7 @@ QHash<int, QByteArray> Library::roleNames() const
         {UpdatingRole, "updating"},
         {SortValueRole, "sortValue"},
         {CoverUrlRole, "coverUrl"},
+        {FavoriteRole, "favorite"},
     };
 }
 

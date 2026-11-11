@@ -906,6 +906,7 @@ void LibraryListTest::coverRole()
 {
     auto library = openLibrary();
     QVERIFY(library->roleNames().values().contains("coverUrl"));
+    QVERIFY(library->roleNames().values().contains("favorite"));
     int games = 0;
     for (int i = 0; i < library->rowCount(); ++i) {
         const QModelIndex row = library->index(i);
