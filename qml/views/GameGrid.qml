@@ -490,7 +490,7 @@ Item {
         x: General.railHidden ? -Theme.rail.width : 0
         y: searchRow.y + searchRow.height + Theme.layout.spacing
         width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin + Theme.grid.margin : 0)
-        height: parent.height - y
+        height: parent.height - y - Theme.grid.panelMargin
         clip: true
         model: Library
         reuseItems: true
@@ -507,6 +507,7 @@ Item {
 
         ScrollBar.vertical: SettingsScrollBar {
             id: gridBar
+            topPadding: Theme.grid.margin
             thickness: Theme.gameEditor.bulkScrollbarWidth
             trackless: true
             handleColor: Theme.list.scrollbarHandle
