@@ -496,6 +496,21 @@ Item {
         color: Theme.palette.textMuted
     }
 
+    // Outside the GridView, whose declared children scroll with its content.
+    Rectangle {
+        id: gridFadeMask
+        visible: false
+        layer.enabled: true
+        width: grid.width
+        height: grid.height
+        gradient: Gradient {
+            GradientStop { position: 0; color: grid.fadeTop > 0 ? "transparent" : "white" }
+            GradientStop { position: grid.height > 0 ? grid.fadeTop / grid.height : 0; color: "white" }
+            GradientStop { position: grid.height > 0 ? 1 - grid.fadeBottom / grid.height : 1; color: "white" }
+            GradientStop { position: 1; color: grid.fadeBottom > 0 ? "transparent" : "white" }
+        }
+    }
+
     GridView {
         id: grid
 
@@ -516,6 +531,18 @@ Item {
         topMargin: Math.max(0, root.contentTop - y)
         bottomMargin: root.pillHeight + 2 * Theme.grid.margin
         cacheBuffer: root.cellH
+
+        readonly property real fadeTop: !Theme.grid.edgeFadeTop ? 0 : Math.min(Theme.grid.edgeFade,
+            Math.max(0, contentY - originY + topMargin))
+        readonly property real fadeBottom: Math.min(Theme.grid.edgeFade,
+            Math.max(0, contentHeight + originY + bottomMargin - contentY - height))
+        layer.enabled: fadeTop > 0 || fadeBottom > 0
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: gridFadeMask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1
+        }
 
         ScrollBar.vertical: SettingsScrollBar {
             id: gridBar

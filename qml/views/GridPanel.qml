@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
@@ -79,6 +80,20 @@ Rectangle {
         id: pendingMenu
         onMessage: text => root.message(text)
         onUndoRequested: root.steamUndoRequested()
+    }
+
+    Rectangle {
+        id: flickFadeMask
+        visible: false
+        layer.enabled: true
+        width: flick.width
+        height: flick.height
+        gradient: Gradient {
+            GradientStop { position: 0; color: flick.fadeTop > 0 ? "transparent" : "white" }
+            GradientStop { position: flick.height > 0 ? flick.fadeTop / flick.height : 0; color: "white" }
+            GradientStop { position: flick.height > 0 ? 1 - flick.fadeBottom / flick.height : 1; color: "white" }
+            GradientStop { position: 1; color: flick.fadeBottom > 0 ? "transparent" : "white" }
+        }
     }
 
     ColumnLayout {
@@ -202,9 +217,23 @@ Rectangle {
             contentWidth: width
             contentHeight: content.implicitHeight
             boundsBehavior: Flickable.StopAtBounds
+
+            readonly property real fadeTop: !Theme.grid.edgeFadeTop ? 0
+                : Math.min(Theme.grid.panelEdgeFade, Math.max(0, contentY - originY))
+            readonly property real fadeBottom: Math.min(Theme.grid.panelEdgeFade,
+                Math.max(0, contentHeight + originY - contentY - height))
+            layer.enabled: fadeTop > 0 || fadeBottom > 0
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: flickFadeMask
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1
+            }
+
             ScrollBar.vertical: SettingsScrollBar {
                 id: panelBar
                 thickness: Theme.gameEditor.bulkScrollbarWidth
+                rightPadding: Math.max(0, (Theme.grid.panelPadding - thickness) / 2)
                 trackless: true
                 handleColor: Theme.list.scrollbarHandle
                 handleHoverColor: Theme.list.scrollbarHandleHover
