@@ -1508,7 +1508,10 @@ ApplicationWindow {
     Rectangle {
         id: panelButton
         visible: window.gridView && !window.gamePageOpen && !setupGuide.active
-        x: (windowControls.visible ? windowControls.x : window.width - Theme.windowControls.margin) - width - Theme.windowControls.spacing
+        // Next to the first button, a spacing away like the buttons are from each other, unless the
+        // controls have a panel of their own, which it then stays outside of.
+        x: (windowControls.visible ? windowControls.x + (Theme.windowControls.background.a === 0 ? windowControls.padding : 0)
+                                   : window.width - Theme.windowControls.margin) - width - Theme.windowControls.spacing
         y: windowControls.y + (windowControls.height - height) / 2
         width: Theme.windowControls.size
         height: Theme.windowControls.size
