@@ -251,9 +251,11 @@ Item {
         play_time: qsTr("Sorted by play time"),
     })
 
+    // One column count per step: the count is a whole number, so a width step inside one count changes nothing on
+    // screen. The width is not held to the slider's range, or the last steps up would stick and the way back be uneven.
     function resize(direction) {
-        const step = Math.max(1, Math.round((Theme.grid.maxCoverWidth - Theme.grid.minCoverWidth) / 12))
-        setCoverWidth(coverWidth + direction * step)
+        const wanted = Math.max(1, columns - direction)
+        coverWidth = Math.max(80, Math.min(600, Math.floor(usable / wanted - Theme.grid.gap)))
         saveTimer.restart()
     }
 
