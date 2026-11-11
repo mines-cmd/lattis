@@ -17,7 +17,6 @@ StatChip {
 
     signal historyRequested()
 
-    leftAligned: carded
     fill: carded ? Theme.grid.chipBackground : Theme.statChip.background
     fillEnd: carded ? Theme.grid.chipBackground : Theme.statChip.backgroundEnd
     border.color: attention ? (attentionColor ?? Theme.notice.border) : carded ? Theme.grid.chipBorder : Theme.statChip.border

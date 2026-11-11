@@ -228,23 +228,61 @@ Rectangle {
 
                     GridLayout {
                         id: chipGrid
-                        x: 0
-                        width: Theme.grid.chipCards ? parent.width : implicitWidth
-                        columns: 2
-                        uniformCellWidths: Theme.grid.chipCards
-                        columnSpacing: Theme.layout.spacing
+                        width: parent.width
+                        columns: {
+                            const n = chipRepeater.count
+                            const gap = Theme.grid.panelSpacing
+                            const fit = Math.floor((width + gap) / (widestChip + gap))
+                            const most = Math.max(1, Math.min(3, fit))
+                            // Spread over as few rows as the widest fit allows, then balance them: 4 chips go 2 + 2, not 3 + 1.
+                            return Math.max(1, Math.ceil(n / Math.ceil(n / most)))
+                        }
+                        // Cards fill equal columns; bare chips keep their own width and share the space left between the columns.
+                        readonly property bool spread: !Theme.grid.chipCards
+                        uniformCellWidths: !spread
+                        columnSpacing: spread && columns > 1 ? Math.max(Theme.grid.panelSpacing, (width - columnsWidth) / (columns - 1))
+                                                             : Theme.grid.panelSpacing
                         rowSpacing: Theme.layout.spacing
 
+                        property real widestChip: 0
+                        property var chipWidths: []
+                        readonly property real columnsWidth: {
+                            let total = 0
+                            for (let c = 0; c < columns; ++c) {
+                                let widest = 0
+                                for (let i = c; i < chipWidths.length; i += columns)
+                                    widest = Math.max(widest, chipWidths[i])
+                                total += widest
+                            }
+                            return total
+                        }
+                        function measureChips() {
+                            const widths = []
+                            for (let i = 0; i < chipRepeater.count; ++i) {
+                                const chip = chipRepeater.itemAt(i)
+                                widths.push(chip ? chip.fitWidth : 0)
+                            }
+                            chipWidths = widths
+                            widestChip = Math.max(0, ...widths)
+                        }
+
                         Repeater {
+                            id: chipRepeater
                             model: root.chipList
+                            onItemAdded: chipGrid.measureChips()
+                            onItemRemoved: chipGrid.measureChips()
 
                             FieldChip {
+                                onFitWidthChanged: chipGrid.measureChips()
                                 required property string modelData
                                 name: modelData
                                 carded: Theme.grid.chipCards
                                 fillOpacity: Theme.grid.cardOpacity
-                                Layout.fillWidth: Theme.grid.chipCards
-                                Layout.preferredWidth: Theme.grid.chipCards ? 1 : implicitWidth
+                                leftAligned: true
+                                // Without a visible surface the padding reads as a misalignment with the buttons above.
+                                contentInset: border.width === 0 && fill.a === 0 && fillEnd.a === 0 ? 0 : Theme.statChip.padding
+                                Layout.fillWidth: !chipGrid.spread
+                                Layout.preferredWidth: chipGrid.spread ? fitWidth : 1
                                 fields: gameFields
                                 steamMenu: pendingMenu
                                 onHistoryRequested: root.historyRequested()
