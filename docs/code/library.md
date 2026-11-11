@@ -513,6 +513,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `platformFilter`, `search` | The rail's platform and the search text |
 | `collections`, `collectionId`, `collection` | The collections (`{id, name, count}`, A to Z), the open one's id (`""` when none) and its map. `openCollection(id)` opens one (replacing an open one), `closeCollection()` leaves it with the old filters and platform back. `tagsOpen` is the filter panel's Tags section, open or collapsed; `matchesSearch(text, search)` is the game search's matching (case, accents and punctuation folded, every word) for any text, which the panel's tag search uses |
 | `groupBy` | `"platform"`, `"status"`, `"year"`, `"rating"`, `"last_played"` or `"none"` |
+| `flat` | The rows come out as with Group by None (no header rows), whatever `groupBy` says, without saving or changing it; not saved. The Grid view sets it while it shows |
 | `sort`, `sortDescending` | `"title"`, `"last_played"`, `"play_time"`, `"rating"`, `"year"`, `"achievements"`, `"added"`, `"size"` or `"platform"`. Choosing an order sets its usual direction: A to Z (title, platform), otherwise the high end first (most recent, most played, highest, newest, most complete, largest) |
 | `installedOnly`, `favoritesOnly`, `tagFilter`, `tagMatchAll`, `statusFilter`, `showHidden` | The filters. `statusFilter` takes the ids from `statuses`, with `"none"` for games without a status |
 | `steamFilter` | `"owned"`, `"family"` or `""`: only the games of that Steam ownership. Session only; counts as an active filter, and Clear filters resets it. `steam` has `familyGames`, `ownedGames` and `wholeLibrary` for the panel |
@@ -548,7 +549,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 
 ### Roles
 
-`isHeader`, `gameId`, `title` (a header's is its group's name), `platform`, `group` (the platform or status id that `toggleGroup()` takes), `count`, `collapsed`, `installed`, `hue`, `iconUrl`, `hidden`, `sortValue` (what the list is sorted by, as shown on the row: "3 days ago", "12 h").
+`isHeader`, `gameId`, `title` (a header's is its group's name), `platform`, `group` (the platform or status id that `toggleGroup()` takes), `count`, `collapsed`, `installed`, `hue`, `iconUrl`, `coverUrl`, `hidden`, `sortValue` (what the list is sorted by, as shown on the row: "3 days ago", "12 h").
 
 ### List navigation
 

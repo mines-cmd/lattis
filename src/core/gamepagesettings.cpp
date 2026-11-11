@@ -24,6 +24,8 @@ QStringList &shownOf(GamePageSettings &s, const QString &place)
            : place == GamePage::buttons ? s.buttons
            : place == GamePage::sections ? s.sections
            : place == GamePage::panels   ? s.panels
+           : place == GamePage::gridChips ? s.gridChips
+           : place == GamePage::gridPanels ? s.gridPanels
                                          : s.infoRows;
 }
 
@@ -33,6 +35,8 @@ QStringList &orderOf(GamePageSettings &s, const QString &place)
            : place == GamePage::buttons ? s.buttonsOrder
            : place == GamePage::sections ? s.sectionsOrder
            : place == GamePage::panels   ? s.panelsOrder
+           : place == GamePage::gridChips ? s.gridChipsOrder
+           : place == GamePage::gridPanels ? s.gridPanelsOrder
                                          : s.infoRowsOrder;
 }
 
@@ -71,6 +75,16 @@ QStringList GamePageSettings::defaultChips()
             QStringLiteral("steam_update"), QStringLiteral("steam_family")};
 }
 
+QStringList GamePageSettings::defaultGridChips()
+{
+    return {QStringLiteral("play_time"), QStringLiteral("last_played")};
+}
+
+QStringList GamePageSettings::defaultGridPanels()
+{
+    return {QStringLiteral("info")};
+}
+
 QStringList GamePageSettings::friendsGroupNames()
 {
     return {QStringLiteral("playing"), QStringLiteral("recent"), QStringLiteral("previous")};
@@ -102,10 +116,13 @@ const QStringList &gamePageChoices(const QString &place)
 {
     static const QStringList sections = GamePageSettings::defaultSections();
     static const QStringList panels = GamePageSettings::defaultPanels();
+    static const QStringList gridPanels = panels + QStringList{QStringLiteral("tags")};
     if (place == GamePage::sections)
         return sections;
     if (place == GamePage::panels)
         return panels;
+    if (place == GamePage::gridPanels)
+        return gridPanels;
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
                                         QStringLiteral("save_folder"), QStringLiteral("gallery"), QStringLiteral("mod_manager"),
@@ -151,8 +168,9 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
     if (!section.table)
         return out;
 
-    const QStringList places = {GamePage::chips, GamePage::buttons, GamePage::infoRows, GamePage::sections,
-                                GamePage::panels};
+    const QStringList places = {GamePage::chips,  GamePage::buttons,   GamePage::infoRows,
+                                GamePage::sections, GamePage::panels, GamePage::gridChips,
+                                GamePage::gridPanels};
     QStringList known = places;
     for (const QString &place : places)
         known.append(place + QStringLiteral("_order"));
@@ -259,7 +277,8 @@ Parsed<GamePageSettings> parseGamePageSettings(const QByteArray &bytes, const QS
 bool isGamePagePlace(const QString &place)
 {
     return place == GamePage::chips || place == GamePage::buttons || place == GamePage::infoRows
-           || place == GamePage::sections || place == GamePage::panels;
+           || place == GamePage::sections || place == GamePage::panels || place == GamePage::gridChips
+           || place == GamePage::gridPanels;
 }
 
 const QStringList &gamePageShown(const GamePageSettings &settings, const QString &place)

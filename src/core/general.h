@@ -27,6 +27,10 @@ class General : public QObject
     Q_PROPERTY(bool reduceMotion READ reduceMotion NOTIFY reduceMotionChanged)
     Q_PROPERTY(bool railHidden READ railHidden NOTIFY railHiddenChanged)
     Q_PROPERTY(bool toolbar READ toolbar NOTIFY toolbarChanged)
+    Q_PROPERTY(QString view READ view NOTIFY viewChanged)
+    Q_PROPERTY(int gridCoverWidth READ gridCoverWidth NOTIFY gridChanged)
+    Q_PROPERTY(bool gridPanel READ gridPanel NOTIFY gridChanged)
+    Q_PROPERTY(bool gridShowTitles READ gridShowTitles NOTIFY gridChanged)
     Q_PROPERTY(double clipVolume READ clipVolume NOTIFY clipVolumeChanged)
     Q_PROPERTY(bool checkForUpdates READ checkForUpdates NOTIFY settingsChanged)
     Q_PROPERTY(bool appMenuEntry READ appMenuEntry NOTIFY settingsChanged)
@@ -49,6 +53,8 @@ class General : public QObject
     Q_PROPERTY(bool showVideo READ showVideo NOTIFY gamePageChanged)
     Q_PROPERTY(int mediaLimit READ mediaLimit NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList gamePagePanels READ gamePagePanels NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList gamePageGridChips READ gamePageGridChips NOTIFY gamePageChanged)
+    Q_PROPERTY(QStringList gamePageGridPanels READ gamePageGridPanels NOTIFY gamePageChanged)
     Q_PROPERTY(bool showAchievements READ showAchievements NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList friendsGroups READ friendsGroups NOTIFY gamePageChanged)
     Q_PROPERTY(QStringList chipsWithoutIcon READ chipsWithoutIcon NOTIFY gamePageChanged)
@@ -79,6 +85,10 @@ public:
     bool reduceMotion() const { return m_settings.reduceMotion; }
     bool railHidden() const { return m_settings.railHidden; }
     bool toolbar() const { return m_settings.toolbar; }
+    QString view() const { return m_settings.view; }
+    int gridCoverWidth() const { return m_settings.gridCoverWidth; }
+    bool gridPanel() const { return m_settings.gridPanel; }
+    bool gridShowTitles() const { return m_settings.gridShowTitles; }
     double clipVolume() const { return m_settings.clipVolume; }
     bool checkForUpdates() const { return m_settings.checkForUpdates; }
     bool appMenuEntry() const { return m_settings.appMenuEntry; }
@@ -101,6 +111,8 @@ public:
     bool showVideo() const { return m_gamePage.showVideo; }
     int mediaLimit() const { return m_gamePage.mediaLimit; }
     QStringList gamePagePanels() const { return m_gamePage.panels; }
+    QStringList gamePageGridChips() const { return m_gamePage.gridChips; }
+    QStringList gamePageGridPanels() const { return m_gamePage.gridPanels; }
     bool showAchievements() const { return m_gamePage.panels.contains(QLatin1String("achievements")); }
     QStringList friendsGroups() const { return m_gamePage.friendsGroups; }
     QStringList chipsWithoutIcon() const { return m_gamePage.chipsWithoutIcon; }
@@ -124,6 +136,10 @@ public:
     Q_INVOKABLE QString setReduceMotion(bool value);
     Q_INVOKABLE QString setRailHidden(bool value);
     Q_INVOKABLE QString setToolbar(bool value);
+    Q_INVOKABLE QString setView(const QString &view);
+    Q_INVOKABLE QString setGridCoverWidth(int width);
+    Q_INVOKABLE QString setGridPanel(bool shown);
+    Q_INVOKABLE QString setGridShowTitles(bool shown);
     Q_INVOKABLE QString setClipVolume(double value);
     Q_INVOKABLE QString setCheckForUpdates(bool value);
     Q_INVOKABLE QString setAppMenuEntry(bool value);
@@ -158,6 +174,8 @@ signals:
     void reduceMotionChanged();
     void railHiddenChanged();
     void toolbarChanged();
+    void viewChanged();
+    void gridChanged();
     void clipVolumeChanged();
     void railHiddenButtonsChanged();
     void railButtonOrderChanged();

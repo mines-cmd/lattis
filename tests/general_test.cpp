@@ -31,6 +31,8 @@ private slots:
     void railHiddenButtonsSetting();
     void railButtonOrderSetting();
     void toolbarSettings();
+    void gridSettings();
+    void gridGamePageLists();
     void gallerySettings();
     void gamePageDefaults();
     void gamePageParser();
@@ -526,6 +528,134 @@ void GeneralTest::toolbarSettings()
     QVERIFY(!text.contains("toolbar_hidden_buttons"));
     QVERIFY(!text.contains("toolbar_button_order"));
     QVERIFY(!text.contains("toolbar"));
+}
+
+void GeneralTest::gridSettings()
+{
+    const GeneralSettings defaults;
+    QCOMPARE(defaults.view, QStringLiteral("list"));
+    QCOMPARE(defaults.gridCoverWidth, 220);
+    QVERIFY(defaults.gridPanel);
+    QVERIFY(!defaults.gridShowTitles);
+
+    const auto ok = parseGeneralSettings("[general]\nview = \"grid\"\ngrid_cover_width = 300\ngrid_panel = false\n"
+                                         "grid_show_titles = true\n",
+                                         QStringLiteral("settings.toml"));
+    QVERIFY(ok.warnings.isEmpty());
+    QCOMPARE(ok.value.view, QStringLiteral("grid"));
+    QCOMPARE(ok.value.gridCoverWidth, 300);
+    QVERIFY(!ok.value.gridPanel);
+    QVERIFY(ok.value.gridShowTitles);
+
+    const auto bad = parseGeneralSettings("[general]\nview = \"tiles\"\ngrid_cover_width = 5\ngrid_panel = 1\n",
+                                          QStringLiteral("settings.toml"));
+    QCOMPARE(bad.warnings.size(), 3);
+    QVERIFY(bad.warnings.join(u'\n').contains("view must be \"list\" or \"grid\""));
+    QVERIFY(bad.warnings.join(u'\n').contains("grid_cover_width must be a whole number from 80 to 600"));
+    QVERIFY(bad.warnings.join(u'\n').contains("grid_panel must be true or false"));
+    QCOMPARE(bad.value, GeneralSettings());
+
+    QTemporaryDir data;
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("# mine\n[general]\nstart_fullscreen = true\n");
+    settings.close();
+    General general(data.path());
+    QSignalSpy changed(&general, &General::settingsChanged);
+    QSignalSpy viewChanged(&general, &General::viewChanged);
+    QSignalSpy gridChanged(&general, &General::gridChanged);
+    const auto fileText = [&] {
+        QFile f(settings.fileName());
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+
+    QCOMPARE(general.setView(QStringLiteral("grid")), QString());
+    QCOMPARE(general.view(), QStringLiteral("grid"));
+    QCOMPARE(viewChanged.size(), 1);
+    QVERIFY(fileText().contains("view = \"grid\""));
+    QCOMPARE(general.setView(QStringLiteral("tiles")), QString());
+    QCOMPARE(general.view(), QStringLiteral("grid"));
+
+    QCOMPARE(general.setGridCoverWidth(1000), QString());
+    QCOMPARE(general.gridCoverWidth(), 600);
+    QCOMPARE(general.setGridCoverWidth(10), QString());
+    QCOMPARE(general.gridCoverWidth(), 80);
+    QCOMPARE(general.setGridPanel(false), QString());
+    QVERIFY(!general.gridPanel());
+    QCOMPARE(general.setGridShowTitles(true), QString());
+    QVERIFY(general.gridShowTitles());
+    QCOMPARE(gridChanged.size(), 4);
+    QCOMPARE(changed.size(), 0);
+
+    QCOMPARE(general.setView(QStringLiteral("list")), QString());
+    QCOMPARE(general.setGridCoverWidth(220), QString());
+    QCOMPARE(general.setGridPanel(true), QString());
+    QCOMPARE(general.setGridShowTitles(false), QString());
+    const QByteArray text = fileText();
+    QVERIFY(!text.contains("view"));
+    QVERIFY(!text.contains("grid_"));
+    QVERIFY(text.contains("# mine"));
+    QVERIFY(text.contains("start_fullscreen = true"));
+}
+
+void GeneralTest::gridGamePageLists()
+{
+    const GamePageSettings defaults;
+    QCOMPARE(defaults.gridChips, (QStringList{"play_time", "last_played"}));
+    QCOMPARE(defaults.gridPanels, (QStringList{"info"}));
+    QCOMPARE(gamePageChoices(GamePage::gridChips), gamePageChoices(GamePage::chips));
+    QCOMPARE(gamePageChoices(GamePage::gridPanels), (QStringList{"info", "friends", "achievements", "tags"}));
+    QCOMPARE(gamePageChoices(GamePage::panels), (QStringList{"info", "friends", "achievements"}));
+
+    const auto parsed = parseGamePageSettings("[game_page]\ngrid_chips = [\"rating\", \"play_time\"]\n"
+                                              "grid_chips_order = [\"play_time\", \"rating\"]\n"
+                                              "grid_panels = [\"tags\", \"info\"]\n"
+                                              "chips = [\"rating\"]\n",
+                                              QStringLiteral("settings.toml"));
+    QVERIFY(parsed.warnings.isEmpty());
+    QCOMPARE(parsed.value.gridChips, (QStringList{"rating", "play_time"}));
+    QCOMPARE(parsed.value.gridChipsOrder, (QStringList{"play_time", "rating"}));
+    QCOMPARE(parsed.value.gridPanels, (QStringList{"tags", "info"}));
+    QCOMPARE(parsed.value.chips, (QStringList{"rating"}));
+    QCOMPARE(parsed.value.panels, GamePageSettings::defaultPanels());
+    QCOMPARE(gamePageOrder(parsed.value, GamePage::gridChips).first(), QStringLiteral("rating"));
+
+    const auto bad = parseGamePageSettings("[game_page]\ngrid_panels = [\"tags\", \"nope\"]\n"
+                                           "panels = [\"tags\"]\n",
+                                           QStringLiteral("settings.toml"));
+    QCOMPARE(bad.warnings.size(), 2);
+    QCOMPARE(bad.value.gridPanels, (QStringList{"tags"}));
+    QVERIFY(bad.value.panels.isEmpty());
+
+    QTemporaryDir data;
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("[general]\nstart_fullscreen = true\n");
+    settings.close();
+    General general(data.path());
+    const auto fileText = [&] {
+        QFile f(settings.fileName());
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+    QCOMPARE(general.setGamePageShown(GamePage::gridChips, QStringLiteral("rating"), true), QString());
+    QCOMPARE(general.gamePageGridChips(), (QStringList{"play_time", "last_played", "rating"}));
+    QCOMPARE(general.gamePageChips(), GamePageSettings::defaultChips());
+    QVERIFY(fileText().contains("grid_chips = [\"play_time\", \"last_played\", \"rating\"]"));
+    QCOMPARE(general.setGamePageShown(GamePage::gridPanels, QStringLiteral("tags"), true), QString());
+    QCOMPARE(general.gamePageGridPanels(), (QStringList{"info", "tags"}));
+    QCOMPARE(general.gamePagePanels(), GamePageSettings::defaultPanels());
+    QCOMPARE(general.setGamePageShown(GamePage::panels, QStringLiteral("tags"), true), QString());
+    QCOMPARE(general.gamePagePanels(), GamePageSettings::defaultPanels());
+
+    QCOMPARE(general.setGamePageOrder(GamePage::gridPanels, {"tags", "achievements", "info", "friends"}), QString());
+    QCOMPARE(general.gamePageOrder(GamePage::gridPanels),
+             (QStringList{"tags", "achievements", "info", "friends"}));
+
+    QCOMPARE(general.setGamePageShown(GamePage::gridChips, QStringLiteral("rating"), false), QString());
+    QCOMPARE(general.setGamePageShown(GamePage::gridPanels, QStringLiteral("tags"), false), QString());
+    QCOMPARE(general.setGamePageOrder(GamePage::gridPanels, gamePageChoices(GamePage::gridPanels)), QString());
+    const QByteArray text = fileText();
+    QVERIFY(!text.contains("grid_"));
 }
 
 void GeneralTest::gamePageDefaults()

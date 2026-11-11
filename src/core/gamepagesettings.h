@@ -19,6 +19,10 @@ struct GamePageSettings
     QStringList sectionsOrder;
     QStringList panels = defaultPanels();
     QStringList panelsOrder;
+    QStringList gridChips = defaultGridChips();
+    QStringList gridChipsOrder;
+    QStringList gridPanels = defaultGridPanels();
+    QStringList gridPanelsOrder;
     QStringList chipsWithoutIcon;
     QStringList collapsedSections;
     QString recentPeriod = QStringLiteral("two_weeks");
@@ -35,17 +39,21 @@ struct GamePageSettings
     static QStringList defaultInfoRows();
     static QStringList defaultSections();
     static QStringList defaultPanels();
+    static QStringList defaultGridChips();
+    static QStringList defaultGridPanels();
     // The groups of the Friends panel, in the order it shows them.
     static QStringList friendsGroupNames();
 };
 
-// The five lists on the game page.
+// The five lists on the game page, and the two the grid view's side panel has of its own.
 namespace GamePage {
 inline const QString chips = QStringLiteral("chips");
 inline const QString buttons = QStringLiteral("buttons");
 inline const QString infoRows = QStringLiteral("info_rows");
 inline const QString sections = QStringLiteral("sections");
 inline const QString panels = QStringLiteral("panels");
+inline const QString gridChips = QStringLiteral("grid_chips");
+inline const QString gridPanels = QStringLiteral("grid_panels");
 }
 
 const QStringList &gamePageChoices(const QString &place);

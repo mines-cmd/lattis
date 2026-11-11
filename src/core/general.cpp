@@ -86,6 +86,53 @@ QString General::setToolbar(bool value)
     return setFlag(QStringLiteral("toolbar"), value);
 }
 
+QString General::setView(const QString &view)
+{
+    if (!libraryViews().contains(view))
+        return {};
+    QString error;
+    if (view == GeneralSettings{}.view)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("view"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("view"),
+                                  u'"' + view + u'"', &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGridCoverWidth(int width)
+{
+    width = std::clamp(width, kMinGridCoverWidth, kMaxGridCoverWidth);
+    QString error;
+    if (width == GeneralSettings{}.gridCoverWidth)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("grid_cover_width"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("grid_cover_width"),
+                                  QString::number(width), &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGridPanel(bool shown)
+{
+    QString error;
+    if (shown)
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("grid_panel"), &error);
+    else
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("grid_panel"),
+                                  QStringLiteral("false"), &error);
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+QString General::setGridShowTitles(bool shown)
+{
+    return setFlag(QStringLiteral("grid_show_titles"), shown);
+}
+
 QString General::setCheckForUpdates(bool value)
 {
     QString error;
@@ -539,7 +586,7 @@ void General::load()
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
-    // systemLocale, reduceMotion, railHidden, railHiddenButtons, railButtonOrder, the toolbar's three keys and clipVolume have their own signals so that
+    // systemLocale, reduceMotion, railHidden, railHiddenButtons, railButtonOrder, the toolbar's three keys, the grid's four and clipVolume have their own signals so that
     // flipping them leaves the window alone.
     GeneralSettings prevWindow = prev;
     prevWindow.clipVolume = m_settings.clipVolume;
@@ -551,6 +598,10 @@ void General::load()
     prevWindow.toolbar = m_settings.toolbar;
     prevWindow.toolbarHiddenButtons = m_settings.toolbarHiddenButtons;
     prevWindow.toolbarButtonOrder = m_settings.toolbarButtonOrder;
+    prevWindow.view = m_settings.view;
+    prevWindow.gridCoverWidth = m_settings.gridCoverWidth;
+    prevWindow.gridPanel = m_settings.gridPanel;
+    prevWindow.gridShowTitles = m_settings.gridShowTitles;
     if (m_settings != prevWindow || m_problems != prevProblems)
         emit settingsChanged();
     if (m_gamePage != prevPage || m_gamePageProblems != prevPageProblems)
@@ -573,6 +624,11 @@ void General::load()
         emit toolbarHiddenButtonsChanged();
     if (orderedToolbarButtons(m_settings.toolbarButtonOrder) != orderedToolbarButtons(prev.toolbarButtonOrder))
         emit toolbarButtonOrderChanged();
+    if (m_settings.view != prev.view)
+        emit viewChanged();
+    if (m_settings.gridCoverWidth != prev.gridCoverWidth || m_settings.gridPanel != prev.gridPanel
+        || m_settings.gridShowTitles != prev.gridShowTitles)
+        emit gridChanged();
     if (m_settings.clipVolume != prev.clipVolume)
         emit clipVolumeChanged();
     for (const QString &w : std::as_const(m_problems))

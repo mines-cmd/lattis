@@ -1475,6 +1475,8 @@ QVariant Library::data(const QModelIndex &index, int role) const
         return game ? game->iconUrl : QUrl();
     case UpdatingRole:
         return game ? game->steamUpdate != SteamUpdate::None : false;
+    case CoverUrlRole:
+        return game ? game->coverUrl : QUrl();
     case HiddenRole:
         return game ? game->hidden : false;
     case SortValueRole:
@@ -1518,6 +1520,7 @@ QHash<int, QByteArray> Library::roleNames() const
         {HiddenRole, "hidden"},
         {UpdatingRole, "updating"},
         {SortValueRole, "sortValue"},
+        {CoverUrlRole, "coverUrl"},
     };
 }
 
@@ -1555,6 +1558,15 @@ void Library::setGroupBy(const QString &groupBy)
     emit groupByChanged();
     rebuild();
     saveListSettings();
+}
+
+void Library::setFlat(bool flat)
+{
+    if (m_flat == flat)
+        return;
+    m_flat = flat;
+    emit flatChanged();
+    rebuild();
 }
 
 const QStringList &Library::sortOrders()
@@ -4811,7 +4823,7 @@ void Library::rebuild()
 QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled) const
 {
     const bool byPlatform = m_groupBy == QLatin1String("platform");
-    const bool grouped = m_groupBy != QLatin1String("none") && (!byPlatform || m_platformFilter.isEmpty());
+    const bool grouped = !m_flat && m_groupBy != QLatin1String("none") && (!byPlatform || m_platformFilter.isEmpty());
     const QStringList tags = effectiveTags();
     const QDateTime now = QDateTime::currentDateTimeUtc();
     *notInstalled = 0;

@@ -30,6 +30,8 @@ private slots:
     void listSettingsRestoredAtStart();
     void listSettingsHandEdit();
     void groupBySetting();
+    void flatDropsTheGroups();
+    void coverRole();
     void statusGroupsAndFilter();
     void listSettingsFollowTagChanges();
     void emptyDataDir();
@@ -850,6 +852,71 @@ void LibraryListTest::groupBySetting()
     QCOMPARE(bad.value.groupBy, QStringLiteral("platform"));
     QCOMPARE(bad.warnings.size(), 1);
     QVERIFY(bad.warnings.first().contains("did you mean \"status\""));
+}
+
+void LibraryListTest::flatDropsTheGroups()
+{
+    const QString file = m_data + QStringLiteral("/settings.toml");
+    auto library = openLibrary();
+    const auto headers = [&] {
+        int n = 0;
+        for (int i = 0; i < library->rowCount(); ++i)
+            n += library->data(library->index(i), Library::IsHeaderRole).toBool();
+        return n;
+    };
+    QVERIFY(headers() > 1);
+    QVERIFY(!library->flat());
+
+    QSignalSpy flatChanged(library.get(), &Library::flatChanged);
+    library->setFlat(true);
+    QCOMPARE(flatChanged.count(), 1);
+    QCOMPARE(headers(), 0);
+    const QStringList flatOrder = gameIds(*library);
+    QCOMPARE(library->rowCount(), int(flatOrder.size()));
+    QCOMPARE(library->groupBy(), QStringLiteral("platform"));
+    QVERIFY(!readFile(file).contains("group_by"));
+    library->setFlat(true);
+    QCOMPARE(flatChanged.count(), 1);
+
+    // Flat is the order with Group by None.
+    library->setFlat(false);
+    library->setGroupBy(QStringLiteral("none"));
+    const QStringList none = gameIds(*library);
+    library->setGroupBy(QStringLiteral("platform"));
+    library->setFlat(true);
+    QCOMPARE(gameIds(*library), none);
+
+    // Whatever Group by says, and searches and platform filters still apply.
+    library->setGroupBy(QStringLiteral("status"));
+    QCOMPARE(headers(), 0);
+    QCOMPARE(gameIds(*library), none);
+    library->setPlatformFilter(QStringLiteral("switch"));
+    QVERIFY(!gameIds(*library).isEmpty());
+    for (const QString &id : gameIds(*library))
+        QVERIFY(id.startsWith(QLatin1String("switch-")));
+    library->setPlatformFilter({});
+
+    library->setFlat(false);
+    QVERIFY(headers() > 1);
+    QCOMPARE(library->groupBy(), QStringLiteral("status"));
+    QCOMPARE(flatChanged.count(), 4);
+}
+
+void LibraryListTest::coverRole()
+{
+    auto library = openLibrary();
+    QVERIFY(library->roleNames().values().contains("coverUrl"));
+    int games = 0;
+    for (int i = 0; i < library->rowCount(); ++i) {
+        const QModelIndex row = library->index(i);
+        const QVariant cover = library->data(row, Library::CoverUrlRole);
+        QVERIFY(cover.canConvert<QUrl>());
+        if (library->data(row, Library::IsHeaderRole).toBool())
+            QVERIFY(cover.toUrl().isEmpty());
+        else
+            ++games;
+    }
+    QVERIFY(games > 0);
 }
 
 void LibraryListTest::statusGroupsAndFilter()

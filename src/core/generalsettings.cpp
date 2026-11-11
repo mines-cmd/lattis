@@ -38,6 +38,12 @@ QStringList orderedToolbarButtons(const QStringList &order)
     return out;
 }
 
+const QStringList &libraryViews()
+{
+    static const QStringList views = {QStringLiteral("list"), QStringLiteral("grid")};
+    return views;
+}
+
 Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QString &displayPath)
 {
     const TomlSection section(bytes, displayPath, "general");
@@ -52,7 +58,9 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                                  QStringLiteral("rail_hidden"), QStringLiteral("clip_volume"),
                                  QStringLiteral("check_for_updates"), QStringLiteral("skipped_update"),
                                  QStringLiteral("app_menu_entry"), QStringLiteral("toolbar"),
-                                 QStringLiteral("toolbar_hidden_buttons"), QStringLiteral("toolbar_button_order")};
+                                 QStringLiteral("toolbar_hidden_buttons"), QStringLiteral("toolbar_button_order"),
+                                 QStringLiteral("view"), QStringLiteral("grid_cover_width"),
+                                 QStringLiteral("grid_panel"), QStringLiteral("grid_show_titles")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
         if (key == known.at(9)) {
@@ -61,6 +69,23 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be a version in quotes, like \"1.2\"")
                                         .arg(section.where(node), key));
+            continue;
+        }
+        if (key == known.at(14)) {
+            const auto *s = node.as_string();
+            if (s && libraryViews().contains(toQString(s->get())))
+                out.value.view = toQString(s->get());
+            else
+                out.warnings.append(QStringLiteral("%1: view must be \"list\" or \"grid\"").arg(section.where(node)));
+            continue;
+        }
+        if (key == known.at(15)) {
+            const std::optional<int64_t> width = node.value<int64_t>();
+            if (!width || *width < kMinGridCoverWidth || *width > kMaxGridCoverWidth)
+                out.warnings.append(QStringLiteral("%1: grid_cover_width must be a whole number from %2 to %3")
+                                        .arg(section.where(node)).arg(kMinGridCoverWidth).arg(kMaxGridCoverWidth));
+            else
+                out.value.gridCoverWidth = int(*width);
             continue;
         }
         if (key == known.at(7)) {
@@ -105,6 +130,8 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                        : key == known.at(8) ? &out.value.checkForUpdates
                        : key == known.at(10) ? &out.value.appMenuEntry
                        : key == known.at(11) ? &out.value.toolbar
+                       : key == known.at(16) ? &out.value.gridPanel
+                       : key == known.at(17) ? &out.value.gridShowTitles
                                             : nullptr;
         if (!target) {
             out.warnings.append(

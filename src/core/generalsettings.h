@@ -23,6 +23,10 @@ struct GeneralSettings
     bool checkForUpdates = true;
     bool appMenuEntry = true;
     QString skippedUpdate;
+    QString view = QStringLiteral("list");
+    int gridCoverWidth = 220;
+    bool gridPanel = true;
+    bool gridShowTitles = false;
 
     bool operator==(const GeneralSettings &) const = default;
 };
@@ -34,5 +38,10 @@ QStringList orderedRailButtons(const QStringList &order);
 const QStringList &toolbarButtons();
 
 QStringList orderedToolbarButtons(const QStringList &order);
+
+const QStringList &libraryViews();
+
+constexpr int kMinGridCoverWidth = 80;
+constexpr int kMaxGridCoverWidth = 600;
 
 Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QString &displayPath);

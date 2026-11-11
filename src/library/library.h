@@ -50,6 +50,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(QString platformFilter READ platformFilter WRITE setPlatformFilter NOTIFY platformFilterChanged)
     Q_PROPERTY(QString search READ search WRITE setSearch NOTIFY searchChanged)
     Q_PROPERTY(QString groupBy READ groupBy WRITE setGroupBy NOTIFY groupByChanged)
+    Q_PROPERTY(bool flat READ flat WRITE setFlat NOTIFY flatChanged)
     Q_PROPERTY(QString sort READ sort WRITE setSort NOTIFY sortChanged)
     Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY sortChanged)
     Q_PROPERTY(bool showSortValue READ showSortValue WRITE setShowSortValue NOTIFY showSortValueChanged)
@@ -111,6 +112,7 @@ public:
         HiddenRole,
         UpdatingRole,
         SortValueRole,
+        CoverUrlRole,
     };
 
     Library(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary = NewLibrary::Plain,
@@ -144,6 +146,9 @@ public:
 
     QString groupBy() const { return m_groupBy; }
     void setGroupBy(const QString &groupBy);
+
+    bool flat() const { return m_flat; }
+    void setFlat(bool flat);
 
     QString sort() const { return m_sort; }
     void setSort(const QString &sort);
@@ -406,6 +411,7 @@ signals:
     void platformFilterChanged();
     void searchChanged();
     void groupByChanged();
+    void flatChanged();
     void sortChanged();
     void showSortValueChanged();
     void filtersChanged();
@@ -638,6 +644,7 @@ private:
     QVariantMap m_groupChange;
     QTimer m_groupChangeTimer;
     QString m_groupBy = QStringLiteral("platform");
+    bool m_flat = false;
     bool m_showingGroups = false;
 
     QString m_cacheDir;
