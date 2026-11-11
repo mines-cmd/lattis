@@ -42,7 +42,7 @@ Item {
     readonly property real coverH: coverW * 1.5
     readonly property real titleH: General.gridShowTitles ? Math.ceil(Theme.grid.titleSize * 1.4) + Theme.layout.spacingSmall : 0
     readonly property real cellH: coverH + titleH + Theme.grid.gap
-    readonly property real pillHeight: Theme.iconButton.size + 2 * Theme.layout.spacingSmall
+    readonly property real pillHeight: Theme.grid.pillButtonSize + 2 * Theme.layout.spacingSmall
     property bool ready: false
 
     // The panel hides without changing the saved setting when there is no game to show.
@@ -785,6 +785,8 @@ Item {
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
                 plain: true
+                width: Theme.grid.pillButtonSize
+                height: width
                 icon: Icons.minimize
                 tip: Actions.tip(qsTr("Smaller covers"), Actions.keys.grid_smaller)
                 onClicked: { root.resize(-1); root.focusList() }
@@ -803,6 +805,8 @@ Item {
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
                 plain: true
+                width: Theme.grid.pillButtonSize
+                height: width
                 icon: Icons.add
                 tip: Actions.tip(qsTr("Bigger covers"), Actions.keys.grid_bigger)
                 onClicked: { root.resize(1); root.focusList() }
