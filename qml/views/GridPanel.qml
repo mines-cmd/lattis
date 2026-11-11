@@ -212,6 +212,7 @@ Rectangle {
                                 required property string modelData
                                 name: modelData
                                 carded: Theme.grid.chipCards
+                                fillOpacity: Theme.grid.cardOpacity
                                 Layout.fillWidth: Theme.grid.chipCards
                                 Layout.preferredWidth: Theme.grid.chipCards ? 1 : implicitWidth
                                 fields: gameFields
@@ -235,6 +236,7 @@ Rectangle {
 
                     InfoPanel {
                         id: info
+                        fillOpacity: Theme.grid.cardOpacity
                         visible: info.rows.length > 0 && General.gamePageGridPanels.includes("info")
                         Layout.row: side.rowOf("info")
                         Layout.fillWidth: true
@@ -250,6 +252,7 @@ Rectangle {
                     }
                     FriendsPanel {
                         id: friends
+                        fillOpacity: Theme.grid.cardOpacity
                         Layout.row: side.rowOf("friends")
                         Layout.fillWidth: true
                         game: root.game
@@ -258,6 +261,7 @@ Rectangle {
                     }
                     AchievementsPanel {
                         id: achievements
+                        fillOpacity: Theme.grid.cardOpacity
                         Layout.row: side.rowOf("achievements")
                         Layout.fillWidth: true
                         game: root.game

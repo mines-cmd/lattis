@@ -608,6 +608,7 @@ constexpr Setting kSettings[] = {
     integer("grid", "panel_spacing", "@layout.spacing", 0, 100, "Space between the side panel's parts"),
     integer("grid", "panel_logo_height", "140", 20, 300, "Tallest the game's logo gets at the top of the side panel (a wide logo is limited by the panel's width instead)"),
     integer("grid", "panel_logo_gap", "12", 0, 100, "Space between the logo and the Launch button"),
+    real("grid", "card_opacity", "1", 0, 1, "How opaque the side panel's cards are (chips in cards, info, Friends and Achievements); 0 lets the backdrop through"),
     heading("grid", "Side panel chips"),
     boolean("grid", "chip_cards", "false", "Put the side panel's chips (play time, last played...) in cards"),
     color("grid", "chip_background", "@surface", "Card behind a chip, when chips are in cards"),
