@@ -54,6 +54,15 @@ Item {
     onSlideChanged: if (slide === 0) panelReserved = false
     Behavior on slide { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
 
+    // Cells slide only while the layout changes size, not when the model reorders or filters.
+    property bool reflowing: false
+    onCellWChanged: if (ready && Motion.on) { reflowing = true; reflowTimer.restart() }
+    Timer {
+        id: reflowTimer
+        interval: Motion.duration(Motion.speedMs("normal"))
+        onTriggered: root.reflowing = false
+    }
+
     Binding { target: Library; property: "flat"; value: true }
 
     function syncSelection() {
@@ -619,6 +628,14 @@ Item {
             width: GridView.view.cellWidth
             height: GridView.view.cellHeight
 
+            // A cell the view just created or reused takes its first position without sliding there.
+            property bool settled: false
+            Component.onCompleted: Qt.callLater(() => settled = true)
+            GridView.onPooled: settled = false
+            GridView.onReused: Qt.callLater(() => settled = true)
+            Behavior on x { enabled: root.reflowing && cell.settled; MotionNumber { speed: "normal" } }
+            Behavior on y { enabled: root.reflowing && cell.settled; MotionNumber { speed: "normal" } }
+
             Item {
                 id: card
                 width: root.coverW
@@ -671,6 +688,7 @@ Item {
                             fillMode: Image.PreserveAspectCrop
                             smooth: true
                             cache: true
+                            retainOnResize: true
                         }
 
                         Rectangle {
