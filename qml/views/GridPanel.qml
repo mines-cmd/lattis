@@ -197,6 +197,7 @@ Rectangle {
             id: flick
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.rightMargin: -Theme.grid.panelPadding
             clip: true
             contentWidth: width
             contentHeight: content.implicitHeight
@@ -211,7 +212,7 @@ Rectangle {
 
             ColumnLayout {
                 id: content
-                width: flick.width - panelBar.reserve
+                width: flick.width - Math.max(Theme.grid.panelPadding, panelBar.reserve)
                 spacing: Theme.grid.panelSpacing
 
                 Item {
