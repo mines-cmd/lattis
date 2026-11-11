@@ -193,7 +193,7 @@ MotionPopup {
         selected: isOn
         leftAligned: true
         showCheck: true
-        opacity: enabled ? 1 : 0.5
+        opacity: enabled ? 1 : Theme.filters.disabledOpacity
         onClicked: flipped()
     }
 
@@ -294,9 +294,25 @@ MotionPopup {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing
 
-                Heading { title: qsTr("Group by") }
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Heading {
+                        Layout.fillWidth: true
+                        title: qsTr("Group by")
+                        opacity: General.view === "grid" ? Theme.filters.disabledOpacity : 1
+                    }
+                    Label {
+                        visible: General.view === "grid"
+                        text: qsTr("In list view only")
+                        color: Theme.filters.hintColor
+                        font.pixelSize: Theme.filters.headingFontSize
+                    }
+                }
                 GridLayout {
                     Layout.fillWidth: true
+                    enabled: General.view !== "grid"
+                    opacity: enabled ? 1 : Theme.filters.disabledOpacity
                     columns: 3
                     rowSpacing: Theme.layout.spacingSmall
                     columnSpacing: Theme.layout.spacingSmall

@@ -433,6 +433,7 @@ constexpr Setting kSettings[] = {
     boolean("filters", "platforms_alphabetical", "true", "List the Platforms section (shown while the rail is hidden) alphabetically instead of in the library's order"),
     color("filters", "text", "@text", "Panel text"),
     color("filters", "hint_color", "@text_muted", "Hints, like the line shown when there are no tags"),
+    real("filters", "disabled_opacity", "0.5", 0, 1, "How faint a section or toggle that doesn't apply is, like Group by in the grid view"),
     heading("filters", "Tags"),
     real("filters", "tag_text_lightness", "0.72", 0, 1, "Lightness of an unselected tag's text, so every tag reads the same whatever its color (the hue stays)"),
     real("filters", "tag_hover_opacity", "0.3", 0, 1, "Fill strength of a tag that isn't selected while the pointer is over it"),
