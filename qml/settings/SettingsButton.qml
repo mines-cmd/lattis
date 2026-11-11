@@ -13,6 +13,9 @@ AbstractButton {
     property bool danger: false
     property color fillOverride: "transparent"
     property string tip
+    property int cornerRadius: Theme.controls.inputRadius
+    property color borderColor: Theme.controls.inputBorder
+    property int borderWidth: Theme.controls.inputBorderWidth
 
     readonly property color foreground: primary ? Theme.controls.buttonPrimaryText
                                         : danger ? Theme.controls.buttonDangerText : Theme.controls.buttonText
@@ -68,7 +71,7 @@ AbstractButton {
 
     background: Surface {
         scale: root.dip
-        radius: Theme.controls.inputRadius
+        radius: root.cornerRadius
         fill: root.flat ? "transparent"
             : root.fillOverride.a > 0 ? root.fillOverride
             : root.primary ? Theme.controls.buttonPrimaryBackground
@@ -82,8 +85,8 @@ AbstractButton {
                : root.hovered ? Theme.controls.buttonHoverBackgroundEnd
                : Theme.controls.buttonBackgroundEnd
         direction: Theme.controls.gradientDirection
-        border.color: Theme.controls.inputBorder
-        border.width: root.filled || root.flat || !root.bordered ? 0 : Theme.controls.inputBorderWidth
+        border.color: root.borderColor
+        border.width: root.filled || root.flat || !root.bordered ? 0 : root.borderWidth
 
         Behavior on fill { enabled: Motion.fades; MotionColor {} }
         Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }

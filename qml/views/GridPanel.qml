@@ -90,7 +90,8 @@ Rectangle {
             id: logoBox
             Layout.fillWidth: true
             Layout.bottomMargin: Theme.grid.panelLogoGap
-            Layout.preferredHeight: hasLogo ? Math.min(Theme.grid.panelLogoHeight, width * aspect) : titleLabel.implicitHeight
+            Layout.preferredHeight: Math.max(Theme.grid.panelLogoMinHeight,
+                                             hasLogo ? Math.min(Theme.grid.panelLogoHeight, width * aspect) : titleLabel.implicitHeight)
 
             readonly property bool hasLogo: logo.status === Image.Ready || logo.status === Image.Loading
             // Another game's logo keeps the old aspect until it has loaded, so the panel doesn't jump twice.
@@ -106,7 +107,9 @@ Rectangle {
 
             Image {
                 id: logo
-                anchors.fill: parent
+                anchors.centerIn: parent
+                width: parent.width
+                height: Math.min(parent.height, Theme.grid.panelLogoHeight)
                 source: root.game.logoUrl ?? ""
                 sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32, 0)
                 fillMode: Image.PreserveAspectFit
@@ -133,6 +136,16 @@ Rectangle {
             id: launchButton
             Layout.fillWidth: true
             game: root.game
+            buttonHeight: Theme.grid.launchHeight
+            buttonRadius: Theme.grid.launchRadius
+            buttonBorder: Theme.grid.launchBorder
+            buttonBorderWidth: Theme.grid.launchBorderWidth
+            idleBackground: Theme.grid.launchBackground
+            idleBackgroundEnd: Theme.grid.launchBackgroundEnd
+            idleText: Theme.grid.launchText
+            idleLabel: Theme.grid.launchLabel !== "" ? Theme.grid.launchLabel : Theme.launchButton.label
+            buttonFontSize: Theme.grid.launchFontSize
+            buttonBold: Theme.grid.launchBold
             onLaunchRequested: root.launchRequested()
             onMessage: text => root.message(text)
             onEmulatorMessage: (text, gameId) => root.emulatorMessage(text, gameId)
@@ -147,7 +160,14 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 bordered: true
-                text: qsTr("Properties")
+                implicitHeight: Theme.grid.buttonHeight
+                cornerRadius: Theme.grid.buttonRadius
+                borderColor: Theme.grid.buttonBorder
+                borderWidth: Theme.grid.buttonBorderWidth
+                fillOverride: Theme.grid.buttonBackground
+                textColor: Theme.grid.buttonText
+                font.pixelSize: Theme.grid.buttonFontSize
+                text: Theme.grid.propertiesLabel
                 tip: Actions.tip((root.game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
                                                                          : qsTr("Properties"),
                                  Actions.keys.game_settings)
@@ -158,7 +178,14 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 bordered: true
-                text: qsTr("More")
+                implicitHeight: Theme.grid.buttonHeight
+                cornerRadius: Theme.grid.buttonRadius
+                borderColor: Theme.grid.buttonBorder
+                borderWidth: Theme.grid.buttonBorderWidth
+                fillOverride: Theme.grid.buttonBackground
+                textColor: Theme.grid.buttonText
+                font.pixelSize: Theme.grid.buttonFontSize
+                text: Theme.grid.moreLabel
                 tip: Actions.tip(qsTr("Game menu"), Actions.keys.game_menu)
                 onClicked: root.menuRequested(moreButton)
             }

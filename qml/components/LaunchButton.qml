@@ -17,6 +17,17 @@ Surface {
     property string emulatorName
     // What the emulator's install is doing ("45 %", "Unpacking"); empty when it isn't running.
     property string emulatorStep
+    // A surface that wants its own Launch button look sets these; the page follows the theme's launch_button.
+    property int buttonHeight: Theme.launchButton.height
+    property int buttonRadius: Theme.launchButton.radius
+    property color buttonBorder: Theme.launchButton.border
+    property int buttonBorderWidth: Theme.launchButton.borderWidth
+    property color idleBackground: Theme.launchButton.background
+    property color idleBackgroundEnd: Theme.launchButton.backgroundEnd
+    property color idleText: Theme.launchButton.text
+    property string idleLabel: Theme.launchButton.label
+    property int buttonFontSize: Theme.launchButton.fontSize
+    property bool buttonBold: Theme.launchButton.bold
 
     readonly property bool emulatorBusy: installed && emulatorName !== "" && emulatorStep !== ""
     readonly property bool emulatorInstall: installed && emulatorName !== "" && emulatorStep === ""
@@ -32,15 +43,15 @@ Surface {
     signal stopRequested()
 
     implicitWidth: emulatorName !== "" ? Math.max(Theme.launchButton.width, label.implicitWidth + 32) : Theme.launchButton.width
-    implicitHeight: Theme.launchButton.height
-    radius: Theme.launchButton.radius
+    implicitHeight: buttonHeight
+    radius: buttonRadius
     fill: {
         const base = stopping ? Theme.launchButton.stopBackground : running ? Theme.launchButton.runningBackground
                    : updateBusy ? Theme.launchButton.updatingBackground
                    : installing ? Theme.launchButton.installBackground
                    : !installed ? Theme.launchButton.uninstalledBackground
                    : updateAction ? Theme.launchButton.updateBackground
-                   : Theme.launchButton.background
+                   : root.idleBackground
         return (launchable || running) && mouse.containsMouse ? Qt.lighter(base, Theme.launchButton.hoverBrightness) : base
     }
     fillEnd: {
@@ -49,12 +60,12 @@ Surface {
                    : installing ? Theme.launchButton.installBackgroundEnd
                    : !installed ? Theme.launchButton.uninstalledBackgroundEnd
                    : updateAction ? Theme.launchButton.updateBackgroundEnd
-                   : Theme.launchButton.backgroundEnd
+                   : root.idleBackgroundEnd
         return (launchable || running) && mouse.containsMouse ? Qt.lighter(base, Theme.launchButton.hoverBrightness) : base
     }
     direction: Theme.launchButton.gradientDirection
-    border.color: Theme.launchButton.border
-    border.width: Theme.launchButton.borderWidth
+    border.color: buttonBorder
+    border.width: buttonBorderWidth
     scale: mouse.pressed && (launchable || running) ? Theme.motion.pressScale : 1
 
     Behavior on scale { enabled: Motion.on; MotionNumber {} }
@@ -72,7 +83,7 @@ Surface {
             : root.emulatorInstall ? qsTr("%1 %2").arg(Theme.launchButton.installLabel).arg(root.emulatorName)
             : root.updateBusy ? (root.updateState === "paused" ? Theme.launchButton.pausedLabel
                                  : root.installed ? Theme.launchButton.updatingLabel : Theme.launchButton.installingLabel)
-            : root.installed ? Theme.launchButton.label
+            : root.installed ? root.idleLabel
             : root.installing ? Theme.launchButton.installLabel
             : root.rom ? Theme.launchButton.missingRomLabel
             : root.gameNotFound ? Theme.launchButton.missingGameLabel : Theme.launchButton.uninstalledLabel
@@ -80,11 +91,11 @@ Surface {
              : root.updateAction ? Theme.launchButton.updateText
              : root.updateBusy ? Theme.launchButton.updatingText
              : root.emulatorInstall ? Theme.launchButton.installText
-             : root.installed ? Theme.launchButton.text
+             : root.installed ? root.idleText
              : root.installing ? Theme.launchButton.installText : Theme.launchButton.uninstalledText
-        font.pixelSize: root.installed || root.installing || root.running ? Theme.launchButton.fontSize
-                                                        : Math.round(Theme.launchButton.fontSize * 0.78)
-        font.bold: Theme.launchButton.bold
+        font.pixelSize: root.installed || root.installing || root.running ? root.buttonFontSize
+                                                        : Math.round(root.buttonFontSize * 0.78)
+        font.bold: root.buttonBold
 
         property real shadowShown: (root.launchable || root.running) && mouse.containsMouse ? 1 : 0
         Behavior on shadowShown { enabled: Motion.fades; MotionNumber { fade: true } }
