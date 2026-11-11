@@ -267,6 +267,10 @@ Rectangle {
                     InfoPanel {
                         id: info
                         fillOpacity: Theme.grid.cardOpacity
+                        fill: Theme.grid.cardBackground
+                        fillEnd: Theme.grid.cardBackgroundEnd
+                        border.color: Theme.grid.cardBorder
+                        border.width: Theme.grid.cardBorderWidth
                         visible: info.rows.length > 0 && General.gamePageGridPanels.includes("info")
                         Layout.row: side.rowOf("info")
                         Layout.fillWidth: true
@@ -283,6 +287,10 @@ Rectangle {
                     FriendsPanel {
                         id: friends
                         fillOpacity: Theme.grid.cardOpacity
+                        fill: Theme.grid.cardBackground
+                        fillEnd: Theme.grid.cardBackgroundEnd
+                        border.color: Theme.grid.cardBorder
+                        border.width: Theme.grid.cardBorderWidth
                         Layout.row: side.rowOf("friends")
                         Layout.fillWidth: true
                         game: root.game
@@ -292,6 +300,10 @@ Rectangle {
                     AchievementsPanel {
                         id: achievements
                         fillOpacity: Theme.grid.cardOpacity
+                        fill: Theme.grid.cardBackground
+                        fillEnd: Theme.grid.cardBackgroundEnd
+                        border.color: Theme.grid.cardBorder
+                        border.width: Theme.grid.cardBorderWidth
                         Layout.row: side.rowOf("achievements")
                         Layout.fillWidth: true
                         game: root.game
