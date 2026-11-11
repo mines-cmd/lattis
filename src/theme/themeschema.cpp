@@ -641,6 +641,7 @@ constexpr Setting kSettings[] = {
     integer("grid", "launch_font_size", "@launch_button.font_size", 6, 72, "Label size"),
     boolean("grid", "launch_bold", "@launch_button.bold", "Bold label"),
     heading("grid", "Side panel Properties and More buttons"),
+    boolean("grid", "show_buttons", "true", "Show the Properties and More buttons under Launch; off, Properties becomes a text button opposite Open game page"),
     text("grid", "properties_label", "Properties", "Label of the Properties button"),
     text("grid", "more_label", "Actions", "Label of the More button"),
     integer("grid", "button_height", "@controls.button_height", 16, 200, "Height"),

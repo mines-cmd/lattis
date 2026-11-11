@@ -169,6 +169,7 @@ Rectangle {
         }
 
         RowLayout {
+            visible: Theme.grid.showButtons
             Layout.fillWidth: true
             Layout.bottomMargin: Theme.grid.panelButtonsGap
             spacing: Theme.grid.panelSpacing
@@ -487,9 +488,23 @@ Rectangle {
             }
         }
 
-        TextLink {
-            text: qsTr("Open game page →")
-            onClicked: root.pageRequested()
+        RowLayout {
+            Layout.fillWidth: true
+
+            TextLink {
+                text: qsTr("Details →")
+                onClicked: root.pageRequested()
+            }
+            Item { Layout.fillWidth: true }
+            TextLink {
+                visible: !Theme.grid.showButtons
+                text: Theme.grid.propertiesLabel
+                onClicked: root.editRequested()
+                ToolTip.visible: hovered
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: (root.game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
+                                                                     : qsTr("Properties")
+            }
         }
     }
 }
