@@ -1015,10 +1015,26 @@ Item {
         }
     }
 
+    // The grid's width jumps as a panel toggle starts, so the pill glides to its new middle with the slide
+    // instead. A window resize follows the grid at once.
+    readonly property real pillX: gridClip.x + (grid.width - sizePill.width) / 2
+    property real pillGlideX: pillX
+    // Started here rather than through a Behavior: its `enabled` binding may not have caught up with the toggle yet.
+    MotionNumber { id: pillGlide; target: root; property: "pillGlideX"; speed: "normal" }
+    onPillXChanged: {
+        if (ready && Motion.on && panelWanted !== shownPanel) {
+            pillGlide.to = pillX
+            pillGlide.restart()
+        } else {
+            pillGlide.stop()
+            pillGlideX = pillX
+        }
+    }
+
     PopoverBackground {
         id: sizePill
         visible: root.selectionCount === 0
-        x: gridClip.x + (grid.width - width) / 2
+        x: root.pillGlideX
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.grid.margin
         width: pillRow.implicitWidth + 2 * Theme.layout.spacing
@@ -1064,7 +1080,7 @@ Item {
 
     Rectangle {
         visible: root.selectionCount > 0
-        x: gridClip.x + (grid.width - width) / 2
+        x: root.pillGlideX
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.grid.margin
         width: sizePill.width
