@@ -983,6 +983,11 @@ Item {
                         }
                         root.clickRow(cell.index, mouse.modifiers)
                         grid.forceActiveFocus()
+                        if (!General.gridPanel && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) {
+                            const error = General.setGridPanel(true)
+                            if (error !== "")
+                                root.message(error)
+                        }
                     }
                     onDoubleClicked: mouse => {
                         if (mouse.button === Qt.LeftButton && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)))
