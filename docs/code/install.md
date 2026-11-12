@@ -137,7 +137,7 @@ Only for an AppImage Lattis installed; Flatpaks are updated by the system. `star
 
 A release counts as newer when the matching asset's sha256 differs from the recorded one, or, when either side has none (mGBA's release lists no digest), when its id or date differs. Not by tag: DuckStation's is always `latest`. `updateVersion` then holds the release's tag.
 
-`update(id)` runs the install flow into the folder the old file is in, in replace mode. When the new file is in place and the record is written, the old file goes to the trash: the moved-aside copy when the name was the same, else the recorded file. A failure leaves the old file and its record as they were. Refused with "Close <game> first" while a game runs in that emulator.
+`update(id)` runs the install flow into the folder the old file is in, in replace mode. When the new file is in place and the record is written, the old file goes to the trash: the moved-aside copy when the name was the same, else the recorded file. A failure leaves the old file and its record as they were. Refused with "Close <game> first" while a game runs in that emulator. A finished AppImage update emits `emulatorUpdated(name, version, notes)` (the release body, Markdown, possibly empty); `Main.qml` collects them and shows a toast "Updated <name> to <version> · What's new" (or "Updated N emulators") for 10 s, whose link opens `WhatsNewDialog` with the notes (a titled section per emulator when several).
 
 ## Uninstall
 

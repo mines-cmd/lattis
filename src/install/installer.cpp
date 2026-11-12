@@ -537,6 +537,8 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
 
     const bool updated = it->kind == Kind::Update;
     const QString oldFile = it->oldFile;
+    const QString updatedName = it->emulatorName;
+    const Release updatedRelease = it->release;
     InstallRecord record;
     record.route = QStringLiteral("appimage");
     record.file = result.path;
@@ -577,6 +579,8 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
     rebuild();
     if (m_setup.redetect)
         m_setup.redetect();
+    if (updated)
+        emit emulatorUpdated(updatedName, updatedRelease.tag, updatedRelease.notes);
 }
 
 void Installer::removeAppImage(const EmulatorDef &emulator, const InstallRecord &record)

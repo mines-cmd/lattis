@@ -78,6 +78,8 @@ public:
 
 signals:
     void emulatorsChanged();
+    // An AppImage update finished; notes is the release's, possibly empty.
+    void emulatorUpdated(const QString &name, const QString &version, const QString &notes);
 
 private:
     enum class State { Idle, Checking, Downloading, Extracting, Installing, Removing, Failed };

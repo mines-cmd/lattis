@@ -689,6 +689,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "openFindRomFoldersForScreenshot", Q_ARG(QVariant, folder));
                 });
             }
+            if (const QString mode = qEnvironmentVariable("LATTIS_EMULATOR_NOTES"); !mode.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, mode] {
+                    logHook("emulatorNotesForScreenshot", mode);
+                    QMetaObject::invokeMethod(window, "emulatorNotesForScreenshot", Q_ARG(QVariant, mode));
+                });
+            }
             if (const QString platform = qEnvironmentVariable("LATTIS_SETUP_ROW"); !platform.isEmpty()) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window, platform] {
                     logHook("expandSetupRowForScreenshot", platform);

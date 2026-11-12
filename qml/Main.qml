@@ -481,9 +481,44 @@ ApplicationWindow {
 
     function openWhatsNew() {
         whatsNewDialog.active = true
+        whatsNewDialog.item.heading = ""
+        whatsNewDialog.item.sections = []
         whatsNewDialog.item.version = updatedVersion
         whatsNewDialog.item.notes = updatedNotes
         whatsNewDialog.item.open()
+    }
+
+    // Emulators updated since the toast last went away; one update at a time or "Update all".
+    property var emulatorReleases: []
+
+    function emulatorUpdated(name, version, notes) {
+        emulatorReleases = emulatorReleases.concat([{ name, version, notes }])
+        const count = emulatorReleases.length
+        toast.show(count === 1 ? qsTr("Updated %1 to %2").arg(name).arg(version)
+                               : qsTr("Updated %1 emulators").arg(count), {
+            text: qsTr("What's new"),
+            run: () => openEmulatorNotes()
+        }, 10000)
+    }
+
+    function openEmulatorNotes() {
+        const releases = emulatorReleases
+        emulatorReleases = []
+        if (releases.length === 0)
+            return
+        whatsNewDialog.active = true
+        whatsNewDialog.item.heading = releases.length === 1
+            ? qsTr("What's new in %1 %2").arg(releases[0].name).arg(releases[0].version)
+            : qsTr("What's new in your emulators")
+        whatsNewDialog.item.notes = releases.length === 1 ? releases[0].notes : ""
+        whatsNewDialog.item.sections = releases.length === 1 ? []
+            : releases.map(r => ({ title: r.name + " " + r.version, notes: r.notes }))
+        whatsNewDialog.item.open()
+    }
+
+    Connections {
+        target: Installer
+        function onEmulatorUpdated(name, version, notes) { window.emulatorUpdated(name, version, notes) }
     }
 
     function openUpdate() {
@@ -512,6 +547,15 @@ ApplicationWindow {
         openSetup(step)
         if (pending && step === setupGuide.item.doneStep)
             setupGuide.item.finish()
+    }
+
+    function emulatorNotesForScreenshot(mode) {
+        const notes = qsTr("## Highlights\n\n- Faster shader compilation\n- Fixed crash on startup with some controllers\n- New **Vulkan** renderer option\n\nSee the [full changelog](https://example.com).")
+        emulatorUpdated("Ryubing", "1.3.2", notes)
+        if (mode === "many")
+            emulatorUpdated("DuckStation", "0.1-9000", "")
+        if (mode !== "toast")
+            openEmulatorNotes()
     }
 
     function openFindRomFoldersForScreenshot(path) {
