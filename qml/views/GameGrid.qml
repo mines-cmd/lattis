@@ -374,6 +374,8 @@ Item {
         const menu = prepareMenu(row)
         if (menu === null)
             return
+        // The button's menu is not the cover's: its hover effects stay off.
+        menuRow = -1
         gameMenu.button = item
         gameMenu.under = item.parent
         gameMenu.underTop = item.y - Theme.menu.buttonGap
