@@ -8,9 +8,9 @@ Image {
 
     property bool wasLoading: false
     // Keeps the shown picture while a new sourceSize decodes, so resizing doesn't blank it. A new
-    // source still clears it: a reused delegate mustn't show the previous game's picture.
+    // source still clears it: a reused delegate mustn't show the previous game's picture. It works
+    // through Image's own retainWhileLoading, which must not be redeclared here or it stops working.
     property bool retainOnResize: false
-    property bool retainWhileLoading: false
     // Off for a picture that loads out of sight, under something that will reveal it whole.
     property bool fades: true
     // Loading or still fading in: whatever stands in for the picture must stay until this is false,
