@@ -171,6 +171,9 @@ Item {
                            run: () => root.action("play_statistics") },
         gallery: { icon: Icons.image, tip: Actions.tip(qsTr("Gallery"), Actions.keys.gallery),
                    run: () => root.action("gallery") },
+        toggle_view: { icon: General.view === "grid" ? Icons.viewList : Icons.layoutGrid,
+                       tip: Actions.tip(General.view === "grid" ? qsTr("List view") : qsTr("Grid view"), Actions.keys.toggle_view),
+                       run: () => root.action("toggle_view") },
         open_settings: { icon: Icons.gear, tip: Actions.tip(qsTr("Settings"), Actions.keys.open_settings),
                          run: () => root.openSettings() }
     })

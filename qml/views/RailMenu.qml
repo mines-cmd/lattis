@@ -64,7 +64,8 @@ SettingsMenu {
                 : modelData === "add_game" ? qsTr("Add game")
                 : modelData === "overview" ? qsTr("Library overview")
                 : modelData === "play_statistics" ? qsTr("Play statistics")
-                : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
+                : modelData === "gallery" ? qsTr("Gallery")
+                : modelData === "toggle_view" ? qsTr("Switch view") : qsTr("Settings")
         }
         onObjectAdded: (index, object) => root.insertItem(root.positionOf(platformsEnd) + 1 + index, object)
         onObjectRemoved: (index, object) => root.removeItem(object)
