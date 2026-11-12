@@ -663,35 +663,42 @@ Item {
                             maskSpreadAtMin: 1.0
                         }
 
-                        ArtPlaceholder {
+                        // The picture grows inside the cover's clip, so the cell, ring and badges stay put.
+                        Item {
                             anchors.fill: parent
-                            hue: cell.hue
-                            visible: image.status !== Image.Ready
+                            scale: cell.hovered && Motion.on ? Theme.grid.hoverZoom : 1
+                            Behavior on scale { enabled: Motion.on; MotionNumber { speed: "normal" } }
 
-                            Label {
+                            ArtPlaceholder {
                                 anchors.fill: parent
-                                anchors.margins: Theme.layout.spacing
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                wrapMode: Text.Wrap
-                                elide: Text.ElideRight
-                                text: cell.title
-                                color: Theme.palette.text
-                                font.pixelSize: Theme.grid.titleSize
-                                font.weight: Theme.font.strongWeight
-                            }
-                        }
+                                hue: cell.hue
+                                visible: image.status !== Image.Ready
 
-                        FadeImage {
-                            id: image
-                            anchors.fill: parent
-                            source: cell.coverUrl
-                            sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
-                                                Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
-                            fillMode: Image.PreserveAspectCrop
-                            smooth: true
-                            cache: true
-                            retainOnResize: true
+                                Label {
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.layout.spacing
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    wrapMode: Text.Wrap
+                                    elide: Text.ElideRight
+                                    text: cell.title
+                                    color: Theme.palette.text
+                                    font.pixelSize: Theme.grid.titleSize
+                                    font.weight: Theme.font.strongWeight
+                                }
+                            }
+
+                            FadeImage {
+                                id: image
+                                anchors.fill: parent
+                                source: cell.coverUrl
+                                sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
+                                                    Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
+                                fillMode: Image.PreserveAspectCrop
+                                smooth: true
+                                cache: true
+                                retainOnResize: true
+                            }
                         }
 
                         Surface {

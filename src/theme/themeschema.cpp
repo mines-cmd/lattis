@@ -601,6 +601,7 @@ constexpr Setting kSettings[] = {
     color("grid", "hover_overlay", "#ffffff1a", "Wash over the cover under the mouse"),
     color("grid", "hover_overlay_end", "@grid.hover_overlay", "Gradient end; hover overlay = flat"),
     choice("grid", "hover_gradient_direction", "@layout.gradient_direction", "down up right left", "Gradient direction of the hover wash"),
+    real("grid", "hover_zoom", "1.025", 1, 1.5, "How far the cover's picture grows under the mouse, inside the cover's corners; 1 = no zoom"),
     heading("grid", "Badges"),
     integer("grid", "badge_size", "32", 8, 100, "Size of the round badge at a cover's top right (favorite, update, running)"),
     color("grid", "badge_background", "#000000a6", "The badge's background"),
