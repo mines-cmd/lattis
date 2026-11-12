@@ -214,7 +214,14 @@ ApplicationWindow {
     readonly property Item browser: gridLoader.item ?? gameList
     readonly property Item details: gridView ? pageDetails.item : listDetails.item
     property bool gamePageOpen: false
-    readonly property bool gamePageCovering: gamePageOpen && gamePage.opacity === 1
+    // 0 shows the grid, 1 the game page. They take turns over the shared backdrop rather than
+    // crossfading, which shows both layouts at once: two titles, two Launch buttons.
+    property real gamePageShown: gamePageOpen ? 1 : 0
+    Behavior on gamePageShown {
+        enabled: Motion.fades
+        MotionNumber { fade: true; speed: "normal"; linear: true }
+    }
+    readonly property bool gamePageCovering: gamePageOpen && gamePageShown === 1
 
     // From the switch until the snapshot starts to fade: the new view's art loads without fading in,
     // to show whole when the snapshot goes.
@@ -1203,6 +1210,10 @@ ApplicationWindow {
             spacing: 0
             enabled: !setupGuide.active
             visible: !window.pageCovering && !window.gamePageCovering
+            // Gone before the game page is halfway in.
+            opacity: 1 - Math.min(1, window.gamePageShown / 0.6)
+            // Without a layer the panel's cards fade over the covers fading behind them and stack.
+            layer.enabled: opacity > 0 && opacity < 1
 
             Rail {
                 id: rail
@@ -1505,14 +1516,15 @@ ApplicationWindow {
             id: gamePage
             anchors.fill: parent
             visible: opacity > 0
-            opacity: window.gamePageOpen ? 1 : 0
+            // Starts once the grid is mostly gone.
+            opacity: Math.max(0, (window.gamePageShown - 0.4) / 0.6)
             layer.enabled: opacity > 0 && opacity < 1
             enabled: !setupGuide.active
             Keys.onEscapePressed: window.setGamePageOpen(false)
-
-            Behavior on opacity {
-                enabled: Motion.fades
-                MotionNumber { fade: true; speed: "normal"; linear: true }
+            // Squared, the rise settles as the fade ends, and the sink on closing comes from the same curve,
+            // so turning back halfway doesn't jump.
+            transform: Translate {
+                y: Motion.on ? Theme.details.pageOffset * Math.pow(1 - gamePage.opacity, 2) : 0
             }
 
             Loader {
@@ -1550,9 +1562,12 @@ ApplicationWindow {
     TopToolbar {
         id: toolbar
         Component.onCompleted: window.toolbarHovered = Qt.binding(() => toolbar.hovered)
-        readonly property real low: window.gridView && !window.gamePageOpen
-                                    ? (General.railHidden ? 0 : Theme.rail.width) + Theme.grid.margin
-                                    : (window.gridView ? 0 : listDetails.x) + Theme.details.marginLeft
+        // In the grid it glides between the grid's edge and the game page's as the page comes and goes.
+        readonly property real pageTurn: window.gamePageShown * window.gamePageShown * (3 - 2 * window.gamePageShown)
+        readonly property real low: window.gridView
+                                    ? (1 - pageTurn) * ((General.railHidden ? 0 : Theme.rail.width) + Theme.grid.margin)
+                                      + pageTurn * Theme.details.marginLeft
+                                    : listDetails.x + Theme.details.marginLeft
         readonly property real high: panelButton.visible ? panelButton.x - Theme.layout.spacing
                                    : windowControls.visible ? windowControls.x - Theme.layout.spacing
                                                             : window.width - Theme.layout.margin
@@ -1660,7 +1675,8 @@ ApplicationWindow {
 
     Rectangle {
         id: panelButton
-        visible: window.gridView && !window.gamePageOpen && !setupGuide.active
+        visible: window.gridView && libraryLayout.opacity > 0 && !setupGuide.active
+        opacity: libraryLayout.opacity
         // Next to the first button, a spacing away like the buttons are from each other, unless the
         // controls have a panel of their own, which it then stays outside of.
         x: (windowControls.visible ? windowControls.x + (Theme.windowControls.background.a === 0 ? windowControls.padding : 0)
@@ -1682,6 +1698,7 @@ ApplicationWindow {
         MouseArea {
             id: panelMouse
             anchors.fill: parent
+            enabled: !window.gamePageOpen
             hoverEnabled: true
             onClicked: window.run("toggle_grid_panel")
         }

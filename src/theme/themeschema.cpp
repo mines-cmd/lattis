@@ -710,6 +710,9 @@ constexpr Setting kSettings[] = {
     integer("details", "margin_right", "72", 0, 1000, "Right margin"),
     integer("details", "margin_top", "16", 0, 400, "Space between the toolbar and the hero; 0 puts the hero level with the bottom of the toolbar buttons"),
     integer("details", "margin_bottom", "32", 0, 1000, "Space below the content when scrolled to the end"),
+    integer("details", "page_offset", "@stats.page_offset", 0, 200,
+            "How far the game page opened from the Grid view rises into place as it opens and sinks as it closes; "
+            "0 = fade only"),
     integer("details", "padding", "32", 0, 400, "Extra horizontal padding on both sides of the content, inside the margins"),
     integer("details", "spacing", "22", 0, 200, "Vertical space between the hero, action row and body"),
     integer("details", "action_spacing", "12", 0, 200, "Space between items in the action row"),
