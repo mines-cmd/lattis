@@ -21,6 +21,9 @@ Item {
     // Set for a pick that follows the last one closely (details.rapid_switch): the new art and logo
     // replace the old without fading, zooming or rising. The art is still waited for.
     property bool instant: false
+    // Set while the view switch hides the hero until its art is in, so the art shows whole.
+    property bool entering: false
+    readonly property bool loading: shown?.loading ?? false
     property var shown: null
     readonly property var shownGame: shown?.game ?? ({})
     readonly property real logoIn: shown?.logoIn ?? 1
@@ -387,7 +390,7 @@ Item {
                     opacity: status === Image.Ready ? 1 : 0
                     // Only for art arriving after the switch timed out; otherwise the layer fades.
                     Behavior on opacity {
-                        enabled: Motion.fades && !root.instant && Theme.hero.fadeDuration > 0 && layer.isCurrent && Theme.hero.animateArt
+                        enabled: Motion.fades && !root.instant && !root.entering && Theme.hero.fadeDuration > 0 && layer.isCurrent && Theme.hero.animateArt
                         MotionNumber { fade: true; duration: Motion.fadeDuration(Theme.hero.fadeDuration) }
                     }
                 }

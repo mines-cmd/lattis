@@ -8,6 +8,7 @@ Rectangle {
     id: root
 
     property var game: ({})
+    readonly property bool logoLoading: logo.status === Image.Loading
 
     signal launchRequested()
     signal stopRequested()

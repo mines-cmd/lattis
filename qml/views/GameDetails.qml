@@ -22,6 +22,8 @@ Item {
     // list doesn't decode every image on the way. Text updates immediately.
     property var heroGame: ({})
     readonly property alias shownHeroGame: hero.shownGame
+    readonly property alias heroLoading: hero.loading
+    property alias heroEntering: hero.entering
 
     readonly property bool hasGame: game.id !== undefined
     readonly property bool downloading: hasGame && Theme.downloadBar.show && Library.download.gameId !== undefined

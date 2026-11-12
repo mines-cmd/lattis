@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -215,6 +216,12 @@ ApplicationWindow {
     property bool gamePageOpen: false
     readonly property bool gamePageCovering: gamePageOpen && gamePage.opacity === 1
 
+    // From the switch until the snapshot starts to fade: the new view's art loads without fading in,
+    // to show whole when the snapshot goes.
+    property bool viewCovered: false
+    // The new view rises into place from this far down as the snapshot fades.
+    property real viewRise: 0
+
     // Kept as the grid changes it: by the time gridView turns false the grid may already be gone.
     property var gridSelection: ({ id: "", ids: [] })
 
@@ -259,14 +266,41 @@ ApplicationWindow {
             apply()
             return
         }
-        libraryLayout.grabToImage(result => {
-            viewSnapshot.holding = true
+        if (viewWait.running)
+            revealView()
+        viewReveal.complete()
+        viewCover.pending = apply
+        // Not just the library: the backdrop changes with the view too.
+        viewArea.grabToImage(result => {
+            // The url is only good while the result lives.
+            viewCover.grab = result
             viewSnapshot.source = result.url
-            viewSnapshot.opacity = 1
-            viewSnapshot.holding = false
-            apply()
-            viewSnapshot.opacity = 0
+            // Setting the source can load the image and run onStatusChanged's coverView() already.
+            if (viewCover.pending !== null && viewSnapshot.status === Image.Ready)
+                coverView()
         })
+    }
+
+    // Only once the snapshot can be drawn: switching before it is would show the new view half-made.
+    function coverView() {
+        const apply = viewCover.pending
+        viewCover.pending = null
+        viewCover.opacity = 1
+        viewCovered = true
+        apply()
+        viewRise = Motion.on ? Theme.motion.viewSwitchRise : 0
+        viewWait.since = Date.now()
+        viewWait.start()
+    }
+
+    function newViewReady(): bool {
+        return gridView ? (gridLoader.item?.artReady() ?? true) : !(listDetails.item?.heroLoading ?? false)
+    }
+
+    function revealView() {
+        viewWait.stop()
+        viewCovered = false
+        viewReveal.restart()
     }
 
     function setGalleryOpen(open, gameId = "", switching = false) {
@@ -1074,15 +1108,6 @@ ApplicationWindow {
         }
     }
 
-    // Window background gradient; when backgroundEnd equals background this is flat,
-    // and the ApplicationWindow.color above provides the same solid fill at no extra cost.
-    Surface {
-        anchors.fill: parent
-        fill: Theme.palette.background
-        fillEnd: Theme.palette.backgroundEnd
-        direction: Theme.palette.gradientDirection
-    }
-
     // The grid's backdrop follows the selection after the hero's delay, so holding an arrow key doesn't decode every image on the way.
     readonly property var gridCurrent: gridLoader.item?.currentGame ?? ({})
     property var gridHeroGame: ({})
@@ -1098,95 +1123,114 @@ ApplicationWindow {
         onTriggered: window.gridHeroGame = window.gridCurrent
     }
 
-    Backdrop {
-        readonly property bool on: window.gridView ? Theme.grid.backdropEnabled : Theme.backdrop.enabled
-        visible: on && !window.pageCovering
-        x: Theme.backdrop.area === "details" && !window.gridView ? listDetails.x : 0
-        width: parent.width - x
-        height: parent.height * heightFraction
-        heightFraction: window.gridView ? Theme.grid.backdropHeight : Theme.backdrop.height
-        strength: window.gridView ? Theme.grid.backdropOpacity : Theme.backdrop.opacity
-        saturation: window.gridView ? Theme.grid.backdropSaturation : Theme.backdrop.saturation
-        blurAmount: window.gridView ? Theme.grid.backdropBlur : Theme.backdrop.blur
-        fadeStart: window.gridView ? Theme.grid.backdropFadeStart : Theme.backdrop.fadeStart
-        game: !on ? ({})
-            : window.gridView && !window.gamePageOpen ? window.gridHeroGame
-            : (details?.shownHeroGame ?? ({}))
-    }
-
-    RowLayout {
-        id: libraryLayout
+    // What the view switch grabs: everything the switch changes, under the toolbar and window controls.
+    Item {
+        id: viewArea
         anchors.fill: parent
-        spacing: 0
-        enabled: !setupGuide.active
-        visible: !window.pageCovering && !window.gamePageCovering
 
-        Rail {
-            id: rail
-            // Above the list, which reaches into the rail's slot while the rail is hidden, so the logo stays on top.
-            z: 1
-            startedUp: window.startedUp
-            Layout.fillHeight: true
-            Layout.preferredWidth: Theme.rail.width
-            onAddGame: window.addGame()
-            onOpenSettings: window.openSettings()
-            onAction: name => window.run(name)
-            onEditTheme: window.openSettingsAt("appearance")
-            onMessage: text => toast.show(text)
-            onUndoable: (text, link) => toast.show(text, link, toast.undoDuration)
-            onEditPlatform: id => window.openSettingsAt("platforms", id)
+        // Window background gradient; when backgroundEnd equals background this is flat,
+        // and the ApplicationWindow.color above provides the same solid fill at no extra cost.
+        Surface {
+            anchors.fill: parent
+            fill: Theme.palette.background
+            fillEnd: Theme.palette.backgroundEnd
+            direction: Theme.palette.gradientDirection
         }
 
-        Loader {
-            id: gridLoader
-            active: window.gridView
-            visible: active
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            sourceComponent: GameGrid {
-                // Start from the list's selection; the grid's first own pick replaces these bindings.
-                selectedId: gameList.selectedId
-                selection: gameList.selection
-                onSelectedIdChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
-                onSelectionChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
-                toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
-                onLaunchRequested: window.launch(currentGame)
-                onStopRequested: window.askForceClose(currentGame)
+        Backdrop {
+            readonly property bool on: window.gridView ? Theme.grid.backdropEnabled : Theme.backdrop.enabled
+            visible: on && !window.pageCovering
+            x: Theme.backdrop.area === "details" && !window.gridView ? listDetails.x : 0
+            width: parent.width - x
+            height: parent.height * heightFraction
+            heightFraction: window.gridView ? Theme.grid.backdropHeight : Theme.backdrop.height
+            strength: window.gridView ? Theme.grid.backdropOpacity : Theme.backdrop.opacity
+            saturation: window.gridView ? Theme.grid.backdropSaturation : Theme.backdrop.saturation
+            blurAmount: window.gridView ? Theme.grid.backdropBlur : Theme.backdrop.blur
+            fadeStart: window.gridView ? Theme.grid.backdropFadeStart : Theme.backdrop.fadeStart
+            game: !on ? ({})
+                : window.gridView && !window.gamePageOpen ? window.gridHeroGame
+                : (details?.shownHeroGame ?? ({}))
+        }
+
+        RowLayout {
+            id: libraryLayout
+            anchors.fill: parent
+            spacing: 0
+            enabled: !setupGuide.active
+            visible: !window.pageCovering && !window.gamePageCovering
+
+            Rail {
+                id: rail
+                // Above the list, which reaches into the rail's slot while the rail is hidden, so the logo stays on top.
+                z: 1
+                startedUp: window.startedUp
+                Layout.fillHeight: true
+                Layout.preferredWidth: Theme.rail.width
+                onAddGame: window.addGame()
+                onOpenSettings: window.openSettings()
+                onAction: name => window.run(name)
+                onEditTheme: window.openSettingsAt("appearance")
                 onMessage: text => toast.show(text)
-                onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
+                onUndoable: (text, link) => toast.show(text, link, toast.undoDuration)
+                onEditPlatform: id => window.openSettingsAt("platforms", id)
+            }
+
+            Loader {
+                id: gridLoader
+                active: window.gridView
+                visible: active
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                transform: Translate { y: window.viewRise }
+                sourceComponent: GameGrid {
+                    coverFades: !window.viewCovered
+                    // Start from the list's selection; the grid's first own pick replaces these bindings.
+                    selectedId: gameList.selectedId
+                    selection: gameList.selection
+                    onSelectedIdChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
+                    onSelectionChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
+                    toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
+                    onLaunchRequested: window.launch(currentGame)
+                    onStopRequested: window.askForceClose(currentGame)
+                    onMessage: text => toast.show(text)
+                    onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
+                    onGameAction: (name, game) => window.runOn(name, game)
+                    onGamesAction: (name, ids) => window.runOnMany(name, ids)
+                    onModManagerRequested: id => window.openModManager(id)
+                    onEditRequested: window.editGame(currentGame.id)
+                    onHistoryRequested: window.openPlayHistory(currentGame)
+                    onSteamUndoRequested: window.askSteamUndo()
+                    onCustomizeRequested: window.openSettingsAt("game_page")
+                    onPageRequested: window.setGamePageOpen(true)
+                }
+            }
+
+            GameList {
+                id: gameList
+                visible: !window.gridView
+                reach: General.railHidden ? Theme.rail.width + Theme.list.padding - Theme.rail.containerMargin - Theme.list.railHiddenMargin
+                                          : Theme.list.padding - Theme.list.railMargin
+                extraTop: General.railHidden ? Theme.list.railHiddenTopMargin : Theme.list.railTopMargin
+                transform: Translate { y: window.viewRise }
+                Layout.fillHeight: true
+                Layout.preferredWidth: Theme.list.width
+                onLaunchRequested: window.launch(currentGame)
+                onMessage: text => toast.show(text)
                 onGameAction: (name, game) => window.runOn(name, game)
                 onGamesAction: (name, ids) => window.runOnMany(name, ids)
                 onModManagerRequested: id => window.openModManager(id)
-                onEditRequested: window.editGame(currentGame.id)
-                onHistoryRequested: window.openPlayHistory(currentGame)
-                onSteamUndoRequested: window.askSteamUndo()
-                onCustomizeRequested: window.openSettingsAt("game_page")
-                onPageRequested: window.setGamePageOpen(true)
             }
-        }
 
-        GameList {
-            id: gameList
-            visible: !window.gridView
-            reach: General.railHidden ? Theme.rail.width + Theme.list.padding - Theme.rail.containerMargin - Theme.list.railHiddenMargin
-                                      : Theme.list.padding - Theme.list.railMargin
-            extraTop: General.railHidden ? Theme.list.railHiddenTopMargin : Theme.list.railTopMargin
-            Layout.fillHeight: true
-            Layout.preferredWidth: Theme.list.width
-            onLaunchRequested: window.launch(currentGame)
-            onMessage: text => toast.show(text)
-            onGameAction: (name, game) => window.runOn(name, game)
-            onGamesAction: (name, ids) => window.runOnMany(name, ids)
-            onModManagerRequested: id => window.openModManager(id)
-        }
-
-        Loader {
-            id: listDetails
-            active: !window.gridView
-            visible: active
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            sourceComponent: detailsComponent
+            Loader {
+                id: listDetails
+                active: !window.gridView
+                visible: active
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                transform: Translate { y: window.viewRise }
+                sourceComponent: detailsComponent
+            }
         }
     }
 
@@ -1198,6 +1242,7 @@ ApplicationWindow {
             allCollapsed: browser.allCollapsed
             dragReserve: windowControls.width + 2 * Theme.windowControls.margin
             startedUp: window.startedUp
+            heroEntering: window.viewCovered
             toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
@@ -1218,16 +1263,66 @@ ApplicationWindow {
         }
     }
 
-    Image {
-        id: viewSnapshot
-        property bool holding: false
+    Item {
+        id: viewCover
+        property var pending: null
+        property var grab: null
         anchors.fill: parent
         visible: opacity > 0
         opacity: 0
-        cache: false
-        fillMode: Image.Stretch
+        // Blurring as it fades, the old view melts into the new one instead of the two showing
+        // sharp over each other.
+        layer.enabled: visible && Theme.motion.viewSwitchBlur > 0
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blurMax: Theme.motion.viewSwitchBlur
+            blur: 1 - viewCover.opacity
+        }
 
-        Behavior on opacity { enabled: Motion.fades && !viewSnapshot.holding; MotionNumber { fade: true; speed: "normal" } }
+        // The grab is see-through wherever nothing was drawn.
+        Rectangle {
+            anchors.fill: parent
+            color: window.color
+        }
+
+        Image {
+            id: viewSnapshot
+            anchors.fill: parent
+            cache: false
+            fillMode: Image.Stretch
+            onStatusChanged: {
+                if (viewCover.pending === null)
+                    return
+                if (status === Image.Ready) {
+                    window.coverView()
+                } else if (status === Image.Error) {
+                    const apply = viewCover.pending
+                    viewCover.pending = null
+                    viewCover.grab = null
+                    apply()
+                }
+            }
+        }
+    }
+
+    FrameAnimation {
+        id: viewWait
+        property real since: 0
+        onTriggered: {
+            if (window.newViewReady() || Date.now() - since >= Theme.motion.viewSwitchWait)
+                window.revealView()
+        }
+    }
+
+    ParallelAnimation {
+        id: viewReveal
+        onFinished: {
+            viewSnapshot.source = ""
+            viewCover.grab = null
+        }
+        // Linear, as the theme's curves drop a third of a large fade in its first frame.
+        MotionNumber { target: viewCover; property: "opacity"; from: 1; to: 0; linear: true }
+        MotionNumber { target: window; property: "viewRise"; to: 0; speed: "normal" }
     }
 
     // Its own stacking context, so a page can drop below the other without going under the game page.

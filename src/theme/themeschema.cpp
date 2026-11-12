@@ -168,6 +168,13 @@ constexpr Setting kSettings[] = {
          "Size the app menu, the game menu and their submenus grow from; 1 = no growing"),
     integer("motion", "menu_offset", "8", 0, 200,
             "How far the app menu, the game menu and their submenus spring out as they open, in px; 0 = no slide"),
+    integer("motion", "view_switch_wait", "200", 0, 2000,
+            "Longest switching between List and Grid view waits for the new view's art before showing it, in ms; "
+            "0 = show it at once"),
+    integer("motion", "view_switch_rise", "8", 0, 100,
+            "How far the new view rises into place when switching between List and Grid view, in px; 0 = no rise"),
+    integer("motion", "view_switch_blur", "16", 0, 64,
+            "How much the old view blurs as it fades out when switching between List and Grid view, in px; 0 = no blur"),
 
     text("font", "family", "Inter", "Font family; empty = system default"),
     text("font", "mono_family", "monospace", "Fixed-width font family, for file paths"),

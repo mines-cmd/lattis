@@ -44,6 +44,23 @@ Item {
     readonly property real cellH: coverH + titleH + Theme.grid.gap
     readonly property real pillHeight: Theme.grid.pillButtonSize + 2 * Theme.layout.spacingSmall
     property bool ready: false
+    // Off while the view switch hides the grid until its covers are in, so they show whole.
+    property bool coverFades: true
+
+    // The covers in sight and the panel's logo have loaded.
+    function artReady(): bool {
+        if (panel.visible && panel.logoLoading)
+            return false
+        const top = grid.contentY
+        const bottom = top + grid.height
+        const cells = grid.contentItem.children
+        for (let i = 0; i < cells.length; ++i) {
+            const cell = cells[i]
+            if (cell.coverLoading === true && cell.visible && cell.y + cell.height > top && cell.y < bottom)
+                return false
+        }
+        return true
+    }
 
     // The panel hides without changing the saved setting when there is no game to show.
     readonly property bool panelWanted: General.gridPanel && currentGame.id !== undefined
@@ -541,7 +558,8 @@ Item {
         rightMargin: Theme.grid.margin - root.barGap - Theme.grid.gap
         topMargin: Math.max(0, root.contentTop - y)
         bottomMargin: root.pillHeight + 2 * Theme.grid.margin
-        cacheBuffer: root.cellH
+        // cellH is negative until the grid has a width.
+        cacheBuffer: Math.max(0, root.cellH)
 
         readonly property real fadeTop: !Theme.grid.edgeFadeTop ? 0 : Math.min(Theme.grid.edgeFade,
             Math.max(0, contentY - originY + topMargin))
@@ -627,6 +645,7 @@ Item {
             readonly property bool current: GridView.isCurrentItem
             readonly property bool selected: root.selection[gameId] === true
             readonly property bool hovered: mouse.containsMouse || playMouse.containsMouse || root.menuRow === index
+            readonly property bool coverLoading: image.status === Image.Loading
 
             width: GridView.view.cellWidth
             height: GridView.view.cellHeight
@@ -672,7 +691,7 @@ Item {
                             ArtPlaceholder {
                                 anchors.fill: parent
                                 hue: cell.hue
-                                visible: image.status !== Image.Ready
+                                visible: image.status !== Image.Ready || image.arriving
 
                                 Label {
                                     anchors.fill: parent
@@ -698,6 +717,7 @@ Item {
                                 smooth: true
                                 cache: true
                                 retainOnResize: true
+                                fades: root.coverFades
                             }
                         }
 
