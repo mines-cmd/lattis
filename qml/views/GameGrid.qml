@@ -65,15 +65,34 @@ Item {
     // The panel hides without changing the saved setting when there is no game to show.
     readonly property bool panelWanted: General.gridPanel && currentGame.id !== undefined
     property real slide: panelWanted ? 1 : 0
-    // Hiding slides the panel out first and widens the grid after; showing narrows the grid first. The covers reflow in one step.
-    property bool panelReserved: panelWanted
-    onPanelWantedChanged: if (panelWanted) panelReserved = true
-    onSlideChanged: if (slide === 0) panelReserved = false
     Behavior on slide { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
 
-    // Cells slide only while the layout changes size, not when the model reorders or filters.
+    // The grid takes or frees the panel's space as the slide starts, so the covers reflow in one step
+    // while the panel moves.
+    signal coversResized(real ratio)
+    property real shownCoverW: 0
+    property bool shownPanel: panelWanted
+    // Only a panel toggle grows the covers: a live resize or zoom follows the pointer and changes them at once.
+    onCoverWChanged: {
+        if (ready && Motion.on && shownCoverW > 0 && panelWanted !== shownPanel)
+            coversResized(shownCoverW / coverW)
+        shownCoverW = coverW
+    }
+    onPanelWantedChanged: {
+        reflow()
+        // Not at once: a toggle changes coverW twice, first with the new width and the old column count.
+        Qt.callLater(() => shownPanel = panelWanted)
+    }
+
+    // Cells slide to their new places on a panel toggle or a zoom, not when the model reorders or
+    // filters, nor when the window resizes (they'd trail the drag, and the window settles at launch).
     property bool reflowing: false
-    onCellWChanged: if (ready && Motion.on) { reflowing = true; reflowTimer.restart() }
+    function reflow() {
+        if (ready && Motion.on) {
+            reflowing = true
+            reflowTimer.restart()
+        }
+    }
     Timer {
         id: reflowTimer
         interval: Motion.duration(Motion.speedMs("normal"))
@@ -281,7 +300,10 @@ Item {
     }
 
     // The view keeps the current game on screen while the cells change size under it.
-    onCoverWidthChanged: Qt.callLater(() => grid.positionViewAtIndex(grid.currentIndex, GridView.Contain))
+    onCoverWidthChanged: {
+        reflow()
+        Qt.callLater(() => grid.positionViewAtIndex(grid.currentIndex, GridView.Contain))
+    }
 
     Timer {
         id: saveTimer
@@ -539,382 +561,464 @@ Item {
         }
     }
 
-    GridView {
-        id: grid
-
+    // While the panel slides, the grid is cut at the panel's edge: the covers reflow under it, and
+    // its background is translucent.
+    Item {
+        id: gridClip
         x: General.railHidden ? -Theme.rail.width : 0
-        y: searchRow.y + searchRow.height
-        width: parent.width - x - (root.panelReserved ? Theme.grid.panelWidth + Theme.grid.panelMargin : 0) - root.barGap
-        height: parent.height - y - Theme.grid.panelMargin
-        clip: true
-        model: Library
-        reuseItems: true
-        keyNavigationEnabled: false
-        highlightMoveDuration: 0
-        boundsBehavior: Flickable.StopAtBounds
-        cellWidth: root.cellW
-        cellHeight: root.cellH
-        leftMargin: root.leftEdge
-        rightMargin: Theme.grid.margin - root.barGap - Theme.grid.gap
-        topMargin: Math.max(0, root.contentTop - y)
-        bottomMargin: root.pillHeight + 2 * Theme.grid.margin
-        // cellH is negative until the grid has a width.
-        cacheBuffer: Math.max(0, root.cellH)
+        width: (panel.visible ? panel.x : root.width) - x
+        height: root.height
+        clip: root.slide > 0 && root.slide < 1
 
-        readonly property real fadeTop: !Theme.grid.edgeFadeTop ? 0 : Math.min(Theme.grid.edgeFade,
-            Math.max(0, contentY - originY + topMargin))
-        readonly property real fadeBottom: Math.min(Theme.grid.edgeFade,
-            Math.max(0, contentHeight + originY + bottomMargin - contentY - height))
-        layer.enabled: fadeTop > 0 || fadeBottom > 0
-        layer.effect: MultiEffect {
-            maskEnabled: true
-            maskSource: gridFadeMask
-            maskThresholdMin: 0.5
-            maskSpreadAtMin: 1
-        }
+        GridView {
+            id: grid
 
-        ScrollBar.vertical: SettingsScrollBar {
-            id: gridBar
-            topPadding: grid.topMargin
-            thickness: Theme.gameEditor.bulkScrollbarWidth
-            trackless: true
-            handleColor: Theme.list.scrollbarHandle
-            handleHoverColor: Theme.list.scrollbarHandleHover
-        }
+            y: searchRow.y + searchRow.height
+            width: root.width - gridClip.x - (root.panelWanted ? Theme.grid.panelWidth + Theme.grid.panelMargin : 0) - root.barGap
+            height: root.height - y - Theme.grid.panelMargin
+            clip: true
+            model: Library
+            reuseItems: true
+            keyNavigationEnabled: false
+            highlightMoveDuration: 0
+            boundsBehavior: Flickable.StopAtBounds
+            cellWidth: root.cellW
+            cellHeight: root.cellH
+            leftMargin: root.leftEdge
+            rightMargin: Theme.grid.margin - root.barGap - Theme.grid.gap
+            topMargin: Math.max(0, root.contentTop - y)
+            bottomMargin: root.pillHeight + 2 * Theme.grid.margin
+            // cellH is negative until the grid has a width.
+            cacheBuffer: Math.max(0, root.cellH)
 
-        // Instant: keys repeat too often to animate a scroll.
-        onCurrentIndexChanged: {
-            root.updateCurrent()
-            positionViewAtIndex(currentIndex, GridView.Contain)
-        }
+            readonly property real fadeTop: !Theme.grid.edgeFadeTop ? 0 : Math.min(Theme.grid.edgeFade,
+                Math.max(0, contentY - originY + topMargin))
+            readonly property real fadeBottom: Math.min(Theme.grid.edgeFade,
+                Math.max(0, contentHeight + originY + bottomMargin - contentY - height))
+            layer.enabled: fadeTop > 0 || fadeBottom > 0
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: gridFadeMask
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1
+            }
 
-        WheelHandler {
-            acceptedModifiers: Qt.ControlModifier
-            onWheel: event => root.resize(event.angleDelta.y > 0 ? 1 : -1)
-        }
+            ScrollBar.vertical: SettingsScrollBar {
+                id: gridBar
+                topPadding: grid.topMargin
+                thickness: Theme.gameEditor.bulkScrollbarWidth
+                trackless: true
+                handleColor: Theme.list.scrollbarHandle
+                handleHoverColor: Theme.list.scrollbarHandleHover
+            }
 
-        Keys.onPressed: event => {
-            const shift = (event.modifiers & Qt.ShiftModifier) !== 0
-            if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
-                const step = event.key === Qt.Key_Left ? -1 : 1
-                const row = grid.currentIndex + step
-                if (row >= 0 && row < grid.count) {
-                    if (shift)
-                        root.extendTo(row)
-                    else {
+            // Instant: keys repeat too often to animate a scroll.
+            onCurrentIndexChanged: {
+                root.updateCurrent()
+                positionViewAtIndex(currentIndex, GridView.Contain)
+            }
+
+            WheelHandler {
+                acceptedModifiers: Qt.ControlModifier
+                onWheel: event => root.resize(event.angleDelta.y > 0 ? 1 : -1)
+            }
+
+            Keys.onPressed: event => {
+                const shift = (event.modifiers & Qt.ShiftModifier) !== 0
+                if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+                    const step = event.key === Qt.Key_Left ? -1 : 1
+                    const row = grid.currentIndex + step
+                    if (row >= 0 && row < grid.count) {
+                        if (shift)
+                            root.extendTo(row)
+                        else {
+                            root.clearSelection()
+                            grid.currentIndex = row
+                        }
+                    }
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Backspace) {
+                    if (searchRow.field.text !== "") {
+                        searchRow.field.forceActiveFocus()
+                        searchRow.field.remove(searchRow.field.length - 1, searchRow.field.length)
+                    }
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Escape) {
+                    if (root.selectionCount > 0)
                         root.clearSelection()
-                        grid.currentIndex = row
+                    else
+                        searchRow.field.clear()
+                    event.accepted = true
+                } else if (event.text.length === 1 && event.text > " " && event.text !== "\x7f"
+                           && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
+                    searchRow.field.forceActiveFocus()
+                    searchRow.field.insert(searchRow.field.length, event.text)
+                    event.accepted = true
+                }
+            }
+
+            delegate: Item {
+                id: cell
+
+                required property int index
+                required property string gameId
+                required property string title
+                required property bool installed
+                required property bool hidden
+                required property bool updating
+                required property bool favorite
+                required property string platformIcon
+                required property real hue
+                required property url coverUrl
+
+                readonly property bool running: GameRunner.running.includes(gameId)
+                readonly property bool current: GridView.isCurrentItem
+                readonly property bool selected: root.selection[gameId] === true
+                readonly property bool hovered: mouse.containsMouse || playMouse.containsMouse || root.menuRow === index
+                readonly property bool coverLoading: image.status === Image.Loading
+
+                width: GridView.view.cellWidth
+                height: GridView.view.cellHeight
+
+                // A cell the view just created or reused takes its first position without sliding there.
+                property bool settled: false
+                Component.onCompleted: Qt.callLater(() => settled = true)
+                GridView.onPooled: {
+                    settled = false
+                    slide.stop()
+                    grow.stop()
+                    arrive.stop()
+                    enterScale = 1
+                    shiftX = 0
+                    shiftY = 0
+                    growFrom = 1
+                    opacity = 1
+                }
+                GridView.onReused: Qt.callLater(() => settled = true)
+
+                // The view places cells from C++, which a Behavior on x or y never sees: a cell that
+                // moves while the layout changes size is drawn at its old place and slides to the new one.
+                property real shownX: 0
+                property real shownY: 0
+                property real shiftX: 0
+                property real shiftY: 0
+                function follow(dx: real, dy: real) {
+                    if (!root.reflowing || !settled)
+                        return
+                    slide.stop()
+                    shiftX += dx
+                    shiftY += dy
+                    slide.restart()
+                }
+                property int shownRow: 0
+                // The view moves a cell's x before its y, so a row change can still cancel the x slide.
+                onXChanged: { follow(shownX - x, 0); shownX = x }
+                onYChanged: {
+                    const row = root.cellH > 0 ? Math.round(y / root.cellH) : 0
+                    if (row !== shownRow && root.reflowing && settled) {
+                        // Sliding to another row would cross the other covers on a diagonal.
+                        slide.stop()
+                        shiftX = 0
+                        shiftY = 0
+                        arrive.restart()
+                    } else {
+                        follow(0, shownY - y)
+                    }
+                    shownY = y
+                    shownRow = row
+                }
+                // Moving to another row: grows from motion.reflow_scale about its centre as it fades in.
+                property real enterScale: 1
+                ParallelAnimation {
+                    id: arrive
+                    MotionNumber { target: cell; property: "opacity"; from: 0; to: 1; fade: true; speed: "normal" }
+                    MotionNumber { target: cell; property: "enterScale"; from: Theme.motion.reflowScale; to: 1; speed: "normal" }
+                }
+                ParallelAnimation {
+                    id: slide
+                    MotionNumber { target: cell; property: "shiftX"; to: 0; speed: "normal" }
+                    MotionNumber { target: cell; property: "shiftY"; to: 0; speed: "normal" }
+                }
+
+                // Starts drawn at the old cover size and grows or shrinks to the new one as it slides.
+                // Scaling the whole cell keeps the Play button, badges and title on the cover.
+                property real growFrom: 1
+                transform: [
+                    Scale { origin.x: cell.width / 2; origin.y: cell.height / 2; xScale: cell.enterScale; yScale: cell.enterScale },
+                    Scale { xScale: cell.growFrom; yScale: cell.growFrom },
+                    Translate { x: cell.shiftX; y: cell.shiftY }
+                ]
+                MotionNumber { id: grow; target: cell; property: "growFrom"; to: 1; speed: "normal" }
+                Connections {
+                    target: root
+                    function onCoversResized(ratio) {
+                        if (!cell.settled)
+                            return
+                        grow.stop()
+                        // From the size on screen, so a toggle mid-animation doesn't jump.
+                        cell.growFrom *= ratio
+                        grow.restart()
                     }
                 }
-                event.accepted = true
-            } else if (event.key === Qt.Key_Backspace) {
-                if (searchRow.field.text !== "") {
-                    searchRow.field.forceActiveFocus()
-                    searchRow.field.remove(searchRow.field.length - 1, searchRow.field.length)
-                }
-                event.accepted = true
-            } else if (event.key === Qt.Key_Escape) {
-                if (root.selectionCount > 0)
-                    root.clearSelection()
-                else
-                    searchRow.field.clear()
-                event.accepted = true
-            } else if (event.text.length === 1 && event.text > " " && event.text !== "\x7f"
-                       && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
-                searchRow.field.forceActiveFocus()
-                searchRow.field.insert(searchRow.field.length, event.text)
-                event.accepted = true
-            }
-        }
-
-        delegate: Item {
-            id: cell
-
-            required property int index
-            required property string gameId
-            required property string title
-            required property bool installed
-            required property bool hidden
-            required property bool updating
-            required property bool favorite
-            required property string platformIcon
-            required property real hue
-            required property url coverUrl
-
-            readonly property bool running: GameRunner.running.includes(gameId)
-            readonly property bool current: GridView.isCurrentItem
-            readonly property bool selected: root.selection[gameId] === true
-            readonly property bool hovered: mouse.containsMouse || playMouse.containsMouse || root.menuRow === index
-            readonly property bool coverLoading: image.status === Image.Loading
-
-            width: GridView.view.cellWidth
-            height: GridView.view.cellHeight
-
-            // A cell the view just created or reused takes its first position without sliding there.
-            property bool settled: false
-            Component.onCompleted: Qt.callLater(() => settled = true)
-            GridView.onPooled: settled = false
-            GridView.onReused: Qt.callLater(() => settled = true)
-            Behavior on x { enabled: root.reflowing && cell.settled; MotionNumber { speed: "normal" } }
-            Behavior on y { enabled: root.reflowing && cell.settled; MotionNumber { speed: "normal" } }
-
-            Item {
-                id: card
-                width: root.coverW
-                height: root.coverH + root.titleH
-                scale: mouse.pressed ? Theme.motion.pressScale : 1
-                Behavior on scale { enabled: Motion.on; MotionNumber {} }
 
                 Item {
-                    id: face
-                    width: parent.width
-                    height: root.coverH
-                    opacity: cell.installed && !cell.hidden ? 1 : Theme.list.uninstalledOpacity
+                    id: card
+                    width: root.coverW
+                    height: root.coverH + root.titleH
+                    scale: mouse.pressed ? Theme.motion.pressScale : 1
+                    Behavior on scale { enabled: Motion.on; MotionNumber {} }
 
                     Item {
-                        id: art
-                        anchors.fill: parent
-                        layer.enabled: true
-                        layer.effect: MultiEffect {
-                            maskEnabled: true
-                            maskSource: artMask
-                            maskThresholdMin: 0.5
-                            maskSpreadAtMin: 1.0
-                        }
+                        id: face
+                        width: parent.width
+                        height: root.coverH
+                        opacity: cell.installed && !cell.hidden ? 1 : Theme.list.uninstalledOpacity
 
-                        // The picture grows inside the cover's clip, so the cell, ring and badges stay put.
                         Item {
+                            id: art
                             anchors.fill: parent
-                            scale: cell.hovered && Motion.on ? Theme.grid.hoverZoom : 1
-                            Behavior on scale { enabled: Motion.on; MotionNumber { speed: "normal" } }
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                maskEnabled: true
+                                maskSource: artMask
+                                maskThresholdMin: 0.5
+                                maskSpreadAtMin: 1.0
+                            }
 
-                            ArtPlaceholder {
+                            // The picture grows inside the cover's clip, so the cell, ring and badges stay put.
+                            Item {
                                 anchors.fill: parent
-                                hue: cell.hue
-                                visible: image.status !== Image.Ready || image.arriving
+                                scale: cell.hovered && Motion.on ? Theme.grid.hoverZoom : 1
+                                Behavior on scale { enabled: Motion.on; MotionNumber { speed: "normal" } }
 
-                                Label {
+                                ArtPlaceholder {
                                     anchors.fill: parent
-                                    anchors.margins: Theme.layout.spacing
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    wrapMode: Text.Wrap
-                                    elide: Text.ElideRight
-                                    text: cell.title
-                                    color: Theme.palette.text
-                                    font.pixelSize: Theme.grid.titleSize
-                                    font.weight: Theme.font.strongWeight
+                                    hue: cell.hue
+                                    visible: image.status !== Image.Ready || image.arriving
+
+                                    Label {
+                                        anchors.fill: parent
+                                        anchors.margins: Theme.layout.spacing
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        wrapMode: Text.Wrap
+                                        elide: Text.ElideRight
+                                        text: cell.title
+                                        color: Theme.palette.text
+                                        font.pixelSize: Theme.grid.titleSize
+                                        font.weight: Theme.font.strongWeight
+                                    }
+                                }
+
+                                FadeImage {
+                                    id: image
+                                    anchors.fill: parent
+                                    source: cell.coverUrl
+                                    sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
+                                                        Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
+                                    fillMode: Image.PreserveAspectCrop
+                                    smooth: true
+                                    cache: true
+                                    retainOnResize: true
+                                    fades: root.coverFades
                                 }
                             }
 
-                            FadeImage {
-                                id: image
+                            Surface {
                                 anchors.fill: parent
-                                source: cell.coverUrl
-                                sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
-                                                    Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
-                                fillMode: Image.PreserveAspectCrop
-                                smooth: true
-                                cache: true
-                                retainOnResize: true
-                                fades: root.coverFades
+                                fill: Theme.grid.hoverOverlay
+                                fillEnd: Theme.grid.hoverOverlayEnd
+                                direction: Theme.grid.hoverGradientDirection
+                                opacity: cell.hovered ? 1 : 0
+                                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
                             }
                         }
 
-                        Surface {
+                        Rectangle {
+                            id: artMask
                             anchors.fill: parent
-                            fill: Theme.grid.hoverOverlay
-                            fillEnd: Theme.grid.hoverOverlayEnd
-                            direction: Theme.grid.hoverGradientDirection
-                            opacity: cell.hovered ? 1 : 0
-                            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                            radius: Theme.grid.radius
+                            visible: false
+                            layer.enabled: true
                         }
                     }
 
                     Rectangle {
-                        id: artMask
-                        anchors.fill: parent
-                        radius: Theme.grid.radius
-                        visible: false
-                        layer.enabled: true
+                        visible: cell.current || cell.selected
+                        anchors.fill: face
+                        anchors.margins: -(Theme.grid.ringGap + Theme.grid.ringWidth)
+                        radius: Theme.grid.radius + Theme.grid.ringGap + Theme.grid.ringWidth
+                        color: "transparent"
+                        border.width: Theme.grid.ringWidth
+                        border.color: Theme.grid.ringColor
+                        opacity: cell.current ? 1 : Theme.grid.selectedOpacity
+                    }
+
+                    Badge {
+                        id: platformBadge
+                        visible: Theme.grid.platformIcon !== "off" && opacity > 0
+                        opacity: Theme.grid.platformIcon === "always" || cell.hovered ? face.opacity : 0
+                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                        anchors.top: face.top
+                        anchors.left: face.left
+                        anchors.margins: Theme.grid.platformIconMargin
+                        width: Theme.grid.platformIconSize
+                        iconPath: Icons.forPlatform(cell.platformIcon)
+                    }
+
+                    Row {
+                        anchors.top: face.top
+                        anchors.right: face.right
+                        anchors.margins: Theme.grid.badgeMargin
+                        spacing: Theme.layout.spacingSmall
+                        layoutDirection: Qt.RightToLeft
+
+                        Badge {
+                            visible: cell.favorite
+                            iconPath: Icons.star
+                        }
+                        Badge {
+                            visible: cell.updating
+                            iconPath: Icons.arrowDown
+                        }
+                        Badge {
+                            visible: cell.running
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width / 3
+                                height: width
+                                radius: width / 2
+                                color: Theme.list.runningColor
+                            }
+                        }
+                    }
+
+                    Label {
+                        visible: General.gridShowTitles
+                        anchors.top: face.bottom
+                        anchors.topMargin: Theme.layout.spacingSmall
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        text: cell.title
+                        color: Theme.list.text
+                        font.pixelSize: Theme.grid.titleSize
+                        opacity: face.opacity
                     }
                 }
 
-                Rectangle {
-                    visible: cell.current || cell.selected
-                    anchors.fill: face
-                    anchors.margins: -(Theme.grid.ringGap + Theme.grid.ringWidth)
-                    radius: Theme.grid.radius + Theme.grid.ringGap + Theme.grid.ringWidth
-                    color: "transparent"
-                    border.width: Theme.grid.ringWidth
-                    border.color: Theme.grid.ringColor
-                    opacity: cell.current ? 1 : Theme.grid.selectedOpacity
-                }
-
-                Badge {
-                    id: platformBadge
-                    visible: Theme.grid.platformIcon !== "off" && opacity > 0
-                    opacity: Theme.grid.platformIcon === "always" || cell.hovered ? face.opacity : 0
+                Surface {
+                    id: playButton
+                    z: 1
+                    readonly property bool shown: Theme.grid.playButton !== "off" && cell.hovered && !cell.running
+                    visible: opacity > 0
+                    opacity: shown ? 1 : 0
                     Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                    anchors.top: face.top
-                    anchors.left: face.left
-                    anchors.margins: Theme.grid.platformIconMargin
-                    width: Theme.grid.platformIconSize
-                    iconPath: Icons.forPlatform(cell.platformIcon)
-                }
+                    x: card.x + (Theme.grid.playButton === "center" ? (root.coverW - width) / 2
+                                                                    : root.coverW - width - Theme.grid.playButtonMargin)
+                    y: Theme.grid.playButton === "center" ? (root.coverH - height) / 2
+                                                          : root.coverH - height - Theme.grid.playButtonMargin
+                    width: Theme.grid.playButtonLabel === "" ? height : playRow.implicitWidth + height / 2
+                    height: Theme.grid.playButtonSize
+                    radius: height / 2
+                    fill: Theme.grid.playButtonBackground
+                    fillEnd: Theme.grid.playButtonBackgroundEnd
+                    direction: Theme.layout.gradientDirection
+                    scale: playMouse.pressed ? Theme.motion.pressScale : 1
+                    Behavior on scale { enabled: Motion.on; MotionNumber {} }
 
-                Row {
-                    anchors.top: face.top
-                    anchors.right: face.right
-                    anchors.margins: Theme.grid.badgeMargin
-                    spacing: Theme.layout.spacingSmall
-                    layoutDirection: Qt.RightToLeft
+                    Row {
+                        id: playRow
+                        anchors.centerIn: parent
+                        spacing: Theme.layout.spacingSmall
 
-                    Badge {
-                        visible: cell.favorite
-                        iconPath: Icons.star
+                        Icon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            path: Icons.playFill
+                            size: playButton.height * 0.5
+                            color: Theme.grid.playButtonIconColor
+                        }
+                        Label {
+                            visible: text !== ""
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Theme.grid.playButtonLabel
+                            color: Theme.grid.playButtonIconColor
+                            font.pixelSize: Theme.grid.playButtonFontSize
+                            font.bold: Theme.launchButton.bold
+                        }
                     }
-                    Badge {
-                        visible: cell.updating
-                        iconPath: Icons.arrowDown
-                    }
-                    Badge {
-                        visible: cell.running
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: parent.width / 3
-                            height: width
-                            radius: width / 2
-                            color: Theme.list.runningColor
+
+                    MouseArea {
+                        id: playMouse
+                        anchors.fill: parent
+                        enabled: playButton.shown
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.clickRow(cell.index, 0)
+                            grid.forceActiveFocus()
+                            root.launchRequested()
                         }
                     }
                 }
 
-                Label {
-                    visible: General.gridShowTitles
-                    anchors.top: face.bottom
-                    anchors.topMargin: Theme.layout.spacingSmall
-                    width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    text: cell.title
-                    color: Theme.list.text
-                    font.pixelSize: Theme.grid.titleSize
-                    opacity: face.opacity
-                }
-            }
-
-            Surface {
-                id: playButton
-                z: 1
-                readonly property bool shown: Theme.grid.playButton !== "off" && cell.hovered && !cell.running
-                visible: opacity > 0
-                opacity: shown ? 1 : 0
-                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
-                x: card.x + (Theme.grid.playButton === "center" ? (root.coverW - width) / 2
-                                                                : root.coverW - width - Theme.grid.playButtonMargin)
-                y: Theme.grid.playButton === "center" ? (root.coverH - height) / 2
-                                                      : root.coverH - height - Theme.grid.playButtonMargin
-                width: Theme.grid.playButtonLabel === "" ? height : playRow.implicitWidth + height / 2
-                height: Theme.grid.playButtonSize
-                radius: height / 2
-                fill: Theme.grid.playButtonBackground
-                fillEnd: Theme.grid.playButtonBackgroundEnd
-                direction: Theme.layout.gradientDirection
-                scale: playMouse.pressed ? Theme.motion.pressScale : 1
-                Behavior on scale { enabled: Motion.on; MotionNumber {} }
-
-                Row {
-                    id: playRow
-                    anchors.centerIn: parent
-                    spacing: Theme.layout.spacingSmall
-
-                    Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        path: Icons.playFill
-                        size: playButton.height * 0.5
-                        color: Theme.grid.playButtonIconColor
-                    }
-                    Label {
-                        visible: text !== ""
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: Theme.grid.playButtonLabel
-                        color: Theme.grid.playButtonIconColor
-                        font.pixelSize: Theme.grid.playButtonFontSize
-                        font.bold: Theme.launchButton.bold
-                    }
-                }
-
                 MouseArea {
-                    id: playMouse
-                    anchors.fill: parent
-                    enabled: playButton.shown
+                    id: mouse
+                    x: card.x
+                    width: root.coverW
+                    height: root.coverH + root.titleH
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.clickRow(cell.index, 0)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                    ToolTip.visible: containsMouse && !General.gridShowTitles
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: cell.title
+
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            const p = mapToItem(grid, mouse.x, mouse.y)
+                            root.openMenu(cell.index, p.x, p.y)
+                            return
+                        }
+                        root.clickRow(cell.index, mouse.modifiers)
                         grid.forceActiveFocus()
-                        root.launchRequested()
+                    }
+                    onDoubleClicked: mouse => {
+                        if (mouse.button === Qt.LeftButton && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)))
+                            root.launchRequested()
                     }
                 }
             }
+        }
 
-            MouseArea {
-                id: mouse
-                x: card.x
-                width: root.coverW
-                height: root.coverH + root.titleH
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+        component Badge: Rectangle {
+            property string iconPath
+            default property alias content: slot.data
 
-                ToolTip.visible: containsMouse && !General.gridShowTitles
-                ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: cell.title
+            width: Theme.grid.badgeSize
+            height: width
+            radius: width / 2
+            color: Theme.grid.badgeBackground
 
-                onClicked: mouse => {
-                    if (mouse.button === Qt.RightButton) {
-                        const p = mapToItem(grid, mouse.x, mouse.y)
-                        root.openMenu(cell.index, p.x, p.y)
-                        return
-                    }
-                    root.clickRow(cell.index, mouse.modifiers)
-                    grid.forceActiveFocus()
-                }
-                onDoubleClicked: mouse => {
-                    if (mouse.button === Qt.LeftButton && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)))
-                        root.launchRequested()
-                }
+            Icon {
+                anchors.centerIn: parent
+                visible: parent.iconPath !== ""
+                path: parent.iconPath
+                size: parent.width * 0.6
+                color: Theme.grid.badgeIconColor
             }
-        }
-    }
-
-    component Badge: Rectangle {
-        property string iconPath
-        default property alias content: slot.data
-
-        width: Theme.grid.badgeSize
-        height: width
-        radius: width / 2
-        color: Theme.grid.badgeBackground
-
-        Icon {
-            anchors.centerIn: parent
-            visible: parent.iconPath !== ""
-            path: parent.iconPath
-            size: parent.width * 0.6
-            color: Theme.grid.badgeIconColor
-        }
-        Item {
-            id: slot
-            anchors.fill: parent
+            Item {
+                id: slot
+                anchors.fill: parent
+            }
         }
     }
 
     PopoverBackground {
         id: sizePill
         visible: root.selectionCount === 0
-        anchors.horizontalCenter: grid.horizontalCenter
+        x: gridClip.x + (grid.width - width) / 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.grid.margin
         width: pillRow.implicitWidth + 2 * Theme.layout.spacing
@@ -960,7 +1064,7 @@ Item {
 
     Rectangle {
         visible: root.selectionCount > 0
-        anchors.horizontalCenter: grid.horizontalCenter
+        x: gridClip.x + (grid.width - width) / 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.grid.margin
         width: sizePill.width

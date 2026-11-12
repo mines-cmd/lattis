@@ -158,6 +158,8 @@ constexpr Setting kSettings[] = {
          "How quickly a spring stops bouncing; 1 = no bounce"),
     real("motion", "popup_scale", "0.95", 0.5, 1, "Size popups and menus grow from when they open; 1 = no growing"),
     real("motion", "press_scale", "0.96", 0.5, 1, "Size buttons shrink to while pressed; 1 = no dip"),
+    real("motion", "reflow_scale", "0.96", 0.5, 1,
+         "Size a grid cover that moves to another row grows from as it fades in, when the covers reflow; 1 = no growing"),
     real("motion", "chip_scale", "0.8", 0.5, 1,
          "Size chips, tags and rail buttons grow from when they appear and shrink to when they go; 1 = no growing"),
     real("motion", "mark_scale", "0.3", 0, 1,
