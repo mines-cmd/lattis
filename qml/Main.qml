@@ -269,7 +269,15 @@ ApplicationWindow {
             if (error.length > 0)
                 toast.show(error)
         }
-        if (!Motion.fades || setupGuide.active || pageCovering || gamePageCovering) {
+        // The pages sit over the views: switching under one would show nothing, so it closes to reveal the new view.
+        if (openPage !== "") {
+            apply()
+            setStatsOpen(false)
+            setOverviewOpen(false)
+            setGalleryOpen(false)
+            return
+        }
+        if (!Motion.fades || setupGuide.active || gamePageCovering) {
             apply()
             return
         }
