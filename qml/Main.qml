@@ -988,7 +988,10 @@ ApplicationWindow {
         case "import_backup": openSettingsAt("library", "import"); break
         case "show_shortcuts": openSettingsAt("keyboard"); break
         case "quit": requestQuit(); break
-        default: browser.run(name)
+        default:
+            // The list is under a covering page: its keys would move the selection and take focus from the page.
+            if (!(pageCovering && browser.coveredActions.includes(name)))
+                browser.run(name)
         }
     }
 

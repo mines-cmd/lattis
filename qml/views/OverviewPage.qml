@@ -440,7 +440,8 @@ FocusScope {
         ]
     }
 
-    Keys.onEscapePressed: {        if (root.dragging || root.rowDrag !== "")
+    Keys.onEscapePressed: {
+        if (root.dragging || root.rowDrag !== "")
             root.cancelDrag()
         else if (root.editing)
             root.stopEditing()

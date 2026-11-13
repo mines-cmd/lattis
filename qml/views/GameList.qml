@@ -177,6 +177,8 @@ Rectangle {
     readonly property var navigationActions: ["previous_game", "next_game", "page_up", "page_down", "first_game",
                                               "last_game", "previous_group", "next_group", "collapse_group", "expand_group"]
 
+    readonly property var coveredActions: navigationActions.concat(["extend_previous", "extend_next", "select_all", "clear_selection"])
+
     function run(name) {
         if (navigationActions.includes(name)) {
             focusList()

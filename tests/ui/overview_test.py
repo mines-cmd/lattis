@@ -104,6 +104,10 @@ def with_achievements(dirs):
 
 
 SCENARIOS = [
+    Scenario("Escape closes the overview after scrolling with End and Home",
+             [(OPEN + DOWN + "key Home\nwait 300\nkey Escape\nwait 300\nexpect-not Library overview\n", None)], demo),
+    Scenario("Escape closes the overview after scrolling with Page Down",
+             [(OPEN + STATUS + "key Escape\nwait 300\nexpect-not Library overview\n", None)], demo),
     Scenario("F7 opens the overview with its tiles and Continue playing, Escape closes it",
              [(OPEN + CARDS + "key Escape\nexpect-not Library overview\nexpect Hades\n", None)], demo),
     Scenario("F7 again closes the overview",
