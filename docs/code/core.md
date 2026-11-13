@@ -153,6 +153,7 @@ Only created when `LATTIS_UI_SCRIPT=<file>` is set (main.cpp); it starts after t
 | `wait <ms>` | Pauses. |
 | `click <text>` | Mouse move, press and release at the center of the visible item whose `text` is exactly `<text>` (the one drawn last when several match). |
 | `rightclick <text>` | The same with the right button, for a right-click menu. |
+| `drag <text> by <dx> <dy>` | Presses on the center of that item, moves the pointer `<dx> <dy>` pixels (a short first move gets past the drag distance) and releases, all at once: no timer runs while the pointer is down, so a drag that scrolls the page at its edge can't be tested. |
 | `key <Name>` | Press and release of that `Qt::Key` (`Return`, `Escape`, `F10`…) to the window, with `Ctrl+`, `Shift+` and `Alt+` in front for a shortcut (`Shift+Down`, `Ctrl+A`). |
 | `type <text>` | A key press and release per character, as typing; goes to whatever has focus (the list starts a search). |
 | `expect <text>` / `expect-not <text>` | An item with exactly this text is / isn't visible. |

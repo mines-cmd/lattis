@@ -73,6 +73,8 @@ FocusScope {
     }
 
     function openCardMenu(name: string, item: Item, position: point) {
+        if (editing)
+            return
         cardMenu.active = true
         const menu = cardMenu.item
         const isRow = name === "tiles" || name === "continue_playing"
@@ -149,6 +151,182 @@ FocusScope {
         report(General.setOverviewRows(rows[0], rows[1]))
     }
 
+    // Edit mode: the cards show whether or not they have anything, each with a grip and an eye.
+    property bool editing: false
+    property point dragScene
+    property string rowDrag: ""
+    property real rowGrab: 0
+    property real rowDy: 0
+    property bool rowSettling: false
+    property var rowTarget: null
+    property bool rowDropped: false
+    property real rowLineY: 0
+    property real rowFinalY: 0
+    readonly property bool dragging: stacks.dragName !== "" || (rowDrag !== "" && !rowSettling)
+    readonly property real scrollEdge: 48
+    readonly property real scrollSpeed: 14
+
+    Behavior on rowDy { enabled: Motion.on && root.rowSettling; MotionNumber { speed: "normal" } }
+
+    function isRow(name: string): bool {
+        return name === "tiles" || name === "continue_playing"
+    }
+
+    function startEditing() {
+        editing = true
+        forceActiveFocus()
+    }
+
+    function editForScreenshot(spec: string) {
+        startEditing()
+        const [name, dx, dy] = spec.split(":")
+        if (!name)
+            return
+        const item = isRow(name) ? rowItem(name) : stacks.cardNamed(name)
+        const center = item.mapToItem(null, item.width / 2, item.height / 2)
+        dragStart(name, center)
+        dragMove(name, Qt.point(center.x + parseInt(dx), center.y + parseInt(dy)))
+    }
+
+    function stopEditing() {
+        cancelDrag()
+        editing = false
+        forceActiveFocus()
+    }
+
+    function toggleHidden(name: string) {
+        if (General.overviewHidden.includes(name))
+            report(General.setOverviewHidden(General.overviewHidden.filter(n => n !== name)))
+        else
+            hideCard(name)
+    }
+
+    function resetLayout() {
+        cancelDrag()
+        report(General.resetOverviewLayout())
+        stacks.reset()
+    }
+
+    function dragStart(name: string, scene: point) {
+        dragScene = scene
+        if (isRow(name))
+            rowDragStart(name)
+        else
+            stacks.startDrag(name, scene)
+    }
+
+    function dragMove(name: string, scene: point) {
+        dragScene = scene
+        if (isRow(name))
+            rowDragMove()
+        else
+            stacks.moveDrag(scene)
+    }
+
+    function dragEnd(name: string, drop: bool) {
+        if (isRow(name))
+            rowDragEnd(drop)
+        else
+            stacks.endDrag(drop)
+    }
+
+    function cancelDrag() {
+        if (stacks.dragName !== "")
+            stacks.endDrag(false)
+        if (rowDrag !== "") {
+            rowSettleTimer.stop()
+            rowSettling = false
+            rowDy = 0
+            rowDrag = ""
+            rowTarget = null
+        }
+    }
+
+    function rowItem(name: string): Item {
+        return name === "tiles" ? tilesSlot : continueReveal
+    }
+
+    function rowDragStart(name: string) {
+        const item = rowItem(name)
+        rowGrab = board.mapFromItem(null, dragScene.x, dragScene.y).y - item.y
+        rowSettling = false
+        rowDy = 0
+        rowDrag = name
+        rowDragMove()
+    }
+
+    // Where the dragged row would land among the others, by its center against theirs.
+    function rowDragMove() {
+        if (rowDrag === "" || rowSettling)
+            return
+        const item = rowItem(rowDrag)
+        rowDy = board.mapFromItem(null, dragScene.x, dragScene.y).y - rowGrab - item.y
+        const center = item.y + rowDy + item.height / 2
+        const above = General.overviewAbove.filter(n => n !== rowDrag)
+        const below = General.overviewBelow.filter(n => n !== rowDrag)
+        const onScreen = n => rowItem(n).visible
+        const slots = above.filter(onScreen).concat(["stacks"], below.filter(onScreen))
+        const itemOf = n => n === "stacks" ? stacks : rowItem(n)
+        let index = 0
+        while (index < slots.length && center >= itemOf(slots[index]).y + itemOf(slots[index]).height / 2)
+            ++index
+        const aboveCount = slots.indexOf("stacks")
+        // A name's place in the full list, which also holds hidden and empty cards: before the next one on screen.
+        const place = (list, next) => next === undefined ? list.length : list.indexOf(next)
+        const target = { above: above.slice(), below: below.slice() }
+        if (index <= aboveCount)
+            target.above.splice(place(above, slots[index] === "stacks" ? undefined : slots[index]), 0, rowDrag)
+        else
+            target.below.splice(place(below, slots[index]), 0, rowDrag)
+        rowTarget = target
+        rowFinalY = 0
+        for (let i = 0; i < index; ++i)
+            rowFinalY += itemOf(slots[i]).height + Theme.overview.sectionSpacing
+        rowLineY = index === 0 ? itemOf(slots[0]).y - Theme.overview.sectionSpacing / 2
+            : itemOf(slots[index - 1]).y + itemOf(slots[index - 1]).height + Theme.overview.sectionSpacing / 2
+    }
+
+    function rowDragEnd(drop: bool) {
+        if (rowDrag === "" || rowSettling)
+            return
+        const changed = drop && rowTarget !== null
+            && (rowTarget.above.join() !== General.overviewAbove.join() || rowTarget.below.join() !== General.overviewBelow.join())
+        rowDropped = changed
+        rowDy = changed ? rowFinalY - rowItem(rowDrag).y : 0
+        rowSettling = true
+        rowSettleTimer.interval = Motion.duration(Motion.speedMs("normal"))
+        rowSettleTimer.restart()
+    }
+
+    function finishRowDrag() {
+        const target = rowTarget
+        const changed = rowDropped
+        rowSettling = false
+        rowDy = 0
+        rowDrag = ""
+        rowTarget = null
+        rowDropped = false
+        if (changed)
+            report(General.setOverviewRows(target.above, target.below))
+    }
+
+    // A drag held near the top or bottom of the view scrolls it, faster the closer it gets.
+    function autoScroll() {
+        const y = flick.mapFromItem(null, dragScene.x, dragScene.y).y
+        const edge = Math.min(scrollEdge, flick.height / 4)
+        let step = 0
+        if (y < edge)
+            step = -scrollSpeed * Math.min(1, (edge - y) / edge)
+        else if (y > flick.height - edge)
+            step = scrollSpeed * Math.min(1, (y - flick.height + edge) / edge)
+        const target = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY + step))
+        if (step === 0 || target === flick.contentY)
+            return
+        flick.contentY = target
+        const name = stacks.dragName !== "" ? stacks.dragName : rowDrag
+        dragMove(name, dragScene)
+    }
+
     signal message(string text)
     signal attentionRequested(string kind)
     signal closeRequested()
@@ -211,6 +389,8 @@ FocusScope {
     }
 
     function leave() {
+        cancelDrag()
+        editing = false
         stopAskingProtonDb()
         riseIn.stop()
         sinkOut.restart()
@@ -260,7 +440,13 @@ FocusScope {
         ]
     }
 
-    Keys.onEscapePressed: root.closeRequested()
+    Keys.onEscapePressed: {        if (root.dragging || root.rowDrag !== "")
+            root.cancelDrag()
+        else if (root.editing)
+            root.stopEditing()
+        else
+            root.closeRequested()
+    }
     Keys.onPressed: event => {
         const page = flick.height - Theme.layout.margin
         const line = Theme.overview.sectionSpacing * 4
@@ -429,6 +615,27 @@ FocusScope {
                 }
                 Item { Layout.fillWidth: true }
                 ChromeButton {
+                    visible: !root.editing
+                    icon: Icons.layoutMasonryLine
+                    label: qsTr("Customize")
+                    tip: qsTr("Hide cards and choose where they go")
+                    onClicked: root.startEditing()
+                }
+                ChromeButton {
+                    visible: root.editing
+                    icon: Icons.undo
+                    label: qsTr("Reset layout")
+                    tip: qsTr("Show every card and place them automatically")
+                    onClicked: root.resetLayout()
+                }
+                ChromeButton {
+                    visible: root.editing
+                    icon: Icons.check
+                    label: qsTr("Done")
+                    tip: qsTr("Done (Esc)")
+                    onClicked: root.stopEditing()
+                }
+                ChromeButton {
                     icon: Icons.barChartFill
                     label: qsTr("Play statistics")
                     tip: qsTr("Play statistics")
@@ -437,15 +644,26 @@ FocusScope {
             }
 
             GridLayout {
+                id: board
                 visible: root.loaded
                 Layout.fillWidth: true
                 columns: 1
                 rowSpacing: Theme.overview.sectionSpacing
 
-                GridLayout {
-                    visible: root.cardShown("tiles")
+                Item {
+                    id: tilesSlot
+                    visible: root.editing || root.cardShown("tiles")
                     Layout.row: root.rowOf("tiles")
                     Layout.fillWidth: true
+                    implicitHeight: tilesGrid.implicitHeight
+                    z: root.rowDrag === "tiles" ? 10 : 0
+                    transform: Translate { y: root.rowDrag === "tiles" ? root.rowDy : 0 }
+
+                GridLayout {
+                    id: tilesGrid
+                    width: parent.width
+                    opacity: root.editing ? (root.rowDrag === "tiles" ? Theme.overview.editDragOpacity
+                        : !root.cardShown("tiles") ? Theme.overview.editHiddenOpacity : 1) : 1
                     columns: root.columns === 3 ? Math.max(1, root.tiles.length) : root.columns === 2 ? 2 : 1
                     columnSpacing: Theme.overview.sectionSpacing
                     rowSpacing: Theme.overview.sectionSpacing
@@ -513,15 +731,37 @@ FocusScope {
                     }
                 }
 
+                    OverviewEditFrame {
+                        anchors.fill: parent
+                        editing: root.editing
+                        title: qsTr("the tiles")
+                        hiddenCard: !root.cardShown("tiles")
+                        canDrag: stacks.count === 2
+                        onEyeClicked: root.toggleHidden("tiles")
+                        onDragStarted: scene => root.dragStart("tiles", scene)
+                        onDragMoved: scene => root.dragMove("tiles", scene)
+                        onDragEnded: dropped => root.dragEnd("tiles", dropped)
+                    }
+                }
+
                 OverviewReveal {
                     id: continueReveal
                     shown: root.revealedCards
                     name: "continue_playing"
+                    title: qsTr("Continue playing")
                     Layout.row: root.rowOf("continue_playing")
                     Layout.fillWidth: true
-                    visible: root.continuePlaying.length > 0 && root.cardShown("continue_playing")
+                    has: root.continuePlaying.length > 0
+                    editing: root.editing
+                    canDrag: stacks.count === 2
+                    dragged: root.rowDrag === "continue_playing"
+                    transform: Translate { y: root.rowDrag === "continue_playing" ? root.rowDy : 0 }
                     order: root.tiles.length
                     onMenuRequested: position => root.openCardMenu("continue_playing", continueReveal, position)
+                    onEyeClicked: root.toggleHidden("continue_playing")
+                    onDragStarted: scene => root.dragStart("continue_playing", scene)
+                    onDragMoved: scene => root.dragMove("continue_playing", scene)
+                    onDragEnded: dropped => root.dragEnd("continue_playing", dropped)
 
                     OverviewCard {
                         Layout.fillWidth: true
@@ -660,6 +900,11 @@ FocusScope {
                     id: stacks
 
                     property real stackHeight: 0
+                    // While a card is dragged: the columns as a drop now would leave them, and the lists from before.
+                    property var preview: null
+                    property var origin: null
+                    property string dragName: ""
+                    property point grab
                     readonly property int count: root.columns === 1 ? 1 : 2
                     readonly property real gap: Theme.overview.sectionSpacing
                     readonly property real columnWidth: (width - (count - 1) * gap) / count
@@ -706,6 +951,61 @@ FocusScope {
                         return names.length
                     }
 
+                    function startDrag(name, scene) {
+                        const card = cardNamed(name)
+                        const at = mapFromItem(null, scene.x, scene.y)
+                        grab = Qt.point(at.x - card.x, at.y - card.y)
+                        origin = currentLists()
+                        preview = { left: origin.left.slice(), right: origin.right.slice() }
+                        dragName = name
+                        card.dragged = true
+                    }
+
+                    // The card follows the pointer; the columns are dealt again with it in the slot its center is over,
+                    // judged against the other cards where they would be without it, so a card sliding aside can't flip the slot back.
+                    function moveDrag(scene) {
+                        if (dragName === "")
+                            return
+                        const card = cardNamed(dragName)
+                        const at = mapFromItem(null, scene.x, scene.y)
+                        card.x = Math.max(0, Math.min(width - card.width, at.x - grab.x))
+                        card.y = Math.max(0, Math.min(Math.max(0, stackHeight - card.height), at.y - grab.y))
+                        const lists = { left: preview.left.filter(n => n !== dragName), right: preview.right.filter(n => n !== dragName) }
+                        const names = count === 1 || card.x + card.width / 2 < width / 2 ? lists.left : lists.right
+                        const center = card.y + card.height / 2
+                        let y = 0
+                        let slot = 0
+                        for (; slot < names.length; ++slot) {
+                            const other = cardNamed(names[slot])
+                            if (!other?.visible)
+                                continue
+                            if (center < y + other.implicitHeight / 2)
+                                break
+                            y += other.implicitHeight + gap
+                        }
+                        names.splice(slot, 0, dragName)
+                        if (JSON.stringify(lists) !== JSON.stringify(preview)) {
+                            preview = lists
+                            relayout()
+                        }
+                    }
+
+                    function endDrag(drop) {
+                        if (dragName === "")
+                            return
+                        const card = cardNamed(dragName)
+                        const lists = preview
+                        const moved = drop && JSON.stringify(lists) !== JSON.stringify(origin)
+                        dragName = ""
+                        preview = null
+                        origin = null
+                        card.dragged = false
+                        // The card settles into its slot from where it was let go.
+                        if (moved)
+                            root.report(General.setOverviewColumns(lists.left, lists.right))
+                        Qt.callLater(relayout)
+                    }
+
                     function reset() {
                         for (let i = 0; i < children.length; ++i) {
                             children[i].column = -1
@@ -731,7 +1031,8 @@ FocusScope {
                         const last = new Array(count).fill(null)
                         const kept = []
                         const dealt = []
-                        const fixed = !General.overviewAutomatic
+                        const fixed = preview !== null || !General.overviewAutomatic
+                        const lists = preview ?? { left: General.overviewLeft, right: General.overviewRight }
                         const byName = {}
                         for (let i = 0; i < children.length; ++i) {
                             const card = children[i]
@@ -745,7 +1046,7 @@ FocusScope {
                         }
                         if (fixed) {
                             // Left column first, so a single column reads the left one then the right one.
-                            for (const [side, names] of [[0, General.overviewLeft], [1, General.overviewRight]]) {
+                            for (const [side, names] of [[0, lists.left], [1, lists.right]]) {
                                 for (const name of names) {
                                     const card = byName[name]
                                     if (!card)
@@ -761,8 +1062,10 @@ FocusScope {
                         for (const card of kept.concat(dealt)) {
                             if (dealt.includes(card))
                                 card.column = bottoms.indexOf(Math.min(...bottoms))
-                            card.x = card.column * (columnWidth + gap)
-                            card.y = bottoms[card.column]
+                            if (!card.dragged) {
+                                card.x = card.column * (columnWidth + gap)
+                                card.y = bottoms[card.column]
+                            }
                             card.width = columnWidth
                             card.height = card.implicitHeight
                             card.stretch = false
@@ -801,13 +1104,20 @@ FocusScope {
                             card.implicitHeightChanged.connect(() => Qt.callLater(relayout))
                             card.visibleChanged.connect(() => Qt.callLater(relayout))
                             card.menuRequested.connect(position => root.openCardMenu(card.name, card, position))
+                            card.editing = Qt.binding(() => root.editing)
+                            card.canDrag = Qt.binding(() => count === 2)
+                            card.eyeClicked.connect(() => root.toggleHidden(card.name))
+                            card.dragStarted.connect(scene => root.dragStart(card.name, scene))
+                            card.dragMoved.connect(scene => root.dragMove(card.name, scene))
+                            card.dragEnded.connect(dropped => root.dragEnd(card.name, dropped))
                         }
                     }
 
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "storage"
-                        visible: storage.hasContent && root.cardShown("storage")
+                        title: qsTr("Storage")
+                        has: storage.hasContent
                         order: root.tiles.length + 1
 
                         OverviewStorage {
@@ -825,7 +1135,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "platforms"
-                        visible: ((root.overview.platformCounts ?? []).length > 0) && root.cardShown("platforms")
+                        title: qsTr("Games by platform")
+                        has: ((root.overview.platformCounts ?? []).length > 0)
                         order: root.tiles.length + 2
 
                         OverviewPlatforms {
@@ -840,7 +1151,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "statuses"
-                        visible: ((root.overview.statusCounts ?? []).length > 0) && root.cardShown("statuses")
+                        title: qsTr("Status")
+                        has: ((root.overview.statusCounts ?? []).length > 0)
                         order: root.tiles.length + 3
 
                         OverviewStatuses {
@@ -854,7 +1166,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "attention"
-                        visible: ((root.overview.attention ?? []).length > 0) && root.cardShown("attention")
+                        title: qsTr("Needs attention")
+                        has: ((root.overview.attention ?? []).length > 0)
                         order: root.tiles.length + 4
 
                         OverviewAttention {
@@ -867,7 +1180,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "backlog"
-                        visible: ((root.overview.backlogPicks ?? []).length > 0) && root.cardShown("backlog")
+                        title: qsTr("From your backlog")
+                        has: ((root.overview.backlogPicks ?? []).length > 0)
                         order: root.tiles.length + 5
 
                         OverviewBacklog {
@@ -882,7 +1196,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "nearly_done"
-                        visible: ((root.overview.nearlyDone ?? []).length > 0) && root.cardShown("nearly_done")
+                        title: qsTr("Nearly done")
+                        has: ((root.overview.nearlyDone ?? []).length > 0)
                         order: root.tiles.length + 6
 
                         OverviewNearlyDone {
@@ -896,7 +1211,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "tags"
-                        visible: ((root.overview.topTags ?? []).length > 0) && root.cardShown("tags")
+                        title: qsTr("Top tags")
+                        has: ((root.overview.topTags ?? []).length > 0)
                         order: root.tiles.length + 7
 
                         OverviewTags {
@@ -910,7 +1226,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "years"
-                        visible: ((root.overview.years ?? []).length > 0) && root.cardShown("years")
+                        title: qsTr("Release years")
+                        has: ((root.overview.years ?? []).length > 0)
                         order: root.tiles.length + 8
 
                         OverviewYears {
@@ -924,7 +1241,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "compatibility"
-                        visible: compatibility.hasContent && root.cardShown("compatibility")
+                        title: qsTr("Compatibility")
+                        has: compatibility.hasContent
                         order: root.tiles.length + 9
 
                         OverviewCompatibility {
@@ -940,7 +1258,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "saves"
-                        visible: ((root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0) && root.cardShown("saves")
+                        title: qsTr("Save backups")
+                        has: ((root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0)
                         order: root.tiles.length + 10
 
                         OverviewSaves {
@@ -953,7 +1272,8 @@ FocusScope {
                     OverviewReveal {
                         shown: root.revealedCards
                         name: "facts"
-                        visible: root.cardShown("facts")
+                        title: qsTr("Fun facts")
+                        has: true
                         order: root.tiles.length + 11
 
                         OverviewFacts {
@@ -966,6 +1286,30 @@ FocusScope {
                 }
             }
         }
+    }
+
+    Rectangle {
+        parent: flick.contentItem
+        visible: root.rowDrag !== "" && !root.rowSettling
+        x: content.x + board.x
+        y: content.y + board.y + root.rowLineY - height / 2
+        width: board.width
+        height: Theme.overview.editDropIndicatorWidth
+        radius: height / 2
+        color: Theme.overview.editDropIndicator
+        z: 20
+    }
+
+    Timer {
+        interval: 16
+        repeat: true
+        running: root.dragging
+        onTriggered: root.autoScroll()
+    }
+
+    Timer {
+        id: rowSettleTimer
+        onTriggered: root.finishRowDrag()
     }
 
     Loader {
@@ -983,5 +1327,6 @@ FocusScope {
         function onDownRequested() { root.moveCard(cardMenu.item.card, 1) }
         function onBelowRequested() { root.moveRowCard(cardMenu.item.card, false) }
         function onAboveRequested() { root.moveRowCard(cardMenu.item.card, true) }
+        function onCustomizeRequested() { root.startEditing() }
     }
 }

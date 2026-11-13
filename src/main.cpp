@@ -636,9 +636,10 @@ int main(int argc, char *argv[])
                 });
             }
             if (qEnvironmentVariableIsSet("LATTIS_OVERVIEW")) {
-                QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
-                    logHook("overviewForScreenshot", QString());
-                    QMetaObject::invokeMethod(window, "overviewForScreenshot");
+                const QString mode = qEnvironmentVariable("LATTIS_OVERVIEW");
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, mode] {
+                    logHook("overviewForScreenshot", mode);
+                    QMetaObject::invokeMethod(window, "overviewForScreenshot", Q_ARG(QVariant, mode));
                 });
             }
             if (const QString spec = qEnvironmentVariable("LATTIS_GALLERY"); !spec.isEmpty()) {

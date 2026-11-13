@@ -209,6 +209,7 @@ qt_add_qml_module(lattis
         qml/views/OverviewQuiet.qml
         qml/views/OverviewReveal.qml
         qml/views/OverviewCardMenu.qml
+        qml/views/OverviewEditFrame.qml
         qml/views/OverviewStorage.qml
         qml/views/OverviewBarRow.qml
         qml/views/OverviewPlatformInfo.qml

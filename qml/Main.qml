@@ -390,8 +390,11 @@ ApplicationWindow {
         galleryPage.item.autoOpen = spec
     }
 
-    function overviewForScreenshot() {
+    // "edit" also turns on edit mode; "edit/<card>:<dx>:<dy>" shows that card held and dragged that far.
+    function overviewForScreenshot(mode) {
         setOverviewOpen(true)
+        if (mode.startsWith("edit"))
+            overviewPage.item.editForScreenshot(mode.split("/")[1] ?? "")
     }
 
     function statsForScreenshot(spec) {

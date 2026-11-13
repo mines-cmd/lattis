@@ -7,6 +7,9 @@ Item {
 
     property bool draggable: true
     property string tip: ""
+    property color color: Theme.controls.iconColor
+    property color hoverColor: Theme.controls.labelColor
+    property real iconSize: Theme.controls.iconSize
     readonly property Item area: mouse
 
     // Pointer positions are in the area's coordinates; DragReorder maps them (the row moves while dragged).
@@ -20,8 +23,8 @@ Item {
     Icon {
         anchors.centerIn: parent
         path: Icons.grip
-        size: Theme.controls.iconSize
-        color: mouse.containsMouse || mouse.pressed ? Theme.controls.labelColor : Theme.controls.iconColor
+        size: root.iconSize
+        color: mouse.containsMouse || mouse.pressed ? root.hoverColor : root.color
     }
 
     MouseArea {

@@ -62,6 +62,25 @@ def overview_order(first, after):
     return check
 
 
+def overview_is(**expected):
+    """Checks [overview] key by key; a key that isn't written counts as an empty list."""
+    def check(result, dirs):
+        section = overview_section(dirs)
+        if section is None:
+            return ["settings.toml wasn't written"]
+        return [f"{key} is {section.get(key, [])}, not {value}"
+                for key, value in expected.items() if section.get(key, []) != value]
+    return check
+
+
+def overview_has(column, name):
+    """Checks that a card is in one of the columns' lists."""
+    def check(result, dirs):
+        section = overview_section(dirs) or {}
+        return [] if name in section.get(column, []) else [f"{name} isn't in {column}: {section}"]
+    return check
+
+
 def steam_achievements(dirs, app_id, game, count, unlocked):
     """Gives a demo Steam game `count` achievements, `unlocked` of them done, with the fixture builder's files."""
     spec = importlib.util.spec_from_file_location(
@@ -192,6 +211,64 @@ SCENARIOS = [
                overview_settings(below=["tiles"])),
               (OPEN + DOWN + "rightclick Hours played\nexpect Move above the cards\nexpect-not Move below the cards\n"
                + "click Hide card\nwait 300\nexpect-not Hours played\n", overview_settings(hidden=["tiles"]))], demo),
+    Scenario("Customize turns on edit mode: every card shows, empty ones with a note",
+             [(OPEN + "expect Customize\nexpect-not Reset layout\nexpect-not Nothing to show now\n"
+               + "click Customize\nwait 400\nexpect Reset layout\nexpect Done\nexpect-not Customize\n"
+               + "expect Hide Storage\nexpect Move Storage\nexpect Hide the tiles\nexpect Hide Continue playing\n"
+               + STATUS + STATUS + "expect Nearly done\nexpect Nothing to show now\n", None)], demo),
+    Scenario("Escape leaves edit mode, and the next one leaves the page",
+             # (A scroll key first would take the keyboard focus to the list, which Escape then closes nothing on.)
+             [(OPEN + "click Customize\nwait 400\nexpect Done\nkey Escape\nwait 400\nexpect Library overview\n"
+               + "expect Customize\nexpect-not Reset layout\nexpect-not Nothing to show now\nexpect-not Hide Storage\n"
+               + "key Escape\nexpect-not Library overview\n", None)], demo),
+    Scenario("Done leaves edit mode and Customize comes back",
+             [(OPEN + "click Customize\nwait 400\nexpect Done\nclick Done\nwait 400\nexpect Customize\n"
+               + "expect-not Reset layout\nexpect-not Done\nexpect-not Hide Storage\n", None)], demo),
+    Scenario("the card menu's Customize overview turns on edit mode",
+             [(OPEN + "rightclick Storage\nexpect Customize overview\nexpect-not Customize overview…\n"
+               + "click Customize overview\nwait 400\nexpect Done\nexpect Hide Storage\n", None)], demo),
+    Scenario("cards take no clicks and no menu while editing",
+             [(OPEN + "click Customize\nwait 400\nclick Games\nwait 400\nexpect Library overview\nexpect Done\n"
+               + "rightclick Storage\nwait 300\nexpect-not Hide card\n", None)], demo),
+    Scenario("the eye hides a card, which stays in place dimmed; its eye shows it again",
+             [(OPEN + "click Customize\nwait 400\nclick Hide Storage\nwait 400\nexpect Show Storage\nexpect Storage\n"
+               + "expect-not Hide Storage\nclick Done\nwait 400\nexpect-not Storage\nexpect Games by platform\n",
+               overview_settings(hidden=["storage"], placed=True)),
+              (OPEN + "expect-not Storage\nclick Customize\nwait 400\nexpect Show Storage\nclick Show Storage\nwait 400\n"
+               + "expect Hide Storage\nclick Done\nwait 400\nexpect Storage\n", overview_is(hidden=[]))], demo),
+    Scenario("the eye hides the tiles and Continue playing too",
+             [(OPEN + "click Customize\nwait 400\nclick Hide the tiles\nwait 400\nexpect Show the tiles\n"
+               + "click Hide Continue playing\nwait 400\nexpect Show Continue playing\nexpect Hours played\n"
+               + "click Done\nwait 400\nexpect-not Hours played\nexpect-not Continue playing\n",
+               overview_is(hidden=["tiles", "continue_playing"]))], demo),
+    Scenario("Reset layout shows every card again and goes back to automatic dealing",
+             [(OPEN + "expect-not Storage\nexpect-not Top tags\nclick Customize\nwait 400\nclick Reset layout\nwait 400\n"
+               + "expect Hide Storage\nclick Done\nwait 400\nexpect Storage\nexpect Games by platform\n"
+               + "expect-not Nothing to show now\n",
+               overview_is(hidden=[], left=[], right=[], below=[]))],
+             lambda dirs: (dirs.use_demo(), dirs.write(
+                 "settings.toml",
+                 '[overview]\nleft = ["facts", "platforms"]\nright = ["years", "statuses"]\n'
+                 'hidden = ["storage", "tags"]\nabove = ["continue_playing"]\nbelow = ["tiles"]\n'))),
+    Scenario("dragging a card by its grip moves it into the other column, and it stays there after a restart",
+             [(OPEN + "click Customize\nwait 400\ndrag Move Storage by 800 0\nwait 800\n"
+               + "click Done\nwait 400\nexpect Storage\n", overview_has("right", "storage")),
+              (OPEN + STATUS + "rightclick Storage\nexpect Move to left column\nexpect-not Move to right column\n"
+               + "key Escape\n", None)], demo),
+    Scenario("dragging a card down its column puts it under the cards it passes",
+             [(OPEN + "click Customize\nwait 400\ndrag Move Storage by 0 450\nwait 800\n"
+               + "click Done\nwait 400\nexpect Storage\n", overview_order("storage", after="attention"))], demo),
+    Scenario("the tiles drag below the cards and swap with Continue playing",
+             [(OPEN + "click Customize\nwait 400\ndrag Move the tiles by 0 400\nwait 800\n",
+               overview_is(above=["continue_playing", "tiles"])),
+              (OPEN + "click Customize\nwait 400\ndrag Move the tiles by 0 3000\nwait 800\n",
+               overview_is(above=["continue_playing"], below=["tiles"]))], demo),
+    Scenario("with one column hiding stays but dragging isn't offered",
+             [(OPEN + "click Customize\nwait 400\nexpect Hide Storage\nexpect Hide the tiles\n"
+               + "expect-not Move Storage\nexpect-not Move the tiles\nclick Hide Continue playing\nwait 400\n"
+               + "expect Show Continue playing\n", overview_is(hidden=["continue_playing"]))],
+             lambda dirs: (dirs.use_demo(), dirs.write(
+                 "themes/styles/Soft.toml", "[overview]\ncompact_width = 4000\nnarrow_width = 4000\n"))),
     Scenario("an empty library shows the tiles and leaves out the cards with nothing to show",
              [("key F7\nexpect Library overview\nwait 800\n" + CARDS.replace("expect Continue playing\n", "")
                + "expect-not Continue playing\nexpect-not Storage\nexpect-not Needs attention\n"

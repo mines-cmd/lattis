@@ -20,6 +20,7 @@ SettingsMenu {
     signal downRequested()
     signal belowRequested()
     signal aboveRequested()
+    signal customizeRequested()
 
     atPointer: true
 
@@ -30,4 +31,5 @@ SettingsMenu {
     SettingsMenuItem { want: root.canDown; text: qsTr("Move down"); onTriggered: root.downRequested() }
     SettingsMenuItem { want: root.canBelow; text: qsTr("Move below the cards"); onTriggered: root.belowRequested() }
     SettingsMenuItem { want: root.canAbove; text: qsTr("Move above the cards"); onTriggered: root.aboveRequested() }
+    SettingsMenuItem { text: qsTr("Customize overview"); onTriggered: root.customizeRequested() }
 }

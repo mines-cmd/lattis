@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QStyleHints>
 #include <QTextStream>
 
 namespace {
@@ -116,6 +117,21 @@ bool UiDriver::tryCommand(const Command &command)
             return false;
         click(item, Qt::RightButton);
         qInfo().noquote() << "uitest: rightclick" << command.argument;
+        settle();
+        return true;
+    }
+    if (command.name == u"drag") {
+        const qsizetype by = command.argument.lastIndexOf(u" by ");
+        const QStringList offset = by < 0 ? QStringList() : command.argument.sliced(by + 4).split(u' ');
+        if (offset.size() != 2) {
+            fail(QStringLiteral("line %1: drag wants '<text> by <dx> <dy>'").arg(command.line));
+            return false;
+        }
+        QQuickItem *item = find(command.argument.first(by));
+        if (!item)
+            return false;
+        drag(item, QPointF(offset[0].toDouble(), offset[1].toDouble()));
+        qInfo().noquote() << "uitest: drag" << command.argument;
         settle();
         return true;
     }
@@ -242,6 +258,23 @@ void UiDriver::click(QQuickItem *item, Qt::MouseButton button)
     send(QEvent::MouseMove, Qt::NoButton);
     send(QEvent::MouseButtonPress, button);
     send(QEvent::MouseButtonRelease, Qt::NoButton);
+}
+
+void UiDriver::drag(QQuickItem *item, const QPointF &offset)
+{
+    QQuickWindow *window = item->window();
+    const QPointF start = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+    const auto send = [&](QEvent::Type type, const QPointF &scene, Qt::MouseButtons buttons) {
+        QMouseEvent event(type, scene, scene, window->mapToGlobal(scene.toPoint()),
+                          type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton, buttons, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &event);
+    };
+    send(QEvent::MouseMove, start, Qt::NoButton);
+    send(QEvent::MouseButtonPress, start, Qt::LeftButton);
+    // A first short move gets past the drag distance, as a hand's would, then the rest in one.
+    send(QEvent::MouseMove, start + QPointF(2 * QGuiApplication::styleHints()->startDragDistance(), 0), Qt::LeftButton);
+    send(QEvent::MouseMove, start + offset, Qt::LeftButton);
+    send(QEvent::MouseButtonRelease, start + offset, Qt::NoButton);
 }
 
 bool UiDriver::key(const QString &name)
