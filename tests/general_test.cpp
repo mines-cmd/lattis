@@ -515,7 +515,7 @@ void GeneralTest::toolbarSettings()
     QCOMPARE(general.setToolbarButtonShown(QStringLiteral("nope"), false), QString());
     QCOMPARE(hiddenChanged.size(), 2);
 
-    const QStringList moved{"overview", "play_statistics", "gallery", "open_settings", "add_game", "steam_friends"};
+    const QStringList moved{"overview", "play_statistics", "gallery", "toggle_view", "open_settings", "add_game", "steam_friends"};
     QCOMPARE(general.setToolbarButtonOrder(moved), QString());
     QCOMPARE(general.toolbarButtonOrder(), moved);
     QCOMPARE(orderChanged.size(), 1);
