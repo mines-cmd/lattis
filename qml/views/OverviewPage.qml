@@ -31,7 +31,6 @@ FocusScope {
     onLoadedChanged: if (!loaded) stacks.reset()
 
     signal attentionRequested(string kind)
-    signal galleryRequested()
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
     signal yearRequested(int year)
@@ -754,7 +753,6 @@ FocusScope {
                         OverviewFacts {
                             Layout.fillWidth: true
                             overview: root.overview
-                            onGalleryRequested: root.galleryRequested()
                             onGameRequested: id => root.gameRequested(id)
                             onSteamRequested: root.filterRequested("steam", [], [])
                         }

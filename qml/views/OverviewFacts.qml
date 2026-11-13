@@ -26,9 +26,10 @@ OverviewCard {
         return out
     }
 
-    signal galleryRequested()
     signal gameRequested(string id)
     signal steamRequested()
+
+    visible: facts.length > 0
 
     OverviewCardTitle { text: qsTr("Fun facts") }
 
@@ -81,13 +82,5 @@ OverviewCard {
                 onTapped: fact.modelData.gameId !== "" ? root.gameRequested(fact.modelData.gameId) : root.steamRequested()
             }
         }
-    }
-
-    ChromeButton {
-        Layout.alignment: Qt.AlignLeft
-        icon: Icons.image
-        label: qsTr("Open the Gallery")
-        tip: qsTr("Screenshots and clips of every game")
-        onClicked: root.galleryRequested()
     }
 }

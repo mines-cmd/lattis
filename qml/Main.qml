@@ -1454,7 +1454,6 @@ ApplicationWindow {
             target: overviewPage.item
             function onCloseRequested() { window.setOverviewOpen(false) }
             function onStatsRequested() { window.setStatsOpen(true) }
-            function onGalleryRequested() { window.setGalleryOpen(true) }
             function onFilterRequested(platform, statuses, tags) {
                 Library.showFiltered(platform, statuses, tags)
                 window.setOverviewOpen(false)
