@@ -29,7 +29,7 @@ When an emulated or Linux game closes, the session is added to its play time and
 
 - Sessions shorter than the **Minimum session length** on Settings → General (30 seconds at first) don't count, so a game that crashes on start changes nothing.
 - A game that exits with an error within a few seconds didn't really start: a message says so.
-- The game keeps running if you quit Lattis, but that session isn't recorded.
+- The game keeps running if you quit Lattis, but that session isn't recorded. Quitting or closing the window while a game runs asks first.
 - Play time and last played can be corrected by hand in the game's Properties.
 
 Steam and Windows games show the play time Steam records instead, including sessions started from Steam. Epic games add what Heroic records to the time Lattis keeps (see [Play time](heroic.md#play-time)).

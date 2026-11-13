@@ -27,6 +27,28 @@ ApplicationWindow {
             showEmulatorMessage(error, game.id)
     }
 
+    function runningGameTitles() {
+        return GameRunner.running.filter(id => !GameRunner.runningManagers.includes(id))
+                                 .map(id => GameRunner.runningTitle(id))
+    }
+
+    function requestQuit() {
+        const titles = runningGameTitles()
+        if (titles.length === 0) {
+            Qt.quit()
+            return
+        }
+        quitPrompt.active = true
+        quitPrompt.item.ask(titles)
+    }
+
+    onClosing: close => {
+        if (runningGameTitles().length === 0)
+            return
+        close.accepted = false
+        requestQuit()
+    }
+
     function openModManager(id) {
         const missing = GameRunner.missingPrefixGame(id)
         if (missing !== "") {
@@ -962,7 +984,7 @@ ApplicationWindow {
         case "back_up_saves": openSettingsAt("library", "backup-saves"); break
         case "import_backup": openSettingsAt("library", "import"); break
         case "show_shortcuts": openSettingsAt("keyboard"); break
-        case "quit": Qt.quit(); break
+        case "quit": requestQuit(); break
         default: browser.run(name)
         }
     }
@@ -1065,6 +1087,16 @@ ApplicationWindow {
     }
     Connections {
         target: whatsNewDialog.item
+        function onClosed() { browser.focusList() }
+    }
+
+    Loader {
+        id: quitPrompt
+        active: false
+        source: "views/QuitPrompt.qml"
+    }
+    Connections {
+        target: quitPrompt.item
         function onClosed() { browser.focusList() }
     }
 

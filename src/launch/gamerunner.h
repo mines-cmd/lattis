@@ -73,7 +73,7 @@ public:
     Q_INVOKABLE QString missingPrefixGame(const QString &managerId) const;
     QStringList runningManagers() const;
     // What a running id is called: a game's title or a manager's name.
-    QString runningTitle(const QString &id) const;
+    Q_INVOKABLE QString runningTitle(const QString &id) const;
     Q_INVOKABLE QString missingEmulator(const QString &gameId) const;
     Q_INVOKABLE QString closeSteamAndApply();
     Q_INVOKABLE QString openHeroic();

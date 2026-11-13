@@ -412,6 +412,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `views/RomFileDialog.qml` | File picker for ROMs |
 | `views/SetupGuide.qml` | Setup guide overlay; lazy |
 | `views/ForceClosePrompt.qml` | "Force close <game>?" from the running Launch button; lazy |
+| `views/QuitPrompt.qml` | "Quit Lattis?" dialog while a game runs, from Quit and the window's close; lazy |
 | `views/SteamLaunchPrompt.qml` | "Restart Steam and launch?" dialog; lazy |
 | `views/SteamUndoPrompt.qml` | "Undo changes waiting for Steam?" dialog; lazy |
 | `views/SteamUninstallPrompt.qml` | "Uninstall \<game\>?" for Steam games; lazy |
