@@ -1699,7 +1699,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "update_width", "560", 280, 1200, "Width of the dialog that updates Lattis"),
     integer("game_editor", "update_notes_height", "240", 60, 800, "Height of the release notes in that dialog"),
     integer("game_editor", "whats_new_width", "820", 280, 1600, "Width of the What's new window, which shows long release notes"),
-    integer("game_editor", "whats_new_height_percent", "75", 20, 100, "Height of the What's new window, as a percentage of the app window"),
+    integer("game_editor", "whats_new_height_percent", "75", 20, 100, "Tallest the What's new window gets, as a percentage of the app window"),
     color("game_editor", "update_notes_background", "@surface_raised", "Behind the release notes"),
     color("game_editor", "update_notes_text", "@text", "The release notes"),
     integer("game_editor", "update_notes_padding", "12", 0, 60, "Space between the release notes' edge and their text"),

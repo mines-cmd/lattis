@@ -17,11 +17,12 @@ AppDialog {
     size: "medium"
     title: heading !== "" ? heading : qsTr("What's new in Lattis %1").arg(version)
     width: Math.min(Theme.gameEditor.whatsNewWidth, parent.width - 2 * Theme.gameEditor.padding)
-    height: Math.round(parent.height * Theme.gameEditor.whatsNewHeightPercent / 100)
+    height: Math.min(implicitHeight, Math.round(parent.height * Theme.gameEditor.whatsNewHeightPercent / 100))
 
     Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
+        Layout.preferredHeight: notesView.contentHeight + 2 * notesView.anchors.margins
         color: root.sections.length === 0 ? Theme.gameEditor.updateNotesBackground : "transparent"
         radius: Theme.gameEditor.updateNotesRadius
         clip: true
