@@ -17,7 +17,7 @@ Rectangle {
 
     readonly property var fixedButtons: ({
         add_game: { icon: Icons.add, tip: qsTr("Add game"), action: "add_game" },
-        overview: { icon: Icons.book, tip: qsTr("Library overview"), action: "overview" },
+        overview: { icon: Icons.book, checkedIcon: Icons.bookFill, tip: qsTr("Library overview"), action: "overview" },
         play_statistics: { icon: Icons.barChartFill, tip: qsTr("Play statistics"), action: "play_statistics" },
         gallery: { icon: Icons.image, checkedIcon: Icons.imageFill, tip: qsTr("Gallery"), action: "gallery" },
         toggle_view: { icon: Icons.layoutGrid, gridIcon: Icons.viewList, tip: qsTr("Grid view"), gridTip: qsTr("List view"),
