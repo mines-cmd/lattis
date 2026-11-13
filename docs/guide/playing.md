@@ -76,7 +76,7 @@ The button above Play statistics on the rail (or F7) opens the Library overview:
 
 Every number leads somewhere: the top tiles brighten under the mouse and dip when pressed. Click a tile, a platform, a status or a tag and the game list opens with just those games (every other filter and the search are cleared, and games that aren't installed are included). The Games tile shows the whole library, Backlog the games with that status, Achievements the Steam games, and Hours played opens Play statistics. A release year column opens the games of that year (the year range set to it). Up, Down, Page Up, Page Down, Home and End scroll the page.
 
-In a narrow window the cards go from three columns to two and then one, and Continue playing scrolls sideways when its covers don't fit. Esc, or F7 again, returns to the games. The colors, sizes and spacing are the theme's `[overview]` section, which follows `[stats]` unless you change it, and `platform_colors` there lists the colors platforms get in the Storage bars and Games by platform, in the order the platforms are listed.
+In a narrow window the cards go from three columns to two and then one, and Continue playing scrolls sideways when its covers don't fit. Esc, or F7 again, returns to the games. The colors, sizes and spacing are the theme's `[overview]` section, which follows `[stats]` unless you change it, and `platform_colors` there lists the colors given, in the order the platforms are listed, to platforms in the Storage bars and Games by platform that have no color of their own (built-in platforms have one; set `color` on a platform in `platforms.toml` to change it).
 
 ## Play statistics
 

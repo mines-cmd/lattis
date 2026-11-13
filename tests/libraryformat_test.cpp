@@ -56,6 +56,7 @@ private slots:
     void platformsKeepFileOrder();
     void platformsInvalidAndDuplicateIds();
     void platformsIgdbIds();
+    void platformsColors();
     void tags();
     void tagsIgdb();
     void steamIndex();
@@ -503,8 +504,8 @@ id = "amiga"
     QVERIFY(r.warnings.isEmpty());
     QCOMPARE(r.value.size(), 3);
     QCOMPARE(r.value.at(0), (Platform{"switch", "Switch", "switch", {"ryubing", "eden"},
-                                      {"/mnt/games/switch", "~/roms/switch"}, 2}));
-    QCOMPARE(r.value.at(1), (Platform{"3ds", "3DS", "", {}, {}, 9}));
+                                      {"/mnt/games/switch", "~/roms/switch"}, 2, {}, true, false, "#e4473c"}));
+    QCOMPARE(r.value.at(1), (Platform{"3ds", "3DS", "", {}, {}, 9, {}, true, false, "#e1832a"}));
     QCOMPARE(r.value.at(2), (Platform{"amiga", "amiga", "", {}, {}, 13})); // name defaults to the id
 }
 
@@ -542,6 +543,33 @@ igdb_platforms = [0, "130"]
     QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("x"), .icon = QStringLiteral("switch2")}), (QList<int>{508}));
     QCOMPARE(r.warnings.size(), 1);
     QVERIFY(anyContains(r.warnings, QStringLiteral(":18: igdb_platforms must be a list of IGDB platform ids")));
+}
+
+void LibraryFormatTest::platformsColors()
+{
+    const QByteArray toml = R"([[platform]]
+id = "steam"
+
+[[platform]]
+id = "ps4"
+color = "#123456"
+
+[[platform]]
+id = "amiga"
+
+[[platform]]
+id = "wrong"
+color = "not a color"
+)";
+    const auto r = parsePlatforms(toml, "library/platforms.toml");
+    QVERIFY(r.ok);
+    QCOMPARE(r.value.size(), 4);
+    QCOMPARE(r.value.at(0).color, QStringLiteral("#3c94d0")); // built in
+    QCOMPARE(r.value.at(1).color, QStringLiteral("#123456")); // written ones win
+    QCOMPARE(r.value.at(2).color, QString()); // the theme's next color
+    QCOMPARE(r.value.at(3).color, QString());
+    QCOMPARE(r.warnings.size(), 1);
+    QVERIFY(anyContains(r.warnings, QStringLiteral(":13: color must be a color")));
 }
 
 void LibraryFormatTest::platformsInvalidAndDuplicateIds()

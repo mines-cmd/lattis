@@ -116,6 +116,23 @@ Parsed<LibraryInfo> parseLibraryInfo(const QByteArray &bytes, const QString &dis
     return out;
 }
 
+QString defaultPlatformColor(const QString &id)
+{
+    // The PlayStations share one blue in steps of lightness, so they read as a family.
+    static const QHash<QString, QString> colors = {
+        {QStringLiteral("steam"), QStringLiteral("#3c94d0")},    {QStringLiteral("proton"), QStringLiteral("#8d7be0")},
+        {QStringLiteral("epic"), QStringLiteral("#ececec")},     {QStringLiteral("linux"), QStringLiteral("#e0b33a")},
+        {QStringLiteral("switch"), QStringLiteral("#e4473c")},   {QStringLiteral("switch-2"), QStringLiteral("#d65a8f")},
+        {QStringLiteral("3ds"), QStringLiteral("#e1832a")},      {QStringLiteral("wiiu"), QStringLiteral("#4fb8c9")},
+        {QStringLiteral("wii"), QStringLiteral("#c9a86a")},      {QStringLiteral("gamecube"), QStringLiteral("#6b4fbb")},
+        {QStringLiteral("n64"), QStringLiteral("#4caf50")},      {QStringLiteral("nds"), QStringLiteral("#a0623d")},
+        {QStringLiteral("gba"), QStringLiteral("#3a9f84")},      {QStringLiteral("ps1"), QStringLiteral("#b7c8f5")},
+        {QStringLiteral("psp"), QStringLiteral("#8ea5ec")},      {QStringLiteral("ps3"), QStringLiteral("#6684e0")},
+        {QStringLiteral("ps4"), QStringLiteral("#4462c4")},      {QStringLiteral("ps2"), QStringLiteral("#283c8c")},
+    };
+    return colors.value(id);
+}
+
 Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &displayPath)
 {
     Parsed<QList<Platform>> out;
@@ -127,7 +144,7 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
     const QStringList known = {QStringLiteral("id"), QStringLiteral("name"), QStringLiteral("icon"),
                                QStringLiteral("emulators"), QStringLiteral("rom_folders"),
                                QStringLiteral("igdb_platforms"), QStringLiteral("in_rail"),
-                               QStringLiteral("auto_backup")};
+                               QStringLiteral("auto_backup"), QStringLiteral("color")};
     QSet<QString> ids;
     for (const toml::table *entry : arrayOfTables(root, "platform", displayPath, &out.warnings, "offered")) {
         const QString at = where(displayPath, *entry);
@@ -188,6 +205,13 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
                 p.id = toQString(s->get());
             } else if (key == QLatin1String("name")) {
                 p.name = toQString(s->get());
+            } else if (key == QLatin1String("color")) {
+                const QString color = toQString(s->get());
+                static const QRegularExpression hex(QStringLiteral("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"));
+                if (hex.match(color).hasMatch())
+                    p.color = color;
+                else
+                    out.warnings.append(QStringLiteral("%1: color must be a color like \"#3c94d0\"").arg(where(displayPath, node)));
             } else {
                 p.icon = toQString(s->get());
             }
@@ -208,6 +232,8 @@ Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &d
         ids.insert(p.id);
         if (p.name.isEmpty())
             p.name = p.id;
+        if (p.color.isEmpty())
+            p.color = defaultPlatformColor(p.id);
         out.value.append(p);
     }
     return out;

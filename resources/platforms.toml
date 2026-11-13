@@ -4,6 +4,8 @@
 # lowercase a-z, 0-9 and -. `name` is what the app shows, and can change any time.
 # `icon` is an icon name from the app (switch, switch2, 3ds, wiiu, wii, gamecube, n64, nds, gba,
 # psp, ps1, ps2, ps3, ps4, steam, proton, linux, gamepad); optional.
+# `color` is the platform's color in the Library overview, like "#3c94d0"; optional. The built-in
+# platforms have their own; others take the next one from the theme's [overview] platform_colors.
 #
 # `emulators` lists emulator ids in order of preference (see emulators.reference.toml).
 # `rom_folders` are scanned for games at startup; a relative path is inside the data dir.

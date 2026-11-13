@@ -3968,7 +3968,7 @@ void Library::overview()
 
     QVariantList platforms;
     for (const Platform &p : m_platforms)
-        platforms.append(QVariantMap{{QStringLiteral("id"), p.id}, {QStringLiteral("name"), p.name}});
+        platforms.append(QVariantMap{{QStringLiteral("id"), p.id}, {QStringLiteral("name"), p.name}, {QStringLiteral("color"), p.color}});
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher] {
         emit overviewReady(watcher->result());

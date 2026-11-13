@@ -55,13 +55,13 @@ static QDataStream &operator>>(QDataStream &s, ModManager &m)
 
 static QDataStream &operator<<(QDataStream &s, const Platform &p)
 {
-    return s << p.id << p.name << p.icon << p.emulators << p.romFolders << p.igdbPlatforms << p.inRail << p.autoBackup << qint32(p.line);
+    return s << p.id << p.name << p.icon << p.color << p.emulators << p.romFolders << p.igdbPlatforms << p.inRail << p.autoBackup << qint32(p.line);
 }
 
 static QDataStream &operator>>(QDataStream &s, Platform &p)
 {
     qint32 line = 0;
-    s >> p.id >> p.name >> p.icon >> p.emulators >> p.romFolders >> p.igdbPlatforms >> p.inRail >> p.autoBackup >> line;
+    s >> p.id >> p.name >> p.icon >> p.color >> p.emulators >> p.romFolders >> p.igdbPlatforms >> p.inRail >> p.autoBackup >> line;
     p.line = line;
     return s;
 }

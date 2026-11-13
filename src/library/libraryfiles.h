@@ -28,6 +28,8 @@ struct Platform
     QList<int> igdbPlatforms;
     bool inRail = true;
     bool autoBackup = false;
+    // The platform's color in the overview's bars; a built-in id gets its own when the file sets none.
+    QString color;
 
     bool operator==(const Platform &) const = default;
 };
@@ -113,6 +115,7 @@ struct LibraryInfo
 
 Parsed<LibraryInfo> parseLibraryInfo(const QByteArray &bytes, const QString &displayPath);
 Parsed<QList<Platform>> parsePlatforms(const QByteArray &bytes, const QString &displayPath);
+QString defaultPlatformColor(const QString &id);
 QList<int> igdbPlatformIds(const Platform &platform);
 
 Parsed<QList<TagDef>> parseTags(const QByteArray &bytes, const QString &displayPath);
