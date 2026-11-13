@@ -5400,6 +5400,8 @@ QString Library::saveGame(const QString &id, const QVariantMap &values)
     }
     if (const QString error = m_store.setGameValues(id, pairs); !error.isEmpty())
         return fail(error);
+    if (std::any_of(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("media_folders"); }))
+        emit mediaFoldersChanged(id);
     if (newRom || newProgram)
         emit undoOffered(0, newRom ? tr("Saved. The new ROM can't be undone") : tr("Saved. The new program can't be undone"));
     else

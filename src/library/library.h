@@ -450,6 +450,7 @@ signals:
     void pageHistoryReady(const QString &id, const QVariantMap &played);
     void mediaReady(const QString &id, const QVariantList &clips);
     void mediaLimited(const QString &id);
+    void mediaFoldersChanged(const QString &id);
     void videoThumbnailReady(const QString &file, const QString &thumbnail, const QString &length);
     void allMediaReady(const QVariantList &batch, bool done);
     void mediaFavoriteChanged(const QString &path, bool on);

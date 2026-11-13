@@ -44,6 +44,10 @@ ColumnLayout {
 
     Connections {
         target: Library
+        function onMediaFoldersChanged(id) {
+            if (id === root.game.id)
+                root.reload()
+        }
         function onMediaLimited(id) {
             if (id === root.game.id)
                 root.limitedNext = true
