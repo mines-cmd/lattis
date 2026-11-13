@@ -94,6 +94,7 @@ struct Sized
     QString platform;
     QString coverUrl;
     qint64 bytes = 0;
+    QDateTime lastPlayed;
 };
 
 struct PlatformCount

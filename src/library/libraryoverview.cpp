@@ -74,7 +74,7 @@ void addStorage(Overview &out, const QList<Game> &games, const QList<Drive> &dri
             continue;
         addBytes(out.platformSizes, g.platform, g.sizeBytes);
         if (g.sizeBytes > 0)
-            out.largest.append({g.id, g.title, g.platform, g.coverUrl, g.sizeBytes});
+            out.largest.append({g.id, g.title, g.platform, g.coverUrl, g.sizeBytes, g.lastPlayed});
 
         const Drive *drive = g.path.isEmpty() ? nullptr : driveOf(g.path, drives);
         if (!drive)
@@ -447,7 +447,8 @@ QVariantMap toVariantMap(const Overview &overview)
                                    {QStringLiteral("title"), s.title},
                                    {QStringLiteral("platform"), s.platform},
                                    {QStringLiteral("coverUrl"), s.coverUrl},
-                                   {QStringLiteral("bytes"), s.bytes}});
+                                   {QStringLiteral("bytes"), s.bytes},
+                                   {QStringLiteral("lastPlayed"), s.lastPlayed}});
         return out;
     };
     QVariantList drives;

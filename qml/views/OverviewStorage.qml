@@ -215,8 +215,23 @@ OverviewCard {
                     Layout.fillWidth: true
                     implicitHeight: thumb.height
 
-                    MouseArea {
+                    Rectangle {
                         anchors.fill: parent
+                        anchors.topMargin: -Theme.layout.spacing / 2
+                        anchors.bottomMargin: -Theme.layout.spacing / 2
+                        anchors.leftMargin: -Theme.layout.spacing * 1.5
+                        anchors.rightMargin: -Theme.layout.spacing * 1.5
+                        radius: Theme.overview.storageRowRadius
+                        color: Theme.palette.hoverOverlay
+                        opacity: rowArea.containsMouse ? 1 : 0
+                        visible: opacity > 0
+                        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                    }
+
+                    MouseArea {
+                        id: rowArea
+                        anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.gameRequested(entry.modelData.id)
                     }
@@ -253,11 +268,21 @@ OverviewCard {
                         }
                     }
 
-                    OverviewQuiet {
+                    ColumnLayout {
                         id: size
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
+                        spacing: 0
+
+                        OverviewQuiet {
+                            Layout.alignment: Qt.AlignRight
+                            text: entry.modelData.lastPlayedText !== "" ? entry.modelData.lastPlayedText : qsTr("Not played yet")
+                        }
+                        Label {
+                            Layout.alignment: Qt.AlignRight
+                            text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
+                            color: entry.unknownSize ? Theme.overview.textMuted : Theme.palette.text
+                        }
                     }
                 }
             }

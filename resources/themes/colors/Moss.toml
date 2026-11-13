@@ -4,6 +4,7 @@ extends = "Ember"
 [palette]
 accent = "#67a715"
 accent_end = "#569209"
+hover_overlay = "#9baec42a"
 
 [launch_button]
 running_background = "#04a5ff"

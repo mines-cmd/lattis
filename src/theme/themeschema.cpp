@@ -1433,6 +1433,7 @@ constexpr Setting kSettings[] = {
     heading("overview", "Storage"),
     integer("overview", "storage_bar_height", "10", 2, 60, "Height of a drive's bar"),
     integer("overview", "storage_bar_radius", "@radius.tiny", 0, 50, "Corner radius of a drive's bar"),
+    integer("overview", "storage_row_radius", "@radius.small", 0, 50, "Corner radius of the highlight behind a game in Largest"),
     integer("overview", "storage_segment_gap", "2", 0, 20, "Space between the colored parts of a drive's bar"),
     integer("overview", "storage_segment_min_width", "4", 1, 50, "Narrowest a part of a drive's bar is drawn, so a small platform stays visible"),
     color("overview", "storage_free", "@stats.track", "The free space on a drive's bar"),

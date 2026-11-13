@@ -4041,6 +4041,7 @@ void Library::overview()
             map.insert(key, rows);
         };
         withDates(QStringLiteral("continuePlaying"), playedAgoText);
+        withDates(QStringLiteral("largest"), playedAgoText);
         QVariantList statusCounts = map.value(QStringLiteral("statusCounts")).toList();
         for (QVariant &row : statusCounts) {
             QVariantMap m = row.toMap();
