@@ -114,7 +114,20 @@ SCENARIOS = [
     Scenario("the Games tile opens the whole library, filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
                + "key F7\nexpect Library overview\nkey Home\nwait 300\nclick Games\nwait 500\n"
-               + "expect-not Library overview\nexpect Metroid Dread\nexpect Final Fantasy XIV Online\n", None)], demo),    Scenario("an empty library shows the tiles and leaves out the cards with nothing to show",
+               + "expect-not Library overview\nexpect Metroid Dread\nexpect Final Fantasy XIV Online\n", None)], demo),
+    Scenario("hidden cards and the hidden tiles are left out",
+             [(OPEN + "expect-not Hours played\nexpect-not Continue playing\nexpect-not Storage\n"
+               + "expect Games by platform\n", None)],
+             lambda dirs: (dirs.use_demo(), dirs.write("settings.toml", '[overview]\nhidden = ["tiles", "continue_playing", "storage"]\n'))),
+    Scenario("cards placed in the columns and the rows below them all show, and a hidden one stays out",
+             [("key F7\nexpect Library overview\nwait 1200\nexpect Hours played\nexpect Continue playing\n"
+               + "expect Games by platform\nexpect-not Storage\nexpect-not Top tags\n" + DOWN
+               + "expect Fun facts\nexpect Release years\n", None)],
+             lambda dirs: (dirs.use_demo(), dirs.write(
+                 "settings.toml",
+                 '[overview]\nleft = ["facts", "platforms"]\nright = ["years", "statuses"]\n'
+                 'hidden = ["storage", "tags"]\nabove = ["continue_playing"]\nbelow = ["tiles"]\n'))),
+    Scenario("an empty library shows the tiles and leaves out the cards with nothing to show",
              [("key F7\nexpect Library overview\nwait 800\n" + CARDS.replace("expect Continue playing\n", "")
                + "expect-not Continue playing\nexpect-not Storage\nexpect-not Needs attention\n"
                + "expect-not From your backlog\nexpect-not Nearly done\nkey Escape\nexpect-not Library overview\n",

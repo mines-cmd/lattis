@@ -30,6 +30,16 @@ FocusScope {
 
     onLoadedChanged: if (!loaded) stacks.reset()
 
+    function cardShown(name: string): bool {
+        return !General.overviewHidden.includes(name)
+    }
+
+    // The full-width cards sit in rows 0-1 above the columns (row 2) and 3-4 below them.
+    function rowOf(name: string): int {
+        const above = General.overviewAbove.indexOf(name)
+        return above >= 0 ? above : 3 + General.overviewBelow.indexOf(name)
+    }
+
     signal attentionRequested(string kind)
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
@@ -316,12 +326,15 @@ FocusScope {
                 }
             }
 
-            ColumnLayout {
+            GridLayout {
                 visible: root.loaded
                 Layout.fillWidth: true
-                spacing: Theme.overview.sectionSpacing
+                columns: 1
+                rowSpacing: Theme.overview.sectionSpacing
 
                 GridLayout {
+                    visible: root.cardShown("tiles")
+                    Layout.row: root.rowOf("tiles")
                     Layout.fillWidth: true
                     columns: root.columns === 3 ? Math.max(1, root.tiles.length) : root.columns === 2 ? 2 : 1
                     columnSpacing: Theme.overview.sectionSpacing
@@ -387,8 +400,10 @@ FocusScope {
 
                 OverviewReveal {
                     shown: root.revealedCards
+                    name: "continue_playing"
+                    Layout.row: root.rowOf("continue_playing")
                     Layout.fillWidth: true
-                    visible: root.continuePlaying.length > 0
+                    visible: root.continuePlaying.length > 0 && root.cardShown("continue_playing")
                     order: root.tiles.length
 
                     OverviewCard {
@@ -532,6 +547,7 @@ FocusScope {
                     readonly property real gap: Theme.overview.sectionSpacing
                     readonly property real columnWidth: (width - (count - 1) * gap) / count
 
+                    Layout.row: 2
                     Layout.fillWidth: true
                     Layout.preferredHeight: stackHeight
 
@@ -560,14 +576,31 @@ FocusScope {
                         const last = new Array(count).fill(null)
                         const kept = []
                         const dealt = []
+                        const fixed = !General.overviewAutomatic
+                        const byName = {}
                         for (let i = 0; i < children.length; ++i) {
                             const card = children[i]
                             if (!card.visible)
                                 continue
-                            if (card.seen && card.column >= 0 && card.column < count)
+                            byName[card.name] = card
+                            if (!fixed && card.seen && card.column >= 0 && card.column < count)
                                 kept.push(card)
-                            else
+                            else if (!fixed)
                                 dealt.push(card)
+                        }
+                        if (fixed) {
+                            // Left column first, so a single column reads the left one then the right one.
+                            for (const [side, names] of [[0, General.overviewLeft], [1, General.overviewRight]]) {
+                                for (const name of names) {
+                                    const card = byName[name]
+                                    if (!card)
+                                        continue
+                                    card.column = count === 1 ? 0 : side
+                                    kept.push(card)
+                                    delete byName[name]
+                                }
+                            }
+                            dealt.push(...Object.values(byName))
                         }
                         // Seen cards go first: an unseen card dealt above one would push it down in view.
                         for (const card of kept.concat(dealt)) {
@@ -603,6 +636,10 @@ FocusScope {
                         target: root
                         function onRevealedCardsChanged() { stacks.markSeen() }
                     }
+                    Connections {
+                        target: General
+                        function onOverviewChanged() { Qt.callLater(stacks.relayout) }
+                    }
                     Component.onCompleted: {
                         for (let i = 0; i < children.length; ++i) {
                             children[i].implicitHeightChanged.connect(() => Qt.callLater(relayout))
@@ -612,7 +649,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: storage.hasContent
+                        name: "storage"
+                        visible: storage.hasContent && root.cardShown("storage")
                         order: root.tiles.length + 1
 
                         OverviewStorage {
@@ -629,7 +667,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.platformCounts ?? []).length > 0
+                        name: "platforms"
+                        visible: ((root.overview.platformCounts ?? []).length > 0) && root.cardShown("platforms")
                         order: root.tiles.length + 2
 
                         OverviewPlatforms {
@@ -643,7 +682,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.statusCounts ?? []).length > 0
+                        name: "statuses"
+                        visible: ((root.overview.statusCounts ?? []).length > 0) && root.cardShown("statuses")
                         order: root.tiles.length + 3
 
                         OverviewStatuses {
@@ -656,7 +696,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.attention ?? []).length > 0
+                        name: "attention"
+                        visible: ((root.overview.attention ?? []).length > 0) && root.cardShown("attention")
                         order: root.tiles.length + 4
 
                         OverviewAttention {
@@ -668,7 +709,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.backlogPicks ?? []).length > 0
+                        name: "backlog"
+                        visible: ((root.overview.backlogPicks ?? []).length > 0) && root.cardShown("backlog")
                         order: root.tiles.length + 5
 
                         OverviewBacklog {
@@ -682,7 +724,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.nearlyDone ?? []).length > 0
+                        name: "nearly_done"
+                        visible: ((root.overview.nearlyDone ?? []).length > 0) && root.cardShown("nearly_done")
                         order: root.tiles.length + 6
 
                         OverviewNearlyDone {
@@ -695,7 +738,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.topTags ?? []).length > 0
+                        name: "tags"
+                        visible: ((root.overview.topTags ?? []).length > 0) && root.cardShown("tags")
                         order: root.tiles.length + 7
 
                         OverviewTags {
@@ -708,7 +752,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.years ?? []).length > 0
+                        name: "years"
+                        visible: ((root.overview.years ?? []).length > 0) && root.cardShown("years")
                         order: root.tiles.length + 8
 
                         OverviewYears {
@@ -721,7 +766,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: compatibility.hasContent
+                        name: "compatibility"
+                        visible: compatibility.hasContent && root.cardShown("compatibility")
                         order: root.tiles.length + 9
 
                         OverviewCompatibility {
@@ -736,7 +782,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
-                        visible: (root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0
+                        name: "saves"
+                        visible: ((root.overview.saves?.played ?? 0) > 0 || (root.overview.saves?.archives ?? 0) > 0) && root.cardShown("saves")
                         order: root.tiles.length + 10
 
                         OverviewSaves {
@@ -748,6 +795,8 @@ FocusScope {
 
                     OverviewReveal {
                         shown: root.revealedCards
+                        name: "facts"
+                        visible: root.cardShown("facts")
                         order: root.tiles.length + 11
 
                         OverviewFacts {

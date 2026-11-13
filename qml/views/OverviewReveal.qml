@@ -7,6 +7,8 @@ Item {
 
     default property alias content: holder.data
     property int order: 0
+    // The card's name in [overview], which the page matches against the layout.
+    property string name: ""
     property bool shown: false
     // Set by the page, which places the cards: the column it chose, and whether the card grows to end level with the other column.
     property int column: -1
