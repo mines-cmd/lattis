@@ -36,7 +36,7 @@ private:
     QQuickItem *checkableBeside(const QString &text) const;
     QQuickItem *find(const QString &text, bool contains = false) const;
     QStringList visibleTexts() const;
-    void click(QQuickItem *item);
+    void click(QQuickItem *item, Qt::MouseButton button = Qt::LeftButton);
     bool key(const QString &name);
     void type(const QString &text);
 

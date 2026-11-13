@@ -40,6 +40,116 @@ FocusScope {
         return above >= 0 ? above : 3 + General.overviewBelow.indexOf(name)
     }
 
+    function rowVisible(name: string): bool {
+        return cardShown(name) && (name !== "continue_playing" || continuePlaying.length > 0)
+    }
+
+    // The entry next to `name` in `order` that is on screen (a hidden or empty card in between is skipped), or "".
+    function neighbour(order, name: string, step: int, isShown): string {
+        for (let i = order.indexOf(name) + step; i >= 0 && i < order.length; i += step)
+            if (isShown(order[i]))
+                return order[i]
+        return ""
+    }
+
+    function swapped(order, a: string, b: string) {
+        const out = order.slice()
+        out[order.indexOf(a)] = b
+        out[order.indexOf(b)] = a
+        return out
+    }
+
+    function report(error: string) {
+        if (error !== "")
+            message(error)
+    }
+
+    // The first change fixes the columns to where the cards are on screen now, so nothing else moves.
+    function fixColumns(): var {
+        const lists = stacks.currentLists()
+        if (General.overviewAutomatic)
+            report(General.setOverviewColumns(lists.left, lists.right))
+        return lists
+    }
+
+    function openCardMenu(name: string, item: Item, position: point) {
+        cardMenu.active = true
+        const menu = cardMenu.item
+        const isRow = name === "tiles" || name === "continue_playing"
+        menu.card = name
+        menu.canLeft = menu.canRight = menu.canBelow = menu.canAbove = false
+        if (isRow) {
+            const order = General.overviewAbove.includes(name) ? General.overviewAbove : General.overviewBelow
+            menu.canUp = neighbour(order, name, -1, rowVisible) !== ""
+            menu.canDown = neighbour(order, name, 1, rowVisible) !== ""
+            menu.canBelow = General.overviewAbove.includes(name)
+            menu.canAbove = !menu.canBelow
+        } else {
+            const lists = stacks.currentLists()
+            const order = stacks.count === 1 ? lists.left.concat(lists.right)
+                : lists.left.includes(name) ? lists.left : lists.right
+            menu.canUp = neighbour(order, name, -1, stacks.isShown) !== ""
+            menu.canDown = neighbour(order, name, 1, stacks.isShown) !== ""
+            if (stacks.count === 2) {
+                menu.canLeft = !lists.left.includes(name)
+                menu.canRight = !menu.canLeft
+            }
+        }
+        menu.popup(item, position.x, position.y)
+    }
+
+    function hideCard(name: string) {
+        if (name !== "tiles" && name !== "continue_playing")
+            fixColumns()
+        report(General.setOverviewHidden(General.overviewHidden.concat(name)))
+    }
+
+    function moveCard(name: string, step: int) {
+        if (name === "tiles" || name === "continue_playing") {
+            const above = General.overviewAbove.includes(name)
+            const order = above ? General.overviewAbove : General.overviewBelow
+            const other = neighbour(order, name, step, rowVisible)
+            if (other === "")
+                return
+            const next = swapped(order, name, other)
+            report(General.setOverviewRows(above ? next : General.overviewAbove, above ? General.overviewBelow : next))
+            return
+        }
+        const lists = fixColumns()
+        const joined = stacks.count === 1
+        const order = joined ? lists.left.concat(lists.right) : lists.left.includes(name) ? lists.left : lists.right
+        const other = neighbour(order, name, step, stacks.isShown)
+        if (other === "")
+            return
+        const next = swapped(order, name, other)
+        if (joined)
+            report(General.setOverviewColumns(next.slice(0, lists.left.length), next.slice(lists.left.length)))
+        else if (order === lists.left)
+            report(General.setOverviewColumns(next, lists.right))
+        else
+            report(General.setOverviewColumns(lists.left, next))
+    }
+
+    function moveToColumn(name: string, side: int) {
+        const lists = fixColumns()
+        const from = side === 0 ? lists.right : lists.left
+        const to = side === 0 ? lists.left : lists.right
+        from.splice(from.indexOf(name), 1)
+        to.splice(stacks.slotIn(to, name), 0, name)
+        report(General.setOverviewColumns(lists.left, lists.right))
+    }
+
+    function moveRowCard(name: string, above: bool) {
+        const rows = [General.overviewAbove.filter(n => n !== name), General.overviewBelow.filter(n => n !== name)]
+        // Next to the columns, so the card stays where it was in relation to them.
+        if (above)
+            rows[0].push(name)
+        else
+            rows[1].unshift(name)
+        report(General.setOverviewRows(rows[0], rows[1]))
+    }
+
+    signal message(string text)
     signal attentionRequested(string kind)
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
@@ -341,6 +451,11 @@ FocusScope {
                     rowSpacing: Theme.overview.sectionSpacing
                     uniformCellWidths: true
 
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: point => root.openCardMenu("tiles", parent, point.position)
+                    }
+
                     Repeater {
                         // A count, not the array: a new array would rebuild the tiles and fade them in again.
                         model: root.tiles.length
@@ -399,12 +514,14 @@ FocusScope {
                 }
 
                 OverviewReveal {
+                    id: continueReveal
                     shown: root.revealedCards
                     name: "continue_playing"
                     Layout.row: root.rowOf("continue_playing")
                     Layout.fillWidth: true
                     visible: root.continuePlaying.length > 0 && root.cardShown("continue_playing")
                     order: root.tiles.length
+                    onMenuRequested: position => root.openCardMenu("continue_playing", continueReveal, position)
 
                     OverviewCard {
                         Layout.fillWidth: true
@@ -551,6 +668,44 @@ FocusScope {
                     Layout.fillWidth: true
                     Layout.preferredHeight: stackHeight
 
+                    function cardNamed(name) {
+                        for (let i = 0; i < children.length; ++i)
+                            if (children[i].name === name)
+                                return children[i]
+                        return null
+                    }
+
+                    function isShown(name) {
+                        return cardNamed(name)?.visible ?? false
+                    }
+
+                    // Each column's cards top to bottom, the ones not on screen too. Automatic dealing is read off
+                    // the screen; a single column has no right side, so it all goes left.
+                    function currentLists() {
+                        if (!General.overviewAutomatic)
+                            return { left: General.overviewLeft.slice(), right: General.overviewRight.slice() }
+                        const shown = []
+                        for (let i = 0; i < children.length; ++i)
+                            if (children[i].visible && children[i].column >= 0)
+                                shown.push(children[i])
+                        shown.sort((a, b) => a.y - b.y)
+                        const lists = { left: [], right: [] }
+                        for (const card of shown)
+                            (count === 1 || card.column === 0 ? lists.left : lists.right).push(card.name)
+                        return lists
+                    }
+
+                    // Where a card moved into `names` goes so it stays level with where it was.
+                    function slotIn(names, name) {
+                        const y = cardNamed(name).y
+                        for (let i = 0; i < names.length; ++i) {
+                            const other = cardNamed(names[i])
+                            if (other?.visible && other.y > y)
+                                return i
+                        }
+                        return names.length
+                    }
+
                     function reset() {
                         for (let i = 0; i < children.length; ++i) {
                             children[i].column = -1
@@ -642,8 +797,10 @@ FocusScope {
                     }
                     Component.onCompleted: {
                         for (let i = 0; i < children.length; ++i) {
-                            children[i].implicitHeightChanged.connect(() => Qt.callLater(relayout))
-                            children[i].visibleChanged.connect(() => Qt.callLater(relayout))
+                            const card = children[i]
+                            card.implicitHeightChanged.connect(() => Qt.callLater(relayout))
+                            card.visibleChanged.connect(() => Qt.callLater(relayout))
+                            card.menuRequested.connect(position => root.openCardMenu(card.name, card, position))
                         }
                     }
 
@@ -809,5 +966,22 @@ FocusScope {
                 }
             }
         }
+    }
+
+    Loader {
+        id: cardMenu
+        active: false
+        source: "OverviewCardMenu.qml"
+    }
+    Connections {
+        target: cardMenu.item
+        function onClosed() { root.forceActiveFocus() }
+        function onHideRequested() { root.hideCard(cardMenu.item.card) }
+        function onLeftRequested() { root.moveToColumn(cardMenu.item.card, 0) }
+        function onRightRequested() { root.moveToColumn(cardMenu.item.card, 1) }
+        function onUpRequested() { root.moveCard(cardMenu.item.card, -1) }
+        function onDownRequested() { root.moveCard(cardMenu.item.card, 1) }
+        function onBelowRequested() { root.moveRowCard(cardMenu.item.card, false) }
+        function onAboveRequested() { root.moveRowCard(cardMenu.item.card, true) }
     }
 }

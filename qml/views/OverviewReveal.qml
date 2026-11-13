@@ -15,6 +15,13 @@ Item {
     property bool stretch: false
     property bool seen: false
 
+    signal menuRequested(point position)
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: point => reveal.menuRequested(point.position)
+    }
+
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
     opacity: 0

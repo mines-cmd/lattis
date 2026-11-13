@@ -1518,6 +1518,7 @@ ApplicationWindow {
             target: overviewPage.item
             function onCloseRequested() { window.setOverviewOpen(false) }
             function onStatsRequested() { window.setStatsOpen(true) }
+            function onMessage(text) { toast.show(text) }
             function onFilterRequested(platform, statuses, tags) {
                 Library.showFiltered(platform, statuses, tags)
                 window.setOverviewOpen(false)

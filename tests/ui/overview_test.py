@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import sys
+import tomllib
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +20,46 @@ def demo(dirs):
 
 def empty_library(dirs):
     dirs.write("library/library.toml", "version = 1\n")
+
+
+def overview_section(dirs):
+    path = os.path.join(dirs.data, "settings.toml")
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f).get("overview", {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+
+
+def overview_settings(hidden=None, left=None, below=None, placed=False):
+    """Checks [overview] in settings.toml: the hidden cards, a card in the left column, the cards below the columns.
+    `placed`: both columns are written, which is what the first change does to the automatic dealing."""
+    def check(result, dirs):
+        section = overview_section(dirs)
+        if section is None:
+            return ["settings.toml wasn't written"]
+        problems = []
+        if hidden is not None and section.get("hidden") != hidden:
+            problems.append(f"hidden is {section.get('hidden')}, not {hidden}")
+        if left is not None and left not in section.get("left", []):
+            problems.append(f"{left} isn't in left: {section.get('left')}")
+        if below is not None and section.get("below") != below:
+            problems.append(f"below is {section.get('below')}, not {below}")
+        if placed and not (section.get("left") and section.get("right")):
+            problems.append("the columns weren't fixed by the first change")
+        return problems
+    return check
+
+
+def overview_order(first, after):
+    """Checks that `first` comes after `after` in the column that holds both."""
+    def check(result, dirs):
+        section = overview_section(dirs) or {}
+        for column in (section.get("left", []), section.get("right", [])):
+            if first in column and after in column:
+                return [] if column.index(first) > column.index(after) else [f"{first} is above {after}"]
+        return [f"{first} and {after} aren't in one column: {section}"]
+    return check
 
 
 def steam_achievements(dirs, app_id, game, count, unlocked):
@@ -127,6 +168,30 @@ SCENARIOS = [
                  "settings.toml",
                  '[overview]\nleft = ["facts", "platforms"]\nright = ["years", "statuses"]\n'
                  'hidden = ["storage", "tags"]\nabove = ["continue_playing"]\nbelow = ["tiles"]\n'))),
+    Scenario("a card's right-click menu hides it, and it stays hidden after a restart",
+             [(OPEN + "rightclick Storage\nexpect Hide card\nexpect Move down\nexpect-not Move up\n"
+               + "expect-not Move to left column\nclick Hide card\nwait 300\nexpect-not Storage\n"
+               + "expect Games by platform\n", overview_settings(hidden=["storage"], placed=True)),
+              (OPEN + "expect-not Storage\nexpect Games by platform\n", None)], demo),
+    Scenario("a card moves to the other column from its menu, and stays there after a restart",
+             [(OPEN + "rightclick Games by platform\nexpect Move to left column\nexpect-not Move to right column\n"
+               + "click Move to left column\nwait 300\n", overview_settings(left="platforms")),
+              (OPEN + STATUS + "rightclick Games by platform\nexpect Move to right column\nexpect-not Move to left column\n"
+               + "key Escape\n", None)], demo),
+    Scenario("moving a card down puts it under its neighbour",
+             [(OPEN + "rightclick Storage\nclick Move down\nwait 300\n", overview_order("storage", after="attention")),
+              (OPEN + "rightclick Needs attention\nexpect Move down\nexpect-not Move up\n", None)], demo),
+    Scenario("right-clicking a bar or a game in a card opens the card's menu, and a left click still acts",
+             [(OPEN + "rightclick The Legend of Zelda: Tears of the Kingdom\nexpect Hide card\n"
+               + "expect Move below the cards\nkey Escape\nwait 300\n" + STATUS
+               + "rightclick Dropped\nexpect Hide card\nkey Escape\nwait 300\n"
+               + "click Dropped\nwait 500\nexpect-not Library overview\n", None)], demo),
+    Scenario("the tiles' menu moves them below the cards and hides them",
+             [(OPEN + "rightclick Hours played\nexpect Move below the cards\nexpect-not Move above the cards\n"
+               + "expect-not Move up\nexpect Move down\nclick Move below the cards\nwait 300\n",
+               overview_settings(below=["tiles"])),
+              (OPEN + DOWN + "rightclick Hours played\nexpect Move above the cards\nexpect-not Move below the cards\n"
+               + "click Hide card\nwait 300\nexpect-not Hours played\n", overview_settings(hidden=["tiles"]))], demo),
     Scenario("an empty library shows the tiles and leaves out the cards with nothing to show",
              [("key F7\nexpect Library overview\nwait 800\n" + CARDS.replace("expect Continue playing\n", "")
                + "expect-not Continue playing\nexpect-not Storage\nexpect-not Needs attention\n"

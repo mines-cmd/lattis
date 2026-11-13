@@ -110,6 +110,15 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
+    if (command.name == u"rightclick") {
+        QQuickItem *item = find(command.argument);
+        if (!item)
+            return false;
+        click(item, Qt::RightButton);
+        qInfo().noquote() << "uitest: rightclick" << command.argument;
+        settle();
+        return true;
+    }
     if (command.name == u"key") {
         if (!key(command.argument)) {
             fail(QStringLiteral("line %1: unknown key %2").arg(command.line).arg(command.argument));
@@ -220,18 +229,18 @@ QStringList UiDriver::visibleTexts() const
     return texts;
 }
 
-void UiDriver::click(QQuickItem *item)
+void UiDriver::click(QQuickItem *item, Qt::MouseButton button)
 {
     QQuickWindow *window = item->window();
     const QPointF scene = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
     const QPointF global = window->mapToGlobal(scene.toPoint());
     const auto send = [&](QEvent::Type type, Qt::MouseButtons buttons) {
         QMouseEvent event(type, scene, scene, global,
-                          type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton, buttons, Qt::NoModifier);
+                          type == QEvent::MouseMove ? Qt::NoButton : button, buttons, Qt::NoModifier);
         QCoreApplication::sendEvent(window, &event);
     };
     send(QEvent::MouseMove, Qt::NoButton);
-    send(QEvent::MouseButtonPress, Qt::LeftButton);
+    send(QEvent::MouseButtonPress, button);
     send(QEvent::MouseButtonRelease, Qt::NoButton);
 }
 
