@@ -605,7 +605,7 @@ FocusScope {
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 2 * Theme.overview.sectionSpacing
+                spacing: Theme.layout.spacing
 
                 Label {
                     text: qsTr("Library overview")
