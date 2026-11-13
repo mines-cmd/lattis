@@ -171,7 +171,7 @@ constexpr Setting kSettings[] = {
     integer("motion", "menu_offset", "8", 0, 200,
             "How far the app menu, the game menu and their submenus spring out as they open, in px; 0 = no slide"),
     integer("motion", "view_switch_wait", "200", 0, 2000,
-            "Longest switching between List and Grid view waits for the new view's art before showing it, in ms; "
+            "Longest switching between List and Grid view, or closing a page on a game picked there, waits for the art before showing it, in ms; "
             "0 = show it at once"),
     integer("motion", "view_switch_rise", "8", 0, 100,
             "How far the new view rises into place when switching between List and Grid view, in px; 0 = no rise"),

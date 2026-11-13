@@ -24,6 +24,9 @@ Item {
     readonly property alias shownHeroGame: hero.shownGame
     readonly property alias heroLoading: hero.loading
     property alias heroEntering: hero.entering
+    // While a page covers the details, a new game replaces the old at once: no hero delay, fade
+    // or rise, so nothing is still moving when the page fades off it.
+    property bool covered: false
 
     readonly property bool hasGame: game.id !== undefined
     readonly property bool downloading: hasGame && Theme.downloadBar.show && Library.download.gameId !== undefined
@@ -302,13 +305,15 @@ Item {
     }
 
     onGameChanged: {
-        if (heroGame.id === undefined || Theme.hero.loadDelay === 0)
+        if (heroGame.id === undefined || Theme.hero.loadDelay === 0 || covered) {
+            heroTimer.stop()
             heroGame = game
-        else
+        } else {
             heroTimer.restart()
+        }
 
         const now = Date.now()
-        const rapid = lastPick > 0 && now - lastPick < Theme.details.rapidSwitch
+        const rapid = covered || lastPick > 0 && now - lastPick < Theme.details.rapidSwitch
         if (game.id !== undefined && game.id !== lastPickId) {
             hero.instant = rapid
             lastPick = now

@@ -318,6 +318,26 @@ ApplicationWindow {
         viewReveal.restart()
     }
 
+    // The page stays until the game's art is in: fading off at once showed the art pop in and the
+    // hero's own switch play through the page.
+    function closePageOnGame(id, close) {
+        browser.revealGame(id)
+        if (!Motion.fades) {
+            close()
+            return
+        }
+        pageWait.close = close
+        pageWait.gameId = id
+        pageWait.since = Date.now()
+        pageWait.start()
+    }
+
+    function gameShown(id): bool {
+        if (gridView)
+            return gridLoader.item?.artReady() ?? true
+        return !listDetails.item || (listDetails.item.shownHeroGame.id === id && !listDetails.item.heroLoading)
+    }
+
     function setGalleryOpen(open, gameId = "", switching = false) {
         if (open === galleryOpen)
             return
@@ -1199,6 +1219,7 @@ ApplicationWindow {
         Backdrop {
             readonly property bool on: window.gridView ? Theme.grid.backdropEnabled : Theme.backdrop.enabled
             visible: on && !window.pageCovering
+            instant: window.pageCovering
             x: Theme.backdrop.area === "details" && !window.gridView ? listDetails.x : 0
             width: parent.width - x
             height: parent.height * heightFraction
@@ -1306,6 +1327,7 @@ ApplicationWindow {
             dragReserve: windowControls.width + 2 * Theme.windowControls.margin
             startedUp: window.startedUp
             heroEntering: window.viewCovered
+            covered: window.pageCovering
             toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
@@ -1377,6 +1399,19 @@ ApplicationWindow {
         }
     }
 
+    FrameAnimation {
+        id: pageWait
+        property var close: null
+        property var gameId
+        property real since: 0
+        onTriggered: {
+            if (window.gameShown(gameId) || Date.now() - since >= Theme.motion.viewSwitchWait) {
+                stop()
+                close()
+            }
+        }
+    }
+
     ParallelAnimation {
         id: viewReveal
         onFinished: {
@@ -1421,10 +1456,7 @@ ApplicationWindow {
         Connections {
             target: statsPage.item
             function onCloseRequested() { window.setStatsOpen(false) }
-            function onGameRequested(id) {
-                browser.revealGame(id)
-                window.setStatsOpen(false)
-            }
+            function onGameRequested(id) { window.closePageOnGame(id, () => window.setStatsOpen(false)) }
         }
 
         Loader {
@@ -1472,10 +1504,7 @@ ApplicationWindow {
                 window.setOverviewOpen(false)
             }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
-            function onGameRequested(id) {
-                browser.revealGame(id)
-                window.setOverviewOpen(false)
-            }
+            function onGameRequested(id) { window.closePageOnGame(id, () => window.setOverviewOpen(false)) }
             function onAttentionRequested(kind) {
                 switch (kind) {
                 case "neverBackedUp": GameSaves.backUpAll(); break
@@ -1520,10 +1549,7 @@ ApplicationWindow {
                 if (text !== "")
                     toast.show(text)
             }
-            function onGameRequested(id) {
-                browser.revealGame(id)
-                window.setGalleryOpen(false)
-            }
+            function onGameRequested(id) { window.closePageOnGame(id, () => window.setGalleryOpen(false)) }
         }
 
         FocusScope {

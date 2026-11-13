@@ -14,6 +14,8 @@ Item {
     property real heightFraction: Theme.backdrop.height
     property real blurAmount: Theme.backdrop.blur
     property real fadeStart: Theme.backdrop.fadeStart
+    // Swaps without a crossfade, for a change made while a page hides the backdrop.
+    property bool instant: false
     readonly property real dim: 1 - strength
 
     clip: true
@@ -61,7 +63,7 @@ Item {
             anchors.fill: parent
             opacity: root.current === index ? 1 : 0
             Behavior on opacity {
-                enabled: Motion.fades && Theme.backdrop.fadeDuration > 0
+                enabled: Motion.fades && !root.instant && Theme.backdrop.fadeDuration > 0
                 MotionNumber { fade: true; duration: Motion.fadeDuration(Theme.backdrop.fadeDuration) }
             }
 
