@@ -228,6 +228,7 @@ public:
     Q_INVOKABLE int nextGroupRow(int from, int step) const;
     Q_INVOKABLE int collapseGroupAt(int row);
     Q_INVOKABLE int expandGroupNear(int row);
+    Q_INVOKABLE int expandToGame(const QString &id);
     Q_INVOKABLE QString gameIdAt(int row) const;
 
     Q_INVOKABLE QString setGameValue(const QString &id, const QString &key, const QVariant &value);
@@ -530,7 +531,7 @@ private:
     bool collectionsWantAchievements() const;
     QString collapseKey(const QString &group) const { return m_groupBy + u'/' + group; }
     bool expandsGroups() const { return !m_search.isEmpty() || filtersActive(); }
-    QList<Row> computeRows(bool *showingGroups, int *notInstalled) const;
+    QList<Row> computeRows(bool *showingGroups, int *notInstalled, bool expandAll = false) const;
     void reloadFromStore();
     void saveViewState() const;
     QUrl heroDisplayUrl(const Game &game) const;

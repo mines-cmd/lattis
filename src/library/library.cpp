@@ -2927,6 +2927,23 @@ int Library::expandGroupNear(int row)
     return nextGameRow(header, 1);
 }
 
+int Library::expandToGame(const QString &id)
+{
+    if (const int row = rowOfGame(id); row >= 0 || !m_showingGroups || m_collapsed.isEmpty())
+        return row;
+    bool showingGroups = false;
+    int notInstalled = 0;
+    for (const Row &row : computeRows(&showingGroups, &notInstalled, true)) {
+        if (row.game < 0 || m_games.at(row.game).id != id)
+            continue;
+        m_collapsed.remove(collapseKey(row.group));
+        rebuildGroup(row.group);
+        m_viewStateTimer.start();
+        return rowOfGame(id);
+    }
+    return -1;
+}
+
 int Library::rowOfGame(const QString &id) const
 {
     for (int i = 0; i < m_rows.size(); ++i) {
@@ -4853,7 +4870,7 @@ void Library::rebuild()
     }
 }
 
-QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled) const
+QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled, bool expandAll) const
 {
     const bool byPlatform = m_groupBy == QLatin1String("platform");
     const bool grouped = !m_flat && m_groupBy != QLatin1String("none") && (!byPlatform || m_platformFilter.isEmpty());
@@ -4936,7 +4953,7 @@ QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled)
         groups.append(m_groupBy == QLatin1String("rating") ? QStringLiteral("unrated") : QStringLiteral("never"));
     }
 
-    const bool expanded = expandsGroups();
+    const bool expanded = expandAll || expandsGroups();
     for (const QString &group : std::as_const(groups)) {
         const QList<int> games = matches.value(group);
         if (games.isEmpty())

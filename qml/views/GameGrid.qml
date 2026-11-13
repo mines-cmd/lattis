@@ -324,15 +324,15 @@ Item {
     }
 
     function revealGame(id) {
-        if (Library.rowOfGame(id) < 0)
+        if (Library.expandToGame(id) < 0 && !Library.gameWithId(id).installed)
             Library.installedOnly = false
-        if (Library.rowOfGame(id) < 0) {
+        if (Library.expandToGame(id) < 0) {
             Library.clearFilters()
-            Library.installedOnly = false
             Library.platformFilter = ""
         }
-        if (Library.rowOfGame(id) < 0 && Library.collectionId !== "")
+        if (Library.expandToGame(id) < 0 && Library.collectionId !== "")
             Library.closeCollection()
+        Library.expandToGame(id)
         selectGame(id)
     }
 

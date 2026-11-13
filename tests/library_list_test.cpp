@@ -490,6 +490,16 @@ void LibraryListTest::collapseSendsOneRange()
     QCOMPARE(inserted.count(), 2);
     QCOMPARE(reset.count(), 0);
 
+    // Going to a game in a collapsed group opens that group.
+    const QString first = library->gameIdAt(header + 1);
+    library->toggleGroup(QStringLiteral("switch"));
+    QCOMPARE(library->rowOfGame(first), -1);
+    QCOMPARE(library->expandToGame(first), header + 1);
+    QVERIFY(!library->data(library->index(header), Library::CollapsedRole).toBool());
+    QCOMPARE(library->expandToGame(QStringLiteral("no-such-game")), -1);
+    QCOMPARE(library->rowCount(), rows);
+    QCOMPARE(reset.count(), 0);
+
     // While searching, groups are expanded already: nothing to insert or remove.
     library->setSearch(QStringLiteral("-"));
     QSignalSpy searchedRemoved(library.get(), &QAbstractItemModel::rowsRemoved);

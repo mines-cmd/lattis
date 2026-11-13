@@ -560,6 +560,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `nextGroupRow(from, step)` | The first game of the next group, or the start of this group and then the previous one |
 | `collapseGroupAt(row)` | Collapses the game's group; returns the row to select next, or −1 if none is left |
 | `expandGroupNear(row)` | Expands the nearest collapsed group below (else above); returns its first game's row |
+| `expandToGame(id)` | Returns the game's row, first expanding the collapsed group that holds it; -1 when the filters leave it out |
 | `rowOfGame(id)`, `gameIdAt(row)`, `gameAt(row)` | `gameAt()`'s `heroUrl` is the display copy when there is one and `heroArt` the original art; `addedText` is the date added (`Game::added`) in the short date format |
 | `copyHeroesNear(row)` | The game on `row` is the one whose neighbors get their hero copies first; the game list calls it when the selection changes |
 | `clearFilters()` | Every filter back to its default; the search, platform and sort stay |
