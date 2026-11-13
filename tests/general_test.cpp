@@ -3,6 +3,7 @@
 #include "gamepagemigration.h"
 #include "gamepagesettings.h"
 #include "generalsettings.h"
+#include "overviewsettings.h"
 #include "tomlpatch.h"
 
 #include <QFile>
@@ -34,6 +35,9 @@ private slots:
     void gridSettings();
     void gridGamePageLists();
     void gallerySettings();
+    void overviewParser();
+    void overviewResolving();
+    void overviewSetters();
     void gamePageDefaults();
     void gamePageParser();
     void gamePageOrderKeepsNewNames();
@@ -1101,6 +1105,148 @@ void GeneralTest::gallerySettings()
     QVERIFY(!text.contains("group"));
     QVERIFY(!text.contains("folded_sections"));
     QVERIFY(text.contains("sort = \"oldest\""));
+}
+
+void GeneralTest::overviewParser()
+{
+    const auto none = parseOverviewSettings("", QStringLiteral("settings.toml"));
+    QCOMPARE(none.value, OverviewSettings{});
+    QCOMPARE(none.value.above, (QStringList{"tiles", "continue_playing"}));
+
+    const auto set = parseOverviewSettings(
+        "[overview]\nleft = [\"tags\", \"storage\", \"tags\"]\nright = [\"facts\"]\nhidden = [\"years\", \"tiles\"]\n"
+        "above = [\"continue_playing\"]\nbelow = [\"tiles\"]\n",
+        QStringLiteral("settings.toml"));
+    QVERIFY(set.warnings.isEmpty());
+    QCOMPARE(set.value.left, (QStringList{"tags", "storage"}));
+    QCOMPARE(set.value.right, QStringList{"facts"});
+    QCOMPARE(set.value.hidden, (QStringList{"years", "tiles"}));
+    QCOMPARE(set.value.above, QStringList{"continue_playing"});
+    QCOMPARE(set.value.below, QStringList{"tiles"});
+
+    // A card put below isn't also above by the default.
+    const auto below = parseOverviewSettings("[overview]\nbelow = [\"continue_playing\"]\n", QStringLiteral("settings.toml"));
+    QCOMPARE(below.value.above, QStringList{"tiles"});
+
+    // A row card isn't a column card and the other way round; strays are dropped with a warning.
+    const auto bad = parseOverviewSettings(
+        "[overview]\nleft = [\"tiles\", \"storag\", \"saves\"]\nhidden = \"saves\"\nabove = [\"saves\"]\nsize = 1\n",
+        QStringLiteral("settings.toml"));
+    QCOMPARE(bad.warnings.size(), 5);
+    QCOMPARE(bad.value.left, QStringList{"saves"});
+    QVERIFY(bad.value.hidden.isEmpty());
+    QVERIFY(bad.value.above.isEmpty());
+}
+
+void GeneralTest::overviewResolving()
+{
+    // Nothing set: the page deals the columns itself and the full-width rows keep their default places.
+    const OverviewLayout automatic = resolveOverview({});
+    QVERIFY(automatic.automatic);
+    QVERIFY(automatic.left.isEmpty() && automatic.right.isEmpty());
+    QCOMPARE(automatic.above, (QStringList{"tiles", "continue_playing"}));
+    QVERIFY(automatic.below.isEmpty());
+
+    // Unknown names and repeats drop; a card in both columns stays in the left one.
+    const QStringList all = overviewColumnCards();
+    OverviewSettings full;
+    full.left = QStringList{"storage", "nope", "tiles", "tags", "storage"};
+    full.right = QStringList{"tags", "years"};
+    for (const QString &name : all)
+        if (!full.left.contains(name) && !full.right.contains(name))
+            full.right.append(name);
+    const OverviewLayout resolved = resolveOverview(full);
+    QVERIFY(!resolved.automatic);
+    QCOMPARE(resolved.left, (QStringList{"storage", "tags"}));
+    QCOMPARE(resolved.right.size(), all.size() - 2);
+    QVERIFY(!resolved.right.contains(QStringLiteral("tags")));
+
+    // A card in neither list goes to the end of the shorter one, counted as the cards are added.
+    OverviewSettings partial;
+    partial.left = QStringList{"facts", "saves", "years"};
+    partial.right = QStringList{"tags"};
+    const OverviewLayout added = resolveOverview(partial);
+    // storage, platforms, statuses, attention, backlog, nearly_done, compatibility are missing, in catalog order
+    QCOMPARE(added.right, (QStringList{"tags", "storage", "platforms", "attention", "nearly_done"}));
+    QCOMPARE(added.left, (QStringList{"facts", "saves", "years", "statuses", "backlog", "compatibility"}));
+
+    // A tie goes to the left column.
+    OverviewSettings tie;
+    tie.left = QStringList{"storage"};
+    tie.right = QStringList{"platforms"};
+    QCOMPARE(resolveOverview(tie).left.value(1), QStringLiteral("statuses"));
+
+    // A hidden card keeps its place; a name for no card is dropped.
+    OverviewSettings hidden;
+    hidden.left = QStringList{"storage"};
+    hidden.hidden = QStringList{"storage", "tiles", "nope", "tiles"};
+    const OverviewLayout withHidden = resolveOverview(hidden);
+    QVERIFY(withHidden.left.contains(QStringLiteral("storage")));
+    QCOMPARE(withHidden.hidden, (QStringList{"storage", "tiles"}));
+
+    // Only one row card named: the other keeps its default place, above.
+    OverviewSettings rows;
+    rows.above = QStringList{"continue_playing"};
+    QCOMPARE(resolveOverview(rows).above, (QStringList{"continue_playing", "tiles"}));
+    rows.above = {};
+    rows.below = QStringList{"tiles", "continue_playing"};
+    const OverviewLayout below = resolveOverview(rows);
+    QVERIFY(below.above.isEmpty());
+    QCOMPARE(below.below, (QStringList{"tiles", "continue_playing"}));
+}
+
+void GeneralTest::overviewSetters()
+{
+    QTemporaryDir data;
+    QFile created(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(created.open(QIODevice::WriteOnly));
+    created.close();
+    General general(data.path());
+    QSignalSpy changed(&general, &General::overviewChanged);
+    QSignalSpy window(&general, &General::settingsChanged);
+    QVERIFY(general.overviewAutomatic());
+    QCOMPARE(general.overviewAbove(), (QStringList{"tiles", "continue_playing"}));
+
+    QCOMPARE(general.setOverviewHidden({"years", "nope", "tiles"}), QString());
+    QCOMPARE(general.overviewHidden(), (QStringList{"tiles", "years"}));
+    QCOMPARE(changed.size(), 1);
+
+    QCOMPARE(general.setOverviewColumns({"facts", "storage"}, {"tags"}), QString());
+    QVERIFY(!general.overviewAutomatic());
+    QCOMPARE(general.overviewLeft().first(), QStringLiteral("facts"));
+    QCOMPARE(general.overviewRight().first(), QStringLiteral("tags"));
+    QCOMPARE(general.overviewLeft().size() + general.overviewRight().size(), overviewColumnCards().size());
+    QCOMPARE(changed.size(), 2);
+
+    QCOMPARE(general.setOverviewRows({"tiles"}, {"continue_playing"}), QString());
+    QCOMPARE(general.overviewAbove(), QStringList{"tiles"});
+    QCOMPARE(general.overviewBelow(), QStringList{"continue_playing"});
+    QCOMPARE(window.size(), 0);
+
+    // It survives a new reader.
+    General again(data.path());
+    QCOMPARE(again.overviewLeft(), general.overviewLeft());
+    QCOMPARE(again.overviewRight(), general.overviewRight());
+    QCOMPARE(again.overviewHidden(), (QStringList{"tiles", "years"}));
+    QCOMPARE(again.overviewBelow(), QStringList{"continue_playing"});
+
+    // The default rows leave no keys.
+    QCOMPARE(general.setOverviewRows({"tiles", "continue_playing"}, {}), QString());
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray text = settings.readAll();
+    settings.close();
+    QVERIFY(!text.contains("above"));
+    QVERIFY(!text.contains("below"));
+    QVERIFY(text.contains("hidden = [\"tiles\", \"years\"]"));
+
+    QCOMPARE(general.resetOverviewLayout(), QString());
+    QVERIFY(general.overviewAutomatic());
+    QVERIFY(general.overviewHidden().isEmpty());
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    const QByteArray cleared = settings.readAll();
+    QVERIFY(!cleared.contains("left"));
+    QVERIFY(!cleared.contains("hidden"));
 }
 
 QTEST_MAIN(GeneralTest)

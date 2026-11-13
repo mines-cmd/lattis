@@ -4,6 +4,7 @@
 #include "gamepagesettings.h"
 #include "gallerysettings.h"
 #include "generalsettings.h"
+#include "overviewsettings.h"
 
 #include <QCoreApplication>
 #include <QObject>
@@ -65,6 +66,12 @@ class General : public QObject
     Q_PROPERTY(int galleryTileWidth READ galleryTileWidth NOTIFY galleryChanged)
     Q_PROPERTY(QStringList galleryFoldedSections READ galleryFoldedSections NOTIFY galleryChanged)
     Q_PROPERTY(bool galleryCaptions READ galleryCaptions NOTIFY galleryChanged)
+    Q_PROPERTY(bool overviewAutomatic READ overviewAutomatic NOTIFY overviewChanged)
+    Q_PROPERTY(QStringList overviewLeft READ overviewLeft NOTIFY overviewChanged)
+    Q_PROPERTY(QStringList overviewRight READ overviewRight NOTIFY overviewChanged)
+    Q_PROPERTY(QStringList overviewHidden READ overviewHidden NOTIFY overviewChanged)
+    Q_PROPERTY(QStringList overviewAbove READ overviewAbove NOTIFY overviewChanged)
+    Q_PROPERTY(QStringList overviewBelow READ overviewBelow NOTIFY overviewChanged)
     Q_PROPERTY(QString shortDateFormat READ shortDateFormat CONSTANT)
     Q_PROPERTY(bool startAtLogin READ startAtLogin NOTIFY loginChanged)
     Q_PROPERTY(bool startAtLoginOurs READ startAtLoginOurs NOTIFY loginChanged)
@@ -123,6 +130,12 @@ public:
     int galleryTileWidth() const { return m_gallery.tileWidth; }
     QStringList galleryFoldedSections() const { return m_gallery.foldedSections; }
     bool galleryCaptions() const { return m_gallery.captions; }
+    bool overviewAutomatic() const { return m_overviewLayout.automatic; }
+    QStringList overviewLeft() const { return m_overviewLayout.left; }
+    QStringList overviewRight() const { return m_overviewLayout.right; }
+    QStringList overviewHidden() const { return m_overviewLayout.hidden; }
+    QStringList overviewAbove() const { return m_overviewLayout.above; }
+    QStringList overviewBelow() const { return m_overviewLayout.below; }
     QString shortDateFormat() const { return DateFormat::shortFormat(); }
     bool startAtLogin() const { return m_loginExists && m_loginEnabled; }
     bool startAtLoginOurs() const { return m_loginOurs; }
@@ -164,6 +177,10 @@ public:
     Q_INVOKABLE QString setGalleryTileWidth(int width);
     Q_INVOKABLE QString setGallerySectionFolded(const QString &name, bool folded);
     Q_INVOKABLE QString setGalleryCaptions(bool on);
+    Q_INVOKABLE QString setOverviewHidden(const QStringList &names);
+    Q_INVOKABLE QString setOverviewColumns(const QStringList &left, const QStringList &right);
+    Q_INVOKABLE QString setOverviewRows(const QStringList &above, const QStringList &below);
+    Q_INVOKABLE QString resetOverviewLayout();
     Q_INVOKABLE QString setStartAtLogin(bool on);
     Q_INVOKABLE void reload();
     void refreshAutostart();
@@ -183,12 +200,14 @@ signals:
     void toolbarButtonOrderChanged();
     void gamePageChanged();
     void galleryChanged();
+    void overviewChanged();
     void loginChanged();
 
 private:
     void load();
     void loadAutostart();
     QString setGalleryValue(const QString &key, const QString &value, bool isDefault);
+    QString setOverviewLists(const QList<std::pair<QString, QStringList>> &lists);
     QString setMediaFlag(const QString &key, bool on);
     QString setFlag(const QString &key, bool value);
     QString writeGamePage(const QString &place, const QStringList &order, const QStringList &shown);
@@ -205,6 +224,8 @@ private:
     GamePageSettings m_gamePage;
     GallerySettings m_gallery;
     QStringList m_galleryProblems;
+    OverviewLayout m_overviewLayout;
+    QStringList m_overviewProblems;
     QStringList m_gamePageProblems;
     QStringList m_problems;
     bool m_loginExists = false;

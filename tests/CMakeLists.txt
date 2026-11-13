@@ -140,6 +140,7 @@ lattis_test(general_test OFFSCREEN
             ../src/core/generalsettings.h ../src/core/generalsettings.cpp
             ../src/core/gamepagesettings.h ../src/core/gamepagesettings.cpp
             ../src/core/gallerysettings.h ../src/core/gallerysettings.cpp
+            ../src/core/overviewsettings.h ../src/core/overviewsettings.cpp
             ../src/core/gamepagemigration.h ../src/core/gamepagemigration.cpp
             ../src/core/autostart.h ../src/core/autostart.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp ${CORE_SOURCES}

@@ -528,6 +528,60 @@ QString General::setGallerySectionFolded(const QString &name, bool folded)
                            names.isEmpty());
 }
 
+// Writes each key, or removes it when its list is the default; `load()` runs once, after the last one.
+QString General::setOverviewLists(const QList<std::pair<QString, QStringList>> &lists)
+{
+    const OverviewSettings defaults;
+    QString error;
+    for (const auto &[key, names] : lists) {
+        const QStringList &fallback = key == QLatin1String("above") ? defaults.above : QStringList();
+        if (names == fallback) {
+            TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("overview"), key, &error);
+        } else {
+            QStringList quoted;
+            for (const QString &name : names)
+                quoted.append(u'"' + name + u'"');
+            TomlPatch::setValueInFile(settingsFile(), QStringLiteral("overview"), key,
+                                      u'[' + quoted.join(QLatin1String(", ")) + u']', &error);
+        }
+        if (!error.isEmpty())
+            break;
+    }
+    load();
+    return error;
+}
+
+QString General::setOverviewHidden(const QStringList &names)
+{
+    QStringList kept;
+    for (const QString &name : overviewRowCards() + overviewColumnCards())
+        if (names.contains(name))
+            kept.append(name);
+    return setOverviewLists({{QStringLiteral("hidden"), kept}});
+}
+
+QString General::setOverviewColumns(const QStringList &left, const QStringList &right)
+{
+    const OverviewLayout layout = resolveOverview({left, right, {}, {}, {}});
+    return setOverviewLists({{QStringLiteral("left"), layout.left}, {QStringLiteral("right"), layout.right}});
+}
+
+QString General::setOverviewRows(const QStringList &above, const QStringList &below)
+{
+    const OverviewLayout layout = resolveOverview({{}, {}, {}, above, below});
+    return setOverviewLists({{QStringLiteral("above"), layout.above}, {QStringLiteral("below"), layout.below}});
+}
+
+QString General::resetOverviewLayout()
+{
+    const OverviewSettings defaults;
+    return setOverviewLists({{QStringLiteral("left"), {}},
+                             {QStringLiteral("right"), {}},
+                             {QStringLiteral("hidden"), {}},
+                             {QStringLiteral("above"), defaults.above},
+                             {QStringLiteral("below"), {}}});
+}
+
 QString General::setStartAtLogin(bool on)
 {
     const QString folder = Autostart::autostartFolder();
@@ -582,7 +636,11 @@ void General::load()
     const QStringList prevGalleryProblems = m_galleryProblems;
     m_gallery = gallery.value;
     m_galleryProblems = gallery.ok ? gallery.warnings : QStringList();
-    m_problems = parsed.warnings + m_gamePageProblems + m_galleryProblems;
+    const auto overview = parseOverviewSettings(bytes, QStringLiteral("settings.toml"));
+    const OverviewLayout prevOverview = m_overviewLayout;
+    m_overviewLayout = resolveOverview(overview.value);
+    m_overviewProblems = overview.ok ? overview.warnings : QStringList();
+    m_problems = parsed.warnings + m_gamePageProblems + m_galleryProblems + m_overviewProblems;
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
@@ -608,6 +666,8 @@ void General::load()
         emit gamePageChanged();
     if (m_gallery != prevGallery)
         emit galleryChanged();
+    if (m_overviewLayout != prevOverview)
+        emit overviewChanged();
     if (m_settings.systemLocale != prev.systemLocale)
         emit systemLocaleChanged();
     if (m_settings.reduceMotion != prev.reduceMotion)
