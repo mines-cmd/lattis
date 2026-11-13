@@ -2,6 +2,7 @@
 
 #include "appimageinstall.h"
 
+#include <QColor>
 #include <QObject>
 #include <QPointer>
 #include <QTimer>
@@ -108,6 +109,9 @@ public:
     Q_INVOKABLE void skip();
     Q_INVOKABLE void restart();
     Q_INVOKABLE void dismissWhatsNew();
+    // Qt's own markdown rendering leaves no space after headings and list items, and draws tables
+    // with black borders and no cell padding.
+    Q_INVOKABLE static QString notesHtml(const QString &markdown, const QColor &tableBorder);
 
     // The daily check: waits `delayMs`, checks when the last check is over a day old, and again a day after each.
     void startDailyCheck(int delayMs = 10000);

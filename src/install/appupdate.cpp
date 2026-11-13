@@ -15,6 +15,12 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSaveFile>
+#include <QRegularExpression>
+#include <QTextBlock>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextFrame>
+#include <QTextTable>
 
 Q_LOGGING_CATEGORY(lcAppUpdate, "launcher.appupdate")
 
@@ -456,6 +462,45 @@ void AppUpdate::loadWhatsNew()
     QFile notes(notesPath());
     if (notes.open(QIODevice::ReadOnly))
         m_whatsNewNotes = QString::fromUtf8(notes.readAll());
+}
+
+QString AppUpdate::notesHtml(const QString &markdown, const QColor &tableBorder)
+{
+    QTextDocument doc;
+    doc.setMarkdown(markdown);
+    for (QTextFrame *frame : doc.rootFrame()->childFrames()) {
+        auto *table = qobject_cast<QTextTable *>(frame);
+        if (!table)
+            continue;
+        QTextTableFormat format = table->format();
+        format.setBorder(1);
+        format.setBorderBrush(tableBorder);
+        format.setBorderStyle(QTextFrameFormat::BorderStyle_Solid);
+        format.setCellSpacing(0);
+        format.setCellPadding(8);
+        format.setTopMargin(4);
+        format.setBottomMargin(12);
+        format.setWidth(QTextLength(QTextLength::PercentageLength, 100));
+        table->setFormat(format);
+    }
+    for (QTextBlock block = doc.begin(); block.isValid(); block = block.next()) {
+        QTextBlockFormat format = block.blockFormat();
+        if (format.headingLevel() > 0) {
+            format.setTopMargin(14);
+            format.setBottomMargin(8);
+        } else if (block.textList()) {
+            format.setTopMargin(0);
+            format.setBottomMargin(6);
+        } else {
+            format.setTopMargin(0);
+            format.setBottomMargin(10);
+        }
+        QTextCursor cursor(block);
+        cursor.setBlockFormat(format);
+    }
+    // The body's font would override the label's.
+    static const QRegularExpression bodyStyle(QStringLiteral("<body style=\"[^\"]*\">"));
+    return doc.toHtml().replace(bodyStyle, QStringLiteral("<body>"));
 }
 
 void AppUpdate::dismissWhatsNew()

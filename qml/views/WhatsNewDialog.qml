@@ -16,11 +16,12 @@ AppDialog {
     carded: true
     size: "medium"
     title: heading !== "" ? heading : qsTr("What's new in Lattis %1").arg(version)
-    width: Math.min(Theme.gameEditor.updateWidth, parent.width - 2 * Theme.gameEditor.padding)
+    width: Math.min(Theme.gameEditor.whatsNewWidth, parent.width - 2 * Theme.gameEditor.padding)
+    height: Math.round(parent.height * Theme.gameEditor.whatsNewHeightPercent / 100)
 
     Rectangle {
         Layout.fillWidth: true
-        Layout.preferredHeight: Theme.gameEditor.updateNotesHeight
+        Layout.fillHeight: true
         color: root.sections.length === 0 ? Theme.gameEditor.updateNotesBackground : "transparent"
         radius: Theme.gameEditor.updateNotesRadius
         clip: true
@@ -43,9 +44,9 @@ AppDialog {
                     Layout.fillWidth: true
                     visible: root.sections.length === 0
                     wrapMode: Text.WordWrap
-                    textFormat: Text.MarkdownText
+                    textFormat: Text.RichText
                     color: Theme.gameEditor.updateNotesText
-                    text: root.notes !== "" ? root.notes : qsTr("No release notes.")
+                    text: AppUpdate.notesHtml(root.notes !== "" ? root.notes : qsTr("No release notes."), Qt.alpha(Theme.gameEditor.updateNotesText, 0.25))
                     onLinkActivated: link => Qt.openUrlExternally(link)
                 }
 
@@ -77,9 +78,9 @@ AppDialog {
                             Label {
                                 Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
-                                textFormat: Text.MarkdownText
+                                textFormat: Text.RichText
                                 color: Theme.gameEditor.updateNotesText
-                                text: modelData.notes !== "" ? modelData.notes : qsTr("No release notes.")
+                                text: AppUpdate.notesHtml(modelData.notes !== "" ? modelData.notes : qsTr("No release notes."), Qt.alpha(Theme.gameEditor.updateNotesText, 0.25))
                                 onLinkActivated: link => Qt.openUrlExternally(link)
                             }
                         }
