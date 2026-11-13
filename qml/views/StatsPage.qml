@@ -9,6 +9,11 @@ FocusScope {
 
     property real dragReserve: 0
 
+    // Bars are drawn opaque so the gridlines don't show through them.
+    function dim(color) {
+        return Qt.tint(Theme.stats.cardBackground, Qt.alpha(color, Theme.stats.barOpacity))
+    }
+
     property string mode: "month"
     property int year: 0
     property int month: 0
@@ -526,7 +531,7 @@ FocusScope {
 
         Surface {
             height: parent.height
-            width: parent.width * shareBar.fraction
+            width: shareBar.fraction > 0 ? Math.max(height, parent.width * shareBar.fraction) : 0
             radius: height / 2
             fill: Theme.stats.bar
             fillEnd: Theme.stats.barEnd
@@ -874,10 +879,9 @@ FocusScope {
                                 topLeftRadius: monthColumn.modelData.mergedMinutes > 0 ? 0 : radius
                                 topRightRadius: topLeftRadius
                                 fill: monthColumn.isCurrent ? Qt.lighter(Theme.stats.barActive, Theme.stats.lightBrightness)
-                                    : monthColumn.active ? Theme.stats.barActive : Theme.stats.bar
+                                    : monthColumn.active ? Theme.stats.barActive : root.dim(Theme.stats.bar)
                                 fillEnd: monthColumn.isCurrent ? Qt.lighter(Theme.stats.barActiveEnd, Theme.stats.lightBrightness)
-                                       : monthColumn.active ? Theme.stats.barActiveEnd : Theme.stats.barEnd
-                                opacity: monthColumn.isCurrent || monthColumn.active ? 1 : Theme.stats.barOpacity
+                                       : monthColumn.active ? Theme.stats.barActiveEnd : root.dim(Theme.stats.barEnd)
 
                                 Behavior on fill { enabled: Motion.fades; MotionColor {} }
                                 Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
@@ -1080,9 +1084,8 @@ FocusScope {
                                 width: Math.min(44, parent.width)
                                 height: (parent.height - weekdayTime.height - Theme.layout.spacing) * weekdayColumn.share * root.yearPresence
                                 radius: Theme.stats.barRadius
-                                fill: Theme.stats.bar
-                                fillEnd: Theme.stats.barEnd
-                                opacity: Theme.stats.barOpacity
+                                fill: root.dim(Theme.stats.bar)
+                                fillEnd: root.dim(Theme.stats.barEnd)
                             }
                         }
                         Muted {
@@ -1436,7 +1439,7 @@ FocusScope {
                                             width: parent.width
                                             height: chart.height * dayColumn.mergedShare * root.monthPresence
                                             radius: Theme.stats.barRadius
-                                            bottomLeftRadius: dayColumn.liveMinutes > 0 ? 0 : radius
+                                            bottomLeftRadius: liveSegment.height >= 1 ? 0 : radius
                                             bottomRightRadius: bottomLeftRadius
                                             fill: Theme.stats.mergedBar
                                             opacity: Theme.stats.mergedOpacity
@@ -1447,13 +1450,12 @@ FocusScope {
                                             width: parent.width
                                             height: chart.height * dayColumn.liveShare * root.monthPresence
                                             radius: Theme.stats.barRadius
-                                            topLeftRadius: dayColumn.modelData.mergedMinutes > 0 ? 0 : radius
+                                            topLeftRadius: mergedSegment.height >= 1 ? 0 : radius
                                             topRightRadius: topLeftRadius
                                             fill: dayColumn.isToday ? Qt.lighter(Theme.stats.barActive, Theme.stats.lightBrightness)
-                                                : dayColumn.active ? Theme.stats.barActive : Theme.stats.bar
+                                                : dayColumn.active ? Theme.stats.barActive : root.dim(Theme.stats.bar)
                                             fillEnd: dayColumn.isToday ? Qt.lighter(Theme.stats.barActiveEnd, Theme.stats.lightBrightness)
-                                                   : dayColumn.active ? Theme.stats.barActiveEnd : Theme.stats.barEnd
-                                            opacity: dayColumn.isToday || dayColumn.active ? 1 : Theme.stats.barOpacity
+                                                   : dayColumn.active ? Theme.stats.barActiveEnd : root.dim(Theme.stats.barEnd)
 
                                             Behavior on fill { enabled: Motion.fades; MotionColor {} }
                                             Behavior on fillEnd { enabled: Motion.fades; MotionColor {} }
@@ -1844,18 +1846,17 @@ FocusScope {
                                                     width: parent.width
                                                     height: parent.height - weekBars.mergedHeight
                                                     radius: Theme.stats.barRadius
-                                                    topLeftRadius: weekBars.mergedHeight > 0 ? 0 : radius
+                                                    topLeftRadius: weekBars.mergedHeight >= 1 ? 0 : radius
                                                     topRightRadius: topLeftRadius
-                                                    fill: Theme.stats.bar
-                                                    fillEnd: Theme.stats.barEnd
-                                                    opacity: Theme.stats.barOpacity
+                                                    fill: root.dim(Theme.stats.bar)
+                                                    fillEnd: root.dim(Theme.stats.barEnd)
                                                 }
                                                 Surface {
                                                     anchors.top: parent.top
                                                     width: parent.width
                                                     height: weekBars.mergedHeight
                                                     radius: Theme.stats.barRadius
-                                                    bottomLeftRadius: parent.height > weekBars.mergedHeight ? 0 : radius
+                                                    bottomLeftRadius: parent.height > weekBars.mergedHeight && weekBars.mergedHeight >= 1 ? 0 : radius
                                                     bottomRightRadius: bottomLeftRadius
                                                     fill: Theme.stats.mergedBar
                                                     opacity: Theme.stats.mergedOpacity
