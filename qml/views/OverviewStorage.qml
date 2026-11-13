@@ -61,7 +61,7 @@ OverviewCard {
                 ColumnLayout {
                     id: drive
                     required property var modelData
-                    property string hover: ""
+                    property var hover: null
                     property real grow: root.barsGrown ? 1 : 0
 
                     readonly property real foldBelow: modelData.total * Theme.overview.storageFoldPercent / 100
@@ -74,12 +74,10 @@ OverviewCard {
                         return part.platform === "" ? qsTr("Other") : root.nameOf(part.platform)
                     }
 
-                    function describe(part: var): string {
-                        const text = qsTr("%1 · %2 · %3").arg(partName(part)).arg(root.roundSize(part.bytes))
-                            .arg(root.percent(part.bytes, modelData.total))
+                    function foldedText(part: var): string {
                         if (part.platform !== "" || folded.length === 0)
-                            return text
-                        return qsTr("%1 · includes %2").arg(text).arg(folded.map(p => root.nameOf(p.platform)).join(", "))
+                            return ""
+                        return qsTr("Includes %1").arg(folded.map(p => root.nameOf(p.platform)).join(", "))
                     }
 
                     Layout.fillWidth: true
@@ -109,20 +107,35 @@ OverviewCard {
                             Layout.fillWidth: true
                         }
                         Item { Layout.fillWidth: drive.modelData.root === drive.modelData.name }
-                        OverviewQuiet {
-                            visible: drive.hover !== ""
-                            text: drive.hover
-                            horizontalAlignment: Text.AlignRight
-                        }
-                        Label {
-                            visible: drive.hover === ""
-                            text: qsTr("%1 free").arg(root.roundSize(drive.modelData.free))
-                            color: Theme.palette.text
-                            font.weight: Theme.font.emphasisWeight
-                        }
-                        OverviewQuiet {
-                            visible: drive.hover === ""
-                            text: qsTr("of %1").arg(root.roundSize(drive.modelData.total))
+                        RowLayout {
+                            spacing: Theme.layout.spacing / 2
+
+                            Rectangle {
+                                visible: drive.hover !== null
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitWidth: Theme.font.smallSize
+                                implicitHeight: implicitWidth
+                                radius: Theme.overview.storageBarRadius
+                                color: !drive.hover || drive.hover.platform === "" ? Theme.overview.storageOther : root.colorOf(drive.hover.platform)
+                            }
+                            Label {
+                                visible: drive.hover !== null
+                                Layout.alignment: Qt.AlignBaseline
+                                text: drive.hover ? drive.partName(drive.hover) : ""
+                                color: Theme.palette.text
+                            }
+                            Label {
+                                Layout.alignment: Qt.AlignBaseline
+                                text: drive.hover ? root.roundSize(drive.hover.bytes)
+                                                  : qsTr("%1 free").arg(root.roundSize(drive.modelData.free))
+                                color: Theme.palette.text
+                                font.weight: Theme.font.emphasisWeight
+                            }
+                            OverviewQuiet {
+                                Layout.alignment: Qt.AlignBaseline
+                                text: drive.hover ? root.percent(drive.hover.bytes, drive.modelData.total)
+                                                  : qsTr("of %1").arg(root.roundSize(drive.modelData.total))
+                            }
                         }
                     }
 
@@ -141,7 +154,14 @@ OverviewCard {
                             layer.enabled: true
                         }
 
+                        // Clearing on the bar rather than each segment keeps the last part shown across the gaps.
+                        HoverHandler {
+                            onHoveredChanged: if (!hovered) drive.hover = null
+                            onPointChanged: if (point.position.x >= segments.childrenRect.width) drive.hover = null
+                        }
+
                         Row {
+                            id: segments
                             anchors.fill: parent
                             layer.enabled: true
                             layer.effect: MultiEffect {
@@ -165,8 +185,12 @@ OverviewCard {
                                     color: modelData.platform === "" ? Theme.overview.storageOther : root.colorOf(modelData.platform)
 
                                     HoverHandler {
-                                        onHoveredChanged: drive.hover = hovered ? drive.describe(segment.modelData) : ""
+                                        id: segmentHover
+                                        onHoveredChanged: if (hovered) drive.hover = segment.modelData
                                     }
+                                    ToolTip.visible: segmentHover.hovered && ToolTip.text !== ""
+                                    ToolTip.delay: Theme.tooltip.delay
+                                    ToolTip.text: drive.foldedText(segment.modelData)
                                 }
                             }
                         }
@@ -175,6 +199,10 @@ OverviewCard {
                     Flow {
                         Layout.fillWidth: true
                         spacing: Theme.layout.spacing / 2
+
+                        HoverHandler {
+                            onHoveredChanged: if (!hovered) drive.hover = null
+                        }
 
                         Repeater {
                             model: drive.parts
@@ -186,8 +214,12 @@ OverviewCard {
                                 rightPadding: Theme.layout.spacing * 1.5
 
                                 HoverHandler {
-                                    onHoveredChanged: drive.hover = hovered ? drive.describe(legend.modelData) : ""
+                                    id: legendHover
+                                    onHoveredChanged: if (hovered) drive.hover = legend.modelData
                                 }
+                                ToolTip.visible: legendHover.hovered && ToolTip.text !== ""
+                                ToolTip.delay: Theme.tooltip.delay
+                                ToolTip.text: drive.foldedText(legend.modelData)
 
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
