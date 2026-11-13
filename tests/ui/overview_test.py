@@ -120,7 +120,7 @@ SCENARIOS = [
              [("key F10\nwait 600\nclick Library overview\nwait 300\nexpect Back to games\nexpect Storage\n", None)],
              demo),
     Scenario("Storage lists the largest games",
-             [(OPEN + "expect Storage\nexpect Largest\nexpect-not Dormant\nexpect Baldur's Gate 3\n"
+             [(OPEN + "expect Storage\nexpect Largest games\nexpect-not Dormant\nexpect Baldur's Gate 3\n"
                + "expect-not Uninstall\n", None)], demo),
     Scenario("Games by platform, Status, Top tags and Release years list the library",
              [(OPEN + "expect Games by platform\nexpect Status\nexpect Top tags\nexpect Release years\n"
@@ -160,9 +160,9 @@ SCENARIOS = [
     Scenario("Save backups offers Back up now, which backs up the played games and stays on the overview",
              [(OPEN + DOWN + "expect Save backups\nexpect-not Not protected\nclick Back up now\nwait 1500\n"
                + "expect Library overview\nexpect Back up now\nexpect-not Backups kept per game\n", None)], demo),
-    Scenario("Fun facts name the longest session and link to the Gallery",
-             [(OPEN + DOWN + "expect Fun facts\nexpect Waiting longest\nclick Open the Gallery\nwait 800\n"
-               + "expect-not Library overview\nexpect Gallery\n", None)], demo),
+    Scenario("Fun facts name the game waiting longest",
+             [(OPEN + DOWN + "expect Fun facts\nexpect Waiting longest\n"
+               + "expect-not Open the Gallery\n", None)], demo),
     Scenario("a release year column opens the game list with that year's games, other filters cleared",
              [(OPEN + STATUS + "click Dropped\nwait 500\nexpect-not Metroid Dread\n"
                # The mouse is still where Dropped was, over this column: its open tooltip has the same text,

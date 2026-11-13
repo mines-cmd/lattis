@@ -328,7 +328,7 @@ OverviewCard {
                         anchors.fill: thumb
                         radius: thumb.radius
                         color: "transparent"
-                        border.width: 1
+                        border.width: Theme.layout.borderWidth
                         border.color: Theme.overview.storageCoverOutline
                     }
 
