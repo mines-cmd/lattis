@@ -35,6 +35,7 @@ FocusScope {
     signal closeRequested()
     signal filterRequested(string platform, var statuses, var tags)
     signal yearRequested(int year)
+    signal allBySizeRequested()
     signal gameRequested(string id)
     signal playRequested(string id)
     signal statsRequested()
@@ -623,6 +624,7 @@ FocusScope {
                             info: platformInfo
                             stacked: true
                             onGameRequested: id => root.gameRequested(id)
+                            onAllBySizeRequested: root.allBySizeRequested()
                         }
                     }
 

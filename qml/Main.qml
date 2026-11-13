@@ -1465,6 +1465,13 @@ ApplicationWindow {
                 Library.yearTo = year
                 window.setOverviewOpen(false)
             }
+            function onAllBySizeRequested() {
+                Library.showFiltered("", [], [])
+                Library.installedOnly = true
+                Library.sort = "size"
+                Library.sortDescending = true
+                window.setOverviewOpen(false)
+            }
             function onPlayRequested(id) { window.launch(Library.gameWithId(id)) }
             function onGameRequested(id) {
                 browser.revealGame(id)

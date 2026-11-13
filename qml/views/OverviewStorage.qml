@@ -15,12 +15,12 @@ OverviewCard {
     property bool barsGrown: false
 
     readonly property var drives: overview.drives ?? []
-    readonly property var platformSizes: overview.platformSizes ?? []
     readonly property var rows: overview.largest ?? []
     readonly property bool hasContent: drives.length > 0 || rows.length > 0
-    readonly property real otherTotal: drives.reduce((sum, d) => sum + d.otherBytes, 0)
+    readonly property real largestBytes: rows.reduce((most, r) => Math.max(most, r.bytes), 0)
 
     signal gameRequested(string id)
+    signal allBySizeRequested()
 
     onOverviewChanged: if (overview.drives === undefined) barsGrown = false
 
@@ -34,6 +34,10 @@ OverviewCard {
 
     function percent(part: real, whole: real): string {
         return whole > 0 ? qsTr("%1%").arg(Math.round(100 * part / whole)) : ""
+    }
+
+    function roundSize(bytes: real): string {
+        return Library.sizeText(bytes, 0)
     }
 
     OverviewCardTitle { text: qsTr("Storage") }
@@ -59,6 +63,24 @@ OverviewCard {
                     required property var modelData
                     property string hover: ""
                     property real grow: root.barsGrown ? 1 : 0
+
+                    readonly property real foldBelow: modelData.total * Theme.overview.storageFoldPercent / 100
+                    readonly property var shown: modelData.platforms.filter(p => p.bytes > 0 && p.bytes >= foldBelow)
+                    readonly property var folded: modelData.platforms.filter(p => p.bytes > 0 && p.bytes < foldBelow)
+                    readonly property real otherBytes: folded.reduce((sum, p) => sum + p.bytes, modelData.otherBytes)
+                    readonly property var parts: shown.concat(folded.length > 0 || (otherBytes > 0 && otherBytes >= foldBelow) ? [{ platform: "", bytes: otherBytes }] : [])
+
+                    function partName(part: var): string {
+                        return part.platform === "" ? qsTr("Other") : root.nameOf(part.platform)
+                    }
+
+                    function describe(part: var): string {
+                        const text = qsTr("%1 · %2 · %3").arg(partName(part)).arg(root.roundSize(part.bytes))
+                            .arg(root.percent(part.bytes, modelData.total))
+                        if (part.platform !== "" || folded.length === 0)
+                            return text
+                        return qsTr("%1 · includes %2").arg(text).arg(folded.map(p => root.nameOf(p.platform)).join(", "))
+                    }
 
                     Layout.fillWidth: true
                     spacing: Theme.layout.spacing
@@ -88,10 +110,19 @@ OverviewCard {
                         }
                         Item { Layout.fillWidth: drive.modelData.root === drive.modelData.name }
                         OverviewQuiet {
-                            text: drive.hover !== "" ? drive.hover
-                                : qsTr("%1 used of %2 · %3 free").arg(Library.sizeText(drive.modelData.total - drive.modelData.free))
-                                    .arg(Library.sizeText(drive.modelData.total)).arg(Library.sizeText(drive.modelData.free))
+                            visible: drive.hover !== ""
+                            text: drive.hover
                             horizontalAlignment: Text.AlignRight
+                        }
+                        Label {
+                            visible: drive.hover === ""
+                            text: qsTr("%1 free").arg(root.roundSize(drive.modelData.free))
+                            color: Theme.palette.text
+                            font.weight: Theme.font.emphasisWeight
+                        }
+                        OverviewQuiet {
+                            visible: drive.hover === ""
+                            text: qsTr("of %1").arg(root.roundSize(drive.modelData.total))
                         }
                     }
 
@@ -122,29 +153,56 @@ OverviewCard {
                             spacing: Theme.overview.storageSegmentGap
 
                             Repeater {
-                                model: drive.modelData.platforms.concat([{ platform: "", bytes: drive.modelData.otherBytes }])
+                                model: drive.parts
 
                                 Rectangle {
                                     id: segment
                                     required property var modelData
-                                    readonly property bool other: modelData.platform === ""
 
                                     visible: modelData.bytes > 0
                                     width: Math.max(Theme.overview.storageSegmentMinWidth * drive.grow * root.regrow, track.width * drive.grow * root.regrow * modelData.bytes / drive.modelData.total)
                                     height: track.height
-                                    color: other ?Theme.overview.storageOther : root.colorOf(modelData.platform)
+                                    color: modelData.platform === "" ? Theme.overview.storageOther : root.colorOf(modelData.platform)
 
                                     HoverHandler {
-                                        onHoveredChanged: {
-                                            if (hovered) {
-                                                const name = segment.other ? qsTr("Other files") : root.nameOf(segment.modelData.platform)
-                                                drive.hover = qsTr("%1 · %2 · %3").arg(name).arg(Library.sizeText(segment.modelData.bytes))
-                                                    .arg(root.percent(segment.modelData.bytes, drive.modelData.total))
-                                            } else {
-                                                drive.hover = ""
-                                            }
-                                        }
+                                        onHoveredChanged: drive.hover = hovered ? drive.describe(segment.modelData) : ""
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: Theme.layout.spacing / 2
+
+                        Repeater {
+                            model: drive.parts
+
+                            Row {
+                                id: legend
+                                required property var modelData
+                                spacing: Theme.layout.spacing
+                                rightPadding: Theme.layout.spacing * 1.5
+
+                                HoverHandler {
+                                    onHoveredChanged: drive.hover = hovered ? drive.describe(legend.modelData) : ""
+                                }
+
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: Theme.font.smallSize
+                                    height: width
+                                    radius: Theme.overview.storageBarRadius
+                                    color: legend.modelData.platform === "" ? Theme.overview.storageOther : root.colorOf(legend.modelData.platform)
+                                }
+                                Label {
+                                    text: drive.partName(legend.modelData)
+                                    color: Theme.palette.text
+                                    font.pixelSize: Theme.font.smallSize
+                                }
+                                OverviewQuiet {
+                                    text: root.roundSize(legend.modelData.bytes)
                                 }
                             }
                         }
@@ -156,35 +214,6 @@ OverviewCard {
                     }
                 }
             }
-
-            Flow {
-                Layout.fillWidth: true
-                spacing: Theme.layout.spacing * 2
-                visible: root.platformSizes.length > 0
-
-                Repeater {
-                    model: root.platformSizes.concat(root.otherTotal > 0 ? [{ platform: "", bytes: root.otherTotal }] : [])
-
-                    Row {
-                        id: legend
-                        required property var modelData
-                        readonly property bool other: modelData.platform === ""
-                        spacing: Theme.layout.spacing
-
-                        Rectangle {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Theme.font.smallSize
-                            height: width
-                            radius: Theme.overview.storageBarRadius
-                            color: legend.other ? Theme.overview.storageOther : root.colorOf(legend.modelData.platform)
-                        }
-                        OverviewQuiet {
-                            text: qsTr("%1 %2").arg(legend.other ? qsTr("Other files") : root.nameOf(legend.modelData.platform))
-                                .arg(legend.modelData.bytes > 0 ? Library.sizeText(legend.modelData.bytes) : qsTr("size unknown"))
-                        }
-                    }
-                }
-            }
         }
 
         ColumnLayout {
@@ -193,10 +222,10 @@ OverviewCard {
             Layout.alignment: Qt.AlignTop
             spacing: Theme.layout.spacing
 
-            // The card spaces its own title by twice the spacing; this column's spacing gives the other half.
-            OverviewCardTitle {
-                Layout.bottomMargin: Theme.layout.spacing
-                text: qsTr("Largest")
+            OverviewQuiet {
+                Layout.topMargin: root.stacked && root.drives.length > 0 ? Theme.overview.sectionSpacing : 0
+                text: qsTr("Largest games")
+                font.weight: Theme.font.emphasisWeight
             }
 
             OverviewQuiet {
@@ -213,6 +242,8 @@ OverviewCard {
                     readonly property bool unknownSize: modelData.bytes <= 0
 
                     Layout.fillWidth: true
+                    Layout.topMargin: Theme.layout.spacing / 2
+                    Layout.bottomMargin: Theme.layout.spacing / 2
                     implicitHeight: thumb.height
 
                     Rectangle {
@@ -245,46 +276,75 @@ OverviewCard {
                         iconWhenEmpty: true
                         source: entry.modelData.coverUrl
                     }
+                    Rectangle {
+                        anchors.fill: thumb
+                        radius: thumb.radius
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Theme.overview.storageCoverOutline
+                    }
 
                     ColumnLayout {
                         anchors.left: thumb.right
                         anchors.leftMargin: Theme.layout.spacing * 1.5
-                        anchors.right: size.left
-                        anchors.rightMargin: Theme.layout.spacing
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 0
-
-                        Label {
-                            Layout.fillWidth: true
-                            text: entry.modelData.title
-                            color: Theme.palette.text
-                            font.weight: Theme.font.emphasisWeight
-                            elide: Text.ElideRight
-                        }
-                        OverviewQuiet {
-                            Layout.fillWidth: true
-                            text: root.nameOf(entry.modelData.platform)
-                            elide: Text.ElideRight
-                        }
-                    }
-
-                    ColumnLayout {
-                        id: size
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 0
 
-                        OverviewQuiet {
-                            Layout.alignment: Qt.AlignRight
-                            text: entry.modelData.lastPlayedText !== "" ? entry.modelData.lastPlayedText : qsTr("Not played yet")
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: entry.modelData.title
+                                color: Theme.palette.text
+                                font.weight: Theme.font.emphasisWeight
+                                elide: Text.ElideRight
+                            }
+                            Label {
+                                text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
+                                color: entry.unknownSize ? Theme.overview.textMuted : Theme.palette.text
+                                font.weight: entry.unknownSize ? Font.Normal : Theme.font.emphasisWeight
+                            }
                         }
-                        Label {
-                            Layout.alignment: Qt.AlignRight
-                            text: entry.unknownSize ? qsTr("Size unknown") : Library.sizeText(entry.modelData.bytes)
-                            color: entry.unknownSize ? Theme.overview.textMuted : Theme.palette.text
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.layout.spacing
+
+                            OverviewQuiet {
+                                Layout.fillWidth: true
+                                text: root.nameOf(entry.modelData.platform)
+                                elide: Text.ElideRight
+                            }
+                            OverviewQuiet {
+                                text: entry.modelData.lastPlayedText !== "" ? entry.modelData.lastPlayedText : qsTr("Not played yet")
+                            }
+                        }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.topMargin: Theme.layout.spacing
+                            Layout.preferredHeight: Theme.overview.storageSizeBarHeight
+                            visible: Theme.overview.storageSizeBarHeight > 0 && !entry.unknownSize
+                            radius: height / 2
+                            color: Theme.overview.storageFree
+
+                            Rectangle {
+                                width: root.largestBytes > 0 ? parent.width * entry.modelData.bytes / root.largestBytes : 0
+                                height: parent.height
+                                radius: parent.radius
+                                color: root.colorOf(entry.modelData.platform)
+                            }
                         }
                     }
                 }
+            }
+
+            TextLink {
+                Layout.leftMargin: -leftPadding
+                visible: root.rows.length > 0
+                text: qsTr("Show all games by size")
+                onClicked: root.allBySizeRequested()
             }
         }
     }

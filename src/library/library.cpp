@@ -161,6 +161,18 @@ QString playedAgoText(const QDateTime &time)
     return (days < 730 ? Library::tr("1 year ago") : Library::tr("%1 years ago").arg(days / 365));
 }
 
+QString playedWhenText(const QDateTime &time)
+{
+    if (!time.isValid())
+        return {};
+    const qint64 days = time.toLocalTime().date().daysTo(QDate::currentDate());
+    if (days <= 0)
+        return Library::tr("Played today");
+    if (days == 1)
+        return Library::tr("Played yesterday");
+    return Library::tr("Played %1").arg(playedAgoText(time));
+}
+
 QString waitingText(const QDate &added)
 {
     const qint64 days = qMax<qint64>(0, added.daysTo(QDate::currentDate()));
@@ -4041,7 +4053,7 @@ void Library::overview()
             map.insert(key, rows);
         };
         withDates(QStringLiteral("continuePlaying"), playedAgoText);
-        withDates(QStringLiteral("largest"), playedAgoText);
+        withDates(QStringLiteral("largest"), playedWhenText);
         QVariantList statusCounts = map.value(QStringLiteral("statusCounts")).toList();
         for (QVariant &row : statusCounts) {
             QVariantMap m = row.toMap();
@@ -4054,9 +4066,9 @@ void Library::overview()
     }));
 }
 
-QString Library::sizeText(qint64 bytes) const
+QString Library::sizeText(qint64 bytes, int precision) const
 {
-    return QLocale().formattedDataSize(qMax<qint64>(bytes, 0), 1, QLocale::DataSizeTraditionalFormat);
+    return QLocale().formattedDataSize(qMax<qint64>(bytes, 0), precision, QLocale::DataSizeTraditionalFormat);
 }
 
 QVariantMap Library::deleteSession(const QString &id, const QString &end)
