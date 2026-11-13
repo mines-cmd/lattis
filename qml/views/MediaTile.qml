@@ -28,10 +28,14 @@ ArtThumb {
     // A video's thumbnail is made after its item was listed; the tile takes it when it arrives.
     property string madeThumbnail: ""
     property string madeLength: ""
-    onMediaChanged: {
-        madeThumbnail = ""
-        madeLength = ""
+    // Tiles created after a thumbnail was made (scrolled into view later) missed the signal.
+    function takeMade() {
+        const made = media.kind === "video" ? Library.madeVideoThumbnail(media.file) : ({})
+        madeThumbnail = made.thumbnail ?? ""
+        madeLength = made.length ?? ""
     }
+    onMediaChanged: takeMade()
+    Component.onCompleted: takeMade()
     Connections {
         target: Library
         enabled: tile.media.kind === "video"

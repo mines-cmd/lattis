@@ -3503,6 +3503,11 @@ QString Library::mediaKey(const QString &id) const
     return g->groupId;
 }
 
+QVariantMap Library::madeVideoThumbnail(const QString &file) const
+{
+    return m_madeVideoThumbnails.value(file);
+}
+
 void Library::requestVideoThumbnails(const QVariantList &items)
 {
     for (const QVariant &v : items) {
@@ -3513,9 +3518,11 @@ void Library::requestVideoThumbnails(const QVariantList &items)
             m_videoThumbnails = new VideoThumbnailMaker(videoThumbnailFolder(), this);
             connect(m_videoThumbnails, &VideoThumbnailMaker::made, this,
                     [this](const QString &path, const QString &thumbnail, qint64 durationMs) {
-                        emit videoThumbnailReady(QUrl::fromLocalFile(path).toString(),
-                                                 QUrl::fromLocalFile(thumbnail).toString(),
-                                                 SteamMedia::lengthText(durationMs));
+                        const QString file = QUrl::fromLocalFile(path).toString();
+                        const QString url = QUrl::fromLocalFile(thumbnail).toString();
+                        const QString length = SteamMedia::lengthText(durationMs);
+                        m_madeVideoThumbnails.insert(file, {{QStringLiteral("thumbnail"), url}, {QStringLiteral("length"), length}});
+                        emit videoThumbnailReady(file, url, length);
                     });
         }
         m_videoThumbnails->request(item.value(QStringLiteral("id")).toString());

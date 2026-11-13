@@ -241,6 +241,7 @@ public:
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
     Q_INVOKABLE void media(const QString &id);
     Q_INVOKABLE void allMedia();
+    Q_INVOKABLE QVariantMap madeVideoThumbnail(const QString &file) const;
     Q_INVOKABLE QVariantMap mediaGames(const QStringList &ids) const;
     Q_INVOKABLE QString mediaKey(const QString &id) const;
     Q_INVOKABLE void setMediaFavorite(const QString &path, bool on);
@@ -629,6 +630,7 @@ private:
     int m_mediaFavoriteRevision = 0;
     QSharedPointer<MediaFavoriteState> m_mediaFavorites;
     VideoThumbnailMaker *m_videoThumbnails = nullptr;
+    QHash<QString, QVariantMap> m_madeVideoThumbnails;
     bool m_showSortValue = true;
     int m_notInstalledHidden = 0;
     QSet<QString> m_tagNames;
