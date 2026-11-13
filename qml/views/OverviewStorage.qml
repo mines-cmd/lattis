@@ -254,10 +254,26 @@ OverviewCard {
             Layout.alignment: Qt.AlignTop
             spacing: Theme.layout.spacing
 
-            OverviewQuiet {
+            RowLayout {
+                Layout.fillWidth: true
                 Layout.topMargin: root.stacked && root.drives.length > 0 ? Theme.overview.sectionSpacing : 0
-                text: qsTr("Largest games")
-                font.weight: Theme.font.emphasisWeight
+                spacing: Theme.layout.spacing
+
+                OverviewQuiet {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignBaseline
+                    text: qsTr("Largest games")
+                    font.pixelSize: Theme.font.size
+                    font.weight: Theme.font.emphasisWeight
+                    elide: Text.ElideRight
+                }
+                TextLink {
+                    Layout.alignment: Qt.AlignBaseline
+                    Layout.rightMargin: -rightPadding
+                    visible: root.rows.length > 0
+                    text: qsTr("Show all games by size")
+                    onClicked: root.allBySizeRequested()
+                }
             }
 
             OverviewQuiet {
@@ -370,13 +386,6 @@ OverviewCard {
                         }
                     }
                 }
-            }
-
-            TextLink {
-                Layout.leftMargin: -leftPadding
-                visible: root.rows.length > 0
-                text: qsTr("Show all games by size")
-                onClicked: root.allBySizeRequested()
             }
         }
     }
