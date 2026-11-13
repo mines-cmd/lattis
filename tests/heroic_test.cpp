@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimeZone>
@@ -50,6 +51,8 @@ class HeroicTest : public QObject
 
 private slots:
     void init();
+
+    void gamePid();
 
     void findNative();
     void findFlatpak();
@@ -616,6 +619,25 @@ void HeroicTest::launchAndOpenArgs()
     QCOMPARE(HeroicLocate::launchArgs(xdgOpen, u"App"_s),
              QStringList{u"heroic://launch?appName=App&runner=legendary&gui=false"_s});
     QCOMPARE(HeroicLocate::openArgs(xdgOpen), QStringList{u"heroic://ping"_s});
+}
+
+void HeroicTest::gamePid()
+{
+    QProcess runner;
+    runner.start(u"/bin/sh"_s, {u"-c"_s, u"sleep 10; true"_s, u"legendary"_s, u"launch"_s, u"AppX"_s});
+    QVERIFY(runner.waitForStarted());
+    QCOMPARE(HeroicLocate::gamePid(u"AppX"_s), runner.processId());
+    QCOMPARE(HeroicLocate::gamePid(u"App"_s), 0);
+
+    QProcess epic;
+    epic.start(u"/bin/sh"_s, {u"-c"_s, u"sleep 10; true"_s, u"umu-run"_s, u"Game.exe"_s, u"-epicapp=AppY"_s});
+    QVERIFY(epic.waitForStarted());
+    QCOMPARE(HeroicLocate::gamePid(u"AppY"_s), epic.processId());
+    epic.kill();
+    epic.waitForFinished();
+    QCOMPARE(HeroicLocate::gamePid({}), 0);
+    runner.kill();
+    runner.waitForFinished();
 }
 
 QTEST_GUILESS_MAIN(HeroicTest)

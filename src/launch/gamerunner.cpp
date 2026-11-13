@@ -779,8 +779,14 @@ QString GameRunner::forceClose(const QString &gameId)
         return {};
     }
     if (const auto session = m_heroicSessions.find(gameId); session != m_heroicSessions.end()) {
-        // Our process only holds the game while it's the Heroic that runs it. Otherwise the game
-        // can't be told from anything else of Heroic's, or never started, so this stops waiting for it.
+        // Heroic ends the session itself once it writes the game's finish time.
+        if (const qint64 pid = HeroicLocate::gamePid(session->appName); pid > 0) {
+            qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1 (pid %2)").arg(gameId).arg(pid);
+            DetachedProcess::killTree(pid);
+            return {};
+        }
+        // Otherwise the game can't be told from anything else of Heroic's, or never started, so this stops
+        // waiting for it. Our process holds it only while it's the Heroic that runs it.
         if (session->process) {
             qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1").arg(gameId);
             session->forceClosed = true;

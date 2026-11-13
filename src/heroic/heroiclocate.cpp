@@ -3,6 +3,7 @@
 #include "heroicscan.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QUrl>
@@ -136,5 +137,31 @@ QStringList openArgs(const HeroicProgram &program)
     QStringList args = program.args;
     args.removeAll(QStringLiteral("--no-gui"));
     return args;
+}
+
+qint64 gamePid(const QString &appName, const QString &procDir)
+{
+    if (appName.isEmpty())
+        return 0;
+    const QByteArray wanted = appName.toUtf8();
+    const QByteArray epicArg = "-epicapp=" + wanted;
+    qint64 found = 0;
+    const QStringList pids = QDir(procDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &name : pids) {
+        bool ok = false;
+        const qint64 pid = name.toLongLong(&ok);
+        if (!ok)
+            continue;
+        QFile file(procDir + u'/' + name + QStringLiteral("/cmdline"));
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
+        const QList<QByteArray> args = file.readAll().split('\0');
+        // Epic games get -epicapp=<appName> on the command line of every process under the runner. The lowest
+        // pid is the one that started the rest, and killing it takes them all.
+        if ((args.contains(epicArg) || (args.contains("launch") && args.contains(wanted)))
+            && (found == 0 || pid < found))
+            found = pid;
+    }
+    return found;
 }
 }

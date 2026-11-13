@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QtTypes>
 
 struct HeroicProgram
 {
@@ -47,4 +48,8 @@ HeroicProgram findProgram(HeroicInstall::Kind kind, const HeroicLocations &where
 
 QStringList launchArgs(const HeroicProgram &program, const QString &appName);
 QStringList openArgs(const HeroicProgram &program);
+
+// The pid of the process that started the game's tree (`... -epicapp=<appName>` or `launch <appName>`); 0 when
+// there is none.
+qint64 gamePid(const QString &appName, const QString &procDir = QStringLiteral("/proc"));
 }
