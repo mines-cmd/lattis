@@ -4,7 +4,7 @@ Everything Lattis keeps lives in one folder, `~/.local/share/lattis/`. **Open** 
 
 | Path | What's in it |
 |---|---|
-| `settings.toml` | Your settings: the colors and style, the list's sort and filters, Steam, launching, shortcuts |
+| `settings.toml` | Your settings: the colors and style, the list's sort and filters, which Library overview cards are shown and where, Steam, launching, shortcuts |
 | `credentials.toml` | Your IGDB and SteamGridDB keys, and the Steam Web API key if you set one, readable only by you |
 | `themes/` | Your themes (a name for colors and a style), in `colors/` your colors and in `styles/` your styles, each with a `reference.toml` explaining every setting |
 | `library/platforms.toml` | Your platforms, in rail order, with their emulators and ROM folders |
