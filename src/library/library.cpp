@@ -3986,9 +3986,14 @@ void Library::overview()
         }
         QList<LibraryOverview::Drive> drives;
         for (const QStorageInfo &v : QStorageInfo::mountedVolumes()) {
-            if (v.isValid() && v.isReady() && v.bytesTotal() > 0)
-                drives.append({QString::fromUtf8(v.device()), v.name().isEmpty() ? v.rootPath() : v.name(), v.rootPath(),
-                               v.bytesTotal(), v.bytesAvailable()});
+            if (!v.isValid() || !v.isReady() || v.bytesTotal() <= 0)
+                continue;
+            QString name = v.name();
+            if (name.isEmpty()) {
+                const QString folder = QFileInfo(v.rootPath()).fileName();
+                name = folder.isEmpty() ? Library::tr("System") : folder.left(1).toUpper() + folder.sliced(1);
+            }
+            drives.append({QString::fromUtf8(v.device()), name, v.rootPath(), v.bytesTotal(), v.bytesAvailable()});
         }
 
         // One listing per backup folder; no archive is opened. A folder holding an archive is a game (or an emulator)
