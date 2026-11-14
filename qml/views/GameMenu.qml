@@ -353,7 +353,7 @@ SettingsMenu {
     Entry {
         actionName: "open_platform"
         iconPath: root.launcher === "steam" ? Icons.steamLine
-                : root.launcher === "heroic" ? Icons.openExternal : Icons.gamepadLine
+                : root.launcher === "heroic" ? Icons.heroic : Icons.gamepadLine
         visible: !root.multi && root.game.platform !== "linux"
         text: root.launcher === "steam" ? qsTr("Open in Steam")
             : root.launcher === "heroic" ? qsTr("Open Heroic") : qsTr("Open emulator")
@@ -367,7 +367,7 @@ SettingsMenu {
     Entry {
         id: saveFolderEntry
         actionName: "open_save_folder"
-        iconPath: Icons.save2Line
+        iconPath: Icons.folderUser
         visible: !root.multi && GameRunner.saveFolder(root.game.id ?? "") !== ""
         text: qsTr("Open save folder")
     }

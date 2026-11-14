@@ -445,7 +445,7 @@ Item {
             badge: false
         },
         open_platform: {
-            icon: Icons.openExternal,
+            icon: launcher === "steam" ? Icons.steamLine : launcher === "heroic" ? Icons.heroic : Icons.gamepadLine,
             color: Theme.iconButton.icon,
             tip: Actions.tip(launcher === "steam" ? qsTr("Open in Steam")
                              : launcher === "heroic" ? qsTr("Open Heroic") : qsTr("Open emulator"),
@@ -459,7 +459,7 @@ Item {
             badge: false
         },
         save_folder: {
-            icon: Icons.save2Line,
+            icon: Icons.folderUser,
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Open save folder: %1").arg(GameRunner.shownPath(saveFolder)),
                              Actions.keys.open_save_folder),
