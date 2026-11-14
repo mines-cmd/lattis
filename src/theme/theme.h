@@ -245,7 +245,7 @@ private:
     QString m_lastResetKey;
     QVariant m_lastResetRaw;
 
-    ThemeSettingsModel *m_colorsSchema = nullptr;
-    ThemeSettingsModel *m_styleSchema = nullptr;
-    ThemeSettingsModel *m_customizeSchema = nullptr;
+    mutable ThemeSettingsModel *m_colorsSchema = nullptr;
+    mutable ThemeSettingsModel *m_styleSchema = nullptr;
+    mutable ThemeSettingsModel *m_customizeSchema = nullptr;
 };

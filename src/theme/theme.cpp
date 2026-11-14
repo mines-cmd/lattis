@@ -340,24 +340,27 @@ Theme::Theme(QString dataDir, Uninstall::Trash trash, QObject *parent)
     ensureFiles();
     reload();
     watch();
-
-    m_colorsSchema = new ThemeSettingsModel(this, ThemeSettingsModel::Mode::Colors, this);
-    m_styleSchema = new ThemeSettingsModel(this, ThemeSettingsModel::Mode::Style, this);
-    m_customizeSchema = new ThemeSettingsModel(this, ThemeSettingsModel::Mode::Both, this);
 }
 
+// Built on first use: the three models cost about 15 ms and only Settings reads them.
 QObject *Theme::customizeSchema() const
 {
+    if (!m_customizeSchema)
+        m_customizeSchema = new ThemeSettingsModel(const_cast<Theme *>(this), ThemeSettingsModel::Mode::Both, const_cast<Theme *>(this));
     return m_customizeSchema;
 }
 
 QObject *Theme::colorsSchema() const
 {
+    if (!m_colorsSchema)
+        m_colorsSchema = new ThemeSettingsModel(const_cast<Theme *>(this), ThemeSettingsModel::Mode::Colors, const_cast<Theme *>(this));
     return m_colorsSchema;
 }
 
 QObject *Theme::styleSchema() const
 {
+    if (!m_styleSchema)
+        m_styleSchema = new ThemeSettingsModel(const_cast<Theme *>(this), ThemeSettingsModel::Mode::Style, const_cast<Theme *>(this));
     return m_styleSchema;
 }
 
@@ -812,13 +815,17 @@ void Theme::applyOverridesOnTop()
     m_resolved.clear();
     m_resolving.clear();
 
+    // One bulk insert per section: inserting the keys one by one costs about 40 ms at startup.
+    QHash<QQmlPropertyMap *, QVariantHash> changed;
     for (const Setting &s : ThemeSchema::settings()) {
         const QVariant value = valueOf(s);
         QQmlPropertyMap *map = m_sections.value(toQString(s.section));
         const QString key = camel(toQString(s.key));
         if (map->value(key) != value)
-            map->insert(key, value);
+            changed[map].insert(key, value);
     }
+    for (auto it = changed.cbegin(); it != changed.cend(); ++it)
+        it.key()->insert(it.value());
 
     QQmlPropertyMap *palette = m_sections.value(QStringLiteral("palette"));
     for (auto it = m_merged.cbegin(); it != m_merged.cend(); ++it) {
