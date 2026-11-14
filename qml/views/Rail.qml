@@ -521,10 +521,10 @@ Item {
                 color: Theme.rail.updateDot
                 border.color: Theme.rail.updateDotBorder
                 border.width: Theme.rail.updateDotBorderWidth
-                anchors.top: parent.top
-                anchors.right: parent.right
-                anchors.topMargin: -width / 4
-                anchors.rightMargin: -width / 4
+                readonly property bool atTop: Theme.rail.updateDotCorner.startsWith("top")
+                readonly property bool atLeft: Theme.rail.updateDotCorner.endsWith("left")
+                x: atLeft ? Theme.rail.updateDotMargin : parent.width - width - Theme.rail.updateDotMargin
+                y: atTop ? Theme.rail.updateDotMargin : parent.height - height - Theme.rail.updateDotMargin
             }
 
             ToolTip.visible: logoMouse.containsMouse && !(appMenu.item?.visible ?? false)

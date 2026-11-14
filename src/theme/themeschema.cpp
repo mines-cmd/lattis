@@ -366,6 +366,8 @@ constexpr Setting kSettings[] = {
     color("rail", "logo_hover", "#ffffff26", "Over the logo while hovered or its menu is open"),
     color("rail", "update_dot", "@accent", "The dot on the logo while a newer Lattis is waiting"),
     integer("rail", "update_dot_size", "10", 2, 40, "Size of that dot"),
+    choice("rail", "update_dot_corner", "top_right", "top_right top_left bottom_right bottom_left", "Which corner of the logo the dot sits in"),
+    integer("rail", "update_dot_margin", "-2", -40, 40, "Distance from the logo's edges to the dot, in pixels; negative moves it out past the edge"),
     color("rail", "update_dot_border", "@background", "Outline around that dot, so it reads on any logo"),
     integer("rail", "update_dot_border_width", "@layout.ring_width", 0, 10, "Outline thickness around that dot; 0 = none"),
     heading("rail", "Buttons"),
