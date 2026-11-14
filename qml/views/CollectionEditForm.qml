@@ -379,8 +379,13 @@ ColumnLayout {
             }
         }
         Label {
-            text: qsTr("Auto-update")
+            text: qsTr("Add games by rules")
             color: Theme.gameEditor.hintColor
+
+            HoverHandler { id: rulesHover }
+            ToolTip.visible: rulesHover.hovered
+            ToolTip.delay: Theme.tooltip.delay
+            ToolTip.text: qsTr("On: games that match the rules join the collection by themselves, alongside the ones you add by hand. Off: only the games you add by hand.")
         }
         SettingsSwitch {
             checked: root.rulesOn

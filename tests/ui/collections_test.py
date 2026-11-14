@@ -134,13 +134,13 @@ SCENARIOS += [
               ("expect 1 game\nexpect Hades\n" + LEAVE + "expect Hades\nexpect-not Pikmin 4\n"
                + OPEN_COLL + "expect Faves now\n", None)], with_collections),
     Scenario("Edit collection lists the exceptions, drops one, and Undo puts it back",
-             [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Added by hand\n"
+             [(FIRST + OPEN_COLL + EDIT + "expect Add games by rules\nexpect Added by hand\n"
                + "expect Left out\nexpect-not Hades\nclick Left out\nwait 300\nexpect Hades\nclick Hades\nclick Save\nwait 600\n"
                + "expect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect Hades\nexpect Mario Tennis Aces\nexpect Pikmin 4\nexpect 3 games\n"
                + "key Ctrl+Z\nwait 600\nexpect-not Hades\nexpect 2 games\n", None)], with_ruled),
     Scenario("Edit collection can turn the rules off, leaving the games added by hand",
-             [(FIRST + OPEN_COLL + EDIT + "toggle Auto-update\nwait 300\nexpect-not Left out\n"
+             [(FIRST + OPEN_COLL + EDIT + "toggle Add games by rules\nwait 300\nexpect-not Left out\n"
                + "click Save\nwait 600\n" + OPEN_COLL + "click Faves\nwait 500\n"
                + "expect 1 game\nexpect Pikmin 4\nexpect-not Mario Tennis Aces\n", None)], with_ruled),
     Scenario("Cancel in Edit collection changes nothing",
@@ -157,7 +157,7 @@ def with_rated(dirs):
 
 SCENARIOS += [
     Scenario("Edit collection: chips toggle, the count follows them and Save keeps them",
-             [(FIRST + OPEN_COLL + EDIT + "expect Auto-update\nexpect Library\nexpect Progress\nexpect Details\n"
+             [(FIRST + OPEN_COLL + EDIT + "expect Add games by rules\nexpect Library\nexpect Progress\nexpect Details\n"
                + "expect-has <b>2</b></font> games match\nclick Installed\nwait 400\nexpect-has <b>1</b></font> game matches\n"
                + "click Installed\nwait 400\nexpect-has <b>2</b></font> games match\nclick Installed\nwait 400\nexpect-has <b>1</b></font> game matches\n"
                + "click Save\nwait 600\nexpect-has Collection Faves changed\n" + OPEN_COLL + "click Faves\nwait 500\n"
@@ -214,14 +214,14 @@ SCENARIOS += [
              [(FIRST + OPEN_COLL + EDIT + "key Tab\nkey Tab\nkey Right\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
                + "key Right\nwait 300\nexpect Hades\n" + LEFT_HINT
                + "key Left\nkey Left\nwait 300\nexpect Library\n", None)], with_ruled),
-    Scenario("Edit collection with Auto-update off has no tabs, just the Games, and turning it on again keeps the rules",
-             [(FIRST + OPEN_COLL + EDIT + "toggle Auto-update\nwait 300\nexpect Games\nexpect Pikmin 4\n" + ADDED_HINT
+    Scenario("Edit collection with Add games by rules off has no tabs, just the Games, and turning it on again keeps the rules",
+             [(FIRST + OPEN_COLL + EDIT + "toggle Add games by rules\nwait 300\nexpect Games\nexpect Pikmin 4\n" + ADDED_HINT
                + "expect-not Rules\nexpect-not Left out\nexpect-not Library\n"
-               + "toggle Auto-update\nwait 300\nexpect Rules\nexpect Left out\nexpect Library\nexpect-not Games\n"
+               + "toggle Add games by rules\nwait 300\nexpect Rules\nexpect Left out\nexpect Library\nexpect-not Games\n"
                + "click Added by hand\nwait 300\nexpect Pikmin 4\nclick Cancel\nwait 400\n", None)], with_ruled),
     Scenario("Edit collection's tab with nothing in it says so",
              [(FIRST + OPEN_COLL + "expect Nothing yet\nclick Nothing yet\nwait 400\nkey Menu\nwait 400\nclick Edit\nwait 600\n"
-               + "toggle Auto-update\nwait 300\nclick Left out\nwait 300\n"
+               + "toggle Add games by rules\nwait 300\nclick Left out\nwait 300\n"
                + "expect No games are left out.\nclick Added by hand\nwait 300\nexpect No games were added by hand.\n", None)],
              with_collections),
 ]
