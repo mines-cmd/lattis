@@ -344,6 +344,7 @@ ColumnLayout {
         CheckList {
             visible: page.rows.length > 0
             Layout.fillWidth: true
+            searchable: false
             model: page.rows
             ticked: page.members
             maxListHeight: root.rulesOn

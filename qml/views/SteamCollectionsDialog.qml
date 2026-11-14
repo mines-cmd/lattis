@@ -112,7 +112,7 @@ AppDialog {
             withSelectAll: true
             maxListHeight: Theme.collections.importListHeight
             onToggled: id => root.ticked = root.toggled(root.ticked, id)
-            onAllToggled: on => root.ticked = on ? selectable.slice() : []
+            onToggledMany: (ids, on) => root.ticked = on ? root.ticked.concat(ids) : root.ticked.filter(id => !ids.includes(id))
         }
 
         Note {
