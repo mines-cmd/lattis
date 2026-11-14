@@ -11,6 +11,7 @@ ColumnLayout {
     property var model: []
     property var ticked: []
     property string label
+    property color labelColor: Theme.controls.labelColor
     // The count line's noun with its number, e.g. qsTr("%n game(s)"); no count line without one.
     property string noun
     // "auto" shows the search row once the rows don't fit in the box; true and false force it.
@@ -132,7 +133,7 @@ ColumnLayout {
         Label {
             visible: root.label !== ""
             text: root.label
-            color: Theme.controls.labelColor
+            color: root.labelColor
             font.pixelSize: Theme.controls.labelFontSize
             font.weight: Theme.font.strongWeight
         }

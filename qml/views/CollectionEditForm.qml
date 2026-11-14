@@ -335,6 +335,8 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             fill: true
+            label: root.rulesOn ? "" : qsTr("Games")
+            labelColor: Theme.gameEditor.headingColor
             noun: qsTr("%n game(s)", "", page.rows.length)
             searchable: true
             customSearch: true
@@ -510,12 +512,6 @@ ColumnLayout {
         ]
         current: root.tab
         onPicked: id => root.tab = id
-    }
-    Label {
-        visible: !root.rulesOn
-        text: qsTr("Games")
-        color: Theme.gameEditor.headingColor
-        font.weight: Theme.font.strongWeight
     }
 
     // The page sizes the dialog by the Rules page; with the rules off it is the list's own size.
