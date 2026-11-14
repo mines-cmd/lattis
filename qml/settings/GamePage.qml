@@ -96,6 +96,7 @@ Item {
                          hint: qsTr("Hidden for Linux games") },
         folder: { icon: Icons.folder, hint: qsTr("The game, ROM or program folder") },
         save_folder: { icon: Icons.folderUser, hint: qsTr("Hidden when the game has none") },
+        backup: { icon: Icons.save2Line, hint: qsTr("Back up the game's saves at once") },
         settings: { icon: Icons.gear, hint: qsTr("Edit the game") },
         gallery: { icon: Icons.image, hint: qsTr("Open the Gallery on this game") },
         mod_manager: { icon: Icons.puzzle, hint: qsTr("Hidden when the game has no mod manager") },

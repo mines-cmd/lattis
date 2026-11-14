@@ -303,8 +303,10 @@ void GameSaves::backUpNow(const QString &gameId)
     if (m_working)
         return;
     std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
-    if (!input)
+    if (!input) {
+        emit backedUp(gameId, tr("This game's saves can't be backed up."));
         return;
+    }
     m_working = true;
     setMessage({});
     emit workingChanged();
@@ -314,29 +316,31 @@ void GameSaves::backUpNow(const QString &gameId)
         watcher->deleteLater();
         m_working = false;
         const bool stillOpen = gameId == m_openGame;
-        if (stillOpen) {
-            switch (result.status) {
-            case SavesBackup::Status::Written:
-                setMessage(tr("Backed up %n file(s), %1.", "", result.files).arg(sizeText(result.bytes)));
-                break;
-            case SavesBackup::Status::Unchanged:
-                setMessage(tr("The saves haven't changed since the last backup."));
-                break;
-            case SavesBackup::Status::TooBig:
-                setMessage(tr("The saves come to %1, over the limit in Settings → Library.").arg(sizeText(result.bytes)));
-                break;
-            case SavesBackup::Status::Failed:
-                setMessage(tr("Couldn't back up: %1").arg(result.error));
-                break;
-            case SavesBackup::Status::Nothing:
-                setMessage(tr("No saves found to back up."));
-                break;
-            }
+        QString text;
+        switch (result.status) {
+        case SavesBackup::Status::Written:
+            text = tr("Backed up %n file(s), %1.", "", result.files).arg(sizeText(result.bytes));
+            break;
+        case SavesBackup::Status::Unchanged:
+            text = tr("The saves haven't changed since the last backup.");
+            break;
+        case SavesBackup::Status::TooBig:
+            text = tr("The saves come to %1, over the limit in Settings → Library.").arg(sizeText(result.bytes));
+            break;
+        case SavesBackup::Status::Failed:
+            text = tr("Couldn't back up: %1").arg(result.error);
+            break;
+        case SavesBackup::Status::Nothing:
+            text = tr("No saves found to back up.");
+            break;
         }
+        if (stillOpen)
+            setMessage(text);
         emit workingChanged();
         if (stillOpen)
             load(gameId);
         refreshLast();
+        emit backedUp(gameId, text);
     });
     watcher->setFuture(QtConcurrent::run([in = std::move(*input)] { return SavesBackup::run(in); }));
 }

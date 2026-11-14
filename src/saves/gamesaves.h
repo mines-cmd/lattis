@@ -86,6 +86,8 @@ signals:
     void workingChanged();
     void messageChanged();
     void backedUpAll();
+    // A backUpNow finished (or couldn't start): `text` says what came of it, whether or not the editor shows the game.
+    void backedUp(const QString &gameId, const QString &text);
 
 private:
     void setMessage(const QString &text);

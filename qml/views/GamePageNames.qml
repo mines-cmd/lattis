@@ -28,6 +28,7 @@ QtObject {
         open_platform: qsTr("Open in Steam, Heroic or the emulator"),
         folder: qsTr("Open folder"),
         save_folder: qsTr("Save folder"),
+        backup: qsTr("Back up saves now"),
         settings: qsTr("Properties"),
         gallery: qsTr("Gallery"),
         mod_manager: qsTr("Mod manager"),

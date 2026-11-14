@@ -125,8 +125,8 @@ const QStringList &gamePageChoices(const QString &place)
         return gridPanels;
     static const QStringList buttons = {QStringLiteral("favorite"), QStringLiteral("open_platform"),
                                         QStringLiteral("folder"),   QStringLiteral("settings"),
-                                        QStringLiteral("save_folder"), QStringLiteral("gallery"), QStringLiteral("mod_manager"),
-                                        QStringLiteral("menu")};
+                                        QStringLiteral("save_folder"), QStringLiteral("backup"), QStringLiteral("gallery"),
+                                        QStringLiteral("mod_manager"), QStringLiteral("menu")};
     return place == GamePage::buttons ? buttons : fields();
 }
 

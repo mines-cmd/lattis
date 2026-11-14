@@ -432,6 +432,18 @@ Item {
     readonly property string saveFolder: General.gamePageButtons.includes("save_folder") && game.id !== undefined
                                          ? GameRunner.saveFolder(game.id) : ""
 
+    // The game whose backup this page's button started: the toast is for it, not for the editor's Back up now.
+    property string backupGameId: ""
+    Connections {
+        target: GameSaves
+        function onBackedUp(gameId, text) {
+            if (gameId === root.backupGameId) {
+                root.backupGameId = ""
+                root.message(text)
+            }
+        }
+    }
+
     readonly property var managers: game.id !== undefined
         ? Library.modManagers.filter(m => m.games.some(g => g.id === game.id)) : []
     readonly property bool managerRunning: managers.some(m => GameRunner.runningManagers.includes(m.id))
@@ -463,6 +475,12 @@ Item {
             color: Theme.iconButton.icon,
             tip: Actions.tip(qsTr("Open save folder"),
                              Actions.keys.open_save_folder),
+            badge: false
+        },
+        backup: {
+            icon: Icons.save2Line,
+            color: Theme.iconButton.icon,
+            tip: qsTr("Back up saves now"),
             badge: false
         },
         settings: {
@@ -633,6 +651,11 @@ Item {
         }
         if (button === "gallery") {
             galleryRequested(g.id)
+            return
+        }
+        if (button === "backup") {
+            backupGameId = g.id
+            GameSaves.backUpNow(g.id)
             return
         }
         if (button === "folder")
@@ -996,7 +1019,8 @@ Item {
                             iconColor: root.actions[modelData].color
                             tip: root.actions[modelData].tip
                             badge: root.actions[modelData].badge
-                            busy: modelData === "open_platform" && root.openingId !== "" && root.openingId === root.game.id
+                            busy: (modelData === "open_platform" && root.openingId !== "" && root.openingId === root.game.id)
+                                  || (modelData === "backup" && GameSaves.working && root.backupGameId === root.game.id)
                             onClicked: modelData === "menu" ? root.menuRequested(this) : root.activate(modelData)
                         }
                     }
