@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import "AppMenuButtons.js" as AppMenuButtons
 
 // See docs/code/qml.md.
 SettingsMenu {
@@ -13,15 +12,6 @@ SettingsMenu {
 
     readonly property int steamWaiting: Library.steamWaiting.length
     readonly property bool hasRomFolders: Library.platformSettings.some(p => (p.romFolders ?? []).length > 0)
-
-    // One entry per name in AppMenuButtons.known.
-    readonly property var railRows: ({
-        add_game: { icon: Icons.add, text: qsTr("Add game") },
-        overview: { icon: Icons.book, text: qsTr("Library overview") },
-        play_statistics: { icon: Icons.barChartFill, text: qsTr("Play statistics") },
-        gallery: { icon: Icons.image, text: qsTr("Gallery") },
-        open_settings: { icon: Icons.gear, text: qsTr("Settings") }
-    })
 
     BulkLookupModel { id: missing }
     onAboutToShow: missing.reload()
@@ -72,18 +62,11 @@ SettingsMenu {
         onTriggered: Qt.callLater(() => root.chosen("update_emulators"))
     }
     SettingsMenuSeparator { visible: AppUpdate.notify || Installer.updates.length > 0 }
-    Instantiator {
-        model: AppMenuButtons.shown(General.railButtonOrder)
-        delegate: Entry {
-            required property string modelData
-            actionName: modelData
-            iconPath: root.railRows[modelData].icon
-            text: root.railRows[modelData].text
-        }
-        onObjectAdded: (index, object) => root.insertItem(index + 5, object)
-        onObjectRemoved: (index, object) => root.removeItem(object)
+    Entry {
+        actionName: "add_game"
+        iconPath: Icons.add
+        text: qsTr("Add game")
     }
-    SettingsMenuSeparator {}
     Entry {
         actionName: "look_up_missing"
         iconPath: Icons.searchEyeLine
@@ -103,6 +86,22 @@ SettingsMenu {
         visible: SteamLibrary.configured
         enabled: !SteamLibrary.syncing
         text: SteamLibrary.syncing ? qsTr("Syncing Steam library") : qsTr("Sync Steam library")
+    }
+    SettingsMenuSeparator {}
+    Entry {
+        actionName: "overview"
+        iconPath: Icons.book
+        text: qsTr("Library overview")
+    }
+    Entry {
+        actionName: "play_statistics"
+        iconPath: Icons.barChartFill
+        text: qsTr("Play statistics")
+    }
+    Entry {
+        actionName: "gallery"
+        iconPath: Icons.image
+        text: qsTr("Gallery")
     }
     SettingsMenuSeparator {}
     SettingsMenu {
@@ -166,6 +165,11 @@ SettingsMenu {
         text: qsTr("Import")
     }
     SettingsMenuSeparator {}
+    Entry {
+        actionName: "open_settings"
+        iconPath: Icons.gear
+        text: qsTr("Settings")
+    }
     Entry {
         actionName: "show_shortcuts"
         iconPath: Icons.commandLine

@@ -260,7 +260,6 @@ qt_add_qml_module(lattis
         qml/views/UpdateDialog.qml
         qml/views/WhatsNewDialog.qml
         qml/views/AppMenu.qml
-        qml/views/AppMenuButtons.js
         qml/views/PlatformMenu.qml
         qml/views/RailMenu.qml
         qml/views/GamePageMenu.qml
