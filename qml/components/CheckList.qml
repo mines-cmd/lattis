@@ -207,7 +207,6 @@ ColumnLayout {
                 Layout.preferredHeight: Theme.collections.checklistRowHeight
                 leftPadding: Theme.collections.checklistRowPadding
                 rightPadding: Theme.collections.checklistRowPadding + tally.implicitWidth + spacing
-                bordered: false
                 enabled: root.shownSelectable.length > 0
                 text: qsTr("Select all")
                 checked: count > 0 && count === root.shownSelectable.length
@@ -298,7 +297,6 @@ ColumnLayout {
                     height: Theme.collections.checklistRowHeight
                     leftPadding: Theme.collections.checklistRowPadding
                     rightPadding: Theme.collections.checklistRowPadding + info.implicitWidth + spacing
-                    bordered: off
                     enabled: !off
                     focusPolicy: Qt.NoFocus
                     opacity: off ? 0.5 : 1
