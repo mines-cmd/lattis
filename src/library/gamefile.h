@@ -72,6 +72,7 @@ struct GameFile
     QStringList savePaths;
     QString savesGame;
     int autoBackup = -1; // -1 = follow the platform, 0 = off, 1 = on
+    bool noSaves = false; // the game has no saves: no backup looks for them and the overview doesn't count it
     qint64 shortcut = 0;
     bool installed = true;
     QString sameAs;

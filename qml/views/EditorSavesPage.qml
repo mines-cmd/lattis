@@ -8,6 +8,7 @@ ColumnLayout {
 
     required property var editor
     property alias autoBackupBox: autoBackupBox
+    property alias noSavesSwitch: noSavesSwitch
     readonly property var savePaths: editor.saves.paths ?? []
     readonly property bool epicFolder: editor.saves.match === "epic"
     readonly property bool matchShown: ((editor.saves.matched ?? "") !== "" || epicFolder)
@@ -73,6 +74,25 @@ ColumnLayout {
                 model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
                         qsTr("On"), qsTr("Off")]
             }
+            Item { Layout.fillWidth: true }
+        }
+        RowLayout {
+            visible: editor.backupGame
+            Layout.fillWidth: true
+            Layout.minimumHeight: Theme.controls.inputHeight
+            spacing: Theme.layout.spacing
+
+            Label {
+                text: qsTr("This game has no saves")
+                color: Theme.gameEditor.labelColor
+                elide: Text.ElideRight
+
+                HoverHandler { id: noSavesHover }
+                ToolTip.visible: noSavesHover.hovered
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: qsTr("Backups skip the game, and the Library overview doesn't count it as never backed up.")
+            }
+            SettingsSwitch { id: noSavesSwitch }
             Item { Layout.fillWidth: true }
         }
         Rectangle {

@@ -222,7 +222,8 @@ QString setBackupName(const QString &archive, const QString &name)
     return {};
 }
 
-Result run(const Input &input)
+namespace {
+Result backUp(const Input &input)
 {
     Result result;
     result.gameId = backupKey(input);
@@ -303,6 +304,23 @@ Result run(const Input &input)
         QString trashError;
         if (!trash(archive, &trashError))
             qCWarning(lcBackup).noquote() << QStringLiteral("Can't trash the old backup %1: %2").arg(archive, trashError);
+    }
+    return result;
+}
+
+}
+
+Result run(const Input &input)
+{
+    const Result result = backUp(input);
+    const QString folder = input.options.folder + u'/' + result.gameId;
+    const QString marker = folder + u'/' + kNothingFound;
+    if (result.status == Status::Nothing) {
+        if (QDir().mkpath(folder))
+            if (QFile file(marker); !file.open(QIODevice::WriteOnly))
+                qCWarning(lcBackup).noquote() << QStringLiteral("Can't write %1").arg(marker);
+    } else if (result.status != Status::Failed) {
+        QFile::remove(marker);
     }
     return result;
 }

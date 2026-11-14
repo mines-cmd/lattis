@@ -19,6 +19,8 @@
 namespace SavesBackup {
 constexpr int kFormat = 1;
 inline const QString kKind = QStringLiteral("game-saves");
+// A file in a game's backup folder, left by a backup that found no saves and removed by one that did.
+inline const QString kNothingFound = QStringLiteral("nothing-found");
 
 using Trash = std::function<bool(const QString &path, QString *error)>;
 

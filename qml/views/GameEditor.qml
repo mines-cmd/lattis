@@ -126,6 +126,7 @@ Item {
     readonly property alias launchOptionsField: launchPage.launchOptionsField
     readonly property alias makeExecutableBox: launchPage.makeExecutableBox
     readonly property alias autoBackupBox: savesPage.autoBackupBox
+    readonly property alias noSavesSwitch: savesPage.noSavesSwitch
     readonly property alias artEditor: imagesPage.artEditor
     readonly property alias mediaMenu: imagesPage.mediaMenu
 
@@ -212,7 +213,7 @@ Item {
         status: 0, tags: 0, igdb: 0, steamgriddb: 0, steam_app: 0,
         media_folders: 1,
         emulator: 2, args: 2, rom: 2, launch_options: 2, proton: 2, exe: 2, installed: 2, start_dir: 2, install_dir: 2,
-        save_folder: 3, auto_backup: 3
+        save_folder: 3, auto_backup: 3, no_saves: 3
     })
     // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
     readonly property var dirtyTabs: {
@@ -319,6 +320,7 @@ Item {
         tagsEditor.reset(g.tags)
         emulatorBox.currentIndex = Math.max(0, emulators.choices.findIndex(c => c.id === g.emulator) + 1)
         autoBackupBox.currentIndex = g.autoBackup === 1 ? 1 : g.autoBackup === 0 ? 2 : 0
+        noSavesSwitch.checked = g.noSaves ?? false
         if (backupGame)
             GameSaves.open(g.id)
         argsField.text = Args.join(g.args)
@@ -672,6 +674,8 @@ Item {
             const choice = [-1, 1, 0][autoBackupBox.currentIndex]
             if (choice !== (game.autoBackup ?? -1))
                 out.auto_backup = choice < 0 ? null : choice === 1
+            if (noSavesSwitch.checked !== (game.noSaves ?? false))
+                out.no_saves = noSavesSwitch.checked ? true : null
         }
         if (mediaGame && newMediaFolders !== null)
             out.media_folders = newMediaFolders

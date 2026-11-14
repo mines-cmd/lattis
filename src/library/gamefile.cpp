@@ -54,6 +54,7 @@ constexpr Field kFields[] = {
     {"save_paths", StringList, 0, 0, "[]", "More folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game; an emulated game's replace its emulator's save folders in its backup"},
     {"saves_game", String, 0, 0, "", "Steam, Epic, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
     {"auto_backup", Bool, 0, 0, "", "Steam, Epic, Proton and Linux games: back up the game's saves when it closes (true), never (false), or, when not set, as its platform does"},
+    {"no_saves", Bool, 0, 0, "false", "The game has no saves worth backing up: backups skip it, and the Library overview doesn't count it as never backed up"},
     {"media_folders", StringList, 0, 0, "[]", "Folders of pictures and videos (OBS recordings, a screenshot tool's folder; `~` for the home folder) shown in the game's Media row and the Gallery; every picture and video in them and their subfolders counts"},
     {"shortcut", Integer, 1, 4294967295.0, "", "Proton games: the Steam shortcut's app ID; it names the prefix and the grid art. Don't change it by hand"},
     {"installed", Bool, 0, 0, "true", "Proton and Linux games: false after Uninstall removed its files (or a Proton game's shortcut) and kept it in the library, until it's located again"},
@@ -382,6 +383,8 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.savePaths = value.toStringList();
     else if (key == QLatin1String("auto_backup"))
         game.autoBackup = value.toBool() ? 1 : 0;
+    else if (key == QLatin1String("no_saves"))
+        game.noSaves = value.toBool();
     else if (key == QLatin1String("saves_game"))
         game.savesGame = value.toString();
     else if (key == QLatin1String("media_folders"))

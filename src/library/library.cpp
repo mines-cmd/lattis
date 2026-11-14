@@ -12,6 +12,7 @@
 #include "mediafolders.h"
 #include "romfoldermatch.h"
 #include "romscan.h"
+#include "savesbackup.h"
 #include "searchtext.h"
 #include "steamart.h"
 #include "steamachievements.h"
@@ -3960,6 +3961,8 @@ void Library::overview()
         if (!g.rom && (g.platform == kSteamPlatform || g.platform == kEpicPlatform || g.platform == kProtonPlatform
             || g.platform == kLinuxPlatform))
             o.backupKey = g.groupId.isEmpty() ? g.id : g.groupId;
+        if (file != files.cend() && file->noSaves)
+            o.backupKey.clear();
         games.append(o);
     }
     const QString backupFolder = m_backupFolder ? m_backupFolder() : QString();
@@ -4016,14 +4019,18 @@ void Library::overview()
         // One listing per backup folder; no archive is opened. A folder holding an archive is a game (or an emulator)
         // that has been backed up.
         std::optional<QSet<QString>> backedUp;
+        QSet<QString> nothingFound;
         if (!backupFolder.isEmpty()) {
             backedUp.emplace();
             LibraryOverview::SaveBackups saves;
             const QDir root(backupFolder);
             for (const QString &name : root.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
                 const QFileInfoList archives = QDir(root.filePath(name)).entryInfoList({QStringLiteral("*.tar.zst")}, QDir::Files);
-                if (archives.isEmpty())
+                if (archives.isEmpty()) {
+                    if (QFileInfo::exists(root.filePath(name) + u'/' + SavesBackup::kNothingFound))
+                        nothingFound.insert(name);
                     continue;
+                }
                 backedUp->insert(name);
                 for (const QFileInfo &archive : archives) {
                     ++saves.archives;
@@ -4033,6 +4040,12 @@ void Library::overview()
                 }
             }
             sources.saves = saves;
+        }
+
+        // A backup that looked and found no saves leaves a marker: such a game isn't one to back up.
+        for (LibraryOverview::Game &g : games) {
+            if (nothingFound.contains(g.backupKey))
+                g.backupKey.clear();
         }
 
         // Merged entries (several sessions in one) don't count, as in Play statistics.
@@ -5130,6 +5143,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("installDir"), file.installDir},
         {QStringLiteral("saveFolder"), file.saveFolder},
         {QStringLiteral("autoBackup"), file.autoBackup},
+        {QStringLiteral("noSaves"), file.noSaves},
         {QStringLiteral("platformAutoBackup"), platformAutoBackup},
         {QStringLiteral("mediaFolders"), file.mediaFolders},
         {QStringLiteral("uninstalled"), g->uninstalled},

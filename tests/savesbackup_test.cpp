@@ -210,16 +210,20 @@ void SavesBackupTest::aGameOverTheSizeCapIsSkipped()
 void SavesBackupTest::noMatchAndNoOwnPathsWritesNothing()
 {
     saveSlot();
-    QCOMPARE(run(input("A game the manifest lacks")).status, Status::Nothing);
-    QVERIFY(!QFileInfo::exists(m_folder));
+    const Result lacking = run(input("A game the manifest lacks"));
+    QCOMPARE(lacking.status, Status::Nothing);
+    QVERIFY(backups(m_folder, lacking.gameId).isEmpty());
+    QVERIFY(QFileInfo::exists(m_folder + u'/' + lacking.gameId + u'/' + kNothingFound));
 
     QCOMPARE(run(input()).status, Status::Written);
+    QVERIFY(!QFileInfo::exists(m_folder + u"/linux-celeste/" + kNothingFound));
     QDir(m_home).removeRecursively();
     QDir().mkpath(m_home);
     Input in = input();
     in.now = at(60);
     QCOMPARE(run(in).status, Status::Nothing); // the matched path is gone
     QCOMPARE(backups(m_folder, "linux-celeste").size(), 1);
+    QVERIFY(QFileInfo::exists(m_folder + u"/linux-celeste/" + kNothingFound));
 }
 
 void SavesBackupTest::ownPathsBackUpWithoutAMatch()

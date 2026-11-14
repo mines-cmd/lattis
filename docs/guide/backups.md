@@ -51,6 +51,7 @@ It covers Steam, Epic, Proton, Linux and emulated games. It's off until you turn
 
 - **For a platform:** the **Back up saves** switch on its row in Settings → Platforms (every platform with an emulator has it, and Steam, Epic, Proton and Linux).
 - **For one game:** Properties → **Backup when the game closes**: Platform default, On or Off. On or Off wins over the platform.
+- **A game with no saves:** switch on **This game has no saves** in its Properties. Backups skip it, Back up now in the overview leaves it out, and the overview doesn't count it as never backed up.
 
 The first time you turn it on, Lattis downloads the manifest. Settings → Library → **Game saves** shows its state and has **Update now**; while backup is on, Lattis checks for a newer list about once a day. That section also holds the backup folder (default `~/.local/share/lattis-saves/`, outside the data folder so a library backup stays small; point it at a synced folder to share saves between computers) and how many backups to keep (default 5; older ones go to the trash).
 

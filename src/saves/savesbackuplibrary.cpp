@@ -148,7 +148,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
         return std::nullopt;
     const LibraryStore &store = library.store();
     const LibrarySnapshot &snapshot = store.snapshot();
-    if (!ignoreChoice && !autoBackupOn(snapshot, *game))
+    if (!ignoreChoice && (snapshot.content.games.value(game->id).noSaves || !autoBackupOn(snapshot, *game)))
         return std::nullopt;
 
     const BackupPlan::Settings settings = readSettings(dataDir);
@@ -227,7 +227,8 @@ QList<Input> inputsForPlayed(const Library &library, const QString &dataDir, con
     QList<Input> out;
     QSet<QString> keys;
     for (const Game &game : library.allGames()) {
-        if (game.hidden || !game.installed || (game.playMinutes <= 0 && !game.lastPlayed.isValid()))
+        if (game.hidden || !game.installed || (game.playMinutes <= 0 && !game.lastPlayed.isValid())
+            || library.store().snapshot().content.games.value(game.id).noSaves)
             continue;
         std::optional<Input> input = inputFor(library, game.id, dataDir, appVersion, true);
         if (input && !keys.contains(backupKey(*input))) {
