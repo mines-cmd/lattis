@@ -500,7 +500,7 @@ constexpr Setting kSettings[] = {
     integer("collections", "list_max_height", "180", 40, 1000, "Height of the list of collections in the popup before it scrolls"),
     heading("collections", "Edit collection dialog"),
     integer("collections", "edit_width", "560", 300, 2000, "Width of the Edit collection dialog, at most the window's"),
-    integer("collections", "edit_list_height", "140", 40, 1000,
+    integer("collections", "edit_list_height", "320", 40, 1000,
             "Height of the lists of added and left-out games in the Edit collection dialog before they scroll"),
     integer("collections", "edit_label_width", "112", 40, 400, "Width of the column of rule names (Platform, Status, Rating) in the Edit collection dialog"),
     integer("collections", "edit_section_gap", "14", 0, 100, "Space between the Library, Progress and Details groups of rules in the Edit collection dialog"),
