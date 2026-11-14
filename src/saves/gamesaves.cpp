@@ -14,6 +14,7 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
+#include <array>
 
 namespace {
 constexpr int kMostResults = 30;
@@ -221,30 +222,47 @@ void GameSaves::backUpAll()
     if (m_working || !m_setup.playedInputs)
         return;
     QList<SavesBackup::Input> inputs = m_setup.playedInputs();
-    if (inputs.isEmpty())
+    if (inputs.isEmpty()) {
+        setMessage(tr("No played games with saves to back up."));
+        emit backedUpAll();
         return;
+    }
     m_working = true;
     setMessage({});
     emit workingChanged();
-    auto *watcher = new QFutureWatcher<int>(this);
-    connect(watcher, &QFutureWatcher<int>::finished, this, [this, watcher] {
-        const int failed = watcher->result();
+    auto *watcher = new QFutureWatcher<std::array<int, 3>>(this);
+    connect(watcher, &QFutureWatcher<std::array<int, 3>>::finished, this, [this, watcher] {
+        const std::array<int, 3> counts = watcher->result();
         watcher->deleteLater();
         m_working = false;
+        const int written = counts[0];
+        const int failed = counts[1];
+        const int unchanged = counts[2];
         if (failed > 0)
             setMessage(tr("%n game(s) couldn't be backed up.", "", failed));
+        else if (written > 0)
+            setMessage(tr("Backed up the saves of %n game(s).", "", written));
+        else if (unchanged > 0)
+            setMessage(tr("The saves haven't changed since the last backup."));
+        else
+            setMessage(tr("No saves found to back up."));
         emit workingChanged();
         emit backedUpAll();
         refreshLast();
     });
     // One after another: games of one emulator share a backup folder.
     watcher->setFuture(QtConcurrent::run([inputs = std::move(inputs)] {
-        int failed = 0;
+        std::array<int, 3> counts{};
         for (const SavesBackup::Input &input : inputs) {
-            if (SavesBackup::run(input).status == SavesBackup::Status::Failed)
-                ++failed;
+            switch (SavesBackup::run(input).status) {
+            case SavesBackup::Status::Written: ++counts[0]; break;
+            case SavesBackup::Status::Failed:
+            case SavesBackup::Status::TooBig: ++counts[1]; break;
+            case SavesBackup::Status::Unchanged: ++counts[2]; break;
+            case SavesBackup::Status::Nothing: break;
+            }
         }
-        return failed;
+        return counts;
     }));
 }
 

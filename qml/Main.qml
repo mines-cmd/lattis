@@ -1559,6 +1559,14 @@ ApplicationWindow {
             }
         }
 
+        Connections {
+            target: GameSaves
+            function onBackedUpAll() {
+                if (window.overviewOpen && GameSaves.message !== "")
+                    toast.show(GameSaves.message)
+            }
+        }
+
         Loader {
             id: galleryPage
             anchors.fill: parent
