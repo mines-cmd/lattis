@@ -69,7 +69,10 @@ Item {
 
             ArtPlaceholder {
                 anchors.fill: parent
-                visible: Theme.backdrop.placeholder && art.status !== Image.Ready
+                // Not while the art is still decoding or before the first game arrives: the
+                // placeholder would flash for a frame before the real backdrop.
+                visible: Theme.backdrop.placeholder && layer.game.id !== undefined
+                         && art.status !== Image.Ready && art.status !== Image.Loading
                 hue: layer.game.hue ?? 0
             }
 
