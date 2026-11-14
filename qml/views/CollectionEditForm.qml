@@ -34,6 +34,9 @@ ColumnLayout {
     property var removed: []
     property var dropAdded: []
     property var dropRemoved: []
+    property var takeAdded: []
+    property var takeRemoved: []
+    property int generation: 0
     property int matches: 0
     property string sort: ""
     property bool sortDescending: false
@@ -193,6 +196,9 @@ ColumnLayout {
         removed = d.removed ?? []
         dropAdded = []
         dropRemoved = []
+        takeAdded = []
+        takeRemoved = []
+        generation++
         recount()
         form.forceActiveFocus()
     }
@@ -215,16 +221,20 @@ ColumnLayout {
 
     function recount() {
         recountTimer.stop()
-        matches = Library.countCollectionMatches(collectionId, rules, dropAdded, dropRemoved)
+        matches = Library.countCollectionMatches(collectionId, rules, dropAdded, dropRemoved,
+                                                 idsOf(takeAdded), idsOf(takeRemoved))
     }
 
     function submit() {
-        finished(Library.editCollection(collectionId, rules, dropAdded, dropRemoved))
+        finished(Library.editCollection(collectionId, rules, dropAdded, dropRemoved,
+                                        idsOf(takeAdded), idsOf(takeRemoved)))
     }
 
     onRulesChanged: recountTimer.restart()
     onDropAddedChanged: recountTimer.restart()
     onDropRemovedChanged: recountTimer.restart()
+    onTakeAddedChanged: recountTimer.restart()
+    onTakeRemovedChanged: recountTimer.restart()
 
     Timer {
         id: recountTimer
@@ -255,35 +265,100 @@ ColumnLayout {
         wrapMode: Text.WordWrap
     }
 
-    // A tab of games with a tick each. It takes the page's height when the tabs are there; without them
-    // it is as tall as its list, which the page then sizes the dialog by.
+    // What a tick on `id` does in a list of `own` games (`extra` are the ones ticked in from the library,
+    // `otherExtra` the other list's): an own game is dropped or given back, an extra one is taken out again.
+    function pick(own, drops, extra, otherExtra, id, title) {
+        const without = list => list.filter(g => g.id !== id)
+        if (own.some(g => g.id === id)) {
+            if (otherExtra.some(g => g.id === id))
+                return { drops, extra, otherExtra: without(otherExtra) }
+            return { drops: toggled(drops, id), extra, otherExtra }
+        }
+        if (extra.some(g => g.id === id))
+            return { drops, extra: without(extra), otherExtra }
+        return { drops, extra: extra.concat([{ id, title }]), otherExtra: without(otherExtra) }
+    }
+
+    function pickAdded(id, title) {
+        const r = pick(added, dropAdded, takeAdded, takeRemoved, id, title)
+        dropAdded = r.drops
+        takeAdded = r.extra
+        takeRemoved = r.otherExtra
+    }
+
+    function pickRemoved(id, title) {
+        const r = pick(removed, dropRemoved, takeRemoved, takeAdded, id, title)
+        dropRemoved = r.drops
+        takeRemoved = r.extra
+        takeAdded = r.otherExtra
+    }
+
+    function idsOf(games) {
+        return games.map(g => g.id)
+    }
+
+    function heldCount(games, drops, extra, otherExtra) {
+        return kept(games, drops.concat(idsOf(otherExtra))).length + extra.length
+    }
+
+    // A tab of games with a tick each, and a search that lists the library's games to tick in. It takes
+    // the page's height when the tabs are there; without them it is as tall as its list, which the page
+    // then sizes the dialog by.
     component ListPage: ColumnLayout {
         id: page
         property var games: []
         property var drops: []
+        property var extra: []
+        property var otherExtra: []
         property string empty
         property string hint
-        signal toggled(string id)
+        property string searchHint
+        signal toggled(string id, string title)
+
+        readonly property string query: search.text.trim()
+        readonly property var found: query === "" ? [] : Library.findGames(query, 200)
+        readonly property var rows: query === ""
+            ? root.gameRows(games).concat(root.gameRows(extra))
+            : found.map(g => ({ id: g.id, title: g.title, info: g.platformName }))
+        readonly property var members: root.kept(games, drops.concat(root.idsOf(otherExtra))).concat(root.idsOf(extra))
 
         Layout.preferredHeight: root.rulesOn ? 0 : implicitHeight
         spacing: Theme.layout.spacing
 
-        CheckList {
-            visible: page.games.length > 0
+        Connections {
+            target: root
+            function onGenerationChanged() { search.clear() }
+        }
+
+        SettingsSearchField {
+            id: search
             Layout.fillWidth: true
-            model: root.gameRows(page.games)
-            ticked: root.kept(page.games, page.drops)
-            maxListHeight: root.rulesOn ? page.height - pageHint.implicitHeight - page.spacing : Theme.collections.editListHeight
-            onToggled: id => page.toggled(id)
+            Layout.preferredHeight: Theme.filters.tagSearchHeight
+            placeholderText: qsTr("Search your library")
+            Keys.onEscapePressed: event => {
+                event.accepted = text !== ""
+                if (event.accepted)
+                    clear()
+            }
+        }
+        CheckList {
+            visible: page.rows.length > 0
+            Layout.fillWidth: true
+            model: page.rows
+            ticked: page.members
+            maxListHeight: root.rulesOn
+                ? page.height - search.height - pageHint.implicitHeight - 2 * page.spacing
+                : Theme.collections.editListHeight
+            onToggled: id => page.toggled(id, page.rows.find(r => r.id === id)?.title ?? id)
         }
         Hint {
-            visible: page.games.length === 0
-            text: page.empty
+            visible: page.rows.length === 0
+            text: page.query === "" ? page.empty : qsTr("No game called \"%1\".").arg(page.query)
         }
         Hint {
             id: pageHint
-            visible: page.games.length > 0
-            text: page.hint
+            visible: page.rows.length > 0
+            text: page.query === "" ? page.hint : page.searchHint
         }
         Item { Layout.fillHeight: true }
     }
@@ -434,8 +509,10 @@ ColumnLayout {
         Layout.fillWidth: true
         model: [
             { id: "rules", name: qsTr("Rules") },
-            { id: "added", name: qsTr("Added by hand"), count: root.kept(root.added, root.dropAdded).length },
-            { id: "removed", name: qsTr("Left out"), count: root.kept(root.removed, root.dropRemoved).length },
+            { id: "added", name: qsTr("Added by hand"),
+              count: root.heldCount(root.added, root.dropAdded, root.takeAdded, root.takeRemoved) },
+            { id: "removed", name: qsTr("Left out"),
+              count: root.heldCount(root.removed, root.dropRemoved, root.takeRemoved, root.takeAdded) },
         ]
         current: root.tab
         onPicked: id => root.tab = id
@@ -695,16 +772,22 @@ ColumnLayout {
         ListPage {
             games: root.added
             drops: root.dropAdded
+            extra: root.takeAdded
+            otherExtra: root.takeRemoved
             empty: root.rulesOn ? qsTr("No games were added by hand.") : qsTr("No games.")
             hint: qsTr("Uncheck a game to take it out of the collection.")
-            onToggled: id => root.dropAdded = root.toggled(root.dropAdded, id)
+            searchHint: qsTr("Tick a game to add it to the collection.")
+            onToggled: (id, title) => root.pickAdded(id, title)
         }
         ListPage {
             games: root.removed
             drops: root.dropRemoved
+            extra: root.takeRemoved
+            otherExtra: root.takeAdded
             empty: qsTr("No games are left out.")
             hint: qsTr("Uncheck a game to let the rules include it again.")
-            onToggled: id => root.dropRemoved = root.toggled(root.dropRemoved, id)
+            searchHint: qsTr("Tick a game to keep the rules from including it.")
+            onToggled: (id, title) => root.pickRemoved(id, title)
         }
     }
 

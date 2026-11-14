@@ -834,6 +834,17 @@ void LibraryCollectionsTest::countsMatchesOfUnsavedRules()
     QCOMPARE(library->countCollectionMatches(id, rules, {}, {}), 1);
     QCOMPARE(library->countCollectionMatches(id, rules, {"switch-pikmin-4"}, {}), 0);
 
+    // A game picked from the library joins the hand-picked ones, and moving the left-out one over frees it.
+    QCOMPARE(library->countCollectionMatches(id, rules, {}, {}, {"steam-1145360"}), 2);
+    QCOMPARE(library->countCollectionMatches(id, rules, {}, {}, {}, {"switch-pikmin-4"}), 0);
+    QCOMPARE(library->editCollection(id, rules, {}, {}, {"steam-1145360"}, {}), QString());
+    QCOMPARE(library->store().collections().first().added, (QStringList{"switch-pikmin-4", "steam-1145360"}));
+    QVERIFY(library->store().collections().first().removed.isEmpty());
+    QCOMPARE(library->editCollection(id, rules, {}, {}, {}, {"steam-1145360"}), QString());
+    QCOMPARE(library->store().collections().first().added, QStringList{"switch-pikmin-4"});
+    QCOMPARE(library->store().collections().first().removed, QStringList{"steam-1145360"});
+    QCOMPARE(library->store().setCollection(c), QString());
+
     // A dropped left-out exception brings the game back when the rules match it.
     rules.insert("enabled", true);
     rules.insert("favoritesOnly", false);

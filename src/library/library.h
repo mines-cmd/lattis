@@ -209,9 +209,12 @@ public:
     Q_INVOKABLE QString addCollectionFromFilters(const QString &name);
     Q_INVOKABLE QVariantMap collectionDetails(const QString &id) const;
     Q_INVOKABLE QString editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
-                                       const QStringList &dropRemoved);
+                                       const QStringList &dropRemoved, const QStringList &moreAdded = {},
+                                       const QStringList &moreRemoved = {});
     Q_INVOKABLE int countCollectionMatches(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
-                                           const QStringList &dropRemoved) const;
+                                           const QStringList &dropRemoved, const QStringList &moreAdded = {},
+                                           const QStringList &moreRemoved = {}) const;
+    Q_INVOKABLE QVariantList findGames(const QString &search, int limit) const;
     Q_INVOKABLE QString renameCollection(const QString &id, const QString &name);
     Q_INVOKABLE QString deleteCollection(const QString &id);
     Q_INVOKABLE QVariantList steamCollectionAccounts() const;

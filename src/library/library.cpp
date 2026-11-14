@@ -2314,7 +2314,44 @@ std::optional<CollectionRules> rulesFromVariant(const QVariantMap &rules)
     r.achievements = rules.value(QStringLiteral("achievements")).toStringList();
     return r;
 }
+
+// A game moved to the other list leaves this one, so it is never in both.
+void applyExceptions(Collection &c, const QStringList &dropAdded, const QStringList &dropRemoved,
+                     const QStringList &moreAdded, const QStringList &moreRemoved)
+{
+    c.added.removeIf([&](const QString &x) { return dropAdded.contains(x) || moreRemoved.contains(x); });
+    c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x) || moreAdded.contains(x); });
+    for (const QString &id : moreAdded) {
+        if (!c.added.contains(id))
+            c.added.append(id);
+    }
+    for (const QString &id : moreRemoved) {
+        if (!c.removed.contains(id))
+            c.removed.append(id);
+    }
+}
 } // namespace
+
+QVariantList Library::findGames(const QString &search, int limit) const
+{
+    const QStringList words = SearchText::words(search);
+    QList<const Game *> found;
+    for (const Game &g : m_games) {
+        if (!g.hidden && SearchText::matches(SearchText::fold(g.title), words))
+            found.append(&g);
+    }
+    const QCollator collator = titleCollator();
+    std::sort(found.begin(), found.end(),
+              [&](const Game *a, const Game *b) { return collator.compare(a->title, b->title) < 0; });
+    QVariantList out;
+    for (const Game *g : std::as_const(found)) {
+        if (out.size() >= limit)
+            break;
+        out.append(QVariantMap{{QStringLiteral("id"), g->id}, {QStringLiteral("title"), g->title},
+                               {QStringLiteral("platformName"), g->platformName}});
+    }
+    return out;
+}
 
 QVariantMap Library::collectionDetails(const QString &id) const
 {
@@ -2360,7 +2397,8 @@ QVariantMap Library::collectionDetails(const QString &id) const
 }
 
 int Library::countCollectionMatches(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
-                                    const QStringList &dropRemoved) const
+                                    const QStringList &dropRemoved, const QStringList &moreAdded,
+                                    const QStringList &moreRemoved) const
 {
     const QList<Collection> &all = m_store.collections();
     const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
@@ -2368,14 +2406,14 @@ int Library::countCollectionMatches(const QString &id, const QVariantMap &rules,
         return 0;
     Collection c = *found;
     c.rules = rulesFromVariant(rules);
-    c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
-    c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
+    applyExceptions(c, dropAdded, dropRemoved, moreAdded, moreRemoved);
     const CollectionMatcher matcher = matcherOf(c);
     return int(std::count_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return !g.hidden && matcher.isMember(g); }));
 }
 
 QString Library::editCollection(const QString &id, const QVariantMap &rules, const QStringList &dropAdded,
-                                const QStringList &dropRemoved)
+                                const QStringList &dropRemoved, const QStringList &moreAdded,
+                                const QStringList &moreRemoved)
 {
     const QList<Collection> &all = m_store.collections();
     const auto found = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == id; });
@@ -2388,8 +2426,7 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
     c.sort = listSorts().contains(sort) ? sort : QString();
     c.sortDescending = !c.sort.isEmpty() && rules.value(QStringLiteral("sortDescending")).toBool();
     c.groupBy = listGroupings().contains(groupBy) ? groupBy : QString();
-    c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
-    c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
+    applyExceptions(c, dropAdded, dropRemoved, moreAdded, moreRemoved);
     if (c == *found)
         return {};
 
