@@ -14,7 +14,7 @@ RowLayout {
     SettingsComboBox {
         id: combo
         Layout.preferredWidth: 200
-        model: root.choices
+        model: (root.choices ?? []).map(c => { const t = c.replace(/_/g, " "); return t.charAt(0).toUpperCase() + t.slice(1) })
 
         Connections {
             target: root
