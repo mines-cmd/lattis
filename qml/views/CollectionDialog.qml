@@ -26,6 +26,12 @@ AppDialog {
     readonly property bool renaming: mode === "rename"
     readonly property bool editing: mode === "edit"
 
+    // The form outlives the dialog, so it is loaded before open() or the last collection shows for a frame.
+    function prepare() {
+        if (editing && editForm.item)
+            editForm.item.load()
+    }
+
     function finish(error) {
         close()
         if (error !== "")

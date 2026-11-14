@@ -127,6 +127,7 @@ ColumnLayout {
         dialog.collectionId = id
         dialog.startName = name
         dialog.ids = ids
+        dialog.prepare()
         dialog.open()
     }
     RowLayout {
