@@ -20,6 +20,14 @@ Item {
 
     signal message(string text)
 
+    // The screenshot hook's `mod_managers/add` or `mod_managers/edit` (the first mod manager).
+    function reveal(item) {
+        if (item === "add")
+            dialog.openFor(null, [])
+        else if (item === "edit" && managers.length > 0)
+            dialog.openFor(managers[0])
+    }
+
     function open(manager) {
         const missing = GameRunner.missingPrefixGame(manager.id)
         if (missing !== "") {

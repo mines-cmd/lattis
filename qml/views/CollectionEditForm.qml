@@ -315,7 +315,7 @@ ColumnLayout {
         property string searchHint
         signal toggled(string id, string title)
 
-        readonly property string query: search.text.trim()
+        readonly property string query: list.query
         readonly property var found: query === "" ? [] : Library.findGames(query, 200)
         readonly property var rows: query === ""
             ? root.gameRows(games).concat(root.gameRows(extra))
@@ -327,37 +327,30 @@ ColumnLayout {
 
         Connections {
             target: root
-            function onGenerationChanged() { search.clear() }
+            function onGenerationChanged() { list.clearSearch() }
         }
 
-        SettingsSearchField {
-            id: search
-            Layout.fillWidth: true
-            Layout.preferredHeight: Theme.filters.tagSearchHeight
-            placeholderText: qsTr("Search your library")
-            Keys.onEscapePressed: event => {
-                event.accepted = text !== ""
-                if (event.accepted)
-                    clear()
-            }
-        }
         CheckList {
-            visible: page.rows.length > 0
+            id: list
             Layout.fillWidth: true
-            searchable: false
+            Layout.fillHeight: true
+            fill: true
+            noun: qsTr("%n game(s)", "", page.rows.length)
+            searchable: true
+            customSearch: true
+            searchPlaceholder: qsTr("Search your library")
+            withSelectAll: query !== ""
+            emptyText: page.empty
             model: page.rows
             ticked: page.members
-            maxListHeight: root.rulesOn
-                ? page.height - search.height - pageHint.implicitHeight - 2 * page.spacing
-                : Theme.collections.editListHeight
+            maxListHeight: root.rulesOn ? page.height : Theme.collections.editListHeight
             onToggled: id => page.toggled(id, page.rows.find(r => r.id === id)?.title ?? id)
+            onToggledMany: (ids, on) => {
+                for (const id of ids)
+                    page.toggled(id, page.rows.find(r => r.id === id)?.title ?? id)
+            }
         }
         Hint {
-            visible: page.rows.length === 0
-            text: page.query === "" ? page.empty : qsTr("No game called \"%1\".").arg(page.query)
-        }
-        Hint {
-            id: pageHint
             visible: page.rows.length > 0
             text: page.query === "" ? page.hint : page.searchHint
         }

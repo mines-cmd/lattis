@@ -21,6 +21,8 @@ ColumnLayout {
     property bool withSelectAll: false
     property string emptyText
     property int maxListHeight: Theme.collections.importListHeight
+    // Lets a taller parent squeeze the list below maxListHeight (it never grows past its rows).
+    property bool fill: false
 
     readonly property string query: search.text.trim()
     readonly property alias onlySelected: onlyTicked.checked
@@ -62,10 +64,10 @@ ColumnLayout {
         return shown.findIndex(r => r.id === id)
     }
 
-    function toggleRow(index) {
+    function toggleRow(index, withShift) {
         const id = shown[index].id
         const anchor = indexOfShown(anchorId)
-        if ((Qt.application.keyboardModifiers & Qt.ShiftModifier) && anchor >= 0) {
+        if (withShift && anchor >= 0) {
             anchorOn = !isTicked(id)
             tickRange(anchor, index, anchorOn)
         } else {
@@ -101,6 +103,10 @@ ColumnLayout {
             toggledMany(ids, on)
     }
 
+    function clearSearch() {
+        search.clear()
+    }
+
     function focusSearch(text) {
         if (!searchShown)
             return
@@ -133,9 +139,12 @@ ColumnLayout {
         Item { Layout.fillWidth: true }
         Label {
             visible: root.noun !== ""
-            readonly property bool narrowed: root.query !== "" || root.onlySelected
-            text: (narrowed ? qsTr("%1 of %2 shown").arg(root.shown.length).arg(root.model.length)
-                            : root.noun.replace("%n", root.model.length))
+            // With customSearch the model already is the search's results, so only Selected narrows it.
+            readonly property bool results: root.customSearch && root.query !== "" && !root.onlySelected
+            readonly property bool narrowed: root.onlySelected || (root.query !== "" && !root.customSearch)
+            text: (results ? qsTr("%1 shown").arg(root.shown.length)
+                  : narrowed ? qsTr("%1 of %2 shown").arg(root.shown.length).arg(root.model.length)
+                  : root.noun.replace("%n", root.model.length))
                   + " · " + qsTr("%1 selected").arg(root.ticked.length)
             color: Theme.collections.checklistCountColor
             font.pixelSize: Theme.controls.descriptionFontSize
@@ -176,6 +185,8 @@ ColumnLayout {
 
     Rectangle {
         Layout.fillWidth: true
+        Layout.fillHeight: root.fill
+        Layout.maximumHeight: root.fill ? implicitHeight : Infinity
         implicitHeight: box.implicitHeight + 2 * Theme.collections.checklistPadding
         radius: Theme.controls.inputRadius
         color: Theme.controls.inputBackground
@@ -233,6 +244,8 @@ ColumnLayout {
                 id: list
                 visible: root.shown.length > 0
                 Layout.fillWidth: true
+                Layout.fillHeight: root.fill
+                Layout.maximumHeight: root.fill ? contentHeight : Infinity
                 Layout.preferredHeight: Math.min(contentHeight, root.rowsThatFit * Theme.collections.checklistRowHeight)
                 clip: true
                 // A curve-rendered check mark in a row cut off by the edge isn't clipped, only a layer is.
@@ -291,9 +304,16 @@ ColumnLayout {
                     opacity: off ? 0.5 : 1
                     text: modelData.title
                     checked: root.isTicked(modelData.id)
+                    // The press's own modifiers: the application's global state lags on some platforms.
+                    property bool shiftHeld: false
                     nextCheckState: () => {
-                        root.toggleRow(index)
+                        root.toggleRow(index, shiftHeld)
                         return checkState
+                    }
+
+                    PointHandler {
+                        acceptedButtons: Qt.LeftButton
+                        onActiveChanged: if (active) row.shiftHeld = (point.modifiers & Qt.ShiftModifier) !== 0
                     }
 
                     background: Rectangle {

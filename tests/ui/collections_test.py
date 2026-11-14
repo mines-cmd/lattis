@@ -211,7 +211,7 @@ SCENARIOS += [
                + "expect-has <b>3</b></font> games match\nexpect 0\nclick Added by hand\nwait 300\nclick Pikmin 4\nwait 400\n"
                + "expect-has <b>2</b></font> games match\nclick Cancel\nwait 500\n", None)], with_ruled),
     Scenario("Edit collection's tabs follow the keyboard: Tab reaches the open one after the switch, arrows change the tab",
-             [(FIRST + OPEN_COLL + EDIT + "key Tab\nkey Tab\nkey Right\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
+             [(FIRST + OPEN_COLL + EDIT + "key Tab\nkey Tab\nkey Tab\nkey Tab\nkey Right\nwait 300\nexpect Pikmin 4\n" + ADDED_HINT
                + "key Right\nwait 300\nexpect Hades\n" + LEFT_HINT
                + "key Left\nkey Left\nwait 300\nexpect Library\n", None)], with_ruled),
     Scenario("Edit collection with Add games by rules off has no tabs, just the Games, and turning it on again keeps the rules",

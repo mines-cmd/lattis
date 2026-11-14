@@ -16,7 +16,6 @@ AppDialog {
     property var tools: []
     property string toolDefault: ""
     property var shortcut: null
-    property bool onlySelected: false
 
     readonly property bool editing: editId !== ""
     readonly property bool adopting: !editing && shortcut !== null
@@ -27,15 +26,19 @@ AppDialog {
     readonly property bool canChoosePrefix: proton && !adopting && prefixGames.length === 1
     readonly property bool sharesPrefix: canChoosePrefix && prefixChoice.currentIndex === 0
     readonly property bool canSave: nameField.text.trim() !== "" && exe !== ""
-    readonly property string query: gameSearch.text.trim().toLowerCase()
-    readonly property var shownGames: linkable.filter(g => (!onlySelected || checked[g.id])
-                                                            && (query === "" || g.title.toLowerCase().includes(query)))
 
     signal saved(string name)
 
     function setLinked(id, on) {
         const c = Object.assign({}, checked)
         c[id] = on
+        checked = c
+    }
+
+    function setLinkedMany(ids, on) {
+        const c = Object.assign({}, checked)
+        for (const id of ids)
+            c[id] = on
         checked = c
     }
 
@@ -63,8 +66,7 @@ AppDialog {
         const i = tools.findIndex(t => t.name === (manager?.protonTool ?? ""))
         protonChoice.currentIndex = i < 0 ? 0 : i + 1
         shortcut = null
-        onlySelected = false
-        gameSearch.clear()
+        gameList.clearSearch()
         error.text = ""
         open()
         nameField.forceActiveFocus()
@@ -198,138 +200,18 @@ AppDialog {
                                     : qsTr("It runs directly, like a Linux game.")
             }
 
-            RowLayout {
+            CheckList {
+                id: gameList
                 Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
-
-                FieldLabel { text: qsTr("Games it mods") }
-                Item { Layout.fillWidth: true }
-                Label {
-                    readonly property int linkedCount: root.linked.length
-                    text: root.query !== "" || root.onlySelected
-                          ? qsTr("%1 of %2 shown · %3 selected").arg(root.shownGames.length).arg(root.linkable.length).arg(linkedCount)
-                          : qsTr("%1 games · %2 selected").arg(root.linkable.length).arg(linkedCount)
-                    color: linkedCount > 0 ? Theme.controls.labelColor : Theme.controls.descriptionColor
-                    font.pixelSize: Theme.controls.descriptionFontSize
-                }
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
-
-                SettingsSearchField {
-                    id: gameSearch
-                    Layout.fillWidth: true
-                    implicitHeight: Theme.controls.inputHeight
-                    placeholderText: qsTr("Search games")
-                }
-                SettingsButton {
-                    implicitHeight: Theme.controls.inputHeight
-                    checkable: true
-                    checked: root.onlySelected
-                    enabled: root.linked.length > 0 || root.onlySelected
-                    text: qsTr("Selected")
-                    tip: qsTr("Show only the games you've checked")
-                    textColor: checked ? Theme.settingsWindow.markerColor : foreground
-                    onToggled: root.onlySelected = checked
-                }
-            }
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(gameList.contentHeight, 5 * Theme.controls.inputHeight) + 2 * Theme.layout.spacing + 2
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.right: gameScroll.visible ? gameScroll.left : parent.right
-                anchors.rightMargin: gameScroll.visible ? Theme.layout.spacing : 0
-                radius: Theme.controls.inputRadius
-                color: Theme.controls.inputBackground
-                border.color: Theme.controls.inputBorder
-                border.width: Theme.controls.inputBorderWidth
-
-                ListView {
-                    id: gameList
-                    anchors.fill: parent
-                    anchors.margins: Theme.layout.spacing + 1
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
-                    model: root.shownGames
-                    ScrollBar.vertical: SettingsScrollBar {
-                        id: gameScroll
-                        parent: gameList.parent.parent
-                        anchors.top: parent.top
-                        anchors.bottom: parent.bottom
-                        anchors.right: parent.right
-                        thickness: 6
-                    }
-
-                    delegate: Item {
-                        id: gameRow
-                        required property var modelData
-                        required property int index
-                        readonly property bool on: root.checked[modelData.id] ?? false
-                        width: ListView.view.width
-                        height: Theme.controls.inputHeight
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Theme.radius.small
-                            color: gameRow.on ? Theme.settingsWindow.themePopupSelectedBackground
-                                 : rowArea.containsMouse ? Theme.controls.buttonHoverBackground : "transparent"
-                            Behavior on color { enabled: Motion.fades; MotionColor {} }
-                        }
-                        MouseArea {
-                            id: rowArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.setLinked(gameRow.modelData.id, !gameRow.on)
-                        }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: Theme.layout.spacing
-                            anchors.rightMargin: Theme.layout.spacing
-                            spacing: Theme.layout.spacing
-
-                            SettingsCheckBox {
-                                checked: gameRow.on
-                                onToggled: root.setLinked(gameRow.modelData.id, checked)
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                text: gameRow.modelData.title
-                                color: Theme.controls.labelColor
-                                elide: Text.ElideRight
-                            }
-                            Label {
-                                text: gameRow.modelData.platformName
-                                color: Theme.controls.descriptionColor
-                                font.pixelSize: Theme.settingsWindow.markerFontSize
-                            }
-                        }
-                        Rectangle {
-                            visible: gameRow.index < gameList.count - 1 && !gameRow.on
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.bottom: parent.bottom
-                            anchors.leftMargin: Theme.controls.checkboxSize + 2 * Theme.layout.spacing
-                            anchors.rightMargin: Theme.layout.spacing
-                            height: 1
-                            color: Theme.settingsWindow.rowDivider
-                            opacity: 0.5
-                        }
-                    }
-                }
-                Label {
-                    anchors.centerIn: parent
-                    visible: root.shownGames.length === 0
-                    text: root.linkable.length === 0 ? qsTr("No Steam, Proton or Linux games yet") : qsTr("No games match")
-                    color: Theme.controls.descriptionColor
-                }
-            }
+                label: qsTr("Games it mods")
+                noun: qsTr("%n game(s)", "", root.linkable.length)
+                withSelectAll: true
+                emptyText: qsTr("No Steam, Proton or Linux games yet")
+                maxListHeight: 5 * Theme.collections.checklistRowHeight
+                model: root.linkable.map(g => ({ id: g.id, title: g.title, info: g.platformName }))
+                ticked: root.linkable.filter(g => root.checked[g.id]).map(g => g.id)
+                onToggled: id => root.setLinked(id, !root.checked[id])
+                onToggledMany: (ids, on) => root.setLinkedMany(ids, on)
             }
             Hint { text: qsTr("Steam, Proton and Linux games can be linked. ROM and emulator games can't.") }
 

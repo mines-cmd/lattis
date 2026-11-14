@@ -111,6 +111,15 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
+    if (command.name == u"shift-click") {
+        QQuickItem *item = find(command.argument);
+        if (!item)
+            return false;
+        click(item, Qt::LeftButton, Qt::ShiftModifier);
+        qInfo().noquote() << "uitest: shift-click" << command.argument;
+        settle();
+        return true;
+    }
     if (command.name == u"rightclick") {
         QQuickItem *item = find(command.argument);
         if (!item)
@@ -245,14 +254,14 @@ QStringList UiDriver::visibleTexts() const
     return texts;
 }
 
-void UiDriver::click(QQuickItem *item, Qt::MouseButton button)
+void UiDriver::click(QQuickItem *item, Qt::MouseButton button, Qt::KeyboardModifiers modifiers)
 {
     QQuickWindow *window = item->window();
     const QPointF scene = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
     const QPointF global = window->mapToGlobal(scene.toPoint());
     const auto send = [&](QEvent::Type type, Qt::MouseButtons buttons) {
         QMouseEvent event(type, scene, scene, global,
-                          type == QEvent::MouseMove ? Qt::NoButton : button, buttons, Qt::NoModifier);
+                          type == QEvent::MouseMove ? Qt::NoButton : button, buttons, modifiers);
         QCoreApplication::sendEvent(window, &event);
     };
     send(QEvent::MouseMove, Qt::NoButton);
