@@ -7,6 +7,8 @@ AppDialog {
 
     property var titles: []
 
+    signal quitConfirmed()
+
     function ask(list) {
         titles = list
         open()
@@ -37,7 +39,7 @@ AppDialog {
         SettingsButton {
             text: qsTr("Quit")
             danger: true
-            onClicked: Qt.quit()
+            onClicked: root.quitConfirmed()
         }
     ]
 }

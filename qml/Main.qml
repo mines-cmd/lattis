@@ -28,9 +28,11 @@ ApplicationWindow {
     }
 
     function runningGameTitles() {
-        return GameRunner.running.filter(id => !GameRunner.runningManagers.includes(id))
+        return GameRunner.running.filter(key => !key.startsWith("mod-manager:"))
                                  .map(id => GameRunner.runningTitle(id))
     }
+
+    property bool quitConfirmed: false
 
     function requestQuit() {
         const titles = runningGameTitles()
@@ -43,7 +45,7 @@ ApplicationWindow {
     }
 
     onClosing: close => {
-        if (runningGameTitles().length === 0)
+        if (quitConfirmed || runningGameTitles().length === 0)
             return
         close.accepted = false
         requestQuit()
@@ -1136,6 +1138,10 @@ ApplicationWindow {
     Connections {
         target: quitPrompt.item
         function onClosed() { browser.focusList() }
+        function onQuitConfirmed() {
+            window.quitConfirmed = true
+            Qt.quit()
+        }
     }
 
     Loader {
