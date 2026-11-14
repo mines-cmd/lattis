@@ -3,11 +3,9 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
-AppDialog {
+UpdatesDialog {
     id: root
 
-    carded: true
-    size: "medium"
     title: ready ? qsTr("Lattis %1 is ready").arg(AppUpdate.latestVersion)
                  : qsTr("Update to Lattis %1").arg(AppUpdate.latestVersion)
 
@@ -15,11 +13,19 @@ AppDialog {
     readonly property bool downloading: state === "downloading"
     readonly property bool ready: state === "ready"
     readonly property bool failed: state === "failed"
-    readonly property string sizeText: qsTr("%1 MB").arg(Math.max(1, Math.round(AppUpdate.size / 1e6)))
+
+    rows: [{ id: "lattis", name: "Lattis", from: Qt.application.version, version: AppUpdate.latestVersion,
+             size: AppUpdate.size, notes: AppUpdate.notes }]
+    showNotes: !downloading && !ready
+    subtitle: ready ? qsTr("It replaced the file you started Lattis from. Restart to use it.")
+            : downloading ? qsTr("Downloading %1 of %2").arg(Math.max(1, Math.round(AppUpdate.size * Math.max(0, AppUpdate.progress) / 1e6)))
+                                   .arg(megabytes(AppUpdate.size))
+            : ""
+    stateOf: () => ({ status: downloading ? "active" : failed ? "failed" : ready ? "done" : "pending",
+                      progress: AppUpdate.progress, step: "", error: AppUpdate.error })
 
     signal message(string text)
 
-    width: Math.min(Theme.gameEditor.updateWidth, parent.width - 2 * Theme.gameEditor.padding)
     closePolicy: Popup.CloseOnEscape
 
     function skipVersion() {
@@ -31,59 +37,6 @@ AppDialog {
         AppUpdate.restart()
         if (AppUpdate.error !== "")
             message(AppUpdate.error)
-    }
-
-    Label {
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.labelColor
-        text: root.ready ? qsTr("It replaced the file you started Lattis from. Restart to use it.")
-            : root.downloading ? qsTr("Downloading %1 of %2").arg(Math.max(1, Math.round(AppUpdate.size * Math.max(0, AppUpdate.progress) / 1e6)))
-                                   .arg(root.sizeText)
-            : qsTr("%1 · you have %2").arg(root.sizeText).arg(Qt.application.version)
-    }
-
-    Rectangle {
-        visible: !root.downloading && !root.ready
-        Layout.fillWidth: true
-        Layout.preferredHeight: Theme.gameEditor.updateNotesHeight
-        color: Theme.gameEditor.updateNotesBackground
-        radius: Theme.gameEditor.updateNotesRadius
-        clip: true
-
-        Flickable {
-            id: notes
-            anchors.fill: parent
-            anchors.margins: Theme.gameEditor.updateNotesPadding
-            contentWidth: width
-            contentHeight: notesText.implicitHeight
-            boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: SettingsScrollBar {}
-
-            Label {
-                id: notesText
-                width: notes.width - Theme.layout.spacing * 2
-                wrapMode: Text.WordWrap
-                textFormat: Text.MarkdownText
-                color: Theme.gameEditor.updateNotesText
-                text: AppUpdate.notes !== "" ? AppUpdate.notes : qsTr("No release notes.")
-                onLinkActivated: link => Qt.openUrlExternally(link)
-            }
-        }
-    }
-
-    InstallProgress {
-        visible: root.downloading
-        Layout.fillWidth: true
-        progress: AppUpdate.progress
-    }
-
-    Label {
-        visible: root.failed
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.errorColor
-        text: AppUpdate.error
     }
 
     Label {

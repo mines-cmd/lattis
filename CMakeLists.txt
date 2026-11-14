@@ -257,6 +257,7 @@ qt_add_qml_module(lattis
         qml/views/LogoAdjuster.qml
         qml/views/LogoMenu.qml
         qml/views/AboutDialog.qml
+        qml/views/UpdatesDialog.qml
         qml/views/EmulatorUpdatesDialog.qml
         qml/views/UpdateDialog.qml
         qml/views/WhatsNewDialog.qml
