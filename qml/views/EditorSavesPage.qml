@@ -9,12 +9,15 @@ ColumnLayout {
     required property var editor
     property alias autoBackupBox: autoBackupBox
     property alias noSavesSwitch: noSavesSwitch
-    readonly property var savePaths: editor.saves.paths ?? []
+    // The found ones; the game's own are listed above them.
+    readonly property var savePaths: (editor.saves.paths ?? []).filter(
+        p => !editor.savePathsShown.some(own => p === own || p.startsWith(own + "/")))
     readonly property bool epicFolder: editor.saves.match === "epic"
     readonly property bool matchShown: ((editor.saves.matched ?? "") !== "" || epicFolder)
                                        && !(editor.saves.fallback ?? false)
     // Epic's own folder is used instead of the manifest, so choosing a manifest game would change nothing.
     readonly property bool canChangeMatch: (editor.saves.hasManifest ?? false) && !epicFolder
+    readonly property bool foundShown: editor.backupGame && !savesPanel.empty
 
     function matchText() {
         switch (editor.saves.match) {
@@ -111,43 +114,43 @@ ColumnLayout {
 
         EditorField {
             heading: editor.backupGame
-            label: editor.backupGame ? qsTr("Save source") : qsTr("Save folder")
-            marked: editor.saveFolderShown === "" && editor.foundSaveFolder !== ""
-            markerText: qsTr("found for you")
-            help: qsTr("The folder Open save folder opens. When it isn't set, it's looked for: next to "
-                       + "the ROM for an emulator that saves there, the emulator's save folder, or the "
-                       + "game's Proton prefix. Choose another folder to open that one instead.")
+            label: qsTr("Save locations")
+            help: qsTr("Where the game's saves are: backups take every one, and Open save folder opens "
+                       + "the first. They're found from the Ludusavi manifest, Epic, or the emulator; add "
+                       + "a folder they miss.")
+            actions: EditorTextAction {
+                text: qsTr("Add")
+                iconPath: Icons.add
+                tip: qsTr("Add a folder the game saves in")
+                onClicked: editor.folderPickerLoader.pickFor("saves")
+            }
+        }
+        Repeater {
+            model: editor.savePathsShown
 
             PathField {
-                onCopied: editor.message(qsTr("Copied"))
+                required property string modelData
                 Layout.fillWidth: true
                 Layout.minimumHeight: Theme.controls.inputHeight
-                path: editor.saveFolderShown !== "" ? editor.saveFolderShown : editor.foundSaveFolder
-                missingText: qsTr("None found")
-                missingColor: Theme.gameEditor.hintColor
+                path: editor.homeAbsolute(modelData)
                 fontSize: Theme.gameEditor.pathFontSize
+                onCopied: editor.message(qsTr("Copied"))
 
                 SettingsButton {
-                    iconPath: Icons.editLine
-                    tip: qsTr("Choose the save folder")
-                    onClicked: editor.folderPickerLoader.pickFor("saves")
-                }
-                SettingsButton {
-                    visible: editor.saveFolderShown !== ""
                     iconPath: Icons.close
-                    tip: qsTr("Look for the save folder")
-                    onClicked: {
-                        editor.newSaveFolder = ""
-                        editor.saveFolderCleared = true
-                    }
+                    tip: qsTr("Remove this location")
+                    onClicked: editor.newSavePaths = editor.savePathsShown.filter(p => p !== modelData)
                 }
             }
+        }
+        EditorHint {
+            open: !editor.backupGame && editor.savePathsShown.length === 0
+            text: qsTr("None yet. Open save folder opens the emulator's or the Proton prefix's folder.")
         }
 
         RowLayout {
             id: matchRow
-            visible: editor.backupGame && !savesPanel.empty
-                && (page.matchShown || page.canChangeMatch || page.savePaths.length > 0)
+            visible: page.foundShown && (page.matchShown || page.canChangeMatch)
             Layout.fillWidth: true
             spacing: Theme.layout.spacing
 
@@ -178,38 +181,46 @@ ColumnLayout {
                 tip: qsTr("Choose which game in the Ludusavi list this one's saves are taken from")
                 onClicked: editor.chooseSavesGame()
             }
-            SettingsButton {
-                visible: page.savePaths.length > 0
-                flat: true
-                text: page.savePaths.length === 1 ? qsTr("1 save file")
-                    : qsTr("%1 save files").arg(page.savePaths.length)
-                iconPath: filesFold.open ? Icons.arrowUp : Icons.arrowDown
-                tip: qsTr("What a backup takes now, found from the Ludusavi manifest or from the save folder above.")
-                onClicked: filesFold.open = !filesFold.open
+        }
+        Repeater {
+            model: page.savePaths.slice(0, 3)
+
+            PathField {
+                required property string modelData
+                visible: page.foundShown
+                Layout.fillWidth: true
+                Layout.minimumHeight: Theme.controls.inputHeight
+                path: editor.homeAbsolute(modelData)
+                fontSize: Theme.gameEditor.pathFontSize
+                onCopied: editor.message(qsTr("Copied"))
             }
         }
         Unfold {
-            id: filesFold
-            visible: matchRow.visible && (open || progress > 0)
+            id: moreFold
+            visible: page.foundShown && (open || progress > 0)
             Layout.fillWidth: true
 
             Repeater {
-                model: page.savePaths.slice(0, 3)
+                model: page.savePaths.slice(3)
 
                 PathField {
                     required property string modelData
                     Layout.fillWidth: true
                     Layout.minimumHeight: Theme.controls.inputHeight
-                    path: modelData.startsWith("~/") ? editor.homePath + modelData.slice(1) : modelData
+                    path: editor.homeAbsolute(modelData)
                     fontSize: Theme.gameEditor.pathFontSize
                     onCopied: editor.message(qsTr("Copied"))
                 }
             }
-            EditorHint {
-                open: page.savePaths.length > 3
-                text: page.savePaths.length === 4 ? qsTr("and 1 more")
-                    : qsTr("and %1 more").arg(page.savePaths.length - 3)
-            }
+        }
+        SettingsButton {
+            visible: page.foundShown && page.savePaths.length > 3
+            Layout.alignment: Qt.AlignLeft
+            flat: true
+            text: moreFold.open ? qsTr("Show fewer")
+                : page.savePaths.length === 4 ? qsTr("1 more") : qsTr("%1 more").arg(page.savePaths.length - 3)
+            iconPath: moreFold.open ? Icons.arrowUp : Icons.arrowDown
+            onClicked: moreFold.open = !moreFold.open
         }
     }
 
@@ -250,7 +261,7 @@ ColumnLayout {
                 text: qsTr("Backup when the game closes")
                 tip: editor.romGame
                     ? qsTr("The emulator's save folders are backed up to the folder in Settings, Library, Game saves.")
-                    : qsTr("Saves are found from the Ludusavi manifest, or from the save folder in Saves, and "
+                    : qsTr("Saves are found from the Ludusavi manifest, or from the save locations you add in Saves, and "
                            + "backed up to the folder in Settings, Library, Game saves.")
 
                 Label {

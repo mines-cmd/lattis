@@ -1062,14 +1062,13 @@ void LaunchTest::saveFolder()
     writeFile(m_data + "/library/games/switch-mario-kart-8-deluxe.toml",
               readFile(m_data + "/library/games/switch-mario-kart-8-deluxe.toml") + "save_folder = \"~/Saves/Kart\"\n");
     writeFile(m_data + "/library/games/switch-pikmin-4.toml",
-              readFile(m_data + "/library/games/switch-pikmin-4.toml") + "save_folder = \"~/Saves/Gone\"\n");
+              readFile(m_data + "/library/games/switch-pikmin-4.toml") + "save_paths = [\"~/Saves/Gone\"]\n");
     openLibrary();
     m_library->setInstalledOnly(false);
 
-    // The game's own folder, with ~ for the home folder.
+    // The older save_folder key still counts, with ~ for the home folder.
     QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), home + QStringLiteral("/Saves/Kart"));
-    QCOMPARE(m_runner->foundSaveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), ryubingSaves);
-    // One that isn't there is passed over; the emulator's save folder for its install is next.
+    // A location that isn't there is passed over; the emulator's save folder for its install is next.
     QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-pikmin-4")), ryubingSaves);
     QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-metroid-dread")), ryubingSaves);
     // A Proton game's prefix, and a Steam game's in compatdata; none for a Steam game without one.
@@ -1080,7 +1079,7 @@ void LaunchTest::saveFolder()
     // A native Linux game has none of its own.
     QCOMPARE(m_runner->saveFolder(QStringLiteral("linux-supertuxkart")), QString());
     QCOMPARE(m_runner->openSaveFolder(QStringLiteral("linux-supertuxkart")),
-             QStringLiteral("SuperTuxKart's save folder isn't found; set it in its properties"));
+             QStringLiteral("SuperTuxKart's save folder isn't found; add its save location in its properties"));
     QCOMPARE(m_runner->shownPath(ryubingSaves), QStringLiteral("~/.config/Ryujinx/bis/user/save"));
 
     // An emulator that saves next to the ROM: the ROM's folder comes before its save folder.
@@ -1096,10 +1095,16 @@ void LaunchTest::saveFolder()
     // A game's own folder still comes first.
     QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), home + QStringLiteral("/Saves/Kart"));
 
-    // Properties writes a folder in the home folder with ~.
-    QCOMPARE(m_library->saveGame(QStringLiteral("switch-pikmin-4"), {{"save_folder", home + "/Saves/Kart"}}), QString());
-    QVERIFY(readFile(m_data + "/library/games/switch-pikmin-4.toml").contains("save_folder = \"~/Saves/Kart\""));
-    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-pikmin-4")), home + QStringLiteral("/Saves/Kart"));
+    // Properties writes locations in the home folder with ~ and drops the older key; a save file opens its folder.
+    writeFile(home + "/Saves/Kart/slot.sav", "");
+    QCOMPARE(m_library->saveGame(QStringLiteral("switch-mario-kart-8-deluxe"),
+                                 {{"save_paths", QStringList{home + "/Saves/Gone", home + "/Saves/Kart/slot.sav"}},
+                                  {"save_folder", QVariant()}}),
+             QString());
+    const QString written = readFile(m_data + "/library/games/switch-mario-kart-8-deluxe.toml");
+    QVERIFY(written.contains("\"~/Saves/Kart/slot.sav\""));
+    QVERIFY(!written.contains("save_folder"));
+    QCOMPARE(m_runner->saveFolder(QStringLiteral("switch-mario-kart-8-deluxe")), home + QStringLiteral("/Saves/Kart"));
 }
 
 void LaunchTest::protonGames()

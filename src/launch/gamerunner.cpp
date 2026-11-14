@@ -1078,17 +1078,36 @@ QString GameRunner::openFolder(const QString &gameId)
     return {};
 }
 
+namespace {
+// A save location's folder: itself, or the folder of a save file.
+QString folderOf(const QString &path)
+{
+    const QFileInfo info(path);
+    if (info.isDir())
+        return path;
+    return info.exists() ? info.absolutePath() : QString();
+}
+}
+
 QString GameRunner::saveFolder(const QString &gameId) const
 {
-    return findSaveFolder(gameId, true);
+    if (const QString own = ownSaveFolder(gameId); !own.isEmpty())
+        return own;
+    return guessedSaveFolder(gameId);
 }
 
-QString GameRunner::foundSaveFolder(const QString &gameId) const
+QString GameRunner::ownSaveFolder(const QString &gameId) const
 {
-    return findSaveFolder(gameId, false);
+    const LibraryStore &store = m_library->store();
+    const QString home = store.installLocations().home;
+    for (const QString &own : store.snapshot().content.games.value(gameId).savePaths) {
+        if (const QString folder = folderOf(resolveRomFolder(own, m_dataDir, home)); !folder.isEmpty())
+            return folder;
+    }
+    return {};
 }
 
-QString GameRunner::findSaveFolder(const QString &gameId, bool ownFirst) const
+QString GameRunner::guessedSaveFolder(const QString &gameId) const
 {
     const Game *game = m_library->game(gameId);
     if (!game)
@@ -1097,11 +1116,6 @@ QString GameRunner::findSaveFolder(const QString &gameId, bool ownFirst) const
     const QString home = store.installLocations().home;
     const auto isDir = [](const QString &path) { return !path.isEmpty() && QFileInfo(path).isDir(); };
 
-    if (ownFirst) {
-        const QString own = store.snapshot().content.games.value(gameId).saveFolder;
-        if (const QString path = own.isEmpty() ? QString() : resolveRomFolder(own, m_dataDir, home); isDir(path))
-            return path;
-    }
     if (game->rom) {
         QString emulatorId;
         chooseEmulator(gameId, &emulatorId);
@@ -1141,11 +1155,31 @@ QString GameRunner::openSaveFolder(const QString &gameId)
     const Game *game = m_library->game(gameId);
     if (!game)
         return {};
-    const QString folder = saveFolder(gameId);
-    if (folder.isEmpty())
-        return tr("%1's save folder isn't found; set it in its properties").arg(game->title);
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder)))
-        return tr("Could not open %1").arg(folder);
+    const QString title = game->title;
+    auto open = [this, title](const QString &folder) -> QString {
+        if (folder.isEmpty())
+            return tr("%1's save folder isn't found; add its save location in its properties").arg(title);
+        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder)))
+            return tr("Could not open %1").arg(folder);
+        return {};
+    };
+    if (const QString own = ownSaveFolder(gameId); !own.isEmpty())
+        return open(own);
+    // An emulator's guessed folder is where its saves are; for other games the found saves come first,
+    // and finding them reads the manifest's index, so the folder opens a moment later.
+    if (game->rom || !m_findSaves)
+        return open(guessedSaveFolder(gameId));
+    m_findSaves(gameId, [this, gameId, open](const QStringList &paths) {
+        QString folder;
+        for (const QString &path : paths) {
+            if (folder = folderOf(path); !folder.isEmpty())
+                break;
+        }
+        if (folder.isEmpty())
+            folder = guessedSaveFolder(gameId);
+        if (const QString error = open(folder); !error.isEmpty())
+            emit message(error);
+    });
     return {};
 }
 

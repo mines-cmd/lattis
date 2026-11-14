@@ -82,9 +82,9 @@ ColumnLayout {
             font.pixelSize: Theme.gameEditor.hintFontSize
             text: root.noSaves ? qsTr("Marked as having none, in Backup options below.")
                 : root.emulator !== "" ? qsTr("%1 hasn't made any saves on this computer yet.").arg(root.emulator)
-                : root.saves.match === "epic" ? qsTr("Epic's save folder for this game doesn't exist on this computer yet. Choose its save folder to back up another one.")
-                : root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
-                : qsTr("Pick this game from the Ludusavi list, or choose its save folder.")
+                : root.saves.match === "epic" ? qsTr("Epic's save folder for this game doesn't exist on this computer yet. Add a save location to back up another one.")
+                : root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or add a save location.")
+                : qsTr("Pick this game from the Ludusavi list, or add a save location.")
         }
         RowLayout {
             id: emptyButtons
@@ -102,7 +102,7 @@ ColumnLayout {
                 onClicked: root.chooseRequested()
             }
             SettingsButton {
-                text: qsTr("Choose folder")
+                text: qsTr("Add folder")
                 onClicked: root.chooseFolderRequested()
             }
         }

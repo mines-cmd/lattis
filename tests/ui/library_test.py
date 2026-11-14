@@ -120,13 +120,13 @@ SCENARIOS = [
                + "expect Proton version\nclick Save\nexpect A game needs a title\nexpect Look up in IGDB\nexpect-not Proton version\n"
                + "key Escape\nexpect-not Properties\nkey Alt+Return\nexpect Properties\nexpect Look up in IGDB\n"
                + "expect-not Proton version\n", None)], demo),
-    Scenario("the Saves tab shows the save folder for an emulator game, and the Launch tab no longer does",
+    Scenario("the Saves tab shows the save locations for an emulator game, and the Launch tab no longer does",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Launch\n"
-               + "expect-not Prefix folder\nexpect-not Save folder\nclick Saves\nexpect Save source\n"
+               + "expect-not Prefix folder\nexpect-not Save folder\nclick Saves\nexpect Save locations\n"
                + "expect No saves found\nexpect Backup when the game closes\nexpect-not Mod managers\nexpect-not Prefix folder\n", None)], demo),
-    Scenario("a Linux game's Saves & mods tab has the save folder and the mod managers",
+    Scenario("a Linux game's Saves & mods tab has the save locations and the mod managers",
              [(FIRST + "click SuperTuxKart\nkey Alt+Return\nexpect Properties\nclick Saves & mods\n"
-               + "expect Save source\nexpect Mod managers\nexpect Mod Organizer 2\n"
+               + "expect Save locations\nexpect Mod managers\nexpect Mod Organizer 2\n"
                + "expect No saves found\nexpect Backup when the game closes\n"
                + "expect-not Manage backups\n", None)], with_managers),
     Scenario("Properties adds an existing tag and a new one from the Add tag list, and Save keeps both",

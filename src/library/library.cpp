@@ -5141,7 +5141,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("exePath"), g->exe},
         {QStringLiteral("startDir"), file.startDir},
         {QStringLiteral("installDir"), file.installDir},
-        {QStringLiteral("saveFolder"), file.saveFolder},
+        {QStringLiteral("savePaths"), file.savePaths},
         {QStringLiteral("autoBackup"), file.autoBackup},
         {QStringLiteral("noSaves"), file.noSaves},
         {QStringLiteral("platformAutoBackup"), platformAutoBackup},
@@ -5408,9 +5408,7 @@ QString Library::saveGame(const QString &id, const QVariantMap &values)
 {
     QList<std::pair<QString, QVariant>> pairs = gameValues(values);
     for (auto &[key, value] : pairs) {
-        if (key == QLatin1String("save_folder") && !value.toString().isEmpty())
-            value = m_store.writtenPath(value.toString());
-        if (key == QLatin1String("media_folders")) {
+        if (key == QLatin1String("media_folders") || key == QLatin1String("save_paths")) {
             QStringList written;
             for (const QString &folder : value.toStringList())
                 written.append(m_store.writtenPath(folder));

@@ -36,7 +36,7 @@ The gear button on a game's page (Alt+Return), or **Properties** in its right-cl
 
 **Saves** (**Saves & mods** for Steam, Windows and Linux games, which can have [mod managers](mod-managers.md))
 
-- **Save folder:** the folder **Open save folder** opens. Lattis looks for it: the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`). When it found one, the field shows it and says so. The pencil sets another (a game that keeps its saves in its own folder, say), and × goes back to looking. A Linux game has none until you set one.
+- **Save locations:** where the game's saves are. Lattis finds them from the saves list, Epic, or the emulator (they're listed under the match, see [Save backups](backups.md#automatic-save-backups)); **Add** adds a folder it misses, such as a game that keeps its saves in its own folder, and × removes one you added. Backups take every location, and **Open save folder** opens the first: one you added, else the first found. With none, it opens the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`); a Linux game has none until one is found or added.
 - The rest of the tab is for [backups](backups.md#automatic-save-backups) and [mod managers](mod-managers.md).
 
 Adding a game (the + button) has no tabs: the General and Launch pages show together, as one short form.

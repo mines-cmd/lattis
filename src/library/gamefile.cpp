@@ -50,8 +50,8 @@ constexpr Field kFields[] = {
     {"exe", String, 0, 0, "", "Proton and Linux games: the program to run (`~` for the home folder); a Proton game's is kept in step with the shortcut's target"},
     {"start_dir", String, 0, 0, "", "Proton and Linux games: the folder it starts in (Steam's Start in); the exe's folder when not set"},
     {"install_dir", String, 0, 0, "", "Proton and Linux games: the game's folder, which Open folder opens and Uninstall can delete"},
-    {"save_folder", String, 0, 0, "", "The folder Open save folder opens (`~` for the home folder); when not set, or not found, it's looked for: the ROM's folder for an emulator that saves next to it, the emulator's save folder, or the Proton prefix's user folder"},
-    {"save_paths", StringList, 0, 0, "[]", "More folders or files (`~` for the home folder) that automatic save backups take, in addition to the ones found for the game; an emulated game's replace its emulator's save folders in its backup"},
+    {"save_folder", String, 0, 0, "", "The older name of one save location; read as the first of save_paths, and moved there when the game's properties are saved"},
+    {"save_paths", StringList, 0, 0, "[]", "Your own save locations, folders or files (`~` for the home folder): save backups take them along with the ones found for the game, and Open save folder opens the first that exists; an emulated game's replace its emulator's save folders in its backup"},
     {"saves_game", String, 0, 0, "", "Steam, Epic, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
     {"auto_backup", Bool, 0, 0, "", "Steam, Epic, Proton and Linux games: back up the game's saves when it closes (true), never (false), or, when not set, as its platform does"},
     {"no_saves", Bool, 0, 0, "false", "The game has no saves worth backing up: backups skip it, and the Library overview doesn't count it as never backed up"},
@@ -377,10 +377,14 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         game.startDir = value.toString();
     else if (key == QLatin1String("install_dir"))
         game.installDir = value.toString();
-    else if (key == QLatin1String("save_folder"))
-        game.saveFolder = value.toString();
-    else if (key == QLatin1String("save_paths"))
-        game.savePaths = value.toStringList();
+    else if (key == QLatin1String("save_folder") || key == QLatin1String("save_paths")) {
+        // save_folder is the older single location; it leads the list whichever key comes first.
+        const QStringList given = key == QLatin1String("save_folder") ? QStringList{value.toString()} : value.toStringList();
+        QStringList merged = key == QLatin1String("save_folder") ? given + game.savePaths : game.savePaths + given;
+        merged.removeAll(QString());
+        merged.removeDuplicates();
+        game.savePaths = merged;
+    }
     else if (key == QLatin1String("auto_backup"))
         game.autoBackup = value.toBool() ? 1 : 0;
     else if (key == QLatin1String("no_saves"))

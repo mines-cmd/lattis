@@ -58,11 +58,8 @@ Item {
     property string newStartDir: ""
     property bool startDirCleared: false
     property string newInstallDir: ""
-    property string newSaveFolder: ""
-    property bool saveFolderCleared: false
-    readonly property string saveFolderShown: saveFolderCleared ? "" : newSaveFolder !== "" ? newSaveFolder
-                                                                    : (game.saveFolder ?? "")
-    property string foundSaveFolder: ""
+    property var newSavePaths: null
+    readonly property var savePathsShown: newSavePaths ?? game.savePaths ?? []
     property var newMediaFolders: null
     readonly property var mediaFoldersShown: newMediaFolders ?? game.mediaFolders ?? []
     readonly property bool mediaGame: !adding && (onSteam || linuxGame || romGame)
@@ -149,6 +146,14 @@ Item {
     readonly property var saves: GameSaves.state.requested === game.id ? GameSaves.state : ({})
     readonly property string homePath: StandardPaths.writableLocation(StandardPaths.HomeLocation).toString().replace(/^file:\/\//, "")
 
+    // Save locations are compared and written as the game file has them, with ~ for the home folder.
+    function homeTilde(path) {
+        return path.startsWith(homePath + "/") ? "~" + path.slice(homePath.length) : path
+    }
+    function homeAbsolute(path) {
+        return path.startsWith("~/") ? homePath + path.slice(1) : path
+    }
+
     function chooseSavesGame() {
         savesPicker.active = true
         const picker = savesPicker.item
@@ -213,7 +218,7 @@ Item {
         status: 0, tags: 0, igdb: 0, steamgriddb: 0, steam_app: 0,
         media_folders: 1,
         emulator: 2, args: 2, rom: 2, launch_options: 2, proton: 2, exe: 2, installed: 2, start_dir: 2, install_dir: 2,
-        save_folder: 3, auto_backup: 3, no_saves: 3
+        save_folder: 3, save_paths: 3, auto_backup: 3, no_saves: 3
     })
     // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
     readonly property var dirtyTabs: {
@@ -300,15 +305,13 @@ Item {
         newStartDir = ""
         startDirCleared = false
         newInstallDir = ""
-        newSaveFolder = ""
-        saveFolderCleared = false
+        newSavePaths = null
         newMediaFolders = null
         managerLinks = ({})
         mediaMenu.close()
         form.scrollRoom = false
         if (!tabs[tab]?.shown)
             tab = 0
-        foundSaveFolder = g.id !== undefined && !adding ? GameRunner.foundSaveFolder(g.id) : ""
         titleField.text = g.title
         descriptionArea.text = g.description
         yearField.text = g.year > 0 ? String(g.year) : ""
@@ -668,8 +671,10 @@ Item {
             if (newInstallDir !== "")
                 out.install_dir = newInstallDir
         }
-        if (!adding && saveFolderShown !== (game.saveFolder ?? ""))
-            out.save_folder = saveFolderShown !== "" ? saveFolderShown : null
+        if (!adding && newSavePaths !== null) {
+            out.save_paths = newSavePaths.length > 0 ? newSavePaths : null
+            out.save_folder = null
+        }
         if (backupGame) {
             const choice = [-1, 1, 0][autoBackupBox.currentIndex]
             if (choice !== (game.autoBackup ?? -1))
@@ -1260,15 +1265,16 @@ Item {
         active: false
         sourceComponent: RomFolderDialog {
             title: folderPicker.target === "install" ? qsTr("The install folder of %1").arg(root.game.title ?? "")
-                 : folderPicker.target === "saves" ? qsTr("The save folder of %1").arg(root.game.title ?? "")
+                 : folderPicker.target === "saves" ? qsTr("A save location of %1").arg(root.game.title ?? "")
                  : folderPicker.target === "media" ? qsTr("A media folder of %1").arg(root.game.title ?? "")
                  : qsTr("The folder %1 starts in").arg(root.game.title ?? "")
             onPicked: path => {
                 if (folderPicker.target === "install") {
                     root.newInstallDir = path
                 } else if (folderPicker.target === "saves") {
-                    root.newSaveFolder = path
-                    root.saveFolderCleared = false
+                    const own = root.homeTilde(path)
+                    if (!root.savePathsShown.includes(own))
+                        root.newSavePaths = root.savePathsShown.concat([own])
                 } else if (folderPicker.target === "media") {
                     if (!root.mediaFoldersShown.includes(path))
                         root.newMediaFolders = root.mediaFoldersShown.concat([path])

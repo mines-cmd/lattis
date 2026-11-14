@@ -282,8 +282,7 @@ void SavesFinderTest::parentTraversalAndBroadPathsAreRefused()
     QCOMPARE(find(matcher, {q}, m_env).paths, QStringList{m_env.home + "/ok"});
 
     Query own;
-    own.saveFolder = "~";
-    own.savePaths = {"~/ok/../../outside"};
+    own.savePaths = {"~", "~/ok/../../outside"};
     QVERIFY(find(matcher, {own}, m_env).paths.isEmpty());
 }
 
@@ -298,8 +297,7 @@ void SavesFinderTest::ownPathsStandAloneAndAddToAMatch()
     Query own;
     own.id = "linux-unknown";
     own.title = "A Game Nobody Listed";
-    own.saveFolder = "~/mysaves";
-    own.savePaths = {"~/more/*.sav", "~/nowhere"};
+    own.savePaths = {"~/mysaves", "~/more/*.sav", "~/nowhere"};
     Found found = find(matcher, {own}, m_env);
     QVERIFY(found.matched.isEmpty());
     QCOMPARE(found.match, Match::None);
@@ -313,8 +311,7 @@ void SavesFinderTest::ownPathsStandAloneAndAddToAMatch()
     QVERIFY(found.paths.contains(m_env.xdgData + "/Celeste/Saves"));
 
     // An own path inside a found folder isn't taken twice.
-    own.saveFolder = "~/.local/share/Celeste/Saves/0.celeste";
-    own.savePaths.clear();
+    own.savePaths = {"~/.local/share/Celeste/Saves/0.celeste"};
     QCOMPARE(find(matcher, {own}, m_env).paths, QStringList{m_env.xdgData + "/Celeste/Saves"});
 }
 
@@ -394,7 +391,7 @@ void SavesFinderTest::storeFolderComesBeforeTheManifest()
     q.prefix = m_prefix;
     q.wineUser = "someone";
     q.storeFolders = {real + "/AppData/LocalLow/Studio/Celeste"};
-    q.saveFolder = m_env.home + "/mine";
+    q.savePaths = {m_env.home + "/mine"};
     touch(m_env.home + "/mine/own.sav");
 
     // The title would match the manifest, but Epic's folder is used instead; the user's own paths still count.

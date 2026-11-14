@@ -69,7 +69,7 @@ Lattis finds an Epic game's saves from what Heroic and Epic's own files say, and
 
 - **The game's Wine prefix** is the one Heroic uses for that game, else Heroic's default prefix. Which Windows user folder inside it is looked in depends on the Wine version the game runs with (`steamuser` for Proton, your own user name for Wine).
 - **Epic's save folder** (the one Epic's cloud saves use) is the first choice when Heroic has it for the game. Otherwise the game is looked up in the saves list by its title, as a Proton game is.
-- **A game with neither** gets no backup, and Properties → Saves says so. Choose a save folder there to back one up anyway.
+- **A game with neither** gets no backup, and Properties → Saves says so. Add a save location there to back one up anyway.
 
 If Heroic's cloud saves are on for the game, it may download Epic's copy over a save you restored, the next time you launch it. The restore question warns about it; turn the game's cloud sync off in Heroic first if you want the restored save to stay.
 

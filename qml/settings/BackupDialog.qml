@@ -409,7 +409,7 @@ AppDialog {
             }
             Hint {
                 visible: !root.library
-                text: qsTr("Just the saves of each Linux, Steam and Proton game that the saves list knows, or that you gave a save folder.")
+                text: qsTr("Just the saves of each Linux, Steam and Proton game that the saves list knows, or that you gave a save location.")
             }
             RowLayout {
                 visible: root.listMissing
@@ -489,7 +489,7 @@ AppDialog {
                 text: (root.library ? qsTr("Saves: they're in their own backup.") + "\n" : qsTr("The library: it's in its own backup.") + "\n")
                       + qsTr("ROMs.") + "\n"
                       + qsTr("Steam games' Proton prefixes, and what Steam Cloud keeps.") + "\n"
-                      + qsTr("Saves of games the saves list doesn't know, unless you gave them a save folder.") + "\n"
+                      + qsTr("Saves of games the saves list doesn't know, unless you gave them a save location.") + "\n"
                       + qsTr("The cache, window sizes and the Steam sync record.")
                 opacity: Theme.gameEditor.readOnlyOpacity
             }

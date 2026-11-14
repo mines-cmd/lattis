@@ -51,6 +51,8 @@ public:
     };
     // What a game's page shows; blocks (reads the index and the disk), so it runs on a worker thread.
     static Loaded read(const SavesBackup::Input &input, std::shared_ptr<const SavesIndex> index);
+    // Loads `*index` when it's empty; blocks.
+    static SavesFinder::Found find(const SavesBackup::Input &input, std::shared_ptr<const SavesIndex> *index);
 
     explicit GameSaves(const Setup &setup, QObject *parent = nullptr);
     ~GameSaves() override;
@@ -65,6 +67,8 @@ public:
     Q_INVOKABLE void load(const QString &gameId);
     // Only the newest backup (`requested`, `when`, `size`, `name`), for the page's chip: no index is read.
     Q_INVOKABLE void loadLast(const QString &gameId);
+    // The game's saves as a backup would find them now, absolute; `done` runs on this thread.
+    void findPaths(const QString &gameId, std::function<void(const QStringList &paths)> done);
     // Reads `last` again for the game it was last read for; for a backup made while its page is open.
     void refreshLast();
     // Empty `name` clears it; returns an error or nothing. Reloads.

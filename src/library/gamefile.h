@@ -67,7 +67,6 @@ struct GameFile
     QString exe;
     QString startDir;
     QString installDir;
-    QString saveFolder;
     QStringList mediaFolders;
     QStringList savePaths;
     QString savesGame;

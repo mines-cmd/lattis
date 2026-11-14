@@ -30,8 +30,7 @@ struct Query
     QString baseDir;    // the game's install folder
     QString prefix;     // its Wine prefix (a Proton one ends in /pfx); empty = it runs natively
     QString wineUser;   // the prefix's user folder; empty = steamuser
-    QString saveFolder; // the user's own paths, `~` allowed
-    QStringList savePaths;
+    QStringList savePaths; // the user's own, `~` allowed
     QStringList storeFolders; // the store's own save folders, absolute globs already expanded; used instead of the manifest
     // An Epic game run by Heroic: find() reads its prefix, user and Epic's folder from this root, where the
     // worker thread is, and fills the three fields above.

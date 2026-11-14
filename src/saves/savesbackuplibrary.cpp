@@ -89,7 +89,6 @@ QList<SavesFinder::Query> copiesOf(const Library &library, const LibrarySnapshot
         query.steamAppId = copy->platform == kSteamPlatform ? int(GameId::steamAppId(copy->id)) : 0;
         query.savesGame = gameFile.savesGame;
         query.baseDir = copy->installDir;
-        query.saveFolder = gameFile.saveFolder;
         query.savePaths = gameFile.savePaths;
         if (copy->platform == kProtonPlatform && copy->shortcut != 0) {
             if (const QString prefix = library.protonPrefix(copy->shortcut); !prefix.isEmpty())
@@ -169,10 +168,7 @@ std::optional<Input> inputFor(const Library &library, const QString &gameId, con
         const auto inHome = [&](const QString &path) { return path.startsWith(input.env.home + u'/'); };
         const auto exists = [](const QString &path) { return QFileInfo(path).exists() || QFileInfo(path).isSymLink(); };
         const GameFile gameFile = snapshot.content.games.value(gameId);
-        QStringList own = gameFile.savePaths;
-        if (!gameFile.saveFolder.isEmpty())
-            own.prepend(gameFile.saveFolder);
-        for (const QString &path : std::as_const(own)) {
+        for (const QString &path : gameFile.savePaths) {
             const QString resolved = resolveRomFolder(path, dataDir, input.env.home);
             if (inHome(resolved) && exists(resolved))
                 input.emulatorPaths.append(resolved);

@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
+
 class DetachedProcess;
 struct LaunchCommand;
 class Library;
@@ -52,7 +54,6 @@ public:
     Q_INVOKABLE QString openEmulator(const QString &gameId);
     Q_INVOKABLE QString openFolder(const QString &gameId);
     Q_INVOKABLE QString saveFolder(const QString &gameId) const;
-    Q_INVOKABLE QString foundSaveFolder(const QString &gameId) const;
     Q_INVOKABLE QString openSaveFolder(const QString &gameId);
     Q_INVOKABLE QString shownPath(const QString &path) const;
     Q_INVOKABLE QString openDataFolder();
@@ -104,6 +105,9 @@ public:
     static QStringList steamCommand(SteamInstall::Kind kind);
     void setSteamProgram(const QStringList &program) { m_steamProgram = program; }
     void setHeroicProgram(const HeroicProgram &program) { m_heroicProgram = program; }
+    // Finds a game's saves (absolute paths) off the main thread and calls back on it.
+    using FindSaves = std::function<void(const QString &gameId, std::function<void(const QStringList &paths)> done)>;
+    void setFindSaves(FindSaves find) { m_findSaves = std::move(find); }
 
     static int sessionMinutes(qint64 elapsedMs);
     static constexpr int kQuickExitSeconds = 10;
@@ -134,7 +138,10 @@ private:
     };
 
     QString chooseEmulator(const QString &gameId, QString *emulatorId) const;
-    QString findSaveFolder(const QString &gameId, bool ownFirst) const;
+    // The folder of the first own save location that exists.
+    QString ownSaveFolder(const QString &gameId) const;
+    // The ROM's or emulator's folder, or the prefix's user folder; Linux games have none.
+    QString guessedSaveFolder(const QString &gameId) const;
     QString launchProgram(const Game &game);
     QString launchProtonManager(const ModManager &manager, const QString &key);
     // The name of a manager of the game that is running, or empty.
@@ -207,6 +214,7 @@ private:
     QTimer m_steamCloseTimer;
     QString m_launchAfterClose;
     HeroicProgram m_heroicProgram;
+    FindSaves m_findSaves;
     QHash<QString, HeroicSession> m_heroicSessions;
     QTimer m_heroicPoll;
     QFileSystemWatcher m_watcher;

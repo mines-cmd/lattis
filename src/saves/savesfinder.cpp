@@ -352,10 +352,7 @@ Found find(const Matcher &matcher, const QList<Query> &copies, const Env &env)
                 }
             }
         }
-        QStringList own = query.savePaths;
-        if (!query.saveFolder.isEmpty())
-            own.prepend(query.saveFolder);
-        for (const QString &path : std::as_const(own)) {
+        for (const QString &path : query.savePaths) {
             const QString expanded = expandHome(path, env.home);
             if (!tooBroad(expanded, env, ctx))
                 addPaths(paths, expanded, false);

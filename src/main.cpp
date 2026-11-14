@@ -316,6 +316,9 @@ int main(int argc, char *argv[])
     QObject::connect(&runner, &GameRunner::sessionEnded, &savesBackup, &SavesBackup::Service::ended);
     QObject::connect(&savesBackup, &SavesBackup::Service::message, &runner, &GameRunner::message);
     QObject::connect(&savesBackup, &SavesBackup::Service::finished, GameSaves::instance(), &GameSaves::refreshLast);
+    runner.setFindSaves([](const QString &id, std::function<void(const QStringList &)> done) {
+        GameSaves::instance()->findPaths(id, std::move(done));
+    });
     Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
                       [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); },
                       [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); },

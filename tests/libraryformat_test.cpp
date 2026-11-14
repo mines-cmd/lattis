@@ -38,6 +38,7 @@ private slots:
     void gameEveryField();
     void gameDefaults();
     void gameScrimFalseIsNone();
+    void gameSaveFolderLeadsSavePaths();
     void gameWrongTypesFallBack();
     void gameOutOfRange();
     void gameUnknownKeySuggests();
@@ -301,6 +302,16 @@ void LibraryFormatTest::gameScrimFalseIsNone()
     const ParsedGameFile on = parseGameFile("logo_scrim = true\n", kFile);
     QVERIFY(on.warnings.isEmpty());
     QVERIFY(on.game.logoScrim.isEmpty());
+}
+
+void LibraryFormatTest::gameSaveFolderLeadsSavePaths()
+{
+    const QStringList expected{"~/Mine", "~/a", "~/b"};
+    const ParsedGameFile before = parseGameFile("save_folder = \"~/Mine\"\nsave_paths = [\"~/a\", \"~/b\", \"~/Mine\"]\n", kFile);
+    QVERIFY(before.warnings.isEmpty());
+    QCOMPARE(before.game.savePaths, expected);
+    const ParsedGameFile after = parseGameFile("save_paths = [\"~/a\", \"~/b\"]\nsave_folder = \"~/Mine\"\n", kFile);
+    QCOMPARE(after.game.savePaths, expected);
 }
 
 void LibraryFormatTest::gameWrongTypesFallBack()

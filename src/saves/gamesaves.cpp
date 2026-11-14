@@ -64,22 +64,28 @@ GameSaves::GameSaves(const Setup &setup, QObject *parent) : QObject(parent), m_s
 
 GameSaves::~GameSaves() = default;
 
+SavesFinder::Found GameSaves::find(const SavesBackup::Input &input, std::shared_ptr<const SavesIndex> *index)
+{
+    if (!input.emulatorId.isEmpty()) {
+        SavesFinder::Found found;
+        found.paths = input.emulatorPaths;
+        return found;
+    }
+    if (!*index) {
+        if (std::optional<SavesIndex> loaded = SavesManifest::loadIndex(input.manifestDir))
+            *index = std::make_shared<const SavesIndex>(std::move(*loaded));
+    }
+    const SavesIndex none;
+    const SavesFinder::Matcher matcher(*index ? **index : none);
+    return SavesFinder::find(matcher, input.copies, input.env);
+}
+
 GameSaves::Loaded GameSaves::read(const SavesBackup::Input &input, std::shared_ptr<const SavesIndex> index)
 {
     Loaded out;
     out.index = std::move(index);
     const bool emulator = !input.emulatorId.isEmpty();
-    if (!out.index && !emulator) {
-        if (std::optional<SavesIndex> loaded = SavesManifest::loadIndex(input.manifestDir))
-            out.index = std::make_shared<const SavesIndex>(std::move(*loaded));
-    }
-    const SavesIndex none;
-    const SavesFinder::Matcher matcher(out.index ? *out.index : none);
-    SavesFinder::Found found;
-    if (emulator)
-        found.paths = input.emulatorPaths;
-    else
-        found = SavesFinder::find(matcher, input.copies, input.env);
+    const SavesFinder::Found found = find(input, &out.index);
 
     const QString home = input.env.home;
     QVariantList paths;
@@ -144,6 +150,32 @@ void GameSaves::load(const QString &gameId)
         emit stateChanged();
     });
     watcher->setFuture(QtConcurrent::run([in = *input, index = m_index] { return read(in, index); }));
+}
+
+void GameSaves::findPaths(const QString &gameId, std::function<void(const QStringList &paths)> done)
+{
+    const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
+    if (!input) {
+        done({});
+        return;
+    }
+    struct Result
+    {
+        QStringList paths;
+        std::shared_ptr<const SavesIndex> index;
+    };
+    auto *watcher = new QFutureWatcher<Result>(this);
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, done = std::move(done)] {
+        const Result result = watcher->result();
+        watcher->deleteLater();
+        if (result.index)
+            m_index = result.index;
+        done(result.paths);
+    });
+    watcher->setFuture(QtConcurrent::run([in = *input, index = m_index]() mutable {
+        const SavesFinder::Found found = find(in, &index);
+        return Result{found.paths, index};
+    }));
 }
 
 void GameSaves::loadLast(const QString &gameId)
