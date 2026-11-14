@@ -34,6 +34,7 @@ struct ListSettings
     bool operator==(const ListSettings &) const = default;
 };
 
+const QStringList &listSorts();
 const QStringList &listGroupings();
 const QStringList &listStatuses();
 const QStringList &listPlayTimes();

@@ -431,6 +431,11 @@ ListSettings Library::listSettings() const
 {
     ListSettings s = workingSettings();
     if (m_held) {
+        if (m_viewOverridden) {
+            s.sort = m_held->list.sort;
+            s.descending = m_held->list.descending;
+            s.groupBy = m_held->list.groupBy;
+        }
         s.installedOnly = m_held->list.installedOnly;
         s.favoritesOnly = m_held->list.favoritesOnly;
         s.tags = m_held->list.tags;
@@ -513,6 +518,14 @@ void Library::applyListSettings(const ListSettings &incoming)
     const ListSettings now = workingSettings();
     if (m_held) {
         // The file holds the normal view: what changed there lands in the held copy, never in the open collection.
+        if (m_viewOverridden) {
+            m_held->list.sort = s.sort;
+            m_held->list.descending = s.descending;
+            m_held->list.groupBy = s.groupBy;
+            s.sort = now.sort;
+            s.descending = now.descending;
+            s.groupBy = now.groupBy;
+        }
         m_held->list.installedOnly = s.installedOnly;
         m_held->list.favoritesOnly = s.favoritesOnly;
         m_held->list.tags = s.tags;
@@ -2050,6 +2063,7 @@ bool Library::enterCollection(const QString &id, bool rebuildNow)
     m_platformFilter.clear();
     m_collectionId = id;
     m_matcher.emplace(matcherOf(*found));
+    applyCollectionView(*found);
     if (platformsDiffer && updatePlatforms())
         emit platformsChanged();
     if (platformChanged)
@@ -2062,11 +2076,50 @@ bool Library::enterCollection(const QString &id, bool rebuildNow)
     return true;
 }
 
+void Library::applyCollectionView(const Collection &collection)
+{
+    const bool overrides = !collection.sort.isEmpty() || !collection.groupBy.isEmpty();
+    if (!overrides && !m_viewOverridden)
+        return;
+    // Moving between collections starts from the list's own view, not the previous collection's.
+    const ListSettings &base = m_viewOverridden ? m_held->list : workingSettings();
+    const QString sort = collection.sort.isEmpty() ? base.sort : collection.sort;
+    const bool descending = collection.sort.isEmpty() ? base.descending : collection.sortDescending;
+    const QString groupBy = collection.groupBy.isEmpty() ? base.groupBy : collection.groupBy;
+    if (overrides && !m_viewOverridden) {
+        m_held->list.sort = m_sort;
+        m_held->list.descending = m_sortDescending;
+        m_held->list.groupBy = m_groupBy;
+    }
+    m_viewOverridden = overrides;
+    applyView(sort, descending, groupBy);
+}
+
+void Library::applyView(const QString &sort, bool descending, const QString &groupBy)
+{
+    const bool sortDiffers = sort != m_sort || descending != m_sortDescending;
+    const bool groupDiffers = groupBy != m_groupBy;
+    m_sort = sort;
+    m_sortDescending = descending;
+    m_groupBy = groupBy;
+    if (sortDiffers) {
+        if (achievementsWanted())
+            readAchievements();
+        updateOrder();
+        emit sortChanged();
+    }
+    if (groupDiffers)
+        emit groupByChanged();
+}
+
 void Library::leaveCollection(bool rebuildNow)
 {
     if (!m_held)
         return;
     const HeldFilters held = *m_held;
+    if (m_viewOverridden)
+        applyView(held.list.sort, held.list.descending, held.list.groupBy);
+    m_viewOverridden = false;
     m_held.reset();
     m_matcher.reset();
     m_collectionId.clear();
@@ -2299,6 +2352,9 @@ QVariantMap Library::collectionDetails(const QString &id) const
                        {QStringLiteral("playTimes"), rules.playTimes},
                        {QStringLiteral("lastPlayed"), rules.lastPlayed},
                        {QStringLiteral("achievements"), rules.achievements},
+                       {QStringLiteral("sort"), found->sort},
+                       {QStringLiteral("sortDescending"), found->sortDescending},
+                       {QStringLiteral("groupBy"), found->groupBy},
                        {QStringLiteral("added"), titled(found->added)},
                        {QStringLiteral("removed"), titled(found->removed)}};
 }
@@ -2327,6 +2383,11 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
         return tr("That collection no longer exists");
     Collection c = *found;
     c.rules = rulesFromVariant(rules);
+    const QString sort = rules.value(QStringLiteral("sort")).toString();
+    const QString groupBy = rules.value(QStringLiteral("groupBy")).toString();
+    c.sort = listSorts().contains(sort) ? sort : QString();
+    c.sortDescending = !c.sort.isEmpty() && rules.value(QStringLiteral("sortDescending")).toBool();
+    c.groupBy = listGroupings().contains(groupBy) ? groupBy : QString();
     c.added.removeIf([&](const QString &x) { return dropAdded.contains(x); });
     c.removed.removeIf([&](const QString &x) { return dropRemoved.contains(x); });
     if (c == *found)
@@ -2336,6 +2397,10 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
     m_undo.keepCopy(QStringLiteral("library/collections.toml"));
     const QString error = m_store.setCollection(c);
     commitUndo(tr("Collection %1 changed").arg(c.name));
+    if (error.isEmpty() && id == m_collectionId) {
+        applyCollectionView(c);
+        rebuild();
+    }
     return error;
 }
 

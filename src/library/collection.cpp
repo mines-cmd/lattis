@@ -19,7 +19,8 @@ const QStringList kKnownKeys = {QStringLiteral("id"),           QStringLiteral("
                                 QStringLiteral("removed"),      QStringLiteral("year_from"),
                                 QStringLiteral("year_to"),      QStringLiteral("min_rating"),
                                 QStringLiteral("play_times"),   QStringLiteral("last_played"),
-                                QStringLiteral("achievements")};
+                                QStringLiteral("achievements"), QStringLiteral("sort"),
+                                QStringLiteral("sort_descending"), QStringLiteral("group_by")};
 
 QString where(const QString &displayPath, const toml::node &node)
 {
@@ -46,6 +47,22 @@ bool readBool(const toml::node &node, const QString &key, const QString &display
     }
     warnings->append(QStringLiteral("%1: %2 must be true or false").arg(where(displayPath, node), key));
     return false;
+}
+
+bool readChoice(const toml::node &node, const QString &key, const QString &displayPath, const QStringList &choices,
+                QString *out, QStringList *warnings)
+{
+    QString value;
+    if (!readString(node, key, displayPath, &value, warnings))
+        return false;
+    if (!choices.contains(value)) {
+        warnings->append(QStringLiteral("%1: %2 must be one of %3%4")
+                             .arg(where(displayPath, node), key, choices.join(QLatin1String(", ")),
+                                  suggestion(value, choices)));
+        return false;
+    }
+    *out = value;
+    return true;
 }
 
 bool readList(const toml::node &node, const QString &key, const QString &displayPath, QStringList *out,
@@ -170,6 +187,12 @@ Parsed<QList<Collection>> parseCollections(const QByteArray &bytes, const QStrin
                     readString(value, name, displayPath, &collection.name, &out.warnings);
                 else if (name == QLatin1String("steam_id"))
                     readString(value, name, displayPath, &collection.steamId, &out.warnings);
+                else if (name == QLatin1String("sort"))
+                    readChoice(value, name, displayPath, listSorts(), &collection.sort, &out.warnings);
+                else if (name == QLatin1String("group_by"))
+                    readChoice(value, name, displayPath, listGroupings(), &collection.groupBy, &out.warnings);
+                else if (name == QLatin1String("sort_descending"))
+                    readBool(value, name, displayPath, &collection.sortDescending, &out.warnings);
                 else if (name == QLatin1String("rules"))
                     readBool(value, name, displayPath, &hasRules, &out.warnings);
                 else if (name == QLatin1String("added"))
@@ -229,6 +252,8 @@ Parsed<QList<Collection>> parseCollections(const QByteArray &bytes, const QStrin
             ids.insert(collection.id);
             if (collection.name.isEmpty())
                 collection.name = collection.id;
+            if (collection.sort.isEmpty())
+                collection.sortDescending = false;
             if (hasRules)
                 collection.rules = rules;
             else if (ruleKeySeen)
@@ -255,6 +280,10 @@ CollectionValues collectionValues(const Collection &collection)
     setOrRemove(QStringLiteral("steam_id"), !collection.steamId.isEmpty(), tomlString(collection.steamId));
     const CollectionRules rules = collection.rules.value_or(CollectionRules{});
     const bool has = collection.rules.has_value();
+    setOrRemove(QStringLiteral("sort"), !collection.sort.isEmpty(), tomlString(collection.sort));
+    setOrRemove(QStringLiteral("sort_descending"), !collection.sort.isEmpty(),
+                collection.sortDescending ? QStringLiteral("true") : QStringLiteral("false"));
+    setOrRemove(QStringLiteral("group_by"), !collection.groupBy.isEmpty(), tomlString(collection.groupBy));
     setOrRemove(QStringLiteral("rules"), has, QStringLiteral("true"));
     setOrRemove(QStringLiteral("platform"), has && !rules.platform.isEmpty(), tomlString(rules.platform));
     setOrRemove(QStringLiteral("installed_only"), has && rules.installedOnly, QStringLiteral("true"));

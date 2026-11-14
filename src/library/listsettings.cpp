@@ -58,6 +58,11 @@ void parseChoices(const toml::node &node, const TomlSection &section, const QStr
 }
 }
 
+const QStringList &listSorts()
+{
+    return kSorts;
+}
+
 const QStringList &listGroupings()
 {
     static const QStringList groupings = {QStringLiteral("platform"), QStringLiteral("status"),

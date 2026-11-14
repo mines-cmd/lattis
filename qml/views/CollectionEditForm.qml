@@ -35,8 +35,38 @@ ColumnLayout {
     property var dropAdded: []
     property var dropRemoved: []
     property int matches: 0
+    property string sort: ""
+    property bool sortDescending: false
+    property string groupBy: ""
+
+    readonly property var sortChoices: [
+        { id: "", name: qsTr("Keep current") },
+        { id: "title", name: qsTr("Title") },
+        { id: "last_played", name: qsTr("Last played") },
+        { id: "play_time", name: qsTr("Play time") },
+        { id: "rating", name: qsTr("Rating") },
+        { id: "year", name: qsTr("Release") },
+        { id: "added", name: qsTr("Added") },
+        { id: "achievements", name: qsTr("Achievements") },
+        { id: "size", name: qsTr("Size") },
+        { id: "platform", name: qsTr("Platform") },
+    ]
+    readonly property var groupChoices: [
+        { id: "", name: qsTr("Keep current") },
+        { id: "platform", name: qsTr("Platform") },
+        { id: "status", name: qsTr("Status") },
+        { id: "year", name: qsTr("Year") },
+        { id: "rating", name: qsTr("Rating") },
+        { id: "last_played", name: qsTr("Last played") },
+        { id: "none", name: qsTr("None") },
+    ]
+    readonly property var directionChoices: [
+        { id: false, name: qsTr("Ascending") },
+        { id: true, name: qsTr("Descending") },
+    ]
 
     readonly property var rules: ({
+        sort: sort, sortDescending: sortDescending, groupBy: groupBy,
         enabled: rulesOn, platform: platform, installedOnly: installedOnly, favoritesOnly: favoritesOnly,
         statuses: statuses, tags: tags, matchAllTags: matchAllTags && tags.length >= 2, steam: steam,
         yearFrom: yearFrom, yearTo: yearTo, minRating: minRating, playTimes: playTimes,
@@ -142,6 +172,9 @@ ColumnLayout {
         name = d.name ?? ""
         rulesOn = d.enabled ?? false
         tab = "rules"
+        sort = d.sort ?? ""
+        sortDescending = d.sortDescending ?? false
+        groupBy = d.groupBy ?? ""
         platform = d.platform ?? ""
         installedOnly = d.installedOnly ?? false
         favoritesOnly = d.favoritesOnly ?? false
@@ -352,6 +385,42 @@ ColumnLayout {
         SettingsSwitch {
             checked: root.rulesOn
             onToggled: root.rulesOn = checked
+        }
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        Label {
+            text: qsTr("Sort")
+            color: Theme.gameEditor.hintColor
+        }
+        SettingsComboBox {
+            Layout.fillWidth: true
+            model: root.sortChoices.map(c => c.name)
+            currentIndex: Math.max(0, root.sortChoices.findIndex(c => c.id === root.sort))
+            onActivated: index => {
+                const id = root.sortChoices[index].id
+                root.sort = id
+                root.sortDescending = id !== "" && id !== "title" && id !== "platform"
+            }
+        }
+        SettingsComboBox {
+            visible: root.sort !== ""
+            model: root.directionChoices.map(c => c.name)
+            currentIndex: root.sortDescending ? 1 : 0
+            onActivated: index => root.sortDescending = index === 1
+        }
+        Label {
+            text: qsTr("Group by")
+            color: Theme.gameEditor.hintColor
+        }
+        SettingsComboBox {
+            Layout.fillWidth: true
+            model: root.groupChoices.map(c => c.name)
+            currentIndex: Math.max(0, root.groupChoices.findIndex(c => c.id === root.groupBy))
+            onActivated: index => root.groupBy = root.groupChoices[index].id
         }
     }
 

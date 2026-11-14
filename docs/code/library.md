@@ -373,6 +373,9 @@ A collection is a named group of games: hand-picked, kept up to date by saved ru
 id = "uc-1a2b"                 # stable; never shown
 name = "Couch co-op"
 steam_id = "uc-1a2b"           # only on a collection imported from Steam
+sort = "rating"                # optional; a collection without sort / group_by keeps the list's current one
+sort_descending = true         # written with sort; without sort it is ignored
+group_by = "none"              # optional
 rules = true                   # present only on a saved-filter collection; the keys below belong to it
 platform = "switch"
 installed_only = true
@@ -439,6 +442,7 @@ Importing again finds a collection by `steam_id`, never by name: `added` is repl
 - **Membership.** While one is open `m_matcher` (a `CollectionMatcher`) is checked first in `passesFilters()`, so search, sort, grouping, the platform and every filter work inside it as usual, and a game hidden stays out unless Hidden is on.
 - **Held filters.** Opening moves the normal view's filters (Installed, favorites, tags, match all, status, Steam ownership, Hidden) and its platform into `m_held`, and the working filters start empty with Installed off and the platform All. Opening another collection keeps the first held copy, so the × always returns to the view from before the first. `leaveCollection()` puts them back (a platform that no longer exists is dropped). `listSettings()` returns the held copy while one is open, so `saveListSettings()` never writes a collection's filters into `[list]`; `applyListSettings()` (the watched file) sends the file's filters to the held copy and leaves the working ones. Renaming or deleting a tag updates the held tag filter too.
 - **Inside a collection** `filtersActive` treats Installed *on* as the filter, and `clearFilters()` returns to Installed off with the rest cleared, so Clear filters gives the collection's full list. Only `closeCollection()` leaves. `showFiltered()` (a number on the overview) leaves first, so its list covers the whole library.
+- **Own sort and grouping.** `applyCollectionView()` (on open, and when `editCollection()` changes the open one) applies the collection's `sort`, `sort_descending` and `group_by`, each only when set; unset ones inherit the current value. `m_viewOverridden` says a collection set any, and then the held list's `sort`, `descending` and `groupBy` are the ones `leaveCollection()` puts back, `listSettings()` saves and `applyListSettings()` updates, so a collection's view never reaches `[list]`. Changing the sort inside such a collection lasts until it closes. In a collection that sets neither, changes are saved as always.
 - **Kept across restarts.** `view-<key>.json` gains `collection` and `tagsOpen`; `platform` is the held platform while one is open (a restart opens the collection on All, as opening did, and the × brings the platform back). A collection that is gone when the library has loaded is dropped; one deleted while open closes the view (`updateCollections()` leaves without rebuilding, as the reload builds the rows next).
 - `tagsOpen` is whether the filter panel's Tags section is open (open by default; a saved state without the key counts as open); it is saved with the view state.
 

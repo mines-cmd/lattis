@@ -41,6 +41,10 @@ struct Collection
     std::optional<CollectionRules> rules;
     QStringList added;
     QStringList removed;
+    // Empty = the list's current sort / grouping stays while the collection is open.
+    QString sort;
+    bool sortDescending = false;
+    QString groupBy;
     // The id Steam gave it, for an imported collection.
     QString steamId;
 

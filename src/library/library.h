@@ -623,6 +623,10 @@ private:
         QString platform;
     };
     std::optional<HeldFilters> m_held;
+    // The open collection sets its own sort or grouping; the held list has the ones to go back to.
+    bool m_viewOverridden = false;
+    void applyCollectionView(const Collection &collection);
+    void applyView(const QString &sort, bool descending, const QString &groupBy);
     QString m_collectionId;
     std::optional<CollectionMatcher> m_matcher;
     QVariantList m_collections;
