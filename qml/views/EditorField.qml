@@ -19,23 +19,35 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.layout.spacing
 
-        Label {
-            id: name
+        RowLayout {
             Layout.fillWidth: !marker.visible
-            color: field.heading ? Theme.gameEditor.cardTitleColor : Theme.gameEditor.labelColor
-            font.weight: field.heading ? Theme.font.emphasisWeight : Font.Normal
-            elide: Text.ElideRight
+            spacing: Theme.layout.spacingSmall
 
-            MouseArea {
-                id: nameMouse
-                anchors.fill: parent
-                enabled: field.labelTip !== ""
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
+            Label {
+                id: name
+                color: field.heading ? Theme.gameEditor.cardTitleColor : Theme.gameEditor.labelColor
+                font.weight: field.heading ? Theme.font.emphasisWeight : Font.Normal
+                elide: Text.ElideRight
+
+                MouseArea {
+                    id: nameMouse
+                    anchors.fill: parent
+                    enabled: field.labelTip !== ""
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                }
+                ToolTip.visible: nameMouse.containsMouse
+                ToolTip.delay: Theme.tooltip.delay
+                ToolTip.text: field.labelTip
             }
-            ToolTip.visible: nameMouse.containsMouse
-            ToolTip.delay: Theme.tooltip.delay
-            ToolTip.text: field.labelTip
+            HelpTip {
+                target: name
+                text: field.help
+                iconSize: name.font.pixelSize
+                color: Theme.gameEditor.helpColor
+                hoverColor: Theme.gameEditor.helpHoverColor
+            }
+            Item { Layout.fillWidth: true }
         }
         Label {
             id: marker
@@ -45,32 +57,6 @@ ColumnLayout {
             color: Theme.gameEditor.markerColor
             font.pixelSize: Theme.gameEditor.markerFontSize
             elide: Text.ElideRight
-        }
-        // A control's own hover, like the buttons' tooltips: a HoverHandler's could stay
-        // hovered after the tooltip opened.
-        AbstractButton {
-            id: help
-            visible: field.help !== ""
-            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            hoverEnabled: true
-            focusPolicy: Qt.NoFocus
-            background: null
-            contentItem: Icon {
-                path: Icons.help
-                size: name.font.pixelSize
-                color: help.hovered ? Theme.gameEditor.helpHoverColor : Theme.gameEditor.helpColor
-            }
-
-            ToolTip {
-                visible: help.hovered
-                delay: Theme.tooltip.delay
-                text: field.help
-                width: Math.min(implicitWidth, Theme.gameEditor.helpWidth)
-                // Its right edge at the ?, above it. The default placement centers it by its
-                // unwrapped width, far to the left for a long text.
-                x: parent.width - width
-                y: -height - 4
-            }
         }
         Item {
             id: actionsSlot

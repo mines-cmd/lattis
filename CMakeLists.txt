@@ -140,6 +140,7 @@ qt_add_qml_module(lattis
         qml/components/TagChip.qml
         qml/components/FilterChip.qml
         qml/components/ToggleChip.qml
+        qml/components/HelpTip.qml
         qml/components/ChoiceChips.qml
         qml/components/TabRow.qml
         qml/components/InstallProgress.qml

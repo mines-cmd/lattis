@@ -316,6 +316,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `components/Args.js` | Split/join program argument strings |
 | `components/TagSearch.js` | `matching(tags, query, matches, keep)`: the tags a tag search shows, by `Library.matchesSearch` (passed in), with the tags in `keep` always kept; the filter panel's tag list and the Edit collection tag picker use it |
 | `components/FilterChip.qml` | Active-filter chip under the search box |
+| `components/HelpTip.qml` | The circled i after a label (`target`, `text`): hovering the label or the icon shows `text` at once, without the tooltip delay; `EditorField`, `EmulatorRow` and `PlatformRow` use it |
 | `components/ToggleChip.qml` | The check-marked toggle pill of the filter panel (`selected`, `detail`, `showCheck`, `tip`); `ChoiceChips` and the panel's `Segment` use it |
 | `components/ChoiceChips.qml` | A row of `ToggleChip`s over a `[{id, name}]` model: `multiple` or one-of-n, `current`, `picked(id)`; Tab enters a row once, arrows move within it |
 | `components/TabRow.qml` | A row of text tabs with an underline on the open one (no rule under the row): `model` of `{id, name, count}` (the count is its own label after the name), `current`, `picked(id)`; Tab enters it once on the open tab, Left/Right move to the neighbour and open it. Used by the Edit collection form (`collections.edit_tab_*`; the count is the tab text at `edit_tab_count_opacity`) |

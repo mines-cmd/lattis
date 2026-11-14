@@ -209,25 +209,18 @@ ColumnLayout {
                     RowLayout {
                         Layout.fillWidth: true
 
+                        spacing: Theme.layout.spacingSmall
+
                         SectionTitle {
-                            Layout.fillWidth: true
+                            id: nameTitle
                             text: qsTr("Name")
                         }
                         // The id, which the name isn't: renaming changes only what the app shows.
-                        AbstractButton {
-                            id: idHelp
-                            hoverEnabled: true
-                            focusPolicy: Qt.NoFocus
-                            background: null
-                            contentItem: Icon {
-                                path: Icons.help
-                                size: Theme.controls.descriptionFontSize
-                                color: idHelp.hovered ? Theme.controls.labelColor : Theme.controls.descriptionColor
-                            }
-                            ToolTip.visible: hovered
-                            ToolTip.delay: Theme.tooltip.delay
-                            ToolTip.text: qsTr("Platforms and games refer to it as \"%1\", which stays when you rename it.").arg(root.emulator.id)
+                        HelpTip {
+                            target: nameTitle
+                            text: qsTr("Platforms and games refer to it as \"%1\", which stays when you rename it.").arg(root.emulator.id)
                         }
+                        Item { Layout.fillWidth: true }
                     }
                     SettingsTextField {
                         id: nameField
