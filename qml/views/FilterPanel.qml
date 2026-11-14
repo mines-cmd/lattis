@@ -58,6 +58,13 @@ MotionPopup {
     readonly property var platformCounts: ({
         total: General.railHidden ? Library.gameCounts.reduce((sum, c) => sum + c.count, 0) : 0
     })
+    // Library.gameCounts is a new array on every library change; a string only notifies when it differs, so the
+    // Platforms grid isn't rebuilt (and its layout left stale) by changes that don't touch the platforms.
+    readonly property string platformsKey: JSON.stringify(!General.railHidden ? []
+        : Theme.filters.platformsAlphabetical
+          ? Library.gameCounts.slice().sort((a, b) => a.name.localeCompare(b.name))
+          : Library.gameCounts)
+    readonly property var platformList: JSON.parse(platformsKey)
 
     function toggleTag(name) {
         const tags = Library.tagFilter.slice()
@@ -370,9 +377,18 @@ MotionPopup {
                 }
             }
 
-            ColumnLayout {
-                visible: General.railHidden
+            // A Loader, not `visible`: a layout that turns visible while the panel is open keeps a stale zero height.
+            Loader {
+                active: General.railHidden
+                visible: active
                 Layout.fillWidth: true
+                sourceComponent: platformsSection
+            }
+
+            Component {
+                id: platformsSection
+
+            ColumnLayout {
                 spacing: Theme.layout.spacing
 
                 Heading { title: qsTr("Platforms") }
@@ -389,10 +405,7 @@ MotionPopup {
                         onClicked: Library.platformFilter = ""
                     }
                     Repeater {
-                        model: !General.railHidden ? []
-                         : Theme.filters.platformsAlphabetical
-                           ? Library.gameCounts.slice().sort((a, b) => a.name.localeCompare(b.name))
-                           : Library.gameCounts
+                        model: root.platformList
 
                         Segment {
                             required property var modelData
@@ -403,6 +416,7 @@ MotionPopup {
                         }
                     }
                 }
+            }
             }
 
             ColumnLayout {
