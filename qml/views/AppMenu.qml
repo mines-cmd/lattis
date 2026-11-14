@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import "AppMenuButtons.js" as AppMenuButtons
 
 // See docs/code/qml.md.
 SettingsMenu {
@@ -12,6 +13,15 @@ SettingsMenu {
 
     readonly property int steamWaiting: Library.steamWaiting.length
     readonly property bool hasRomFolders: Library.platformSettings.some(p => (p.romFolders ?? []).length > 0)
+
+    // One entry per name in AppMenuButtons.known.
+    readonly property var railRows: ({
+        add_game: { icon: Icons.add, text: qsTr("Add game") },
+        overview: { icon: Icons.book, text: qsTr("Library overview") },
+        play_statistics: { icon: Icons.barChartFill, text: qsTr("Play statistics") },
+        gallery: { icon: Icons.image, text: qsTr("Gallery") },
+        open_settings: { icon: Icons.gear, text: qsTr("Settings") }
+    })
 
     BulkLookupModel { id: missing }
     onAboutToShow: missing.reload()
@@ -63,17 +73,12 @@ SettingsMenu {
     }
     SettingsMenuSeparator { visible: AppUpdate.notify || Installer.updates.length > 0 }
     Instantiator {
-        model: General.railButtonOrder.filter(name => name !== "steam_friends")
+        model: AppMenuButtons.shown(General.railButtonOrder)
         delegate: Entry {
             required property string modelData
             actionName: modelData
-            iconPath: modelData === "add_game" ? Icons.add : modelData === "overview" ? Icons.book
-                    : modelData === "play_statistics" ? Icons.barChartFill
-                    : modelData === "gallery" ? Icons.image : Icons.gear
-            text: modelData === "add_game" ? qsTr("Add game")
-                : modelData === "overview" ? qsTr("Library overview")
-                : modelData === "play_statistics" ? qsTr("Play statistics")
-                : modelData === "gallery" ? qsTr("Gallery") : qsTr("Settings")
+            iconPath: root.railRows[modelData].icon
+            text: root.railRows[modelData].text
         }
         onObjectAdded: (index, object) => root.insertItem(index + 5, object)
         onObjectRemoved: (index, object) => root.removeItem(object)

@@ -147,6 +147,9 @@ SCENARIOS = [
              [(FIRST + "key Ctrl+G\nwait 600\nexpect Details →\nexpect-not SWITCH\n"
                + "key Ctrl+G\nwait 600\nexpect SWITCH\nexpect-not Open game page\n"
                + "key Ctrl+G\nkey Ctrl+G\nwait 600\nexpect SWITCH\nexpect-not Open game page\n", None)], demo),
+    Scenario("the app menu lists the rail's buttons with their own labels",
+             [(FIRST + "key F10\nwait 600\nexpect Add game\nexpect Library overview\nexpect Play statistics\n"
+               + "expect Gallery\nexpect Settings\nexpect Grid view\n", None)], demo),
     Scenario("a linked game's menu opens its mod managers, another game's only offers to add one",
              [(FIRST + "click SuperTuxKart\nkey Menu\nwait 400\nexpect Open Mod Organizer 2\nexpect Open Vortex\n"
                + "expect Add a mod manager\nkey Escape\nwait 400\nclick Hades\nkey Menu\nwait 400\n"
