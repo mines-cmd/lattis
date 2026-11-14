@@ -346,11 +346,27 @@ QList<Library::PlatformProblem> Library::platformProblems(const Platform &known,
     return out;
 }
 
-Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary, QObject *parent)
+static BuiltLibrary buildFrom(const LibrarySnapshot &snapshot)
+{
+    return buildLibrary(snapshot.content, snapshot.art, snapshot.romFiles, Emulators::presets(), snapshot.romGameFiles,
+                        snapshot.steam, snapshot.steamQueued, snapshot.programFiles, snapshot.heroic);
+}
+
+LibraryPreload Library::preload(const QString &dataDir, const QString &cacheDir)
+{
+    LibraryPreload out;
+    out.cache = readCache(dataDir, cacheDir);
+    out.built = buildFrom(out.cache.snapshot.value_or(LibrarySnapshot()));
+    out.heroFiles = HeroCache::list(cacheDir);
+    return out;
+}
+
+Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary,
+                 std::optional<LibraryPreload> preload, QObject *parent)
     : QAbstractListModel(parent)
-    , m_store(dataDir, cacheDir, newLibrary)
+    , m_store(dataDir, cacheDir, newLibrary, preload ? std::optional(std::move(preload->cache)) : std::nullopt)
     , m_cacheDir(cacheDir)
-    , m_heroFiles(HeroCache::list(cacheDir))
+    , m_heroFiles(preload ? std::move(preload->heroFiles) : HeroCache::list(cacheDir))
 {
     s_instance = this;
     connect(&m_heroCopy, &QFutureWatcher<HeroCache::Result>::finished, this, &Library::heroCopyFinished);
@@ -415,7 +431,10 @@ Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary new
     m_showHidden = list.value.showHidden;
     m_showSortValue = list.value.showSortValue;
     m_groupBy = list.value.groupBy;
-    reloadFromStore();
+    if (preload)
+        reloadFromBuilt(std::move(preload->built));
+    else
+        reloadFromStore();
 }
 
 void Library::startRefresh()
@@ -1229,10 +1248,12 @@ QVariantList Library::gameCounts() const
 
 void Library::reloadFromStore()
 {
+    reloadFromBuilt(buildFrom(m_store.snapshot()));
+}
+
+void Library::reloadFromBuilt(BuiltLibrary built)
+{
     const LibrarySnapshot &snapshot = m_store.snapshot();
-    BuiltLibrary built = buildLibrary(snapshot.content, snapshot.art, snapshot.romFiles, Emulators::presets(),
-                                      snapshot.romGameFiles, snapshot.steam, snapshot.steamQueued,
-                                      snapshot.programFiles, snapshot.heroic);
 
     QStringList problems = m_store.versionStatus().problems + snapshot.warnings() + built.warnings + m_listProblems;
     m_platformProblems.clear();

@@ -58,7 +58,7 @@ Three classes carry the library at run time:
 
 ### Startup
 
-Startup must reach the first frame in about 110–200 ms, so nothing is parsed before it. `LibraryStore`'s constructor loads the binary snapshot from the cache on the main thread, and `Library` builds its rows from it right away. Only after the first frame does `Library::startRefresh()` start the first scan.
+Startup must reach the first frame within 400 ms, so nothing is parsed before it. `main()` runs `Library::preload()` on a worker thread before the theme loads: it reads the binary snapshot from the cache (`readCache()`), builds the game list from it (`buildLibrary()`, the title sort included) and lists the hero copies. That work grows with the library (about 60 ms for 2000 games), and the theme and settings load meanwhile. The result goes to `Library`'s constructor, which hands the snapshot to `LibraryStore` and makes its rows from the built list. Without one (tests, tools), both constructors do the same work on the calling thread. The title sort uses the default `QLocale`, so `main()` sets the locale from `[general] system_locale` before starting the preload. Only after the first frame does `Library::startRefresh()` start the first scan.
 
 The cache (`librarycache.*`) is disposable. It's keyed to the data dir, and anything unexpected (a missing or unreadable file, another format version, another Qt version, another data dir) means no cache, and the library is parsed from scratch. On a first start without a cache, `Library.loading` is true and the list stays empty until the first scan ends. Bump `LibraryCache::kFormatVersion` whenever what's stored, or how, changes.
 

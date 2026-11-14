@@ -95,13 +95,21 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
 
 enum class NewLibrary { Plain, WithSetup };
 
+struct CacheRead
+{
+    std::optional<LibrarySnapshot> snapshot;
+    qint64 nsecs = 0;
+};
+
+CacheRead readCache(const QString &dataDir, const QString &cacheDir);
+
 class LibraryStore : public QObject
 {
     Q_OBJECT
 
 public:
     LibraryStore(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary = NewLibrary::Plain,
-                 QObject *parent = nullptr);
+                 std::optional<CacheRead> read = std::nullopt, QObject *parent = nullptr);
     ~LibraryStore() override;
 
     QString dataDir() const { return m_dataDir; }

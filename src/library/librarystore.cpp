@@ -887,7 +887,18 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     return out;
 }
 
-LibraryStore::LibraryStore(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary, QObject *parent)
+CacheRead readCache(const QString &dataDir, const QString &cacheDir)
+{
+    QElapsedTimer timer;
+    timer.start();
+    CacheRead read;
+    read.snapshot = LibraryCache::load(LibraryCache::pathFor(cacheDir, dataDir), QDir(dataDir).absolutePath());
+    read.nsecs = timer.nsecsElapsed();
+    return read;
+}
+
+LibraryStore::LibraryStore(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary,
+                           std::optional<CacheRead> read, QObject *parent)
     : QObject(parent)
     , m_dataDir(QDir(dataDir).absolutePath())
     , m_cachePath(LibraryCache::pathFor(cacheDir, dataDir))
@@ -904,13 +915,13 @@ LibraryStore::LibraryStore(const QString &dataDir, const QString &cacheDir, NewL
     if (m_versionStatus.created)
         fileToOpen(kTags, defaultTagsFile());
 
-    QElapsedTimer timer;
-    timer.start();
-    if (std::optional<LibrarySnapshot> cached = LibraryCache::load(m_cachePath, m_dataDir)) {
-        m_snapshot = std::move(*cached);
+    if (!read)
+        read = readCache(dataDir, cacheDir);
+    if (read->snapshot) {
+        m_snapshot = std::move(*read->snapshot);
         qCInfo(lcLibrary).noquote() << QStringLiteral("loaded %1 game files from the cache in %2 ms")
                                            .arg(m_snapshot.content.games.size())
-                                           .arg(timer.nsecsElapsed() / 1e6, 0, 'f', 1);
+                                           .arg(read->nsecs / 1e6, 0, 'f', 1);
     } else {
         m_loading = true;
         qCInfo(lcLibrary) << "no usable cache; the library loads in the background";

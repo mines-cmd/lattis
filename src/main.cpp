@@ -11,6 +11,7 @@
 #include "core/apppaths.h"
 #include "core/gamepagemigration.h"
 #include "core/general.h"
+#include "core/generalsettings.h"
 #include "core/oldname.h"
 #include "core/pluralfallback.h"
 #include "core/restart.h"
@@ -147,6 +148,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Set before the library is built, which sorts titles in the default locale. A missing
+    // settings.toml gives the same default as the file the theme creates.
+    {
+        QFile file(dataDir + QStringLiteral("/settings.toml"));
+        const QByteArray bytes = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+        if (!parseGeneralSettings(bytes, QStringLiteral("settings.toml")).value.systemLocale)
+            QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
+    }
+    // The cache is read and the game list built while the theme and settings load.
+    QFuture<LibraryPreload> libraryPreload = QtConcurrent::run(&Library::preload, dataDir, AppPaths::cacheDir());
+
     // All are exposed to QML as singletons (see their create()); they must outlive the engine.
     // Theme first: it creates settings.toml, which Actions and General read too.
     Theme theme(dataDir);
@@ -158,12 +170,10 @@ int main(int argc, char *argv[])
             qWarning().noquote() << "can't move the game page settings out of the style:" << migrationError;
     }
     General general(dataDir);
-    if (!general.systemLocale())
-        QLocale::setDefault(QLocale(QLocale::English, QLocale::UnitedStates));
     DateFormat::setSystemLocale(general.systemLocale());
     Actions actions(dataDir);
     RomDbFetch::setEnabled(true);
-    Library library(dataDir, AppPaths::cacheDir(), NewLibrary::WithSetup);
+    Library library(dataDir, AppPaths::cacheDir(), NewLibrary::WithSetup, libraryPreload.takeResult());
     library.store().setStateDir(AppPaths::stateDir());
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)

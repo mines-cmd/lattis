@@ -32,6 +32,13 @@ class VideoThumbnailMaker;
 class QJSEngine;
 class QQmlEngine;
 
+struct LibraryPreload
+{
+    CacheRead cache;
+    BuiltLibrary built;
+    QHash<QString, QString> heroFiles;
+};
+
 // See docs/code/library.md.
 class Library : public QAbstractListModel
 {
@@ -118,8 +125,9 @@ public:
     };
 
     Library(const QString &dataDir, const QString &cacheDir, NewLibrary newLibrary = NewLibrary::Plain,
-            QObject *parent = nullptr);
+            std::optional<LibraryPreload> preload = std::nullopt, QObject *parent = nullptr);
 
+    static LibraryPreload preload(const QString &dataDir, const QString &cacheDir);
     static Library *create(QQmlEngine *, QJSEngine *);
 
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -536,6 +544,7 @@ private:
     bool expandsGroups() const { return !m_search.isEmpty() || filtersActive(); }
     QList<Row> computeRows(bool *showingGroups, int *notInstalled, bool expandAll = false) const;
     void reloadFromStore();
+    void reloadFromBuilt(BuiltLibrary built);
     void saveViewState() const;
     QUrl heroDisplayUrl(const Game &game) const;
     void makeNextHeroCopy();
