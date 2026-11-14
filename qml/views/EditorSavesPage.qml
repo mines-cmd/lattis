@@ -26,6 +26,64 @@ ColumnLayout {
         return ""
     }
 
+    // A setting with its control at the right edge, as in the Settings window, so the controls of
+    // a card line up whatever their labels' length.
+    component OptionRow: Item {
+        id: optionRow
+
+        property alias text: optionLabel.text
+        property string tip: ""
+        property bool clickable: false
+        default property alias control: controlSlot.data
+        signal labelClicked()
+
+        Layout.fillWidth: true
+        implicitHeight: Math.max(Theme.controls.inputHeight, controlSlot.implicitHeight)
+
+        HoverHandler { id: rowHover }
+        // Past the row, into the card's padding, so the label keeps the card's left edge.
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -Theme.gameEditor.optionRowBleed
+            radius: Theme.settingsWindow.rowRadius
+            color: rowHover.hovered ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
+
+            Behavior on color { enabled: Motion.fades; MotionColor {} }
+        }
+        RowLayout {
+            anchors.fill: parent
+            spacing: Theme.settingsWindow.rowLabelSpacing
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                Label {
+                    id: optionLabel
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, parent.width)
+                    color: Theme.gameEditor.labelColor
+                    elide: Text.ElideRight
+
+                    HoverHandler { id: labelHover }
+                    ToolTip.visible: optionRow.tip !== "" && labelHover.hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: optionRow.tip
+                }
+                HoverHandler { cursorShape: optionRow.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                TapHandler {
+                    enabled: optionRow.clickable
+                    onTapped: optionRow.labelClicked()
+                }
+            }
+            Item {
+                id: controlSlot
+                implicitWidth: childrenRect.width
+                implicitHeight: childrenRect.height
+            }
+        }
+    }
+
     Layout.fillWidth: true
     Layout.fillHeight: false // as tall as its cards; layouts fill by default
     Layout.alignment: Qt.AlignTop
@@ -39,61 +97,10 @@ ColumnLayout {
             id: savesPanel
             visible: editor.backupGame
             game: editor.game
+            noSaves: noSavesSwitch.checked
             onMessage: text => editor.message(text)
             onChooseRequested: editor.chooseSavesGame()
             onChooseFolderRequested: editor.folderPickerLoader.pickFor("saves")
-        }
-        RowLayout {
-            visible: editor.backupGame
-            Layout.fillWidth: true
-            Layout.minimumHeight: Theme.controls.inputHeight
-            spacing: Theme.layout.spacing
-
-            Label {
-                id: autoLabel
-                text: qsTr("Backup when the game closes")
-                color: Theme.gameEditor.labelColor
-                elide: Text.ElideRight
-
-                HoverHandler { id: autoHover }
-                ToolTip.visible: autoHover.hovered
-                ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: editor.romGame
-                    ? qsTr("The emulator's save folders are backed up to the folder in Settings, Library, Game saves.")
-                    : qsTr("Saves are found from the Ludusavi manifest, or from the save folder below, and "
-                           + "backed up to the folder in Settings, Library, Game saves.")
-            }
-            Label {
-                id: widest
-                visible: false
-                text: qsTr("Platform default (%1)").arg(qsTr("off"))
-            }
-            SettingsComboBox {
-                id: autoBackupBox
-                Layout.preferredWidth: autoBackupBox.leftPadding + autoBackupBox.rightPadding + Math.ceil(widest.implicitWidth)
-                model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
-                        qsTr("On"), qsTr("Off")]
-            }
-            Item { Layout.fillWidth: true }
-        }
-        RowLayout {
-            visible: editor.backupGame
-            Layout.fillWidth: true
-            Layout.minimumHeight: Theme.controls.inputHeight
-            spacing: Theme.layout.spacing
-
-            Label {
-                text: qsTr("This game has no saves")
-                color: Theme.gameEditor.labelColor
-                elide: Text.ElideRight
-
-                HoverHandler { id: noSavesHover }
-                ToolTip.visible: noSavesHover.hovered
-                ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: qsTr("Backups skip the game, and the Library overview doesn't count it as never backed up.")
-            }
-            SettingsSwitch { id: noSavesSwitch }
-            Item { Layout.fillWidth: true }
         }
         Rectangle {
             visible: editor.backupGame
@@ -202,6 +209,72 @@ ColumnLayout {
                 open: page.savePaths.length > 3
                 text: page.savePaths.length === 4 ? qsTr("and 1 more")
                     : qsTr("and %1 more").arg(page.savePaths.length - 3)
+            }
+        }
+    }
+
+    EditorCard {
+        title: qsTr("Backup options")
+        visible: !editor.adding && editor.backupGame
+
+        // First, since it decides whether the menu below applies: what replaces the menu changes
+        // under it rather than moving the switch out from under the pointer.
+        OptionRow {
+            text: qsTr("This game has no saves")
+            clickable: true
+            onLabelClicked: noSavesSwitch.toggle()
+
+            SettingsSwitch { id: noSavesSwitch }
+        }
+        // The menu and the note crossfade in one place and only the card's bottom edge moves;
+        // folding one while unfolding the other drew both half-clipped over each other.
+        Item {
+            id: autoSlot
+
+            readonly property bool skipped: noSavesSwitch.checked
+            property real slotHeight: skipped ? skipNote.implicitHeight : autoRow.implicitHeight
+            Behavior on slotHeight { enabled: Motion.on; MotionNumber { speed: "normal" } }
+
+            Layout.fillWidth: true
+            implicitHeight: slotHeight
+            // Only while it changes height: at rest, the rows' hover highlight reaches past it.
+            clip: slotHeight !== (skipped ? skipNote.implicitHeight : autoRow.implicitHeight)
+
+            OptionRow {
+                id: autoRow
+                width: parent.width
+                enabled: !autoSlot.skipped
+                opacity: autoSlot.skipped ? 0 : 1
+                visible: opacity > 0
+                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                text: qsTr("Backup when the game closes")
+                tip: editor.romGame
+                    ? qsTr("The emulator's save folders are backed up to the folder in Settings, Library, Game saves.")
+                    : qsTr("Saves are found from the Ludusavi manifest, or from the save folder in Saves, and "
+                           + "backed up to the folder in Settings, Library, Game saves.")
+
+                Label {
+                    id: widest
+                    visible: false
+                    text: qsTr("Platform default (%1)").arg(qsTr("off"))
+                }
+                SettingsComboBox {
+                    id: autoBackupBox
+                    width: autoBackupBox.leftPadding + autoBackupBox.rightPadding + Math.ceil(widest.implicitWidth)
+                    model: [qsTr("Platform default (%1)").arg(editor.game.platformAutoBackup ? qsTr("on") : qsTr("off")),
+                            qsTr("On"), qsTr("Off")]
+                }
+            }
+            Label {
+                id: skipNote
+                width: parent.width
+                opacity: autoSlot.skipped ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                wrapMode: Text.WordWrap
+                color: Theme.gameEditor.hintColor
+                font.pixelSize: Theme.gameEditor.hintFontSize
+                text: qsTr("Backups skip it, and the Library overview doesn't count it as never backed up.")
             }
         }
     }

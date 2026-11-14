@@ -1649,6 +1649,8 @@ constexpr Setting kSettings[] = {
             "Size of the notes under a field, smaller than the field names so they don't read as one"),
     color("game_editor", "error_color", "@controls.problems_text", "Why a change wasn't saved"),
     integer("game_editor", "row_spacing", "12", 0, 100, "Space between fields"),
+    integer("game_editor", "option_row_bleed", "6", 0, 50,
+            "How far the highlight under a setting row with its control at the right (Backup options) reaches past the row"),
     integer("game_editor", "description_height", "130", 30, 600, "Height of the description box"),
     integer("game_editor", "path_font_size", "@font.small_size", 6, 48, "Size of the ROM path, in font.mono_family"),
     integer("game_editor", "media_popup_width", "400", 200, 1000, "Width of the media folders list that opens under its Edit button"),

@@ -7,6 +7,7 @@ ColumnLayout {
     id: root
 
     property var game: ({})
+    property bool noSaves: false
     readonly property var saves: GameSaves.state.requested === game.id ? GameSaves.state : ({})
     readonly property var backups: saves.backups ?? []
     readonly property var paths: saves.paths ?? []
@@ -45,6 +46,14 @@ ColumnLayout {
     }
 
     ColumnLayout {
+        id: emptyState
+
+        // The buttons fade rather than leave, and the text slides to the middle of the room they
+        // keep: the card mustn't change height while the no-saves switch under it is clicked.
+        readonly property bool buttonsHidden: root.noSaves && emptyButtons.visible
+        property real textShift: buttonsHidden ? (emptyButtons.implicitHeight + spacing) / 2 : 0
+        Behavior on textShift { enabled: Motion.on; MotionNumber { speed: "normal" } }
+
         visible: root.empty
         Layout.fillWidth: true
         Layout.topMargin: Theme.gameEditor.rowSpacing
@@ -52,29 +61,37 @@ ColumnLayout {
         spacing: Theme.gameEditor.rowSpacing
 
         Icon {
+            transform: Translate { y: emptyState.textShift }
             Layout.alignment: Qt.AlignHCenter
-            path: Icons.save2Line
+            path: root.noSaves ? Icons.check : Icons.save2Line
             size: Theme.controls.iconSize
             color: Theme.gameEditor.hintColor
         }
         Label {
+            transform: Translate { y: emptyState.textShift }
             Layout.alignment: Qt.AlignHCenter
-            text: qsTr("No saves found")
+            text: root.noSaves ? qsTr("No saves to back up") : qsTr("No saves found")
             color: Theme.gameEditor.labelColor
         }
         Label {
+            transform: Translate { y: emptyState.textShift }
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             color: Theme.gameEditor.hintColor
             font.pixelSize: Theme.gameEditor.hintFontSize
-            text: root.emulator !== "" ? qsTr("%1 hasn't made any saves on this computer yet.").arg(root.emulator)
+            text: root.noSaves ? qsTr("Marked as having none, in Backup options below.")
+                : root.emulator !== "" ? qsTr("%1 hasn't made any saves on this computer yet.").arg(root.emulator)
                 : root.saves.match === "epic" ? qsTr("Epic's save folder for this game doesn't exist on this computer yet. Choose its save folder to back up another one.")
                 : root.matched ? qsTr("None of its save files exist on this computer yet. Pick another game from the Ludusavi list, or choose its save folder.")
                 : qsTr("Pick this game from the Ludusavi list, or choose its save folder.")
         }
         RowLayout {
+            id: emptyButtons
             visible: root.emulator === ""
+            enabled: !root.noSaves
+            opacity: root.noSaves ? 0 : 1
+            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
             Layout.alignment: Qt.AlignHCenter
             spacing: Theme.layout.spacing
 

@@ -63,7 +63,7 @@ The Launch tab shows the folder Heroic installed the game in, and **Open Heroic*
 
 ## Automatic save backups
 
-Epic games can have their saves backed up when they close, like Steam and Linux games: switch on **Back up saves** on the Epic row of Settings → Platforms, or choose On in a game's Properties → **Backup when the game closes**. It's off until you do. The [backups page](backups.md#automatic-save-backups) explains the rest.
+Epic games can have their saves backed up when they close, like Steam and Linux games: switch on **Back up saves** on the Epic row of Settings → Platforms, or choose On in a game's Properties → **Backup options** → **Backup when the game closes**. It's off until you do. The [backups page](backups.md#automatic-save-backups) explains the rest.
 
 Lattis finds an Epic game's saves from what Heroic and Epic's own files say, and changes none of them:
 
