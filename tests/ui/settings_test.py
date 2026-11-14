@@ -82,9 +82,9 @@ SCENARIOS = [
               (CUSTOMIZE + "click Search settings\ntype Big panels\nwait 800\nexpect 0\n", None)], demo),
     Scenario("gradient directions change with no warnings and persist",
              [(CUSTOMIZE + "click Search settings\ntype Default gradient direction\nwait 800\n"
-               + "".join(f"click down\nwait 400\nclick {d}\nwait 500\nexpect {d}\n"
-                         for d in ("up",))
-               + "click up\nwait 400\nclick right\nwait 500\nclick right\nwait 400\nclick left\nwait 500\n"
+               + "".join(f"click Down\nwait 400\nclick {d}\nwait 500\nexpect {d}\n"
+                         for d in ("Up",))
+               + "click Up\nwait 400\nclick Right\nwait 500\nclick Right\nwait 400\nclick Left\nwait 500\n"
                + "key Ctrl+W\nwait 400\n" + FIRST,
                style_has('gradient_direction = "left"'))], demo),
     Scenario("a followers link filters the list to the settings that follow it, Clear all brings it back",
