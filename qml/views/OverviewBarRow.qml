@@ -35,9 +35,14 @@ Item {
     }
     Behavior on grow { enabled: Motion.on; MotionNumber { speed: "slow" } }
 
+    // Reaches half the card's gap (twice the layout spacing) past the row, so neighbouring highlights meet.
     Rectangle {
         anchors.fill: parent
-        radius: Theme.overview.barRadius
+        anchors.topMargin: -Theme.layout.spacing
+        anchors.bottomMargin: -Theme.layout.spacing
+        anchors.leftMargin: -Theme.layout.spacing / 2
+        anchors.rightMargin: -Theme.layout.spacing / 2
+        radius: Theme.overview.storageRowRadius
         color: Theme.palette.hoverOverlay
         opacity: root.hovered ? 1 : 0
         visible: opacity > 0
