@@ -46,6 +46,7 @@
 #include <QLocale>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QImageReader>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QProcessEnvironment>
@@ -174,6 +175,10 @@ int main(int argc, char *argv[])
     Actions actions(dataDir);
     RomDbFetch::setEnabled(true);
     Library library(dataDir, AppPaths::cacheDir(), NewLibrary::WithSetup, libraryPreload.takeResult());
+    // Qt Quick's first image load calls supportedImageFormats(), which loads every image format
+    // plugin installed: about 40 ms on a desktop with KDE's set, on the GUI thread during the QML
+    // load. Started here, it overlaps the QML load; earlier, it slowed the theme down as much.
+    (void)QtConcurrent::run([] { QImageReader::supportedImageFormats(); });
     library.store().setStateDir(AppPaths::stateDir());
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
