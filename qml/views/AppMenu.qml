@@ -80,6 +80,12 @@ SettingsMenu {
         enabled: !Library.scanning
         text: Library.scanning ? qsTr("Scanning") : qsTr("Scan ROM folders now")
     }
+    SettingsMenuItem {
+        iconPath: Icons.download
+        visible: Object.values(Installer.emulators).some(e => e.installedByApp && e.route === "appimage")
+        text: qsTr("Check for emulator updates")
+        onTriggered: Qt.callLater(() => root.chosen("check_emulator_updates"))
+    }
     Entry {
         actionName: "sync_steam"
         iconPath: Icons.steamLine

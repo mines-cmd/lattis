@@ -147,6 +147,7 @@ private slots:
     void replacingKeepsTheOldUntilTheNewIsIn();
     void installerChecksUpdates();
     void installerChecksByFileForARollingTag();
+    void installerAskedCheckSaysWhenDone();
     void installerUsesTheReleaseCache();
     void installerUpdates();
     void installerUpdatesInPlace();
@@ -1275,6 +1276,16 @@ void InstallTest::installerChecksUpdates()
     QCOMPARE(row().value("version").toString(), QStringLiteral("0.10.5"));
     QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
 
+    // The update list carries what the updates dialog shows.
+    const QVariantList updates = installer.updates();
+    QCOMPARE(updates.size(), 1);
+    const QVariantMap update = updates.first().toMap();
+    QCOMPARE(update.value("id").toString(), QStringLiteral("mgba"));
+    QCOMPARE(update.value("version").toString(), QStringLiteral("0.10.6"));
+    QCOMPARE(update.value("from").toString(), QStringLiteral("0.10.5"));
+    QVERIFY(update.contains("notes"));
+    QVERIFY(update.value("size").toDouble() > 0);
+
     // A quiet look at a release it can't read says nothing.
     QFile::remove(h.fixtures + "/github-mgba-emu-mgba.json");
     installer.checkUpdates();
@@ -1290,6 +1301,29 @@ void InstallTest::installerChecksUpdates()
     installer.cancel("mgba");
     installer.checkUpdates("dolphin");
     QVERIFY(!installer.emulators().contains("dolphin"));
+}
+
+void InstallTest::installerAskedCheckSaysWhenDone()
+{
+    InstallerHome h;
+    h.release("the first build");
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    QCOMPARE(installer.checkUpdatesAsked(), 0);
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(installer.emulators().value("mgba").toMap().value("installedByApp").toBool(), 10000);
+
+    QSignalSpy done(&installer, &Installer::updatesChecked);
+    QCOMPARE(installer.checkUpdatesAsked(), 1);
+    QTRY_COMPARE_WITH_TIMEOUT(done.count(), 1, 5000);
+    QCOMPARE(done.takeFirst(), (QVariantList{1, 0}));
+
+    QFile::remove(h.fixtures + "/github-mgba-emu-mgba.json");
+    QCOMPARE(installer.checkUpdatesAsked(), 1);
+    QTRY_COMPARE_WITH_TIMEOUT(done.count(), 1, 5000);
+    QCOMPARE(done.takeFirst(), (QVariantList{1, 1}));
 }
 
 void InstallTest::installerChecksByFileForARollingTag()

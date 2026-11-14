@@ -131,9 +131,9 @@ State changes update it at once; progress is coalesced to about 12 updates a sec
 
 Only for an AppImage Lattis installed; Flatpaks are updated by the system. `startDailyCheck(autoCheck)`, called from `main.cpp` after the first frame (which makes the Installer), runs a quiet `checkUpdates()` 10 s later and then once a day, while `autoCheck` (`[general] check_for_updates`) is on; the hour-long release cache keeps it from asking GitHub more often.
 
-`updates` lists `{id, name, version, state}` for every emulator with an `updateVersion`, for the rail logo's dot and the app menu's update entry.
+`updates` lists `{id, name, version, from, notes, size, state}` for every emulator with an `updateVersion` (`from` is the installed version, `notes` the newer release's body as Markdown, possibly empty, `size` its asset's bytes), for the rail logo's dot, the app menu's update entry and the dialog it opens.
 
-`checkUpdates(id)` fetches the latest release of one emulator (state `checking`, an error shown in the row), and `checkUpdates()` of every installed AppImage, quietly (a failure is only logged). The answer is cached an hour in `<cache dir>/releases/<release value with ":" and "/" as "-">.json` (GitHub allows 60 unauthenticated requests an hour); only checks read the cache, an update always asks again.
+`checkUpdates(id)` fetches the latest release of one emulator (state `checking`, an error shown in the row), and `checkUpdates()` of every installed AppImage, quietly (a failure is only logged). `checkUpdatesAsked()`, behind the app menu's "Check for emulator updates", does the same and returns how many emulators it is looking at (0: none installed by Lattis); `updatesChecked(checked, failed)` fires once the last of them has answered, so the UI can say what came of it. The answer is cached an hour in `<cache dir>/releases/<release value with ":" and "/" as "-">.json` (GitHub allows 60 unauthenticated requests an hour); only checks read the cache, an update always asks again.
 
 A release counts as newer when the matching asset's sha256 differs from the recorded one, or, when either side has none (mGBA's release lists no digest), when its id or date differs. Not by tag: DuckStation's is always `latest`. `updateVersion` then holds the release's tag.
 
@@ -208,6 +208,7 @@ Installer.install(id, route)  route defaults to "appimage"; "flatpak" is the oth
 Installer.update(id)
 Installer.uninstall(id)
 Installer.checkUpdates(id)    no id: every installed AppImage, quietly
+Installer.checkUpdatesAsked() same, and updatesChecked(checked, failed) says when it is over
 Installer.retry(id)           runs a failed job again
 Installer.cancel(id)          also clears a failure
 Installer.refresh()

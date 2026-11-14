@@ -175,6 +175,9 @@ void Installer::rebuild()
             updateList.append(QVariantMap{{QStringLiteral("id"), def.id},
                                           {QStringLiteral("name"), def.name},
                                           {QStringLiteral("version"), updateVersion},
+                                          {QStringLiteral("from"), versionText(record.tag, record.prerelease)},
+                                          {QStringLiteral("notes"), m_updates.value(def.id).release.notes},
+                                          {QStringLiteral("size"), double(m_updates.value(def.id).asset.size)},
                                           {QStringLiteral("state"), stateName(job.state)}});
         out.insert(def.id, QVariantMap{
                                {QStringLiteral("state"), stateName(job.state)},
@@ -300,6 +303,29 @@ void Installer::checkUpdates(const QString &id)
     }
 }
 
+int Installer::checkUpdatesAsked()
+{
+    m_asked.clear();
+    checkUpdates();
+    // Includes a look already running, whose end counts too.
+    for (auto it = m_jobs.cbegin(); it != m_jobs.cend(); ++it)
+        if (it->kind == Kind::Check && it->quiet)
+            m_asked.insert(it.key());
+    m_askedTotal = m_asked.size();
+    m_askedFailed = 0;
+    return m_askedTotal;
+}
+
+void Installer::askedDone(const QString &id, bool failed)
+{
+    if (!m_asked.remove(id))
+        return;
+    if (failed)
+        ++m_askedFailed;
+    if (m_asked.isEmpty())
+        emit updatesChecked(m_askedTotal, m_askedFailed);
+}
+
 QString Installer::cachedReleasePath(const QString &release) const
 {
     return QDir(m_setup.cacheDir).filePath(QStringLiteral("releases/") + releaseFileName(release));
@@ -423,6 +449,7 @@ void Installer::checked(const EmulatorDef &emulator)
     }
     m_jobs.remove(id);
     rebuild();
+    askedDone(id, false);
 }
 
 void Installer::useFixtureAsset(ReleaseAsset *asset) const
@@ -667,8 +694,11 @@ void Installer::fail(const QString &id, const QString &error)
         return;
     qCWarning(lcInstall).noquote() << id << error;
     if (it->quiet) {
+        const bool check = it->kind == Kind::Check;
         m_jobs.erase(it);
         rebuild();
+        if (check)
+            askedDone(id, true);
         return;
     }
     it->state = State::Failed;

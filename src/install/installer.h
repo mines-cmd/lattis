@@ -29,7 +29,7 @@ class Installer : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(QVariantMap emulators READ emulators NOTIFY emulatorsChanged)
-    // {id, name, version, state} of each emulator Lattis installed that has a newer release.
+    // {id, name, version, from, notes, size, state} of each emulator Lattis installed that has a newer release.
     Q_PROPERTY(QVariantList updates READ updates NOTIFY emulatorsChanged)
 
 public:
@@ -66,6 +66,8 @@ public:
     Q_INVOKABLE void uninstall(const QString &id);
     // One emulator's, or (no id) every AppImage Lattis installed, quietly.
     Q_INVOKABLE void checkUpdates(const QString &id = {});
+    // Like checkUpdates() for every emulator, but updatesChecked() tells the end. Returns how many it is looking at.
+    Q_INVOKABLE int checkUpdatesAsked();
     // Runs a failed job again.
     Q_INVOKABLE void retry(const QString &id);
     Q_INVOKABLE void cancel(const QString &id);
@@ -78,6 +80,8 @@ public:
 
 signals:
     void emulatorsChanged();
+    // Every look checkUpdatesAsked() started is over; failed of them couldn't reach the release.
+    void updatesChecked(int checked, int failed);
     // An AppImage update finished; notes is the release's, possibly empty.
     void emulatorUpdated(const QString &name, const QString &version, const QString &notes);
 
@@ -121,6 +125,7 @@ private:
     void gotRelease(const EmulatorDef &emulator, quint64 serial, const QByteArray &json, const QString &networkError,
                     bool fromCache);
     void checked(const EmulatorDef &emulator);
+    void askedDone(const QString &id, bool failed);
     void download(const EmulatorDef &emulator);
     void downloadFinished(const QString &id, const AppImageDownload::Result &result);
     void beginFlatpak(const EmulatorDef &emulator, Kind kind, const QString &appId);
@@ -144,6 +149,10 @@ private:
     QString m_flatpakProgram;
     QHash<QString, Job> m_jobs;
     QHash<QString, Update> m_updates;
+    // The emulators checkUpdatesAsked() waits for, and how many of them failed.
+    QSet<QString> m_asked;
+    int m_askedTotal = 0;
+    int m_askedFailed = 0;
     // Checked this session and found no newer release.
     QSet<QString> m_upToDate;
     InstallRecords::Records m_records;
