@@ -161,6 +161,7 @@ qt_add_qml_module(lattis
         qml/views/Backdrop.qml
         qml/views/GameDetails.qml
         qml/views/ImportNotice.qml
+        qml/views/TopNotices.qml
         qml/views/DownloadBar.qml
         qml/views/DownloadPill.qml
         qml/views/MediaRow.qml

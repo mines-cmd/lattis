@@ -410,6 +410,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `views/LogoAdjuster.qml` | Adjust logo: move, resize, snapping, keys; lazy |
 | `views/ImageFileDialog.qml` | File picker for art |
 | `views/ImportNotice.qml` | "Import moved X aside" notice bar; lazy |
+| `views/TopNotices.qml` | Read-only and import notices right of the toolbar, shared by list and grid |
 | `views/DownloadBar.qml` | The bar along the bottom of a game's page while Steam downloads; lazy |
 | `views/DownloadPill.qml` | The pill left in the corner while the bar is hidden; lazy |
 | `views/InfoPanel.qml` | The game's fields as rows in the details view (from `GameFields`, in `[game_page] info_rows` order); hovering the rating stars shows the number as a tooltip; clicking the Platform row sets `Library.platformFilter` to the game's platform and the Play time row emits `historyRequested` (a clickable value brightens on hover, `info_panel.value_hover_color`, and dips by `motion.press_scale` while pressed) |

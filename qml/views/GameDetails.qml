@@ -10,13 +10,6 @@ Item {
     property bool startedUp: false
     property bool allCollapsed: false
     property real dragReserve: 0
-    property real toolbarRight: -1
-    readonly property real noticeX: Math.max(Theme.details.marginLeft + Theme.details.padding,
-                                             toolbarRight < 0 ? 0 : toolbarRight + Theme.layout.spacing)
-    readonly property real noticeWidth: {
-        const right = Math.min(width - marginRight - Theme.details.padding, width - dragReserve)
-        return Math.max(0, right - noticeX)
-    }
 
     // The hero follows the selection after a short delay, so holding an arrow key in the
     // list doesn't decode every image on the way. Text updates immediately.
@@ -762,37 +755,6 @@ Item {
         }
     }
 
-    NoticeBar {
-        id: readOnlyNotice
-        visible: Library.readOnly
-        opacity: visible ? 1 : 0
-        z: 1
-        x: root.noticeX
-        y: Theme.layout.margin
-        width: root.noticeWidth
-        height: Theme.layout.toolbarHeight
-        text: Library.readOnlyNotice
-
-        Behavior on opacity { enabled: Motion.fades && root.startedUp; MotionNumber { fade: true; speed: "normal" } }
-    }
-
-    // After an Import, below that one when both show. Loaded after the first frame: Backups is
-    // made on first use.
-    Loader {
-        id: importNotice
-        active: root.startedUp
-        z: 1
-        x: root.noticeX
-        y: Theme.layout.margin + (Library.readOnly ? Theme.layout.toolbarHeight + Theme.layout.spacing : 0)
-        width: root.noticeWidth
-        height: Theme.layout.toolbarHeight
-        source: "ImportNotice.qml"
-    }
-    Connections {
-        target: importNotice.item
-        function onMessage(text) { root.message(text) }
-    }
-
     Flickable {
         id: flick
 
@@ -1377,7 +1339,7 @@ Item {
 
         DragHandler {
             target: null
-            enabled: !readOnlyNotice.hovered && !(importNotice.item?.hovered ?? false) && !(root.Window.window?.toolbarHovered ?? false)
+            enabled: !(root.Window.window?.noticesHovered ?? false) && !(root.Window.window?.toolbarHovered ?? false)
             grabPermissions: PointerHandler.CanTakeOverFromAnything
             onActiveChanged: if (active) root.Window.window.startSystemMove()
         }

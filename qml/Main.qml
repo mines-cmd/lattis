@@ -6,6 +6,7 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: window
     property bool toolbarHovered: false
+    property bool noticesHovered: false
 
     function launch(game) {
         if (!game.installed && (game.platform === "proton" || game.platform === "linux")) {
@@ -1404,7 +1405,6 @@ ApplicationWindow {
             startedUp: window.startedUp
             heroEntering: window.viewCovered
             covered: window.pageCovering
-            toolbarRight: toolbar.visible ? toolbar.x + toolbar.width - parent.x : -1
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
             onMessage: text => toast.show(text)
@@ -1702,6 +1702,19 @@ ApplicationWindow {
         started: window.startedUp
         checkedButton: window.statsOpen ? "play_statistics" : window.galleryOpen ? "gallery" : window.overviewOpen ? "overview" : ""
         onTriggered: name => window.run(name)
+        onMessage: text => toast.show(text)
+    }
+
+    // Right of the toolbar, the same spot in the list and the grid.
+    TopNotices {
+        id: notices
+        Component.onCompleted: window.noticesHovered = Qt.binding(() => notices.hovered)
+        visible: !window.pageCovering && !setupGuide.active
+        x: toolbar.x + toolbar.width + Theme.layout.spacing
+        y: Theme.layout.margin
+        width: Math.max(0, toolbar.high - x)
+        height: Theme.layout.toolbarHeight
+        startedUp: window.startedUp
         onMessage: text => toast.show(text)
     }
 
