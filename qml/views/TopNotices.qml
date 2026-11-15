@@ -7,8 +7,25 @@ Item {
     id: root
 
     property bool startedUp: false
-    readonly property bool hovered: readOnlyNotice.hovered || (importNotice.item?.hovered ?? false)
-        || (steamNotice.visible && steamNotice.hovered)
+
+    // Most urgent first; a notice joins the deck by taking a place in this list.
+    readonly property var ranked: {
+        const list = []
+        if (steamNotice.wanted)
+            list.push("steam")
+        if (readOnlyNotice.wanted)
+            list.push("readOnly")
+        if (importNotice.item?.showing ?? false)
+            list.push("import")
+        return list
+    }
+    readonly property bool hovered: (readOnlyNotice.depth >= 0 && readOnlyNotice.hovered)
+        || (importNotice.item?.hovered ?? false) || (steamNotice.depth >= 0 && steamNotice.hovered)
+
+    function depthOf(key: string): int { return ranked.indexOf(key) }
+    function peekOpacity(depth: int): real { return depth <= 0 ? 1 : Math.pow(Theme.notice.peekOpacity, depth) }
+    function peekScale(depth: int): real { return depth <= 0 ? 1 : Math.pow(Theme.notice.peekScale, depth) }
+    function peekShown(depth: int): bool { return depth >= 0 && depth <= Theme.notice.peekCount }
 
     signal message(string text)
     signal undoRequested()
@@ -16,8 +33,17 @@ Item {
 
     NoticeBar {
         id: readOnlyNotice
-        visible: Library.readOnly
-        opacity: visible ? 1 : 0
+        readonly property bool wanted: Library.readOnly
+        readonly property int depth: root.depthOf("readOnly")
+        warning: true
+        count: root.ranked.length
+        peeking: depth > 0
+        visible: root.peekShown(depth)
+        z: -depth
+        opacity: root.peekOpacity(depth)
+        y: Math.max(0, depth) * Theme.notice.peekOffset
+        scale: root.peekScale(depth)
+        transformOrigin: Item.Top
         width: root.width
         height: Theme.layout.toolbarHeight
         text: Library.readOnlyNotice
@@ -25,29 +51,46 @@ Item {
         Behavior on opacity { enabled: Motion.fades && root.startedUp; MotionNumber { fade: true; speed: "normal" } }
     }
 
-    // After an Import, below that one when both show. Loaded after the first frame: Backups is
-    // made on first use.
+    // Loaded after the first frame: Backups is made on first use.
     Loader {
         id: importNotice
+        readonly property int depth: root.depthOf("import")
         active: root.startedUp
-        y: Library.readOnly ? Theme.layout.toolbarHeight + Theme.layout.spacing : 0
+        visible: depth < 0 ? (item?.progress ?? 0) > 0 : root.peekShown(depth)
+        z: -Math.max(0, depth)
+        opacity: root.peekOpacity(depth)
+        y: Math.max(0, depth) * Theme.notice.peekOffset
+        scale: root.peekScale(depth)
+        transformOrigin: Item.Top
         width: root.width
         height: Theme.layout.toolbarHeight
         source: "ImportNotice.qml"
+        onLoaded: {
+            item.count = Qt.binding(() => root.ranked.length)
+            item.peeking = Qt.binding(() => depth > 0)
+        }
     }
     Connections {
         target: importNotice.item
         function onMessage(text) { root.message(text) }
     }
 
-    // Edits waiting for Steam to close, library-wide; below the other two when they show.
+    // Edits waiting for Steam to close, library-wide. Never together with read-only (nothing
+    // is saved then), so it ranks first without it.
     NoticeBar {
         id: steamNotice
         readonly property int waiting: Library.steamWaiting.length
-        visible: !Library.readOnly && waiting > 0
-        opacity: visible ? 1 : 0
-        y: (Library.readOnly ? Theme.layout.toolbarHeight + Theme.layout.spacing : 0)
-           + (importNotice.item?.showing ? Theme.layout.toolbarHeight + Theme.layout.spacing : 0)
+        readonly property bool wanted: !Library.readOnly && waiting > 0
+        readonly property int depth: root.depthOf("steam")
+        warning: true
+        count: root.ranked.length
+        peeking: depth > 0
+        visible: root.peekShown(depth)
+        z: -depth
+        opacity: root.peekOpacity(depth)
+        y: Math.max(0, depth) * Theme.notice.peekOffset
+        scale: root.peekScale(depth)
+        transformOrigin: Item.Top
         width: root.width
         height: Theme.layout.toolbarHeight
         text: waiting === 1
@@ -55,8 +98,6 @@ Item {
                     .arg(Library.steamWaiting[0].title).arg(Library.steamWaiting[0].changes || qsTr("changes"))
               : qsTr("Waiting for Steam to close: %1")
                     .arg(Library.steamWaiting.map(w => w.title).join(", "))
-
-        Behavior on opacity { enabled: Motion.fades && root.startedUp; MotionNumber { fade: true; speed: "normal" } }
 
         SettingsButton {
             id: showButton

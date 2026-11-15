@@ -9,6 +9,9 @@ Surface {
 
     property string text
     property var parts: []
+    property bool warning: false
+    property int count: 1
+    property bool peeking: false
     readonly property alias hovered: hover.hovered
     default property alias actions: actionRow.data
 
@@ -16,26 +19,43 @@ Surface {
     fill: Theme.notice.background
     fillEnd: Theme.notice.backgroundEnd
     direction: Theme.notice.gradientDirection
-    border.color: Theme.notice.border
+    border.color: warning ? Theme.notice.warningBorder : Theme.notice.border
     border.width: Theme.notice.borderWidth
 
     Rectangle {
         anchors.fill: parent
         anchors.margins: root.border.width
         radius: Math.max(0, root.radius - root.border.width)
-        color: Qt.alpha(Theme.notice.tint, Theme.notice.tintOpacity)
+        color: Qt.alpha(root.warning ? Theme.notice.warningTint : Theme.notice.tint, Theme.notice.tintOpacity)
     }
 
     RowLayout {
+        visible: !root.peeking
         anchors.fill: parent
         anchors.leftMargin: Theme.notice.padding
         anchors.rightMargin: Theme.notice.padding
         spacing: Theme.layout.spacing
 
         Icon {
-            path: Icons.informationLine
+            path: root.warning ? Icons.alertLine : Icons.informationLine
             size: Theme.notice.iconSize
-            color: Theme.notice.icon
+            color: root.warning ? Theme.notice.warningIcon : Theme.notice.icon
+        }
+        Rectangle {
+            visible: root.count >= 2
+            Layout.preferredWidth: Math.max(height, countLabel.implicitWidth + 2 * Theme.layout.spacingSmall)
+            Layout.preferredHeight: countLabel.implicitHeight + 2
+            radius: Theme.radius.pill
+            color: Qt.alpha(Theme.notice.count, Theme.notice.countOpacity)
+
+            Label {
+                id: countLabel
+                anchors.centerIn: parent
+                text: root.count
+                color: Theme.notice.countText
+                font.pixelSize: Theme.notice.countSize
+                font.weight: Theme.font.emphasisWeight
+            }
         }
         Item {
             id: message
@@ -109,7 +129,7 @@ Surface {
     }
 
     HoverHandler { id: hover }
-    ToolTip.visible: hover.hovered && message.truncated
+    ToolTip.visible: hover.hovered && message.truncated && !root.peeking
     ToolTip.text: root.text
     ToolTip.delay: 500
 }
