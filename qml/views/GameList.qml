@@ -866,17 +866,18 @@ Rectangle {
                             title: row.title
                             hue: row.hue
                         }
-                        RowLayout {
+                        Item {
                             id: nameRow
                             Layout.fillWidth: true
-                            spacing: Theme.layout.spacingSmall
                             Layout.preferredWidth: 0
                             Layout.minimumWidth: 0
+                            implicitHeight: titleLabel.implicitHeight
+                            readonly property real gap: Theme.layout.spacingSmall
                             Label {
                                 id: titleLabel
-                                Layout.minimumWidth: 0
-                                Layout.maximumWidth: Math.max(0, nameRow.width
-                                    - (runningLabel.visible ? runningLabel.implicitWidth + nameRow.spacing : 0))
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, Math.max(0, nameRow.width
+                                    - (runningLabel.visible ? runningLabel.width + nameRow.gap : 0)))
                                 text: row.title
                                 elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
                                      : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
@@ -891,8 +892,9 @@ Rectangle {
                             RowLayout {
                                 id: runningLabel
                                 visible: row.running && Theme.list.runningLabel !== ""
-                                spacing: parent.spacing
-                                Layout.minimumWidth: implicitWidth
+                                spacing: nameRow.gap
+                                x: titleLabel.width + nameRow.gap
+                                anchors.verticalCenter: parent.verticalCenter
                                 Label {
                                     text: "·"
                                     color: Theme.list.runningColor
@@ -904,7 +906,6 @@ Rectangle {
                                     font.bold: row.current && Theme.list.selectedBold
                                 }
                             }
-                            Item { Layout.fillWidth: true }
                         }
                         Icon {
                             visible: Theme.list.showUpdateIcon && row.updating
