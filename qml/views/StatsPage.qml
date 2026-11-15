@@ -603,7 +603,7 @@ FocusScope {
         Layout.fillWidth: true
         Layout.preferredHeight: (Theme.stats.rowHeight + gap) * presence
         visible: presence > 0
-        clip: true
+        clip: presence < 1
         opacity: presence
 
         Item {
@@ -1913,10 +1913,21 @@ FocusScope {
                                     Rectangle {
                                         id: topRow
                                         anchors.fill: parent
-                                        radius: Theme.stats.barRadius
-                                        color: topMouse.containsMouse ? Theme.palette.hoverOverlay : Qt.alpha(Theme.palette.hoverOverlay, 0)
+                                        color: "transparent"
 
-                                        Behavior on color { enabled: Motion.fades; MotionColor {} }
+                                        Rectangle {
+                                            z: -1
+                                            anchors.fill: parent
+                                            anchors.topMargin: -Theme.layout.spacing
+                                            anchors.bottomMargin: -Theme.layout.spacing
+                                            anchors.leftMargin: -Theme.layout.spacing / 2
+                                            anchors.rightMargin: -Theme.layout.spacing / 2
+                                            radius: Theme.overview.storageRowRadius
+                                            color: Theme.palette.hoverOverlay
+                                            opacity: topMouse.containsMouse ? 1 : 0
+                                            visible: opacity > 0
+                                            Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true } }
+                                        }
 
                                         RowLayout {
                                             anchors.fill: parent
