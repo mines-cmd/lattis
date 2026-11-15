@@ -122,7 +122,7 @@ ColumnLayout {
                 flat: true
                 visible: (root.saves.folder ?? "") !== ""
                 tip: qsTr("Open the backups folder")
-                onClicked: Qt.openUrlExternally("file://" + root.saves.folder)
+                onClicked: GameRunner.openPath(root.saves.folder)
             }
             SettingsButton {
                 text: GameSaves.working ? qsTr("Backing up") : qsTr("Back up now")
