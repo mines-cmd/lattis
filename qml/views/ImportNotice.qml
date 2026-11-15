@@ -9,25 +9,16 @@ Item {
 
     readonly property var current: Backups.notice
     readonly property bool showing: current.text !== undefined
-    readonly property bool hovered: bar.hovered
+    readonly property bool menuOpen: confirm.visible
     property int count: 1
     property bool peeking: false
     property var notice: ({})
     onCurrentChanged: if (current.text !== undefined) notice = current
     Component.onCompleted: if (current.text !== undefined) notice = current
 
-    property real progress: showing ? 1 : 0
-    Behavior on progress { enabled: Motion.on; MotionNumber { speed: "normal" } }
-
-    visible: progress > 0
-    clip: progress < 1
-
     NoticeBar {
         id: bar
-        width: root.width
-        height: root.height
-        y: -height * (1 - root.progress)
-        opacity: root.progress
+        anchors.fill: parent
         enabled: root.showing && !root.peeking
         count: root.count
         peeking: root.peeking

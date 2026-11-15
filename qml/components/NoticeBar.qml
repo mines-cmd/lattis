@@ -30,7 +30,10 @@ Surface {
     }
 
     RowLayout {
-        visible: !root.peeking
+        opacity: root.peeking ? 0 : 1
+        visible: opacity > 0
+        enabled: !root.peeking
+        Behavior on opacity { enabled: Motion.fades; MotionNumber { fade: true; speed: "fast" } }
         anchors.fill: parent
         anchors.leftMargin: Theme.notice.padding
         anchors.rightMargin: Theme.notice.padding

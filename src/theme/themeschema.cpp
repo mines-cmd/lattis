@@ -1171,6 +1171,10 @@ constexpr Setting kSettings[] = {
     color("notice", "count_text", "@text", "The number of notices"),
     integer("notice", "count_size", "@font.small_size", 6, 48, "Font size of the number of notices"),
     integer("notice", "fan_close_delay", "300", 0, 5000, "How long, in milliseconds, the notices wait after the pointer leaves before folding"),
+    integer("notice", "fan_stagger", "30", 0, 500, "How long, in milliseconds, each notice behind waits for the one in front when they fan out"),
+    integer("notice", "enter_offset", "8", 0, 100, "How far above its place a notice starts when it arrives"),
+    integer("notice", "leave_offset", "4", 0, 100, "How far a notice rises while it fades out when it is dismissed"),
+    integer("notice", "dismiss_duration", "80", 0, 2000, "How long, in milliseconds, a notice takes to fade out when it is dismissed"),
 
     heading("download_bar", "Bar"),
     boolean("download_bar", "show", "true", "Show the bar while Steam downloads a game"),
