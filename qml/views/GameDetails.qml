@@ -10,11 +10,11 @@ Item {
     property bool startedUp: false
     property bool allCollapsed: false
     property real dragReserve: 0
-    property real toolbarLeft: -1
-    readonly property real noticeX: Theme.details.marginLeft + Theme.details.padding
+    property real toolbarRight: -1
+    readonly property real noticeX: Math.max(Theme.details.marginLeft + Theme.details.padding,
+                                             toolbarRight < 0 ? 0 : toolbarRight + Theme.layout.spacing)
     readonly property real noticeWidth: {
-        const right = Math.min(width - marginRight - Theme.details.padding, width - dragReserve,
-                               toolbarLeft < 0 ? Infinity : toolbarLeft - Theme.layout.spacing)
+        const right = Math.min(width - marginRight - Theme.details.padding, width - dragReserve)
         return Math.max(0, right - noticeX)
     }
 

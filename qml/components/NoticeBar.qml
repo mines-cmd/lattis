@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Effects
 
 // See docs/code/qml.md.
 Surface {
@@ -42,6 +43,28 @@ Surface {
             Layout.fillWidth: true
             implicitHeight: root.parts.length > 0 ? pieces.implicitHeight : label.implicitHeight
             clip: root.parts.length > 0
+            layer.enabled: truncated && root.parts.length > 0
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: fadeMask
+            }
+
+            Item {
+                id: fadeMask
+                visible: false
+                layer.enabled: true
+                width: message.width
+                height: message.height
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0; color: "white" }
+                        GradientStop { position: Math.max(0, 1 - 2 * Theme.layout.margin / Math.max(1, message.width)); color: "white" }
+                        GradientStop { position: 1; color: "transparent" }
+                    }
+                }
+            }
 
             Label {
                 id: label

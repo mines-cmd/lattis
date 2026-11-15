@@ -700,22 +700,21 @@ QVariantMap Backups::notice() const
     if (index < 0)
         return {};
     const MovedAside::Import &import = m_imports[index];
-    const QString file = QFileInfo(import.archive).fileName();
     QString text;
     QVariantList parts;
-    appendParts(parts, text, import.kind == Backup::kLibrary ? tr("Restored the library from %1.")
-                                                             : tr("Restored saves from %1."),
-                {{file, true}});
+    appendParts(parts, text, import.kind == Backup::kLibrary ? tr("Library restored.")
+                                                             : tr("Saves restored."),
+                {});
     appendParts(parts, text, QStringLiteral(" "), {});
     const qint64 bytes = m_importBytes.value(index, -1);
     const QString size = bytes < 0 ? QString() : QStringLiteral(" (%1)").arg(sizeText(bytes));
     if (import.paths.isEmpty())
-        appendParts(parts, text, tr("Nothing was there before it."), {});
+        appendParts(parts, text, tr("Nothing was replaced."), {});
     else if (import.paths.size() == 1)
-        appendParts(parts, text, tr("What you had is in %1%2."),
-                    {{QFileInfo(import.paths.first()).fileName(), true}, {size}});
+        appendParts(parts, text, tr("Previous ones kept aside%1."),
+                    {{size}});
     else
-        appendParts(parts, text, tr("What you had is moved aside: %1%2."), {{placesText(import.paths)}, {size}});
+        appendParts(parts, text, tr("Previous ones moved aside: %1%2."), {{placesText(import.paths)}, {size}});
     return {
         {QStringLiteral("text"), text},
         {QStringLiteral("parts"), parts},

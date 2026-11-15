@@ -994,8 +994,7 @@ void RestoreTest::libraryImportRestarts()
     const QVariantMap notice = restarted.notice();
     const QString aside = QStringLiteral(".before-import-") + QDate::currentDate().toString(Qt::ISODate);
     QVERIFY2(notice.value(QStringLiteral("text")).toString().startsWith(
-                 QStringLiteral("Restored the library from %1. What you had is in data%2")
-                     .arg(QFileInfo(archive).fileName(), aside)),
+                 QStringLiteral("Library restored. Previous ones kept aside")),
              qPrintable(notice.value(QStringLiteral("text")).toString()));
     QString joined;
     QStringList chips;
@@ -1006,7 +1005,7 @@ void RestoreTest::libraryImportRestarts()
             chips.append(map.value(QStringLiteral("text")).toString());
     }
     QCOMPARE(joined, notice.value(QStringLiteral("text")).toString());
-    QCOMPARE(chips, (QStringList{QFileInfo(archive).fileName(), QStringLiteral("data") + aside}));
+    QVERIFY(chips.isEmpty());
     QCOMPARE(notice.value(QStringLiteral("folder")).toUrl(), QUrl::fromLocalFile(m_data + aside));
     QCOMPARE(restarted.movedAside().size(), 1);
     QCOMPARE(readFile(m_data + aside + QStringLiteral("/settings.toml")), "# changed\n");
@@ -1032,7 +1031,7 @@ void RestoreTest::savesImportDoesntRestart()
     QVERIFY(calls.isEmpty());
     QVERIFY(changed.count() > 0);
     const QString text = backups.notice().value(QStringLiteral("text")).toString();
-    QVERIFY2(text.contains(QStringLiteral("What you had is moved aside: 4 folders and 3 files")), qPrintable(text));
+    QVERIFY2(text.contains(QStringLiteral("Previous ones moved aside: 4 folders and 3 files")), qPrintable(text));
     const QVariantList aside = backups.movedAside();
     QCOMPARE(aside.size(), 1);
     QCOMPARE(aside.first().toMap().value(QStringLiteral("more")).toInt(), 4);
@@ -1584,7 +1583,7 @@ void RestoreTest::gameSavesWhileRunning()
     QCOMPARE(finished.first().at(1).toString(), QString());
     QCOMPARE(readFile(m_home + QStringLiteral("/.config/Game/saves/slot1.sav")), QByteArray("backed up slot 1"));
     QVERIFY(calls.isEmpty());
-    QVERIFY(idle.notice().value(QStringLiteral("text")).toString().contains(QStringLiteral("What you had is")));
+    QVERIFY(idle.notice().value(QStringLiteral("text")).toString().contains(QStringLiteral("Previous ones")));
 
     // A library backup isn't a game's.
     QVERIFY(!idle.restoreGameSaves(backUpLibrary()).isEmpty());

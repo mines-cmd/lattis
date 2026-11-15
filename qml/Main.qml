@@ -1404,7 +1404,7 @@ ApplicationWindow {
             startedUp: window.startedUp
             heroEntering: window.viewCovered
             covered: window.pageCovering
-            toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
+            toolbarRight: toolbar.visible ? toolbar.x + toolbar.width - parent.x : -1
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
             onMessage: text => toast.show(text)
