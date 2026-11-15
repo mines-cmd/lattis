@@ -867,12 +867,16 @@ Rectangle {
                             hue: row.hue
                         }
                         RowLayout {
+                            id: nameRow
                             Layout.fillWidth: true
                             spacing: Theme.layout.spacingSmall
                             Layout.preferredWidth: 0
+                            Layout.minimumWidth: 0
                             Label {
                                 id: titleLabel
                                 Layout.minimumWidth: 0
+                                Layout.maximumWidth: Math.max(0, nameRow.width
+                                    - (runningLabel.visible ? runningLabel.implicitWidth + nameRow.spacing : 0))
                                 text: row.title
                                 elide: Theme.list.titleElide === "middle" ? Text.ElideMiddle
                                      : Theme.list.titleElide === "left" ? Text.ElideLeft : Text.ElideRight
