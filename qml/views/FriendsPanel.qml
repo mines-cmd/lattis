@@ -222,9 +222,17 @@ Surface {
                 visible: root.topGroup !== "recent"
                 text: root.recentTitle
             }
-            Repeater {
-                model: root.recentShown
-                FriendRow {}
+            GridLayout {
+                Layout.fillWidth: true
+                columns: Theme.friends.recentColumns
+                columnSpacing: Theme.friends.nameGap
+                rowSpacing: Theme.friends.rowGap
+                uniformCellWidths: true
+
+                Repeater {
+                    model: root.recentShown
+                    FriendRow {}
+                }
             }
         }
 
