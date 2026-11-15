@@ -49,7 +49,6 @@ Item {
     signal clicked()
     signal editRequested()
     signal addRequested()
-    signal steamUndoRequested()
     signal historyRequested()
     signal menuRequested(Item button)
     signal customizeRequested()
@@ -680,12 +679,6 @@ Item {
     onShownChipsChanged: showChips()
     Component.onCompleted: { showChips(); gameFields.loadLastBackup() }
 
-    SteamPendingMenu {
-        id: pendingMenu
-        onMessage: text => root.message(text)
-        onUndoRequested: root.steamUndoRequested()
-    }
-
     ColumnLayout {
         anchors.centerIn: parent
         width: Math.min(Theme.details.messageWidth, parent.width - Theme.details.marginLeft - Theme.details.marginRight)
@@ -934,7 +927,6 @@ Item {
                                 FieldChip {
                                     name: chip.name
                                     fields: gameFields
-                                    steamMenu: pendingMenu
                                     leaving: chip.leaving
                                     onHistoryRequested: root.historyRequested()
                                 }
@@ -1090,8 +1082,6 @@ Item {
                         Layout.fillWidth: true
                         fields: gameFields
                         onHistoryRequested: root.historyRequested()
-                        onMessage: text => root.message(text)
-                        onUndoRequested: root.steamUndoRequested()
 
                         TapHandler {
                             acceptedButtons: Qt.RightButton

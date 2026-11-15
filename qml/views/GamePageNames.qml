@@ -4,7 +4,6 @@ import QtQuick
 // See docs/code/qml.md.
 QtObject {
     readonly property var fields: ({
-        steam_waiting: qsTr("Steam changes waiting"),
         steam_update: qsTr("Steam update"),
         steam_family: qsTr("Steam Family"),
         last_backup: qsTr("Last backup"),

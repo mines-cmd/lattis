@@ -1361,7 +1361,6 @@ ApplicationWindow {
                     onModManagerRequested: id => window.openModManager(id)
                     onEditRequested: window.editGame(currentGame.id)
                     onHistoryRequested: window.openPlayHistory(currentGame)
-                    onSteamUndoRequested: window.askSteamUndo()
                     onCustomizeRequested: window.openSettingsAt("game_page")
                     onPageRequested: window.setGamePageOpen(true)
                 }
@@ -1415,7 +1414,6 @@ ApplicationWindow {
             }
             onEditRequested: window.editGame(game.id)
             onAddRequested: window.addGame()
-            onSteamUndoRequested: window.askSteamUndo()
             onHistoryRequested: window.openPlayHistory(game)
             onMenuRequested: button => browser.openMenuBelow(Library.rowOfGame(game.id), button)
             onCustomizeRequested: window.openSettingsAt("game_page")
@@ -1716,6 +1714,8 @@ ApplicationWindow {
         height: Theme.layout.toolbarHeight
         startedUp: window.startedUp
         onMessage: text => toast.show(text)
+        onUndoRequested: window.askSteamUndo()
+        onGameRequested: id => browser.revealGame(id)
     }
 
     Loader {

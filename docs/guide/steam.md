@@ -128,9 +128,9 @@ A Steam game's Properties have a Run card on the Launch tab:
 Steam rewrites its settings when it exits, so it would undo any change made while it runs. Lattis only writes to Steam while Steam is closed:
 
 - **Steam closed:** your change goes into Steam as soon as you save.
-- **Steam running:** the change waits. The game's settings button gets a badge, the Launch card says "Waiting for Steam to close to apply this", and a Steam chip beside Launch says what's waiting. It's applied when Steam next closes.
-- **Close Steam and apply** (on the Launch card, Settings → Steam, the chip, or "Apply N Steam changes" in the app menu) closes Steam, writes the changes and starts Steam again.
-- **Undo** on the chip, or per game on Settings → Steam, drops the waiting changes and keeps what Steam has.
+- **Steam running:** the change waits. The game's settings button gets a badge, the Launch card says "Waiting for Steam to close to apply this", and a banner right of the toolbar names the games waiting and what changed (launch options, Proton version and so on). **Show** goes to the game, or lists them when there are several. It's applied when Steam next closes.
+- **Close Steam and apply** (on the Launch card, Settings → Steam, the banner's **Close Steam**, or "Apply N Steam changes" in the app menu) closes Steam, writes the changes and starts Steam again.
+- **Undo** on the banner, or per game on Settings → Steam, drops the waiting changes and keeps what Steam has.
 - **Launching a game with a change waiting** while Steam runs asks: "Restart Steam and launch", "Launch with the old options", or Cancel.
 
 **Changes made in Steam** come into Lattis within a moment. If the same game's value was changed in both before they met, Steam's wins.

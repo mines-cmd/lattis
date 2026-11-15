@@ -12,7 +12,7 @@ const QStringList &fields()
         QStringLiteral("platform"),     QStringLiteral("status"),           QStringLiteral("install_size"),
         QStringLiteral("rating"),       QStringLiteral("times_played"),     QStringLiteral("first_played"),
         QStringLiteral("recent_play_time"), QStringLiteral("date_added"),
-        QStringLiteral("steam_waiting"),   QStringLiteral("steam_update"),     QStringLiteral("steam_family"),
+        QStringLiteral("steam_update"),     QStringLiteral("steam_family"),
         QStringLiteral("last_backup"),     QStringLiteral("protondb"),
         QStringLiteral("friends_playing")};
     return names;
@@ -58,6 +58,9 @@ bool readNames(const toml::node &node, const QString &key, const QString &place,
     const QStringList &choices = gamePageChoices(place);
     for (const toml::node &item : *array) {
         const QString name = toQString(item.as_string()->get());
+        // Moved to a banner right of the toolbar; old files still list it.
+        if (name == QLatin1String("steam_waiting") && (place == GamePage::chips || place == GamePage::gridChips || place == GamePage::infoRows))
+            continue;
         if (!choices.contains(name))
             warnings.append(QStringLiteral("%1: unknown name \"%2\" in %3: they're \"%4\"%5")
                                 .arg(section.where(item), name, key, choices.join(QStringLiteral("\", \"")),
@@ -71,7 +74,7 @@ bool readNames(const toml::node &node, const QString &key, const QString &place,
 
 QStringList GamePageSettings::defaultChips()
 {
-    return {QStringLiteral("play_time"), QStringLiteral("last_played"), QStringLiteral("steam_waiting"),
+    return {QStringLiteral("play_time"), QStringLiteral("last_played"),
             QStringLiteral("steam_update"), QStringLiteral("steam_family")};
 }
 

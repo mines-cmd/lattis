@@ -847,6 +847,24 @@ QVariantList Library::buildSteamWaiting() const
         QString id;
         QString title;
         bool adds;
+        QString changes;
+    };
+    const auto describe = [](const QStringList &keys) {
+        QStringList names;
+        for (const QString &key : keys) {
+            if (key == SteamSync::kShortcutIcon)
+                continue;
+            names.append(key == u"launch_options" ? tr("launch options")
+                         : key == u"proton"       ? tr("Proton version")
+                         : key == u"title"        ? tr("name")
+                         : key == u"exe"          ? tr("program")
+                         : key == u"start_dir"    ? tr("start folder")
+                         : key == SteamSync::kAddShortcut ? tr("addition to Steam")
+                         : key == SteamSync::kRemoveShortcut ? tr("removal from Steam")
+                                                  : QString(key).replace(u'_', u' '));
+        }
+        names.removeDuplicates();
+        return names.join(QStringLiteral(", "));
     };
     QList<Entry> entries;
     const QHash<QString, QStringList> &queued = m_store.snapshot().steamQueued;
@@ -855,19 +873,20 @@ QVariantList Library::buildSteamWaiting() const
             continue;
         if (const quint32 appId = SteamSync::removedAppId(it.key()); appId != 0) {
             const QString title = m_store.removedShortcutTitle(appId);
-            entries.append({it.key(), tr("%1 (removed)").arg(title.isEmpty() ? QString::number(appId) : title), false});
+            entries.append({it.key(), tr("%1 (removed)").arg(title.isEmpty() ? QString::number(appId) : title), false,
+                            describe(it.value())});
             continue;
         }
         const auto g = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == it.key(); });
         if (g != m_games.cend())
-            entries.append({g->id, g->title, it.value().contains(SteamSync::kAddShortcut)});
+            entries.append({g->id, g->title, it.value().contains(SteamSync::kAddShortcut), describe(it.value())});
     }
     std::sort(entries.begin(), entries.end(),
               [](const Entry &a, const Entry &b) { return a.title.compare(b.title, Qt::CaseInsensitive) < 0; });
     QVariantList out;
     for (const Entry &e : std::as_const(entries))
         out.append(QVariantMap{{QStringLiteral("id"), e.id}, {QStringLiteral("title"), e.title},
-                               {QStringLiteral("adds"), e.adds}});
+                               {QStringLiteral("adds"), e.adds}, {QStringLiteral("changes"), e.changes}});
     return out;
 }
 

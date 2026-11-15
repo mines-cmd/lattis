@@ -668,7 +668,7 @@ void GeneralTest::gamePageDefaults()
     QVERIFY(empty.ok);
     QCOMPARE(empty.value, GamePageSettings());
     QCOMPARE(empty.value.chips,
-             (QStringList{"play_time", "last_played", "steam_waiting", "steam_update", "steam_family"}));
+             (QStringList{"play_time", "last_played", "steam_update", "steam_family"}));
     QCOMPARE(empty.value.buttons, (QStringList{"favorite", "open_platform", "folder", "settings"}));
     QCOMPARE(empty.value.infoRows,
              (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
@@ -681,6 +681,14 @@ void GeneralTest::gamePageDefaults()
     QVERIFY(other.warnings.isEmpty());
 
     QVERIFY(!parseGamePageSettings("[game_page\n", QStringLiteral("settings.toml")).ok);
+
+    const auto retired = parseGamePageSettings("[game_page]\nchips = [\"steam_waiting\", \"play_time\"]\n"
+                                               "chips_order = [\"steam_waiting\", \"play_time\"]\n"
+                                               "info_rows = [\"steam_waiting\"]\ninfo_rows_order = [\"steam_waiting\"]\n"
+                                               "grid_chips_order = [\"steam_waiting\"]\n",
+                                               QStringLiteral("settings.toml"));
+    QVERIFY(retired.warnings.isEmpty());
+    QCOMPARE(retired.value.chips, (QStringList{"play_time"}));
 }
 
 void GeneralTest::gamePageParser()
@@ -754,7 +762,7 @@ void GeneralTest::gamePageOrderKeepsNewNames()
 
     // A new chip is a new info row too: the two places never drift apart.
     QCOMPARE(gamePageChoices(GamePage::chips), gamePageChoices(GamePage::infoRows));
-    QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
+    QVERIFY(!gamePageChoices(GamePage::infoRows).contains(QStringLiteral("steam_waiting")));
     QVERIFY(gamePageChoices(GamePage::infoRows).contains(QStringLiteral("protondb")));
     QVERIFY(!GamePageSettings::defaultInfoRows().contains(QStringLiteral("protondb")));
     QVERIFY(gamePageChoices(GamePage::chips).contains(QStringLiteral("friends_playing")));

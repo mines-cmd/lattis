@@ -17,7 +17,6 @@ Rectangle {
     signal editRequested()
     signal menuRequested(Item button)
     signal historyRequested()
-    signal steamUndoRequested()
     signal customizeRequested()
     signal pageRequested()
 
@@ -75,12 +74,6 @@ Rectangle {
         target: pageMenu.item
         function onCustomizeRequested() { root.customizeRequested() }
         function onMessage(text) { root.message(text) }
-    }
-
-    SteamPendingMenu {
-        id: pendingMenu
-        onMessage: text => root.message(text)
-        onUndoRequested: root.steamUndoRequested()
     }
 
     Rectangle {
@@ -361,7 +354,6 @@ Rectangle {
                                 Layout.fillWidth: !chipGrid.spread
                                 Layout.preferredWidth: chipGrid.spread ? fitWidth : 1
                                 fields: gameFields
-                                steamMenu: pendingMenu
                                 onHistoryRequested: root.historyRequested()
                             }
                         }
@@ -391,8 +383,6 @@ Rectangle {
                         Layout.fillWidth: true
                         fields: gameFields
                         onHistoryRequested: root.historyRequested()
-                        onMessage: text => root.message(text)
-                        onUndoRequested: root.steamUndoRequested()
 
                         TapHandler {
                             acceptedButtons: Qt.RightButton

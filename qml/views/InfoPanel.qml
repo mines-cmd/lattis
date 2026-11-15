@@ -10,14 +10,6 @@ Surface {
     readonly property var rows: fields.shown(General.gamePageInfoRows).map(name => fields.all[name])
 
     signal historyRequested()
-    signal message(string text)
-    signal undoRequested()
-
-    SteamPendingMenu {
-        id: pendingMenu
-        onMessage: text => root.message(text)
-        onUndoRequested: root.undoRequested()
-    }
 
     implicitHeight: column.implicitHeight + 2 * Theme.infoPanel.verticalPadding
     radius: Theme.infoPanel.radius
@@ -116,8 +108,6 @@ Surface {
                     onClicked: {
                         if (infoRow.modelData.history ?? false)
                             root.historyRequested()
-                        else if (infoRow.modelData.action === "pending")
-                            pendingMenu.popup(infoRow, infoRow.width - pendingMenu.width, infoRow.height)
                         else if (infoRow.modelData.action === "url")
                             Qt.openUrlExternally(infoRow.modelData.url)
                         else

@@ -39,7 +39,6 @@ QtObject {
             recent_play_time: { label: periodLabels[General.recentPeriod] ?? "", value: playTime((played.recent ?? {})[General.recentPeriod]),
                                 icon: Icons.timerLine },
             date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckLine },
-            steam_waiting: steamWaitingField,
             steam_update: steamUpdateField,
             steam_family: steamFamilyField,
             last_backup: lastBackupField,
@@ -48,20 +47,6 @@ QtObject {
         }
     }
 
-    readonly property bool steamWaitingShown: !Library.readOnly && Library.steamWaiting.length > 0
-        && ((game.installed ?? true) || (game.steamUpdate ?? "none") === "none")
-    readonly property bool pendingMine: game.pendingSteamEdits ?? false
-    readonly property var steamWaitingField: {
-        const waiting = Library.steamWaiting.length
-        return { label: qsTr("Steam"), icon: Icons.informationLine, attention: true, action: "pending",
-                 value: !steamWaitingShown ? ""
-                      : (game.shortcutQueued ?? false) ? qsTr("Added when it closes")
-                      : pendingMine ? qsTr("Changes wait for it to close")
-                      : waiting === 1 ? qsTr("1 game's changes waiting")
-                      : qsTr("%1 games' changes waiting").arg(waiting),
-                 hoverTip: pendingMine ? "" : qsTr("Waiting for Steam to close: %1").arg(Library.steamWaiting.map(w => w.title).join(", ")),
-                 tip: qsTr("Apply the changes now, or undo them") }
-    }
     readonly property var steamUpdateField: ({
         label: (game.installed ?? true) ? qsTr("Update available") : qsTr("Installing"),
         value: (game.steamUpdate ?? "none") !== "none" ? game.steamUpdateText ?? "" : "",

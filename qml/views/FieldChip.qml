@@ -7,7 +7,6 @@ StatChip {
 
     required property string name
     required property GameFields fields
-    required property SteamPendingMenu steamMenu
     property bool leaving: false
     property bool carded: false
     // A cell of a strip that draws the card itself.
@@ -55,20 +54,4 @@ StatChip {
     }
 
     HoverHandler { id: chipHover }
-
-    SettingsButton {
-        id: pendingButton
-        visible: (root.field.action ?? "") === "pending"
-        implicitHeight: Theme.statChip.buttonHeight
-        flat: true
-        leftPadding: text === "" ? 0 : 14
-        rightPadding: leftPadding
-        implicitWidth: text === "" ? implicitHeight : contentItem.implicitWidth + leftPadding + rightPadding
-        text: GameRunner.closingSteam ? qsTr("Closing Steam") : ""
-        iconPath: GameRunner.closingSteam ? "" : Icons.chevronRight
-        iconRotation: root.steamMenu.showing ? -90 : 90
-        enabled: !GameRunner.closingSteam
-        tip: root.field.tip ?? ""
-        onClicked: root.steamMenu.popup(pendingButton, 0, pendingButton.height)
-    }
 }

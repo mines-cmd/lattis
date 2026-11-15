@@ -20,7 +20,6 @@ Item {
     signal emulatorMessage(string text, string gameId)
     signal editRequested()
     signal historyRequested()
-    signal steamUndoRequested()
     signal customizeRequested()
     signal pageRequested()
 
@@ -1144,7 +1143,6 @@ Item {
         onEditRequested: root.editRequested()
         onMenuRequested: button => root.openMenuBelow(Library.rowOfGame(root.currentGame.id), button)
         onHistoryRequested: root.historyRequested()
-        onSteamUndoRequested: root.steamUndoRequested()
         onCustomizeRequested: root.customizeRequested()
         onPageRequested: root.pageRequested()
     }
