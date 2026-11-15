@@ -73,7 +73,7 @@ A game played for less than the minimum session length makes no backup, and neit
 - **A game's saves backup** (from automatic backup) restores that game's files, as above.
 - **A saves backup** lets you pick what to restore, part by part (an emulator's saves, its keys, a game's saves), each with where it'll go. Saves go into each emulator as it's installed now, even if it's installed differently than when you backed up (a Flatpak instead of an AppImage). Saves kept next to a ROM follow the ROM to wherever it is now.
 
-**Nothing is overwritten.** What a restore replaces is moved aside, to a folder named `<folder>.before-import-<date>`, and a notice names each one. When you're happy with the result, delete them from Settings → Library's Backup section.
+**Nothing is overwritten.** What a restore replaces is moved aside, to a folder named `<folder>.before-import-<date>`, and a notice names each one. The notice is a green banner right of the toolbar, with **Show** to open the folder, **Delete** to move what was set aside to the trash, and an X to hide it; it stays until you do. If another banner is showing too (Steam changes waiting, a read-only library), that one is in front and this one peeks out under it: hover the stack to fan them out. When you're happy with the result, delete them from Settings → Library's Backup section.
 
 A part that can't be restored yet (an emulator that isn't installed, a Windows game that hasn't been launched on this computer yet) says why and stays in the backup for a later Import.
 

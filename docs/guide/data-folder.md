@@ -45,7 +45,7 @@ When a file has a mistake (a typo in a setting, a value out of range), Lattis us
 
 ## A read-only library
 
-A library saved by a newer version of Lattis (say, a backup restored under an older one) opens read-only: you can browse and launch, but nothing is saved, not even play time. A bar above the game says so. Update Lattis to use it normally.
+A library saved by a newer version of Lattis (say, a backup restored under an older one) opens read-only: you can browse and launch, but nothing is saved, not even play time. A yellow banner right of the toolbar says so. Update Lattis to use it normally.
 
 When Lattis is updated and its library format changes, it upgrades your library at start, after copying it to `library/backup-v<old version>/`.
 
