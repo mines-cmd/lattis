@@ -133,7 +133,7 @@ Item {
                     flat: true
                     leftPadding: Theme.layout.spacing
                     rightPadding: Theme.layout.spacing
-                    textColor: Theme.notice.actionText
+                    textColor: Theme.notice.warningActionText
                     font.weight: Theme.font.emphasisWeight
                     tip: steamNotice.waiting === 1 ? qsTr("Go to the game") : qsTr("Pick a game to go to, with what changed")
                     onClicked: {
@@ -149,7 +149,7 @@ Item {
                     flat: true
                     leftPadding: Theme.layout.spacing
                     rightPadding: Theme.layout.spacing
-                    textColor: Theme.notice.actionText
+                    textColor: Theme.notice.warningActionText
                     font.weight: Theme.font.emphasisWeight
                     enabled: !GameRunner.closingSteam
                     tip: qsTr("Closes Steam, writes these changes to it, and starts Steam again")

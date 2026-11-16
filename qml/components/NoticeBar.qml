@@ -49,7 +49,7 @@ Surface {
             Layout.preferredWidth: Math.max(height, countLabel.implicitWidth + 2 * Theme.layout.spacingSmall)
             Layout.preferredHeight: countLabel.implicitHeight + 2
             radius: Theme.radius.pill
-            color: Qt.alpha(Theme.notice.count, Theme.notice.countOpacity)
+            color: Qt.alpha(root.warning ? Theme.notice.warningCount : Theme.notice.count, Theme.notice.countOpacity)
 
             Label {
                 id: countLabel
@@ -96,7 +96,7 @@ Surface {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.text
                 elide: Text.ElideRight
-                color: Theme.notice.text
+                color: root.warning ? Theme.notice.warningText : Theme.notice.text
             }
             Row {
                 id: pieces
@@ -111,7 +111,7 @@ Surface {
                         readonly property bool chip: modelData.chip === true
                         anchors.verticalCenter: parent?.verticalCenter
                         text: modelData.text
-                        color: chip ? Theme.notice.chipText : Theme.notice.text
+                        color: chip ? Theme.notice.chipText : (root.warning ? Theme.notice.warningText : Theme.notice.text)
                         leftPadding: chip ? Theme.notice.chipPadding : 0
                         rightPadding: chip ? Theme.notice.chipPadding : 0
                         topPadding: chip ? 2 : 0
