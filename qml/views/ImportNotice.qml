@@ -30,6 +30,8 @@ Item {
             Layout.preferredHeight: Theme.notice.buttonHeight
             text: qsTr("Show")
             flat: true
+            leftPadding: Theme.layout.spacing
+            rightPadding: Theme.layout.spacing
             textColor: Theme.notice.actionText
             font.weight: Theme.font.emphasisWeight
             onClicked: Qt.openUrlExternally(root.notice.folder)
@@ -39,6 +41,8 @@ Item {
             Layout.preferredHeight: Theme.notice.buttonHeight
             text: qsTr("Delete")
             flat: true
+            leftPadding: Theme.layout.spacing
+            rightPadding: Theme.layout.spacing
             textColor: Theme.notice.dangerText
             font.weight: Theme.font.emphasisWeight
             onClicked: confirm.open()
