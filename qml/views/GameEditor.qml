@@ -343,6 +343,7 @@ Item {
         status: 0, tags: 0, igdb: 0, steamgriddb: 0, steam_app: 0,
         media_folders: 1,
         emulator: 2, args: 2, rom: 2, launch_options: 2, proton: 2, exe: 2, installed: 2, start_dir: 2, install_dir: 2,
+        update_source: 2, update_asset: 2, update_prereleases: 2,
         save_folder: 3, save_paths: 3, auto_backup: 3, no_saves: 3
     })
     // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
