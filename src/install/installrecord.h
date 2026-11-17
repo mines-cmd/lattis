@@ -24,6 +24,29 @@ struct InstallRecord
     bool operator==(const InstallRecord &) const = default;
 };
 
+// What Lattis knows about the installed build of an AppImage game (game-updates.toml, one table per game id).
+struct GameUpdateRecord
+{
+    QString file;
+    qint64 size = 0;
+    QString sha256;
+    QString assetId;
+    QString assetDate;
+    QString tag;
+    QString checked;
+
+    bool operator==(const GameUpdateRecord &) const = default;
+};
+
+namespace GameUpdateRecords {
+using Records = QMap<QString, GameUpdateRecord>;
+
+QString path(const QString &stateDir);
+Parsed<Records> parse(const QByteArray &bytes);
+Parsed<Records> read(const QString &path);
+bool write(const QString &path, const Records &records, QString *error);
+}
+
 namespace InstallRecords {
 using Records = QMap<QString, InstallRecord>;
 

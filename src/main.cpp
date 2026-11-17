@@ -342,6 +342,22 @@ int main(int argc, char *argv[])
                           const QString id = runner.runningIn(emulatorName);
                           const Game *game = id.isEmpty() ? nullptr : library.game(id);
                           return game ? game->title : id;
+                      },
+                      [&library] {
+                          QList<Installer::GameTarget> targets;
+                          const auto files = library.store().snapshot().programFiles;
+                          for (auto it = files.cbegin(); it != files.cend(); ++it) {
+                              const Game *game = library.game(it.key());
+                              if (!game || !it->appImage || !it->updateSource.isSet() || it->updateSource.asset.isEmpty())
+                                  continue;
+                              targets.append({it.key(), game->title, it->exe, it->updateSource.source,
+                                              it->updateSource.asset, it->updateSource.prereleases});
+                          }
+                          return targets;
+                      },
+                      [&runner](const QString &gameId) {
+                          const QStringList running = runner.running();
+                          return running.contains(gameId) ? runner.runningTitle(gameId) : QString();
                       }});
     {
         AppUpdate::Setup update;

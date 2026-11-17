@@ -1,8 +1,11 @@
 #include "installer.h"
 
+#include "appupdate.h"
 #include "desktopentry.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QFutureWatcher>
 #include <QDate>
 #include <QDateTime>
 #include <QDir>
@@ -14,18 +17,30 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSaveFile>
+#include <QtConcurrent>
 
 Q_LOGGING_CATEGORY(lcInstall, "launcher.install")
 
 Installer::Setup Installer::s_setup;
 
 namespace {
-std::optional<ReleaseSource> sourceOf(const EmulatorDef &def, QString *problem = nullptr)
+std::optional<ReleaseSource> sourceOf(const QString &release, bool prereleases, QString *problem = nullptr)
 {
-    auto source = ReleaseSources::parse(def.release, problem);
+    auto source = ReleaseSources::parse(release, problem);
     if (source && source->host == ReleaseSource::Host::GitHub)
-        source->prereleases = def.releasePrereleases;
+        source->prereleases = prereleases;
     return source;
+}
+
+QString fileSha256(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (!hash.addData(&file))
+        return {};
+    return QString::fromLatin1(hash.result().toHex());
 }
 
 QString versionText(const QString &tag, bool prerelease)
@@ -119,6 +134,7 @@ void Installer::refresh()
 {
     m_flatpakProgram = FlatpakInstall::program();
     m_records = InstallRecords::read(InstallRecords::path(m_setup.stateDir)).value;
+    m_gameRecords = GameUpdateRecords::read(GameUpdateRecords::path(m_setup.stateDir)).value;
     rebuild();
 }
 
@@ -161,7 +177,7 @@ void Installer::rebuild()
         }
         QString source;
         QString project;
-        if (const auto parsed = sourceOf(def)) {
+        if (const auto parsed = sourceOf(def.release, def.releasePrereleases)) {
             source = parsed->label();
             project = parsed->project;
         }
@@ -173,6 +189,8 @@ void Installer::rebuild()
         }
         if (!updateVersion.isEmpty())
             updateList.append(QVariantMap{{QStringLiteral("id"), def.id},
+                                          {QStringLiteral("kind"), QStringLiteral("emulator")},
+                                          {QStringLiteral("gameId"), QString()},
                                           {QStringLiteral("name"), def.name},
                                           {QStringLiteral("version"), updateVersion},
                                           {QStringLiteral("from"), versionText(record.tag, record.prerelease)},
@@ -203,9 +221,54 @@ void Installer::rebuild()
                                {QStringLiteral("canCancel"), job.state != State::Installing || !job.flatpak.isNull()},
                            });
     }
-    if (out != m_emulators) {
+    QVariantMap gameRows;
+    const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    for (const GameTarget &game : games) {
+        const QString key = gameKey(game.id);
+        const Job job = m_jobs.value(key);
+        const GameUpdateRecord record = m_gameRecords.value(game.id);
+        const bool recorded = record.file == QFileInfo(game.file).absoluteFilePath();
+        const auto update = m_updates.constFind(key);
+        const bool hasUpdate = update != m_updates.cend();
+        const bool upToDate = !hasUpdate && m_upToDate.contains(key);
+        if (!hasUpdate && !upToDate && job.state == State::Idle)
+            continue;
+        QString updateVersion;
+        if (hasUpdate)
+            updateVersion = update->release.tag.isEmpty() ? update->asset.date
+                                                           : versionText(update->release.tag, update->release.prerelease);
+        const QString version = recorded ? record.tag : QString();
+        if (hasUpdate)
+            updateList.append(QVariantMap{{QStringLiteral("id"), key},
+                                          {QStringLiteral("kind"), QStringLiteral("game")},
+                                          {QStringLiteral("gameId"), game.id},
+                                          {QStringLiteral("name"), game.title},
+                                          {QStringLiteral("version"), updateVersion},
+                                          {QStringLiteral("from"), version},
+                                          {QStringLiteral("notes"), update->release.notes},
+                                          {QStringLiteral("size"), double(update->asset.size)},
+                                          {QStringLiteral("state"), stateName(job.state)}});
+        QString project;
+        if (const auto parsed = sourceOf(game.source, game.prereleases))
+            project = parsed->label();
+        gameRows.insert(game.id, QVariantMap{
+                                     {QStringLiteral("state"), stateName(job.state)},
+                                     {QStringLiteral("progress"), job.progress},
+                                     {QStringLiteral("error"), job.error},
+                                     {QStringLiteral("version"), version},
+                                     {QStringLiteral("updateVersion"), updateVersion},
+                                     {QStringLiteral("upToDate"), upToDate},
+                                     {QStringLiteral("match"), m_matched.value(key)},
+                                     {QStringLiteral("notes"), hasUpdate ? update->release.notes : QString()},
+                                     {QStringLiteral("size"), hasUpdate ? double(update->asset.size) : 0.0},
+                                     {QStringLiteral("source"), project},
+                                     {QStringLiteral("canCancel"), job.state != State::Installing},
+                                 });
+    }
+    if (out != m_emulators || gameRows != m_gameRows) {
         m_emulators = out;
         m_updateList = updateList;
+        m_gameRows = gameRows;
         emit emulatorsChanged();
     }
 }
@@ -216,13 +279,67 @@ bool Installer::busy(const QString &id) const
     return it != m_jobs.cend() && it->state != State::Failed;
 }
 
-Installer::Job &Installer::startJob(const EmulatorDef &emulator, Kind kind)
+Installer::Job &Installer::startJob(const ReleaseTarget &target, Kind kind)
 {
     Job job;
     job.serial = ++m_serial;
     job.kind = kind;
-    job.emulatorName = emulator.name;
-    return m_jobs.insert(emulator.id, job).value();
+    job.emulatorName = target.name;
+    return m_jobs.insert(target.id, job).value();
+}
+
+Installer::ReleaseTarget Installer::targetOf(const EmulatorDef &emulator)
+{
+    ReleaseTarget target;
+    target.id = emulator.id;
+    target.name = emulator.name;
+    target.release = emulator.release;
+    target.assets = emulator.releaseAsset;
+    target.prereleases = emulator.releasePrereleases;
+    target.inside = emulator.releaseInside;
+    return target;
+}
+
+Installer::ReleaseTarget Installer::targetOf(const GameTarget &game)
+{
+    ReleaseTarget target;
+    target.id = gameKey(game.id);
+    target.name = game.title;
+    target.release = game.source;
+    target.assets = ReleaseSources::withoutZsync(game.asset);
+    target.prereleases = game.prereleases;
+    target.game = true;
+    target.gameId = game.id;
+    target.file = game.file;
+    return target;
+}
+
+std::optional<Installer::GameTarget> Installer::findGame(const QString &gameId) const
+{
+    const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    for (const GameTarget &game : games)
+        if (game.id == gameId)
+            return game;
+    return std::nullopt;
+}
+
+QString Installer::gameBlocker(const GameTarget &game) const
+{
+    const QFileInfo file(game.file);
+    if (!file.isFile())
+        return tr("The AppImage file isn't there");
+    if (!QFileInfo(file.absolutePath()).isWritable())
+        return tr("%1 can't be written to").arg(QDir::toNativeSeparators(file.absolutePath()));
+    QString applications;
+    if (m_setup.locations) {
+        const InstallLocations where = m_setup.locations();
+        applications = where.xdgDirs.contains(QStringLiteral("data"))
+                           ? where.xdgDirs.value(QStringLiteral("data")) + QStringLiteral("/applications")
+                           : where.home + QStringLiteral("/.local/share/applications");
+    }
+    if (const QString manager = AppUpdates::managedBy(game.file, applications); !manager.isEmpty())
+        return tr("%1 manages this AppImage; update it there").arg(manager);
+    return {};
 }
 
 QString Installer::gameRunning(const EmulatorDef &emulator) const
@@ -236,9 +353,9 @@ void Installer::install(const QString &id, const QString &route)
     const EmulatorDef *def = Emulators::find(defs, id);
     if (!def || busy(id))
         return;
-    startJob(*def, Kind::Install).route = route;
+    startJob(targetOf(*def), Kind::Install).route = route;
     if (route == QLatin1String("appimage"))
-        begin(*def);
+        begin(targetOf(*def));
     else if (route == QLatin1String("flatpak"))
         beginFlatpak(*def, Kind::Install, def->flatpak);
     else
@@ -247,12 +364,18 @@ void Installer::install(const QString &id, const QString &route)
 
 void Installer::update(const QString &id)
 {
+    if (id.startsWith(gameKey({}))) {
+        const auto game = findGame(id.mid(gameKey({}).size()));
+        if (game && !busy(id))
+            updateGameFile(*game);
+        return;
+    }
     const QList<EmulatorDef> defs = m_setup.emulators ? m_setup.emulators() : QList<EmulatorDef>();
     const EmulatorDef *def = Emulators::find(defs, id);
     if (!def || busy(id))
         return;
     const auto record = installedByApp(id);
-    startJob(*def, Kind::Update);
+    startJob(targetOf(*def), Kind::Update);
     if (!record || record->route != QLatin1String("appimage")) {
         fail(id, tr("%1 wasn't installed as an AppImage by Lattis, so it can't be updated here").arg(def->name));
         return;
@@ -262,7 +385,24 @@ void Installer::update(const QString &id)
         return;
     }
     m_jobs[id].oldFile = record->file;
-    begin(*def);
+    begin(targetOf(*def));
+}
+
+void Installer::updateGameFile(const GameTarget &game)
+{
+    const ReleaseTarget target = targetOf(game);
+    startJob(target, Kind::Update);
+    if (const QString running = m_setup.gameRunningTitle ? m_setup.gameRunningTitle(game.id) : QString();
+        !running.isEmpty()) {
+        fail(target.id, tr("Close %1 first").arg(running));
+        return;
+    }
+    if (const QString blocker = gameBlocker(game); !blocker.isEmpty()) {
+        fail(target.id, blocker);
+        return;
+    }
+    m_jobs[target.id].oldFile = game.file;
+    begin(target);
 }
 
 void Installer::uninstall(const QString &id)
@@ -272,7 +412,7 @@ void Installer::uninstall(const QString &id)
     if (!def || busy(id))
         return;
     const auto record = installedByApp(id);
-    startJob(*def, Kind::Uninstall);
+    startJob(targetOf(*def), Kind::Uninstall);
     if (!record) {
         fail(id, tr("%1 wasn't installed by Lattis, so it can't be uninstalled here").arg(def->name));
         return;
@@ -290,6 +430,19 @@ void Installer::uninstall(const QString &id)
 void Installer::checkUpdates(const QString &id)
 {
     const QList<EmulatorDef> defs = m_setup.emulators ? m_setup.emulators() : QList<EmulatorDef>();
+    if (id.isEmpty() || id.startsWith(gameKey({}))) {
+        const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+        for (const GameTarget &game : games) {
+            if ((!id.isEmpty() && gameKey(game.id) != id) || game.source.isEmpty() || game.asset.isEmpty()
+                || !QFileInfo(game.file).isFile() || busy(gameKey(game.id)))
+                continue;
+            const ReleaseTarget target = targetOf(game);
+            startJob(target, Kind::Check).quiet = id.isEmpty();
+            begin(target);
+        }
+        if (!id.isEmpty())
+            return;
+    }
     const QStringList ids = id.isEmpty() ? m_records.keys() : QStringList{id};
     for (const QString &target : ids) {
         const EmulatorDef *def = Emulators::find(defs, target);
@@ -298,8 +451,8 @@ void Installer::checkUpdates(const QString &id)
         const auto record = installedByApp(target);
         if (!record || record->route != QLatin1String("appimage"))
             continue;
-        startJob(*def, Kind::Check).quiet = id.isEmpty();
-        begin(*def);
+        startJob(targetOf(*def), Kind::Check).quiet = id.isEmpty();
+        begin(targetOf(*def));
     }
 }
 
@@ -331,13 +484,13 @@ QString Installer::cachedReleasePath(const QString &release) const
     return QDir(m_setup.cacheDir).filePath(QStringLiteral("releases/") + releaseFileName(release));
 }
 
-void Installer::begin(const EmulatorDef &emulator)
+void Installer::begin(const ReleaseTarget &emulator)
 {
     const QString id = emulator.id;
     Job &job = m_jobs[id];
     QString problem;
-    const auto source = sourceOf(emulator, &problem);
-    if (emulator.release.isEmpty() || emulator.releaseAsset.isEmpty()) {
+    const auto source = sourceOf(emulator.release, emulator.prereleases, &problem);
+    if (emulator.release.isEmpty() || emulator.assets.isEmpty()) {
         fail(id, tr("%1 has no AppImage to download").arg(emulator.name));
         return;
     }
@@ -394,15 +547,15 @@ void Installer::begin(const EmulatorDef &emulator)
     });
 }
 
-void Installer::gotRelease(const EmulatorDef &emulator, quint64 serial, const QByteArray &json,
+void Installer::gotRelease(const ReleaseTarget &emulator, quint64 serial, const QByteArray &json,
                            const QString &networkError, bool fromCache)
 {
     const auto it = m_jobs.find(emulator.id);
     if (it == m_jobs.end() || it->serial != serial || it->state != State::Checking)
         return;
-    const auto source = sourceOf(emulator);
+    const auto source = sourceOf(emulator.release, emulator.prereleases);
     QString error;
-    const auto release = source ? ReleaseSources::parseRelease(*source, json, &error, emulator.releaseAsset) : std::nullopt;
+    const auto release = source ? ReleaseSources::parseRelease(*source, json, &error, emulator.assets) : std::nullopt;
     if (!release) {
         if (fromCache && m_fixturesDir.isEmpty())
             QFile::remove(cachedReleasePath(emulator.release));
@@ -417,21 +570,27 @@ void Installer::gotRelease(const EmulatorDef &emulator, quint64 serial, const QB
         if (file.open(QIODevice::WriteOnly) && file.write(json) == json.size())
             file.commit();
     }
-    const ReleaseAsset *asset = ReleaseSources::pickAsset(*release, emulator.releaseAsset);
+    const ReleaseAsset *asset = ReleaseSources::pickAsset(*release, emulator.assets);
     if (!asset) {
-        fail(emulator.id, tr("The latest release (%1) has no download named %2").arg(release->tag, emulator.releaseAsset));
+        m_matched.remove(emulator.id);
+        fail(emulator.id, tr("The latest release (%1) has no download named %2").arg(release->tag, emulator.assets));
         return;
     }
     it->release = *release;
     it->asset = *asset;
+    m_matched.insert(emulator.id, asset->name);
     if (it->kind == Kind::Check)
         checked(emulator);
     else
         download(emulator);
 }
 
-void Installer::checked(const EmulatorDef &emulator)
+void Installer::checked(const ReleaseTarget &emulator)
 {
+    if (emulator.game) {
+        checkedGame(emulator);
+        return;
+    }
     const QString id = emulator.id;
     const Job job = m_jobs.value(id);
     const InstallRecord record = m_records.value(id);
@@ -450,6 +609,81 @@ void Installer::checked(const EmulatorDef &emulator)
     m_jobs.remove(id);
     rebuild();
     askedDone(id, false);
+}
+
+void Installer::checkedGame(const ReleaseTarget &target)
+{
+    const Job job = m_jobs.value(target.id);
+    const ReleaseAsset &asset = job.asset;
+    const QFileInfo file(target.file);
+    const GameUpdateRecord record = m_gameRecords.value(target.gameId);
+    const bool known = record.file == file.absoluteFilePath() && record.size == file.size() && !record.sha256.isEmpty();
+    if (known) {
+        const bool newer = !asset.sha256.isEmpty() ? record.sha256 != asset.sha256
+                                                    : record.assetId != asset.id || record.assetDate != asset.date;
+        gameCheckDone(target, newer);
+        return;
+    }
+    // Nothing says which build is installed: its checksum is compared to the release's.
+    if (asset.sha256.isEmpty()) {
+        gameCheckDone(target, true);
+        return;
+    }
+    const quint64 serial = job.serial;
+    auto *watcher = new QFutureWatcher<QString>(this);
+    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, target, serial] {
+        const QString hash = watcher->result();
+        watcher->deleteLater();
+        const auto it = m_jobs.constFind(target.id);
+        if (it == m_jobs.cend() || it->serial != serial || it->state != State::Checking)
+            return;
+        if (hash.isEmpty()) {
+            fail(target.id, tr("Couldn't read %1").arg(QDir::toNativeSeparators(target.file)));
+            return;
+        }
+        const ReleaseAsset &asset = it->asset;
+        const QFileInfo file(target.file);
+        GameUpdateRecord record;
+        record.file = file.absoluteFilePath();
+        record.size = file.size();
+        record.sha256 = hash;
+        const bool same = hash == asset.sha256;
+        if (same) {
+            record.tag = it->release.tag;
+            record.assetId = asset.id;
+            record.assetDate = asset.date;
+        }
+        record.checked = QDate::currentDate().toString(Qt::ISODate);
+        saveGameRecord(target.gameId, record);
+        gameCheckDone(target, !same);
+    });
+    watcher->setFuture(QtConcurrent::run(fileSha256, target.file));
+}
+
+void Installer::gameCheckDone(const ReleaseTarget &target, bool newer)
+{
+    const QString key = target.id;
+    const Job job = m_jobs.value(key);
+    if (newer) {
+        m_updates.insert(key, {job.release, job.asset});
+        m_upToDate.remove(key);
+    } else {
+        m_updates.remove(key);
+        m_upToDate.insert(key);
+    }
+    m_jobs.remove(key);
+    rebuild();
+    askedDone(key, false);
+}
+
+void Installer::saveGameRecord(const QString &gameId, const GameUpdateRecord &record)
+{
+    GameUpdateRecords::Records records = GameUpdateRecords::read(GameUpdateRecords::path(m_setup.stateDir)).value;
+    records.insert(gameId, record);
+    QString error;
+    if (!GameUpdateRecords::write(GameUpdateRecords::path(m_setup.stateDir), records, &error))
+        qCWarning(lcInstall).noquote() << error;
+    m_gameRecords = records;
 }
 
 void Installer::useFixtureAsset(ReleaseAsset *asset) const
@@ -475,7 +709,7 @@ void Installer::useFixtureAsset(ReleaseAsset *asset) const
     asset->sha256.clear();
 }
 
-void Installer::download(const EmulatorDef &emulator)
+void Installer::download(const ReleaseTarget &emulator)
 {
     const QString id = emulator.id;
     Job &job = m_jobs[id];
@@ -489,9 +723,12 @@ void Installer::download(const EmulatorDef &emulator)
     job.state = State::Downloading;
     job.progress = -1;
 
-    auto *transfer = new AppImageDownload(network(), job.asset, emulator.releaseInside, job.folder, this);
+    auto *transfer = new AppImageDownload(network(), job.asset, emulator.inside, job.folder, this);
     job.download = transfer;
     transfer->setReplace(updating);
+    // The same path keeps the game's program, Steam shortcuts and menu entries working.
+    if (emulator.game)
+        transfer->setTargetName(QFileInfo(emulator.file).fileName());
     if (fixtures) {
         transfer->setRelaxed(true);
         if (m_fixtureTickMs > 0)
@@ -516,8 +753,13 @@ void Installer::download(const EmulatorDef &emulator)
         it->progress = -1;
         rebuild();
     });
-    connect(transfer, &AppImageDownload::finished, this,
-            [this, id](const AppImageDownload::Result &result) { downloadFinished(id, result); });
+    const bool game = emulator.game;
+    connect(transfer, &AppImageDownload::finished, this, [this, id, game](const AppImageDownload::Result &result) {
+        if (game)
+            gameDownloadFinished(id, result);
+        else
+            downloadFinished(id, result);
+    });
     rebuild();
     transfer->start();
 }
@@ -608,6 +850,54 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
         m_setup.redetect();
     if (updated)
         emit emulatorUpdated(updatedName, updatedRelease.tag, updatedRelease.notes);
+}
+
+void Installer::gameDownloadFinished(const QString &key, const AppImageDownload::Result &result)
+{
+    const auto it = m_jobs.find(key);
+    if (it == m_jobs.end())
+        return;
+    if (it->download)
+        it->download->deleteLater();
+    if (result.cancelled) {
+        m_jobs.erase(it);
+        changed();
+        return;
+    }
+    if (!result.ok) {
+        fail(key, result.error);
+        return;
+    }
+
+    const QString gameId = key.mid(gameKey({}).size());
+    const QString name = it->emulatorName;
+    const Release release = it->release;
+    const QString oldFile = it->oldFile;
+    GameUpdateRecord record;
+    record.file = QFileInfo(result.path).absoluteFilePath();
+    record.size = QFileInfo(result.path).size();
+    record.sha256 = result.sha256;
+    record.assetId = it->asset.id;
+    record.assetDate = it->asset.date;
+    record.tag = release.tag;
+    record.checked = QDate::currentDate().toString(Qt::ISODate);
+    m_jobs.erase(it);
+    saveGameRecord(gameId, record);
+    m_updates.remove(key);
+    m_upToDate.insert(key);
+
+    // The new file is in place and recorded; only now does the old one go.
+    const QString old = result.replaced.isEmpty() ? oldFile : result.replaced;
+    if (!old.isEmpty() && old != result.path) {
+        if (const QString problem = trashFile(old); !problem.isEmpty())
+            qCWarning(lcInstall).noquote() << "couldn't trash the old" << old << problem;
+        if (!result.replaced.isEmpty())
+            QDir().rmdir(QFileInfo(result.replaced).absolutePath());
+    }
+    rebuild();
+    if (m_setup.redetect)
+        m_setup.redetect();
+    emit emulatorUpdated(name, release.tag, release.notes);
 }
 
 void Installer::removeAppImage(const EmulatorDef &emulator, const InstallRecord &record)

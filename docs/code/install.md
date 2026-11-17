@@ -144,6 +144,18 @@ A release counts as newer when the matching asset's sha256 differs from the reco
 
 `update(id)` runs the install flow into the folder the old file is in, in replace mode. When the new file is in place and the record is written, the old file goes to the trash: the moved-aside copy when the name was the same, else the recorded file. A failure leaves the old file and its record as they were. Refused with "Close <game> first" while a game runs in that emulator. A finished AppImage update emits `emulatorUpdated(name, version, notes)` (the release body, Markdown, possibly empty); `Main.qml` collects them and shows a toast "Updated <name> to <version> · What's new" (or "Updated N emulators") for 10 s, whose link opens `WhatsNewDialog` with the notes (a titled section per emulator when several).
 
+### Games
+
+The same engine updates AppImage games. Both go through one private `ReleaseTarget` (job key, name, source, file patterns, pre-releases, the zip member, and for a game its id and file): `targetOf(EmulatorDef)` and `targetOf(GameTarget)` build it, and `begin`, `gotRelease`, `checked` and `download` run on it, so the release cache, the hour-long reuse (one request per distinct source an hour, whoever asks), the digest rules and the replace-in-place download are shared. A game's job key is `game:<id>`, so it never meets an emulator's id; `update()`, `checkUpdates()`, `cancel()` and `retry()` take it, and `updateGame(id)` and `checkGame(id)` add the prefix.
+
+`Setup::games` lists the AppImage games with a release source as `GameTarget {id, title, file, source, asset, prereleases}` (`main.cpp` builds it from the library's program files: the game's own `update_source` keys, else the AppImage's `.upd_info`); `Setup::gameRunningTitle(id)` is the title of that game while it runs. `checkUpdates()` with no id looks at every one whose file is there, quietly, after the emulators; `checkUpdatesAsked()` counts them too.
+
+- **The record**: `~/.local/state/lattis/game-updates.toml` (`GameUpdateRecords`, in `installrecord.*`), one table per game id: `file`, `size`, `sha256`, `asset_id`, `asset_date`, `tag`, `checked`. State dir, like `installs.toml`.
+- **First check** (no record, or one for another path or size): the file's sha256 is computed on a worker thread and compared with the release's. Equal: up to date, and the record gets the release's tag, id and date. Different: an update is offered and the record keeps only the file's hash, so the next check compares checksums with no hashing. A release without a digest offers an update of an unknown version (`from` is empty) and writes no record until it is installed. With a record, newer is decided as for emulators: checksums when both exist, else the asset's id or date.
+- **`update`** is refused with "Close <title> first" while the game runs, with "Gear Lever manages this AppImage; update it there" (or AppImageLauncher) when a menu entry of theirs holds the file, and when the file is gone or its folder isn't writable. Otherwise `AppImageDownload` runs in the file's folder with `setReplace(true)` and `setTargetName(<the file's name>)`: the new file takes the same path, is made executable, and only after it and its record are in place does the old one go to the trash. A failure or cancel leaves the file and record as they were. The record then holds the new asset's values and the file's real size and hash. A finished update emits `emulatorUpdated(title, tag, notes)`, like an emulator's, and asks the library to scan again.
+- **`updates`** rows have `kind` (`"emulator"` or `"game"`) and `gameId` (empty for emulators); a game's `id` is its job key.
+- **`games`** (gameId to a map, for games with a job, a known update or a check this session): `state`, `progress`, `error`, `version` (the recorded tag), `updateVersion`, `upToDate`, `match` (the release file the pattern picked), `notes`, `size`, `source`, `canCancel`.
+
 ## Uninstall
 
 `uninstall(id)` works only on what Lattis installed (the record, still there): "<emulator> wasn't installed by Lattis…" otherwise. An AppImage goes to the trash, with its menu entry; a Flatpak is removed with `flatpak uninstall` (state `removing`) and keeps its data. The record is deleted and the library detects again. Refused with "Close <game> first" while a game runs in that emulator.
@@ -200,7 +212,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
 | `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`, `ensureOwn()`, `removeOwn()`: the AppImage's menu entry, and Lattis's own |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
-| `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml` |
+| `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml`; `GameUpdateRecord` for `game-updates.toml` |
 | `installer.*` | The `Installer` singleton |
 | `ffmpegtool.*` | The `FfmpegTool` singleton; `FfmpegInstall::assetName()` and `extract()` |
 | `versions.*` | `Versions::parse()` and `newer()` |

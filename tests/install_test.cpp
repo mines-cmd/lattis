@@ -151,6 +151,10 @@ private slots:
     void installerUsesTheReleaseCache();
     void installerUpdates();
     void installerUpdatesInPlace();
+    void installerChecksGames();
+    void installerUpdatesGames();
+    void installerRefusesGameUpdates();
+    void gameUpdateRecords();
     void installerUninstalls();
     void installerRefusesWhileRunning();
 
@@ -1463,6 +1467,217 @@ void InstallTest::installerUpdatesInPlace()
     QVERIFY(old.open(QIODevice::ReadOnly));
     QCOMPARE(old.readAll(), QByteArray("build one"));
     QCOMPARE(InstallRecords::read(InstallRecords::path(h.state)).value.value("duckstation").assetId, QStringLiteral("2"));
+}
+
+namespace {
+struct GameUpdateHome : InstallerHome
+{
+    QString file = home + "/Games/hero/Hero.AppImage";
+    QString runningTitle;
+
+    GameUpdateHome() { QVERIFY(write(file, "build one")); }
+
+    Installer::Setup gameSetup()
+    {
+        Installer::Setup s = setup();
+        s.games = [this] {
+            return QList<Installer::GameTarget>{{"hero", "Hero", file, "github:dev/hero", "Hero-*.AppImage.zsync", false}};
+        };
+        s.gameRunningTitle = [this](const QString &) { return runningTitle; };
+        return s;
+    }
+
+    void gameRelease(const QByteArray &asset, bool withDigest = true, const QString &tag = "2.0", int id = 7,
+                     const QString &name = "Hero-2.0.AppImage")
+    {
+        QJsonObject a{{"id", id},
+                      {"name", name},
+                      {"browser_download_url", "https://github.com/dev/hero/releases/download/x/" + name},
+                      {"size", asset.size()},
+                      {"updated_at", "2026-11-01T10:00:00Z"}};
+        if (withDigest)
+            a.insert("digest", "sha256:" + sha(asset));
+        const QJsonObject body{{"tag_name", tag}, {"body", "Notes"}, {"assets", QJsonArray{a}}};
+        QVERIFY(write(fixtures + "/github-dev-hero.json", QJsonDocument(body).toJson()));
+        QVERIFY(write(fixtures + "/" + name, asset));
+    }
+
+    QByteArray current() const
+    {
+        QFile f(file);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    }
+
+    GameUpdateRecord record() const
+    {
+        return GameUpdateRecords::read(GameUpdateRecords::path(state)).value.value("hero");
+    }
+};
+}
+
+void InstallTest::gameUpdateRecords()
+{
+    QTemporaryDir dir;
+    const QString path = GameUpdateRecords::path(dir.path());
+    QVERIFY(path.endsWith("/game-updates.toml"));
+    GameUpdateRecords::Records records;
+    records.insert("hero", {"/g/Hero.AppImage", 1234, "abc", "7", "2026-11-01T10:00:00Z", "2.0", "2026-11-17"});
+    QString error;
+    QVERIFY2(GameUpdateRecords::write(path, records, &error), qPrintable(error));
+    const auto read = GameUpdateRecords::read(path);
+    QVERIFY(read.ok);
+    QCOMPARE(read.value, records);
+    QVERIFY(GameUpdateRecords::read(dir.filePath("none.toml")).value.isEmpty());
+    QVERIFY(!GameUpdateRecords::parse("[hero\nfile = ").ok);
+    QVERIFY(GameUpdateRecords::parse("[hero]\nsha256 = \"x\"\n").value.isEmpty()); // needs a file
+}
+
+void InstallTest::installerChecksGames()
+{
+    // Equal checksum: up to date, and the record learns the release.
+    {
+        GameUpdateHome h;
+        h.gameRelease("build one");
+        Installer installer(h.gameSetup());
+        installer.setFixturesDir(h.fixtures);
+        installer.setFixtureDelay(0);
+        const auto row = [&] { return installer.games().value("hero").toMap(); };
+        installer.checkGame("hero");
+        QTRY_VERIFY_WITH_TIMEOUT(row().value("upToDate").toBool(), 5000);
+        QVERIFY(installer.updates().isEmpty());
+        QCOMPARE(row().value("match").toString(), QStringLiteral("Hero-2.0.AppImage"));
+        QCOMPARE(h.record().sha256, sha("build one"));
+        QCOMPARE(h.record().tag, QStringLiteral("2.0"));
+        QCOMPARE(h.record().assetId, QStringLiteral("7"));
+        QCOMPARE(h.record().file, h.file);
+        QCOMPARE(h.record().size, qint64(9));
+    }
+    // A different checksum: an update, with the file's own hash recorded so the next check needs no hashing.
+    {
+        GameUpdateHome h;
+        h.gameRelease("build two");
+        Installer installer(h.gameSetup());
+        installer.setFixturesDir(h.fixtures);
+        installer.setFixtureDelay(0);
+        installer.checkGame("hero");
+        QTRY_COMPARE_WITH_TIMEOUT(installer.updates().size(), 1, 5000);
+        const QVariantMap update = installer.updates().first().toMap();
+        QCOMPARE(update.value("id").toString(), QStringLiteral("game:hero"));
+        QCOMPARE(update.value("kind").toString(), QStringLiteral("game"));
+        QCOMPARE(update.value("gameId").toString(), QStringLiteral("hero"));
+        QCOMPARE(update.value("name").toString(), QStringLiteral("Hero"));
+        QCOMPARE(update.value("version").toString(), QStringLiteral("2.0"));
+        QCOMPARE(update.value("notes").toString(), QStringLiteral("Notes"));
+        QCOMPARE(h.record().sha256, sha("build one"));
+        QVERIFY(h.record().tag.isEmpty());
+        QCOMPARE(h.current(), QByteArray("build one"));
+
+        // The record answers now: the file can change on disk without the release being read as the same.
+        installer.checkGame("hero");
+        QTest::qWait(100);
+        QCOMPARE(installer.updates().size(), 1);
+    }
+    // No digest in the release: the version is unknown, and an update is offered.
+    {
+        GameUpdateHome h;
+        h.gameRelease("build one", false);
+        Installer installer(h.gameSetup());
+        installer.setFixturesDir(h.fixtures);
+        installer.setFixtureDelay(0);
+        installer.checkGame("hero");
+        QTRY_COMPARE_WITH_TIMEOUT(installer.updates().size(), 1, 5000);
+        QCOMPARE(installer.updates().first().toMap().value("from").toString(), QString());
+        QVERIFY(h.record().file.isEmpty());
+    }
+    // A game with no source, or whose file is gone, is skipped by the quiet check.
+    {
+        GameUpdateHome h;
+        h.gameRelease("build two");
+        QVERIFY(QFile::remove(h.file));
+        Installer installer(h.gameSetup());
+        installer.setFixturesDir(h.fixtures);
+        installer.setFixtureDelay(0);
+        QCOMPARE(installer.checkUpdatesAsked(), 0);
+    }
+}
+
+void InstallTest::installerUpdatesGames()
+{
+    GameUpdateHome h;
+    h.gameRelease("build two");
+    Installer installer(h.gameSetup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.games().value("hero").toMap(); };
+    QSignalSpy updated(&installer, &Installer::emulatorUpdated);
+    QCOMPARE(installer.checkUpdatesAsked(), 1);
+    QTRY_COMPARE_WITH_TIMEOUT(installer.updates().size(), 1, 5000);
+
+    // Replaced in place: same path and name, the old build in the trash, made executable.
+    installer.updateGame("hero");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("upToDate").toBool(), 10000);
+    QCOMPARE(h.current(), QByteArray("build two"));
+    QCOMPARE(names(h.home + "/Games/hero"), QStringList{"Hero.AppImage"});
+    QVERIFY(QFileInfo(h.file).isExecutable());
+    QCOMPARE(h.trashed, QStringList{"Hero.AppImage"});
+    QFile old(h.trashDir + "/Hero.AppImage");
+    QVERIFY(old.open(QIODevice::ReadOnly));
+    QCOMPARE(old.readAll(), QByteArray("build one"));
+    QVERIFY(installer.updates().isEmpty());
+    QCOMPARE(row().value("version").toString(), QStringLiteral("2.0"));
+    QCOMPARE(h.record().sha256, sha("build two"));
+    QCOMPARE(h.record().assetId, QStringLiteral("7"));
+    QCOMPARE(h.record().size, qint64(9));
+    QCOMPARE(updated.size(), 1);
+    QCOMPARE(updated.first().first().toString(), QStringLiteral("Hero"));
+    QCOMPARE(updated.first().at(1).toString(), QStringLiteral("2.0"));
+    QCOMPARE(h.redetected, 1);
+
+    // The record now answers the next check without hashing: the same release is up to date, a newer one isn't.
+    installer.checkGame("hero");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("upToDate").toBool(), 5000);
+    h.gameRelease("build three", true, "2.1", 8, "Hero-2.1.AppImage");
+    installer.checkGame("hero");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("2.1"), 5000);
+
+    // A download that fails its checksum leaves the file and the record alone.
+    QVERIFY(write(h.fixtures + "/Hero-2.1.AppImage", "bad bytes"));
+    installer.updateGame("hero");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 5000);
+    QVERIFY(row().value("error").toString().contains("checksum"));
+    QCOMPARE(h.current(), QByteArray("build two"));
+    QCOMPARE(names(h.home + "/Games/hero"), QStringList{"Hero.AppImage"});
+    QCOMPARE(h.trashed.size(), 1);
+    QCOMPARE(h.record().sha256, sha("build two"));
+}
+
+void InstallTest::installerRefusesGameUpdates()
+{
+    GameUpdateHome h;
+    h.gameRelease("build two");
+    Installer installer(h.gameSetup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.games().value("hero").toMap(); };
+
+    h.runningTitle = "Hero";
+    installer.updateGame("hero");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("failed"));
+    QCOMPARE(row().value("error").toString(), QStringLiteral("Close Hero first"));
+    QCOMPARE(h.current(), QByteArray("build one"));
+    installer.cancel("game:hero");
+    h.runningTitle.clear();
+
+    // Gear Lever keeps this file and its menu entry, and would put the old build back.
+    QVERIFY(write(h.home + "/.local/share/applications/gearlever_hero.desktop",
+                  "[Desktop Entry]\nExec=" + h.file.toUtf8() + "\n"));
+    installer.updateGame("hero");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("failed"));
+    QCOMPARE(row().value("error").toString(), QStringLiteral("Gear Lever manages this AppImage; update it there"));
+    QCOMPARE(h.current(), QByteArray("build one"));
+    QVERIFY(h.trashed.isEmpty());
 }
 
 void InstallTest::installerUninstalls()

@@ -115,3 +115,100 @@ bool stillThere(const InstallRecord &record, const QSet<QString> &userFlatpaks)
     return record.route == QLatin1String("appimage") && QFileInfo(record.file).isFile();
 }
 }
+
+namespace GameUpdateRecords {
+namespace {
+QString text(const toml::table &table, std::string_view key)
+{
+    const auto *s = table[key].as_string();
+    return s ? toQString(s->get()) : QString();
+}
+}
+
+QString path(const QString &stateDir)
+{
+    return stateDir + QStringLiteral("/game-updates.toml");
+}
+
+Parsed<Records> parse(const QByteArray &bytes)
+{
+    Parsed<Records> out;
+    toml::table root;
+    try {
+        root = toml::parse(std::string_view(bytes.constData(), size_t(bytes.size())));
+    } catch (const toml::parse_error &e) {
+        out.warnings.append(
+            QStringLiteral("game-updates.toml:%1: %2").arg(e.source().begin.line).arg(toQString(e.description())));
+        return out;
+    }
+    out.ok = true;
+    for (auto &&[key, node] : root) {
+        const toml::table *table = node.as_table();
+        if (!table)
+            continue;
+        GameUpdateRecord r;
+        r.file = text(*table, "file");
+        r.size = text(*table, "size").toLongLong();
+        r.sha256 = text(*table, "sha256");
+        r.assetId = text(*table, "asset_id");
+        r.assetDate = text(*table, "asset_date");
+        r.tag = text(*table, "tag");
+        r.checked = text(*table, "checked");
+        if (r.file.isEmpty())
+            continue;
+        out.value.insert(toQString(key.str()), r);
+    }
+    return out;
+}
+
+Parsed<Records> read(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        Parsed<Records> none;
+        none.ok = true;
+        return none;
+    }
+    Parsed<Records> out = parse(file.readAll());
+    for (QString &warning : out.warnings)
+        warning.replace(QStringLiteral("game-updates.toml"), path);
+    return out;
+}
+
+bool write(const QString &path, const Records &records, QString *error)
+{
+    toml::table root;
+    for (auto it = records.cbegin(); it != records.cend(); ++it) {
+        toml::table values;
+        const auto put = [&](const char *key, const QString &value) {
+            if (!value.isEmpty())
+                values.insert(key, value.toStdString());
+        };
+        const GameUpdateRecord &r = it.value();
+        put("file", r.file);
+        put("size", r.size > 0 ? QString::number(r.size) : QString());
+        put("sha256", r.sha256);
+        put("asset_id", r.assetId);
+        put("asset_date", r.assetDate);
+        put("tag", r.tag);
+        put("checked", r.checked);
+        root.insert(it.key().toStdString(), std::move(values));
+    }
+    std::ostringstream out;
+    out << "# The AppImage builds of games Lattis checks for updates on this computer; written by the app.\n\n"
+        << toml::toml_formatter(root);
+
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        *error = QStringLiteral("Couldn't make the folder for %1").arg(path);
+        return false;
+    }
+    QSaveFile file(path);
+    const std::string bytes = out.str();
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes.data(), qint64(bytes.size())) != qint64(bytes.size())
+        || !file.commit()) {
+        *error = QStringLiteral("Couldn't write %1: %2").arg(path, file.errorString());
+        return false;
+    }
+    return true;
+}
+}
