@@ -76,10 +76,10 @@ QList<SavesFinder::Query> copiesOf(const Library &library, const LibrarySnapshot
 {
     QList<SavesFinder::Query> out;
     QStringList ids{main};
-    if (const Game *mainGame = library.game(main))
+    if (const Game *mainGame = library.gameIncludingHidden(main))
         ids += mainGame->linked;
     for (const QString &id : ids) {
-        const Game *copy = library.game(id);
+        const Game *copy = library.gameIncludingHidden(id);
         if (!copy)
             continue;
         const GameFile gameFile = snapshot.content.games.value(id);

@@ -409,6 +409,7 @@ public:
     QList<std::pair<QString, QStringList>> tagMappings() const;
 
     const Game *game(const QString &id) const;
+    const Game *gameIncludingHidden(const QString &id) const;
 
     QList<LookupGame> lookupGames() const;
     QHash<QString, QString> saveGames(const QList<std::pair<QString, QVariantMap>> &games);

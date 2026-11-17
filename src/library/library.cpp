@@ -378,7 +378,7 @@ Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary new
     connect(&m_store, &LibraryStore::historyChanged, this, [this](const QStringList &ids) {
         QStringList withCopies = ids;
         for (const QString &id : ids) {
-            if (const Game *g = game(id))
+            if (const Game *g = gameIncludingHidden(id))
                 withCopies += g->linked;
         }
         withCopies.removeDuplicates();
@@ -3204,7 +3204,7 @@ QVariantList Library::linkedCopies(const Game &g) const
 
 QVariantMap Library::copyRow(const QString &id) const
 {
-    const Game *copy = game(id);
+    const Game *copy = gameIncludingHidden(id);
     if (!copy)
         return {};
     return {{QStringLiteral("id"), copy->id},
@@ -3226,14 +3226,14 @@ QVariantMap Library::copyRows(const QString &id) const
         return {{QStringLiteral("copies"), QVariantList()}, {QStringLiteral("self"), copyRow(id)}};
     QStringList ids = g->linked;
     std::sort(ids.begin(), ids.end(), [this](const QString &a, const QString &b) {
-        const Game *ga = game(a);
-        const Game *gb = game(b);
+        const Game *ga = gameIncludingHidden(a);
+        const Game *gb = gameIncludingHidden(b);
         return QString::localeAwareCompare(ga ? ga->platformName : a, gb ? gb->platformName : b) < 0;
     });
     ids.prepend(id);
     QVariantList copies;
     for (const QString &copyId : std::as_const(ids)) {
-        if (game(copyId))
+        if (gameIncludingHidden(copyId))
             copies.append(copyRow(copyId));
     }
     return {{QStringLiteral("copies"), copies},
@@ -3364,8 +3364,8 @@ QHash<QString, QString> Library::planCopyChanges(const QString &gameId, const QV
                 now[gameId] = main;
             } else {
                 // The Steam copy stays the main one, so a store game never points at a shortcut.
-                const Game *g = game(gameId);
-                const Game *o = game(id);
+                const Game *g = gameIncludingHidden(gameId);
+                const Game *o = gameIncludingHidden(id);
                 if (g->platform == kSteamPlatform && o->platform != kSteamPlatform)
                     now[id] = gameId;
                 else
@@ -3498,7 +3498,7 @@ QVariantMap Library::pageHistory(const QString &id)
     const QString dataDir = m_store.dataDir();
     const QDate today = QDate::currentDate();
     const Qt::DayOfWeek firstDay = QLocale().firstDayOfWeek();
-    const Game *g = game(id);
+    const Game *g = gameIncludingHidden(id);
     const QStringList ids = g ? copiesOf(*g) : QStringList{id};
     qint64 bytes = 0;
     for (const QString &copy : ids)
@@ -3706,7 +3706,7 @@ void Library::media(const QString &id)
     using Job = std::function<Result()>;
 
     const auto jobFor = [this](const QString &copyId) -> Job {
-        const Game *g = game(copyId);
+        const Game *g = gameIncludingHidden(copyId);
         if (g && g->rom) {
             const Platform *p = platform(g->platform);
             const QString chosen = Emulators::choose(g->emulator, p ? p->emulators : QStringList(), installs());
@@ -3764,7 +3764,7 @@ void Library::media(const QString &id)
         };
     };
 
-    const Game *g = game(id);
+    const Game *g = gameIncludingHidden(id);
     QList<Job> jobs;
     for (const QString &copyId : g ? copiesOf(*g) : QStringList{id}) {
         if (Job job = jobFor(copyId))
@@ -4558,6 +4558,15 @@ const Game *Library::game(const QString &id) const
     for (const Game &g : m_games) {
         if (g.id == id)
             return g.hidden && !m_showHidden ? nullptr : &g;
+    }
+    return nullptr;
+}
+
+const Game *Library::gameIncludingHidden(const QString &id) const
+{
+    for (const Game &g : m_games) {
+        if (g.id == id)
+            return &g;
     }
     return nullptr;
 }
