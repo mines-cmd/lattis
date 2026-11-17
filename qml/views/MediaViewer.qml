@@ -43,14 +43,14 @@ MotionPopup {
     // Fullscreen the viewer turned on is turned off again when it closes; one the window already had stays.
     property bool madeFullscreen: false
     property bool awake: true
+    readonly property var window: scope.Window.window
+    readonly property bool fullscreen: window !== null && window.visibility === Window.FullScreen
     readonly property bool barsShown: awake || Theme.media.viewerHideDelay === 0 || topHover.hovered || bottomHover.hovered || zoomHover.hovered
                                       || clipMenu.visible || isClip && (!playing || file === "")
     readonly property bool preparing: token !== "" && file === "" && error === ""
     readonly property bool needsFfmpeg: isSteamClip && !FfmpegTool.available
     property bool tempFile: false
     readonly property bool playing: player.playbackState === MediaPlayer.PlayingState
-    readonly property var window: scope.Window.window
-    readonly property bool fullscreen: window !== null && window.visibility === Window.FullScreen
 
     signal message(string text)
     signal gameRequested(string id)
@@ -267,9 +267,13 @@ MotionPopup {
             saveVolume.stop()
             saveVolume.triggered()
         }
+        madeFullscreen = false
+    }
+
+    // By onClosed the popup has left the window, so `window` is already null.
+    onAboutToHide: {
         if (madeFullscreen && fullscreen)
             window.toggleFullscreen()
-        madeFullscreen = false
     }
 
     // Writing settings.toml on every step of a drag would be wasteful.
@@ -532,9 +536,9 @@ MotionPopup {
         ColumnLayout {
             id: column
             anchors.fill: parent
-            anchors.margins: Theme.media.viewerMargin
-            anchors.topMargin: Theme.media.viewerTopMargin
-            anchors.bottomMargin: Theme.media.viewerBottomMargin
+            anchors.margins: root.fullscreen ? 0 : Theme.media.viewerMargin
+            anchors.topMargin: root.fullscreen ? 0 : Theme.media.viewerTopMargin
+            anchors.bottomMargin: root.fullscreen ? 0 : Theme.media.viewerBottomMargin
             spacing: Theme.layout.spacing
 
             Item {
@@ -568,10 +572,6 @@ MotionPopup {
                             clipMenu.popup(this, mouse.x, mouse.y)
                         else
                             root.toggleWithFlash()
-                    }
-                    onDoubleClicked: mouse => {
-                        if (mouse.button === Qt.LeftButton)
-                            root.toggleFullscreen()
                     }
                 }
 
@@ -618,10 +618,6 @@ MotionPopup {
                     onClicked: mouse => {
                         if (mouse.button === Qt.RightButton)
                             clipMenu.popup(this, mouse.x, mouse.y)
-                    }
-                    onDoubleClicked: mouse => {
-                        if (mouse.button === Qt.LeftButton)
-                            root.toggleFullscreen()
                     }
                 }
 
