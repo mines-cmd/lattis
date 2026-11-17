@@ -101,6 +101,7 @@ private slots:
     void sourceParses_data();
     void sourceParses();
     void sourceUrls();
+    void pastedUrls();
     void githubRelease();
     void gitlabRelease();
     void releaseErrors();
@@ -232,6 +233,22 @@ void InstallTest::sourceUrls()
     QCOMPARE(gitlab.toEncoded(), QByteArray("https://git.ryujinx.app/api/v4/projects/ryubing%2Fryujinx/releases?per_page=1"));
     QCOMPARE(ReleaseSources::parse("github:o/r")->label(), QStringLiteral("GitHub"));
     QCOMPARE(ReleaseSources::parse("gitlab:git.ryujinx.app/a/b")->label(), QStringLiteral("git.ryujinx.app"));
+}
+
+void InstallTest::pastedUrls()
+{
+    QCOMPARE(ReleaseSources::fromUrl("https://github.com/imputnet/helium-linux"), QString("github:imputnet/helium-linux"));
+    QCOMPARE(ReleaseSources::fromUrl(" https://github.com/imputnet/helium-linux/releases/latest "),
+             QString("github:imputnet/helium-linux"));
+    QCOMPARE(ReleaseSources::fromUrl("github.com/o/r.git?tab=readme#x"), QString("github:o/r"));
+    QCOMPARE(ReleaseSources::fromUrl("https://gitlab.com/group/sub/project/-/releases"),
+             QString("gitlab:gitlab.com/group/sub/project"));
+    QCOMPARE(ReleaseSources::fromUrl("https://git.ryujinx.app/ryubing/ryujinx"),
+             QString());
+    QCOMPARE(ReleaseSources::fromUrl("https://gitlab.example.org/a/b"), QString("gitlab:gitlab.example.org/a/b"));
+    QCOMPARE(ReleaseSources::fromUrl("github:o/r"), QString());
+    QCOMPARE(ReleaseSources::fromUrl("https://github.com/onlyowner"), QString());
+    QCOMPARE(ReleaseSources::fromUrl("https://example.com/a/b"), QString());
 }
 
 void InstallTest::githubRelease()

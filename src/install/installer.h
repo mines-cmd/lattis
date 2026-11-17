@@ -33,7 +33,7 @@ class Installer : public QObject
     // game with a release source, that has a newer release. kind is "emulator" or "game"; a game's id is its job key
     // ("game:<gameId>"), which update(), cancel() and retry() take.
     Q_PROPERTY(QVariantList updates READ updates NOTIFY emulatorsChanged)
-    // gameId to {state, progress, error, version, updateVersion, upToDate, match, notes, size, source} of each game with
+    // gameId to {state, progress, error, version, updateVersion, upToDate, matched, match, notes, size, source} of each game with
     // a release source that has a job, a known update or was checked.
     Q_PROPERTY(QVariantMap games READ games NOTIFY emulatorsChanged)
 
@@ -97,6 +97,16 @@ public:
     Q_INVOKABLE int checkUpdatesAsked();
     Q_INVOKABLE void updateGame(const QString &gameId) { update(gameKey(gameId)); }
     Q_INVOKABLE void checkGame(const QString &gameId) { checkUpdates(gameKey(gameId)); }
+    // Properties' Updates card: what is typed in it, before Save, stands in for the game's saved source until
+    // forgetGameSource() (the editor closing). checkGameWith() also checks it; setGameSource() only sets it, so
+    // updateGame() can follow a Save.
+    Q_INVOKABLE void setGameSource(const QString &gameId, const QString &file, const QString &title,
+                                   const QString &source, const QString &asset, bool prereleases);
+    Q_INVOKABLE void checkGameWith(const QString &gameId, const QString &file, const QString &title,
+                                   const QString &source, const QString &asset, bool prereleases);
+    Q_INVOKABLE void forgetGameSource(const QString &gameId);
+    // "github:owner/repo" or "gitlab:host/group/project" for a pasted repository URL, else empty.
+    Q_INVOKABLE static QString sourceFromText(const QString &text);
     // Runs a failed job again.
     Q_INVOKABLE void retry(const QString &id);
     Q_INVOKABLE void cancel(const QString &id);
@@ -167,6 +177,7 @@ private:
     static ReleaseTarget targetOf(const GameTarget &game);
     std::optional<InstallRecord> installedByApp(const QString &id) const;
     QString gameRunning(const EmulatorDef &emulator) const;
+    QList<GameTarget> gameTargets() const;
     std::optional<GameTarget> findGame(const QString &gameId) const;
     // Why a game's AppImage can't be replaced (empty: it can).
     QString gameBlocker(const GameTarget &game) const;
@@ -211,6 +222,7 @@ private:
     QSet<QString> m_upToDate;
     // The release file each game's last check matched, by job key.
     QHash<QString, QString> m_matched;
+    QHash<QString, GameTarget> m_gameOverrides;
     InstallRecords::Records m_records;
     GameUpdateRecords::Records m_gameRecords;
     QVariantMap m_emulators;

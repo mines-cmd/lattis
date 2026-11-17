@@ -13,6 +13,12 @@ ColumnLayout {
     property alias launchOptionsField: launchOptionsField
     property alias makeExecutableBox: makeExecutableBox
 
+    // The typed source stands in for the saved one only while the editor is open.
+    function forgetUpdates() {
+        if (updatesCard.item)
+            Installer.forgetGameSource(editor.game.id)
+    }
+
     Layout.fillWidth: true
     Layout.fillHeight: false // as tall as its cards; layouts fill by default
     Layout.alignment: Qt.AlignTop
@@ -376,6 +382,20 @@ ColumnLayout {
                     onClicked: editor.closeSteamAndApply()
                 }
             }
+        }
+    }
+
+    Loader {
+        id: updatesCard
+        readonly property bool wanted: editor.appImageGame
+        Layout.fillWidth: true
+        onWantedChanged: sync()
+        Component.onCompleted: sync()
+        function sync() {
+            if (wanted)
+                setSource("EditorUpdatesCard.qml", { editor: editor })
+            else
+                source = ""
         }
     }
 }

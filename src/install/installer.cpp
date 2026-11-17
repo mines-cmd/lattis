@@ -222,7 +222,7 @@ void Installer::rebuild()
                            });
     }
     QVariantMap gameRows;
-    const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    const QList<GameTarget> games = gameTargets();
     for (const GameTarget &game : games) {
         const QString key = gameKey(game.id);
         const Job job = m_jobs.value(key);
@@ -259,6 +259,7 @@ void Installer::rebuild()
                                      {QStringLiteral("updateVersion"), updateVersion},
                                      {QStringLiteral("upToDate"), upToDate},
                                      {QStringLiteral("match"), m_matched.value(key)},
+                                     {QStringLiteral("matched"), m_matched.contains(key)},
                                      {QStringLiteral("notes"), hasUpdate ? update->release.notes : QString()},
                                      {QStringLiteral("size"), hasUpdate ? double(update->asset.size) : 0.0},
                                      {QStringLiteral("source"), project},
@@ -314,9 +315,74 @@ Installer::ReleaseTarget Installer::targetOf(const GameTarget &game)
     return target;
 }
 
+QList<Installer::GameTarget> Installer::gameTargets() const
+{
+    QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    for (auto it = m_gameOverrides.cbegin(); it != m_gameOverrides.cend(); ++it) {
+        const auto same = [&](const GameTarget &g) { return g.id == it.key(); };
+        if (const auto found = std::find_if(games.begin(), games.end(), same); found != games.end())
+            *found = it.value();
+        else
+            games.append(it.value());
+    }
+    return games;
+}
+
+void Installer::setGameSource(const QString &gameId, const QString &file, const QString &title, const QString &source,
+                              const QString &asset, bool prereleases)
+{
+    m_gameOverrides.insert(gameId, {gameId, title, file, source.trimmed(), ReleaseSources::withoutZsync(asset),
+                                    prereleases});
+}
+
+void Installer::checkGameWith(const QString &gameId, const QString &file, const QString &title, const QString &source,
+                              const QString &asset, bool prereleases)
+{
+    const QString key = gameKey(gameId);
+    if (busy(key))
+        return;
+    setGameSource(gameId, file, title, source, asset, prereleases);
+    m_updates.remove(key);
+    m_upToDate.remove(key);
+    m_matched.remove(key);
+    const ReleaseTarget target = targetOf(m_gameOverrides.value(gameId));
+    startJob(target, Kind::Check);
+    if (!QFileInfo(file).isFile()) {
+        fail(key, tr("The AppImage file isn't there"));
+        return;
+    }
+    begin(target);
+}
+
+void Installer::forgetGameSource(const QString &gameId)
+{
+    const QString key = gameKey(gameId);
+    const auto it = m_gameOverrides.find(gameId);
+    if (it == m_gameOverrides.end() || busy(key))
+        return;
+    const GameTarget typed = it.value();
+    m_gameOverrides.erase(it);
+    const QList<GameTarget> saved = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    const auto same = [&](const GameTarget &g) {
+        return g.id == gameId && g.source == typed.source && g.asset == typed.asset && g.prereleases == typed.prereleases;
+    };
+    if (std::none_of(saved.cbegin(), saved.cend(), same)) {
+        m_updates.remove(key);
+        m_upToDate.remove(key);
+        m_matched.remove(key);
+        m_jobs.remove(key);
+    }
+    rebuild();
+}
+
+QString Installer::sourceFromText(const QString &text)
+{
+    return ReleaseSources::fromUrl(text);
+}
+
 std::optional<Installer::GameTarget> Installer::findGame(const QString &gameId) const
 {
-    const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+    const QList<GameTarget> games = gameTargets();
     for (const GameTarget &game : games)
         if (game.id == gameId)
             return game;
@@ -431,7 +497,7 @@ void Installer::checkUpdates(const QString &id)
 {
     const QList<EmulatorDef> defs = m_setup.emulators ? m_setup.emulators() : QList<EmulatorDef>();
     if (id.isEmpty() || id.startsWith(gameKey({}))) {
-        const QList<GameTarget> games = m_setup.games ? m_setup.games() : QList<GameTarget>();
+        const QList<GameTarget> games = gameTargets();
         for (const GameTarget &game : games) {
             if ((!id.isEmpty() && gameKey(game.id) != id) || game.source.isEmpty() || game.asset.isEmpty()
                 || !QFileInfo(game.file).isFile() || busy(gameKey(game.id)))
@@ -572,7 +638,7 @@ void Installer::gotRelease(const ReleaseTarget &emulator, quint64 serial, const 
     }
     const ReleaseAsset *asset = ReleaseSources::pickAsset(*release, emulator.assets);
     if (!asset) {
-        m_matched.remove(emulator.id);
+        m_matched.insert(emulator.id, QString());
         fail(emulator.id, tr("The latest release (%1) has no download named %2").arg(release->tag, emulator.assets));
         return;
     }

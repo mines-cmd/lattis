@@ -68,6 +68,43 @@ Item {
     readonly property string startDirShown: startDirCleared ? "" : newStartDir !== "" ? newStartDir : (game.startDir ?? "")
     property bool shortcutQueued: false
 
+    // The Updates card's fields. The baseline is the game's own keys, else the AppImage's (shown as the source).
+    readonly property bool dialogOpened: dialog.opened
+    readonly property bool appImageGame: !adding && (game.appImage ?? false)
+    readonly property bool updOwn: (game.updateSource ?? "") !== ""
+    readonly property var updBase: updOwn ? { source: game.updateSource, asset: game.updateAsset ?? "",
+                                              pre: game.updatePrereleases ?? false }
+        : { source: game.embeddedSource?.source ?? "", asset: game.embeddedSource?.asset ?? "",
+            pre: game.embeddedSource?.prereleases ?? false }
+    property string updSource: ""
+    property string updAsset: ""
+    property bool updPre: false
+    // "Use the AppImage's" was clicked while the game has its own keys: Save removes them.
+    property bool updReset: false
+    // What Check now was last asked with, so an answer isn't shown for fields edited since.
+    property string updCheckedWith: ""
+    readonly property string updKey: updSource.trim() + "|" + updAsset.trim() + "|" + updPre
+    readonly property bool updDirty: updSource.trim() !== updBase.source || updAsset.trim() !== updBase.asset
+                                     || updPre !== updBase.pre
+    readonly property bool updFromAppImage: appImageGame && !updDirty && !updOwn && updBase.source !== ""
+                                            || appImageGame && updReset
+    readonly property bool updCanUseEmbedded: appImageGame && (game.embeddedSource?.source ?? "") !== ""
+        && (updOwn || updDirty) && !updReset
+    function loadUpdateFields() {
+        updSource = updBase.source
+        updAsset = updBase.asset
+        updPre = updBase.pre
+        updReset = false
+        updCheckedWith = ""
+    }
+    function useEmbeddedSource() {
+        const e = game.embeddedSource
+        updSource = e.source
+        updAsset = e.asset
+        updPre = e.prereleases
+        updReset = updOwn
+    }
+
     readonly property var protonChoices: {
         const tools = game.protonTools ?? []
         const none = protonGame ? qsTr("None (runs natively)")
@@ -428,6 +465,7 @@ Item {
         argsField.text = Args.join(g.args)
         protonBox.currentIndex = Math.max(0, protonChoices.findIndex(c => c.name === (g.proton ?? "")))
         launchOptionsField.text = g.launchOptions ?? ""
+        loadUpdateFields()
         steamPending = g.pendingSteamEdits ?? false
         shortcutQueued = g.shortcutQueued ?? false
         steamRunning = onSteam && GameRunner.steamRunning()
@@ -770,6 +808,15 @@ Item {
             if (newInstallDir !== "")
                 out.install_dir = newInstallDir
         }
+        if (appImageGame && updReset) {
+            out.update_source = null
+            out.update_asset = null
+            out.update_prereleases = null
+        } else if (appImageGame && updDirty) {
+            out.update_source = updSource.trim() !== "" ? updSource.trim() : null
+            out.update_asset = updAsset.trim() !== "" ? updAsset.trim() : null
+            out.update_prereleases = updPre ? true : null
+        }
         if (!adding && newSavePaths !== null) {
             out.save_paths = newSavePaths.length > 0 ? newSavePaths : null
             out.save_folder = null
@@ -931,6 +978,7 @@ Item {
             if (protonUninstall.item)
                 protonUninstall.item.close()
             root.resetLookup()
+            launchPage.forgetUpdates()
             Metadata.discardDownloads()
             root.closed()
         }

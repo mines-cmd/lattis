@@ -5426,6 +5426,8 @@ QVariantMap Library::gameForEditing(const QString &id) const
     sortTagsByName(tags);
     const auto url = [](const QUrl &u) { return u.isEmpty() ? QString() : u.toString(); };
     const QVariantMap emulators = emulatorChoices(g->platform);
+    const ProgramFiles program = m_store.snapshot().programFiles.value(id);
+    const bool appImage = g->platform == kLinuxPlatform && program.appImage;
     QString platformIcon;
     bool platformAutoBackup = false;
     for (const Platform &p : m_store.snapshot().content.platforms) {
@@ -5471,6 +5473,13 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("exePath"), g->exe},
         {QStringLiteral("startDir"), file.startDir},
         {QStringLiteral("installDir"), file.installDir},
+        {QStringLiteral("appImage"), appImage},
+        {QStringLiteral("updateSource"), file.updateSource},
+        {QStringLiteral("updateAsset"), file.updateAsset},
+        {QStringLiteral("updatePrereleases"), file.updatePrereleases},
+        {QStringLiteral("embeddedSource"), QVariantMap{{QStringLiteral("source"), program.embedded.source},
+                                                        {QStringLiteral("asset"), program.embedded.asset},
+                                                        {QStringLiteral("prereleases"), program.embedded.prereleases}}},
         {QStringLiteral("savePaths"), file.savePaths},
         {QStringLiteral("autoBackup"), file.autoBackup},
         {QStringLiteral("noSaves"), file.noSaves},

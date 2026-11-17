@@ -177,6 +177,7 @@ qt_add_qml_module(lattis
         qml/views/EditorGeneralPage.qml
         qml/views/EditorImagesPage.qml
         qml/views/EditorLaunchPage.qml
+        qml/views/EditorUpdatesCard.qml
         qml/views/EditorSavesPage.qml
         qml/views/EditorField.qml
         qml/views/EditorCard.qml

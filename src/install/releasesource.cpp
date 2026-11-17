@@ -173,6 +173,42 @@ std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArra
     return source.host == ReleaseSource::Host::GitHub ? fromGitHub(root, error) : fromGitLab(root, error);
 }
 
+QString fromUrl(const QString &text)
+{
+    QString rest = text.trimmed();
+    static const QRegularExpression scheme(QStringLiteral("^https?://"), QRegularExpression::CaseInsensitiveOption);
+    const auto start = scheme.match(rest);
+    if (start.hasMatch())
+        rest = rest.mid(start.capturedLength());
+    else if (!rest.startsWith(QLatin1String("github.com/"), Qt::CaseInsensitive)
+             && !rest.startsWith(QLatin1String("www.github.com/"), Qt::CaseInsensitive)
+             && !rest.contains(QLatin1String("gitlab")))
+        return {};
+    rest = rest.section(QRegularExpression(QStringLiteral("[?#]")), 0, 0);
+    QStringList parts = rest.split(u'/', Qt::SkipEmptyParts);
+    if (parts.size() < 3)
+        return {};
+    const QString host = parts.takeFirst().toLower();
+    if (host == QLatin1String("github.com") || host == QLatin1String("www.github.com")) {
+        QString repo = parts.at(1);
+        if (repo.endsWith(QLatin1String(".git")))
+            repo.chop(4);
+        const QString source = QStringLiteral("github:") + parts.at(0) + u'/' + repo;
+        return parse(source) ? source : QString();
+    }
+    if (!host.contains(QLatin1String("gitlab")))
+        return {};
+    const int dash = parts.indexOf(QStringLiteral("-"));
+    if (dash >= 0)
+        parts = parts.mid(0, dash);
+    if (parts.size() < 2)
+        return {};
+    if (parts.last().endsWith(QLatin1String(".git")))
+        parts.last().chop(4);
+    const QString source = QStringLiteral("gitlab:") + host + u'/' + parts.join(u'/');
+    return parse(source) ? source : QString();
+}
+
 QString withoutZsync(const QString &patterns)
 {
     QStringList out;

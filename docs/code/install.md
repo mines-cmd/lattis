@@ -154,7 +154,8 @@ The same engine updates AppImage games. Both go through one private `ReleaseTarg
 - **First check** (no record, or one for another path or size): the file's sha256 is computed on a worker thread and compared with the release's. Equal: up to date, and the record gets the release's tag, id and date. Different: an update is offered and the record keeps only the file's hash, so the next check compares checksums with no hashing. A release without a digest offers an update of an unknown version (`from` is empty) and writes no record until it is installed. With a record, newer is decided as for emulators: checksums when both exist, else the asset's id or date.
 - **`update`** is refused with "Close <title> first" while the game runs, with "Gear Lever manages this AppImage; update it there" (or AppImageLauncher) when a menu entry of theirs holds the file, and when the file is gone or its folder isn't writable. Otherwise `AppImageDownload` runs in the file's folder with `setReplace(true)` and `setTargetName(<the file's name>)`: the new file takes the same path, is made executable, and only after it and its record are in place does the old one go to the trash. A failure or cancel leaves the file and record as they were. The record then holds the new asset's values and the file's real size and hash. A finished update emits `emulatorUpdated(title, tag, notes)`, like an emulator's, and asks the library to scan again.
 - **`updates`** rows have `kind` (`"emulator"` or `"game"`) and `gameId` (empty for emulators); a game's `id` is its job key.
-- **`games`** (gameId to a map, for games with a job, a known update or a check this session): `state`, `progress`, `error`, `version` (the recorded tag), `updateVersion`, `upToDate`, `match` (the release file the pattern picked), `notes`, `size`, `source`, `canCancel`.
+- **`games`** (gameId to a map, for games with a job, a known update or a check this session): `state`, `progress`, `error`, `version` (the recorded tag), `updateVersion`, `upToDate`, `matched` (the last check read the release) and `match` (the release file the pattern picked; empty when none did), `notes`, `size`, `source`, `canCancel`.
+- **Properties' Updates card** (`EditorUpdatesCard`) checks and updates with what is typed, before Save: `setGameSource(id, file, title, source, asset, prereleases)` makes that a game's target in `gameTargets()` (it replaces the saved one, or adds a game with none), `checkGameWith()` sets it and checks (not quietly, so a failure stays in `games` for the card), and `forgetGameSource(id)` drops it when the editor closes, with the check's answer unless the saved source is the same or a job runs. `sourceFromText(text)` is `ReleaseSources::fromUrl()`: `https://github.com/<owner>/<repo>` (also `/releases`, `.git`, a query), `gitlab.*` hosts' project addresses (the part from `/-/` on dropped) become `github:` / `gitlab:` sources, anything else is empty.
 
 ## Uninstall
 
@@ -206,7 +207,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 
 | File | What it holds |
 |---|---|
-| `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns |
+| `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns; a pasted repository URL as a source (`fromUrl`) |
 | `appimageupdateinfo.*` | `AppImageUpdateInfo`: `readSection()`, `parse()`, `read()` |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
 | `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
