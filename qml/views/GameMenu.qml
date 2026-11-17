@@ -445,7 +445,8 @@ SettingsMenu {
     SettingsMenuItem {
         iconPath: Icons.unlink
         visible: !root.multi && root.linked.length > 0
-        text: root.linked.length === 1 ? qsTr("Unlink from %1").arg(root.linked[0].platformName) : qsTr("Unlink")
+        text: root.linked.length !== 1 ? qsTr("Unlink")
+            : qsTr("Unlink from %1").arg(root.linked[0].platformName !== root.game.platformName ? root.linked[0].platformName : root.linked[0].title)
         onTriggered: {
             const error = Library.unlinkCopy(root.game.id)
             if (error !== "")
