@@ -106,6 +106,14 @@ LibrarySnapshot LibraryCacheTest::sample() const
     s.programFiles.insert(QStringLiteral("proton-mortal-shell-2"),
                          {"/home/x/Games/Mortal Shell II/MortalShell2.exe", true, "/home/x/Games/Mortal Shell II",
                           50'000'000'000});
+    GameFile appImage;
+    appImage.title = QStringLiteral("Helium");
+    appImage.platform = QStringLiteral("linux");
+    appImage.exe = QStringLiteral("~/AppImages/Helium.AppImage");
+    appImage.updateSource = QStringLiteral("github:imputnet/helium-linux");
+    appImage.updateAsset = QStringLiteral("helium-*-x86_64.AppImage");
+    appImage.updatePrereleases = true;
+    s.content.games.insert(QStringLiteral("linux-helium"), appImage);
     s.content.games.insert(QStringLiteral("steam-1145360"), GameFile{});
     s.art.insert(QStringLiteral("steam-1145360"), {"/data/art/steam-1145360/hero.png", {}, "/x/icon.webp", {}});
 
