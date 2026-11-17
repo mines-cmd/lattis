@@ -586,10 +586,22 @@ MotionPopup {
                     source: root.isClip ? "" : (root.current.image ?? "")
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
-                    // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory;
-                    // zoomed in, at its own.
-                    sourceSize.width: root.zoom > 1 ? 0 : width
-                    sourceSize.height: root.zoom > 1 ? 0 : height
+                    // Decoded at the size it's shown, so a 4K screenshot doesn't hold its full size in memory.
+                    sourceSize.width: width
+                    sourceSize.height: height
+                }
+                // Zoomed in, the picture is decoded at its own size. Changing `shot`'s sourceSize instead would
+                // empty it while the new size loads, which flashed black; this one replaces it once ready.
+                Image {
+                    width: shot.width
+                    height: shot.height
+                    x: shot.x
+                    y: shot.y
+                    scale: shot.scale
+                    visible: !root.isClip && root.zoom > 1 && status === Image.Ready
+                    source: root.zoom > 1 && !root.isClip ? (root.current.image ?? "") : ""
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
                 }
                 MouseArea {
                     id: shotArea
@@ -609,11 +621,9 @@ MotionPopup {
                             last = Qt.point(mouse.x, mouse.y)
                         }
                     }
-                    WheelHandler {
-                        onWheel: event => {
-                            const at = shotArea.mapToItem(shot.parent, point.position.x, point.position.y)
-                            root.zoomTo(root.zoom * Math.pow(1.2, event.angleDelta.y / 120), at.x, at.y)
-                        }
+                    onWheel: wheel => {
+                        const at = shotArea.mapToItem(shot.parent, wheel.x, wheel.y)
+                        root.zoomTo(root.zoom * Math.pow(1.2, wheel.angleDelta.y / 120), at.x, at.y)
                     }
                     onClicked: mouse => {
                         if (mouse.button === Qt.RightButton)
