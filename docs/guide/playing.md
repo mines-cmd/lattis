@@ -36,10 +36,10 @@ Steam and Proton games show the play time Steam records instead, including sessi
 
 ### The same game from two sources
 
-When you have one game twice, for example bought on Steam and also added as a Proton game, right-click either copy and choose **Same game as**, then the other copy. The menu lists games with the same title, or the same IGDB entry after a lookup. Linked copies count as one game:
+When you have one game twice, for example bought on Steam and also added as a Proton game, right-click either copy and choose **Same game as**, then the other copy. The menu lists games with the same title, or the same IGDB entry after a lookup. The **Copies** tab in the game's Properties does the same and more: it shows which copies are linked and which is main, lets you link a game with a different title, and unlink or change the main copy, all written with Save. Linked copies count as one game:
 
 - Both show the combined play time and last played, and their play history lists the sessions of both, each marked with the platform it was played on.
-- The statistics count the game once in Most played, under the Steam copy (between two copies not from Steam, under the one you picked in the menu); each copy's hours still go to its own platform.
+- The statistics count the game once in Most played, under the Steam copy (between two copies not from Steam, under the one you picked in the menu; **Make main** in the Copies tab overrides this, so the statistics can follow the shortcut instead); each copy's hours still go to its own platform.
 - Their media is shared: each copy's page shows the clips and screenshots of both, and the Gallery lists the game once.
 - Nothing is moved between the copies: each keeps its own play time, and Steam's own numbers stay separate. **Unlink** in the right-click menu (Undo is offered) puts each copy back on its own time. Unlinking the copy the others point at unlinks them all.
 

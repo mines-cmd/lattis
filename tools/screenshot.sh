@@ -3,7 +3,8 @@
 #
 #   tools/screenshot.sh [--demo] <data dir> <out.png> [delay ms]
 #
-# --demo copies the demo library (tools/demo-data) into the data dir first. The library
+# --demo copies the demo library (tools/demo-data) into the data dir first, plus the Proton
+# copy of Hades linked to the Steam one (tools/demo-linked; the library tests don't see it). The library
 # cache and the remembered window sizes go next to the data dir (<data dir>-cache,
 # <data dir>-state), not into ~/.cache and ~/.local/state.
 #
@@ -23,6 +24,7 @@ if [ "$1" = "--demo" ]; then
     shift
     mkdir -p "$1"
     cp -r "$tools/demo-data/." "$1/"
+    cp -r "$tools/demo-linked/." "$1/"
 fi
 
 data=$(realpath "$1")

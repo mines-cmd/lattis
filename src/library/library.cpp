@@ -3202,6 +3202,55 @@ QVariantList Library::linkedCopies(const Game &g) const
     return out;
 }
 
+QVariantMap Library::copyRow(const QString &id) const
+{
+    const Game *copy = game(id);
+    if (!copy)
+        return {};
+    return {{QStringLiteral("id"), copy->id},
+            {QStringLiteral("title"), copy->title},
+            {QStringLiteral("platform"), copy->platform},
+            {QStringLiteral("platformName"), copy->platformName},
+            {QStringLiteral("main"), !copy->groupId.isEmpty() && copy->id == copy->groupId},
+            {QStringLiteral("hidden"), copy->hidden},
+            {QStringLiteral("notInstalled"), !copy->installed},
+            {QStringLiteral("coverUrl"), copy->coverUrl},
+            {QStringLiteral("playTimeText"), playTimeText(copy->playMinutes)},
+            {QStringLiteral("lastPlayedText"), lastPlayedText(copy->lastPlayed)}};
+}
+
+QVariantMap Library::copyRows(const QString &id) const
+{
+    const Game *g = game(id);
+    if (!g || g->groupId.isEmpty())
+        return {{QStringLiteral("copies"), QVariantList()}, {QStringLiteral("self"), copyRow(id)}};
+    QStringList ids = g->linked;
+    std::sort(ids.begin(), ids.end(), [this](const QString &a, const QString &b) {
+        const Game *ga = game(a);
+        const Game *gb = game(b);
+        return QString::localeAwareCompare(ga ? ga->platformName : a, gb ? gb->platformName : b) < 0;
+    });
+    ids.prepend(id);
+    QVariantList copies;
+    for (const QString &copyId : std::as_const(ids)) {
+        if (game(copyId))
+            copies.append(copyRow(copyId));
+    }
+    return {{QStringLiteral("copies"), copies},
+            {QStringLiteral("self"), copyRow(id)},
+            {QStringLiteral("totalPlayTimeText"), playTimeText(g->groupPlayMinutes)},
+            {QStringLiteral("totalLastPlayedText"), lastPlayedText(g->groupLastPlayed)}};
+}
+
+// The main copy's title when `other` is in a group `g` isn't part of; empty otherwise.
+QString Library::otherGroupTitle(const Game &g, const Game &other) const
+{
+    if (other.groupId.isEmpty() || other.groupId == g.groupId)
+        return {};
+    const Game *main = game(other.groupId);
+    return main ? main->title : other.groupId;
+}
+
 QVariantList Library::sameGameCandidates(const QString &id) const
 {
     const Game *g = game(id);
@@ -3219,7 +3268,9 @@ QVariantList Library::sameGameCandidates(const QString &id) const
         if ((igdb > 0 && otherIgdb == igdb) || m_foldedTitles.at(i) == title)
             out.append(QVariantMap{{QStringLiteral("id"), other.id},
                                    {QStringLiteral("title"), other.title},
-                                   {QStringLiteral("platformName"), other.platformName}});
+                                   {QStringLiteral("platformName"), other.platformName},
+                                   {QStringLiteral("sameIgdb"), igdb > 0 && otherIgdb == igdb},
+                                   {QStringLiteral("linkedTo"), otherGroupTitle(*g, other)}});
     }
     return out;
 }
@@ -3230,17 +3281,153 @@ QString Library::linkCopy(const QString &id, const QString &other)
     const Game *o = game(other);
     if (!g || !o || id == other)
         return tr("There's no game with the id %1").arg(!g ? id : other);
-    if (!g->groupId.isEmpty())
-        return tr("%1 is already linked; unlink it first").arg(g->title);
-    // The Steam copy stays the main one, so a store game never points at a shortcut.
-    QString main = o->groupId.isEmpty() ? other : o->groupId;
-    QStringList ids{id};
-    if (o->groupId.isEmpty() && g->platform == kSteamPlatform && o->platform != kSteamPlatform) {
-        main = id;
-        ids = {other};
+    QString error;
+    const auto plan = planCopyChanges(id, {QVariantMap{{QStringLiteral("op"), QStringLiteral("link")},
+                                                       {QStringLiteral("id"), other}}}, error);
+    if (!error.isEmpty())
+        return error;
+    return writeCopyPlan(plan, tr("Linked %1 and %2").arg(g->title, o->title));
+}
+
+QString Library::setMainCopy(const QString &id)
+{
+    const Game *g = game(id);
+    if (!g)
+        return tr("There's no game with the id %1").arg(id);
+    QString error;
+    const auto plan = planCopyChanges(id, {QVariantMap{{QStringLiteral("op"), QStringLiteral("main")},
+                                                       {QStringLiteral("id"), id}}}, error);
+    if (!error.isEmpty())
+        return error;
+    return writeCopyPlan(plan, tr("%1 is now the main copy").arg(g->title));
+}
+
+QString Library::applyCopyChanges(const QString &gameId, const QVariantList &changes)
+{
+    const Game *g = game(gameId);
+    if (!g)
+        return tr("There's no game with the id %1").arg(gameId);
+    QString error;
+    const auto plan = planCopyChanges(gameId, changes, error);
+    if (!error.isEmpty())
+        return error;
+    // A Save has taken its Undo already (art and values go into it): the link changes join it.
+    return writeCopyPlan(plan, tr("Linked copies of %1 changed").arg(g->title),
+                         m_undo.pending() && m_undo.subject() == gameId);
+}
+
+// The new same_as of every game the changes touch, worked out in memory first so that a refused change writes nothing.
+QHash<QString, QString> Library::planCopyChanges(const QString &gameId, const QVariantList &changes, QString &error) const
+{
+    QHash<QString, QString> before;
+    before.reserve(m_games.size());
+    for (const Game &g : m_games)
+        before.insert(g.id, g.groupId == g.id ? QString() : g.groupId);
+    QHash<QString, QString> now = before;
+
+    const auto mainOf = [&](const QString &id) {
+        if (!now.value(id).isEmpty())
+            return now.value(id);
+        for (auto it = now.cbegin(); it != now.cend(); ++it) {
+            if (it.value() == id)
+                return id;
+        }
+        return QString();
+    };
+    const auto titleOf = [&](const QString &id) {
+        const Game *g = game(id);
+        return g ? g->title : id;
+    };
+
+    for (const QVariant &entry : changes) {
+        const QVariantMap change = entry.toMap();
+        const QString op = change.value(QStringLiteral("op")).toString();
+        const QString id = change.value(QStringLiteral("id")).toString();
+        if (!now.contains(id) || !now.contains(gameId)) {
+            error = tr("There's no game with the id %1").arg(now.contains(id) ? gameId : id);
+            return {};
+        }
+        const QString main = mainOf(id);
+        if (op == QLatin1String("link")) {
+            const QString own = mainOf(gameId);
+            if (id == gameId)
+                continue;
+            if (!own.isEmpty() && !main.isEmpty()) {
+                if (own != main) {
+                    error = tr("%1 is already linked to %2; unlink it first").arg(titleOf(id), titleOf(main));
+                    return {};
+                }
+            } else if (!own.isEmpty()) {
+                now[id] = own;
+            } else if (!main.isEmpty()) {
+                now[gameId] = main;
+            } else {
+                // The Steam copy stays the main one, so a store game never points at a shortcut.
+                const Game *g = game(gameId);
+                const Game *o = game(id);
+                if (g->platform == kSteamPlatform && o->platform != kSteamPlatform)
+                    now[id] = gameId;
+                else
+                    now[gameId] = id;
+            }
+        } else if (op == QLatin1String("unlink")) {
+            if (main.isEmpty())
+                continue;
+            if (main == id) {
+                for (auto it = now.begin(); it != now.end(); ++it) {
+                    if (it.value() == id)
+                        it.value().clear();
+                }
+            } else {
+                now[id].clear();
+            }
+        } else if (op == QLatin1String("main")) {
+            if (main.isEmpty()) {
+                error = tr("%1 isn't linked to another copy").arg(titleOf(id));
+                return {};
+            }
+            if (main == id)
+                continue;
+            for (auto it = now.begin(); it != now.end(); ++it) {
+                if (it.value() == main)
+                    it.value() = id;
+            }
+            now[main] = id;
+            now[id].clear();
+        } else {
+            error = tr("Unknown change: %1").arg(op);
+            return {};
+        }
     }
-    return editGames(ids, tr("Linked %1 and %2").arg(g->title, o->title), [&](const QString &copy) {
-        return m_store.setGameValues(copy, {{QStringLiteral("same_as"), main}});
+
+    QHash<QString, QString> plan;
+    for (auto it = now.cbegin(); it != now.cend(); ++it) {
+        if (it.value() != before.value(it.key()))
+            plan.insert(it.key(), it.value());
+    }
+    return plan;
+}
+
+QString Library::writeCopyPlan(const QHash<QString, QString> &plan, const QString &text, bool joinPendingUndo)
+{
+    if (plan.isEmpty())
+        return {};
+    QStringList ids = plan.keys();
+    ids.sort();
+    if (joinPendingUndo) {
+        QStringList errors;
+        for (const QString &id : std::as_const(ids))
+            m_undo.keepCopy(gameFileOf(id));
+        m_store.beginBatch();
+        for (const QString &id : std::as_const(ids)) {
+            if (const QString error = m_store.setGameValues(id, {{QStringLiteral("same_as"), plan.value(id)}}); !error.isEmpty())
+                errors.append(error);
+        }
+        m_store.endBatch();
+        return errors.join(u'\n');
+    }
+    return editGames(ids, text, [&](const QString &copy) {
+        return m_store.setGameValues(copy, {{QStringLiteral("same_as"), plan.value(copy)}});
     });
 }
 

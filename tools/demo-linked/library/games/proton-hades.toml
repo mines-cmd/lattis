@@ -1,0 +1,12 @@
+title = "Hades"
+platform = "proton"
+year = 2020
+description = """
+Defy the god of the dead as you hack and slash out of the Underworld."""
+tags = ["Roguelike"]
+added = 2026-02-10
+exe = "~/Games/Hades/Hades.exe"
+install_dir = "~/Games/Hades"
+shortcut = 3110441900
+proton = "proton_experimental"
+same_as = "steam-1145360"

@@ -539,6 +539,18 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "uninstallInEditor");
                 });
             }
+            if (const int tab = qEnvironmentVariableIntValue("LATTIS_EDIT_TAB"); tab > 0) {
+                QTimer::singleShot(actualDelay * 5 / 8, window, [window, tab] {
+                    logHook("tabInEditor", QString::number(tab));
+                    QMetaObject::invokeMethod(window, "tabInEditor", Q_ARG(QVariant, tab));
+                });
+            }
+            if (const QString spec = qEnvironmentVariable("LATTIS_COPY_CHANGES"); !spec.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, spec] {
+                    logHook("copyChangesInEditor", spec);
+                    QMetaObject::invokeMethod(window, "copyChangesInEditor", Q_ARG(QVariant, spec));
+                });
+            }
             if (qEnvironmentVariableIntValue("LATTIS_MEDIA_FOLDERS") == 1) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
                     logHook("mediaFoldersInEditor");

@@ -39,6 +39,15 @@ The gear button on a game's page (Alt+Return), or **Properties** in its right-cl
 - **Save locations:** where the game's saves are. Lattis finds them from the saves list, Epic, or the emulator (they're listed under the match, see [Save backups](backups.md#automatic-save-backups)); **Add** adds a folder it misses, such as a game that keeps its saves in its own folder, and × removes one you added. Backups take every location, and **Open save folder** opens the first: one you added, else the first found. With none, it opens the ROM's folder for an emulator that saves next to its ROMs (melonDS, mGBA), the emulator's own save folder, or a Steam or Windows game's Proton prefix (its `drive_c/users/steamuser`); a Linux game has none until one is found or added.
 - The rest of the tab is for [backups](backups.md#automatic-save-backups) and [mod managers](mod-managers.md).
 
+**Copies** (not while adding a game)
+
+For a game you have from two sources, such as a Steam game and a Proton shortcut. See [The same game from two sources](playing.md#the-same-game-from-two-sources).
+
+- **Linked copies:** one row per copy, this one first: its cover, title and platform, its own play time and last played, and badges (**Main**, **This copy**, **Hidden**, **Not installed**). Below, the combined play time and last played. **Open** switches Properties to that copy (it asks first if this one has unsaved changes), **Make main** counts that copy as the main one, and × unlinks it; on the main copy it reads **Unlink all**, since the others point at it. A game that isn't linked shows a one-line explanation instead.
+- **Link another copy:** games with the same title or the same IGDB entry, each with **Link**. **Choose games…** searches every other game, for copies with a different title; tick as many as you like and press **Link**. A game already linked to a third copy can't be linked until it is unlinked from it.
+
+Link changes wait for **Save** like the rest: a copy to be linked shows with **New**, one to be unlinked is dimmed (the arrow brings it back), and the tab gets a dot. One Undo reverts everything Save wrote here.
+
 Adding a game (the + button) has no tabs: the General and Launch pages show together, as one short form.
 
 **Save** (or Enter in a one-line field) writes what you changed. **Cancel** or Escape throws everything away, art included.

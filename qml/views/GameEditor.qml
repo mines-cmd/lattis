@@ -170,6 +170,21 @@ Item {
         onLoaded: item.message.connect(text => root.message(text))
     }
 
+    function chooseCopy() {
+        copyPicker.active = true
+        const picker = copyPicker.item
+        picker.gameId = game.id
+        picker.taken = copyRowList.map(c => c.id)
+        picker.open()
+    }
+
+    Loader {
+        id: copyPicker
+        active: false
+        source: "CopyGamePicker.qml"
+        onLoaded: item.picked.connect(ids => ids.forEach(id => root.addCopy(id)))
+    }
+
     // Links ticked or unticked here (manager id → linked), written with Save.
     property var managerLinks: ({})
     readonly property bool managerGame: !adding && ["steam", "proton", "linux"].includes(game.platform ?? "")
@@ -199,14 +214,87 @@ Item {
         return errors
     }
 
-    // 0 General, 1 Images, 2 Launch, 3 Saves & mods. Adding a game has no tabs: General and Launch show together.
+    // Link changes made in the Copies tab, written with Save: rows waiting to be linked, ids waiting to
+    // be unlinked, and the copy made main ("" for no change).
+    property var copyAdded: []
+    property var copyUnlinked: ({})
+    property string copyMain: ""
+    property var copyInfo: ({})
+    readonly property var copyBase: copyInfo.copies ?? []
+    readonly property var copySelf: copyInfo.self ?? ({})
+    readonly property string copyMainOriginal: copyBase.find(c => c.main)?.id ?? ""
+    readonly property string copyMainShown: {
+        if (copyMain !== "")
+            return copyMain
+        if (copyMainOriginal !== "")
+            return copyMainOriginal
+        if (copyAdded.length === 0)
+            return ""
+        // The first link makes the pair: the Steam copy stays main, else the other game.
+        const other = copyAdded[0]
+        return copySelf.platform === "steam" && other.platform !== "steam" ? copySelf.id : other.id
+    }
+    // The main copy waiting to be unlinked breaks up the whole group.
+    readonly property bool copyBreakAll: copyMainShown !== "" && copyUnlinked[copyMainShown] === true
+    readonly property var copyRowList: {
+        const rows = copyBase.length > 0 ? copyBase.slice() : copyAdded.length > 0 ? [copySelf] : []
+        return rows.concat(copyAdded)
+    }
+    readonly property bool copiesDirty: copyAdded.length > 0 || copyMain !== "" || Object.keys(copyUnlinked).length > 0
+
+    function copyIsDimmed(id) {
+        return copyBreakAll || copyUnlinked[id] === true
+    }
+    function resetCopies() {
+        copyAdded = []
+        copyUnlinked = ({})
+        copyMain = ""
+    }
+    function refreshCopies() {
+        resetCopies()
+        copyInfo = Library.copyRows(game.id)
+    }
+    function addCopy(id) {
+        if (copyAdded.some(c => c.id === id))
+            return
+        copyAdded = copyAdded.concat([Library.copyRow(id)])    }
+    function setCopyMain(id) {
+        copyMain = id === copyMainOriginal ? "" : id
+    }
+    function toggleCopyUnlink(id) {
+        if (copyAdded.some(c => c.id === id)) {
+            copyAdded = copyAdded.filter(c => c.id !== id)
+            if (copyMain === id || copyAdded.length === 0 && copyBase.length === 0)
+                copyMain = ""
+            return
+        }
+        const next = Object.assign({}, copyUnlinked)
+        if (next[id])
+            delete next[id]
+        else
+            next[id] = true
+        copyUnlinked = next
+    }
+    // Links first (they join the group), then the new main, then the unlinks, which see that main.
+    function copyChanges() {
+        const ops = []
+        if (!copyBreakAll)
+            copyAdded.forEach(c => ops.push({ op: "link", id: c.id }))
+        if (copyMain !== "")
+            ops.push({ op: "main", id: copyMain })
+        Object.keys(copyUnlinked).forEach(id => ops.push({ op: "unlink", id: id }))
+        return ops
+    }
+
+    // 0 General, 1 Images, 2 Launch, 3 Saves & mods, 4 Copies. Adding a game has no tabs: General and Launch show together.
     property int tab: 0
     readonly property bool savesTabUsed: !adding
     readonly property var tabs: [
         { name: qsTr("General"), icon: Icons.informationLine, shown: true },
         { name: qsTr("Images"), icon: Icons.image, shown: true },
         { name: qsTr("Launch"), icon: Icons.playLargeLine, shown: true },
-        { name: managerGame ? qsTr("Saves & mods") : qsTr("Saves"), icon: Icons.archiveLine, shown: savesTabUsed }
+        { name: managerGame ? qsTr("Saves & mods") : qsTr("Saves"), icon: Icons.archiveLine, shown: savesTabUsed },
+        { name: qsTr("Copies"), icon: Icons.link, shown: !adding }
     ]
 
     function pageShown(n) {
@@ -222,7 +310,7 @@ Item {
     })
     // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
     readonly property var dirtyTabs: {
-        const dirty = [false, false, false, false]
+        const dirty = [false, false, false, false, false]
         if (!dialog.opened || adding || game.id === undefined)
             return dirty
         for (const key of Object.keys(changes()))
@@ -234,6 +322,8 @@ Item {
         if (Object.keys(managerLinks).length > 0 && Library.modManagers.some(
                 m => managerLinks[m.id] !== undefined && managerLinks[m.id] !== m.games.some(g => g.id === game.id)))
             dirty[3] = true
+        if (copiesDirty)
+            dirty[4] = true
         return dirty
     }
 
@@ -257,6 +347,13 @@ Item {
         pick = ({})
         tab = tabIndex ?? 0
         show(g)
+    }
+
+    function openCopy(id) {
+        if (dirtyTabs.some(d => d))
+            confirmSwitch.ask(id)
+        else
+            openFor(id, tab)
     }
 
     function openMediaFolders() {
@@ -308,6 +405,8 @@ Item {
         newSavePaths = null
         newMediaFolders = null
         managerLinks = ({})
+        resetCopies()
+        copyInfo = adding ? ({}) : Library.copyRows(g.id)
         mediaMenu.close()
         form.scrollRoom = false
         if (!tabs[tab]?.shown)
@@ -749,6 +848,13 @@ Item {
             // Art first: the Save's Undo is taken when saveGame() finishes, and covers the art.
             Library.beginEditUndo(id)
             errors.push(...artEditor.apply(id))
+            // Joins the Undo taken above, so one Undo puts the links back with the rest.
+            const copyOps = copyChanges()
+            const copyError = copyOps.length > 0 ? Library.applyCopyChanges(id, copyOps) : ""
+            if (copyOps.length > 0 && copyError === "")
+                refreshCopies()
+            if (copyError !== "")
+                errors.push(copyError)
             const e = Library.saveGame(id, values)
             if (e !== "") {
                 error.text = errors.concat([e]).join("\n")
@@ -820,6 +926,7 @@ Item {
         closePolicy: Popup.CloseOnEscape
         onClosed: {
             confirmRemove.close()
+            confirmSwitch.close()
             confirmUninstall.close()
             if (protonUninstall.item)
                 protonUninstall.item.close()
@@ -1049,6 +1156,12 @@ Item {
                         visible: root.pageShown(3)
                     }
 
+                    EditorCopiesPage {
+                        id: copiesPage
+                        editor: root
+                        visible: root.pageShown(4)
+                    }
+
                     EditorImagesPage {
                         id: imagesPage
                         editor: root
@@ -1182,6 +1295,44 @@ Item {
                 }
             ]
         }
+    }
+
+    AppDialog {
+        id: confirmSwitch
+
+        property string target: ""
+        function ask(id) {
+            target = id
+            open()
+        }
+
+        carded: false
+        scrim: false
+        title: qsTr("Discard your changes?")
+        onOpened: keepEditing.forceActiveFocus()
+
+        Label {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.labelColor
+            text: qsTr("This copy has changes you haven't saved. Opening the other copy drops them.")
+        }
+
+        footer: [
+            SettingsButton {
+                id: keepEditing
+                text: qsTr("Keep editing")
+                onClicked: confirmSwitch.close()
+            },
+            SettingsButton {
+                text: qsTr("Discard and open")
+                danger: true
+                onClicked: {
+                    confirmSwitch.close()
+                    root.openFor(confirmSwitch.target, root.tab)
+                }
+            }
+        ]
     }
 
     ModManagerMenu {

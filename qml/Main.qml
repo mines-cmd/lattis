@@ -708,6 +708,26 @@ ApplicationWindow {
         editorLoader.item?.uninstall()
     }
 
+    function tabInEditor(tab) {
+        if (editorLoader.item)
+            editorLoader.item.tab = tab
+    }
+
+    function copyChangesInEditor(spec) {
+        const editor = editorLoader.item
+        if (!editor)
+            return
+        for (const part of spec.split(",")) {
+            const [op, id] = part.split(":")
+            if (op === "link")
+                editor.addCopy(id)
+            else if (op === "unlink")
+                editor.toggleCopyUnlink(id)
+            else if (op === "main")
+                editor.setCopyMain(id)
+        }
+    }
+
     function mediaFoldersInEditor() {
         editorLoader.item?.openMediaFolders()
     }

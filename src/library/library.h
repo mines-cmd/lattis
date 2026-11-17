@@ -248,6 +248,13 @@ public:
     Q_INVOKABLE QVariantList sameGameCandidates(const QString &id) const;
     Q_INVOKABLE QString linkCopy(const QString &id, const QString &other);
     Q_INVOKABLE QString unlinkCopy(const QString &id);
+    // The copies in `id`'s group, this one first, then the others by platform name; empty when it isn't linked.
+    Q_INVOKABLE QVariantMap copyRows(const QString &id) const;
+    // One game's row as the Copies tab shows it (also `self` in copyRows, for a game that isn't linked yet).
+    Q_INVOKABLE QVariantMap copyRow(const QString &id) const;
+    Q_INVOKABLE QString setMainCopy(const QString &id);
+    // changes: maps {op: "link"|"unlink"|"main", id}; "link" joins `id` to `gameId`'s group. One edit, one Undo.
+    Q_INVOKABLE QString applyCopyChanges(const QString &gameId, const QVariantList &changes);
 
     Q_INVOKABLE QVariantMap historyFor(const QString &id) const;
     Q_INVOKABLE QVariantMap pageHistory(const QString &id);
@@ -480,6 +487,9 @@ private:
     static QString gameFileOf(const QString &id);
     QString editGames(const QStringList &ids, const QString &text, const std::function<QString(const QString &)> &change);
     quint64 commitUndo(const QString &text);
+    QHash<QString, QString> planCopyChanges(const QString &gameId, const QVariantList &changes, QString &error) const;
+    QString writeCopyPlan(const QHash<QString, QString> &plan, const QString &text, bool joinPendingUndo = false);
+    QString otherGroupTitle(const Game &g, const Game &other) const;
     QString movePlatformWith(const QString &id, const std::function<QString()> &move);
     struct StatsInput;
     StatsInput statsInput() const;

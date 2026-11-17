@@ -168,10 +168,12 @@ qt_add_qml_module(lattis
         qml/views/MediaRow.qml
         qml/views/SavesPanel.qml
         qml/views/SavesGamePicker.qml
+        qml/views/CopyGamePicker.qml
         qml/views/MediaViewer.qml
         qml/views/ClipMenu.qml
         qml/views/FfmpegPrompt.qml
         qml/views/GameEditor.qml
+        qml/views/EditorCopiesPage.qml
         qml/views/EditorGeneralPage.qml
         qml/views/EditorImagesPage.qml
         qml/views/EditorLaunchPage.qml

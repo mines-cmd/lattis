@@ -21,6 +21,11 @@ private slots:
     void addGameRefused();
     void removeGameFile();
     void setGamesValueReloadsOnceAndUndoes();
+    void linkJoinsAnExistingGroup();
+    void linkToAnotherGroupIsRefused();
+    void mainCopyMoves();
+    void saveTakesCopyChangesIntoItsUndo();
+    void copyChangesUndoTogether();
     void hideAndUnhide();
     void setAndRemoveArt();
     void editorApi();
@@ -790,6 +795,164 @@ void LibraryEditTest::artCopyErrors()
     // And where it can, the copy is shrunk to the icon's size.
     QCOMPARE(ArtImage::copy(big, target, QStringLiteral("icon")), QString());
     QCOMPARE(QImageReader(target).size(), QSize(512, 512));
+}
+
+namespace {
+QString sameAsOf(Library &library, const QString &id)
+{
+    return library.store().snapshot().content.games.value(id).sameAs;
+}
+} // namespace
+
+void LibraryEditTest::linkJoinsAnExistingGroup()
+{
+    auto library = openLibrary();
+    const QString main = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString copy = QStringLiteral("switch-metroid-dread");
+    const QString third = QStringLiteral("switch-pikmin-4");
+    QCOMPARE(library->linkCopy(copy, main), QString());
+    QCOMPARE(sameAsOf(*library, copy), main);
+
+    // From the non-main copy, the new one joins the group's main; from the main copy, the same.
+    QCOMPARE(library->linkCopy(copy, third), QString());
+    QCOMPARE(sameAsOf(*library, third), main);
+    QCOMPARE(sameAsOf(*library, main), QString());
+    QCOMPARE(library->game(third)->groupId, main);
+    QCOMPARE(library->gameAt(library->rowOfGame(main)).value("linked").toList().size(), 2);
+
+    // Linking a copy that's already in the group changes nothing and offers no Undo.
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    QCOMPARE(library->linkCopy(copy, third), QString());
+    QCOMPARE(offered.size(), 0);
+
+    const QString kirby = QStringLiteral("switch-kirby-and-the-forgotten-land");
+    QCOMPARE(library->linkCopy(main, kirby), QString());
+    QCOMPARE(sameAsOf(*library, kirby), main);
+}
+
+void LibraryEditTest::linkToAnotherGroupIsRefused()
+{
+    auto library = openLibrary();
+    const QString a = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString b = QStringLiteral("switch-metroid-dread");
+    const QString c = QStringLiteral("switch-pikmin-4");
+    const QString d = QStringLiteral("switch-kirby-and-the-forgotten-land");
+    QCOMPARE(library->linkCopy(b, a), QString());
+    QCOMPARE(library->linkCopy(d, c), QString());
+
+    const QString error = library->linkCopy(b, d);
+    QVERIFY(error.contains(QStringLiteral("unlink it first")));
+    QVERIFY(error.contains(library->game(c)->title));
+    QCOMPARE(sameAsOf(*library, d), c);
+    QCOMPARE(sameAsOf(*library, b), a);
+
+    // Nothing in a refused batch is written, even the changes before the refused one.
+    const QVariantList changes{QVariantMap{{"op", "main"}, {"id", b}},
+                               QVariantMap{{"op", "link"}, {"id", d}}};
+    QVERIFY(!library->applyCopyChanges(b, changes).isEmpty());
+    QCOMPARE(sameAsOf(*library, b), a);
+}
+
+void LibraryEditTest::mainCopyMoves()
+{
+    auto library = openLibrary();
+    const QString a = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString b = QStringLiteral("switch-metroid-dread");
+    const QString c = QStringLiteral("switch-pikmin-4");
+    QCOMPARE(library->linkCopy(b, a), QString());
+    QCOMPARE(library->linkCopy(c, a), QString());
+
+    QCOMPARE(library->setMainCopy(b), QString());
+    QCOMPARE(sameAsOf(*library, b), QString());
+    QCOMPARE(sameAsOf(*library, a), b);
+    QCOMPARE(sameAsOf(*library, c), b);
+    QCOMPARE(library->game(c)->groupId, b);
+
+    // The main copy again, or a game that isn't linked.
+    QCOMPARE(library->setMainCopy(b), QString());
+    QVERIFY(!library->setMainCopy(QStringLiteral("switch-kirby-and-the-forgotten-land")).isEmpty());
+
+    // The Steam rule is only the default: Make main overrides it.
+    const QString steam = QStringLiteral("steam-1145360");
+    const QString shortcut = QStringLiteral("proton-diablo-iv");
+    QCOMPARE(library->linkCopy(steam, shortcut), QString());
+    QCOMPARE(sameAsOf(*library, shortcut), steam);
+    QCOMPARE(library->setMainCopy(shortcut), QString());
+    QCOMPARE(sameAsOf(*library, steam), shortcut);
+    QCOMPARE(sameAsOf(*library, shortcut), QString());
+}
+
+void LibraryEditTest::copyChangesUndoTogether()
+{
+    auto library = openLibrary();
+    const QString a = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString b = QStringLiteral("switch-metroid-dread");
+    const QString c = QStringLiteral("switch-pikmin-4");
+    const QString d = QStringLiteral("switch-kirby-and-the-forgotten-land");
+    QCOMPARE(library->linkCopy(b, a), QString());
+    QCOMPARE(library->linkCopy(c, a), QString());
+
+    QMap<QString, QByteArray> before;
+    for (const QString &id : {a, b, c, d})
+        before.insert(id, QFile::exists(gamePath(id)) ? readFile(gamePath(id)) : QByteArray());
+    QSignalSpy changed(&library->store(), &LibraryStore::changed);
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+
+    // Link d, unlink c, make b the main one: one write, one Undo.
+    const QVariantList changes{QVariantMap{{"op", "link"}, {"id", d}},
+                               QVariantMap{{"op", "unlink"}, {"id", c}},
+                               QVariantMap{{"op", "main"}, {"id", b}}};
+    QCOMPARE(library->applyCopyChanges(a, changes), QString());
+    QCOMPARE(changed.size(), 1);
+    QCOMPARE(offered.size(), 1);
+    QCOMPARE(sameAsOf(*library, b), QString());
+    QCOMPARE(sameAsOf(*library, a), b);
+    QCOMPARE(sameAsOf(*library, d), b);
+    QCOMPARE(sameAsOf(*library, c), QString());
+
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    for (const QString &id : {a, b, c, d})
+        QCOMPARE(QFile::exists(gamePath(id)) ? readFile(gamePath(id)) : QByteArray(), before.value(id));
+    QCOMPARE(sameAsOf(*library, a), QString());
+    QCOMPARE(sameAsOf(*library, b), a);
+    QCOMPARE(sameAsOf(*library, c), a);
+    QCOMPARE(sameAsOf(*library, d), QString());
+
+    // Unlinking the main copy breaks up the whole group, and a batch with nothing to change offers no Undo.
+    offered.clear();
+    QCOMPARE(library->applyCopyChanges(a, {QVariantMap{{"op", "unlink"}, {"id", a}}}), QString());
+    QCOMPARE(sameAsOf(*library, b), QString());
+    QCOMPARE(sameAsOf(*library, c), QString());
+    QCOMPARE(offered.size(), 1);
+    offered.clear();
+    QCOMPARE(library->applyCopyChanges(a, {QVariantMap{{"op", "unlink"}, {"id", d}}}), QString());
+    QCOMPARE(offered.size(), 0);
+}
+
+void LibraryEditTest::saveTakesCopyChangesIntoItsUndo()
+{
+    auto library = openLibrary();
+    const QString a = QStringLiteral("switch-mario-kart-8-deluxe");
+    const QString b = QStringLiteral("switch-metroid-dread");
+    QMap<QString, QByteArray> before;
+    for (const QString &id : {a, b})
+        before.insert(id, readFile(gamePath(id)));
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+
+    // What the Properties Save does: the links go between its Undo's start and its values.
+    library->beginEditUndo(a);
+    QCOMPARE(library->applyCopyChanges(a, {QVariantMap{{"op", "link"}, {"id", b}}}), QString());
+    QCOMPARE(offered.size(), 0);
+    QCOMPARE(library->saveGame(a, {{"favorite", true}}), QString());
+    QCOMPARE(offered.size(), 1);
+    QCOMPARE(sameAsOf(*library, a).isEmpty() != sameAsOf(*library, b).isEmpty(), true);
+    QVERIFY(library->game(a)->favorite);
+
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    for (const QString &id : {a, b})
+        QCOMPARE(readFile(gamePath(id)), before.value(id));
+    QVERIFY(!library->game(a)->favorite);
+    QVERIFY(library->game(a)->groupId.isEmpty());
 }
 
 QTEST_GUILESS_MAIN(LibraryEditTest)
