@@ -24,7 +24,7 @@ Open the entry to see the release notes, then click **Update**. Lattis downloads
 
 - **Skip this version** hides the entry and the dot until a newer one comes out; Settings → General still lists it.
 - **Check now** in Settings → General looks right away.
-- The check is one request to `api.github.com` for the project's latest release, and nothing else is sent. The emulators Lattis installed as AppImages are checked the same way, once a day; one with an update also puts the dot on the logo and its own entry in the app menu. Turn both off with **Check for updates** in Settings → General.
+- The check is one request to `api.github.com` for the project's latest release, and nothing else is sent. The emulators Lattis installed as AppImages, and AppImage games with an update source, are checked the same way, once a day; one with an update also puts the dot on the logo and its own entry in the app menu. Turn both off with **Check for updates** in Settings → General.
 - If the AppImage's folder can't be written to, or Gear Lever or AppImageLauncher manages it, the button is **Open release page** instead; update it in that tool.
 - A build from source, a distro package and a local test AppImage never check.
 

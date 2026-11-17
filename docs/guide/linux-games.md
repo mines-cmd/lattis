@@ -32,6 +32,24 @@ Play time and last played are recorded as for an emulated game (see [Playing](pl
 
 If the program is moved or deleted, the game shows "Game not found" with **Locate** in place of Launch.
 
+## Updates
+
+An AppImage game can be updated from its GitHub or GitLab releases, like the emulators Lattis installs. Open the game's **Properties → Launch**: the **Updates** card (only for AppImage games) holds:
+
+- **Source:** `github:owner/repo` or `gitlab:host/group/project`. Pasting a repository address (`https://github.com/owner/repo`, or its `/releases` page) turns it into the first form.
+- **Release file name:** the release file to download, with `*` and `?` as wildcards (several patterns separated by `;`). A pattern ending in `.zsync`, like the ones Gear Lever and the AppImage itself use, works: the `.zsync` is dropped, because Lattis always downloads the whole AppImage. Under the field, Lattis shows the file it matches in the latest release, or says none does.
+- **Allow pre-releases:** takes the newest release that has a matching file, pre-releases included (GitHub only).
+
+Many AppImages carry their own source. Lattis reads it without running the program and uses it until you type your own; the card then says **From the AppImage**, and **Use the AppImage's** puts it back. With neither, the card says to add the game's GitHub or GitLab repository.
+
+**Check now** looks at the latest release with what is typed, before you save, and the card says "Up to date", "Update available" with the version and an **Update** button, or why the check failed. The first time a game is checked, Lattis compares the file's checksum with the release's; if the release lists none, it offers the update once, as an unknown version.
+
+Lattis also checks once a day with the emulators (when **Check for updates** is on in Settings → General). A game with an update gets an **Update available** chip and an **Update** row in the info panel on its page (both can be turned off in Settings → Game page), an **Update to <version>** entry in its right-click menu, and a place in the app menu's update entry and the logo's dot. They open the **Updates** window, which lists emulators and games together, with release notes and **Update all**. While it downloads, the chip reads "Updating" with the percentage and Launch is off. When it's done, a message says so, with a **What's new** link.
+
+The new file takes the **same path** as the old one, so shortcuts and menu entries keep working, and the old file goes to the trash. Play time, history and art stay as they are. If anything fails, the old file stays as it was. An update can't be undone from Lattis (restore the old file from the trash). It is refused while the game runs ("Close <game> first"), when Gear Lever or AppImageLauncher manages the file (update it there), and when the file's folder can't be written to.
+
+The three settings are saved in the game's file, so they come back with a library backup.
+
 ## Saves
 
 Each Linux game keeps its saves in its own place (`~/.local/share`, `~/.config`, or its own folder). Lattis can find them and back them up when the game closes: turn on **Back up saves** for the Linux platform, or **Backup when the game closes** in the game's Properties (Saves tab, **Backup options**). See [Automatic save backups](backups.md#automatic-save-backups). Add the game's save location in Properties (Saves tab) if it isn't in the list. **Back up saves** (Settings → Library, or the app menu) also takes every Linux game's saves that it finds this way, whether or not automatic backup is on for it.
