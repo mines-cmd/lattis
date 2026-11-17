@@ -1606,6 +1606,21 @@ void InstallTest::installerChecksGames()
         QCOMPARE(installer.updates().first().toMap().value("from").toString(), QString());
         QVERIFY(h.record().file.isEmpty());
     }
+    // A failure Check now left stays: the quiet check doesn't start over it.
+    {
+        GameUpdateHome h;
+        h.gameRelease("build two");
+        Installer installer(h.gameSetup());
+        installer.setFixturesDir(QDir(h.fixtures).filePath(QStringLiteral("missing")));
+        installer.setFixtureDelay(0);
+        const auto state = [&] { return installer.games().value("hero").toMap().value("state").toString(); };
+        installer.checkGame("hero");
+        QTRY_COMPARE_WITH_TIMEOUT(state(), QStringLiteral("failed"), 5000);
+        QCOMPARE(installer.checkUpdatesAsked(), 0);
+        QTest::qWait(100);
+        QCOMPARE(state(), QStringLiteral("failed"));
+        QVERIFY(!Installer::gameUpdating(QStringLiteral("hero")));
+    }
     // A game with no source, or whose file is gone, is skipped by the quiet check.
     {
         GameUpdateHome h;

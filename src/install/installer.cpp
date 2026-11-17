@@ -77,11 +77,28 @@ Installer *Installer::instance()
     return installer;
 }
 
+namespace {
+Installer *s_made = nullptr;
+}
+
+bool Installer::gameUpdating(const QString &gameId)
+{
+    return s_made && s_made->updatingGame(gameId);
+}
+
+bool Installer::updatingGame(const QString &gameId) const
+{
+    const auto it = m_jobs.constFind(gameKey(gameId));
+    return it != m_jobs.cend() && it->kind == Kind::Update
+           && (it->state == State::Downloading || it->state == State::Extracting || it->state == State::Installing);
+}
+
 Installer::Installer(const Setup &setup, QObject *parent)
     : QObject(parent)
     , m_setup(setup)
     , m_fixturesDir(qEnvironmentVariable("LATTIS_INSTALL_FIXTURES"))
 {
+    s_made = this;
     m_changed.setSingleShot(true);
     m_changed.setInterval(80);
     connect(&m_changed, &QTimer::timeout, this, &Installer::rebuild);
@@ -101,7 +118,11 @@ Installer::Installer(const Setup &setup, QObject *parent)
     refresh();
 }
 
-Installer::~Installer() = default;
+Installer::~Installer()
+{
+    if (s_made == this)
+        s_made = nullptr;
+}
 
 void Installer::startDailyCheck(std::function<bool()> autoCheck, int delayMs)
 {
@@ -501,6 +522,9 @@ void Installer::checkUpdates(const QString &id)
         for (const GameTarget &game : games) {
             if ((!id.isEmpty() && gameKey(game.id) != id) || game.source.isEmpty() || game.asset.isEmpty()
                 || !QFileInfo(game.file).isFile() || busy(gameKey(game.id)))
+                continue;
+            // A job left in m_jobs has failed; the quiet check leaves alone that, and a game whose Properties card is open.
+            if (id.isEmpty() && (m_jobs.contains(gameKey(game.id)) || m_gameOverrides.contains(game.id)))
                 continue;
             const ReleaseTarget target = targetOf(game);
             startJob(target, Kind::Check).quiet = id.isEmpty();

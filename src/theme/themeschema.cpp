@@ -819,6 +819,7 @@ constexpr Setting kSettings[] = {
     integer("launch_button", "height", "52", 20, 300, "Height"),
     integer("launch_button", "radius", "@radius.medium", 0, 150, "Corner radius"),
     real("launch_button", "hover_brightness", "1.1", 0.2, 3, "Background brightness under the mouse; 1 = no change"),
+    real("launch_button", "disabled_opacity", "0.45", 0, 1, "How faint the button is while the game's own file is being updated and it can't be launched"),
     choice("launch_button", "gradient_direction", "@layout.gradient_direction", "down up right left", "Gradient direction for the launch button"),
     color("launch_button", "border", "@border", "Outline color"),
     integer("launch_button", "border_width", "0", 0, 20, "Outline thickness; 0 = none"),

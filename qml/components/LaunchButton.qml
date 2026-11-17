@@ -68,6 +68,7 @@ Surface {
     direction: Theme.launchButton.gradientDirection
     border.color: buttonBorder
     border.width: buttonBorderWidth
+    opacity: updateBlocks ? Theme.launchButton.disabledOpacity : 1
     scale: mouse.pressed && (launchable || running) ? Theme.motion.pressScale : 1
 
     Behavior on scale { enabled: Motion.on; MotionNumber {} }

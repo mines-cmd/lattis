@@ -109,6 +109,9 @@ public:
     using FindSaves = std::function<void(const QString &gameId, std::function<void(const QStringList &paths)> done)>;
     void setFindSaves(FindSaves find) { m_findSaves = std::move(find); }
 
+    // Whether a game's file is being replaced by an update, so it must not start.
+    void setUpdating(std::function<bool(const QString &gameId)> updating) { m_updating = std::move(updating); }
+
     static int sessionMinutes(qint64 elapsedMs);
     static constexpr int kQuickExitSeconds = 10;
     static constexpr int kSteamStartSeconds = 90;
@@ -215,6 +218,7 @@ private:
     QString m_launchAfterClose;
     HeroicProgram m_heroicProgram;
     FindSaves m_findSaves;
+    std::function<bool(const QString &)> m_updating;
     QHash<QString, HeroicSession> m_heroicSessions;
     QTimer m_heroicPoll;
     QFileSystemWatcher m_watcher;

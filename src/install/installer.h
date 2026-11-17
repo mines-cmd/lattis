@@ -72,6 +72,8 @@ public:
     // Called once at startup; nothing is made until QML uses it.
     static void setup(const Setup &setup) { s_setup = setup; }
     static Installer *instance();
+    // True while the game's AppImage is being replaced; false without making the Installer.
+    static bool gameUpdating(const QString &gameId);
     static Installer *create(QQmlEngine *, QJSEngine *) { return instance(); }
 
     explicit Installer(const Setup &setup, QObject *parent = nullptr);
@@ -176,6 +178,7 @@ private:
         ReleaseAsset asset;
     };
 
+    bool updatingGame(const QString &gameId) const;
     QNetworkAccessManager *network();
     bool busy(const QString &id) const;
     Job &startJob(const ReleaseTarget &target, Kind kind);

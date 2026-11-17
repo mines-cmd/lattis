@@ -750,8 +750,11 @@ QString GameRunner::launch(const QString &gameId)
     }
     if (game->platform == kProtonPlatform)
         return tr("%1 has no Steam shortcut; add it with Settings → Steam → Add existing shortcuts").arg(game->title);
-    if (game->platform == kLinuxPlatform)
+    if (game->platform == kLinuxPlatform) {
+        if (m_updating && m_updating(gameId))
+            return tr("Updating %1, try again when it finishes").arg(game->title);
         return launchProgram(*game);
+    }
     if (game->platform == kEpicPlatform)
         return launchHeroicGame(*game);
     if (!game->rom)

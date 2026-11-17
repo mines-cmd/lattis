@@ -334,6 +334,7 @@ int main(int argc, char *argv[])
     runner.setFindSaves([](const QString &id, std::function<void(const QStringList &)> done) {
         GameSaves::instance()->findPaths(id, std::move(done));
     });
+    runner.setUpdating([](const QString &id) { return Installer::gameUpdating(id); });
     Installer::setup({AppPaths::stateDir(), AppPaths::cacheDir(), [&library] { return library.emulators(); },
                       [&library] { return library.store().installLocations(); }, [&library] { library.scanNow(); },
                       [] { return programEnvironment(QProcessEnvironment::systemEnvironment().toStringList()); },
