@@ -21,29 +21,116 @@ ColumnLayout {
     Component.onCompleted: Qt.callLater(() => { armed = true })
 
     function together() {
+        // A group that doesn't exist yet has no combined numbers until Save makes it.
+        if (editor.copyBase.length === 0)
+            return qsTr("The combined numbers show once you save.")
         const time = editor.copyInfo.totalPlayTimeText ?? ""
         const last = editor.copyInfo.totalLastPlayedText ?? ""
-        if (time !== "" && last !== "")
-            return qsTr("Together: %1, last played %2 · media shared").arg(time).arg(last)
-        if (time !== "")
-            return qsTr("Together: %1 · media shared").arg(time)
-        return qsTr("Together: not played yet · media shared")
+        const text = time !== "" && last !== "" ? qsTr("Together: %1, last played %2 · media shared").arg(time).arg(last)
+                   : time !== "" ? qsTr("Together: %1 · media shared").arg(time)
+                   : qsTr("Together: not played yet · media shared")
+        return editor.copiesDirty ? qsTr("%1 (updates when you save)").arg(text) : text
     }
 
-    component Badge: Rectangle {
-        property alias text: badgeLabel.text
+    component CopyRow: Rectangle {
+        id: row
+
+        property url coverUrl
+        property string title
+        property string meta
         property bool main: false
+        property bool current: false
+        property real contentOpacity: 1
+        default property alias trailing: trailingRow.data
 
-        implicitWidth: badgeLabel.implicitWidth + 2 * Theme.layout.spacing
-        implicitHeight: badgeLabel.implicitHeight + Theme.layout.spacingSmall
-        radius: Theme.gameEditor.copyBadgeRadius
-        color: main ? Theme.gameEditor.copyMainBackground : Theme.gameEditor.copyBadgeBackground
+        Layout.fillWidth: true
+        implicitHeight: rowContent.implicitHeight + 2 * Theme.layout.spacing
+        radius: Theme.gameEditor.copyRowRadius
+        color: rowHover.hovered ? Theme.gameEditor.copyHover : Qt.alpha(Theme.gameEditor.copyHover, 0)
+        Behavior on color { enabled: Motion.fades; MotionColor {} }
 
-        Label {
-            id: badgeLabel
-            anchors.centerIn: parent
-            color: parent.main ? Theme.gameEditor.copyMainText : Theme.gameEditor.copyBadgeText
-            font.pixelSize: Theme.gameEditor.hintFontSize
+        HoverHandler { id: rowHover }
+
+        Rectangle {
+            visible: row.current
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: Theme.layout.spacingSmall
+            anchors.topMargin: Theme.layout.spacing
+            anchors.bottomMargin: Theme.layout.spacing
+            width: Theme.gameEditor.copyCurrentMarkerWidth
+            radius: width / 2
+            color: Theme.gameEditor.copyCurrentMarker
+        }
+
+        RowLayout {
+            id: rowContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 2 * Theme.layout.spacing
+            anchors.rightMargin: Theme.layout.spacing
+            spacing: Theme.controls.controlSpacing
+
+            Rectangle {
+                implicitHeight: Theme.gameEditor.copyCoverHeight
+                implicitWidth: implicitHeight * 3 / 4
+                radius: Theme.gameEditor.copyCoverRadius
+                color: Theme.gameEditor.artPreviewBackground
+                clip: true
+                opacity: row.contentOpacity
+
+                FadeImage {
+                    anchors.fill: parent
+                    source: row.coverUrl
+                    sourceSize.height: parent.height * 2
+                    fillMode: Image.PreserveAspectCrop
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Theme.layout.spacingSmall
+                opacity: row.contentOpacity
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.layout.spacing
+
+                    Label {
+                        Layout.minimumWidth: 0
+                        text: row.title
+                        color: Theme.controls.inputText
+                        elide: Text.ElideRight
+                    }
+                    SettingTag {
+                        opacity: row.main ? 1 : 0
+                        visible: opacity > 0
+                        filled: false
+                        text: qsTr("Main")
+                        tint: Theme.gameEditor.copyMainTag
+                        Behavior on opacity {
+                            enabled: Motion.fades
+                            MotionNumber { fade: true }
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: row.meta
+                    color: Theme.controls.descriptionColor
+                    font.pixelSize: Theme.controls.descriptionFontSize
+                    elide: Text.ElideRight
+                }
+            }
+
+            RowLayout {
+                id: trailingRow
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Theme.layout.spacingSmall
+            }
         }
     }
 
@@ -74,282 +161,149 @@ ColumnLayout {
             wrapMode: Text.WordWrap
         }
 
-        ListButton {
-            id: openSizer
-            visible: false
-            text: qsTr("Open")
-        }
-        ListButton {
-            id: makeMainSizer
-            visible: false
-            text: qsTr("Make main")
-        }
-        ListButton {
-            id: unlinkAllSizer
-            visible: false
-            text: qsTr("Unlink all")
-        }
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 0
 
-        Repeater {
-            model: copyModel
+            Repeater {
+                model: copyModel
 
-            RowLayout {
-                id: copyRow
-                required property var model
-                readonly property bool here: model.id === page.editor.game.id
-                readonly property bool main: model.id === page.editor.copyMainShown
-                readonly property bool dimmed: page.editor.copyIsDimmed(model.id)
-                readonly property bool unlinkPending: page.editor.copyUnlinked[model.id] === true
-                // Linking a row that isn't in a group yet has nothing to take back; its own row only goes with the others.
-                readonly property bool canUnlink: model.pendingNew || (page.editor.copyBase.length > 0 && (!dimmed || unlinkPending))
-                readonly property bool unlinksAll: main && !model.pendingNew && page.editor.copyBase.length > 0
-                readonly property bool canMakeMain: !main && !dimmed
-                property bool entered: !page.armed || copyModel.rebuilt
+                CopyRow {
+                    id: copyRow
+                    required property var model
+                    readonly property bool here: model.id === page.editor.game.id
+                    readonly property bool dimmed: page.editor.copyIsDimmed(model.id)
+                    readonly property bool unlinkPending: page.editor.copyUnlinked[model.id] === true
+                    // Linking a row that isn't in a group yet has nothing to take back; its own row only goes with the others.
+                    readonly property bool canUnlink: model.pendingNew || (page.editor.copyBase.length > 0 && (!dimmed || unlinkPending))
+                    readonly property bool unlinksAll: main && !model.pendingNew && page.editor.copyBase.length > 0
+                    readonly property bool canMakeMain: !main && !dimmed
+                    property bool entered: !page.armed || copyModel.rebuilt
 
-                Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
-                opacity: copyRow.model.leaving || !entered ? 0 : 1
-
-                Behavior on opacity {
-                    enabled: Motion.fades
-                    MotionNumber { fade: true }
-                }
-                Component.onCompleted: entered = true
-
-                HoverHandler { id: rowHover }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Theme.controls.controlSpacing
-                    opacity: copyRow.dimmed ? Theme.gameEditor.copyDimmedOpacity : 1
+                    coverUrl: model.coverUrl
+                    title: model.title
+                    main: model.id === page.editor.copyMainShown
+                    current: here
+                    contentOpacity: dimmed ? Theme.gameEditor.copyDimmedOpacity : 1
+                    meta: [model.platformName,
+                           here ? qsTr("This copy") : "",
+                           model.hidden ? qsTr("Hidden") : "",
+                           model.notInstalled ? qsTr("Not installed") : "",
+                           model.pendingNew ? qsTr("New") : "",
+                           unlinkPending ? qsTr("Unlinks when you save") : ""].filter(s => s !== "").join(" · ")
+                    opacity: model.leaving || !entered ? 0 : 1
 
                     Behavior on opacity {
                         enabled: Motion.fades
                         MotionNumber { fade: true }
                     }
-
-                    Rectangle {
-                        implicitHeight: Theme.gameEditor.copyCoverHeight
-                        implicitWidth: implicitHeight * 3 / 4
-                        radius: Theme.controls.inputRadius
-                        color: Theme.gameEditor.artPreviewBackground
-                        clip: true
-
-                        FadeImage {
-                            anchors.fill: parent
-                            source: copyRow.model.coverUrl
-                            sourceSize.height: parent.height * 2
-                            fillMode: Image.PreserveAspectCrop
-                        }
+                    Behavior on contentOpacity {
+                        enabled: Motion.fades
+                        MotionNumber { fade: true }
                     }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.layout.spacingSmall
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            Label {
-                                Layout.minimumWidth: 0
-                                text: copyRow.model.title
-                                color: Theme.gameEditor.headingColor
-                                elide: Text.ElideRight
-                            }
-                            Badge {
-                                id: mainBadge
-                                main: true
-                                text: qsTr("Main")
-                                opacity: copyRow.main ? 1 : 0
-                                visible: opacity > 0
-                                Behavior on opacity {
-                                    enabled: Motion.fades
-                                    MotionNumber { fade: true }
-                                }
-                            }
-                            Badge {
-                                visible: copyRow.model.pendingNew
-                                text: qsTr("New")
-                            }
-                            Badge {
-                                visible: copyRow.model.hidden
-                                text: qsTr("Hidden")
-                            }
-                            Badge {
-                                visible: copyRow.model.notInstalled
-                                text: qsTr("Not installed")
-                            }
-                            Item { Layout.fillWidth: true }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.layout.spacing
-
-                            Label {
-                                text: copyRow.model.platformName
-                                color: Theme.gameEditor.hintColor
-                                font.pixelSize: Theme.gameEditor.hintFontSize
-                            }
-                            Badge {
-                                visible: copyRow.here
-                                text: qsTr("This copy")
-                            }
-                            Item { Layout.fillWidth: true }
-                        }
-                    }
+                    Component.onCompleted: entered = true
 
                     ColumnLayout {
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.preferredWidth: Theme.gameEditor.copyNumbersWidth
+                        Layout.rightMargin: Theme.layout.spacing
                         spacing: Theme.layout.spacingSmall
+                        opacity: copyRow.contentOpacity
 
                         Label {
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignRight
-                            text: copyRow.model.playTimeText !== "" ? copyRow.model.playTimeText : qsTr("Not played")
-                            color: Theme.gameEditor.labelColor
-                            elide: Text.ElideRight
+                            Layout.alignment: Qt.AlignRight
+                            visible: copyRow.model.playTimeText !== ""
+                            text: copyRow.model.playTimeText
+                            color: Theme.controls.inputText
                         }
                         Label {
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignRight
-                            text: copyRow.model.lastPlayedText
-                            color: Theme.gameEditor.hintColor
-                            font.pixelSize: Theme.gameEditor.hintFontSize
-                            elide: Text.ElideRight
+                            Layout.alignment: Qt.AlignRight
+                            text: copyRow.model.playTimeText !== "" ? copyRow.model.lastPlayedText : qsTr("Not played")
+                            color: Theme.controls.descriptionColor
+                            font.pixelSize: Theme.controls.descriptionFontSize
                         }
                     }
-                }
-
-                Item {
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: openSizer.implicitWidth
-                    Layout.preferredHeight: openSizer.implicitHeight
 
                     ListButton {
-                        anchors.centerIn: parent
-                        visible: !copyRow.here && !copyRow.model.pendingNew
-                        enabled: !copyRow.dimmed && !copyRow.model.leaving
-                        text: qsTr("Open")
+                        flat: true
+                        iconPath: Icons.openExternal
+                        enabled: !copyRow.here && !copyRow.model.pendingNew && !copyRow.dimmed && !copyRow.model.leaving
+                        textColor: hovered ? foreground : Theme.controls.descriptionColor
                         tip: qsTr("Open this copy's Properties")
                         onClicked: page.editor.openCopy(copyRow.model.id)
                     }
-                }
-
-                Item {
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: makeMainSizer.implicitWidth
-                    Layout.preferredHeight: makeMainSizer.implicitHeight
 
                     ListButton {
-                        id: makeMain
-                        anchors.centerIn: parent
-                        text: qsTr("Make main")
-                        tip: qsTr("Count this copy as the main one")
-                        enabled: opacity > 0 && copyRow.canMakeMain && !copyRow.model.leaving
-                        opacity: copyRow.canMakeMain && (rowHover.hovered || activeFocus) ? 1 : 0
-                        visible: opacity > 0
-                        Behavior on opacity {
-                            enabled: Motion.fades
-                            MotionNumber { fade: true }
+                        id: moreButton
+                        flat: true
+                        iconPath: Icons.more
+                        enabled: (copyRow.canMakeMain || copyRow.canUnlink) && !copyRow.model.leaving
+                        textColor: hovered || moreMenu.opened ? foreground : Theme.controls.descriptionColor
+                        tip: qsTr("Make main or unlink")
+                        onClicked: moreMenu.opened ? moreMenu.close() : moreMenu.open()
+
+                        SettingsMenu {
+                            id: moreMenu
+                            x: moreButton.width - width
+                            y: moreButton.height
+                            pops: true
+                            popDirection: "below"
+                            // The button toggles it; a press on it must not close and reopen it.
+                            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                            SettingsMenuItem {
+                                want: copyRow.canMakeMain
+                                text: qsTr("Make main")
+                                onTriggered: page.editor.setCopyMain(copyRow.model.id)
+                            }
+                            SettingsMenuItem {
+                                want: copyRow.canUnlink
+                                danger: copyRow.unlinksAll && !copyRow.unlinkPending
+                                text: copyRow.unlinkPending ? qsTr("Keep it linked")
+                                    : copyRow.model.pendingNew ? qsTr("Don't link this copy")
+                                    : copyRow.unlinksAll ? qsTr("Unlink all")
+                                    : qsTr("Unlink this copy")
+                                onTriggered: page.editor.toggleCopyUnlink(copyRow.model.id)
+                            }
                         }
-                        onClicked: page.editor.setCopyMain(copyRow.model.id)
-                    }
-                }
-
-                Item {
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: unlinkAllSizer.implicitWidth
-                    Layout.preferredHeight: unlinkAllSizer.implicitHeight
-
-                    ListButton {
-                        anchors.centerIn: parent
-                        visible: copyRow.canUnlink
-                        enabled: !copyRow.model.leaving
-                        text: copyRow.unlinkPending || copyRow.model.pendingNew || !copyRow.unlinksAll ? "" : qsTr("Unlink all")
-                        iconPath: copyRow.unlinkPending ? Icons.undo : copyRow.unlinksAll ? "" : Icons.close
-                        tip: copyRow.unlinkPending ? qsTr("Keep it linked")
-                           : copyRow.model.pendingNew ? qsTr("Don't link this copy")
-                           : copyRow.unlinksAll ? qsTr("Unlink every copy from this game")
-                           : qsTr("Unlink this copy")
-                        onClicked: page.editor.toggleCopyUnlink(copyRow.model.id)
                     }
                 }
             }
-        }
 
-        Rectangle {
-            visible: page.linked
-            Layout.fillWidth: true
-            implicitHeight: 1
-            color: Theme.settingsWindow.rowDivider
-        }
-        Label {
-            visible: page.linked
-            Layout.fillWidth: true
-            text: page.editor.copiesDirty ? qsTr("The combined numbers update when you save.") : page.together()
-            color: page.editor.copiesDirty ? Theme.gameEditor.hintColor : Theme.gameEditor.labelColor
-            wrapMode: Text.WordWrap
+            Repeater {
+                model: page.candidates
+
+                CopyRow {
+                    id: candidate
+                    required property var modelData
+
+                    coverUrl: modelData.coverUrl
+                    title: modelData.title
+                    meta: modelData.linkedTo !== ""
+                          ? qsTr("%1 · linked to %2").arg(modelData.platformName).arg(modelData.linkedTo)
+                          : modelData.sameIgdb ? qsTr("%1 · same IGDB entry").arg(modelData.platformName)
+                                               : qsTr("%1 · same title").arg(modelData.platformName)
+
+                    ListButton {
+                        enabled: candidate.modelData.linkedTo === ""
+                        text: qsTr("Link")
+                        tip: enabled ? qsTr("Count this as the same game") : qsTr("Unlink it from %1 first").arg(candidate.modelData.linkedTo)
+                        onClicked: page.editor.addCopy(candidate.modelData.id)
+                    }
+                }
+            }
+
+            ListAction {
+                Layout.leftMargin: 2 * Theme.layout.spacing
+                Layout.topMargin: Theme.layout.spacing
+                text: qsTr("Link another copy…")
+                tip: qsTr("Link a copy that has a different title")
+                onClicked: page.editor.chooseCopy()
+            }
         }
     }
 
-    EditorCard {
-        title: qsTr("Link another copy")
-
-        Repeater {
-            model: page.candidates
-
-            RowLayout {
-                id: candidate
-                required property var modelData
-                Layout.fillWidth: true
-                spacing: Theme.controls.controlSpacing
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Theme.layout.spacingSmall
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: candidate.modelData.title
-                        color: Theme.gameEditor.headingColor
-                        elide: Text.ElideRight
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        text: candidate.modelData.linkedTo !== ""
-                              ? qsTr("%1 · linked to %2").arg(candidate.modelData.platformName).arg(candidate.modelData.linkedTo)
-                              : candidate.modelData.sameIgdb
-                                ? qsTr("%1 · same IGDB entry").arg(candidate.modelData.platformName)
-                                : qsTr("%1 · same title").arg(candidate.modelData.platformName)
-                        color: Theme.gameEditor.hintColor
-                        font.pixelSize: Theme.gameEditor.hintFontSize
-                        elide: Text.ElideRight
-                    }
-                }
-                ListButton {
-                    Layout.alignment: Qt.AlignVCenter
-                    enabled: candidate.modelData.linkedTo === ""
-                    text: qsTr("Link")
-                    tip: enabled ? qsTr("Count this as the same game") : qsTr("Unlink it from %1 first").arg(candidate.modelData.linkedTo)
-                    onClicked: page.editor.addCopy(candidate.modelData.id)
-                }
-            }
-        }
-
-        Label {
-            visible: page.candidates.length === 0
-            Layout.fillWidth: true
-            text: qsTr("No other game has this title.")
-            color: Theme.gameEditor.hintColor
-            wrapMode: Text.WordWrap
-        }
-
-        ListButton {
-            text: qsTr("Choose games…")
-            tip: qsTr("Link a copy that has a different title")
-            onClicked: page.editor.chooseCopy()
-        }
+    EditorHint {
+        open: page.linked
+        text: page.together()
     }
 }

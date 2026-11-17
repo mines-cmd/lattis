@@ -43,10 +43,11 @@ The gear button on a game's page (Alt+Return), or **Properties** in its right-cl
 
 For a game you have from two sources, such as a Steam game and a Proton shortcut. See [The same game from two sources](playing.md#the-same-game-from-two-sources).
 
-- **Linked copies:** one row per copy, this one first: its cover, title and platform, its own play time and last played, and badges (**Main**, **This copy**, **Hidden**, **Not installed**). Below, the combined play time and last played. **Open** switches Properties to that copy (it asks first if this one has unsaved changes), **Make main** counts that copy as the main one, and × unlinks it; on the main copy it reads **Unlink all**, since the others point at it. A game that isn't linked shows a one-line explanation instead.
-- **Link another copy:** games with the same title or the same IGDB entry, each with **Link**. **Choose games…** searches every other game, for copies with a different title; tick as many as you like and press **Link**. A game already linked to a third copy can't be linked until it is unlinked from it.
+- **Linked copies:** one row per copy, this one first and marked with a bar at its left: its cover, its title (with a **Main** tag on the main copy), a line with its platform and state (This copy, Hidden, Not installed), and its own play time and last played. The open-in-new button switches Properties to that copy (it asks first if this one has unsaved changes); it is greyed out on the copy already open. The ⋯ button holds **Make main**, which counts that copy as the main one, and **Unlink this copy**; on the main copy it reads **Unlink all**, since the others point at it. A game that isn't linked shows a one-line explanation instead.
+- Below the copies, games with the same title or the same IGDB entry, each with **Link**. **Link another copy…** searches every other game, for copies with a different title; tick as many as you like and press **Link**. A game already linked to a third copy can't be linked until it is unlinked from it.
+- Under the card, the combined play time and last played.
 
-Link changes wait for **Save** like the rest: a copy to be linked shows with **New**, one to be unlinked is dimmed (the arrow brings it back), and the tab gets a dot. One Undo reverts everything Save wrote here.
+Link changes wait for **Save** like the rest: a copy to be linked says **New**, one to be unlinked is dimmed and says "Unlinks when you save" (**Keep it linked** in its ⋯ menu brings it back), and the tab gets a dot. One Undo reverts everything Save wrote here.
 
 Adding a game (the + button) has no tabs: the General and Launch pages show together, as one short form.
 

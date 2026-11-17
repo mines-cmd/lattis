@@ -3269,6 +3269,7 @@ QVariantList Library::sameGameCandidates(const QString &id) const
             out.append(QVariantMap{{QStringLiteral("id"), other.id},
                                    {QStringLiteral("title"), other.title},
                                    {QStringLiteral("platformName"), other.platformName},
+                                   {QStringLiteral("coverUrl"), other.coverUrl},
                                    {QStringLiteral("sameIgdb"), igdb > 0 && otherIgdb == igdb},
                                    {QStringLiteral("linkedTo"), otherGroupTitle(*g, other)}});
     }
