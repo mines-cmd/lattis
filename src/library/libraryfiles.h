@@ -129,6 +129,17 @@ QString resolveRomFolder(const QString &folder, const QString &dataDir, const QS
 QHash<QString, RomFile> findRomGameFiles(const QMap<QString, GameFile> &games, const QString &dataDir,
                                          const QString &home);
 
+struct UpdateSource
+{
+    QString source;
+    QString asset;
+    bool prereleases = false;
+    bool fromAppImage = false;
+
+    bool isSet() const { return !source.isEmpty(); }
+    bool operator==(const UpdateSource &) const = default;
+};
+
 struct ProgramFiles
 {
     QString exe;
@@ -136,6 +147,12 @@ struct ProgramFiles
     QString installDir;
     qint64 sizeBytes = 0;
     bool singleFile = false;
+    bool appImage = false;
+    // The AppImage's own update info, cached by the file's size and modified time.
+    UpdateSource embedded;
+    qint64 exeSize = 0;
+    qint64 exeModified = 0;
+    UpdateSource updateSource;
 
     QString files() const { return singleFile ? exe : installDir; }
 

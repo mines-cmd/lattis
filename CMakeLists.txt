@@ -411,6 +411,7 @@ qt_add_qml_module(lattis
         src/library/mediafavorites.h src/library/mediafavorites.cpp
         src/library/videothumbnails.h src/library/videothumbnails.cpp
         src/install/releasesource.h src/install/releasesource.cpp
+        src/install/appimageupdateinfo.h src/install/appimageupdateinfo.cpp
         src/install/appimageinstall.h src/install/appimageinstall.cpp
         src/install/desktopentry.h src/install/desktopentry.cpp
         src/install/installrecord.h src/install/installrecord.cpp

@@ -2189,7 +2189,7 @@ QString LibraryStore::setGameValues(const QString &id, const QList<std::pair<QSt
         m_snapshot.romGameFiles = findRomGameFiles(m_snapshot.content.games, m_dataDir, m_installLocations.home);
     if (std::any_of(checked.cbegin(), checked.cend(), [](const auto &pair) {
             return pair.first == QLatin1String("exe") || pair.first == QLatin1String("install_dir")
-                || pair.first == QLatin1String("platform");
+                || pair.first == QLatin1String("platform") || pair.first.startsWith(QLatin1String("update_"));
         }))
         m_snapshot.programFiles = findProgramFiles(m_snapshot.content.games, m_dataDir, m_installLocations.home,
                                                   m_snapshot.programFiles, false);

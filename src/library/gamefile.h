@@ -68,6 +68,9 @@ struct GameFile
     QString startDir;
     QString installDir;
     QStringList mediaFolders;
+    QString updateSource;
+    QString updateAsset;
+    bool updatePrereleases = false;
     QStringList savePaths;
     QString savesGame;
     int autoBackup = -1; // -1 = follow the platform, 0 = off, 1 = on

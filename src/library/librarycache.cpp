@@ -261,14 +261,26 @@ static QDataStream &operator>>(QDataStream &s, SteamAppConfig &c)
     return s;
 }
 
+static QDataStream &operator<<(QDataStream &s, const UpdateSource &u)
+{
+    return s << u.source << u.asset << u.prereleases << u.fromAppImage;
+}
+
+static QDataStream &operator>>(QDataStream &s, UpdateSource &u)
+{
+    return s >> u.source >> u.asset >> u.prereleases >> u.fromAppImage;
+}
+
 static QDataStream &operator<<(QDataStream &s, const ProgramFiles &f)
 {
-    return s << f.exe << f.exeFound << f.installDir << f.sizeBytes << f.singleFile;
+    return s << f.exe << f.exeFound << f.installDir << f.sizeBytes << f.singleFile << f.appImage << f.embedded
+             << f.exeSize << f.exeModified << f.updateSource;
 }
 
 static QDataStream &operator>>(QDataStream &s, ProgramFiles &f)
 {
-    return s >> f.exe >> f.exeFound >> f.installDir >> f.sizeBytes >> f.singleFile;
+    return s >> f.exe >> f.exeFound >> f.installDir >> f.sizeBytes >> f.singleFile >> f.appImage >> f.embedded
+        >> f.exeSize >> f.exeModified >> f.updateSource;
 }
 
 static QDataStream &operator<<(QDataStream &s, const SteamShortcut &c)

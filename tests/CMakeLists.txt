@@ -62,6 +62,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/heroic/heroicsettings.h ../src/heroic/heroicsettings.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp
+    ../src/install/appimageupdateinfo.h ../src/install/appimageupdateinfo.cpp
     ../src/library/romscan.h ../src/library/romscan.cpp
     ../src/library/rominfo.h ../src/library/rominfo.cpp
     ../src/library/romdb.h ../src/library/romdb.cpp
@@ -184,6 +185,7 @@ lattis_test(steamlibrarysync_test OFFSCREEN
             ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
             ../src/library/gameid.h ../src/library/gameid.cpp
             ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/install/releasesource.h ../src/install/releasesource.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Network Qt6::DBus Qt6::Concurrent Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(steamfriends_test OFFSCREEN
@@ -197,6 +199,7 @@ lattis_test(steamfriends_test OFFSCREEN
             ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
             ../src/library/gameid.h ../src/library/gameid.cpp
             ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/install/releasesource.h ../src/install/releasesource.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Network Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(autostart_test OFFSCREEN
@@ -270,6 +273,10 @@ lattis_test(emulators_test PRESETS
     SOURCES ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus
     DEFINES ${DOCS})
+lattis_test(appimageupdateinfo_test PRESETS
+    SOURCES ${LIBRARY_FILE_SOURCES}
+    LIBS tomlplusplus::tomlplusplus
+    DEFINES "APPIMAGE_DIR=\"${CMAKE_SOURCE_DIR}/build/appimage\"")
 lattis_test(emulatorscreenshots_test PRESETS
     SOURCES ../src/library/emulatorscreenshots.h ../src/library/emulatorscreenshots.cpp
             ../src/library/playhistory.h ../src/library/playhistory.cpp
@@ -399,6 +406,7 @@ lattis_test(metadata_test
             ../src/library/searchtext.h ../src/library/searchtext.cpp
             ../src/library/gameid.h ../src/library/gameid.cpp
             ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/install/releasesource.h ../src/install/releasesource.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Qml Qt6::Gui Qt6::Network tomlplusplus::tomlplusplus
@@ -419,6 +427,7 @@ lattis_test(protondb_test
             ../src/library/searchtext.h ../src/library/searchtext.cpp
             ../src/library/gameid.h ../src/library/gameid.cpp
             ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/install/releasesource.h ../src/install/releasesource.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Qml Qt6::Gui Qt6::Network tomlplusplus::tomlplusplus

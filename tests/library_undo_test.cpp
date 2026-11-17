@@ -28,6 +28,7 @@ class LibraryUndoTest : public LibraryTestBase
 private slots:
     void editSave();
     void editSaveWithArt();
+    void updateKeysSave();
     void unchangedSaveOffersNothing();
     void hideOffersUndo();
     void romChangeHasNoUndo();
@@ -48,6 +49,38 @@ quint64 lastToken(QSignalSpy &spy)
 }
 
 } // namespace
+
+void LibraryUndoTest::updateKeysSave()
+{
+    auto library = openLibrary();
+    const QString file = gamePath(QStringLiteral("linux-supertuxkart"));
+    const QByteArray before = readFile(file);
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+
+    QCOMPARE(library->saveGame("linux-supertuxkart",
+                               {{"update_source", "github:supertuxkart/stk-code"},
+                                {"update_asset", "SuperTuxKart-*.AppImage.zsync"},
+                                {"update_prereleases", true}}),
+             QString());
+    const QByteArray after = readFile(file);
+    QVERIFY(after.contains("update_source = \"github:supertuxkart/stk-code\""));
+    QVERIFY(after.contains("update_asset = \"SuperTuxKart-*.AppImage\""));
+    QVERIFY(after.contains("update_prereleases = true"));
+    QCOMPARE(offered.count(), 1);
+
+    QVERIFY(!library->saveGame("linux-supertuxkart", {{"update_source", "stk-code"}}).isEmpty());
+    QCOMPARE(readFile(file), after);
+
+    QCOMPARE(library->undo(lastToken(offered)), QString());
+    QCOMPARE(readFile(file), before);
+
+    // Emptying the keys removes them, and false is the default.
+    QCOMPARE(library->saveGame("linux-supertuxkart", {{"update_source", "gitlab:gitlab.com/a/b"}, {"update_prereleases", false}}),
+             QString());
+    QVERIFY(!readFile(file).contains("update_prereleases"));
+    QCOMPARE(library->saveGame("linux-supertuxkart", {{"update_source", ""}}), QString());
+    QVERIFY(!readFile(file).contains("update_source"));
+}
 
 void LibraryUndoTest::editSave()
 {

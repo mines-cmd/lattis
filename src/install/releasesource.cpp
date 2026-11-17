@@ -173,6 +173,19 @@ std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArra
     return source.host == ReleaseSource::Host::GitHub ? fromGitHub(root, error) : fromGitLab(root, error);
 }
 
+QString withoutZsync(const QString &patterns)
+{
+    QStringList out;
+    for (QString pattern : patterns.split(u';', Qt::SkipEmptyParts)) {
+        pattern = pattern.trimmed();
+        if (pattern.endsWith(QLatin1String(".zsync"), Qt::CaseInsensitive))
+            pattern.chop(6);
+        if (!pattern.isEmpty())
+            out.append(pattern);
+    }
+    return out.join(u';');
+}
+
 bool matches(const QString &name, const QString &patterns)
 {
     for (const QString &pattern : patterns.split(u';', Qt::SkipEmptyParts)) {

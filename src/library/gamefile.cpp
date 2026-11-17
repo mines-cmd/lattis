@@ -1,6 +1,7 @@
 #include "gamefile.h"
 #include "tomlsection.h"
 #include "suggestion.h"
+#include "releasesource.h"
 
 #include <QTimeZone>
 
@@ -50,6 +51,9 @@ constexpr Field kFields[] = {
     {"exe", String, 0, 0, "", "Proton and Linux games: the program to run (`~` for the home folder); a Proton game's is kept in step with the shortcut's target"},
     {"start_dir", String, 0, 0, "", "Proton and Linux games: the folder it starts in (Steam's Start in); the exe's folder when not set"},
     {"install_dir", String, 0, 0, "", "Proton and Linux games: the game's folder, which Open folder opens and Uninstall can delete"},
+    {"update_source", String, 0, 0, "", "Linux games run from an AppImage: where its releases are, \"github:<owner>/<repo>\" or \"gitlab:<host>/<group>/<project>\"; when not set, the update information inside the AppImage is used"},
+    {"update_asset", String, 0, 0, "", "Linux games run from an AppImage: the release file's name pattern (case doesn't matter; * and ?; several, in order of preference, separated by ;); a trailing .zsync is dropped"},
+    {"update_prereleases", Bool, 0, 0, "false", "Linux games run from an AppImage: take the newest release, pre-release or not (GitHub only)"},
     {"save_folder", String, 0, 0, "", "The older name of one save location; read as the first of save_paths, and moved there when the game's properties are saved"},
     {"save_paths", StringList, 0, 0, "[]", "Your own save locations, folders or files (`~` for the home folder): save backups take them along with the ones found for the game, and Open save folder opens the first that exists; an emulated game's replace its emulator's save folders in its backup"},
     {"saves_game", String, 0, 0, "", "Steam, Epic, Proton and Linux games: the name of the game in the Ludusavi manifest whose save paths automatic save backups use, when the title does not find it"},
@@ -243,8 +247,26 @@ QVariant validate(const QString &key, const QVariant &value, QString *error)
     };
 
     switch (field->type) {
-    case String:
-        return value.typeId() == QMetaType::QString ? value : wrong();
+    case String: {
+        if (value.typeId() != QMetaType::QString)
+            return wrong();
+        const QString text = value.toString();
+        if (key == QLatin1String("update_source") && !text.isEmpty()) {
+            QString problem;
+            if (!ReleaseSources::parse(text, &problem)) {
+                *error = QStringLiteral("update_source") + problem.mid(QStringLiteral("release").size());
+                return {};
+            }
+        }
+        if (key == QLatin1String("update_asset")) {
+            if (text.contains(u'/')) {
+                *error = QStringLiteral("update_asset is a file name pattern, without folders");
+                return {};
+            }
+            return ReleaseSources::withoutZsync(text);
+        }
+        return value;
+    }
     case Integer: {
         if (!isIntegral(value))
             return wrong();
@@ -385,6 +407,12 @@ void apply(GameFile &game, const QString &key, const QVariant &value)
         merged.removeDuplicates();
         game.savePaths = merged;
     }
+    else if (key == QLatin1String("update_source"))
+        game.updateSource = value.toString();
+    else if (key == QLatin1String("update_asset"))
+        game.updateAsset = value.toString();
+    else if (key == QLatin1String("update_prereleases"))
+        game.updatePrereleases = value.toBool();
     else if (key == QLatin1String("auto_backup"))
         game.autoBackup = value.toBool() ? 1 : 0;
     else if (key == QLatin1String("no_saves"))
@@ -484,6 +512,10 @@ ParsedGameFile parseGameFile(const QByteArray &bytes, const QString &displayPath
         GameFields::apply(out.game, key, value);
         if (key == QLatin1String("rom"))
             out.game.romLine = int(node.source().begin.line);
+    }
+    if (out.game.updatePrereleases && out.game.updateSource.startsWith(QLatin1String("gitlab:"))) {
+        out.warnings.append(QStringLiteral("%1: update_prereleases works for github: releases only; ignored").arg(displayPath));
+        out.game.updatePrereleases = false;
     }
     return out;
 }

@@ -52,6 +52,7 @@ std::optional<ReleaseSource> parse(const QString &text, QString *error = nullptr
 std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error,
                                     const QString &assetPatterns = QString());
 
+QString withoutZsync(const QString &patterns);
 bool matches(const QString &name, const QString &patterns);
 const ReleaseAsset *pickAsset(const Release &release, const QString &patterns);
 }

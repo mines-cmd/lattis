@@ -2,6 +2,7 @@
 #include "tomlsection.h"
 #include "gameid.h"
 #include "gamefile.h"
+#include "appimageupdateinfo.h"
 #include "romscan.h"
 #include "suggestion.h"
 
@@ -740,9 +741,25 @@ QHash<QString, ProgramFiles> findProgramFiles(const QMap<QString, GameFile> &gam
         }
         if (!it->installDir.isEmpty())
             f.installDir = resolveRomFolder(it->installDir, dataDir, home);
-        f.singleFile = f.exeFound
-                       && (f.installDir.isEmpty() || QDir::cleanPath(f.installDir) == QFileInfo(f.exe).absolutePath())
-                       && linuxProgramKind(f.exe) == LinuxProgramKind::AppImage;
+        const bool appImage = f.exeFound && linuxProgramKind(f.exe) == LinuxProgramKind::AppImage;
+        f.appImage = appImage;
+        f.singleFile = appImage
+                       && (f.installDir.isEmpty() || QDir::cleanPath(f.installDir) == QFileInfo(f.exe).absolutePath());
+        if (appImage && it->platform == kLinuxPlatform) {
+            const QFileInfo exe(f.exe);
+            f.exeSize = exe.size();
+            f.exeModified = exe.lastModified().toMSecsSinceEpoch();
+            const auto old = previous.constFind(it.key());
+            if (old != previous.cend() && old->appImage && old->exe == f.exe && old->exeSize == f.exeSize
+                && old->exeModified == f.exeModified)
+                f.embedded = old->embedded;
+            else if (const auto info = AppImageUpdateInfo::read(f.exe))
+                f.embedded = {info->source, info->asset, info->prereleases, true};
+            if (!it->updateSource.isEmpty())
+                f.updateSource = {it->updateSource, it->updateAsset, it->updatePrereleases, false};
+            else
+                f.updateSource = f.embedded;
+        }
         if (const auto old = previous.constFind(it.key());
             old != previous.cend() && old->files() == f.files() && old->sizeBytes > 0)
             f.sizeBytes = old->sizeBytes;

@@ -40,8 +40,13 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 | `ReleaseSource::apiUrl()` | GitHub: `https://api.github.com/repos/<project>/releases/latest`, or with `prereleases` `…/releases?per_page=20` (newest first). GitLab: `https://<server>/api/v4/projects/<project, percent-encoded>/releases?per_page=1` |
 | `ReleaseSource::label()` | "GitHub", or the GitLab server's name, for the interface |
 | `ReleaseSources::parseRelease(source, json, &error)` | A `Release`: tag, date and the assets (id, name, URL, size, sha256, date). GitHub's answer is one release; GitLab's is a list whose first entry counts. An API error body (`{"message": …}`) becomes the error. GitHub's `digest` (`sha256:…`) is the checksum; GitLab gives none, and uses an asset's `direct_asset_url` when it has one |
+| `ReleaseSources::withoutZsync(patterns)` | Drops a trailing `.zsync` from each `;`-separated pattern (Gear Lever's and the AppImage's own patterns name the zsync file; Lattis downloads the AppImage itself), and empty ones |
 | `ReleaseSources::matches(name, patterns)` | `*` and `?` patterns, anchored, case-insensitive, `;`-separated |
 | `ReleaseSources::pickAsset(release, patterns)` | The first pattern that matches any asset wins, then the asset's place in the release |
+
+### An AppImage's own update information
+
+`appimageupdateinfo.*` is pure too: it runs no program. `AppImageUpdateInfo::readSection(path)` reads the `.upd_info` section of a 64-bit little-endian ELF through its section header table (bounds-checked: at most 4096 sections, 64 KiB per section, offsets inside the file) and returns its text up to the first NUL, or nothing for a missing file, a non-ELF file, a 32-bit or big-endian ELF, no such section or an empty one. `parse(info)` maps `gh-releases-zsync|<owner>|<repo>|<tag>|<file>` (and `gh-releases-direct|…`, same fields) to `source` (`github:<owner>/<repo>`), `asset` (`<file>` through `withoutZsync()`) and `prereleases` (any tag but `latest`); other forms (`zsync|<url>`, `pling-v1-zsync|…`) and names that aren't a GitHub source give nothing. `read(path)` is both. The library scan uses it for AppImage games with no `update_source` (see [library](library.md#linux-games-update-source)).
 
 ## The download
 
@@ -190,6 +195,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | File | What it holds |
 |---|---|
 | `releasesource.*` | `ReleaseSource`, `Release`, `ReleaseAsset`; parsing a `release` value and the two APIs' JSON; asset patterns |
+| `appimageupdateinfo.*` | `AppImageUpdateInfo`: `readSection()`, `parse()`, `read()` |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
 | `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
 | `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`, `ensureOwn()`, `removeOwn()`: the AppImage's menu entry, and Lattis's own |
