@@ -26,6 +26,7 @@ Lattis is a game launcher for Linux. It keeps your emulated games, Steam games, 
 ## Making it yours
 
 - [Themes](themes.md): picking a theme and changing colors, fonts and sizes.
+- [Customize reference](customize.md): every setting on Settings → Customize, grouped by where it shows, and what it changes.
 
 ## Keeping your library safe
 
