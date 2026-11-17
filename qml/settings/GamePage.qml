@@ -78,6 +78,8 @@ Item {
     readonly property var fieldDefs: Object.assign({
         steam_update: { icon: Icons.download,
                         hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") },
+        game_update: { icon: Icons.download,
+                       hint: qsTr("Only for a Linux game that is an AppImage with a release source: the chip while an update is waiting or running, the row also when it is up to date. Click reviews the update") },
         steam_family: { icon: Icons.steamLine,
                         hint: qsTr("Only for a game a member of your Steam Family shares with you: who lends it") },
         last_backup: { icon: Icons.save2Line,

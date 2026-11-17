@@ -12,7 +12,7 @@ const QStringList &fields()
         QStringLiteral("platform"),     QStringLiteral("status"),           QStringLiteral("install_size"),
         QStringLiteral("rating"),       QStringLiteral("times_played"),     QStringLiteral("first_played"),
         QStringLiteral("recent_play_time"), QStringLiteral("date_added"),
-        QStringLiteral("steam_update"),     QStringLiteral("steam_family"),
+        QStringLiteral("steam_update"),     QStringLiteral("game_update"),    QStringLiteral("steam_family"),
         QStringLiteral("last_backup"),     QStringLiteral("protondb"),
         QStringLiteral("friends_playing")};
     return names;
@@ -75,7 +75,7 @@ bool readNames(const toml::node &node, const QString &key, const QString &place,
 QStringList GamePageSettings::defaultChips()
 {
     return {QStringLiteral("play_time"), QStringLiteral("last_played"),
-            QStringLiteral("steam_update"), QStringLiteral("steam_family")};
+            QStringLiteral("steam_update"), QStringLiteral("game_update"), QStringLiteral("steam_family")};
 }
 
 QStringList GamePageSettings::defaultGridChips()
@@ -102,7 +102,7 @@ QStringList GamePageSettings::defaultButtons()
 QStringList GamePageSettings::defaultInfoRows()
 {
     return {QStringLiteral("release_date"), QStringLiteral("rating"), QStringLiteral("status"),
-            QStringLiteral("install_size"), QStringLiteral("platform")};
+            QStringLiteral("install_size"), QStringLiteral("platform"), QStringLiteral("game_update")};
 }
 
 QStringList GamePageSettings::defaultSections()

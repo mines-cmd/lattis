@@ -7,6 +7,8 @@ QtObject {
     property var game: ({})
     // The Launch button's update state, which tints the Steam update entry.
     property bool updateAction: false
+    // False until the first frame is out: an AppImage game's update state needs the Installer, which isn't made before.
+    property bool live: true
     // The chips the owner shows: only what a shown chip or info row needs is read or asked for.
     property var chipNames: General.gamePageChips
 
@@ -40,6 +42,7 @@ QtObject {
                                 icon: Icons.timerLine },
             date_added: { label: qsTr("Date added"), value: game.addedText ?? "", icon: Icons.calendarCheckLine },
             steam_update: steamUpdateField,
+            game_update: gameUpdateField,
             steam_family: steamFamilyField,
             last_backup: lastBackupField,
             protondb: protonDbField,
@@ -53,6 +56,27 @@ QtObject {
         icon: Icons.download, attention: true,
         attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground
     })
+    readonly property bool wantsGameUpdate: chipNames.includes("game_update") || General.gamePageInfoRows.includes("game_update")
+    readonly property var gameUpdateRow: live && wantsGameUpdate && game.platform === "linux" ? Installer.games[game.id ?? ""] : undefined
+    readonly property var gameUpdateField: {
+        const row = gameUpdateRow
+        const updating = ["downloading", "extracting", "installing"].includes(row?.state ?? "")
+        const version = row?.updateVersion ?? ""
+        const percent = row && row.progress >= 0 ? Math.round(row.progress * 100) : -1
+        return {
+            label: qsTr("Update"), icon: Icons.download,
+            chipLabel: updating ? qsTr("Updating") : qsTr("Update available"),
+            chipValue: updating ? (percent >= 0 ? qsTr("%1%").arg(percent) : "…") : version,
+            chipHidden: !updating && version === "",
+            value: updating ? (percent >= 0 ? qsTr("Updating · %1%").arg(percent) : qsTr("Updating"))
+                 : version !== "" ? qsTr("%1 available").arg(version)
+                 : row?.upToDate ? qsTr("Up to date") : "",
+            attention: updating || version !== "",
+            attentionColor: updating ? Theme.launchButton.updatingBackground : Theme.launchButton.updateBackground,
+            action: !updating && version !== "" ? "update" : "",
+            tip: qsTr("Review the update")
+        }
+    }
     readonly property var steamFamilyField: ({
         label: qsTr("Shared by"), icon: Icons.steamLine,
         value: (game.steamOwnership ?? "") !== "family" ? ""
@@ -140,6 +164,11 @@ QtObject {
     // The names of `names` this game has a value for, in their order.
     function shown(names) {
         return names.filter(name => all[name] !== undefined && all[name].value !== "")
+    }
+
+    // shown() for chips: a field can be an info row only (an update that isn't waiting).
+    function shownChips(names) {
+        return shown(names).filter(name => !all[name].chipHidden)
     }
 
     // The history file is read only while a field needs it, and again only when the game's play changed:

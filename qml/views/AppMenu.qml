@@ -56,9 +56,11 @@ SettingsMenu {
         visible: updates.length > 0
         enabled: waiting.length > 0
         text: waiting.length === 0
-              ? (updates.length === 1 ? qsTr("Updating %1").arg(updates[0].name) : qsTr("Updating emulators"))
+              ? (updates.length === 1 ? qsTr("Updating %1").arg(updates[0].name) : qsTr("Updating"))
             : waiting.length === 1 ? qsTr("Update %1 to %2").arg(waiting[0].name).arg(waiting[0].version)
-            : qsTr("Update %1 emulators").arg(waiting.length)
+            : waiting.every(u => u.kind === "game") ? qsTr("Update %1 games").arg(waiting.length)
+            : waiting.every(u => u.kind === "emulator") ? qsTr("Update %1 emulators").arg(waiting.length)
+            : qsTr("Update %1 items").arg(waiting.length)
         onTriggered: Qt.callLater(() => root.chosen("update_emulators"))
     }
     SettingsMenuSeparator { visible: AppUpdate.notify || Installer.updates.length > 0 }
@@ -83,7 +85,8 @@ SettingsMenu {
     SettingsMenuItem {
         iconPath: Icons.download
         visible: Object.values(Installer.emulators).some(e => e.installedByApp && e.route === "appimage")
-        text: qsTr("Check for emulator updates")
+                 || (void Installer.games, Installer.checkableGames() > 0)
+        text: qsTr("Check for updates")
         onTriggered: Qt.callLater(() => root.chosen("check_emulator_updates"))
     }
     Entry {

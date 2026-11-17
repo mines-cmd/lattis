@@ -49,6 +49,7 @@ Rectangle {
         id: gameFields
         game: root.game
         chipNames: General.gamePageGridChips
+        live: true
         updateAction: launchButton.updateAction
         Component.onCompleted: {
             loadLastBackup()
@@ -57,7 +58,7 @@ Rectangle {
     }
 
     // Another game's chips change in place; the delegates are rebuilt only when the set of chips changes.
-    readonly property var shownChips: General.gamePageGridChips.filter(name => gameFields.shown([name]).length > 0)
+    readonly property var shownChips: General.gamePageGridChips.filter(name => gameFields.shownChips([name]).length > 0)
     property var chipList: []
     onShownChipsChanged: {
         if (chipList.join() !== shownChips.join())
@@ -146,6 +147,7 @@ Rectangle {
             id: launchButton
             Layout.fillWidth: true
             game: root.game
+            live: true
             buttonHeight: Theme.grid.launchHeight
             buttonRadius: Theme.grid.launchRadius
             buttonBorder: Theme.grid.launchBorder

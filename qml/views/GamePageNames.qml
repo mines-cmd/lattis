@@ -5,6 +5,7 @@ import QtQuick
 QtObject {
     readonly property var fields: ({
         steam_update: qsTr("Steam update"),
+        game_update: qsTr("Game update"),
         steam_family: qsTr("Steam Family"),
         last_backup: qsTr("Last backup"),
         protondb: qsTr("ProtonDB"),

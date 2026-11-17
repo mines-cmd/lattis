@@ -543,6 +543,13 @@ int main(int argc, char *argv[])
                     }
                 });
             }
+            if (const QString spec = qEnvironmentVariable("LATTIS_UPDATE"); !spec.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [spec] {
+                    logHook("update", spec);
+                    for (const QString &one : spec.split(u',', Qt::SkipEmptyParts))
+                        Installer::instance()->update(one);
+                });
+            }
             if (qEnvironmentVariableIntValue("LATTIS_STEAM_UNDO") == 1) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window] {
                     logHook("askSteamUndo");

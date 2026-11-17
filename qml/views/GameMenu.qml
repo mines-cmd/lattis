@@ -17,6 +17,9 @@ SettingsMenu {
     readonly property bool installable: launcher !== "" && !programGame
     readonly property bool running: GameRunner.running.includes(game.id ?? "")
     readonly property bool installed: game.installed ?? true
+    // An AppImage game's update: its Installer.games row, once the Installer is made (the menu opens after the first frame).
+    readonly property var gameUpdate: !multi && game.platform === "linux" ? Installer.games[game.id] : undefined
+    readonly property bool updating: ["downloading", "extracting", "installing"].includes(gameUpdate?.state ?? "")
 
     readonly property bool allFavorite: games.every(g => g.favorite)
     readonly property bool anyVisible: games.some(g => !g.hidden)
@@ -251,7 +254,14 @@ SettingsMenu {
             : root.installable ? Theme.launchButton.installLabel
             : root.programGame ? qsTr("Locate")
             : Theme.launchButton.missingRomLabel
-        enabled: !root.running && (root.installed || root.launcher !== "" || root.programGame)
+        enabled: !root.running && !root.updating && (root.installed || root.launcher !== "" || root.programGame)
+    }
+    Entry {
+        actionName: "update_game"
+        iconPath: Icons.download
+        visible: !root.multi && (root.gameUpdate?.updateVersion ?? "") !== ""
+        enabled: !root.updating
+        text: root.updating ? qsTr("Updating") : qsTr("Update to %1").arg(root.gameUpdate?.updateVersion ?? "")
     }
     SettingsMenuSeparator { visible: !root.multi }
     Entry {

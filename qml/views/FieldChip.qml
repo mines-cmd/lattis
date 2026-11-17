@@ -15,6 +15,7 @@ StatChip {
     readonly property var field: fields.all[name]
     readonly property bool opensHistory: field.history ?? false
     readonly property bool opensUrl: (field.action ?? "") === "url"
+    readonly property bool opensUpdate: (field.action ?? "") === "update"
 
     signal historyRequested()
 
@@ -36,9 +37,9 @@ StatChip {
     attentionColor: field.attentionColor
     iconTint: field.iconTint
     icon: General.chipsWithoutIcon.includes(name) ? "" : field.icon
-    label: field.label
-    value: field.value
-    clickable: !leaving && (opensHistory || opensUrl || (field.filterPlatform ?? "") !== "")
+    label: field.chipLabel ?? field.label
+    value: field.chipValue ?? field.value
+    clickable: !leaving && (opensHistory || opensUrl || opensUpdate || (field.filterPlatform ?? "") !== "")
     tip: clickable ? field.tip ?? "" : ""
     tipStars: field.stars ?? -1
     ToolTip.visible: chipHover.hovered && (field.hoverTip ?? "") !== ""
@@ -49,6 +50,8 @@ StatChip {
             historyRequested()
         else if (opensUrl)
             Qt.openUrlExternally(field.url)
+        else if (opensUpdate)
+            Installer.review(fields.game.id)
         else
             Library.platformFilter = field.filterPlatform
     }

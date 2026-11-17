@@ -20,7 +20,7 @@ Item {
     readonly property string updateTip: !startedUp ? ""
         : AppUpdate.notify ? qsTr("Update to %1 available").arg(AppUpdate.latestVersion)
         : emulatorUpdates.length === 1 ? qsTr("%1 update available").arg(emulatorUpdates[0].name)
-        : emulatorUpdates.length > 1 ? qsTr("%1 emulator updates available").arg(emulatorUpdates.length)
+        : emulatorUpdates.length > 1 ? qsTr("%1 updates available").arg(emulatorUpdates.length)
         : ""
     property string dragId: ""
     property int dragFrom: -1

@@ -195,7 +195,7 @@ Test hooks (tests and screenshots): `setReleaseUrl()` answers the release from a
 
 ## Testing hooks
 
-`LATTIS_INSTALL_FIXTURES=<dir>` makes the Installer read the release from `<dir>/<release value with ":" and "/" as "-">.json` (`github-mgba-emu-mgba.json`) after a short delay, and download the asset from `<dir>/<asset name>` as a `file:` URL. With no such file it makes a script that sleeps (2 MB, no checksum) under the cache dir. The download is paced (40 steps of 60 ms), so the progress shows. Fixtures skip the release cache.
+`LATTIS_INSTALL_FIXTURES=<dir>` makes the Installer read the release from `<dir>/<release value with ":" and "/" as "-">.json` (`github-mgba-emu-mgba.json`) after a short delay, and download the asset from `<dir>/<asset name>` as a `file:` URL. With no such file it makes a script that sleeps (2 MB, no checksum) under the cache dir. The download is paced (40 steps of 60 ms), so the progress shows. Fixtures skip the release cache. `LATTIS_UPDATE=<emulator id or game:<game id>>,...` (a screenshot hook) starts those updates three quarters through the screenshot delay; give a game's one a delay of about 8000 to catch its download.
 
 `LATTIS_INSTALL=<id>[/<route>],…` starts those installs three quarters through a screenshot's delay, before `LATTIS_OPEN_SETTINGS` opens the Emulators page, so the page shows them running (with the fixtures, an emulator with no canned release shows a failure).
 
@@ -231,6 +231,8 @@ Installer.checkUpdatesAsked() same, and updatesChecked(checked, failed) says whe
 Installer.retry(id)           runs a failed job again
 Installer.cancel(id)          also clears a failure
 Installer.refresh()
+Installer.review(gameId)     asks Main.qml to open the Updates dialog on that game (no id: on every update); reviewRequested(gameId)
+Installer.checkableGames()   how many AppImage games have a release source
 
 AppUpdate.available           a release AppImage: the rest does nothing when false
 AppUpdate.state               "idle", "checking", "downloading", "ready" or "failed"

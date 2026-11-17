@@ -5,6 +5,12 @@ LaunchButton {
     id: root
 
     property var game: ({})
+    // False until the first frame is out: the Installer isn't made before.
+    property bool live: false
+
+    // An AppImage game's file being replaced; Installer.games has a row only for a game with a release source.
+    readonly property bool gameUpdating: live && game.platform === "linux"
+        && ["downloading", "extracting", "installing"].includes(Installer.games[game.id ?? ""]?.state ?? "")
 
     readonly property bool hasGame: game.id !== undefined
     readonly property string launcher: game.launcher ?? ""
@@ -34,7 +40,8 @@ LaunchButton {
     }
 
     installed: game.installed ?? true
-    updateState: game.steamUpdate ?? "none"
+    updateState: gameUpdating ? "downloading" : (game.steamUpdate ?? "none")
+    updateBlocks: gameUpdating
     rom: game.rom ?? false
     gameNotFound: game.gameNotFound ?? false
     locatable: game.platform === "proton" || game.platform === "linux"

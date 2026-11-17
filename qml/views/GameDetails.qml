@@ -661,10 +661,11 @@ Item {
     GameFields {
         id: gameFields
         game: root.game
+        live: root.startedUp
         updateAction: launchButton.updateAction
     }
 
-    readonly property var shownChips: General.gamePageChips.filter(name => gameFields.shown([name]).length > 0)
+    readonly property var shownChips: General.gamePageChips.filter(name => gameFields.shownChips([name]).length > 0)
 
     // Another game's chips replace these at once: the switch has its own motion. A chip turned on or off,
     // or a Steam chip coming or going on this game, pops in or out.
@@ -860,6 +861,7 @@ Item {
                     Layout.maximumWidth: implicitWidth
                     Layout.minimumWidth: !actionRow.oneLine ? Math.min(implicitWidth, Theme.launchButton.height * 2) : implicitWidth
                     game: root.game
+                    live: root.startedUp
                     onLaunchRequested: root.launchRequested()
                     onMessage: text => root.message(text)
                     onEmulatorMessage: (text, gameId) => root.emulatorMessage(text, gameId)

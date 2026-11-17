@@ -668,10 +668,10 @@ void GeneralTest::gamePageDefaults()
     QVERIFY(empty.ok);
     QCOMPARE(empty.value, GamePageSettings());
     QCOMPARE(empty.value.chips,
-             (QStringList{"play_time", "last_played", "steam_update", "steam_family"}));
+             (QStringList{"play_time", "last_played", "steam_update", "game_update", "steam_family"}));
     QCOMPARE(empty.value.buttons, (QStringList{"favorite", "open_platform", "folder", "settings"}));
     QCOMPARE(empty.value.infoRows,
-             (QStringList{"release_date", "rating", "status", "install_size", "platform"}));
+             (QStringList{"release_date", "rating", "status", "install_size", "platform", "game_update"}));
     QCOMPARE(empty.value.recentPeriod, QStringLiteral("two_weeks"));
     QCOMPARE(empty.value.playTimeFormat, QStringLiteral("hours"));
     QCOMPARE(empty.value.sections, (QStringList{"description", "clips", "tags"}));

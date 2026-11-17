@@ -110,6 +110,8 @@ Surface {
                             root.historyRequested()
                         else if (infoRow.modelData.action === "url")
                             Qt.openUrlExternally(infoRow.modelData.url)
+                        else if (infoRow.modelData.action === "update")
+                            Installer.review(root.fields.game.id)
                         else
                             Library.platformFilter = infoRow.modelData.filterPlatform
                     }

@@ -551,17 +551,17 @@ ApplicationWindow {
         whatsNewDialog.item.open()
     }
 
-    // Emulators updated since the toast last went away; one update at a time or "Update all".
+    // Emulators and games updated since the toast last went away; one update at a time or "Update all".
     property var emulatorReleases: []
 
     function emulatorUpdated(name, version, notes) {
         // The open updates dialog shows the notes and the result itself.
-        if (emulatorUpdatesDialog.item?.opened)
+        if (updatesDialog.item?.opened)
             return
         emulatorReleases = emulatorReleases.concat([{ name, version, notes }])
         const count = emulatorReleases.length
         toast.show(count === 1 ? qsTr("Updated %1 to %2").arg(name).arg(version)
-                               : qsTr("Updated %1 emulators").arg(count), {
+                               : qsTr("Updated %n item(s)", "", count), {
             text: qsTr("What's new"),
             run: () => openEmulatorNotes()
         }, 10000)
@@ -575,7 +575,7 @@ ApplicationWindow {
         whatsNewDialog.active = true
         whatsNewDialog.item.heading = releases.length === 1
             ? qsTr("What's new in %1 %2").arg(releases[0].name).arg(releases[0].version)
-            : qsTr("What's new in your emulators")
+            : qsTr("What's new in your updates")
         whatsNewDialog.item.notes = releases.length === 1 ? releases[0].notes : ""
         whatsNewDialog.item.sections = releases.length === 1 ? []
             : releases.map(r => ({ title: r.name + " " + r.version, notes: r.notes }))
@@ -586,6 +586,7 @@ ApplicationWindow {
     Connections {
         target: Installer
         function onEmulatorUpdated(name, version, notes) { window.emulatorUpdated(name, version, notes) }
+        function onReviewRequested(gameId) { window.openUpdates(gameId) }
         function onUpdatesChecked(checked, failed) {
             if (!window.emulatorCheckAsked)
                 return
@@ -593,13 +594,18 @@ ApplicationWindow {
             const updates = Installer.updates
             const failure = failed === 0 ? ""
                 : failed === checked ? qsTr("Couldn't reach the releases")
-                : qsTr("couldn't check %n emulator(s)", "", failed)
+                : qsTr("couldn't check %n item(s)", "", failed)
             toast.show(updates.length === 0
-                           ? (failed === checked ? failure : failed > 0 ? qsTr("No updates found; %1").arg(failure) : qsTr("Emulators are up to date"))
+                           ? (failed === checked ? failure : failed > 0 ? qsTr("No updates found; %1").arg(failure) : qsTr("Everything is up to date"))
                        : updates.length === 1 ? qsTr("Update available for %1: %2").arg(updates[0].name).arg(updates[0].version)
-                       : qsTr("Updates available for %n emulator(s)", "", updates.length),
+                       : qsTr("%n update(s) available", "", updates.length),
                        updates.length > 0 ? { text: qsTr("Review"), run: () => window.run("update_emulators") } : null)
         }
+    }
+
+    function openUpdates(gameId) {
+        updatesDialog.active = true
+        updatesDialog.item.show(gameId)
     }
 
     function openUpdate() {
@@ -1013,13 +1019,12 @@ ApplicationWindow {
             if (!emulatorCheckAsked) {
                 const looking = Installer.checkUpdatesAsked()
                 emulatorCheckAsked = looking > 0
-                toast.show(looking === 0 ? qsTr("No emulators installed by Lattis to check")
-                                         : qsTr("Checking for emulator updates…"))
+                toast.show(looking === 0 ? qsTr("Nothing installed by Lattis to check")
+                                         : qsTr("Checking for updates…"))
             }
             break
         case "update_emulators":
-            emulatorUpdatesDialog.active = true
-            emulatorUpdatesDialog.item.show()
+            openUpdates()
             break
         case "whats_new": openWhatsNew(); break
         case "open_data_folder": {
@@ -1052,6 +1057,7 @@ ApplicationWindow {
             return
         switch (name) {
         case "launch": launch(game); break
+        case "update_game": Installer.review(game.id); break
         case "toggle_favorite": activateOn("favorite", game); break
         case "open_platform": activateOn("open_platform", game); break
         case "open_folder": activateOn("folder", game); break
@@ -1142,12 +1148,12 @@ ApplicationWindow {
     }
 
     Loader {
-        id: emulatorUpdatesDialog
+        id: updatesDialog
         active: false
-        source: "views/EmulatorUpdatesDialog.qml"
+        source: "views/UpdatesDialog.qml"
     }
     Connections {
-        target: emulatorUpdatesDialog.item
+        target: updatesDialog.item
         function onClosed() { browser.focusList() }
     }
 
@@ -1817,7 +1823,7 @@ ApplicationWindow {
         // The setup guide's Done step shows this itself.
         status: ScanLookup.running && !(setupGuide.active && !setupGuide.reopened)
                 ? qsTr("Looking up new games: %1 of %2").arg(ScanLookup.progressDone).arg(ScanLookup.progressTotal)
-                : window.emulatorCheckAsked ? qsTr("Checking for emulator updates…")
+                : window.emulatorCheckAsked ? qsTr("Checking for updates…")
                 : ""
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom

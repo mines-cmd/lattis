@@ -13,6 +13,8 @@ Surface {
     property bool running: false
     property string tip
     property string updateState: "none"
+    // The game's own file is being replaced: reads like an update in progress and can't be pressed.
+    property bool updateBlocks: false
     // Set when the game's emulator isn't found but can be installed: the button installs it.
     property string emulatorName
     // What the emulator's install is doing ("45 %", "Unpacking"); empty when it isn't running.
@@ -32,9 +34,9 @@ Surface {
     readonly property bool emulatorBusy: installed && emulatorName !== "" && emulatorStep !== ""
     readonly property bool emulatorInstall: installed && emulatorName !== "" && emulatorStep === ""
     readonly property bool installing: (!installed && installable) || emulatorInstall
-    readonly property bool launchable: (installed || installable || locatable) && !running && !emulatorBusy
+    readonly property bool launchable: (installed || installable || locatable) && !running && !emulatorBusy && !updateBlocks
     readonly property bool updateAction: installed && !running && updateState === "waiting"
-    readonly property bool updateBusy: emulatorBusy || ((installed || installable) && !running && !updateAction
+    readonly property bool updateBusy: emulatorBusy || (updateBlocks && installed && !running) || ((installed || installable) && !running && !updateAction
                                        && (updateState === "downloading" || updateState === "paused"))
 
     readonly property bool stopping: running && mouse.containsMouse

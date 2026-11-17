@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
 // See docs/code/qml.md.
-UpdatesDialog {
+UpdateRowsDialog {
     id: root
 
     title: ready ? qsTr("Lattis %1 is ready").arg(AppUpdate.latestVersion)

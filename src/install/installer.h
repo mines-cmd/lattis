@@ -111,6 +111,11 @@ public:
     Q_INVOKABLE void retry(const QString &id);
     Q_INVOKABLE void cancel(const QString &id);
     Q_INVOKABLE void refresh();
+    // Asks the main window to open the Updates dialog on one game (its chip, info row and menu entry), or on every
+    // update when gameId is empty.
+    // How many AppImage games have a release source to check.
+    Q_INVOKABLE int checkableGames() const { return gameTargets().size(); }
+    Q_INVOKABLE void review(const QString &gameId = {}) { emit reviewRequested(gameId); }
 
     void setFixturesDir(const QString &dir) { m_fixturesDir = dir; }
     void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
@@ -119,6 +124,7 @@ public:
 
 signals:
     void emulatorsChanged();
+    void reviewRequested(const QString &gameId);
     // Every look checkUpdatesAsked() started is over; failed of them couldn't reach the release.
     void updatesChecked(int checked, int failed);
     // An AppImage update (an emulator's or a game's, by its name) finished; notes is the release's, possibly empty.
