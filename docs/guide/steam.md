@@ -37,7 +37,7 @@ When Steam has an update for a game, Lattis shows it in three places:
 
 - **The Launch button** becomes **Update**. Steam doesn't let other programs start an update, so a click opens the game's page in Steam, where Steam's own Update button is. While Steam downloads, the button says **Updating**, and **Paused** if you paused the download in Steam; a click opens Steam's downloads.
 - **An "Update available" chip** next to the play time shows the state: **Waiting** with the download size once Steam knows it, **Downloading** with the percentage, or **Paused** with the percentage. The percentage is the one Steam shows and moves while it downloads.
-- **An arrow and a colored title** in the list mark the game. Turn the arrow off with **Show an icon on games with a Steam update** in Settings → Style (`list.show_update_icon`).
+- **An arrow and a colored title** in the list mark the game. Turn the arrow off with **Show an icon on games with an update** in Settings → Style (`list.show_update_icon`).
 
 **A download bar** shows along the bottom of the window while Steam downloads a game, on every game's page (not only the downloading game's). It has the game's icon, **Updating**, **Installing** (a first install) or **Paused** with its name, the percentage and a progress bar. Click it to open Steam's downloads. Steam downloads one game at a time, so the bar shows the one that runs, or a paused one when none runs. It looks like the other panels and follows the theme: the `[download_bar]` settings, where `show = false` hides it.
 

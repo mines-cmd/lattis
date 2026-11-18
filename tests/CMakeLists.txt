@@ -351,7 +351,8 @@ lattis_test(vdf_test
 lattis_test(heroic_test
     SOURCES ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp
             ../src/heroic/heroicscan.h ../src/heroic/heroicscan.cpp
-    LIBS Qt6::Core)
+    LIBS Qt6::Core
+    DEFINES "LEGENDARY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/legendary\"")
 lattis_test(steam_test OFFSCREEN
     SOURCES ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp

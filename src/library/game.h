@@ -1,6 +1,6 @@
 #pragma once
 
-#include "steamupdate.h"
+#include "gameupdate.h"
 
 #include <QDate>
 #include <QDateTime>
@@ -74,7 +74,7 @@ struct Game
     bool installed = true;
     PendingLauncher pendingEdits = PendingLauncher::None;
 
-    SteamUpdate steamUpdate = SteamUpdate::None;
+    GameUpdate update = GameUpdate::None;
     qint64 updateBytes = 0;
     int updatePercent = -1; // -1: unknown
 

@@ -91,6 +91,10 @@ private slots:
     void repeatedEntries();
     void badEntries();
     void playTime();
+    void updateWaiting();
+    void updateCurrent();
+    void updatePerPlatform();
+    void updateUnknown();
     void watchPaths();
     void noRoot();
     void rescanReusesUnchangedCache();
@@ -524,12 +528,92 @@ void HeroicTest::playTime()
     QCOMPARE(state.playTime.value(u"started"_s), HeroicPlayTime{});
 }
 
+namespace {
+const QString kHikeApp = u"d6407c9e6fd54cb492b8c6635480d792"_s;
+
+QByteArray legendaryFile(const QString &name)
+{
+    QFile file(QStringLiteral(LEGENDARY_DATA_DIR) + u'/' + name);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+QByteArray installedAs(const QString &platform, const QString &version)
+{
+    return QByteArray(R"({"d6407c9e6fd54cb492b8c6635480d792": {"title": "A Short Hike", "install_path": "/g/hike",
+        "install_size": 5, "is_dlc": false, "platform": ")")
+        + platform.toUtf8() + R"(", "version": ")" + version.toUtf8() + R"("}})";
+}
+}
+
+void HeroicTest::updateWaiting()
+{
+    // Captures of Legendary 0.21.1: the installed build is older than the one assets.json lists.
+    QVERIFY(!legendaryFile(u"installed.outdated.json"_s).isEmpty());
+    writeInstalled(m_root, legendaryFile(u"installed.outdated.json"_s));
+    writeFile(HeroicScan::assetsPath(m_root), legendaryFile(u"assets.after-check.json"_s));
+    const HeroicState state = HeroicScan::scan(m_root);
+    QVERIFY(state.warnings.isEmpty());
+    const HeroicGame *hike = findGame(state.games(), kHikeApp);
+    QVERIFY(hike);
+    QVERIFY(hike->installed);
+    QCOMPARE(hike->version, u"1.10.0_old"_s);
+    QCOMPARE(hike->update, GameUpdate::Waiting);
+}
+
+void HeroicTest::updateCurrent()
+{
+    writeInstalled(m_root, legendaryFile(u"installed.json"_s));
+    for (const QString &assets : {u"assets.before-check.json"_s, u"assets.after-check.json"_s}) {
+        writeFile(HeroicScan::assetsPath(m_root), legendaryFile(assets));
+        const HeroicGame *hike = findGame(HeroicScan::scan(m_root).games(), kHikeApp);
+        QVERIFY(hike);
+        QCOMPARE(hike->version, u"1.10.1_patched_Windows"_s);
+        QCOMPARE(hike->update, GameUpdate::None);
+    }
+}
+
+void HeroicTest::updatePerPlatform()
+{
+    const QByteArray assets = R"({"Windows": [{"app_name": "d6407c9e6fd54cb492b8c6635480d792", "build_version": "2.0"}],
+        "Mac": [{"app_name": "d6407c9e6fd54cb492b8c6635480d792", "build_version": "1.0"}]})";
+    writeFile(HeroicScan::assetsPath(m_root), assets);
+
+    writeInstalled(m_root, installedAs(u"Mac"_s, u"1.0"_s));
+    QCOMPARE(findGame(HeroicScan::scan(m_root).games(), kHikeApp)->update, GameUpdate::None);
+    writeInstalled(m_root, installedAs(u"Mac"_s, u"0.9"_s));
+    QCOMPARE(findGame(HeroicScan::scan(m_root).games(), kHikeApp)->update, GameUpdate::Waiting);
+    writeInstalled(m_root, installedAs(u"Windows"_s, u"1.0"_s));
+    QCOMPARE(findGame(HeroicScan::scan(m_root).games(), kHikeApp)->update, GameUpdate::Waiting);
+    writeInstalled(m_root, installedAs(u"Windows"_s, u"2.0"_s));
+    QCOMPARE(findGame(HeroicScan::scan(m_root).games(), kHikeApp)->update, GameUpdate::None);
+}
+
+void HeroicTest::updateUnknown()
+{
+    writeInstalled(m_root, legendaryFile(u"installed.outdated.json"_s));
+    // No assets.json, a half-written one, one without the game, and an installed entry without a version:
+    // nothing is known to be newer, and none of it is a warning.
+    for (const QByteArray &assets : {QByteArray(), QByteArray(R"({"Windows": [{"app_na)"), QByteArray("[1]"),
+                                     QByteArray(R"({"Windows": [{"app_name": "other", "build_version": "9"}]})")}) {
+        QFile::remove(HeroicScan::assetsPath(m_root));
+        if (!assets.isEmpty())
+            writeFile(HeroicScan::assetsPath(m_root), assets);
+        const HeroicState state = HeroicScan::scan(m_root);
+        QVERIFY(state.warnings.isEmpty());
+        QCOMPARE(findGame(state.games(), kHikeApp)->update, GameUpdate::None);
+    }
+    writeFile(HeroicScan::assetsPath(m_root), legendaryFile(u"assets.after-check.json"_s));
+    writeInstalled(m_root, installedAs(u"Windows"_s, u""_s));
+    QCOMPARE(findGame(HeroicScan::scan(m_root).games(), kHikeApp)->update, GameUpdate::None);
+}
+
 void HeroicTest::watchPaths()
 {
     QVERIFY(QDir().mkpath(m_root));
     QCOMPARE(HeroicScan::scan(m_root).watchPaths(),
              (QStringList{m_root + u"/store_cache/legendary_library.json"_s,
-                          m_root + u"/legendaryConfig/legendary/installed.json"_s, m_root + u"/store/timestamp.json"_s}));
+                          m_root + u"/legendaryConfig/legendary/installed.json"_s,
+                          m_root + u"/legendaryConfig/legendary/assets.json"_s, m_root + u"/store/timestamp.json"_s}));
 }
 
 void HeroicTest::noRoot()

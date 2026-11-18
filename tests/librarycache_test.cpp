@@ -67,7 +67,7 @@ LibrarySnapshot LibraryCacheTest::sample() const
     s.content.collections = {filtered, handPicked};
     s.content.heroic = {{"epic-fez", "Fez", "epic", "FezApp", 12}, {"epic-hike", "A Short Hike", "epic", "HikeApp"}};
     s.heroic.install = {HeroicInstall::Kind::Flatpak, "/h/heroic", false, {"/bin/flatpak", {"run", "--no-gui"}, true}};
-    s.heroic.installed.insert("epic-fez", {"/games/Fez", 1000});
+    s.heroic.installed.insert("epic-fez", {"/games/Fez", 1000, GameUpdate::Waiting});
     s.heroic.gone = {"epic-hike"};
     s.heroic.warnings = {"installed.json: not a JSON object"};
     GameFile g;
@@ -126,7 +126,7 @@ LibrarySnapshot LibraryCacheTest::sample() const
     steam.libraryFoldersStamp = {3000, 377};
     steam.libraries = {steam.install.root + "/steamapps"};
     steam.manifests.insert(steam.install.root + "/steamapps/appmanifest_1145360.acf",
-                           {{4000, 600}, {1145360, "Hades", "/games/Hades", true, 15'000'000'000, SteamUpdate::Paused, 1000, 45}, true});
+                           {{4000, 600}, {1145360, "Hades", "/games/Hades", true, 15'000'000'000, GameUpdate::Paused, 1000, 45}, true});
     steam.localConfigPath = steam.install.root + "/userdata/39734273/config/localconfig.vdf";
     steam.localConfigStamp = {5000, 95809};
     steam.apps.insert(1145360, {4100, 1788735088, "mangohud %command%"});

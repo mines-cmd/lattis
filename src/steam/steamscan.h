@@ -3,7 +3,7 @@
 #include "steamlocate.h"
 #include "steampresets.h"
 #include "steamshortcuts.h"
-#include "steamupdate.h"
+#include "gameupdate.h"
 
 #include <QHash>
 #include <QList>
@@ -26,7 +26,7 @@ struct SteamApp
     QString installDir;
     bool installed = false;
     qint64 sizeBytes = 0;
-    SteamUpdate update = SteamUpdate::None;
+    GameUpdate update = GameUpdate::None;
     qint64 updateBytes = 0;
     int updatePercent = -1;     // as Steam shows it; -1 while update is None, or when Steam wrote no sizes
 

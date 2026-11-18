@@ -250,7 +250,7 @@ The file is a JSON array of `[key, metadata]` pairs, most of them unrelated to c
 | `steampresets.*` | `SteamPreset`, `SteamSettings`; `parseSteamSettings()`; `LaunchOptions::isOn()`, `turnOn()`, `turnOff()` |
 | `steamart.*` | `SteamArt::find()`, `writeGrid()`; `GridFile`, `GridFiles` |
 | `steamscan.*` | `SteamStamp`, `SteamApp`, `SteamAppConfig`, `CompatTool`, `SteamState`; `SteamScan::scan()`, `isBlocked()`, `valveToolName()` |
-| `steamupdate.h` | `SteamUpdate` (`None`, `Waiting`, `Downloading`, `Paused`) |
+| `../library/gameupdate.h` | `GameUpdate` (`None`, `Waiting`, `Downloading`, `Paused`), shared by Steam and Epic games; `Game::update` |
 | `steamdownloads.*` | `SteamDownloads`: `setApps()`, `progress()`, `changed()`; `parseLog()`, `directorySize()` |
 | `steamstatus.*` | `SteamStatus`: `status`, `running`, `avatar`, `setStatus()`, `openFriends()`, `start()`, `changed()`; `Source` (install, running, open), `setup()`; `parse()` |
 | `steammedia.*` | `SteamMedia::Clip`, `Screenshot`; `listClips()`, `listScreenshots()`, `listAll()`, `AppMedia`, `remuxClip()`, `parseDurationMs()`, `lengthText()` |
@@ -337,7 +337,7 @@ userMissing   [steam] user is set but hasn't logged in here
 | `SteamState::shortcutConfig(appId)` | `localconfig.vdf`'s block for a shortcut (play time) |
 | `SteamState::watchPaths()` | Folders and files to watch for changes that should trigger a re-scan |
 
-`SteamStamp`: `mtimeMs`, `size` (`−1` when missing). `SteamApp`: `appId`, `name`, `installDir`, `installed` (fully installed, or updating over a build on disk), `sizeBytes`, `update` (`SteamUpdate`), `updateBytes`, `updatePercent` (`-1` unknown). `SteamAppConfig`: `playMinutes` (`−1` = never), `lastPlayed`, `launchOptions`. `CompatTool`: `name` (internal), `displayName`.
+`SteamStamp`: `mtimeMs`, `size` (`−1` when missing). `SteamApp`: `appId`, `name`, `installDir`, `installed` (fully installed, or updating over a build on disk), `sizeBytes`, `update` (`GameUpdate`), `updateBytes`, `updatePercent` (`-1` unknown). `SteamAppConfig`: `playMinutes` (`−1` = never), `lastPlayed`, `launchOptions`. `CompatTool`: `name` (internal), `displayName`.
 
 ### Downloads (`steamdownloads.*`)
 

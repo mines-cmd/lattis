@@ -36,7 +36,7 @@ Result merge(const Input &in)
         }
         listed.insert(id);
         if (game.installed)
-            out.installed.insert(id, {game.installPath, game.sizeBytes});
+            out.installed.insert(id, {game.installPath, game.sizeBytes, game.update});
     }
 
     // Its line stays in heroic.toml: the id and the counted minutes must survive until it returns.

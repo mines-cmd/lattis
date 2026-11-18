@@ -225,7 +225,7 @@ The list of games on the left in List view.
 - `selected_bold`: the selected game's title in bold.
 - `title_elide`: where a title too long for the list is cut: at the end, in the middle or at the start. Hover a cut title to see it whole.
 - `uninstalled_opacity`: how faint games that aren't installed are.
-- `show_update_icon`, `update_icon_color`: the icon on games with a Steam update waiting.
+- `show_update_icon`, `update_icon_color`: the icon on games with an update waiting.
 - `running_label`, `running_color`, `running_title`: the "Running" label on a game that's running, its color, and whether the title takes that color too. Empty label = none.
 - `link_color`: the "Show" link on the line that says how many games are left out.
 

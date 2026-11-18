@@ -554,7 +554,7 @@ constexpr Setting kSettings[] = {
     boolean("list", "selected_bold", "true", "Selected title in bold"),
     choice("list", "title_elide", "right", "right middle left",
            "Where a title too long for the list is cut: at the end, in the middle, or at the start. Hovering a cut title shows it whole"),
-    boolean("list", "show_update_icon", "true", "Show an icon on games with a Steam update"),
+    boolean("list", "show_update_icon", "true", "Show an icon on games with an update"),
     color("list", "update_icon_color", "@launch_button.update_background", "The update icon on list rows"),
     text("list", "running_label", "Running", "Label on the row of a game that is running; empty = none"),
     color("list", "running_color", "@launch_button.running_background", "The running label on list rows"),

@@ -73,19 +73,19 @@ SteamManifest readManifest(const QString &path, const QString &library, QStringL
     // Pausing in Steam clears "running" and leaves "started" (its log says "Suspended"); no real
     // manifest has had the paused bit, so it's kept as a guess.
     if (flags & kUpdatePaused)
-        app.update = SteamUpdate::Paused;
+        app.update = GameUpdate::Paused;
     else if (flags & kUpdateRunning)
-        app.update = SteamUpdate::Downloading;
+        app.update = GameUpdate::Downloading;
     else if (flags & kUpdateStarted)
-        app.update = SteamUpdate::Paused;
+        app.update = GameUpdate::Paused;
     else if ((flags & kUpdateRequired) || (targetBuildId != 0 && targetBuildId != buildId))
-        app.update = SteamUpdate::Waiting;
+        app.update = GameUpdate::Waiting;
     // An update under way clears the installed bit, but a build on disk (buildid is 0 until a
     // first install completes) means the game still launches.
-    app.installed = (flags & kFullyInstalled) != 0 || (app.update != SteamUpdate::None && buildId != 0);
+    app.installed = (flags & kFullyInstalled) != 0 || (app.update != GameUpdate::None && buildId != 0);
     app.sizeBytes = state->valueOf(u"SizeOnDisk").toLongLong();
     // Steam keeps the last update's byte counts after it finishes.
-    if (app.update != SteamUpdate::None) {
+    if (app.update != GameUpdate::None) {
         app.updateBytes = state->valueOf(u"BytesToDownload").toLongLong();
         // Steam's percentage is the staging progress (unpacked bytes), which runs ahead of the
         // download's.

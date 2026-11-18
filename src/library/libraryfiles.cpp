@@ -1083,9 +1083,9 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
             if (app.installed)
                 g.sizeBytes = app.sizeBytes;
             // A first install has no build yet but is still downloading.
-            if (app.installed || app.update != SteamUpdate::None) {
+            if (app.installed || app.update != GameUpdate::None) {
                 g.installDir = app.installDir;
-                g.steamUpdate = app.update;
+                g.update = app.update;
                 g.updateBytes = app.updateBytes;
                 g.updatePercent = app.updatePercent;
             }
@@ -1125,6 +1125,7 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
             if (g.installed) {
                 g.installDir = here->installDir;
                 g.sizeBytes = here->sizeBytes;
+                g.update = here->update;
             }
         } else if (g.platform == kProtonPlatform) {
             const ProgramFiles files = programFiles.value(g.id);

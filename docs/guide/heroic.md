@@ -67,7 +67,7 @@ The Launch tab shows the folder Heroic installed the game in, and **Open Heroic*
 - **Presets:** a check box per [preset](steam.md#presets). MangoHud and GameMode are Heroic's own switches for the game; your own presets add to Heroic's environment variables, wrapper commands and launch options. There are no default presets for Epic games: a new game keeps Heroic's settings until you change them.
 - **Launch options:** Heroic's launch arguments for the game, written like Steam's: variables, a wrapper, then `%command%` and arguments after it. Typing a preset's part by hand checks its box.
 
-Updates and Heroic's other settings (Esync, Fsync, DXVK, the Wine prefix) are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
+An installed Epic game whose build is older than the newest one Epic lists (Heroic keeps that list up to date) shows the same "Update available" chip and list arrow as a Steam game with an update (see [Steam](steam.md#updates)); update it in Heroic. Heroic's other settings (Esync, Fsync, DXVK, the Wine prefix) are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
 
 ### Changes wait for Heroic to close
 

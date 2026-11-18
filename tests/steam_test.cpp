@@ -492,7 +492,7 @@ void SteamTest::updateStates()
     const QString built = u"\t\"buildid\"\t\t\"10\"\n"_s;
 
     SteamApp app = read(6, built + bytes);
-    QCOMPARE(app.update, SteamUpdate::Waiting);
+    QCOMPARE(app.update, GameUpdate::Waiting);
     QVERIFY(app.installed);
     QCOMPARE(app.updateBytes, 1000);
     QCOMPARE(app.updatePercent, 45); // no staging sizes: the download bytes
@@ -500,32 +500,32 @@ void SteamTest::updateStates()
     // 10% staged, and Steam showed 10.
     app = read(1286, built + u"\t\"BytesToDownload\"\t\t\"20969404624\"\n\t\"BytesDownloaded\"\t\t\"690973408\"\n"
                               "\t\"BytesToStage\"\t\t\"29292040346\"\n\t\"BytesStaged\"\t\t\"2953297829\"\n"_s);
-    QCOMPARE(app.update, SteamUpdate::Downloading);
+    QCOMPARE(app.update, GameUpdate::Downloading);
     QCOMPARE(app.updatePercent, 10);
     // The same download suspended in Steam: "started" without "running".
-    QCOMPARE(read(1030, built).update, SteamUpdate::Paused);
+    QCOMPARE(read(1030, built).update, GameUpdate::Paused);
     // Waiting by build alone, with the installed bit set.
-    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"11\"\n"_s).update, SteamUpdate::Waiting);
-    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"10\"\n"_s).update, SteamUpdate::None);
-    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"0\"\n"_s).update, SteamUpdate::None);
+    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"11\"\n"_s).update, GameUpdate::Waiting);
+    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"10\"\n"_s).update, GameUpdate::None);
+    QCOMPARE(read(4, built + u"\t\"TargetBuildID\"\t\t\"0\"\n"_s).update, GameUpdate::None);
 
     // Updating drops the installed bit; the build on disk keeps the game installed.
     app = read(1286, built + bytes);
-    QCOMPARE(app.update, SteamUpdate::Downloading);
+    QCOMPARE(app.update, GameUpdate::Downloading);
     QVERIFY(app.installed);
-    QCOMPARE(read(258, built).update, SteamUpdate::Downloading);
+    QCOMPARE(read(258, built).update, GameUpdate::Downloading);
     app = read(1538, built + bytes);
-    QCOMPARE(app.update, SteamUpdate::Paused);
+    QCOMPARE(app.update, GameUpdate::Paused);
     QVERIFY(app.installed);
 
     // A first install has no build on disk yet.
     app = read(1282, u"\t\"buildid\"\t\t\"0\"\n"_s + bytes);
-    QCOMPARE(app.update, SteamUpdate::Downloading);
+    QCOMPARE(app.update, GameUpdate::Downloading);
     QVERIFY(!app.installed);
 
     // Steam keeps the last update's numbers after it finishes.
     app = read(4, built + bytes + u"\t\"ScheduledAutoUpdate\"\t\t\"1790000000\"\n"_s);
-    QCOMPARE(app.update, SteamUpdate::None);
+    QCOMPARE(app.update, GameUpdate::None);
     QCOMPARE(app.updateBytes, 0);
     QCOMPARE(app.updatePercent, -1);
     QVERIFY(app.installed);
@@ -533,9 +533,9 @@ void SteamTest::updateStates()
     // A manifest rewritten from Downloading to None is read on the next scan.
     writeText(file, manifest(620, u"Portal 2"_s, 1286, 1000, built + bytes));
     const SteamState downloading = scanHome(home);
-    QCOMPARE(downloading.games().at(0).update, SteamUpdate::Downloading);
+    QCOMPARE(downloading.games().at(0).update, GameUpdate::Downloading);
     writeText(file, manifest(620, u"Portal 2"_s, 4, 1001, built));
-    QCOMPARE(scanHome(home, downloading).games().at(0).update, SteamUpdate::None);
+    QCOMPARE(scanHome(home, downloading).games().at(0).update, GameUpdate::None);
 }
 
 void SteamTest::twoLibraryFolders()

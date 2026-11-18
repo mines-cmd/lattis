@@ -235,7 +235,7 @@ QString GameRunner::uninstall(const QString &gameId)
         return {};
     if (const QString manager = runningManagerFor(gameId); !manager.isEmpty())
         return tr("%1 is running; close it first").arg(manager);
-    if (!game->installed && game->steamUpdate != SteamUpdate::Downloading && game->steamUpdate != SteamUpdate::Paused)
+    if (!game->installed && game->update != GameUpdate::Downloading && game->update != GameUpdate::Paused)
         return tr("%1 isn't installed").arg(game->title);
     return runSteam({QStringLiteral("steam://uninstall/%1").arg(steam.runId)});
 }
@@ -253,12 +253,12 @@ QString GameRunner::update(const QString &gameId)
 {
     const Game *game = m_library->game(gameId);
     const SteamRef steam = game ? steamRefOf(*game) : SteamRef();
-    if (!steam || steam.shortcut || game->steamUpdate == SteamUpdate::None)
+    if (!steam || steam.shortcut || game->update == GameUpdate::None)
         return {};
     // Steam ignores steam://update/<id>, steam://install/<id> on an installed game, and has no URL
     // that starts an update short of steam://validate, so Waiting opens the game's page, where
     // Steam's own Update button is.
-    return runSteam({game->steamUpdate == SteamUpdate::Waiting
+    return runSteam({game->update == GameUpdate::Waiting
                          ? QStringLiteral("steam://nav/games/details/%1").arg(steam.runId)
                          : QStringLiteral("steam://open/downloads")},
                     true);
@@ -294,7 +294,7 @@ QString GameRunner::closeSteamAndApply()
 QString GameRunner::restartSteamAndLaunch(const QString &gameId)
 {
     const Game *game = m_library->game(gameId);
-    if (!game || !steamRefOf(*game) || !game->installed || game->steamUpdate != SteamUpdate::None
+    if (!game || !steamRefOf(*game) || !game->installed || game->update != GameUpdate::None
         || m_steamSessions.contains(gameId))
         return launch(gameId);
     return closeSteamThen(gameId);
@@ -839,10 +839,10 @@ QString GameRunner::launch(const QString &gameId)
         if (!game->installed && steam.shortcut)
             return missingProgram(*game);
         const bool downloading =
-            game->steamUpdate == SteamUpdate::Downloading || game->steamUpdate == SteamUpdate::Paused;
+            game->update == GameUpdate::Downloading || game->update == GameUpdate::Paused;
         if (!game->installed && !downloading)
             return runSteam({QStringLiteral("steam://install/%1").arg(steam.runId)});
-        if (game->steamUpdate != SteamUpdate::None)
+        if (game->update != GameUpdate::None)
             return update(gameId);
         if (m_steamSessions.contains(gameId))
             return {};

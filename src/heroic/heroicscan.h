@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gameupdate.h"
 #include "heroiclocate.h"
 
 #include <QHash>
@@ -25,6 +26,8 @@ struct HeroicGame
     bool installed = false;
     QString installPath;
     qint64 sizeBytes = 0;   // only installed.json has it in bytes; the cache's is text like "308.78 MiB"
+    QString version;        // installed.json's build; empty when not installed
+    GameUpdate update = GameUpdate::None;
     QString artCover;
     QString artSquare;
     QString artLogo;
@@ -71,6 +74,7 @@ struct HeroicInstalled
 {
     QString installDir;
     qint64 sizeBytes = 0;
+    GameUpdate update = GameUpdate::None;
 
     bool operator==(const HeroicInstalled &) const = default;
 };
@@ -91,6 +95,7 @@ struct HeroicListing
 namespace HeroicScan {
 QString libraryPath(const QString &root);
 QString installedPath(const QString &root);
+QString assetsPath(const QString &root);
 QString playTimePath(const QString &root);
 
 HeroicState scan(const QString &root, const HeroicState &previous = {});

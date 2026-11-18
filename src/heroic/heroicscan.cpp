@@ -77,7 +77,28 @@ void readLibrary(const QString &path, HeroicState *state)
     }
 }
 
-void readInstalled(const QString &path, HeroicState *state)
+// assets.json lists the newest build per platform; Heroic and Legendary rewrite it, so a half-written
+// or unreadable one just means no update is known.
+QHash<QString, QString> readLatest(const QString &path)
+{
+    QHash<QString, QString> latest;
+    QJsonObject root;
+    QString warning;
+    if (!QFileInfo::exists(path) || !readObject(path, &root, &warning))
+        return latest;
+    for (auto platform = root.constBegin(); platform != root.constEnd(); ++platform) {
+        for (const QJsonValue &value : platform.value().toArray()) {
+            const QJsonObject entry = value.toObject();
+            const QString app = entry.value(QStringLiteral("app_name")).toString();
+            const QString build = entry.value(QStringLiteral("build_version")).toString();
+            if (!app.isEmpty() && !build.isEmpty())
+                latest.insert(platform.key() + QLatin1Char('/') + app, build);
+        }
+    }
+    return latest;
+}
+
+void readInstalled(const QString &path, const QHash<QString, QString> &latest, HeroicState *state)
 {
     if (!QFileInfo::exists(path)) {
         state->installedOk = true;
@@ -100,6 +121,12 @@ void readInstalled(const QString &path, HeroicState *state)
         game.installed = true;
         game.installPath = entry.value(QStringLiteral("install_path")).toString();
         game.sizeBytes = entry.value(QStringLiteral("install_size")).toInteger();
+        game.version = entry.value(QStringLiteral("version")).toString();
+        const QString platform = entry.value(QStringLiteral("platform")).toString();
+        const QString newest = latest.value((platform.isEmpty() ? QStringLiteral("Windows") : platform)
+                                            + QLatin1Char('/') + game.appName);
+        if (!game.version.isEmpty() && !newest.isEmpty() && newest != game.version)
+            game.update = GameUpdate::Waiting;
         state->installed.append(game);
     }
 }
@@ -147,6 +174,8 @@ QList<HeroicGame> HeroicState::games() const
             game.installed = here != nullptr;
             game.installPath = here ? here->installPath : QString();
             game.sizeBytes = here ? here->sizeBytes : 0;
+            game.version = here ? here->version : QString();
+            game.update = here ? here->update : GameUpdate::None;
             if (here && game.title.isEmpty())
                 game.title = here->title;
         }
@@ -167,10 +196,16 @@ QStringList HeroicState::watchPaths() const
 {
     if (root.isEmpty())
         return {};
-    return {HeroicScan::libraryPath(root), HeroicScan::installedPath(root), HeroicScan::playTimePath(root)};
+    return {HeroicScan::libraryPath(root), HeroicScan::installedPath(root), HeroicScan::assetsPath(root),
+            HeroicScan::playTimePath(root)};
 }
 
 namespace HeroicScan {
+QString assetsPath(const QString &root)
+{
+    return root + QStringLiteral("/legendaryConfig/legendary/assets.json");
+}
+
 QString libraryPath(const QString &root)
 {
     return root + QStringLiteral("/store_cache/legendary_library.json");
@@ -206,7 +241,7 @@ HeroicState scan(const QString &root, const HeroicState &previous)
     if (!state.libraryWarning.isEmpty())
         state.warnings.append(state.libraryWarning);
 
-    readInstalled(installedPath(root), &state);
+    readInstalled(installedPath(root), readLatest(assetsPath(root)), &state);
     readPlayTime(playTimePath(root), &state);
     return state;
 }

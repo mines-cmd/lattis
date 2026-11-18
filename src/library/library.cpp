@@ -80,17 +80,17 @@ QString hoursMinutesText(int minutes)
 // -1 when Steam gave no size, or while nothing is downloading.
 int updatePercent(const Game &g)
 {
-    if (g.steamUpdate != SteamUpdate::Downloading && g.steamUpdate != SteamUpdate::Paused)
+    if (g.update != GameUpdate::Downloading && g.update != GameUpdate::Paused)
         return -1;
     return g.updatePercent;
 }
 
-QString updateStateName(SteamUpdate update)
+QString updateStateName(GameUpdate update)
 {
     switch (update) {
-    case SteamUpdate::Waiting: return QStringLiteral("waiting");
-    case SteamUpdate::Downloading: return QStringLiteral("downloading");
-    case SteamUpdate::Paused: return QStringLiteral("paused");
+    case GameUpdate::Waiting: return QStringLiteral("waiting");
+    case GameUpdate::Downloading: return QStringLiteral("downloading");
+    case GameUpdate::Paused: return QStringLiteral("paused");
     default: return QStringLiteral("none");
     }
 }
@@ -98,15 +98,15 @@ QString updateStateName(SteamUpdate update)
 QString updateText(const Game &g)
 {
     const int percent = updatePercent(g);
-    switch (g.steamUpdate) {
-    case SteamUpdate::Waiting:
+    switch (g.update) {
+    case GameUpdate::Waiting:
         if (g.updateBytes <= 0)
             return Library::tr("Waiting");
         return Library::tr("Waiting · %1")
             .arg(QLocale().formattedDataSize(g.updateBytes, 1, QLocale::DataSizeTraditionalFormat));
-    case SteamUpdate::Downloading:
+    case GameUpdate::Downloading:
         return percent < 0 ? Library::tr("Downloading") : Library::tr("Downloading · %1%").arg(percent);
-    case SteamUpdate::Paused:
+    case GameUpdate::Paused:
         return percent < 0 ? Library::tr("Paused") : Library::tr("Paused · %1%").arg(percent);
     default:
         return {};
@@ -763,7 +763,7 @@ QVariantMap Library::buildSteam() const
     const QList<SteamApp> games = state.games();
     const int installed = int(std::count_if(games.cbegin(), games.cend(), [](const SteamApp &a) { return a.installed; }));
     const int updating = int(std::count_if(games.cbegin(), games.cend(), [](const SteamApp &a) {
-        return a.installed && a.update != SteamUpdate::None;
+        return a.installed && a.update != GameUpdate::None;
     }));
 
     QSet<quint32> shortcutIds;
@@ -922,7 +922,7 @@ void Library::updateDownloads()
     for (const Game &g : std::as_const(m_games)) {
         const qint64 appId = GameId::steamAppId(g.id);
         if (g.platform != kSteamPlatform || appId <= 0 || g.installDir.isEmpty()
-            || (g.steamUpdate != SteamUpdate::Downloading && g.steamUpdate != SteamUpdate::Paused))
+            || (g.update != GameUpdate::Downloading && g.update != GameUpdate::Paused))
             continue;
         // installDir is <library>/steamapps/common/<name>.
         apps.append({appId, QDir::cleanPath(g.installDir + QStringLiteral("/../../downloading/%1").arg(appId))});
@@ -940,12 +940,12 @@ bool Library::applyDownloads()
     for (Game &g : m_games) {
         const auto it = progress.constFind(GameId::steamAppId(g.id));
         if (g.platform != kSteamPlatform || it == progress.cend()
-            || (g.steamUpdate != SteamUpdate::Downloading && g.steamUpdate != SteamUpdate::Paused))
+            || (g.update != GameUpdate::Downloading && g.update != GameUpdate::Paused))
             continue;
-        const SteamUpdate update = it->running ? SteamUpdate::Downloading : SteamUpdate::Paused;
+        const GameUpdate update = it->running ? GameUpdate::Downloading : GameUpdate::Paused;
         const int percent = it->percent >= 0 ? it->percent : g.updatePercent;
-        changed = changed || update != g.steamUpdate || percent != g.updatePercent;
-        g.steamUpdate = update;
+        changed = changed || update != g.update || percent != g.updatePercent;
+        g.update = update;
         g.updatePercent = percent;
     }
     return changed;
@@ -955,11 +955,11 @@ void Library::updateDownloadBar()
 {
     const Game *shown = nullptr;
     for (const Game &g : std::as_const(m_games)) {
-        if (g.steamUpdate == SteamUpdate::Downloading) {
+        if (g.update == GameUpdate::Downloading) {
             shown = &g;
             break;
         }
-        if (g.steamUpdate == SteamUpdate::Paused && !shown)
+        if (g.update == GameUpdate::Paused && !shown)
             shown = &g;
     }
     QVariantMap download;
@@ -967,7 +967,7 @@ void Library::updateDownloadBar()
         download = {{QStringLiteral("gameId"), shown->id},
                     {QStringLiteral("name"), shown->title},
                     {QStringLiteral("icon"), shown->iconUrl},
-                    {QStringLiteral("state"), updateStateName(shown->steamUpdate)},
+                    {QStringLiteral("state"), updateStateName(shown->update)},
                     {QStringLiteral("percent"), updatePercent(*shown)},
                     {QStringLiteral("installing"), !shown->installed}};
     }
@@ -1580,7 +1580,7 @@ QVariant Library::data(const QModelIndex &index, int role) const
     case IconUrlRole:
         return game ? game->iconUrl : QUrl();
     case UpdatingRole:
-        return game ? game->steamUpdate != SteamUpdate::None : false;
+        return game ? game->update != GameUpdate::None : false;
     case CoverUrlRole:
         return game ? game->coverUrl : QUrl();
     case FavoriteRole:
@@ -4327,7 +4327,7 @@ void Library::overview()
             o.protonDbApp = protonDbAppOf(g);
             installedApps.append(o.protonDbApp);
         }
-        o.updateWaiting = g.steamUpdate == SteamUpdate::Waiting;
+        o.updateWaiting = g.update == GameUpdate::Waiting;
         if (g.rom && g.installed) {
             const Platform *p = platform(g.platform);
             o.emulatorMissing = Emulators::choose(g.emulator, p ? p->emulators : QStringList(), installs()).isEmpty();
@@ -4637,16 +4637,16 @@ QString Library::launchTip(const Game &g) const
 {
     if (g.platform == kSteamPlatform && GameId::steamAppId(g.id) > 0) {
         if (!g.installed) {
-            switch (g.steamUpdate) {
-            case SteamUpdate::Downloading: return tr("Steam is installing the game; open its downloads");
-            case SteamUpdate::Paused: return tr("The install is paused; open Steam's downloads");
+            switch (g.update) {
+            case GameUpdate::Downloading: return tr("Steam is installing the game; open its downloads");
+            case GameUpdate::Paused: return tr("The install is paused; open Steam's downloads");
             default: return tr("Install through Steam; it asks where");
             }
         }
-        switch (g.steamUpdate) {
-        case SteamUpdate::Waiting: return tr("Open the game's page in Steam to update it");
-        case SteamUpdate::Downloading: return tr("Steam is updating the game; open its downloads");
-        case SteamUpdate::Paused: return tr("The update is paused; open Steam's downloads");
+        switch (g.update) {
+        case GameUpdate::Waiting: return tr("Open the game's page in Steam to update it");
+        case GameUpdate::Downloading: return tr("Steam is updating the game; open its downloads");
+        case GameUpdate::Paused: return tr("The update is paused; open Steam's downloads");
         default: return tr("Launch through Steam");
         }
     }
@@ -5037,11 +5037,11 @@ QVariantMap Library::gameMap(const Game &g) const
         {QStringLiteral("logoScrimStrength"), g.logoScrimStrength},
         {QStringLiteral("installed"), g.installed},
         {QStringLiteral("launcher"), g.launcher()},
-        {QStringLiteral("steamUpdate"), updateStateName(g.steamUpdate)},
+        {QStringLiteral("steamUpdate"), updateStateName(g.update)},
         {QStringLiteral("steamOwnership"), g.steamOwnership},
         {QStringLiteral("sharedBy"), g.sharedBy},
-        {QStringLiteral("steamUninstallable"), g.installed || g.steamUpdate == SteamUpdate::Downloading
-                                                   || g.steamUpdate == SteamUpdate::Paused},
+        {QStringLiteral("steamUninstallable"), g.installed || g.update == GameUpdate::Downloading
+                                                   || g.update == GameUpdate::Paused},
         {QStringLiteral("steamUpdateText"), updateText(g)},
         {QStringLiteral("steamUpdatePercent"), updatePercent(g)},
         {QStringLiteral("rom"), g.rom},
@@ -5289,7 +5289,7 @@ QList<Library::Row> Library::computeRows(bool *showingGroups, int *notInstalled,
         if (!passesFilters(g, tags)
             || !(m_searchWords.isEmpty() || SearchText::matches(m_foldedTitles.at(i), m_searchWords)))
             return false;
-        if (m_installedOnly && !g.installed && g.steamUpdate == SteamUpdate::None) {
+        if (m_installedOnly && !g.installed && g.update == GameUpdate::None) {
             ++*notInstalled;
             return false;
         }

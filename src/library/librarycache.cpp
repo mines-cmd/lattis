@@ -138,12 +138,15 @@ static QDataStream &operator>>(QDataStream &s, HeroicEntry &e)
 
 static QDataStream &operator<<(QDataStream &s, const HeroicInstalled &i)
 {
-    return s << i.installDir << i.sizeBytes;
+    return s << i.installDir << i.sizeBytes << qint8(i.update);
 }
 
 static QDataStream &operator>>(QDataStream &s, HeroicInstalled &i)
 {
-    return s >> i.installDir >> i.sizeBytes;
+    qint8 update = 0;
+    s >> i.installDir >> i.sizeBytes >> update;
+    i.update = update == qint8(GameUpdate::Waiting) ? GameUpdate::Waiting : GameUpdate::None;
+    return s;
 }
 
 static QDataStream &operator<<(QDataStream &s, const HeroicListing &l)
@@ -235,8 +238,8 @@ static QDataStream &operator>>(QDataStream &s, SteamApp &a)
     qint32 percent = -1;
     s >> a.appId >> a.name >> a.installDir >> a.installed >> a.sizeBytes >> update >> a.updateBytes >> percent;
     a.updatePercent = percent;
-    a.update = update >= qint8(SteamUpdate::None) && update <= qint8(SteamUpdate::Paused) ? SteamUpdate(update)
-                                                                                           : SteamUpdate::None;
+    a.update = update >= qint8(GameUpdate::None) && update <= qint8(GameUpdate::Paused) ? GameUpdate(update)
+                                                                                           : GameUpdate::None;
     return s;
 }
 

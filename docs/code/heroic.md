@@ -15,14 +15,17 @@ All paths are under the root:
 | File | What's read |
 |---|---|
 | `store_cache/legendary_library.json` | the whole library: app name, title, art URLs; DLC is left out |
-| `legendaryConfig/legendary/installed.json` | what's installed, where, and its size |
+| `legendaryConfig/legendary/installed.json` | what's installed, where, its size and its build (`version`, `platform`) |
+| `legendaryConfig/legendary/assets.json` | the newest build per platform (`Windows[]`, `Mac[]`: `app_name`, `build_version`); Heroic and Legendary rewrite it |
 | `store/timestamp.json` | total minutes and last played per app name |
 
-`HeroicScan::scan()` returns a `HeroicState`. Passing the previous state skips parsing the library cache when its `HeroicStamp` (time and size) hasn't changed, since it can be tens of megabytes. The other two are small and always read.
+`HeroicScan::scan()` returns a `HeroicState`. Passing the previous state skips parsing the library cache when its `HeroicStamp` (time and size) hasn't changed, since it can be tens of megabytes. The others are small and always read.
+
+An installed game whose installed.json `version` differs from the `build_version` that assets.json lists for the same `app_name` on its `platform` (Windows when installed.json has none) gets `update = GameUpdate::Waiting`; `HeroicGame::version` is the installed build. No assets.json, one that can't be parsed (no warning: Heroic rewrites it), a game it doesn't list or an empty `version` all mean no update. `HeroicMerge` passes `update` on in `HeroicInstalled`, and the library sets `Game::update` from it (see [steam.md](steam.md#updates) for what the chip, arrow, Launch button and bar do with it).
 
 The flags say what the absence of a game means. `libraryKnown` is only true for a readable cache that lists something, because Heroic can blank a store it can't read. `installedOk` and `playTimeOk` are true when the file was read or doesn't exist. Nothing here decides anything from them: that's `HeroicMerge`.
 
-`HeroicState::games()` joins the two lists, with `installed.json` deciding what's installed, as the cache only changes on a refresh. `watchPaths()` is what `LibraryStore` watches: all three files. `lastPlayed()` reads one game's date for a running session. `cachedImage()` finds an image in `images-cache/`, where Heroic names a copy by the SHA-256 of its URL plus its resize parameters.
+`HeroicState::games()` joins the two lists, with `installed.json` deciding what's installed, as the cache only changes on a refresh. `watchPaths()` is what `LibraryStore` watches: all four files. `lastPlayed()` reads one game's date for a running session. `cachedImage()` finds an image in `images-cache/`, where Heroic names a copy by the SHA-256 of its URL plus its resize parameters.
 
 `HeroicListing` is the part of a scan the disk cache keeps. It's keyed by game id and holds no art URLs, so the first frame doesn't read them.
 
