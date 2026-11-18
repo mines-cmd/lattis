@@ -4,6 +4,7 @@
 #include "dateformat.h"
 #include "emulatorscreenshots.h"
 #include "gameid.h"
+#include "heroicsaves.h"
 #include "igdb.h"
 #include "launchcommand.h"
 #include "libraryoverview.h"
@@ -6246,6 +6247,68 @@ QVariantMap Library::uninstallProtonGame(const QString &id, bool files, bool pre
     if (const bool hide = action == QLatin1String("hide"); hide != game.hidden)
         values.append({QStringLiteral("hidden"), hide ? QVariant(true) : QVariant()});
     return withError(values.isEmpty() ? QString() : m_store.setGameValues(id, values));
+}
+
+QString Library::epicAppName(const QString &id) const
+{
+    for (const HeroicEntry &entry : m_store.snapshot().content.heroic) {
+        if (entry.id == id)
+            return entry.appName;
+    }
+    return {};
+}
+
+QVariantMap Library::epicUninstallChoices(const QString &id)
+{
+    const LibrarySnapshot &s = m_store.snapshot();
+    const QString appName = epicAppName(id);
+    if (appName.isEmpty() || !s.heroic.install.found())
+        return {};
+    const QString installDir = s.heroic.installed.value(id).installDir;
+    const QString prefix = HeroicSaves::ownPrefix(s.heroic.install.root, appName);
+    const Uninstall::Places places = uninstallPlaces(id);
+    const QString refused = installDir.isEmpty() ? QString() : Uninstall::refusal(installDir, places);
+    const QString prefixRefused = prefix.isEmpty() || !QFileInfo(prefix).isDir() ? QString()
+                                                                                : Uninstall::refusal(prefix, places);
+
+    const QString files = refused.isEmpty() ? installDir : QString();
+    const QString prefixDir = prefixRefused.isEmpty() && QFileInfo(prefix).isDir() ? prefix : QString();
+    QtConcurrent::run([files, prefixDir] {
+        const auto size = [](const QString &path) {
+            return path.isEmpty() ? QString()
+                                  : QLocale().formattedDataSize(folderSize(path), 1, QLocale::DataSizeTraditionalFormat);
+        };
+        return std::pair(size(files), size(prefixDir));
+    }).then(this, [this, id](const std::pair<QString, QString> &sizes) {
+        emit uninstallSizes(id, sizes.first, sizes.second);
+    });
+    return {{QStringLiteral("installDir"), installDir.isEmpty() ? QString() : m_store.writtenPath(installDir)},
+            {QStringLiteral("installDirRefused"), refused},
+            {QStringLiteral("prefix"), prefixDir.isEmpty() ? QString() : m_store.writtenPath(prefixDir)},
+            {QStringLiteral("prefixRefused"), prefixRefused}};
+}
+
+QVariantMap Library::removeEpicPrefix(const QString &id, bool permanent)
+{
+    const auto withError = [](const QString &error) { return QVariantMap{{QStringLiteral("error"), error}}; };
+    if (readOnly())
+        return withError(tr("The library is read-only; nothing was deleted"));
+    const LibrarySnapshot &s = m_store.snapshot();
+    const QString appName = epicAppName(id);
+    const QString prefix = appName.isEmpty() ? QString() : HeroicSaves::ownPrefix(s.heroic.install.root, appName);
+    if (prefix.isEmpty() || !QFileInfo(prefix).isDir())
+        return withError(tr("%1 has no Wine prefix of its own").arg(s.content.games.value(id).title));
+    if (const QString why = Uninstall::refusal(prefix, uninstallPlaces(id)); !why.isEmpty())
+        return withError(tr("The Wine prefix can't be deleted: %1").arg(why));
+    const Uninstall::Removal r = Uninstall::remove(prefix, permanent, m_trash);
+    if (r.needsPermanent)
+        return {{QStringLiteral("trashless"), m_store.writtenPath(prefix)}};
+    if (!r.error.isEmpty()) {
+        qCWarning(lcLibrary).noquote() << QStringLiteral("%1: prefix not removed: %2").arg(id, r.error);
+        return withError(r.error);
+    }
+    qCInfo(lcLibrary).noquote() << QStringLiteral("%1: removed %2").arg(id, prefix);
+    return {};
 }
 
 namespace {

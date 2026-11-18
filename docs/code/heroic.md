@@ -36,7 +36,7 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 
 | File | Contents |
 |---|---|
-| `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `launchArgs()`, `openArgs()` |
+| `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `findLegendary()`, `launchArgs()`, `openArgs()` |
 | `heroicscan.*` | `HeroicState`, `HeroicGame`, `HeroicPlayTime`, `HeroicListing`; `scan()`, `lastPlayed()`, `cachedImage()` |
-| `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `expandCloudSaveFolder()` |
+| `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `ownPrefix()`, `expandCloudSaveFolder()` |
 | `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` |

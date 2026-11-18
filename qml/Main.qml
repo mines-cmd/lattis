@@ -1119,11 +1119,20 @@ ApplicationWindow {
         if (game.platform === "steam" && (game.steamUninstallable ?? false)) {
             steamUninstall.active = true
             steamUninstall.item.ask(game)
+        } else if (game.platform === "epic" && (game.installed ?? false)) {
+            epicUninstall.active = true
+            epicUninstall.item.ask(game)
         } else if (game.platform === "proton" || game.platform === "linux") {
             protonUninstall.active = true
             protonUninstall.next = game.id === browser.selectedId ? browser.neighborOf(game.id) : ""
             protonUninstall.item.ask(game)
         }
+    }
+
+    Loader {
+        id: epicUninstall
+        active: false
+        source: "views/EpicUninstall.qml"
     }
 
     Loader {

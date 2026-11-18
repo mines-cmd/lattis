@@ -75,13 +75,6 @@ AppDialog {
         }
     }
 
-    component Hint: Label {
-        Layout.fillWidth: true
-        leftPadding: Theme.controls.checkboxSize + Theme.layout.spacing
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.hintColor
-        font.pixelSize: Theme.gameEditor.hintFontSize
-    }
     component Card: Surface {
         default property alias fields: cardColumn.data
 
@@ -100,11 +93,6 @@ AppDialog {
             anchors.margins: Theme.gameEditor.cardPadding
             spacing: Theme.gameEditor.rowSpacing
         }
-    }
-    component PathHint: Hint {
-        font.family: Theme.font.monoFamily
-        font.pixelSize: Theme.gameEditor.pathFontSize
-        wrapMode: Text.WrapAnywhere
     }
 
     Label {
@@ -143,16 +131,16 @@ AppDialog {
                         text: qsTr("Delete the game's files")
                         onToggled: if (checked) steamBox.checked = true
                     }
-                    PathHint {
+                    DialogPathHint {
                         text: root.choices.installDir ?? ""
                     }
-                    Hint {
+                    DialogHint {
                         text: (root.choices.installDirRefused ?? "") !== ""
                               ? qsTr("They stay: %1.").arg(root.choices.installDirRefused)
                               : root.filesSize !== "" ? root.filesSize : qsTr("Adding up…")
                     }
                     // A Linux game's saves are its own business: often in ~/.local/share or ~/.config.
-                    Hint {
+                    DialogHint {
                         visible: root.linux && root.deletesFiles
                         text: root.removes
                               ? qsTr("Saves the game keeps elsewhere, like in ~/.local/share, stay.")
@@ -173,7 +161,7 @@ AppDialog {
                         enabled: !root.deletesFiles
                         text: qsTr("Remove its shortcut from Steam")
                     }
-                    Hint {
+                    DialogHint {
                         text: {
                             if (root.deletesFiles)
                                 return qsTr("It goes with the game's files: nothing would be left for it to run.")
@@ -199,10 +187,10 @@ AppDialog {
                     id: prefixBox
                     text: qsTr("Delete its Wine prefix")
                 }
-                PathHint {
+                DialogPathHint {
                     text: root.choices.prefix ?? ""
                 }
-                Hint {
+                DialogHint {
                     text: (root.prefixSize !== "" ? root.prefixSize : qsTr("Adding up…")) + "  ·  "
                           + qsTr("It holds the game's saves and settings.")
                           + (root.deletesPrefix && !root.removesShortcut

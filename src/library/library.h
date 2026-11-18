@@ -394,6 +394,9 @@ public:
     Q_INVOKABLE QVariantMap uninstallChoices(const QString &id);
     QVariantMap uninstallProtonGame(const QString &id, bool files, bool prefix, bool shortcut,
                                     const QString &action, bool permanent);
+    Q_INVOKABLE QVariantMap epicUninstallChoices(const QString &id);
+    QString epicAppName(const QString &id) const;
+    QVariantMap removeEpicPrefix(const QString &id, bool permanent);
     void setTrash(const Uninstall::Trash &trash) { m_trash = trash; }
 
     QVariantList tags() const { return m_tags; }

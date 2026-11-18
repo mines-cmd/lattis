@@ -24,6 +24,10 @@ namespace HeroicSaves {
 // Reads only; `systemUser` is the user a non-Proton Wine prefix is made for.
 HeroicSavesInfo read(const QString &root, const QString &appName, const QString &systemUser);
 
+// The prefix only this game uses: named in its own config, not Heroic's default and not another game's. Empty
+// otherwise, since deleting a shared prefix would take other games' saves with it.
+QString ownPrefix(const QString &root, const QString &appName);
+
 // Epic's folder with its variables filled in, as one absolute glob. Empty when a variable can't be
 // resolved: one under the prefix with no prefix, or one Legendary doesn't have.
 QString expandCloudSaveFolder(const QString &folder, const QString &prefix, const QString &wineUser,

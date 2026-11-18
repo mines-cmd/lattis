@@ -472,7 +472,8 @@ SettingsMenu {
     Entry {
         actionName: "uninstall_game"
         iconPath: Icons.deleteBin6Line
-        visible: !root.multi && (root.game.platform === "steam" ? (root.game.steamUninstallable ?? false) : root.programGame)
+        visible: !root.multi && (root.game.platform === "steam" ? (root.game.steamUninstallable ?? false)
+                                 : root.game.platform === "epic" ? root.installed : root.programGame)
         text: qsTr("Uninstall")
         danger: true
     }

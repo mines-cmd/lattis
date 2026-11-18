@@ -46,6 +46,10 @@ HeroicInstall find(const HeroicLocations &where, const QString &configuredPath =
 
 HeroicProgram findProgram(HeroicInstall::Kind kind, const HeroicLocations &where);
 
+// Heroic's own copy of Legendary, which it runs to uninstall a game; empty for a Flatpak (its files aren't
+// reachable from outside the sandbox) and when none is found.
+QString findLegendary(const HeroicLocations &where);
+
 QStringList launchArgs(const HeroicProgram &program, const QString &appName);
 QStringList openArgs(const HeroicProgram &program);
 

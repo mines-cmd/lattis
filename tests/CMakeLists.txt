@@ -59,6 +59,7 @@ set(LIBRARY_FILE_SOURCES
     ../src/library/heroicmerge.h ../src/library/heroicmerge.cpp
     ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp
     ../src/heroic/heroicscan.h ../src/heroic/heroicscan.cpp
+    ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
     ../src/heroic/heroicsettings.h ../src/heroic/heroicsettings.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp

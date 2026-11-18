@@ -947,6 +947,11 @@ Item {
             confirmUninstall.ask(game)
             return
         }
+        if (game.platform === "epic") {
+            epicUninstall.active = true
+            epicUninstall.item.ask(game)
+            return
+        }
         protonUninstall.active = true
         protonUninstall.next = nextGame()
         protonUninstall.item.ask(game)
@@ -978,6 +983,8 @@ Item {
             confirmUninstall.close()
             if (protonUninstall.item)
                 protonUninstall.item.close()
+            if (epicUninstall.item)
+                epicUninstall.item.close()
             root.resetLookup()
             launchPage.forgetUpdates()
             Metadata.discardDownloads()
@@ -1244,6 +1251,7 @@ Item {
             },
             SettingsButton {
                 visible: !root.adding && (root.game.platform === "steam" ? (root.game.steamUninstallable ?? false)
+                                          : root.game.platform === "epic" ? (root.game.installed ?? false)
                                           : root.programGame)
                 text: qsTr("Uninstall")
                 danger: true
@@ -1395,6 +1403,15 @@ Item {
         id: confirmUninstall
         onFailed: text => error.text = text
         onDone: dialog.close()
+    }
+
+    Loader {
+        id: epicUninstall
+        active: false
+        sourceComponent: EpicUninstall {
+            scrim: false
+            onDone: dialog.close()
+        }
     }
 
     Loader {

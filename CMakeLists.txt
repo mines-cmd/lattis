@@ -120,6 +120,8 @@ qt_add_qml_module(lattis
         qml/components/Unfold.qml
         qml/components/LogoScrim.qml
         qml/components/AppDialog.qml
+        qml/components/DialogHint.qml
+        qml/components/DialogPathHint.qml
         qml/components/Scrim.qml
         qml/components/PopoverBackground.qml
         qml/components/ScreenSwap.qml
@@ -236,6 +238,7 @@ qt_add_qml_module(lattis
         qml/views/StatsPeriodPicker.qml
         qml/views/SteamUninstallPrompt.qml
         qml/views/ProtonUninstall.qml
+        qml/views/EpicUninstall.qml
         qml/views/LookupRow.qml
         qml/views/ArtBrowser.qml
         qml/views/DetailedLookup.qml

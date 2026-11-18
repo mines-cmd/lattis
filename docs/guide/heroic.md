@@ -44,7 +44,9 @@ When you run the guide again, the step counts what's already in your library and
 
 The game shows as running until Heroic says it closed. If a launch stops early, for example because the install folder is gone, Heroic opens its own dialog and nothing ends the session in Lattis: use **Close** on the Launch button.
 
-**Install** opens Heroic, copies the game's title and tells you to paste it in Heroic's search, because Heroic has no way to open a game's page from outside. Uninstall a game in Heroic too.
+**Install** opens Heroic, copies the game's title and tells you to paste it in Heroic's search, because Heroic has no way to open a game's page from outside.
+
+**Uninstall** (the game's menu and Properties) runs Heroic's own copy of Legendary, so Heroic doesn't need to be open. It deletes the game's files for good, not to the trash. If the game has a Wine prefix of its own (one no other game and not Heroic's default prefix uses), you can delete that too; it goes to the trash and holds the game's saves. The game stays in the list as not installed, with its play time, tags and art. With a Flatpak Heroic the button asks you to uninstall in Heroic instead.
 
 **Open Heroic** is on the game's page and in its menu (Ctrl+O), and on Settings → Heroic.
 

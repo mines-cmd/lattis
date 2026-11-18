@@ -7,6 +7,7 @@
 #include <QElapsedTimer>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QSet>
 #include <QLoggingCategory>
 #include <QObject>
 #include <QStringList>
@@ -78,6 +79,11 @@ public:
     Q_INVOKABLE QString missingEmulator(const QString &gameId) const;
     Q_INVOKABLE QString closeSteamAndApply();
     Q_INVOKABLE QString openHeroic();
+    Q_INVOKABLE bool legendaryFound() const;
+    // Heroic's Legendary deletes the files for good; the prefix goes to the trash. The answer comes as
+    // epicUninstalled; a result with `trashless` asks to run it again with files off and permanent on.
+    Q_INVOKABLE QString uninstallEpic(const QString &gameId, bool files, bool prefix, bool permanent);
+    void setLegendaryProgram(const QString &program) { m_legendary = program; }
     bool closingSteam() const { return m_steamClosing != nullptr; }
     Q_INVOKABLE bool steamRunning() const;
     // Hands a steam:// URL to Steam, bare; the error, or empty.
@@ -121,6 +127,7 @@ public:
     void setSessionPollInterval(int ms) { m_sessionPollMs = ms; }
 
 signals:
+    void epicUninstalled(const QString &gameId, const QVariantMap &result);
     void runningChanged();
     void closingSteamChanged();
     void settingsChanged();
@@ -217,6 +224,8 @@ private:
     QTimer m_steamCloseTimer;
     QString m_launchAfterClose;
     HeroicProgram m_heroicProgram;
+    QString m_legendary;
+    QSet<QString> m_epicUninstalling;
     FindSaves m_findSaves;
     std::function<bool(const QString &)> m_updating;
     QHash<QString, HeroicSession> m_heroicSessions;

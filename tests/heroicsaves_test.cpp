@@ -55,6 +55,14 @@ private slots:
         QCOMPARE(info.wineUser, kUser);
     }
 
+    void ownPrefixIsOnlyAPrefixNoOtherGameUses()
+    {
+        QCOMPARE(HeroicSaves::ownPrefix(kRoot, QStringLiteral("StrandedApp")), kPrefix);
+        // No config of its own: it would use the default, which is shared.
+        QVERIFY(HeroicSaves::ownPrefix(kRoot, QStringLiteral("SharedApp")).isEmpty());
+        QVERIFY(HeroicSaves::ownPrefix(kRoot, QStringLiteral("InstallApp")).isEmpty());
+    }
+
     void aGameWithoutAConfigFileGetsTheDefaults()
     {
         const HeroicSavesInfo info = read(QStringLiteral("InstallApp"));

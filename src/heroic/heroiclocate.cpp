@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QSysInfo>
 #include <QUrl>
 
 namespace {
@@ -120,6 +121,24 @@ HeroicInstall find(const HeroicLocations &where, const QString &configuredPath)
     }
     install.program = findProgram(install.kind, where);
     return install;
+}
+
+QString findLegendary(const HeroicLocations &where)
+{
+    const QString arch = QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("arm64")
+                                                                                      : QStringLiteral("x64");
+    const QString relative = QStringLiteral("/resources/app.asar.unpacked/build/bin/%1/linux/legendary").arg(arch);
+    QStringList roots = {QStringLiteral("/usr/lib64/heroic"), QStringLiteral("/usr/lib/heroic"),
+                         QStringLiteral("/opt/Heroic")};
+    // `heroic` on the PATH is usually a link into the install folder.
+    if (const QString heroic = canonical(QStandardPaths::findExecutable(QStringLiteral("heroic"), where.pathDirs));
+        !heroic.isEmpty())
+        roots.prepend(QFileInfo(heroic).absolutePath());
+    for (const QString &root : std::as_const(roots)) {
+        if (QFileInfo(root + relative).isExecutable())
+            return root + relative;
+    }
+    return QStandardPaths::findExecutable(QStringLiteral("legendary"), where.pathDirs);
 }
 
 QStringList launchArgs(const HeroicProgram &program, const QString &appName)

@@ -122,6 +122,8 @@ The tab list on the left. Follows the Settings sidebar until set.
 
 - `label_color`, `label_spacing`: field names and their gap to the field.
 - `hint_color`, `hint_font_size`: notes under a field.
+- `danger_color`: the mark and note on what an uninstall deletes for good.
+- `divider`: the line above a dialog's closing note.
 - `row_spacing`: the space between fields.
 - `option_row_bleed`: how far the highlight of a row with its control at the right reaches past it.
 - `description_height`: the description box.

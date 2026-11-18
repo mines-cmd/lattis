@@ -84,6 +84,34 @@ HeroicSavesInfo read(const QString &root, const QString &appName, const QString 
     return info;
 }
 
+QString ownPrefix(const QString &root, const QString &appName)
+{
+    QStringList warnings;
+    const auto prefixOf = [&](const QJsonObject &settings) {
+        const QString prefix = settings.value(QLatin1String("winePrefix")).toString();
+        return prefix.isEmpty() ? QString() : QDir::cleanPath(absolute(prefix));
+    };
+    const QString own = prefixOf(readObject(root + QStringLiteral("/GamesConfig/") + appName + QStringLiteral(".json"),
+                                            warnings)
+                                     .value(appName)
+                                     .toObject());
+    if (own.isEmpty())
+        return {};
+    const QJsonObject defaults = readObject(root + QStringLiteral("/config.json"), warnings)
+                                     .value(QLatin1String("defaultSettings"))
+                                     .toObject();
+    if (prefixOf(defaults) == own)
+        return {};
+    const QDir configs(root + QStringLiteral("/GamesConfig"));
+    for (const QString &name : configs.entryList({QStringLiteral("*.json")}, QDir::Files)) {
+        const QString other = name.chopped(5);
+        if (other != appName
+            && prefixOf(readObject(configs.filePath(name), warnings).value(other).toObject()) == own)
+            return {};
+    }
+    return own;
+}
+
 QString expandCloudSaveFolder(const QString &folder, const QString &prefix, const QString &wineUser,
                               const QString &installDir)
 {
