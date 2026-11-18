@@ -552,6 +552,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `platformSettings` | Every platform, for Settings → Platforms (below) |
 | `steam` | Settings → Steam (below) |
 | `steamWaiting` | Games with edits waiting for Steam (below) |
+| `heroicWaiting` | Epic games with edits waiting for Heroic to close: `id`, `title`, `changes` |
 | `download` | The game Steam downloads now, for the download bar: `gameId`, `name`, `icon`, `state` (`"downloading"` or `"paused"`), `percent` (`-1` unknown) and `installing`; empty when none. Steam runs one download at a time: the running game, else the first paused one in library order. `downloadChanged` is emitted only when the map changes |
 
 ### Roles

@@ -977,8 +977,42 @@ void Library::updateDownloadBar()
     emit downloadChanged();
 }
 
+void Library::updateHeroicWaiting()
+{
+    const auto describe = [](const HeroicGameEdits &e) {
+        QStringList names;
+        if (e.wine)
+            names << tr("Wine version");
+        if (e.launcherArgs)
+            names << tr("launch options");
+        if (e.showMangohud || e.useGameMode || e.environment || e.wrappers)
+            names << tr("presets");
+        return names.join(QStringLiteral(", "));
+    };
+    QVariantList out;
+    if (!m_heroicPending.isEmpty()) {
+        for (const Game &g : std::as_const(m_games)) {
+            if (g.launcher() != QLatin1String("heroic"))
+                continue;
+            const auto it = m_heroicPending.constFind(epicAppName(g.id));
+            if (it != m_heroicPending.cend())
+                out.append(QVariantMap{{QStringLiteral("id"), g.id}, {QStringLiteral("title"), g.title},
+                                       {QStringLiteral("changes"), describe(it.value())}});
+        }
+        std::sort(out.begin(), out.end(), [](const QVariant &a, const QVariant &b) {
+            return a.toMap().value(QStringLiteral("title")).toString().compare(
+                       b.toMap().value(QStringLiteral("title")).toString(), Qt::CaseInsensitive) < 0;
+        });
+    }
+    if (out == m_heroicWaiting)
+        return;
+    m_heroicWaiting = std::move(out);
+    emit heroicWaitingChanged();
+}
+
 void Library::updateSteam()
 {
+    updateHeroicWaiting();
     if (QVariantList waiting = buildSteamWaiting(); waiting != m_steamWaiting) {
         m_steamWaiting = std::move(waiting);
         emit steamWaitingChanged();
@@ -6406,6 +6440,7 @@ QString Library::saveHeroicSettings(const QString &id, const QVariantMap &settin
         HeroicGameConfig::merge(m_heroicPending[appName], edits);
         saveHeroicPending();
         applyHeroicPending();
+        updateHeroicWaiting();
         emit dataChanged(index(0), index(int(m_rows.size()) - 1));
         emit gamesChanged();
         return {};
@@ -6446,6 +6481,7 @@ void Library::setHeroicPendingFile(const QString &path)
     }
     if (!m_heroicPending.isEmpty())
         applyHeroicPending();
+    updateHeroicWaiting();
 }
 
 void Library::saveHeroicPending() const
@@ -6492,6 +6528,7 @@ void Library::applyHeroicPending()
         qCInfo(lcLibrary).noquote() << QStringLiteral("%1: applied its waiting edits to Heroic").arg(it.key());
     }
     saveHeroicPending();
+    updateHeroicWaiting();
     emit dataChanged(index(0), index(int(m_rows.size()) - 1));
     emit gamesChanged();
 }

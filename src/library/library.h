@@ -103,6 +103,7 @@ class Library : public QAbstractListModel
     Q_PROPERTY(QVariantMap steam READ steam NOTIFY steamChanged)
     Q_PROPERTY(QVariantMap heroic READ heroic NOTIFY heroicChanged)
     Q_PROPERTY(QVariantList steamWaiting READ steamWaiting NOTIFY steamWaitingChanged)
+    Q_PROPERTY(QVariantList heroicWaiting READ heroicWaiting NOTIFY heroicWaitingChanged)
     Q_PROPERTY(QVariantMap download READ download NOTIFY downloadChanged)
     Q_PROPERTY(QVariantMap groupChange READ groupChange NOTIFY groupChangeChanged)
 
@@ -354,6 +355,7 @@ public:
 
     QVariantMap steam() const;
     QVariantList steamWaiting() const { return m_steamWaiting; }
+    QVariantList heroicWaiting() const { return m_heroicWaiting; }
     QVariantMap download() const { return m_download; }
     QVariantMap groupChange() const { return m_groupChange; }
     Q_INVOKABLE QString setSteamValue(const QString &key, const QVariant &value);
@@ -478,6 +480,7 @@ signals:
     void steamChanged();
     void heroicChanged();
     void steamWaitingChanged();
+    void heroicWaitingChanged();
     void downloadChanged();
     void groupChangeChanged();
     void uninstallSizes(const QString &id, const QString &installDir, const QString &prefix);
@@ -553,6 +556,7 @@ private:
     QString saveSettingsValue(const QString &section, const QString &key, const QString &formatted);
     QVariantMap buildSteam() const;
     QVariantList buildSteamWaiting() const;
+    void updateHeroicWaiting();
     void updateSteam();
     QVariantMap buildHeroic() const;
     void updateHeroic();
@@ -694,6 +698,7 @@ private:
     std::function<bool()> m_heroicRunning = [] { return HeroicLocate::running(); };
     SteamDownloads m_downloads;
     QVariantList m_steamWaiting;
+    QVariantList m_heroicWaiting;
     QVariantMap m_download;
     QFileSystemWatcher m_settingsWatcher;
     QTimer m_settingsTimer;

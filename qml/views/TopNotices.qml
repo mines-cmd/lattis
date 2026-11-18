@@ -8,10 +8,14 @@ Item {
 
     property bool startedUp: false
 
+    // Games waiting on Steam, then on Heroic, each tagged with its launcher.
+    readonly property var waitingGames: Library.steamWaiting.map(w => Object.assign({ launcher: "Steam" }, w))
+                                        .concat(Library.heroicWaiting.map(w => Object.assign({ launcher: "Heroic" }, w)))
+
     // Most urgent first; a notice joins the deck by taking a place in this list.
     readonly property var ranked: {
         const list = []
-        if (!Library.readOnly && Library.steamWaiting.length > 0)
+        if (!Library.readOnly && waitingGames.length > 0)
             list.push("steam")
         if (Library.readOnly)
             list.push("readOnly")
@@ -115,16 +119,22 @@ Item {
 
             NoticeBar {
                 id: steamNotice
-                readonly property int waiting: Library.steamWaiting.length
+                readonly property int waiting: root.waitingGames.length
+                readonly property bool steamWaiting: Library.steamWaiting.length > 0
                 anchors.fill: parent
                 warning: true
                 count: root.fanned ? 1 : root.total
                 peeking: !root.fanned && steamSlot.depth > 0
-                text: waiting === 1
-                      ? qsTr("Waiting for Steam to close: %1's %2")
-                            .arg(Library.steamWaiting[0].title).arg(Library.steamWaiting[0].changes || qsTr("changes"))
-                      : qsTr("Waiting for Steam to close: %1")
-                            .arg(Library.steamWaiting.map(w => w.title).join(", "))
+                text: {
+                    if (waiting === 1) {
+                        const w = root.waitingGames[0]
+                        return qsTr("Waiting for %1 to close: %2's %3").arg(w.launcher).arg(w.title).arg(w.changes || qsTr("changes"))
+                    }
+                    if (steamWaiting && Library.heroicWaiting.length > 0)
+                        return qsTr("Waiting to close: %1").arg(root.waitingGames.map(w => qsTr("%1 (%2)").arg(w.title).arg(w.launcher)).join(", "))
+                    const launcher = steamWaiting ? qsTr("Steam") : qsTr("Heroic")
+                    return qsTr("Waiting for %1 to close: %2").arg(launcher).arg(root.waitingGames.map(w => w.title).join(", "))
+                }
 
                 SettingsButton {
                     id: showButton
@@ -138,7 +148,7 @@ Item {
                     tip: steamNotice.waiting === 1 ? qsTr("Go to the game") : qsTr("Pick a game to go to, with what changed")
                     onClicked: {
                         if (steamNotice.waiting === 1)
-                            root.gameRequested(Library.steamWaiting[0].id)
+                            root.gameRequested(root.waitingGames[0].id)
                         else
                             waitingMenu.popup(showButton.parent, showButton.x, showButton.y + showButton.height)
                     }
@@ -151,6 +161,7 @@ Item {
                     rightPadding: Theme.layout.spacing
                     textColor: Theme.notice.warningActionText
                     font.weight: Theme.font.emphasisWeight
+                    visible: steamNotice.steamWaiting
                     enabled: !GameRunner.closingSteam
                     tip: qsTr("Closes Steam, writes these changes to it, and starts Steam again")
                     onClicked: {
@@ -167,7 +178,8 @@ Item {
                     rightPadding: Theme.layout.spacing
                     textColor: Theme.notice.dangerText
                     font.weight: Theme.font.emphasisWeight
-                    tip: qsTr("Drops these changes and keeps what Steam has")
+                    visible: steamNotice.steamWaiting
+                    tip: qsTr("Drops the changes waiting for Steam and keeps what Steam has")
                     onClicked: root.undoRequested()
                 }
             }
@@ -178,10 +190,11 @@ Item {
         id: waitingMenu
 
         Instantiator {
-            model: Library.steamWaiting
+            model: root.waitingGames
             delegate: SettingsMenuItem {
                 required property var modelData
-                text: modelData.changes !== "" ? qsTr("%1: %2").arg(modelData.title).arg(modelData.changes) : modelData.title
+                text: modelData.changes !== "" ? qsTr("%1: %2 (%3)").arg(modelData.title).arg(modelData.changes).arg(modelData.launcher)
+                                               : qsTr("%1 (%2)").arg(modelData.title).arg(modelData.launcher)
                 onTriggered: root.gameRequested(modelData.id)
             }
             onObjectAdded: (index, object) => waitingMenu.insertItem(index, object)
