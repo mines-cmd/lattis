@@ -97,7 +97,8 @@ Surface {
                 spacing: Theme.layout.spacing
 
                 Label {
-                    text: root.paused ? qsTr("Paused") : root.download.installing ? qsTr("Installing") : qsTr("Updating")
+                    text: root.paused ? qsTr("Paused") : root.download.installing ? qsTr("Installing")
+                                        : root.download.verifying ? qsTr("Verifying") : qsTr("Updating")
                     color: Theme.downloadBar.text
                 }
                 Label {
@@ -129,7 +130,8 @@ Surface {
 
                         ToolTip.visible: containsMouse && root.tooltips
                         ToolTip.text: root.download.installing ? qsTr("Cancel the install; Install again resumes")
-                                                                   : qsTr("Cancel the update; it resumes next time")
+                                                 : root.download.verifying ? qsTr("Cancel the check; verifying again starts over")
+                                                 : qsTr("Cancel the update; it resumes next time")
                         ToolTip.delay: 500
                     }
                 }

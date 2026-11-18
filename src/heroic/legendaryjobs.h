@@ -17,11 +17,16 @@
 
 // See docs/code/heroic.md.
 namespace LegendaryOutput {
-// The percentage of a `= Progress: 47.06% (272/578), …` line; none for any other line.
+// The percentage of a `= Progress: 47.06% (272/578), …` line or a `Verification progress: 12/219 (5.5%)` one;
+// none for any other line.
 std::optional<double> progress(const QString &line);
 
 // The line to show when a run failed: the last error line, else the last line that isn't a progress detail.
 QString failureLine(const QStringList &lines);
+
+// How many files a `repair` run found broken or missing (and so downloaded again), from its
+// `Verification failed, N file(s) corrupted, M file(s) are missing.` line; 0 when every file was fine.
+int repairedFiles(const QStringList &lines);
 }
 
 class LegendaryJobs : public QObject
@@ -52,6 +57,7 @@ public:
         bool ok = false;
         bool cancelled = false;
         bool started = true;
+        int repaired = 0; // a repair's broken and missing files
         QString error; // the last Legendary line, or why it didn't start
     };
 

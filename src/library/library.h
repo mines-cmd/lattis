@@ -396,7 +396,7 @@ public:
     // For tests and screenshots: stands in for looking at the running processes.
     void setHeroicRunningCheck(std::function<bool()> check) { m_heroicRunning = std::move(check); }
     Q_INVOKABLE bool heroicRunning() const { return m_heroicRunning(); }
-    // Legendary's visible jobs (LegendaryJobs::jobs()): an update job sets its game Downloading or Queued.
+    // Legendary's visible jobs (LegendaryJobs::jobs()): an update, install or repair job sets its game Downloading or Queued (Verifying for a repair).
     void setEpicJobs(const QVariantList &jobs);
     bool heroicChecksUpdates() const { return m_heroicSettings.checkUpdates; }
     QString epicInstallFolder() const { return m_heroicSettings.epicInstallFolder; }
@@ -711,6 +711,7 @@ private:
     {
         bool running = false;
         int percent = -1;
+        bool verify = false;
         bool operator==(const EpicJob &) const = default;
     };
     QHash<QString, EpicJob> m_epicJobs; // by appName: the jobs the runner shows

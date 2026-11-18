@@ -103,6 +103,8 @@ QString updateText(const Game &g)
         switch (g.update) {
         case GameUpdate::Waiting: return Library::tr("Available");
         case GameUpdate::Downloading:
+            if (g.verifying)
+                return percent < 0 ? Library::tr("Verifying") : Library::tr("Verifying · %1%").arg(percent);
             if (!g.installed)
                 return percent < 0 ? Library::tr("Installing") : Library::tr("Installing · %1%").arg(percent);
             return percent < 0 ? Library::tr("Updating") : Library::tr("Updating · %1%").arg(percent);
@@ -953,11 +955,12 @@ void Library::setEpicJobs(const QVariantList &jobs)
         const QVariantMap job = v.toMap();
         const QString state = job.value(QStringLiteral("state")).toString();
         const QString kind = job.value(QStringLiteral("kind")).toString();
-        if ((kind != QLatin1String("update") && kind != QLatin1String("install"))
+        if ((kind != QLatin1String("update") && kind != QLatin1String("install") && kind != QLatin1String("repair"))
             || (state != QLatin1String("running") && state != QLatin1String("queued")))
             continue;
         next.insert(job.value(QStringLiteral("appName")).toString(),
-                    {state == QLatin1String("running"), int(job.value(QStringLiteral("percent")).toDouble())});
+                    {state == QLatin1String("running"), int(job.value(QStringLiteral("percent")).toDouble()),
+                     kind == QLatin1String("repair")});
     }
     if (next == m_epicJobs)
         return;
@@ -1001,6 +1004,7 @@ bool Library::applyEpicJobs()
             if (m_epicOverlaid.contains(g.id) && (g.update == GameUpdate::Downloading || g.update == GameUpdate::Queued)) {
                 g.update = g.installed ? GameUpdate::Waiting : GameUpdate::None;
                 g.updatePercent = -1;
+                g.verifying = false;
                 changed = true;
             }
             continue;
@@ -1008,9 +1012,10 @@ bool Library::applyEpicJobs()
         overlaid.insert(g.id);
         const GameUpdate update = it->running ? GameUpdate::Downloading : GameUpdate::Queued;
         const int percent = it->running ? it->percent : -1;
-        changed = changed || update != g.update || percent != g.updatePercent;
+        changed = changed || update != g.update || percent != g.updatePercent || it->verify != g.verifying;
         g.update = update;
         g.updatePercent = percent;
+        g.verifying = it->verify;
     }
     m_epicOverlaid = overlaid;
     return changed;
@@ -1063,6 +1068,7 @@ void Library::updateDownloadBar()
                     {QStringLiteral("state"), updateStateName(shown->update)},
                     {QStringLiteral("percent"), updatePercent(*shown)},
                     {QStringLiteral("installing"), !shown->installed},
+                    {QStringLiteral("verifying"), shown->verifying},
                     {QStringLiteral("epic"), epicShown},
                     {QStringLiteral("appName"), epicShown ? epicAppName(shown->id) : QString()}};
     }
@@ -4756,8 +4762,11 @@ QString Library::launchTip(const Game &g) const
         }
         switch (g.update) {
         case GameUpdate::Waiting: return tr("Update the game; Lattis runs Heroic's Legendary");
-        case GameUpdate::Downloading: return tr("Legendary is updating the game");
-        case GameUpdate::Queued: return tr("The update waits for another Legendary job");
+        case GameUpdate::Downloading:
+            return g.verifying ? tr("Legendary is verifying the game's files") : tr("Legendary is updating the game");
+        case GameUpdate::Queued:
+            return g.verifying ? tr("The verification waits for another Legendary job")
+                               : tr("The update waits for another Legendary job");
         default: return tr("Launch through Heroic");
         }
     }
@@ -5152,6 +5161,7 @@ QVariantMap Library::gameMap(const Game &g) const
         {QStringLiteral("steamUninstallable"), g.installed || g.update == GameUpdate::Downloading
                                                    || g.update == GameUpdate::Paused},
         {QStringLiteral("steamUpdateText"), updateText(g)},
+        {QStringLiteral("verifying"), g.verifying},
         {QStringLiteral("steamUpdatePercent"), updatePercent(g)},
         {QStringLiteral("rom"), g.rom},
         {QStringLiteral("romPath"), g.romPath},

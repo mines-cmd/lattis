@@ -519,6 +519,15 @@ int main(int argc, char *argv[])
                     runner.update(game);
                 });
             }
+            const QStringList epicVerifies =
+                qEnvironmentVariable("LATTIS_EPIC_VERIFY").split(u',', Qt::SkipEmptyParts);
+            for (const QString &game : epicVerifies) {
+                QTimer::singleShot(actualDelay / 2, window, [&runner, game] {
+                    logHook("epicVerify", game);
+                    if (const QString error = runner.verifyEpic(game); !error.isEmpty())
+                        qWarning().noquote() << "epicVerify:" << error;
+                });
+            }
             const QStringList epicInstalls =
                 qEnvironmentVariable("LATTIS_EPIC_INSTALL").split(u',', Qt::SkipEmptyParts);
             for (const QString &game : epicInstalls) {

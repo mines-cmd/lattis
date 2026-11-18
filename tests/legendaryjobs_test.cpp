@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -16,6 +17,15 @@ QStringList captureLines(const QString &name)
     if (!file.open(QIODevice::ReadOnly))
         return {};
     return QString::fromUtf8(file.readAll()).split(u'\n');
+}
+
+// Verification's progress has carriage returns and no newlines.
+QStringList captureLinesCr(const QString &name)
+{
+    QFile file(QStringLiteral(LEGENDARY_DATA_DIR) + u'/' + name);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    return QString::fromUtf8(file.readAll()).split(QRegularExpression(u"[\r\n]"_s));
 }
 
 QList<double> percents(const QStringList &lines)
@@ -46,6 +56,14 @@ Bad)
     echo "[cli] INFO: starting" >&2
     echo "[cli] ERROR: The disk is full" >&2
     exit 1 ;;
+Fix)
+    echo "[cli] INFO: Verifying the game" >&2
+    printf 'Verification progress: 1/4 (25.0%%) [0.0 MiB/s]\t\rVerification progress: 2/4 (50.0%%) [0.0 MiB/s]\t\r'
+    sleep 0.3
+    printf 'Verification progress: 4/4 (100.0%%) [0.0 MiB/s]\t\r\n'
+    echo "[cli] ERROR: File is missing: a.dll" >&2
+    echo "[cli] ERROR: Verification failed, 1 file(s) corrupted, 2 file(s) are missing." >&2
+    exit 0 ;;
 Slow)
     trap 'echo "[cli] INFO: Command was aborted via KeyboardInterrupt, cleaning up..." >&2; exit 0' INT
     for p in 0.00 10.50 20.00 30.00 40.00 50.00 60.00 70.00 80.00 90.00; do
@@ -79,6 +97,9 @@ private slots:
     void progressStopsAtACancel();
     void otherLinesAreNotProgress();
     void failureLinePrefersTheError();
+    void verificationProgressOfARealRepair();
+    void repairedFilesOfRealRepairs();
+    void aRepairReportsItsFixes();
     void argumentsPerKind();
     void checkDueAfterADay();
     void runsAJobWithProgress();
@@ -183,6 +204,53 @@ void LegendaryJobsTest::failureLinePrefersTheError()
     // The real update's old-manifest error is the line a failing run of it would show.
     QCOMPARE(LegendaryOutput::failureLine(captureLines(u"update.stderr"_s)),
              u"Could not load old manifest, patching will not work!"_s);
+}
+
+void LegendaryJobsTest::verificationProgressOfARealRepair()
+{
+    for (const QString &name : {u"repair-ok.stdout"_s, u"repair-broken.stdout"_s}) {
+        const QList<double> p = percents(captureLinesCr(name));
+        QVERIFY2(p.size() > 100, qPrintable(name));
+        QVERIFY2(p.last() > 90.0, qPrintable(name));
+        for (qsizetype i = 1; i < p.size(); ++i)
+            QVERIFY2(p.at(i) >= p.at(i - 1), qPrintable(name));
+    }
+    QCOMPARE(LegendaryOutput::progress(u"Verification progress: 2/219 (0.3%) [0.0 MiB/s]\t"_s), 0.3);
+    QVERIFY(!LegendaryOutput::progress(u"[cli] INFO: Verification finished successfully."_s));
+}
+
+void LegendaryJobsTest::repairedFilesOfRealRepairs()
+{
+    QCOMPARE(LegendaryOutput::repairedFiles(captureLines(u"repair-ok.stderr"_s)), 0);
+    // One file changed and one deleted.
+    QCOMPARE(LegendaryOutput::repairedFiles(captureLines(u"repair-broken.stderr"_s)), 2);
+    QCOMPARE(LegendaryOutput::repairedFiles({}), 0);
+    QCOMPARE(LegendaryOutput::repairedFiles({u"[cli] ERROR: Verification failed, 3 file(s) corrupted"_s}), 3);
+    // Not a verification line.
+    QCOMPARE(LegendaryOutput::repairedFiles({u"[cli] INFO: 5 file(s) are missing"_s}), 0);
+}
+
+void LegendaryJobsTest::aRepairReportsItsFixes()
+{
+    LegendaryJobs *jobs = make();
+    QSignalSpy finished(jobs, &LegendaryJobs::finished);
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Repair, u"Fix"_s), QString());
+    QVERIFY(waitFor([&] { return jobs->job(u"Fix"_s).value(u"percent"_s).toDouble() >= 50.0; }));
+    QCOMPARE(jobs->job(u"Fix"_s).value(u"kind"_s).toString(), u"repair"_s);
+    QVERIFY(waitFor([&] { return finished.count() == 1; }));
+    const auto result = finished.first().first().value<LegendaryJobs::Result>();
+    QVERIFY(result.ok);
+    QCOMPARE(result.kind, LegendaryJobs::Kind::Repair);
+    QCOMPARE(result.repaired, 3);
+
+    QFile calls(m_dir.filePath(u"calls.txt"_s));
+    QVERIFY(calls.open(QIODevice::ReadOnly));
+    QCOMPARE(calls.readAll().trimmed(), QByteArray("repair Fix -y [/cfg/legendary]"));
+
+    // A fine run has nothing to fix.
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Repair, u"Fine"_s), QString());
+    QVERIFY(waitFor([&] { return finished.count() == 2; }));
+    QCOMPARE(finished.at(1).first().value<LegendaryJobs::Result>().repaired, 0);
 }
 
 void LegendaryJobsTest::argumentsPerKind()

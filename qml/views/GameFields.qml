@@ -51,7 +51,8 @@ QtObject {
     }
 
     readonly property var steamUpdateField: ({
-        label: (game.installed ?? true) ? qsTr("Update available") : qsTr("Installing"),
+        label: (game.verifying ?? false) ? qsTr("Game files")
+             : (game.installed ?? true) ? qsTr("Update available") : qsTr("Installing"),
         value: (game.steamUpdate ?? "none") !== "none" ? game.steamUpdateText ?? "" : "",
         icon: Icons.download, attention: true,
         attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground,

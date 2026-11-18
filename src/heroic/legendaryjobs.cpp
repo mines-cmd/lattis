@@ -42,11 +42,29 @@ constexpr int kTailLines = 300;
 
 std::optional<double> LegendaryOutput::progress(const QString &line)
 {
-    static const QRegularExpression re(QStringLiteral(R"(= Progress: (\d+(?:\.\d+)?)%)"));
+    static const QRegularExpression re(
+        QStringLiteral(R"((?:= Progress: |Verification progress: \d+/\d+ \()(\d+(?:\.\d+)?)%)"));
     const QRegularExpressionMatch m = re.match(line);
     if (!m.hasMatch())
         return std::nullopt;
     return m.captured(1).toDouble();
+}
+
+int LegendaryOutput::repairedFiles(const QStringList &lines)
+{
+    static const QRegularExpression corrupted(QStringLiteral(R"((\d+) file\(s\) corrupted)"));
+    static const QRegularExpression missing(QStringLiteral(R"((\d+) file\(s\) are missing)"));
+    for (auto it = lines.crbegin(); it != lines.crend(); ++it) {
+        if (!it->contains(QLatin1String("Verification failed")))
+            continue;
+        int count = 0;
+        if (const auto m = corrupted.match(*it); m.hasMatch())
+            count += m.captured(1).toInt();
+        if (const auto m = missing.match(*it); m.hasMatch())
+            count += m.captured(1).toInt();
+        return count;
+    }
+    return 0;
 }
 
 QString LegendaryOutput::failureLine(const QStringList &lines)
@@ -328,8 +346,16 @@ void LegendaryJobs::onProcessOutput()
     m_pending += m_process->readAll();
     qsizetype end;
     bool changed = false;
-    while ((end = m_pending.indexOf('\n')) >= 0) {
-        const QString line = QString::fromLocal8Bit(m_pending.left(end)).remove(u'\r');
+    // Verification's progress is on stdout, one update per carriage return and no newline until it ends.
+    const auto lineEnd = [this] {
+        for (qsizetype i = 0; i < m_pending.size(); ++i) {
+            if (m_pending.at(i) == '\n' || m_pending.at(i) == '\r')
+                return i;
+        }
+        return qsizetype(-1);
+    };
+    while ((end = lineEnd()) >= 0) {
+        const QString line = QString::fromLocal8Bit(m_pending.left(end));
         m_pending.remove(0, end + 1);
         if (const auto percent = LegendaryOutput::progress(line)) {
             Job &job = m_queue.first();
@@ -366,6 +392,8 @@ void LegendaryJobs::onFinished(int exitCode, QProcess::ExitStatus status)
     // Legendary exits with 0 after SIGINT too.
     result.cancelled = m_cancelling;
     result.ok = !m_cancelling && status == QProcess::NormalExit && exitCode == 0;
+    if (result.ok && result.kind == Kind::Repair)
+        result.repaired = LegendaryOutput::repairedFiles(m_tail);
     m_cancelling = false;
     if (!result.ok && !result.cancelled) {
         result.error = status == QProcess::NormalExit ? LegendaryOutput::failureLine(m_tail)

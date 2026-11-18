@@ -1103,6 +1103,7 @@ ApplicationWindow {
         case "hide_game": hideGame(game); break
         case "play_history": openPlayHistory(game); break
         case "steam_properties": showError(GameRunner.openSteamProperties(game.id)); break
+        case "verify_files": showError(GameRunner.verifyEpic(game.id)); break
         case "uninstall_game": uninstallGame(game); break
         }
     }

@@ -131,6 +131,17 @@ ColumnLayout {
                         onClicked: editor.folderPickerLoader.pickFor("install")
                     }
                     SettingsButton {
+                        id: verifyButton
+                        // The game's job, read again whenever Legendary's jobs change.
+                        readonly property var job: { void GameRunner.legendary.jobs; return GameRunner.epicJob(editor.game.id ?? "") }
+                        readonly property bool busy: (job.kind ?? "") !== "" && job.state !== "failed"
+                        visible: editor.heroicGame && (editor.game.installed ?? false) && GameRunner.legendaryFound()
+                        text: busy ? (job.kind === "repair" ? qsTr("Verifying") : qsTr("Updating")) : qsTr("Verify files")
+                        enabled: !busy
+                        tip: qsTr("Check every file against Epic's and download the ones that are broken or missing")
+                        onClicked: editor.errorLabel.text = GameRunner.verifyEpic(editor.game.id)
+                    }
+                    SettingsButton {
                         visible: editor.heroicGame
                         text: qsTr("Open Heroic")
                         tip: qsTr("This game's other settings and its updates are in Heroic")

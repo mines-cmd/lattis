@@ -77,6 +77,7 @@ struct Game
     GameUpdate update = GameUpdate::None;
     qint64 updateBytes = 0;
     int updatePercent = -1; // -1: unknown
+    bool verifying = false; // an Epic repair is what Downloading or Queued stands for
 
     QString installDir;
     // "owned" or "family" for a Steam game the Web API listed, else empty; sharedBy is the lenders' names.

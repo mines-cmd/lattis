@@ -305,6 +305,29 @@ QStringList GameRunner::epicJobTitles() const
     return titles;
 }
 
+QString GameRunner::verifyEpic(const QString &gameId)
+{
+    const Game *game = m_library->game(gameId);
+    const QString appName = m_library->epicAppName(gameId);
+    if (!game || appName.isEmpty())
+        return tr("Heroic isn't found");
+    if (!game->installed)
+        return tr("%1 isn't installed").arg(game->title);
+    if (legendaryProgram().isEmpty())
+        return tr("Heroic's Legendary isn't found; verify %1 in Heroic").arg(game->title);
+    if (m_library->readOnly())
+        return tr("The library is read-only; nothing was verified");
+    if (running().contains(gameId))
+        return tr("%1 is running; close it first").arg(game->title);
+    qCInfo(lcLaunch).noquote() << QStringLiteral("verifying %1").arg(gameId);
+    return m_legendaryJobs.enqueue(LegendaryJobs::Kind::Repair, appName);
+}
+
+QVariantMap GameRunner::epicJob(const QString &gameId) const
+{
+    return m_legendaryJobs.job(m_library->epicAppName(gameId));
+}
+
 QString GameRunner::installFolder() const
 {
     const QString chosen = m_library->epicInstallFolder();
@@ -742,6 +765,12 @@ void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
         m_library->store().refresh();
         if (result.kind == Kind::Install)
             emit message(tr("%1 installed").arg(epicTitle(result.appName)));
+    }
+    if (result.ok && result.kind == Kind::Repair) {
+        const QString title = epicTitle(result.appName);
+        emit message(result.repaired == 0 ? tr("%1: all files are fine").arg(title)
+                     : result.repaired == 1 ? tr("%1: fixed 1 file").arg(title)
+                                            : tr("%1: fixed %2 files").arg(title).arg(result.repaired));
     }
     if (result.ok || result.cancelled || result.kind == Kind::Check)
         return;

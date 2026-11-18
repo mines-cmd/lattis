@@ -102,6 +102,10 @@ public:
     Q_INVOKABLE QString sizeText(double bytes) const;
     // Queues `legendary install` into the folder and remembers it for the next install; the error, or empty.
     Q_INVOKABLE QString installEpic(const QString &gameId, const QString &folder);
+    // Queues `legendary repair` (checks every file, downloads the broken ones); the error, or empty. The result
+    // comes as `message`. epicJob is the game's job (appName, kind, percent, state, error), empty when it has none.
+    Q_INVOKABLE QString verifyEpic(const QString &gameId);
+    Q_INVOKABLE QVariantMap epicJob(const QString &gameId) const;
     void setLegendaryProgram(const QString &program) { m_legendary = program; }
     LegendaryJobs *legendary() { return &m_legendaryJobs; }
     bool closingSteam() const { return m_steamClosing != nullptr; }

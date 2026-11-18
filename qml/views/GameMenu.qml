@@ -432,6 +432,14 @@ SettingsMenu {
         text: qsTr("Steam properties")
     }
     Entry {
+        actionName: "verify_files"
+        iconPath: Icons.shieldCheckLine
+        // Without Legendary (a Flatpak Heroic) there is nothing to run; Heroic's own game page has it.
+        visible: !root.multi && root.launcher === "heroic" && root.installed && GameRunner.legendaryFound()
+        enabled: root.epicUpdate === "none" || root.epicUpdate === "waiting"
+        text: root.game.verifying ?? false ? qsTr("Verifying") : qsTr("Verify files")
+    }
+    Entry {
         actionName: "add_mod_manager"
         iconPath: Icons.puzzle
         visible: !root.multi && root.linkable
