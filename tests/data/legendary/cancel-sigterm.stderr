@@ -1,0 +1,26 @@
+[Core] INFO: Trying to re-use existing login session...
+[cli] INFO: Preparing download for "A Short Hike" (d6407c9e6fd54cb492b8c6635480d792)...
+[Core] ERROR: Could not load old manifest, patching will not work!
+[Core] INFO: Parsing game manifest...
+[Core] INFO: Install path: /home/user/Games/Heroic/AShortHike
+[Core] INFO: Selected CDN: egs-cloudfront-chunks.epicgamescdn.com (https)
+[DLM] INFO: Found 0 missing files.
+[cli] INFO: Install size: 308.78 MiB
+[cli] INFO: Download size: 214.55 MiB (Compression savings: 30.6%)
+[cli] INFO: Reusable size: 0.00 MiB (chunks) / 0.00 MiB (unchanged / skipped)
+[cli] INFO: Downloads are resumable, you can interrupt the download with CTRL-C and resume it using the same command later on.
+[DLManager] INFO: Download Manager running with process-id: 28291
+[DLManager] INFO: Starting download workers...
+[DLManager] INFO: Starting file writing worker...
+[DLManager] INFO: = Progress: 0.00% (0/578), Running for 00:00:00, ETA: 00:00:00
+[DLManager] INFO:  - Downloaded: 0.00 MiB, Written: 0.00 MiB
+[DLManager] INFO:  - Cache usage: 32.00 MiB, active tasks: 32
+[DLManager] INFO:  + Download	- 0.00 MiB/s (raw) / 0.00 MiB/s (decompressed)
+[DLManager] INFO:  + Disk	- 0.00 MiB/s (write) / 0.00 MiB/s (read)
+[DLManager] INFO: = Progress: 32.53% (188/578), Running for 00:00:01, ETA: 00:00:02
+[DLManager] INFO:  - Downloaded: 32.06 MiB, Written: 47.66 MiB
+[DLManager] INFO:  - Cache usage: 92.00 MiB, active tasks: 32
+[DLManager] INFO:  + Download	- 32.05 MiB/s (raw) / 106.97 MiB/s (decompressed)
+[DLManager] INFO:  + Disk	- 47.65 MiB/s (write) / 0.00 MiB/s (read)
+/usr/lib64/python3.14/multiprocessing/resource_tracker.py:475: UserWarning: resource_tracker: There appear to be 3 leaked semaphore objects to clean up at shutdown: {'/mp-lo8t5vai', '/mp-r096p5j5', '/mp-fdcqhwuo'}
+  warnings.warn(

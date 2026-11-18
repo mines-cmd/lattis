@@ -1,0 +1,28 @@
+{
+  "d6407c9e6fd54cb492b8c6635480d792": {
+    "app_name": "d6407c9e6fd54cb492b8c6635480d792",
+    "base_urls": [
+      "https://egs-cloudfront-chunks.epicgamescdn.com/Builds/Org/o-x6pmn2h8elkycylakfrdw79xp2hrpv/5900d5b75cb24e4ca6ac93c30155fb72/default",
+      "https://epicgames-download1.akamaized.net/Builds/Org/o-x6pmn2h8elkycylakfrdw79xp2hrpv/5900d5b75cb24e4ca6ac93c30155fb72/default",
+      "https://egdownload.fastly-edge.com/Builds/Org/o-x6pmn2h8elkycylakfrdw79xp2hrpv/5900d5b75cb24e4ca6ac93c30155fb72/default"
+    ],
+    "can_run_offline": true,
+    "egl_guid": "",
+    "executable": "AShortHike.exe",
+    "install_path": "/home/user/Games/Heroic/AShortHike",
+    "install_size": 323783140,
+    "install_tags": [],
+    "is_dlc": false,
+    "is_preloaded": false,
+    "launch_parameters": "",
+    "manifest_path": null,
+    "needs_verification": false,
+    "platform": "Windows",
+    "prereq_info": null,
+    "requires_ot": false,
+    "save_path": null,
+    "title": "A Short Hike",
+    "uninstaller": null,
+    "version": "1.10.1_patched_Windows"
+  }
+}

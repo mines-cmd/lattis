@@ -1,0 +1,46 @@
+{
+  "Windows": [
+    {
+      "app_name": "d6407c9e6fd54cb492b8c6635480d792",
+      "asset_id": "d6407c9e6fd54cb492b8c6635480d792",
+      "build_version": "1.10.1_patched_Windows",
+      "catalog_item_id": "018230f620e34503926e5c76525a8fd1",
+      "label_name": "Live-Windows",
+      "metadata": {},
+      "namespace": "fd0183d33a5a40ff8cd4a6ebb52f6ace",
+      "sidecar_rev": 0
+    },
+    {
+      "app_name": "40cb42e38c0b4a14a1bb133eb3291572",
+      "asset_id": "40cb42e38c0b4a14a1bb133eb3291572",
+      "build_version": "IdleDragons659164Live",
+      "catalog_item_id": "48353a502e72433298f25827e03dbff0",
+      "label_name": "Live-Windows",
+      "metadata": {
+        "update_type": "MINOR"
+      },
+      "namespace": "7e508f543b05465abe3a935960eb70ac",
+      "sidecar_rev": 0
+    },
+    {
+      "app_name": "UE_4.26",
+      "asset_id": "UE",
+      "build_version": "4.26.2-15973114+++UE4+Release-4.26-2023.1a-Windows",
+      "catalog_item_id": "3ddb1bad6e004b99a7192c1a29f2318a",
+      "label_name": "Live-Windows",
+      "metadata": {},
+      "namespace": "ue",
+      "sidecar_rev": 0
+    },
+    {
+      "app_name": "UE_4.26Chaos",
+      "asset_id": "UE",
+      "build_version": "4.26.2-15903758+++UE4+Release-4.26-Chaos-2023.1a-Windows",
+      "catalog_item_id": "5cba2afac392412a99c6b42d04c816e2",
+      "label_name": "Live-Windows",
+      "metadata": {},
+      "namespace": "ue",
+      "sidecar_rev": 0
+    }
+  ]
+}
