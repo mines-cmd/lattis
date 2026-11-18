@@ -103,6 +103,8 @@ QString updateText(const Game &g)
         switch (g.update) {
         case GameUpdate::Waiting: return Library::tr("Available");
         case GameUpdate::Downloading:
+            if (!g.installed)
+                return percent < 0 ? Library::tr("Installing") : Library::tr("Installing · %1%").arg(percent);
             return percent < 0 ? Library::tr("Updating") : Library::tr("Updating · %1%").arg(percent);
         case GameUpdate::Queued: return Library::tr("Queued");
         default: return {};
@@ -950,7 +952,8 @@ void Library::setEpicJobs(const QVariantList &jobs)
     for (const QVariant &v : jobs) {
         const QVariantMap job = v.toMap();
         const QString state = job.value(QStringLiteral("state")).toString();
-        if (job.value(QStringLiteral("kind")).toString() != QLatin1String("update")
+        const QString kind = job.value(QStringLiteral("kind")).toString();
+        if ((kind != QLatin1String("update") && kind != QLatin1String("install"))
             || (state != QLatin1String("running") && state != QLatin1String("queued")))
             continue;
         next.insert(job.value(QStringLiteral("appName")).toString(),
@@ -959,9 +962,21 @@ void Library::setEpicJobs(const QVariantList &jobs)
     if (next == m_epicJobs)
         return;
     m_epicJobs = next;
+    const QSet<QString> before = m_epicOverlaid;
     applyEpicJobs();
     updateDownloadBar();
-    if (!m_rows.isEmpty())
+    // With Installed only on, a game that isn't installed joins the list while its install runs, and leaves
+    // when that stops: the rows change, not only their data.
+    bool listChanged = false;
+    if (m_installedOnly) {
+        for (const Game &g : std::as_const(m_games)) {
+            if (!g.installed && before.contains(g.id) != m_epicOverlaid.contains(g.id))
+                listChanged = true;
+        }
+    }
+    if (listChanged)
+        rebuild();
+    else if (!m_rows.isEmpty())
         emit dataChanged(index(0), index(int(m_rows.size()) - 1));
 }
 
@@ -984,7 +999,7 @@ bool Library::applyEpicJobs()
         const auto it = byGame.constFind(g.id);
         if (it == byGame.cend()) {
             if (m_epicOverlaid.contains(g.id) && (g.update == GameUpdate::Downloading || g.update == GameUpdate::Queued)) {
-                g.update = GameUpdate::Waiting;
+                g.update = g.installed ? GameUpdate::Waiting : GameUpdate::None;
                 g.updatePercent = -1;
                 changed = true;
             }
@@ -1223,7 +1238,7 @@ QString Library::setHeroicValue(const QString &key, const QVariant &value)
     if (key == u"enabled" || key == u"whole_library" || key == u"check_updates") {
         if (!value.toBool())
             formatted = QStringLiteral("false");
-    } else if (key == u"path") {
+    } else if (key == u"path" || key == u"epic_install_folder") {
         if (const QString path = value.toString().trimmed(); !path.isEmpty())
             formatted = tomlString(path);
     } else {
@@ -4732,8 +4747,13 @@ QString Library::launchTip(const Game &g) const
         }
     }
     if (g.platform == kEpicPlatform) {
-        if (!g.installed)
-            return tr("Install through Heroic");
+        if (!g.installed) {
+            switch (g.update) {
+            case GameUpdate::Downloading: return tr("Legendary is installing the game");
+            case GameUpdate::Queued: return tr("The install waits for another Legendary job");
+            default: return tr("Install through Heroic");
+            }
+        }
         switch (g.update) {
         case GameUpdate::Waiting: return tr("Update the game; Lattis runs Heroic's Legendary");
         case GameUpdate::Downloading: return tr("Legendary is updating the game");

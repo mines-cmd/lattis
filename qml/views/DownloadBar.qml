@@ -128,7 +128,8 @@ Surface {
                         onClicked: GameRunner.legendary.cancel(root.download.appName)
 
                         ToolTip.visible: containsMouse && root.tooltips
-                        ToolTip.text: qsTr("Cancel the update; it resumes next time")
+                        ToolTip.text: root.download.installing ? qsTr("Cancel the install; Install again resumes")
+                                                                   : qsTr("Cancel the update; it resumes next time")
                         ToolTip.delay: 500
                     }
                 }

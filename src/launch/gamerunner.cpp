@@ -305,6 +305,104 @@ QStringList GameRunner::epicJobTitles() const
     return titles;
 }
 
+QString GameRunner::installFolder() const
+{
+    const QString chosen = m_library->epicInstallFolder();
+    if (!chosen.isEmpty())
+        return chosen;
+    return EpicInstall::defaultFolder(m_library->store().snapshot().heroic.install.root);
+}
+
+QVariantMap GameRunner::installPlan(const QString &appName, const EpicInstallInfo *info,
+                                    const QString &sizeState) const
+{
+    return {{QStringLiteral("appName"), appName},
+            {QStringLiteral("folder"), installFolder()},
+            {QStringLiteral("sizeState"), sizeState},
+            {QStringLiteral("downloadSize"), info ? double(info->downloadSize) : -1.0},
+            {QStringLiteral("diskSize"), info ? double(info->diskSize) : -1.0},
+            {QStringLiteral("platform"), info ? EpicInstall::platformFor(*info) : QStringLiteral("Windows")}};
+}
+
+QVariantMap GameRunner::epicInstallPlan(const QString &gameId)
+{
+    const QString appName = m_library->epicAppName(gameId);
+    if (appName.isEmpty())
+        return {};
+    std::optional<EpicInstallInfo> info;
+    if (const auto it = m_epicInfo.constFind(appName); it != m_epicInfo.cend())
+        info = it.value();
+    else
+        info = EpicInstall::cachedInfo(m_library->store().snapshot().heroic.install.root, appName);
+    if (info && !info->platform.isEmpty() && info->platform != EpicInstall::platformFor(*info))
+        info.reset();
+    if (info)
+        return installPlan(appName, &*info, QStringLiteral("known"));
+    if (legendaryProgram().isEmpty())
+        return installPlan(appName, nullptr, QStringLiteral("unknown"));
+    m_legendaryJobs.queryInfo(appName);
+    return installPlan(appName, nullptr, QStringLiteral("checking"));
+}
+
+void GameRunner::onInfoReady(const QString &appName, const QByteArray &json, const QString &error)
+{
+    std::optional<EpicInstallInfo> info;
+    if (error.isEmpty())
+        info = EpicInstall::parseInfo(json);
+    if (!error.isEmpty())
+        qCWarning(lcLaunch).noquote() << QStringLiteral("legendary info %1 failed: %2").arg(appName, error);
+    if (info)
+        m_epicInfo.insert(appName, *info);
+    emit epicInstallInfo(appName, installPlan(appName, info ? &*info : nullptr,
+                                              info ? QStringLiteral("known") : QStringLiteral("unknown")));
+}
+
+double GameRunner::freeSpace(const QString &folder) const
+{
+    // A screenshot's way to show "not enough space" without a full drive.
+    if (const QByteArray fake = qgetenv("LATTIS_FREE_SPACE"); !fake.isEmpty())
+        return fake.toDouble();
+    return double(EpicInstall::freeSpace(folder));
+}
+
+QString GameRunner::sizeText(double bytes) const
+{
+    return QLocale().formattedDataSize(qint64(bytes), 1, QLocale::DataSizeTraditionalFormat);
+}
+
+QString GameRunner::installEpic(const QString &gameId, const QString &folder)
+{
+    const Game *game = m_library->game(gameId);
+    const QString appName = m_library->epicAppName(gameId);
+    if (!game || appName.isEmpty())
+        return tr("Heroic isn't found");
+    if (game->installed)
+        return tr("%1 is installed already").arg(game->title);
+    if (folder.trimmed().isEmpty())
+        return tr("Choose a folder to install into");
+    if (legendaryProgram().isEmpty())
+        return tr("Heroic's Legendary isn't found; install %1 in Heroic").arg(game->title);
+    if (m_library->readOnly())
+        return tr("The library is read-only; nothing was installed");
+
+    std::optional<EpicInstallInfo> info;
+    if (const auto it = m_epicInfo.constFind(appName); it != m_epicInfo.cend())
+        info = it.value();
+    else
+        info = EpicInstall::cachedInfo(m_library->store().snapshot().heroic.install.root, appName);
+    const QString platform = info ? EpicInstall::platformFor(*info) : QStringLiteral("Windows");
+
+    const QString expanded = EpicInstall::expandHome(folder.trimmed());
+    qCInfo(lcLaunch).noquote() << QStringLiteral("installing %1 into %2").arg(game->id, expanded);
+    if (const QString error = m_legendaryJobs.enqueue(LegendaryJobs::Kind::Install, appName,
+                                                      EpicInstall::installArgs(expanded, platform));
+        !error.isEmpty())
+        return error;
+    if (folder.trimmed() != installFolder())
+        m_library->setHeroicValue(QStringLiteral("epic_install_folder"), folder.trimmed());
+    return {};
+}
+
 QVariantMap GameRunner::uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,
                                         const QString &action, bool permanent)
 {
@@ -640,8 +738,11 @@ void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
         }
         return;
     }
-    if (result.ok && result.kind == Kind::Update)
+    if (result.ok && (result.kind == Kind::Update || result.kind == Kind::Install)) {
         m_library->store().refresh();
+        if (result.kind == Kind::Install)
+            emit message(tr("%1 installed").arg(epicTitle(result.appName)));
+    }
     if (result.ok || result.cancelled || result.kind == Kind::Check)
         return;
     const QString title = epicTitle(result.appName);
@@ -767,6 +868,7 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
 {
     s_instance = this;
     connect(&m_legendaryJobs, &LegendaryJobs::finished, this, &GameRunner::onLegendaryFinished);
+    connect(&m_legendaryJobs, &LegendaryJobs::infoReady, this, &GameRunner::onInfoReady);
     connect(&m_legendaryJobs, &LegendaryJobs::jobsChanged, this,
             [this] { m_library->setEpicJobs(m_legendaryJobs.jobs()); });
     m_reloadTimer.setSingleShot(true);

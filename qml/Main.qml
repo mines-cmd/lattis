@@ -15,6 +15,12 @@ ApplicationWindow {
         }
         if (!game.installed && (game.launcher ?? "") === "")
             return
+        // Without Legendary (a Flatpak Heroic) it stays what it was: open Heroic and copy the title.
+        if (!game.installed && game.platform === "epic" && GameRunner.legendaryFound()) {
+            if ((game.steamUpdate ?? "none") === "none")
+                askEpicInstall(game)
+            return
+        }
         // Edits waiting for Steam to close: ask whether to restart it. With Steam closed,
         // they're written first without asking.
         if ((game.platform === "steam" || game.platform === "proton") && game.installed && game.pendingEdits === "steam"
@@ -92,6 +98,21 @@ ApplicationWindow {
     function askForceClose(game) {
         forceClosePrompt.active = true
         forceClosePrompt.item.ask(game)
+    }
+
+    function askEpicInstall(game) {
+        epicInstall.active = true
+        epicInstall.item.ask(game)
+    }
+
+    Loader {
+        id: epicInstall
+        active: false
+        source: "views/EpicInstallDialog.qml"
+    }
+    Connections {
+        target: epicInstall.item
+        function onClosed() { browser.focusList() }
     }
 
     function askSteamUndo() {

@@ -60,6 +60,8 @@ LaunchButton {
         }
     }
     tip: emulatorName !== "" ? qsTr("Install %1; Lattis finds it afterwards").arg(emulatorName)
+       : launcher === "heroic" && !installed && updateState === "none" && GameRunner.legendaryFound()
+         ? Actions.tip(qsTr("Install the game; Lattis runs Heroic's Legendary"), Actions.keys.launch)
        : (game.launchTip ?? "") !== "" ? Actions.tip(game.launchTip, Actions.keys.launch) : ""
 
     onClicked: {

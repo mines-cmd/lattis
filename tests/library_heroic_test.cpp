@@ -94,6 +94,8 @@ private slots:
     void editsWaitForHeroicToClose();
     void settingsShowWhatWasFound();
     void updateJobsSetTheGamesState();
+    void installJobsSetTheGamesState();
+    void installFolderIsRemembered();
     void settingsSaveTheirValues();
     void setupCountsTheScan();
     void setupShowsAFlatpakRoot();
@@ -824,6 +826,52 @@ void LibraryHeroicTest::updateJobsSetTheGamesState()
     library->setEpicJobs({});
     QCOMPARE(state(u"epic-fez"_s), u"waiting"_s);
     QVERIFY(library->download().isEmpty());
+}
+
+void LibraryHeroicTest::installJobsSetTheGamesState()
+{
+    writeLibrary(libraryCache(kLibrary));
+    writeInstalled(installedFile({u"FezApp"_s}));
+    auto library = openLibrary();
+    const auto game = [&](const QString &id) { return library->gameAt(library->rowOfGame(id)); };
+    const auto job = [](const QString &app, const QString &state, double percent) {
+        return QVariantMap{{u"appName"_s, app}, {u"kind"_s, u"install"_s}, {u"state"_s, state}, {u"percent"_s, percent}};
+    };
+    library->setInstalledOnly(false);
+    QVERIFY(!game(u"epic-a-short-hike"_s).value(u"installed"_s).toBool());
+    QCOMPARE(game(u"epic-a-short-hike"_s).value(u"steamUpdate"_s).toString(), u"none"_s);
+
+    library->setEpicJobs({job(u"HikeApp"_s, u"running"_s, 30)});
+    QCOMPARE(game(u"epic-a-short-hike"_s).value(u"steamUpdate"_s).toString(), u"downloading"_s);
+    QCOMPARE(game(u"epic-a-short-hike"_s).value(u"steamUpdateText"_s).toString(), u"Installing · 30%"_s);
+    QVERIFY(library->download().value(u"installing"_s).toBool());
+    QCOMPARE(library->download().value(u"appName"_s).toString(), u"HikeApp"_s);
+
+    // With Installed only on, the game stays listed while its install runs.
+    library->setInstalledOnly(true);
+    QVERIFY(library->rowOfGame(u"epic-a-short-hike"_s) >= 0);
+
+    // A job that leaves puts a game that isn't installed back to none, not to an update waiting.
+    library->setEpicJobs({});
+    QVERIFY(library->rowOfGame(u"epic-a-short-hike"_s) < 0);
+    // With the filter already on, a job that starts brings the game into the list.
+    library->setEpicJobs({job(u"HikeApp"_s, u"queued"_s, 0)});
+    QVERIFY(library->rowOfGame(u"epic-a-short-hike"_s) >= 0);
+    library->setEpicJobs({});
+    QVERIFY(library->rowOfGame(u"epic-a-short-hike"_s) < 0);
+    library->setInstalledOnly(false);
+    QCOMPARE(game(u"epic-a-short-hike"_s).value(u"steamUpdate"_s).toString(), u"none"_s);
+    QVERIFY(library->download().isEmpty());
+}
+
+void LibraryHeroicTest::installFolderIsRemembered()
+{
+    auto library = openLibrary();
+    QVERIFY(library->epicInstallFolder().isEmpty());
+    QCOMPARE(library->setHeroicValue(u"epic_install_folder"_s, u"~/Games/Epic"_s), QString());
+    QCOMPARE(library->epicInstallFolder(), u"~/Games/Epic"_s);
+    QCOMPARE(library->setHeroicValue(u"epic_install_folder"_s, QString()), QString());
+    QVERIFY(library->epicInstallFolder().isEmpty());
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

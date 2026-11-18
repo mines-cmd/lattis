@@ -32,6 +32,15 @@ QList<double> percents(const QStringList &lines)
 // `Bad` fails with an error line, anything else finishes quickly.
 const QByteArray kFake = R"(#!/bin/sh
 echo "$* [$LEGENDARY_CONFIG_PATH]" >> "$(dirname "$0")/calls.txt"
+if [ "$1" = info ]; then
+    echo "[Core] INFO: Trying to re-use existing login session..." >&2
+    if [ "$2" = Bad ]; then
+        echo "[cli] ERROR: Could not find the game" >&2
+        exit 1
+    fi
+    echo '{"manifest": {"download_size": 1000, "disk_size": 3000}}'
+    exit 0
+fi
 case "$2" in
 Bad)
     echo "[cli] INFO: starting" >&2
@@ -77,6 +86,8 @@ private slots:
     void cancelSendsSigint();
     void cancelAQueuedJob();
     void failureKeepsTheJobAndTheLine();
+    void infoAnswersWithItsStdout();
+    void infoFailureGivesTheLine();
     void noLegendary();
     void aGameHasOneJob();
     void uninstallAndCheckAreHidden();
@@ -281,6 +292,40 @@ void LegendaryJobsTest::failureKeepsTheJobAndTheLine()
     QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Bad"_s), QString());
     QVERIFY(waitFor([&] { return finished.count() == 2; }));
     QCOMPARE(jobs->jobs().size(), 1);
+}
+
+void LegendaryJobsTest::infoAnswersWithItsStdout()
+{
+    LegendaryJobs *jobs = make();
+    QSignalSpy ready(jobs, &LegendaryJobs::infoReady);
+    jobs->queryInfo(u"App"_s);
+    jobs->queryInfo(u"App"_s);
+    QVERIFY(waitFor([&] { return ready.count() == 1; }));
+    QCOMPARE(ready.first().at(0).toString(), u"App"_s);
+    QCOMPARE(ready.first().at(1).toByteArray().trimmed(), QByteArray(R"({"manifest": {"download_size": 1000, "disk_size": 3000}})"));
+    QVERIFY(ready.first().at(2).toString().isEmpty());
+    // It runs beside the queue and is not a job.
+    QVERIFY(jobs->jobs().isEmpty());
+
+    QFile calls(m_dir.filePath(u"calls.txt"_s));
+    QVERIFY(calls.open(QIODevice::ReadOnly));
+    QCOMPARE(calls.readAll().trimmed(), QByteArray("info App --json [/cfg/legendary]"));
+}
+
+void LegendaryJobsTest::infoFailureGivesTheLine()
+{
+    LegendaryJobs *jobs = make();
+    QSignalSpy ready(jobs, &LegendaryJobs::infoReady);
+    jobs->queryInfo(u"Bad"_s);
+    QVERIFY(waitFor([&] { return ready.count() == 1; }));
+    QVERIFY(ready.first().at(1).toByteArray().isEmpty());
+    QCOMPARE(ready.first().at(2).toString(), u"Could not find the game"_s);
+
+    m_jobs = std::make_unique<LegendaryJobs>([] { return LegendaryJobs::Tool{}; });
+    QSignalSpy none(m_jobs.get(), &LegendaryJobs::infoReady);
+    m_jobs->queryInfo(u"App"_s);
+    QVERIFY(waitFor([&] { return none.count() == 1; }));
+    QVERIFY(!none.first().at(2).toString().isEmpty());
 }
 
 void LegendaryJobsTest::noLegendary()

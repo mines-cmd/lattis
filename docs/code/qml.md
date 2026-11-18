@@ -429,6 +429,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `views/LookupRow.qml` | Lookup state bar in the game editor |
 | `views/PlayHistoryPopup.qml` | A game's play history popup; lazy |
 | `views/ProtonUninstall.qml` | Proton game uninstall dialog; lazy |
+| `views/EpicInstallDialog.qml` | Install an Epic game: plain medium dialog (`ask(game)`), the folder with Change (the folder picker of the settings pages), download and disk size (cached, "Checking size…" while Legendary answers, or "Size unknown"), free space, a line with what is missing when the disk is too small (Install off, also while checking); opened by `askEpicInstall()` in `Main.qml` from Launch on a game that isn't installed; lazy |
 | `views/EpicUninstall.qml` | Epic game uninstall dialog: Legendary deletes the files, an own Wine prefix is optional (to the trash); plain (`carded: false`), one row per part (icon or checkbox, name, size at the right, path, note; `game_editor.danger_color` on what goes for good), a `game_editor.divider` line above the closing note, Cancel focused; no scrim when opened over Properties; lazy |
 | `views/Rail.qml` | Left icon rail: logo, platforms, add, settings |
 | `views/RailButton.qml` | One button in the rail |

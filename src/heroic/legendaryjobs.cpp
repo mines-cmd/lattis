@@ -174,6 +174,52 @@ void LegendaryJobs::dismiss(const QString &appName)
         emit jobsChanged();
 }
 
+void LegendaryJobs::queryInfo(const QString &appName)
+{
+    if (m_infoRunning.contains(appName))
+        return;
+    const Tool tool = m_tool();
+    if (tool.program.isEmpty()) {
+        QTimer::singleShot(0, this, [this, appName] {
+            emit infoReady(appName, {}, tr("Heroic's Legendary isn't found"));
+        });
+        return;
+    }
+    m_infoRunning.insert(appName);
+    auto *process = new QProcess(this);
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    if (!tool.configPath.isEmpty())
+        env.insert(QStringLiteral("LEGENDARY_CONFIG_PATH"), tool.configPath);
+    process->setProcessEnvironment(env);
+    connect(process, &QProcess::errorOccurred, this, [this, process, appName](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart)
+            return;
+        m_infoRunning.remove(appName);
+        emit infoReady(appName, {}, tr("Could not start Legendary: %1").arg(process->errorString()));
+        process->deleteLater();
+    });
+    connect(process, &QProcess::finished, this, [this, process, appName](int exitCode, QProcess::ExitStatus status) {
+        m_infoRunning.remove(appName);
+        const QByteArray out = process->readAllStandardOutput();
+        QString error;
+        if (status != QProcess::NormalExit || exitCode != 0) {
+            const QStringList lines = QString::fromLocal8Bit(process->readAllStandardError()).split(u'\n');
+            error = status == QProcess::NormalExit ? LegendaryOutput::failureLine(lines)
+                                                   : tr("Legendary stopped unexpectedly");
+            if (error.isEmpty())
+                error = tr("it failed");
+        }
+        emit infoReady(appName, error.isEmpty() ? out : QByteArray(), error);
+        process->deleteLater();
+    });
+    // Not a download: it should answer in seconds, so a stuck one is stopped rather than left asking forever.
+    QTimer::singleShot(60'000, process, [process] {
+        if (process->state() != QProcess::NotRunning)
+            process->kill();
+    });
+    process->start(tool.program, {QStringLiteral("info"), appName, QStringLiteral("--json")});
+}
+
 bool LegendaryJobs::checkUpdates()
 {
     if (busy() || m_tool().program.isEmpty())

@@ -519,6 +519,22 @@ int main(int argc, char *argv[])
                     runner.update(game);
                 });
             }
+            const QStringList epicInstalls =
+                qEnvironmentVariable("LATTIS_EPIC_INSTALL").split(u',', Qt::SkipEmptyParts);
+            for (const QString &game : epicInstalls) {
+                QTimer::singleShot(actualDelay / 2, window, [&runner, game] {
+                    logHook("epicInstall", game);
+                    const QString error = runner.installEpic(game, runner.epicInstallPlan(game).value(QStringLiteral("folder")).toString());
+                    if (!error.isEmpty())
+                        qWarning().noquote() << "epicInstall:" << error;
+                });
+            }
+            if (const QString game = qEnvironmentVariable("LATTIS_EPIC_INSTALL_DIALOG"); !game.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, &library, game] {
+                    logHook("epicInstallDialog", game);
+                    QMetaObject::invokeMethod(window, "askEpicInstall", Q_ARG(QVariant, library.gameWithId(game)));
+                });
+            }
             if (const QString game = qEnvironmentVariable("LATTIS_EDIT_GAME"); !game.isEmpty()) {
                 QTimer::singleShot(actualDelay / 2, window, [window, game] {
                     logHook("selectAndEdit", game);

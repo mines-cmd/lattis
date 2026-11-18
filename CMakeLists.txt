@@ -239,6 +239,7 @@ qt_add_qml_module(lattis
         qml/views/SteamUninstallPrompt.qml
         qml/views/ProtonUninstall.qml
         qml/views/EpicUninstall.qml
+        qml/views/EpicInstallDialog.qml
         qml/views/LookupRow.qml
         qml/views/ArtBrowser.qml
         qml/views/DetailedLookup.qml
@@ -488,6 +489,7 @@ qt_add_qml_module(lattis
         src/heroic/heroicsaves.h src/heroic/heroicsaves.cpp
         src/heroic/heroicsettings.h src/heroic/heroicsettings.cpp
         src/heroic/legendaryjobs.h src/heroic/legendaryjobs.cpp
+        src/heroic/epicinstall.h src/heroic/epicinstall.cpp
         src/theme/theme.h src/theme/theme.cpp
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp

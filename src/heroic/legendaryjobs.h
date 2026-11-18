@@ -5,6 +5,7 @@
 #include <QList>
 #include <QObject>
 #include <QProcess>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
@@ -70,6 +71,10 @@ public:
     Q_INVOKABLE void cancel(const QString &appName);
     Q_INVOKABLE void dismiss(const QString &appName);
 
+    // `legendary info <appName> --json` beside the queue: it only asks Epic, so it needn't wait for a download.
+    // The answer comes as `infoReady` (stdout, or why not); a second ask for a game still being asked is ignored.
+    void queryInfo(const QString &appName);
+
     // The daily `list-installed --check-updates`: hidden, and only when nothing else is queued or running.
     // False when it didn't start.
     bool checkUpdates();
@@ -89,6 +94,7 @@ public:
 signals:
     void jobsChanged();
     void finished(const LegendaryJobs::Result &result);
+    void infoReady(const QString &appName, const QByteArray &json, const QString &error);
 
 private:
     struct Job
@@ -112,6 +118,7 @@ private:
     std::function<Tool()> m_tool;
     QList<Job> m_queue; // the running job first
     QList<Job> m_failed;
+    QSet<QString> m_infoRunning;
     QProcess *m_process = nullptr;
     QByteArray m_pending;
     QStringList m_tail;

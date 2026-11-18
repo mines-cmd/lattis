@@ -1,5 +1,6 @@
 #pragma once
 
+#include "epicinstall.h"
 #include "heroiclocate.h"
 #include "legendaryjobs.h"
 #include "launchsettings.h"
@@ -93,6 +94,14 @@ public:
     // Heroic's Legendary deletes the files for good; the prefix goes to the trash. The answer comes as
     // epicUninstalled; a result with `trashless` asks to run it again with files off and permanent on.
     Q_INVOKABLE QString uninstallEpic(const QString &gameId, bool files, bool prefix, bool permanent);
+    // The Install dialog's start: {appName, folder, sizeState ("known", "checking" or "unknown"), downloadSize,
+    // diskSize, platform}. "checking" asks Legendary; the answer comes as epicInstallInfo.
+    Q_INVOKABLE QVariantMap epicInstallPlan(const QString &gameId);
+    // Bytes free where `folder` is (or would be made); -1 when unknown.
+    Q_INVOKABLE double freeSpace(const QString &folder) const;
+    Q_INVOKABLE QString sizeText(double bytes) const;
+    // Queues `legendary install` into the folder and remembers it for the next install; the error, or empty.
+    Q_INVOKABLE QString installEpic(const QString &gameId, const QString &folder);
     void setLegendaryProgram(const QString &program) { m_legendary = program; }
     LegendaryJobs *legendary() { return &m_legendaryJobs; }
     bool closingSteam() const { return m_steamClosing != nullptr; }
@@ -140,6 +149,7 @@ public:
 
 signals:
     void epicUninstalled(const QString &gameId, const QVariantMap &result);
+    void epicInstallInfo(const QString &appName, const QVariantMap &plan);
     void runningChanged();
     void closingSteamChanged();
     void closingHeroicChanged();
@@ -249,6 +259,10 @@ private:
     void finishEpicUninstall(const QString &gameId, const EpicUninstall &uninstall);
     QString epicTitle(const QString &appName) const;
     QString updateEpic(const Game &game);
+    QVariantMap installPlan(const QString &appName, const EpicInstallInfo *info, const QString &sizeState) const;
+    QString installFolder() const;
+    void onInfoReady(const QString &appName, const QByteArray &json, const QString &error);
+    QHash<QString, EpicInstallInfo> m_epicInfo; // by app name, for this run
     QHash<QString, EpicUninstall> m_epicUninstalling; // by game id
     LegendaryJobs m_legendaryJobs;
     FindSaves m_findSaves;

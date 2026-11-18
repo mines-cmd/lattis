@@ -11,7 +11,7 @@ Parsed<HeroicSettings> parseHeroicSettings(const QByteArray &bytes, const QStrin
         return out;
 
     const QStringList known = {QStringLiteral("enabled"), QStringLiteral("path"), QStringLiteral("whole_library"),
-                           QStringLiteral("check_updates")};
+                           QStringLiteral("check_updates"), QStringLiteral("epic_install_folder")};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
         if (key == u"enabled" || key == u"whole_library" || key == u"check_updates") {
@@ -21,11 +21,11 @@ Parsed<HeroicSettings> parseHeroicSettings(const QByteArray &bytes, const QStrin
                                            : out.value.checkUpdates) = b->get();
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
-        } else if (key == u"path") {
+        } else if (key == u"path" || key == u"epic_install_folder") {
             if (const auto *s = node.as_string())
-                out.value.path = toQString(s->get());
+                (key == u"path" ? out.value.path : out.value.epicInstallFolder) = toQString(s->get());
             else
-                out.warnings.append(QStringLiteral("%1: path must be text in quotes").arg(section.where(node)));
+                out.warnings.append(QStringLiteral("%1: %2 must be text in quotes").arg(section.where(node), key));
         } else {
             out.warnings.append(
                 QStringLiteral("%1: unknown key %2%3").arg(section.where(node), key, suggestion(key, known)));

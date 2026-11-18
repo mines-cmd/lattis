@@ -90,6 +90,7 @@ Surface {
                                  : root.updateState === "queued" ? qsTr("Queued")
                                  : root.installed ? (root.updatePercent >= 0 ? qsTr("%1 %2%").arg(Theme.launchButton.updatingLabel).arg(root.updatePercent)
                                                                              : Theme.launchButton.updatingLabel)
+                                 : root.updatePercent >= 0 ? qsTr("%1 %2%").arg(Theme.launchButton.installingLabel).arg(root.updatePercent)
                                  : Theme.launchButton.installingLabel)
             : root.installed ? root.idleLabel
             : root.installing ? Theme.launchButton.installLabel

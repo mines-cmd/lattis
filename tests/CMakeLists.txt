@@ -342,6 +342,7 @@ lattis_test(launch_test PRESETS
             ../src/launch/detachedprocess.h ../src/launch/detachedprocess.cpp
             ../src/launch/gamerunner.h ../src/launch/gamerunner.cpp
             ../src/heroic/legendaryjobs.h ../src/heroic/legendaryjobs.cpp
+            ../src/heroic/epicinstall.h ../src/heroic/epicinstall.cpp
     LIBS library_objects
     DEFINES ${DEMO_DATA} ${STEAM_DATA})
 
@@ -352,6 +353,10 @@ lattis_test(vdf_test
 lattis_test(legendaryjobs_test
     SOURCES ../src/heroic/legendaryjobs.h ../src/heroic/legendaryjobs.cpp
     LIBS Qt6::Core Qt6::Qml
+    DEFINES "LEGENDARY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/legendary\"")
+lattis_test(epicinstall_test
+    SOURCES ../src/heroic/epicinstall.h ../src/heroic/epicinstall.cpp
+    LIBS Qt6::Core
     DEFINES "LEGENDARY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/legendary\"")
 lattis_test(heroic_test
     SOURCES ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp

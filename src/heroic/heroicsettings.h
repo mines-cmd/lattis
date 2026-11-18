@@ -13,6 +13,8 @@ struct HeroicSettings
     bool wholeLibrary = true;
     // Once a day, `legendary list-installed --check-updates` asks Epic for new builds.
     bool checkUpdates = true;
+    // The folder the last Epic install in Lattis went into; empty until one is picked (Heroic's default then).
+    QString epicInstallFolder;
 
     bool operator==(const HeroicSettings &) const = default;
 };

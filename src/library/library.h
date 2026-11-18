@@ -399,6 +399,7 @@ public:
     // Legendary's visible jobs (LegendaryJobs::jobs()): an update job sets its game Downloading or Queued.
     void setEpicJobs(const QVariantList &jobs);
     bool heroicChecksUpdates() const { return m_heroicSettings.checkUpdates; }
+    QString epicInstallFolder() const { return m_heroicSettings.epicInstallFolder; }
     void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
     Q_INVOKABLE void beginEditUndo(const QString &id);
