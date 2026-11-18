@@ -14,7 +14,6 @@ Surface {
     property string tip
     property string updateState: "none"
     // The update's percentage when the label should show it (-1: none).
-    property int updatePercent: -1
     // The game's own file is being replaced: reads like an update in progress and can't be pressed.
     property bool updateBlocks: false
     // Set when the game's emulator isn't found but can be installed: the button installs it.
@@ -88,9 +87,7 @@ Surface {
             : root.emulatorInstall ? qsTr("%1 %2").arg(Theme.launchButton.installLabel).arg(root.emulatorName)
             : root.updateBusy ? (root.updateState === "paused" ? Theme.launchButton.pausedLabel
                                  : root.updateState === "queued" ? qsTr("Queued")
-                                 : root.installed ? (root.updatePercent >= 0 ? qsTr("%1 %2%").arg(Theme.launchButton.updatingLabel).arg(root.updatePercent)
-                                                                             : Theme.launchButton.updatingLabel)
-                                 : root.updatePercent >= 0 ? qsTr("%1 %2%").arg(Theme.launchButton.installingLabel).arg(root.updatePercent)
+                                 : root.installed ? Theme.launchButton.updatingLabel
                                  : Theme.launchButton.installingLabel)
             : root.installed ? root.idleLabel
             : root.installing ? Theme.launchButton.installLabel

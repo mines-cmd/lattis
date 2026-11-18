@@ -41,7 +41,6 @@ LaunchButton {
 
     installed: game.installed ?? true
     updateState: gameUpdating ? "downloading" : (game.steamUpdate ?? "none")
-    updatePercent: launcher === "heroic" ? (game.steamUpdatePercent ?? -1) : -1
     updateBlocks: gameUpdating
     rom: game.rom ?? false
     gameNotFound: game.gameNotFound ?? false
