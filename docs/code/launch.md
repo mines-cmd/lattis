@@ -42,6 +42,8 @@ An Epic game is handed to Heroic, which installs, updates and runs it. `HeroicLo
 
 A game that isn't installed only opens Heroic and starts no session. Heroic has no way in to a game's page, so `copyRequested()` puts the title on the clipboard, and a toast says to paste it in Heroic's search. The launch URL would ask whether to install it, but Heroic 2.22.4 does nothing on Yes, and with its window hidden the dialog crashes it on Hyprland. `openHeroic()` starts Heroic or shows its window (`openArgs()`: no `--no-gui`, and `heroic://ping` through `xdg-open`, which needs a URL). Heroic has no URL for a game's page, so `openEmulator()` opens Heroic too.
 
+Whether Heroic runs also decides when an Epic game's edited Wine version and launch options are written (see [heroic.md](heroic.md#waiting-for-heroic-to-close)). Launching doesn't touch that queue: a game launched while edits wait runs with Heroic's old settings, and the edits are written once Heroic has closed.
+
 Heroic is one instance, so the process we start means one of two things. If Heroic was closed, it runs the game and exits after it. If Heroic was running, it passes the URL on and exits at once, and that exit says nothing. Neither case can be told apart at launch, so a session ends on either signal that the game closed:
 
 - `lastPlayed` in `timestamp.json` differs from what it was at the launch. Heroic rewrites it when a game closes, even for a session too short to add a minute. `m_heroicPoll` reads it each second while a session lasts, and once more when the process exits, since a Heroic that was closed has written the file by then.

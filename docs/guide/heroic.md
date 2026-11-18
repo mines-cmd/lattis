@@ -61,7 +61,20 @@ An Epic game's play time and last played are kept by Lattis, and you can correct
 
 ## Properties
 
-The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Below it, a Run card has the game's **Wine version** (Heroic's Proton and Wine builds, Steam's compatibility tools and the system's Wine), **Presets** and **Launch options**, read from Heroic's settings for the game and written back when you save. MangoHud and GameMode are Heroic's own switches; your own [presets](steam.md#presets) fill Heroic's environment variables, wrappers and launch options. Updates and Heroic's other settings are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
+The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Below it, a Run card has the game's settings, read from Heroic's files for the game (or Heroic's defaults, for a game you never configured in Heroic) and written back when you save:
+
+- **Wine version:** the Proton and Wine builds Heroic has installed, the compatibility tools in Steam's `compatibilitytools.d` (GE-Proton and the like) and the Wine on your system. If the game's build is gone, it's listed as "(not installed)".
+- **Presets:** a check box per [preset](steam.md#presets). MangoHud and GameMode are Heroic's own switches for the game; your own presets add to Heroic's environment variables, wrapper commands and launch options. There are no default presets for Epic games: a new game keeps Heroic's settings until you change them.
+- **Launch options:** Heroic's launch arguments for the game, written like Steam's: variables, a wrapper, then `%command%` and arguments after it. Typing a preset's part by hand checks its box.
+
+Updates and Heroic's other settings (Esync, Fsync, DXVK, the Wine prefix) are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
+
+### Changes wait for Heroic to close
+
+Heroic keeps a game's settings in memory and writes them all back, so it would undo a change made while it runs. Lattis only writes to Heroic's files while Heroic is closed:
+
+- **Heroic closed:** your change is written when you save.
+- **Heroic running** (one minimized to the tray counts): the change waits. The game's settings button gets a badge, and the Launch card says "Waiting for Heroic to close to apply this" (while you're still in Properties: "Heroic is running: saving applies this when it closes"). It's applied within a couple of seconds of Heroic closing, even if Lattis was restarted in between. Lattis never closes Heroic for you.
 
 ## Automatic save backups
 

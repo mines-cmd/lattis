@@ -38,13 +38,23 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 
 `write(root, appName, edits)` changes only the keys set in `HeroicGameEdits`. It patches the file's text instead of re-serialising it, so every other key, the key order and the indentation stay (Heroic puts new keys in its own order, and `QJsonObject` would sort them). A key that's absent is added after the entry's last one, and `wineVersion` is patched inside, so its `wineserver` stays. A missing file or an empty `{}` entry becomes a full entry: `defaultSettings` plus the edits, with `"version": "v0"` and `"explicit": true`. In that new entry the keys are sorted, as `defaultSettings` is read through `QJsonObject`. A file that isn't JSON is refused and left alone.
 
-Heroic holds a game's config in memory and writes all of it back on its next change, so an edit made while it runs is lost; callers write only while Heroic is closed.
+Heroic holds a game's config in memory and writes all of it back on its next change, so an edit made while it runs is lost (the spike confirmed it: an edit made to the file while Heroic ran was gone after Heroic saved something else); callers write only while Heroic is closed. `editsToJson()`/`editsFromJson()`, `merge()` (a later edit wins key by key), `apply()` (an edit laid over a `HeroicGameSettings`) and `isEmpty()` support the queue below.
 
 `HeroicPresets::isOn()`, `turnOn()` and `turnOff()` apply a `SteamPreset` to a `HeroicGameSettings`: the built-in `mangohud` and `gamemode` presets set `showMangohud` and `useGameMode`; any other preset adds its `env` pairs to `enviromentOptions` (`{key, value}`), its `wrapper` to `wrapperOptions` (`{exe, args}`) and its `args` to `launcherArgs` (through `LaunchOptions`, as words after `%command%`).
 
 `HeroicWines::find(root, steamToolDirs, systemWine)` lists the Wine builds a game can use: `<root>/tools/proton/*` (a `proton` file), `<root>/tools/wine/*` (`bin/wine`), the Steam tool folders' Proton builds and the system `wine`, each as a `HeroicWine` and its source.
 
-`Library::gameForEditing()` adds `heroic` for an Epic game, read when Properties opens: `settings` (the keys above), `wines` (`label` and `wine`, the current one listed first with "(not installed)" when it is gone), `presets` and `error`. `heroicPresetOn()` and `setHeroicPreset()` work on that settings map, and `saveHeroicSettings(id, settings)` writes only the keys that differ from the file through `applyHeroicEdits()`, the one place that writes to Heroic, which the wait-for-Heroic rule will gate.
+`Library::gameForEditing()` adds `heroic` for an Epic game, read when Properties opens: `settings` (the keys above), `wines` (`label` and `wine`, the current one listed first with "(not installed)" when it is gone), `presets` and `error`. `heroicPresetOn()` and `setHeroicPreset()` work on that settings map, and `saveHeroicSettings(id, settings)` works out the keys that differ from what Properties showed (the file plus anything already waiting) and passes them to `applyHeroicEdits()`, the one place that writes to Heroic.
+
+## Waiting for Heroic to close
+
+`HeroicLocate::running()` says whether Heroic itself runs, native or Flatpak: a process under `/proc` whose program is named `heroic`, leaving out its helper processes (those with a `--type=` argument). A Heroic that has only its tray icon is still running, and counts. The `/proc` directory is a parameter for tests.
+
+While Heroic runs, `saveHeroicSettings()` doesn't write: it merges the edits into `Library`'s per-app queue (`m_heroicPending`), keeps the queue in `<state dir>/heroic-pending-<data dir key>.json` (`{"<appName>": {"launcherArgs": …}}`, removed when empty) so it survives a restart, and a 2 s timer checks for Heroic having closed. Then `applyHeroicPending()` writes every waiting game through `applyHeroicEdits()`, logs it, and keeps an entry that failed to write. It also runs at startup (`setHeroicPendingFile()`), so edits left by a session that ended with Heroic open are applied if Heroic has since closed. Nothing is polled while the queue is empty.
+
+A game's row has `pendingEdits` (`"heroic"` while the app name has an entry, `"steam"` for Steam's queue, else empty; on `Game` it's the enum `PendingLauncher::None/Steam/Heroic`), which the settings button's badge and tooltip use. The Launch card says "Waiting for Heroic to close to apply this", or before saving "Heroic is running: saving applies this when it closes" (the editor asks `Library.heroicRunning()` while it's open). Unlike Steam there's no "close and apply" action and no banner: Lattis doesn't close Heroic.
+
+`LATTIS_HEROIC_RUNNING=<1|0>` replaces the process check (`Library::setHeroicRunningCheck()`) for tests and screenshots.
 
 ## Files
 

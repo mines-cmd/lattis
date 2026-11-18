@@ -151,7 +151,7 @@ Three presets are built in:
 | GameMode | `gamemoderun` before `%command%` |
 | Wayland | `PROTON_ENABLE_WAYLAND=1` (GE-Proton only) |
 
-**Default presets**, on Settings → Steam (or the setup guide), are turned on for each new Steam game as it's imported. Games already in the library keep theirs. **Apply to all** and **Remove from all** turn a preset on or off in every Steam game at once, waiting for Steam like any change.
+**Default presets**, on Settings → Steam (or the setup guide), are turned on for each new Steam game as it's imported. Games already in the library keep theirs. **Apply to all** and **Remove from all** turn a preset on or off in every Steam game at once, waiting for Steam like any change. Epic games have no default presets and aren't touched by these.
 
 ### Your own presets
 
@@ -167,7 +167,7 @@ name = "HDR"
 env = { PROTON_ENABLE_HDR = "1", DXVK_HDR = "1" }
 ```
 
-Save the file and they show up as check boxes in every Steam, Windows, Linux and Epic game's Properties. They used to be `[steam.presets.<id>]`, which Lattis still reads; `[presets.<id>]` wins when both name the same preset.
+Save the file and they show up as check boxes in every Steam, Windows, Linux and Epic game's Properties (for an Epic game they go into [Heroic's settings](heroic.md#properties)). They used to be `[steam.presets.<id>]`, which Lattis still reads; `[presets.<id>]` wins when both name the same preset.
 
 ## Restoring on another computer
 
