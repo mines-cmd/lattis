@@ -38,6 +38,7 @@ struct Game
     bool missingInfo = false; // no description, year or rating a lookup could still find
     QString backupKey; // the folder name its saves are backed up under; empty = saves can't cover it
     qint64 steamAppId = 0; // set for a Steam game whose achievements are read (installed or played); 0 = none
+    qint64 protonDbApp = 0; // the app id ProtonDB is asked about: a Steam game's own, a Windows game's looked-up one; 0 = none
     QDate added; // invalid = unknown
     int longestSession = 0; // minutes of its longest session in the play history; merged entries don't count
     QDateTime longestEnd;
@@ -173,7 +174,7 @@ struct TierCount
 
 struct Compatibility
 {
-    int games = 0; // installed Steam games
+    int games = 0; // installed games with a ProtonDB app id
     int noReports = 0;
     int unchecked = 0; // no entry in ProtonDB's cache yet
     QList<TierCount> tiers; // in that order, the ones in use

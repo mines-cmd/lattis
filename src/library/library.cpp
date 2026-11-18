@@ -3695,6 +3695,15 @@ quint64 steamAppIdOf(const Game &g)
         return (quint64(g.shortcut) << 32) | 0x02000000;
     return quint64(qMax<qint64>(GameId::steamAppId(g.id), 0));
 }
+
+// The app id ProtonDB is asked about: a Steam game's own, or the one a lookup found for any other Windows game
+// (not a Linux program or a ROM); 0 for none.
+qint64 protonDbAppOf(const Game &g)
+{
+    if (g.platform == kSteamPlatform)
+        return qMax<qint64>(GameId::steamAppId(g.id), 0);
+    return g.rom || g.platform == kLinuxPlatform ? 0 : g.steamAppId;
+}
 }
 
 void Library::media(const QString &id)
@@ -4274,6 +4283,10 @@ void Library::overview()
         }
         if (g.platform == kSteamPlatform && (g.installed || g.playMinutes > 0 || g.lastPlayed.isValid())) {
             o.steamAppId = GameId::steamAppId(g.id);
+            o.protonDbApp = o.steamAppId;
+        } else if (g.platform != kSteamPlatform && g.installed && protonDbAppOf(g) > 0) {
+            o.protonDbApp = protonDbAppOf(g);
+            installedApps.append(o.protonDbApp);
         }
         o.updateWaiting = g.steamUpdate == SteamUpdate::Waiting;
         if (g.rom && g.installed) {
@@ -4962,6 +4975,7 @@ QVariantMap Library::gameMap(const Game &g) const
         {QStringLiteral("platform"), g.platform},
         {QStringLiteral("platformName"), g.platformName},
         {QStringLiteral("platformIcon"), platformIcon},
+        {QStringLiteral("protonDbApp"), protonDbAppOf(g)},
         {QStringLiteral("description"), g.description},
         {QStringLiteral("year"), g.year > 0 ? QString::number(g.year) : QString()},
         {QStringLiteral("sizeText"),

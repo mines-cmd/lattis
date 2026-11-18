@@ -18,6 +18,7 @@ Game steamGame(const QString &id, qint64 appId)
 {
     Game g = game(id, QStringLiteral("steam"));
     g.steamAppId = appId;
+    g.protonDbApp = appId;
     return g;
 }
 
@@ -65,6 +66,7 @@ private slots:
     void nearlyDoneLeavesOutBelowEightyAndPerfect();
     void achievementsLeaveOutHiddenAndCountLinkedCopiesOnce();
     void compatibilityTiersAndNothingAsked();
+    void compatibilityCountsWindowsGamesWithAnId();
     void compatibilityRunners();
     void compatibilityTopToolAndLinkedCopies();
     void compatibilityVariantMap();
@@ -818,6 +820,21 @@ void LibraryOverviewTest::compatibilityTiersAndNothingAsked()
     o = LibraryOverview::overview(games);
     QCOMPARE(o.compatibility.unchecked, 4);
     QVERIFY(o.compatibility.tiers.isEmpty());
+}
+
+void LibraryOverviewTest::compatibilityCountsWindowsGamesWithAnId()
+{
+    Game epic = game("epic-a", "epic");
+    epic.protonDbApp = 10;
+    Game noId = game("epic-b", "epic");
+    LibraryOverview::Sources sources;
+    sources.protonTiers = {{10, "gold"}};
+
+    const LibraryOverview::Compatibility c = LibraryOverview::overview({epic, noId}, {}, day(20), std::nullopt,
+                                                                       std::nullopt, sources).compatibility;
+    QCOMPARE(c.games, 1);
+    QCOMPARE(c.tiers.size(), 1);
+    QCOMPARE(c.tiers.at(0).tier, QStringLiteral("gold"));
 }
 
 void LibraryOverviewTest::compatibilityRunners()

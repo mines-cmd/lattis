@@ -266,9 +266,9 @@ void addCompatibility(Overview &out, const QList<Unit> &units, const Sources &so
         if (!g)
             continue;
         QString tier;
-        if (g->platform == QLatin1String("steam") && g->steamAppId > 0) {
+        if (g->protonDbApp > 0) {
             ++c.games;
-            const auto it = sources.protonTiers.constFind(g->steamAppId);
+            const auto it = sources.protonTiers.constFind(g->protonDbApp);
             if (it == sources.protonTiers.cend())
                 ++c.unchecked;
             else if (*it == QLatin1String("none"))

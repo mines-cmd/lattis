@@ -159,7 +159,7 @@ SCENARIOS = [
              [(OPEN + "click Achievements\nwait 500\nexpect-not Library overview\nexpect Hades\n"
                + "expect-not Metroid Dread\n", None)], with_achievements),
     Scenario("Compatibility says what it covers, counts native and Proton games and asks ProtonDB for the rest",
-             [(OPEN + DOWN + "expect Compatibility\nexpect ProtonDB tiers of your installed Steam games\n"
+             [(OPEN + DOWN + "expect Compatibility\nexpect ProtonDB tiers of your installed Windows games\n"
                + "expect Native games\nexpect Proton games\n", None)], demo),
     Scenario("Save backups offers Back up now, which backs up the played games, stays on the overview and leaves the card out when none have saves",
              [(OPEN + DOWN + "expect Save backups\nexpect-not Not protected\nclick Back up now\nwait 1500\n"

@@ -54,7 +54,7 @@ OverviewCard {
         }
         OverviewQuiet {
             visible: root.games > 0
-            text: qsTr("ProtonDB tiers of your installed Steam games")
+            text: qsTr("ProtonDB tiers of your installed Windows games")
         }
     }
 

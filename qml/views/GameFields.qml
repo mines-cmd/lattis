@@ -97,10 +97,12 @@ QtObject {
         value: GameSaves.last.requested !== game.id ? "" : (GameSaves.last.when ?? "")
     })
 
-    readonly property int protonDbAppId: {
+    readonly property int steamGameAppId: {
         const m = /^steam-(\d+)$/.exec(game.id ?? "")
         return m ? parseInt(m[1]) : 0
     }
+    // A Steam game's own id, or the one a lookup found for another Windows game.
+    readonly property int protonDbAppId: steamGameAppId > 0 ? steamGameAppId : (game.protonDbApp ?? 0)
     readonly property bool protonDbWanted: (chipNames.includes("protondb")
                                             || General.gamePageInfoRows.includes("protondb")) && protonDbAppId > 0
     // Asks ProtonDb (which starts its request) only while the entry is wanted; the singleton isn't built before.
@@ -143,7 +145,7 @@ QtObject {
         }
     }
 
-    readonly property bool friendsPlayingWanted: protonDbAppId > 0
+    readonly property bool friendsPlayingWanted: steamGameAppId > 0
         && (chipNames.includes("friends_playing") || General.gamePageInfoRows.includes("friends_playing"))
     property int friendsRevision: 0
     property Connections friendsWatch: Connections {
@@ -151,7 +153,7 @@ QtObject {
         function onChanged() { ++root.friendsRevision }
     }
     readonly property int friendsPlayed: friendsRevision >= 0 && friendsPlayingWanted
-        ? FriendsActivity.playedCount(protonDbAppId) : 0
+        ? FriendsActivity.playedCount(steamGameAppId) : 0
     readonly property var friendsPlayingField: ({
         label: qsTr("Friends"), icon: Icons.users,
         value: friendsPlayed > 0 ? qsTr("%1 play").arg(friendsPlayed) : ""
