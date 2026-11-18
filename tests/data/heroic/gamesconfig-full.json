@@ -1,0 +1,39 @@
+{
+  "d6407c9e6fd54cb492b8c6635480d792": {
+    "autoInstallDxvk": true,
+    "autoInstallDxvkNvapi": true,
+    "autoInstallVkd3d": true,
+    "preferSystemLibs": false,
+    "enableEsync": true,
+    "enableMsync": false,
+    "enableFsync": true,
+    "enableWineWayland": false,
+    "enableHDR": false,
+    "enableWoW64": false,
+    "launcherArgs": "-testarg",
+    "nvidiaPrime": false,
+    "enviromentOptions": [],
+    "wrapperOptions": [],
+    "showFps": false,
+    "showMangohud": true,
+    "useGameMode": false,
+    "battlEyeRuntime": true,
+    "eacRuntime": true,
+    "language": "",
+    "beforeLaunchScriptPath": "",
+    "afterLaunchScriptPath": "",
+    "verboseLogs": true,
+    "advertiseAvxForRosetta": false,
+    "enableQuickSavesMenu": false,
+    "steamRuntime": false,
+    "wineVersion": {
+      "bin": "/home/user/.local/share/Steam/compatibilitytools.d/GE-Proton11-11/proton",
+      "name": "GE-Proton11-11",
+      "type": "proton"
+    },
+    "winePrefix": "/home/user/Games/Heroic/Prefixes/A Short Hike",
+    "wineCrossoverBottle": ""
+  },
+  "version": "v0",
+  "explicit": true
+}
