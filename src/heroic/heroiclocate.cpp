@@ -9,6 +9,8 @@
 #include <QSysInfo>
 #include <QUrl>
 
+#include <algorithm>
+
 namespace {
 const QString kFlatpakId = QStringLiteral("com.heroicgameslauncher.hgl");
 
@@ -182,5 +184,27 @@ qint64 gamePid(const QString &appName, const QString &procDir)
             found = pid;
     }
     return found;
+}
+
+bool running(const QString &procDir)
+{
+    const QStringList pids = QDir(procDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &name : pids) {
+        bool ok = false;
+        name.toLongLong(&ok);
+        if (!ok)
+            continue;
+        QFile file(procDir + u'/' + name + QStringLiteral("/cmdline"));
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
+        const QList<QByteArray> args = file.readAll().split('\0');
+        if (args.first().isEmpty() || QFileInfo(QString::fromLocal8Bit(args.first())).fileName() != u"heroic")
+            continue;
+        const bool helper = std::any_of(args.cbegin(), args.cend(),
+                                        [](const QByteArray &a) { return a.startsWith("--type="); });
+        if (!helper)
+            return true;
+    }
+    return false;
 }
 }

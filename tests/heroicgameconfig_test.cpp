@@ -213,6 +213,30 @@ private slots:
         QVERIFY(s.useGameMode);
     }
 
+    void editsRoundTripThroughJsonAndMerge()
+    {
+        HeroicGameEdits a;
+        a.launcherArgs = QStringLiteral("-a");
+        a.useGameMode = true;
+        a.wine = HeroicWine{QStringLiteral("/w/wine"), QStringLiteral("Wine-9"), QStringLiteral("wine"),
+                            QStringLiteral("/w/server")};
+        const HeroicGameEdits back = HeroicGameConfig::editsFromJson(HeroicGameConfig::editsToJson(a));
+        QCOMPARE(*back.launcherArgs, QStringLiteral("-a"));
+        QVERIFY(*back.useGameMode);
+        QVERIFY(!back.showMangohud);
+        QCOMPARE(back.wine->wineserver, QStringLiteral("/w/server"));
+        QVERIFY(HeroicGameConfig::isEmpty({}));
+        QVERIFY(!HeroicGameConfig::isEmpty(a));
+
+        HeroicGameEdits later;
+        later.launcherArgs = QStringLiteral("-b");
+        later.showMangohud = true;
+        HeroicGameConfig::merge(a, later);
+        QCOMPARE(*a.launcherArgs, QStringLiteral("-b"));
+        QVERIFY(*a.showMangohud);
+        QVERIFY(*a.useGameMode);
+    }
+
     void otherGamesInTheFileStay()
     {
         install({});

@@ -13,6 +13,9 @@ inline const QString kEpicPlatform = QStringLiteral("epic");
 inline const QString kProtonPlatform = QStringLiteral("proton");
 inline const QString kLinuxPlatform = QStringLiteral("linux");
 
+// Which launcher has edits waiting for it to close, so the badge and banner can say so.
+enum class PendingLauncher { None, Steam, Heroic };
+
 struct GameTag
 {
     QString name;
@@ -69,7 +72,7 @@ struct Game
     // Not in the file: sources fill these in.
     qint64 sizeBytes = 0;
     bool installed = true;
-    bool pendingSteamEdits = false;
+    PendingLauncher pendingEdits = PendingLauncher::None;
 
     SteamUpdate steamUpdate = SteamUpdate::None;
     qint64 updateBytes = 0;

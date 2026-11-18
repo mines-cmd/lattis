@@ -112,7 +112,7 @@ Item {
                                 ? qsTr("Proton · %1").arg(modelData.protonName) : qsTr("Native")
                             readonly property string status: running ? qsTr("Running")
                                 : !modelData.inSteam ? qsTr("Not in Steam")
-                                : modelData.pendingSteamEdits ? qsTr("Waiting for Steam to close") : ""
+                                : modelData.pendingEdits ? qsTr("Waiting for Steam to close") : ""
 
                             last: index === root.managers.length - 1
                             implicitHeight: Math.max(Theme.controls.inputHeight, info.implicitHeight + 16)

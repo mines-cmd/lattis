@@ -405,8 +405,9 @@ ColumnLayout {
         }
 
         Unfold {
-            open: editor.onSteam && (editor.adding ? editor.steamRunning
-                                               : editor.steamPending || (editor.steamEdited && editor.steamRunning))
+            open: editor.heroicGame ? editor.heroicPending || (editor.heroicEdited && editor.heroicRunning)
+                                   : editor.onSteam && (editor.adding ? editor.steamRunning
+                                                                      : editor.steamPending || (editor.steamEdited && editor.steamRunning))
             visible: open || progress > 0
             Layout.fillWidth: true
 
@@ -416,7 +417,9 @@ ColumnLayout {
 
                 Label {
                     Layout.fillWidth: true
-                    text: editor.adding ? qsTr("Steam is running: the game is added to it when it closes")
+                    text: editor.heroicGame ? (editor.heroicEdited ? qsTr("Heroic is running: saving applies this when it closes")
+                                                          : qsTr("Waiting for Heroic to close to apply this"))
+                        : editor.adding ? qsTr("Steam is running: the game is added to it when it closes")
                         : editor.steamEdited ? qsTr("Steam is running: saving applies this when it closes")
                         : editor.shortcutQueued ? qsTr("Waiting for Steam to close to add this game to it")
                         : qsTr("Waiting for Steam to close to apply this")
@@ -425,6 +428,7 @@ ColumnLayout {
                     wrapMode: Text.WordWrap
                 }
                 SettingsButton {
+                    visible: !editor.heroicGame
                     text: GameRunner.closingSteam ? qsTr("Closing Steam") : qsTr("Close Steam and apply")
                     enabled: !GameRunner.closingSteam
                     tip: qsTr("Saves, closes Steam, writes the changes and starts Steam again")

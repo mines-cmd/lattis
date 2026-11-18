@@ -1067,7 +1067,7 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
             ignoredKeys(QStringLiteral("Proton"), {{"shortcut", f.shortcut != 0}});
         // A shortcut's icon alone (SteamSync::kShortcutIcon) isn't worth restarting Steam for.
         const QStringList queued = steamQueued.value(g.id);
-        g.pendingSteamEdits = queued.size() > int(queued.contains(QStringLiteral("icon")));
+        g.pendingEdits = queued.size() > int(queued.contains(QStringLiteral("icon"))) ? PendingLauncher::Steam : PendingLauncher::None;
         if (const auto rom = romPaths.constFind(g.id); rom != romPaths.cend()) {
             g.rom = true;
             g.romKey = !f.rom.isEmpty();

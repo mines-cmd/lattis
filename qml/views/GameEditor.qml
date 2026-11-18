@@ -134,6 +134,9 @@ Item {
             || (protonGame && (titleField.text.trim() !== game.title || newExe !== ""
                                || startDirShown !== (game.startDir ?? ""))))
     property bool steamRunning: false
+    property bool heroicPending: false
+    property bool heroicRunning: false
+    onHeroicEditedChanged: if (heroicEdited) heroicRunning = Library.heroicRunning()
     onSteamEditedChanged: if (steamEdited) steamRunning = GameRunner.steamRunning()
 
     property int lookupRequest: 0
@@ -483,9 +486,11 @@ Item {
         heroicDraft = g.heroic?.settings ?? ({})
         wineBox.currentIndex = Math.max(0, (g.heroic?.wines ?? []).findIndex(w => w.wine.bin === (heroicDraft.wine?.bin ?? "")))
         loadUpdateFields()
-        steamPending = g.pendingSteamEdits ?? false
+        steamPending = (g.pendingEdits ?? "") === "steam"
+        heroicPending = (g.pendingEdits ?? "") === "heroic"
         shortcutQueued = g.shortcutQueued ?? false
         steamRunning = onSteam && GameRunner.steamRunning()
+        heroicRunning = heroicGame && Library.heroicRunning()
         artEditor.reset(g.art)
         error.text = ""
         resetLookup()
@@ -739,12 +744,14 @@ Item {
 
     Connections {
         target: Library
-        enabled: dialog.visible && root.onSteam
+        enabled: dialog.visible && (root.onSteam || root.heroicGame)
         function onGamesChanged() {
             const g = Library.gameForEditing(root.game.id)
-            root.steamPending = g.pendingSteamEdits ?? false
+            root.steamPending = (g.pendingEdits ?? "") === "steam"
+            root.heroicPending = (g.pendingEdits ?? "") === "heroic"
             root.shortcutQueued = g.shortcutQueued ?? false
-            root.steamRunning = GameRunner.steamRunning()
+            root.steamRunning = root.onSteam && GameRunner.steamRunning()
+            root.heroicRunning = root.heroicGame && Library.heroicRunning()
         }
     }
 

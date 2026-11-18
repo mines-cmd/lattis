@@ -89,7 +89,7 @@ inline void setSteamLaunchOptions(const QString &localConfig, qint64 appId, cons
 
 inline bool pending(const Library &library, const QString &id)
 {
-    return library.gameAt(library.rowOfGame(id)).value("pendingSteamEdits").toBool();
+    return library.gameAt(library.rowOfGame(id)).value("pendingEdits").toString() == "steam";
 }
 
 inline QString launchOptionsOf(const Library &library, const QString &id)

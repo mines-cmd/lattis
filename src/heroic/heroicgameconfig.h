@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 
 #include <optional>
@@ -41,6 +42,15 @@ struct HeroicGameEdits
 };
 
 namespace HeroicGameConfig {
+// Edits as a JSON object (only the keys set), for the queue that waits for Heroic to close.
+QJsonObject editsToJson(const HeroicGameEdits &edits);
+HeroicGameEdits editsFromJson(const QJsonObject &object);
+// `later` wins for every key it sets.
+void merge(HeroicGameEdits &into, const HeroicGameEdits &later);
+// What the settings read as once the edits are written.
+void apply(HeroicGameSettings &settings, const HeroicGameEdits &edits);
+bool isEmpty(const HeroicGameEdits &edits);
+
 QString path(const QString &root, const QString &appName);
 
 // `root` is Heroic's config folder. A game with no file or an empty entry reads as Heroic's defaults. False, with

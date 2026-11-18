@@ -372,6 +372,8 @@ Library::Library(const QString &dataDir, const QString &cacheDir, NewLibrary new
     , m_heroFiles(preload ? std::move(preload->heroFiles) : HeroCache::list(cacheDir))
 {
     s_instance = this;
+    m_heroicPendingTimer.setInterval(2000);
+    connect(&m_heroicPendingTimer, &QTimer::timeout, this, &Library::applyHeroicPending);
     connect(&m_heroCopy, &QFutureWatcher<HeroCache::Result>::finished, this, &Library::heroCopyFinished);
     connect(&m_store, &LibraryStore::changed, this, &Library::reloadFromStore);
     connect(&m_store, &LibraryStore::artShrunk, this, &Library::makeNextHeroCopy);
@@ -1386,6 +1388,7 @@ void Library::reloadFromBuilt(BuiltLibrary built)
     }
     updateSteam();
     updateHeroic();
+    applyHeroicPending();
 
     QVariantList tags;
     for (const TagDef &t : snapshot.content.tags) {
@@ -4685,7 +4688,7 @@ QVariantList Library::buildModManagers() const
             {QStringLiteral("shortcut"), m.shortcut},
             {QStringLiteral("inSteam"), m.inSteam},
             {QStringLiteral("shortcutQueued"), queuedKeys.contains(SteamSync::kAddShortcut)},
-            {QStringLiteral("pendingSteamEdits"), pending},
+            {QStringLiteral("pendingEdits"), pending ? QStringLiteral("steam") : QString()},
             {QStringLiteral("protonName"), m.isProton() ? toolName(m) : QString()},
             {QStringLiteral("sharedGame"), sharedGame},
             {QStringLiteral("games"), games},
@@ -4960,6 +4963,7 @@ QVariantMap Library::gameWithId(const QString &id) const
 
 QVariantMap Library::gameMap(const Game &g) const
 {
+    const QString pendingName = pendingEditsName(g);
     QString platformIcon;
     for (const Platform &p : m_platforms) {
         if (p.id == g.platform)
@@ -5013,9 +5017,9 @@ QVariantMap Library::gameMap(const Game &g) const
         {QStringLiteral("favorite"), g.favorite},
         {QStringLiteral("hidden"), g.hidden},
         {QStringLiteral("emulator"), g.emulator},
-        {QStringLiteral("pendingSteamEdits"), g.pendingSteamEdits},
+        {QStringLiteral("pendingEdits"), pendingName},
         {QStringLiteral("shortcutQueued"),
-         g.pendingSteamEdits && m_store.snapshot().steamQueued.value(g.id).contains(SteamSync::kAddShortcut)},
+         g.pendingEdits == PendingLauncher::Steam && m_store.snapshot().steamQueued.value(g.id).contains(SteamSync::kAddShortcut)},
         {QStringLiteral("tags"), tags},
         {QStringLiteral("hue"), hueOf(g.title)},
         {QStringLiteral("iconUrl"), g.iconUrl},
@@ -5446,6 +5450,7 @@ QVariantMap Library::gameForEditing(const QString &id) const
     if (!g)
         return {};
     const GameFile file = m_store.snapshot().content.games.value(id);
+    const QString pendingName = pendingEditsName(*g);
     QVariantList tags;
     for (const GameTag &tag : g->tags)
         tags.append(QVariantMap{{QStringLiteral("name"), tag.name}, {QStringLiteral("color"), tag.color}});
@@ -5491,9 +5496,9 @@ QVariantMap Library::gameForEditing(const QString &id) const
         {QStringLiteral("protonDefault"), steam.value(QStringLiteral("protonDefault"))},
         {QStringLiteral("steamPresets"),
          g->platform == kLinuxPlatform ? QVariant(linuxPresets()) : steam.value(QStringLiteral("steamPresets"))},
-        {QStringLiteral("pendingSteamEdits"), g->pendingSteamEdits},
+        {QStringLiteral("pendingEdits"), pendingName},
         {QStringLiteral("shortcutQueued"),
-         g->pendingSteamEdits && m_store.snapshot().steamQueued.value(id).contains(SteamSync::kAddShortcut)},
+         g->pendingEdits == PendingLauncher::Steam && m_store.snapshot().steamQueued.value(id).contains(SteamSync::kAddShortcut)},
         {QStringLiteral("installPath"), g->installDir},
         {QStringLiteral("exe"), file.exe},
         {QStringLiteral("exePath"), g->exe},
@@ -6317,6 +6322,7 @@ QVariantMap Library::heroicSettingsFor(const QString &id) const
     QString error;
     if (!HeroicGameConfig::read(s.heroic.install.root, appName, settings, &error))
         return {{QStringLiteral("error"), error}};
+    HeroicGameConfig::apply(settings, m_heroicPending.value(appName));
 
     // Matched by program, so the stored name may differ from the one Lattis lists it under.
     QVariantList wines;
@@ -6377,6 +6383,8 @@ QString Library::saveHeroicSettings(const QString &id, const QVariantMap &settin
     QString error;
     if (!HeroicGameConfig::read(root, appName, before, &error))
         return error;
+    // What Properties showed includes what already waits for Heroic.
+    HeroicGameConfig::apply(before, m_heroicPending.value(appName));
     const HeroicGameSettings after = heroicFromDraft(settings);
 
     HeroicGameEdits edits;
@@ -6392,6 +6400,16 @@ QString Library::saveHeroicSettings(const QString &id, const QVariantMap &settin
         edits.wrappers = after.wrappers;
     if (after.wine.bin != before.wine.bin && !after.wine.bin.isEmpty())
         edits.wine = after.wine;
+    if (HeroicGameConfig::isEmpty(edits))
+        return {};
+    if (m_heroicRunning()) {
+        HeroicGameConfig::merge(m_heroicPending[appName], edits);
+        saveHeroicPending();
+        applyHeroicPending();
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+        emit gamesChanged();
+        return {};
+    }
     return applyHeroicEdits(root, appName, edits);
 }
 
@@ -6401,6 +6419,81 @@ QString Library::applyHeroicEdits(const QString &root, const QString &appName, c
         || edits.wrappers || edits.wine;
     QString error;
     return !any || HeroicGameConfig::write(root, appName, edits, &error) ? QString() : error;
+}
+
+QString Library::pendingEditsName(const Game &g) const
+{
+    if (g.pendingEdits == PendingLauncher::Steam)
+        return QStringLiteral("steam");
+    if (!m_heroicPending.isEmpty() && g.launcher() == QLatin1String("heroic")
+        && m_heroicPending.contains(epicAppName(g.id)))
+        return QStringLiteral("heroic");
+    return {};
+}
+
+void Library::setHeroicPendingFile(const QString &path)
+{
+    m_heroicPendingFile = path;
+    m_heroicPending.clear();
+    QFile file(path);
+    if (!path.isEmpty() && file.open(QIODevice::ReadOnly)) {
+        const QJsonObject all = QJsonDocument::fromJson(file.readAll()).object();
+        for (auto it = all.begin(); it != all.end(); ++it) {
+            const HeroicGameEdits edits = HeroicGameConfig::editsFromJson(it.value().toObject());
+            if (!HeroicGameConfig::isEmpty(edits))
+                m_heroicPending.insert(it.key(), edits);
+        }
+    }
+    if (!m_heroicPending.isEmpty())
+        applyHeroicPending();
+}
+
+void Library::saveHeroicPending() const
+{
+    if (m_heroicPendingFile.isEmpty())
+        return;
+    if (m_heroicPending.isEmpty()) {
+        QFile::remove(m_heroicPendingFile);
+        return;
+    }
+    QJsonObject all;
+    for (auto it = m_heroicPending.cbegin(); it != m_heroicPending.cend(); ++it)
+        all.insert(it.key(), HeroicGameConfig::editsToJson(it.value()));
+    QDir().mkpath(QFileInfo(m_heroicPendingFile).absolutePath());
+    QSaveFile out(m_heroicPendingFile);
+    if (!out.open(QIODevice::WriteOnly) || out.write(QJsonDocument(all).toJson()) < 0 || !out.commit())
+        qCWarning(lcLibrary).noquote() << "could not save" << m_heroicPendingFile;
+}
+
+// Heroic writes a game's whole config back from memory, so edits made to the file while it runs are lost: they
+// wait here, and are written when it has closed.
+void Library::applyHeroicPending()
+{
+    if (m_heroicPending.isEmpty()) {
+        m_heroicPendingTimer.stop();
+        return;
+    }
+    const QString root = m_store.snapshot().heroic.install.root;
+    if (root.isEmpty())
+        return;
+    if (m_heroicRunning()) {
+        if (!m_heroicPendingTimer.isActive())
+            m_heroicPendingTimer.start();
+        return;
+    }
+    m_heroicPendingTimer.stop();
+    const QHash<QString, HeroicGameEdits> waiting = std::exchange(m_heroicPending, {});
+    for (auto it = waiting.cbegin(); it != waiting.cend(); ++it) {
+        if (const QString error = applyHeroicEdits(root, it.key(), it.value()); !error.isEmpty()) {
+            qCWarning(lcLibrary).noquote() << QStringLiteral("not applied to Heroic: %1").arg(error);
+            m_heroicPending.insert(it.key(), it.value());
+            continue;
+        }
+        qCInfo(lcLibrary).noquote() << QStringLiteral("%1: applied its waiting edits to Heroic").arg(it.key());
+    }
+    saveHeroicPending();
+    emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+    emit gamesChanged();
 }
 
 QVariantMap Library::epicUninstallChoices(const QString &id)

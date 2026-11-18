@@ -331,4 +331,83 @@ bool write(const QString &root, const QString &appName, const HeroicGameEdits &e
         return fail(error, QStringLiteral("%1: can't write the file").arg(filePath));
     return true;
 }
+
+QJsonObject editsToJson(const HeroicGameEdits &e)
+{
+    QJsonObject o;
+    if (e.launcherArgs)
+        o.insert(QStringLiteral("launcherArgs"), *e.launcherArgs);
+    if (e.showMangohud)
+        o.insert(QStringLiteral("showMangohud"), *e.showMangohud);
+    if (e.useGameMode)
+        o.insert(QStringLiteral("useGameMode"), *e.useGameMode);
+    if (e.environment)
+        o.insert(QStringLiteral("environment"), *e.environment);
+    if (e.wrappers)
+        o.insert(QStringLiteral("wrappers"), *e.wrappers);
+    if (e.wine) {
+        QJsonObject wine = wineObject(*e.wine);
+        wine.insert(QStringLiteral("wineserver"), e.wine->wineserver);
+        o.insert(QStringLiteral("wine"), wine);
+    }
+    return o;
+}
+
+HeroicGameEdits editsFromJson(const QJsonObject &o)
+{
+    HeroicGameEdits e;
+    if (o.contains(QStringLiteral("launcherArgs")))
+        e.launcherArgs = o.value(QStringLiteral("launcherArgs")).toString();
+    if (o.contains(QStringLiteral("showMangohud")))
+        e.showMangohud = o.value(QStringLiteral("showMangohud")).toBool();
+    if (o.contains(QStringLiteral("useGameMode")))
+        e.useGameMode = o.value(QStringLiteral("useGameMode")).toBool();
+    if (o.contains(QStringLiteral("environment")))
+        e.environment = o.value(QStringLiteral("environment")).toArray();
+    if (o.contains(QStringLiteral("wrappers")))
+        e.wrappers = o.value(QStringLiteral("wrappers")).toArray();
+    if (const QJsonObject wine = o.value(QStringLiteral("wine")).toObject(); !wine.isEmpty()) {
+        e.wine = HeroicWine{wine.value(QStringLiteral("bin")).toString(), wine.value(QStringLiteral("name")).toString(),
+                            wine.value(QStringLiteral("type")).toString(),
+                            wine.value(QStringLiteral("wineserver")).toString()};
+    }
+    return e;
+}
+
+void merge(HeroicGameEdits &into, const HeroicGameEdits &later)
+{
+    if (later.launcherArgs)
+        into.launcherArgs = later.launcherArgs;
+    if (later.showMangohud)
+        into.showMangohud = later.showMangohud;
+    if (later.useGameMode)
+        into.useGameMode = later.useGameMode;
+    if (later.environment)
+        into.environment = later.environment;
+    if (later.wrappers)
+        into.wrappers = later.wrappers;
+    if (later.wine)
+        into.wine = later.wine;
+}
+
+void apply(HeroicGameSettings &s, const HeroicGameEdits &e)
+{
+    if (e.launcherArgs)
+        s.launcherArgs = *e.launcherArgs;
+    if (e.showMangohud)
+        s.showMangohud = *e.showMangohud;
+    if (e.useGameMode)
+        s.useGameMode = *e.useGameMode;
+    if (e.environment)
+        s.environment = *e.environment;
+    if (e.wrappers)
+        s.wrappers = *e.wrappers;
+    if (e.wine)
+        s.wine = *e.wine;
+}
+
+bool isEmpty(const HeroicGameEdits &e)
+{
+    return !(e.launcherArgs || e.showMangohud || e.useGameMode || e.environment || e.wrappers || e.wine);
+}
 }

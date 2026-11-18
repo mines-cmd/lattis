@@ -478,10 +478,11 @@ Item {
         settings: {
             icon: Icons.gear,
             color: Theme.iconButton.icon,
-            tip: Actions.tip((game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
-                                                               : qsTr("Properties"),
+            tip: Actions.tip((game.pendingEdits ?? "") === "heroic" ? qsTr("Properties — changes are queued until Heroic closes")
+                                                      : (game.pendingEdits ?? "") === "steam" ? qsTr("Properties — changes are queued until Steam closes")
+                                                                                              : qsTr("Properties"),
                              Actions.keys.game_settings),
-            badge: game.pendingSteamEdits ?? false
+            badge: (game.pendingEdits ?? "") !== ""
         },
         gallery: {
             icon: Icons.image,

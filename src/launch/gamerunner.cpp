@@ -807,7 +807,7 @@ QString GameRunner::launch(const QString &gameId)
             && m_library->store().snapshot().steamQueued.value(gameId).contains(SteamSync::kAddShortcut))
             return tr("%1 isn't in Steam yet; restart Steam to add it").arg(game->title);
         // With Steam closed, what's queued is written first, so the game starts with it.
-        const QString applied = game->pendingSteamEdits && !running ? m_library->store().applySteamQueue() : QString();
+        const QString applied = game->pendingEdits == PendingLauncher::Steam && !running ? m_library->store().applySteamQueue() : QString();
         if (const QString error = startSteamGame(gameId, steam); !error.isEmpty())
             return error;
         return applied;

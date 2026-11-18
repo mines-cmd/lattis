@@ -53,6 +53,7 @@ private slots:
     void init();
 
     void gamePid();
+    void heroicRunning();
 
     void findNative();
     void findFlatpak();
@@ -638,6 +639,26 @@ void HeroicTest::gamePid()
     QCOMPARE(HeroicLocate::gamePid({}), 0);
     runner.kill();
     runner.waitForFinished();
+}
+
+void HeroicTest::heroicRunning()
+{
+    QTemporaryDir proc;
+    QVERIFY(proc.isValid());
+    const auto process = [&](const char *pid, const QByteArray &cmdline) {
+        QVERIFY(QDir().mkpath(proc.filePath(QString::fromLatin1(pid))));
+        QFile file(proc.filePath(QString::fromLatin1(pid) + u"/cmdline"_s));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(cmdline);
+    };
+    QVERIFY(!HeroicLocate::running(proc.path()));
+
+    process("10", QByteArray("/usr/bin/lattis\0--no-gui\0", 25));
+    // Heroic's helper processes don't count; its main process does, native or in a Flatpak.
+    process("11", QByteArray("/usr/lib64/heroic/heroic\0--type=renderer\0", 41));
+    QVERIFY(!HeroicLocate::running(proc.path()));
+    process("12", QByteArray("/app/bin/heroic\0--no-sandbox\0", 28));
+    QVERIFY(HeroicLocate::running(proc.path()));
 }
 
 QTEST_GUILESS_MAIN(HeroicTest)

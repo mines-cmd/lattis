@@ -91,6 +91,7 @@ private slots:
     void aBrokenCachedImageIsSkipped();
     void aGameSaysWhoRunsIt();
     void anEpicGamesLaunchSettings();
+    void editsWaitForHeroicToClose();
     void settingsShowWhatWasFound();
     void settingsSaveTheirValues();
     void setupCountsTheScan();
@@ -737,6 +738,39 @@ void LibraryHeroicTest::anEpicGamesLaunchSettings()
     QVERIFY(entry.value(u"showMangohud"_s).toBool());
     QCOMPARE(entry.value(u"launcherArgs"_s).toString(), u"-windowed"_s);
     QCOMPARE(entry.value(u"wineVersion"_s).toObject().value(u"name"_s).toString(), u"Wine-GE-8"_s);
+}
+
+void LibraryHeroicTest::editsWaitForHeroicToClose()
+{
+    writeLibrary(libraryCache(kLibrary));
+    writeInstalled(installedFile({u"HikeApp"_s}));
+    writeFile(heroicRoot() + u"/config.json"_s, R"({"defaultSettings": {}})");
+    auto library = openLibrary();
+    const QString pendingFile = heroicRoot() + u"-pending.json"_s;
+    library->setHeroicPendingFile(pendingFile);
+    bool running = true;
+    library->setHeroicRunningCheck([&running] { return running; });
+
+    QVariantMap settings =
+        library->gameForEditing(u"epic-a-short-hike"_s).value(u"heroic"_s).toMap().value(u"settings"_s).toMap();
+    settings.insert(u"launcherArgs"_s, u"-windowed"_s);
+    QVERIFY(library->saveHeroicSettings(u"epic-a-short-hike"_s, settings).isEmpty());
+
+    // Nothing is written while it runs; the game says it waits, and Properties shows the waiting value.
+    QVERIFY(!QFileInfo::exists(HeroicGameConfig::path(heroicRoot(), u"HikeApp"_s)));
+    QCOMPARE(library->gameForEditing(u"epic-a-short-hike"_s).value(u"pendingEdits"_s).toString(), u"heroic"_s);
+    QCOMPARE(library->gameWithId(u"epic-a-short-hike"_s).value(u"pendingEdits"_s).toString(), u"heroic"_s);
+    QCOMPARE(library->gameForEditing(u"epic-a-short-hike"_s).value(u"heroic"_s).toMap().value(u"settings"_s).toMap()
+                 .value(u"launcherArgs"_s).toString(), u"-windowed"_s);
+
+    // The queue is kept in a file; once Heroic is closed what it holds is written.
+    running = false;
+    library->setHeroicPendingFile(pendingFile);
+    const QJsonObject entry = QJsonDocument::fromJson(readFile(HeroicGameConfig::path(heroicRoot(), u"HikeApp"_s)))
+                                  .object().value(u"HikeApp"_s).toObject();
+    QCOMPARE(entry.value(u"launcherArgs"_s).toString(), u"-windowed"_s);
+    QVERIFY(library->gameForEditing(u"epic-a-short-hike"_s).value(u"pendingEdits"_s).toString().isEmpty());
+    QVERIFY(!QFileInfo::exists(pendingFile));
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

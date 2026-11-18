@@ -5,6 +5,7 @@
 #include "gameid.h"
 #include "herocache.h"
 #include "heroicgameconfig.h"
+#include "heroiclocate.h"
 #include "heroicsettings.h"
 #include "librarystore.h"
 #include "libraryundo.h"
@@ -386,6 +387,11 @@ public:
     Q_INVOKABLE QString retagGames(const QStringList &ids, const QStringList &add, const QStringList &remove);
 
     void setUndoDir(const QString &dir);
+    // Where the Epic edits waiting for Heroic to close are kept; read now and applied once Heroic is closed.
+    void setHeroicPendingFile(const QString &path);
+    // For tests and screenshots: stands in for looking at the running processes.
+    void setHeroicRunningCheck(std::function<bool()> check) { m_heroicRunning = std::move(check); }
+    Q_INVOKABLE bool heroicRunning() const { return m_heroicRunning(); }
     void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
     Q_INVOKABLE void beginEditUndo(const QString &id);
@@ -397,6 +403,9 @@ public:
                                     const QString &action, bool permanent);
     Q_INVOKABLE QVariantMap epicUninstallChoices(const QString &id);
     QString epicAppName(const QString &id) const;
+    QString pendingEditsName(const Game &g) const;
+    void applyHeroicPending();
+    void saveHeroicPending() const;
     // An Epic game's Heroic settings for Properties; see docs/code/heroic.md.
     QVariantMap heroicSettingsFor(const QString &id) const;
     Q_INVOKABLE bool heroicPresetOn(const QVariantMap &settings, const QString &preset) const;
@@ -679,6 +688,10 @@ private:
     mutable QVariantMap m_steam;
     HeroicSettings m_heroicSettings;
     mutable QVariantMap m_heroic;
+    QHash<QString, HeroicGameEdits> m_heroicPending; // by app name
+    QString m_heroicPendingFile;
+    QTimer m_heroicPendingTimer;
+    std::function<bool()> m_heroicRunning = [] { return HeroicLocate::running(); };
     SteamDownloads m_downloads;
     QVariantList m_steamWaiting;
     QVariantMap m_download;

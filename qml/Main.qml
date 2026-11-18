@@ -17,7 +17,7 @@ ApplicationWindow {
             return
         // Edits waiting for Steam to close: ask whether to restart it. With Steam closed,
         // they're written first without asking.
-        if ((game.platform === "steam" || game.platform === "proton") && game.installed && game.pendingSteamEdits
+        if ((game.platform === "steam" || game.platform === "proton") && game.installed && game.pendingEdits === "steam"
                 && !GameRunner.running.includes(game.id) && GameRunner.steamRunning()) {
             steamPrompt.active = true
             steamPrompt.item.ask(game)

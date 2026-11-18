@@ -56,4 +56,9 @@ QStringList openArgs(const HeroicProgram &program);
 // The pid of the process that started the game's tree (`... -epicapp=<appName>` or `launch <appName>`); 0 when
 // there is none.
 qint64 gamePid(const QString &appName, const QString &procDir = QStringLiteral("/proc"));
+
+// Whether Heroic itself is running, native or Flatpak: a process whose program is named `heroic`, other than
+// its helper processes (`--type=`). Heroic keeps a game's config in memory and writes it back, so a file
+// edited while it runs is overwritten.
+bool running(const QString &procDir = QStringLiteral("/proc"));
 }

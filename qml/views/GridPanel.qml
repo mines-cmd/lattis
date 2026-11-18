@@ -182,8 +182,9 @@ Rectangle {
                 textColor: Theme.grid.buttonText
                 font.pixelSize: Theme.grid.buttonFontSize
                 text: Theme.grid.propertiesLabel
-                tip: Actions.tip((root.game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
-                                                                         : qsTr("Properties"),
+                tip: Actions.tip((root.game.pendingEdits ?? "") === "heroic" ? qsTr("Properties — changes are queued until Heroic closes")
+                                                      : (root.game.pendingEdits ?? "") === "steam" ? qsTr("Properties — changes are queued until Steam closes")
+                                                                                                  : qsTr("Properties"),
                                  Actions.keys.game_settings)
                 onClicked: root.editRequested()
             }
@@ -495,8 +496,9 @@ Rectangle {
                 onClicked: root.editRequested()
                 ToolTip.visible: hovered
                 ToolTip.delay: Theme.tooltip.delay
-                ToolTip.text: (root.game.pendingSteamEdits ?? false) ? qsTr("Properties — changes are queued until Steam closes")
-                                                                     : qsTr("Properties")
+                ToolTip.text: (root.game.pendingEdits ?? "") === "heroic" ? qsTr("Properties — changes are queued until Heroic closes")
+                                                      : (root.game.pendingEdits ?? "") === "steam" ? qsTr("Properties — changes are queued until Steam closes")
+                                                                                                  : qsTr("Properties")
             }
         }
     }

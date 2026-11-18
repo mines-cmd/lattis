@@ -180,6 +180,10 @@ int main(int argc, char *argv[])
     // load. Started here, it overlaps the QML load; earlier, it slowed the theme down as much.
     (void)QtConcurrent::run([] { QImageReader::supportedImageFormats(); });
     library.store().setStateDir(AppPaths::stateDir());
+    if (const QByteArray fake = qgetenv("LATTIS_HEROIC_RUNNING"); !fake.isEmpty())
+        library.setHeroicRunningCheck([running = fake != "0"] { return running; });
+    library.setHeroicPendingFile(AppPaths::stateDir() + QStringLiteral("/heroic-pending-")
+                                 + AppPaths::dataDirKey(dataDir) + QStringLiteral(".json"));
     library.setUndoDir(AppPaths::stateDir() + QStringLiteral("/undo"));
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
                              + QStringLiteral(".json"));
