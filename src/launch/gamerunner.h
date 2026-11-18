@@ -1,6 +1,7 @@
 #pragma once
 
 #include "heroiclocate.h"
+#include "legendaryjobs.h"
 #include "launchsettings.h"
 #include "steamlocate.h"
 
@@ -41,6 +42,7 @@ class GameRunner : public QObject
     Q_PROPERTY(QStringList problems READ problems NOTIFY settingsChanged)
     Q_PROPERTY(bool closingSteam READ closingSteam NOTIFY closingSteamChanged)
     Q_PROPERTY(bool closingHeroic READ closingHeroic NOTIFY closingHeroicChanged)
+    Q_PROPERTY(LegendaryJobs *legendary READ legendary CONSTANT)
 
 public:
     GameRunner(Library *library, const QString &dataDir, const QString &logDir, QObject *parent = nullptr);
@@ -89,6 +91,7 @@ public:
     // epicUninstalled; a result with `trashless` asks to run it again with files off and permanent on.
     Q_INVOKABLE QString uninstallEpic(const QString &gameId, bool files, bool prefix, bool permanent);
     void setLegendaryProgram(const QString &program) { m_legendary = program; }
+    LegendaryJobs *legendary() { return &m_legendaryJobs; }
     bool closingSteam() const { return m_steamClosing != nullptr; }
     Q_INVOKABLE bool steamRunning() const;
     // Hands a steam:// URL to Steam, bare; the error, or empty.
@@ -232,7 +235,18 @@ private:
     QString m_launchAfterClose;
     HeroicProgram m_heroicProgram;
     QString m_legendary;
-    QSet<QString> m_epicUninstalling;
+    struct EpicUninstall
+    {
+        QString appName;
+        bool prefix = false;
+        bool permanent = false;
+    };
+    QString legendaryProgram() const;
+    void onLegendaryFinished(const LegendaryJobs::Result &result);
+    void finishEpicUninstall(const QString &gameId, const EpicUninstall &uninstall);
+    QString epicTitle(const QString &appName) const;
+    QHash<QString, EpicUninstall> m_epicUninstalling; // by game id
+    LegendaryJobs m_legendaryJobs;
     FindSaves m_findSaves;
     std::function<bool(const QString &)> m_updating;
     QHash<QString, HeroicSession> m_heroicSessions;

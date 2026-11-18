@@ -69,6 +69,8 @@ The Launch tab shows the folder Heroic installed the game in, and **Open Heroic*
 
 An installed Epic game whose build is older than the newest one Epic lists (Heroic keeps that list up to date) shows the same "Update available" chip and list arrow as a Steam game with an update (see [Steam](steam.md#updates)); update it in Heroic. Heroic's other settings (Esync, Fsync, DXVK, the Wine prefix) are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
 
+Once a day, shortly after Lattis starts, it asks Epic for the newest builds through Heroic's own Legendary (`legendary list-installed --check-updates`, about 2.4 seconds, in the background), so the chip and arrow are right even if you haven't opened Heroic. This contacts Epic and changes nothing in your games. Switch **Check for updates daily** off on Settings → Heroic to stop it. It needs Legendary, so a Flatpak Heroic is left out, and a failed check (you are offline) is only written to the log.
+
 ### Changes wait for Heroic to close
 
 Heroic keeps a game's settings in memory and writes them all back, so it would undo a change made while it runs. Lattis only writes to Heroic's files while Heroic is closed:

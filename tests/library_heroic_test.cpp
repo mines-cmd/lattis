@@ -202,11 +202,13 @@ void LibraryHeroicTest::theIndexRoundTrips()
 
 void LibraryHeroicTest::parsesTheSettings()
 {
+    QVERIFY(parseHeroicSettings({}, u"settings.toml"_s).value.checkUpdates);
+    QVERIFY(!parseHeroicSettings("[heroic]\ncheck_updates = false\n", u"settings.toml"_s).value.checkUpdates);
     QVERIFY(parseHeroicSettings({}, u"settings.toml"_s).value.wholeLibrary);
     QVERIFY(parseHeroicSettings({}, u"settings.toml"_s).value.enabled);
     const auto r = parseHeroicSettings("[heroic]\nenabled = false\npath = \"~/h\"\nwhole_library = false\n",
                                        u"settings.toml"_s);
-    QCOMPARE(r.value, (HeroicSettings{false, u"~/h"_s, false}));
+    QCOMPARE(r.value, (HeroicSettings{false, u"~/h"_s, false, true}));
     QVERIFY(r.warnings.isEmpty());
     const auto wrong = parseHeroicSettings("[heroic]\nwhole_library = 1\nwhole_libary = true\n", u"settings.toml"_s);
     QVERIFY(wrong.value.wholeLibrary);

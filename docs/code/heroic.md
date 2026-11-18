@@ -59,6 +59,17 @@ A game's row has `pendingEdits` (`"heroic"` while the app name has an entry, `"s
 
 `LATTIS_HEROIC_RUNNING=<1|0>` replaces the process check (`Library::setHeroicRunningCheck()`) for tests and screenshots.
 
+## Legendary jobs
+
+`LegendaryJobs` (`legendaryjobs.*`, owned by `GameRunner`, reached from QML as `GameRunner.legendary`) is the only place Lattis runs Legendary. It starts one process at a time, in the order jobs were queued, as `legendary <verb> <appName> [extra args] -y` with `LEGENDARY_CONFIG_PATH` set to the root's `legendaryConfig/legendary`. The program and config path come from a function given to the constructor, asked again for each job; no Heroic root or no Legendary (a Flatpak) means `enqueue()` is refused.
+
+- **Kinds:** `Update`, `Install` and `Repair` are the jobs the UI lists; `Uninstall` and `Check` are hidden. A game has one job at a time (a second `enqueue()` for the same app name is refused); a failed one stays listed as `failed` until it is queued again or `dismiss()`ed.
+- **`jobs`** (property, `jobsChanged`) is a list of `{appName, kind, percent, state, error}`; `state` is `queued`, `running` or `failed`; `job(appName)` gives one. `finished(Result)` follows every job: `ok`, `cancelled`, `started` (false when the process didn't start) and `error`, the line to show.
+- **Progress** is read from the merged output, line by line: `LegendaryOutput::progress()` takes the percentage of `= Progress: 47.06% (272/578), …` (chunks, not bytes; the first line says 0.00%). The detail lines under it are dropped; the other lines are kept, 300 at most, and logged in full (`lattis.legendary`) when a run fails.
+- **Cancel:** `cancel(appName)` removes a queued job, or sends SIGINT to the running one, as Ctrl-C does: Legendary stops its workers and keeps the resume file (`<config>/tmp/<appName>.resume`), so running the job again resumes. SIGTERM would kill only the parent. Legendary exits with 0 after SIGINT, so the job is marked cancelled, not done; one that ignores SIGINT for 10 s is killed. The destructor sends SIGINT too.
+- **Failure:** `LegendaryOutput::failureLine()` is the last `ERROR:` or `CRITICAL:` line's text, else the last line that isn't a progress line; `GameRunner` shows it in a toast ("Couldn't update <title>: …") and answers an uninstall with it.
+- **Daily check:** `startDailyCheck(file, enabled)` (from `GameRunner::start()`, so after the first frame) looks 10 s later, then every hour, at `[heroic] check_updates` (on by default), whether a Legendary and a Heroic root were found, and whether the time in `<state dir>/epic-update-check-<data dir key>.txt` is over a day old. A due check runs `legendary list-installed --check-updates` as a hidden job; it is skipped, and tried again a minute later, while another job is queued or running. Legendary rewrites `assets.json` and `entitlements.json`, which the scan watches, so the chip and arrow follow without more code. The time is written only after a check that worked; a failure (offline) is logged only.
+
 ## Files
 
 | File | Contents |
@@ -69,4 +80,5 @@ A game's row has `pendingEdits` (`"heroic"` while the app name has an entry, `"s
 | `heroicpresets.*` | `HeroicPresets::isOn()`, `turnOn()`, `turnOff()`: a launch option preset in a game's Heroic settings |
 | `heroicwines.*` | `HeroicWineChoice`; `HeroicWines::find()` |
 | `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `ownPrefix()`, `expandCloudSaveFolder()` |
-| `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` |
+| `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` (`enabled`, `path`, `whole_library`, `check_updates`) |
+| `legendaryjobs.*` | `LegendaryJobs`, `LegendaryOutput::progress()`, `failureLine()`: the Legendary job runner |

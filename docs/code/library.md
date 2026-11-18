@@ -243,7 +243,7 @@ For Proton and Linux games, the **install folder** is the program's folder, clim
 
 An entry of `heroic.toml` is `<id> = { title = "…", store = "epic", app_name = "…", heroic_minutes = 12 }`. An app name can't be an id (Epic's have capitals), so the id is `GameId::forTitle()`'s and the app name sits beside it. `store` is also the game's platform, and `heroic_minutes` is left out until Heroic's total has been counted. The `epic` platform is added once Heroic is found.
 
-`scanLibrary()` finds Heroic (`[heroic]` in `settings.toml`: `enabled`, `path`, `whole_library`, on by default), reads its files, and runs `HeroicMerge::merge()`. New games get a line and go out through `gamesAdded`, like Steam's whole library: one batch for the rate-limited lookup, which does nothing without IGDB keys or with `look_up_new_games` off. The file is written whole, as hundreds of patches would take minutes, and not at all while it has an error.
+`scanLibrary()` finds Heroic (`[heroic]` in `settings.toml`: `enabled`, `path`, `whole_library`, `check_updates`, on by default), reads its files, and runs `HeroicMerge::merge()`. New games get a line and go out through `gamesAdded`, like Steam's whole library: one batch for the rate-limited lookup, which does nothing without IGDB keys or with `look_up_new_games` off. The file is written whole, as hundreds of patches would take minutes, and not at all while it has an error.
 
 The scan never removes a line or renames a game, so a game that returns has its id and its counted minutes. Leaving the list only puts the id in `HeroicListing::gone`, which `buildLibrary()` skips along with the game's file:
 

@@ -1111,6 +1111,7 @@ QVariantMap Library::buildHeroic() const
         {QStringLiteral("enabled"), m_heroicSettings.enabled},
         {QStringLiteral("path"), m_heroicSettings.path},
         {QStringLiteral("wholeLibrary"), m_heroicSettings.wholeLibrary},
+        {QStringLiteral("checkUpdates"), m_heroicSettings.checkUpdates},
         {QStringLiteral("found"), m_heroicSettings.enabled && install.found()},
         {QStringLiteral("programFound"), install.program.found()},
         {QStringLiteral("flatpak"), install.kind == HeroicInstall::Kind::Flatpak},
@@ -1139,7 +1140,7 @@ void Library::updateHeroic()
 QString Library::setHeroicValue(const QString &key, const QVariant &value)
 {
     QString formatted;
-    if (key == u"enabled" || key == u"whole_library") {
+    if (key == u"enabled" || key == u"whole_library" || key == u"check_updates") {
         if (!value.toBool())
             formatted = QStringLiteral("false");
     } else if (key == u"path") {

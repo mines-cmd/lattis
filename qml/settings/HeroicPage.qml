@@ -170,6 +170,25 @@ Item {
                     }
                 }
 
+                SettingsCard {
+                    enabled: root.heroic.enabled
+
+                    SwitchRow {
+                        label: qsTr("Check for updates daily")
+                        checked: root.heroic.checkUpdates
+                        enabled: GameRunner.legendaryFound()
+                        onToggled: on => root.set("check_updates", on)
+                    }
+                    SettingsNote {
+                        Layout.fillWidth: true
+                        text: GameRunner.legendaryFound()
+                              ? qsTr("Once a day, Heroic's Legendary asks Epic whether your installed games have a "
+                                     + "newer build, so the update chip and arrow are right even when Heroic hasn't "
+                                     + "been opened. It contacts Epic, and changes nothing in your games.")
+                              : qsTr("Needs Heroic's own Legendary, which isn't found. A Flatpak Heroic keeps it out of reach.")
+                    }
+                }
+
                 SettingsButton {
                     enabled: root.heroic.found && root.heroic.programFound
                     text: qsTr("Open Heroic")

@@ -396,6 +396,7 @@ public:
     // For tests and screenshots: stands in for looking at the running processes.
     void setHeroicRunningCheck(std::function<bool()> check) { m_heroicRunning = std::move(check); }
     Q_INVOKABLE bool heroicRunning() const { return m_heroicRunning(); }
+    bool heroicChecksUpdates() const { return m_heroicSettings.checkUpdates; }
     void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
     Q_INVOKABLE void beginEditUndo(const QString &id);

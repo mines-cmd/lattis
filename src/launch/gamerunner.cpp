@@ -3,6 +3,7 @@
 #include "emulators.h"
 #include "gameid.h"
 #include "heroicscan.h"
+#include "apppaths.h"
 #include "launchcommand.h"
 #include "library.h"
 #include "steamshortcuts.h"
@@ -519,9 +520,25 @@ QString GameRunner::openHeroic()
     return runHeroic(HeroicLocate::openArgs(heroicProgram()));
 }
 
+QString GameRunner::legendaryProgram() const
+{
+    return m_legendary.isEmpty() ? HeroicLocate::findLegendary(HeroicLocations::system()) : m_legendary;
+}
+
 bool GameRunner::legendaryFound() const
 {
-    return !(m_legendary.isEmpty() ? HeroicLocate::findLegendary(HeroicLocations::system()) : m_legendary).isEmpty();
+    return !legendaryProgram().isEmpty();
+}
+
+QString GameRunner::epicTitle(const QString &appName) const
+{
+    for (const HeroicEntry &entry : m_library->store().snapshot().content.heroic) {
+        if (entry.appName != appName)
+            continue;
+        if (const Game *game = m_library->game(entry.id))
+            return game->title;
+    }
+    return appName;
 }
 
 QString GameRunner::uninstallEpic(const QString &gameId, bool files, bool prefix, bool permanent)
@@ -538,49 +555,66 @@ QString GameRunner::uninstallEpic(const QString &gameId, bool files, bool prefix
     if (m_library->readOnly())
         return tr("The library is read-only; nothing was deleted");
 
-    const auto removePrefix = [this, gameId, prefix, permanent] {
-        emit epicUninstalled(gameId, prefix ? m_library->removeEpicPrefix(gameId, permanent) : QVariantMap());
-    };
+    const EpicUninstall uninstall{appName, prefix, permanent};
     if (!files) {
-        removePrefix();
+        finishEpicUninstall(gameId, uninstall);
         return {};
     }
-    const QString program = m_legendary.isEmpty() ? HeroicLocate::findLegendary(HeroicLocations::system())
-                                                  : m_legendary;
-    if (program.isEmpty())
+    if (legendaryProgram().isEmpty())
         return tr("Heroic's Legendary isn't found; uninstall the game in Heroic");
 
-    auto *process = new QProcess(this);
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("LEGENDARY_CONFIG_PATH"), root + QStringLiteral("/legendaryConfig/legendary"));
-    process->setProcessEnvironment(env);
-    process->setProcessChannelMode(QProcess::MergedChannels);
-    m_epicUninstalling.insert(gameId);
-    qCInfo(lcLaunch).noquote() << QStringLiteral("uninstalling %1 with %2").arg(gameId, program);
-    connect(process, &QProcess::errorOccurred, this, [this, process, gameId](QProcess::ProcessError error) {
-        if (error != QProcess::FailedToStart)
-            return;
+    m_epicUninstalling.insert(gameId, uninstall);
+    qCInfo(lcLaunch).noquote() << QStringLiteral("uninstalling %1").arg(gameId);
+    if (const QString error = m_legendaryJobs.enqueue(LegendaryJobs::Kind::Uninstall, appName); !error.isEmpty()) {
         m_epicUninstalling.remove(gameId);
-        emit epicUninstalled(gameId, {{QStringLiteral("error"), tr("Could not start Legendary: %1").arg(process->errorString())}});
-        process->deleteLater();
-    });
-    connect(process, &QProcess::finished, this,
-            [this, process, gameId, removePrefix](int exitCode, QProcess::ExitStatus status) {
-                m_epicUninstalling.remove(gameId);
-                const QString output = QString::fromLocal8Bit(process->readAll()).trimmed();
-                process->deleteLater();
-                if (status != QProcess::NormalExit || exitCode != 0) {
-                    qCWarning(lcLaunch).noquote() << QStringLiteral("Legendary: %1").arg(output);
-                    const QString last = output.section(u'\n', -1).trimmed();
-                    emit epicUninstalled(gameId, {{QStringLiteral("error"),
-                                                   tr("Legendary could not uninstall it: %1")
-                                                       .arg(last.isEmpty() ? tr("it failed") : last)}});
-                    return;
-                }
-                removePrefix();
-            });
-    process->start(program, {QStringLiteral("uninstall"), appName, QStringLiteral("-y")});
+        return error;
+    }
     return {};
+}
+
+void GameRunner::finishEpicUninstall(const QString &gameId, const EpicUninstall &uninstall)
+{
+    emit epicUninstalled(gameId, uninstall.prefix ? m_library->removeEpicPrefix(gameId, uninstall.permanent)
+                                                  : QVariantMap());
+}
+
+void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
+{
+    using Kind = LegendaryJobs::Kind;
+    if (result.kind == Kind::Uninstall) {
+        for (auto it = m_epicUninstalling.begin(); it != m_epicUninstalling.end(); ++it) {
+            if (it->appName != result.appName)
+                continue;
+            const QString gameId = it.key();
+            const EpicUninstall uninstall = it.value();
+            m_epicUninstalling.erase(it);
+            if (result.ok) {
+                finishEpicUninstall(gameId, uninstall);
+            } else {
+                const QString why = result.error.isEmpty() ? tr("it failed") : result.error;
+                emit epicUninstalled(gameId, {{QStringLiteral("error"),
+                                               result.started ? tr("Legendary could not uninstall it: %1").arg(why)
+                                                              : why}});
+            }
+            return;
+        }
+        return;
+    }
+    if (result.ok || result.cancelled || result.kind == Kind::Check)
+        return;
+    const QString title = epicTitle(result.appName);
+    const QString why = result.error.isEmpty() ? tr("it failed") : result.error;
+    switch (result.kind) {
+    case Kind::Install:
+        emit message(tr("Couldn't install %1: %2").arg(title, why));
+        break;
+    case Kind::Repair:
+        emit message(tr("Couldn't verify %1: %2").arg(title, why));
+        break;
+    default:
+        emit message(tr("Couldn't update %1: %2").arg(title, why));
+        break;
+    }
 }
 
 QString GameRunner::launchHeroicGame(const Game &game)
@@ -680,8 +714,17 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
     , m_library(library)
     , m_dataDir(dataDir)
     , m_logDir(logDir)
+    , m_legendaryJobs(
+          [this] {
+              const QString root = m_library->store().snapshot().heroic.install.root;
+              if (root.isEmpty())
+                  return LegendaryJobs::Tool{};
+              return LegendaryJobs::Tool{legendaryProgram(), root + QStringLiteral("/legendaryConfig/legendary")};
+          },
+          this)
 {
     s_instance = this;
+    connect(&m_legendaryJobs, &LegendaryJobs::finished, this, &GameRunner::onLegendaryFinished);
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(100);
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, &m_reloadTimer, qOverload<>(&QTimer::start));
@@ -728,6 +771,10 @@ GameRunner *GameRunner::create(QQmlEngine *, QJSEngine *)
 void GameRunner::start()
 {
     loadSettings();
+    m_legendaryJobs.startDailyCheck(
+        AppPaths::stateDir() + QStringLiteral("/epic-update-check-") + AppPaths::dataDirKey(m_dataDir)
+            + QStringLiteral(".txt"),
+        [this] { return m_library->heroicChecksUpdates(); });
 }
 
 QString GameRunner::setLaunchValue(const QString &key, const QString &value)

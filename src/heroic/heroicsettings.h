@@ -11,6 +11,8 @@ struct HeroicSettings
     QString path;
     // Off lists only the installed games; see docs/code/library.md.
     bool wholeLibrary = true;
+    // Once a day, `legendary list-installed --check-updates` asks Epic for new builds.
+    bool checkUpdates = true;
 
     bool operator==(const HeroicSettings &) const = default;
 };

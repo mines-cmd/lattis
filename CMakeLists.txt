@@ -487,6 +487,7 @@ qt_add_qml_module(lattis
         src/heroic/heroicwines.h src/heroic/heroicwines.cpp
         src/heroic/heroicsaves.h src/heroic/heroicsaves.cpp
         src/heroic/heroicsettings.h src/heroic/heroicsettings.cpp
+        src/heroic/legendaryjobs.h src/heroic/legendaryjobs.cpp
         src/theme/theme.h src/theme/theme.cpp
         src/theme/themeschema.h src/theme/themeschema.cpp
         src/theme/schemamodel.h src/theme/schemamodel.cpp
