@@ -188,10 +188,16 @@ qint64 gamePid(const QString &appName, const QString &procDir)
 
 bool running(const QString &procDir)
 {
+    return !mainPids(procDir, 1).isEmpty();
+}
+
+QList<qint64> mainPids(const QString &procDir, int limit)
+{
+    QList<qint64> out;
     const QStringList pids = QDir(procDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const QString &name : pids) {
         bool ok = false;
-        name.toLongLong(&ok);
+        const qint64 pid = name.toLongLong(&ok);
         if (!ok)
             continue;
         QFile file(procDir + u'/' + name + QStringLiteral("/cmdline"));
@@ -202,9 +208,12 @@ bool running(const QString &procDir)
             continue;
         const bool helper = std::any_of(args.cbegin(), args.cend(),
                                         [](const QByteArray &a) { return a.startsWith("--type="); });
-        if (!helper)
-            return true;
+        if (!helper) {
+            out.append(pid);
+            if (limit > 0 && out.size() >= limit)
+                break;
+        }
     }
-    return false;
+    return out;
 }
 }

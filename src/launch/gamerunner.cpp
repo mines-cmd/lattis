@@ -19,6 +19,9 @@
 #include <QStandardPaths>
 #include <QUrl>
 
+#include <cerrno>
+#include <cstring>
+#include <signal.h>
 #include <utility>
 
 Q_LOGGING_CATEGORY(lcLaunch, "launcher.launch")
@@ -329,6 +332,36 @@ QString GameRunner::closeSteamThen(const QString &gameId)
         addSteamSession(gameId, steam);
     }
     emit closingSteamChanged();
+    return {};
+}
+
+QString GameRunner::closeHeroicAndApply()
+{
+    if (closingHeroic())
+        return {};
+    if (!m_heroicSessions.isEmpty()) {
+        const Game *game = m_library->game(m_heroicSessions.constBegin().key());
+        return tr("%1 is running; close it first").arg(game ? game->title : m_heroicSessions.constBegin().key());
+    }
+    // Games started from Heroic itself have no session here.
+    for (const HeroicEntry &entry : m_library->store().snapshot().content.heroic) {
+        const Game *game = m_library->game(entry.id);
+        if (game && game->installed && HeroicLocate::gamePid(entry.appName) > 0)
+            return tr("%1 is running; close it first").arg(game->title);
+    }
+    const QList<qint64> pids = HeroicLocate::mainPids();
+    if (pids.isEmpty()) {
+        m_library->applyHeroicPending();
+        return {};
+    }
+    for (const qint64 pid : pids) {
+        if (::kill(pid_t(pid), SIGTERM) != 0 && errno != ESRCH)
+            return tr("Couldn't close Heroic: %1").arg(QString::fromLocal8Bit(std::strerror(errno)));
+    }
+    qCInfo(lcLaunch) << "closing Heroic to apply the waiting edits";
+    m_heroicCloseSince.start();
+    m_heroicCloseTimer.start();
+    emit closingHeroicChanged();
     return {};
 }
 
@@ -661,6 +694,18 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
     m_steamCloseTimer.setSingleShot(true);
     m_steamCloseTimer.setInterval(kSteamCloseSeconds * 1000);
     connect(&m_steamCloseTimer, &QTimer::timeout, this, [this] { onSteamClosed(false); });
+    m_heroicCloseTimer.setInterval(500);
+    connect(&m_heroicCloseTimer, &QTimer::timeout, this, [this] {
+        if (!m_library->heroicRunning()) {
+            m_heroicCloseTimer.stop();
+            emit closingHeroicChanged();
+            m_library->applyHeroicPending();
+        } else if (m_heroicCloseSince.hasExpired(kHeroicCloseSeconds * 1000)) {
+            m_heroicCloseTimer.stop();
+            emit closingHeroicChanged();
+            emit message(tr("Heroic didn't close within %1 seconds; nothing was applied").arg(kHeroicCloseSeconds));
+        }
+    });
 }
 
 GameRunner::~GameRunner()

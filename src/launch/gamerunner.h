@@ -40,6 +40,7 @@ class GameRunner : public QObject
     Q_PROPERTY(int minSessionSeconds READ minSessionSeconds NOTIFY settingsChanged)
     Q_PROPERTY(QStringList problems READ problems NOTIFY settingsChanged)
     Q_PROPERTY(bool closingSteam READ closingSteam NOTIFY closingSteamChanged)
+    Q_PROPERTY(bool closingHeroic READ closingHeroic NOTIFY closingHeroicChanged)
 
 public:
     GameRunner(Library *library, const QString &dataDir, const QString &logDir, QObject *parent = nullptr);
@@ -78,6 +79,10 @@ public:
     Q_INVOKABLE QString runningTitle(const QString &id) const;
     Q_INVOKABLE QString missingEmulator(const QString &gameId) const;
     Q_INVOKABLE QString closeSteamAndApply();
+    // Heroic has no quit command, so it gets SIGTERM; refused while an Epic game runs, which it could take down.
+    // Library applies the waiting edits once it's gone.
+    Q_INVOKABLE QString closeHeroicAndApply();
+    bool closingHeroic() const { return m_heroicCloseTimer.isActive(); }
     Q_INVOKABLE QString openHeroic();
     Q_INVOKABLE bool legendaryFound() const;
     // Heroic's Legendary deletes the files for good; the prefix goes to the trash. The answer comes as
@@ -123,6 +128,7 @@ public:
     static constexpr int kSteamStartSeconds = 90;
     static constexpr int kSteamGoneSeconds = 5;
     static constexpr int kSteamCloseSeconds = 30;
+    static constexpr int kHeroicCloseSeconds = 15;
     void setSteamCloseTimeout(int ms) { m_steamCloseTimer.setInterval(ms); }
     void setSessionPollInterval(int ms) { m_sessionPollMs = ms; }
 
@@ -130,6 +136,7 @@ signals:
     void epicUninstalled(const QString &gameId, const QVariantMap &result);
     void runningChanged();
     void closingSteamChanged();
+    void closingHeroicChanged();
     void settingsChanged();
     void sessionStarted(const QString &gameId);
     void sessionEnded(const QString &gameId);
@@ -230,6 +237,8 @@ private:
     std::function<bool(const QString &)> m_updating;
     QHash<QString, HeroicSession> m_heroicSessions;
     QTimer m_heroicPoll;
+    QTimer m_heroicCloseTimer;
+    QElapsedTimer m_heroicCloseSince;
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;
     int m_sessionPollMs = 2000;

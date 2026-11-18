@@ -348,7 +348,7 @@ Lasting notices beside the toolbar: a read-only library, Steam changes waiting, 
 - `background`, `background_end`, `gradient_direction`: the color under the tint.
 - `tint_opacity`: how strongly the tint colors that background.
 - `tint`, `border`, `text`, `icon`, `action_text`: a green (information) notice: its tint, outline, message, icon and text buttons (Show).
-- `warning_tint`, `warning_border`, `warning_text`, `warning_icon`, `warning_action_text`: the same for a yellow (warning) notice (Show, Close Steam).
+- `warning_tint`, `warning_border`, `warning_text`, `warning_icon`, `warning_action_text`: the same for a yellow (warning) notice (Show, Close Steam, Close Heroic).
 - `danger_text`: a button that removes something (Delete), in either kind.
 - `border_width`, `radius`, `padding`: the outline's thickness, roundness and inner space.
 - `icon_size`, `close_icon_size`: the notice's icon, and the × that hides it.

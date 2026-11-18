@@ -48,7 +48,7 @@ Heroic holds a game's config in memory and writes all of it back on its next cha
 
 ## Waiting for Heroic to close
 
-`HeroicLocate::running()` says whether Heroic itself runs, native or Flatpak: a process under `/proc` whose program is named `heroic`, leaving out its helper processes (those with a `--type=` argument). A Heroic that has only its tray icon is still running, and counts. The `/proc` directory is a parameter for tests.
+`HeroicLocate::running()` says whether Heroic itself runs, native or Flatpak: a process under `/proc` whose program is named `heroic`, leaving out its helper processes (those with a `--type=` argument). A Heroic that has only its tray icon is still running, and counts. The `/proc` directory is a parameter for tests. `HeroicLocate::mainPids()` returns those processes' pids, which `GameRunner::closeHeroicAndApply()` sends SIGTERM (a Flatpak's pids are visible from outside too).
 
 While Heroic runs, `saveHeroicSettings()` doesn't write: it merges the edits into `Library`'s per-app queue (`m_heroicPending`), keeps the queue in `<state dir>/heroic-pending-<data dir key>.json` (`{"<appName>": {"launcherArgs": …}}`, removed when empty) so it survives a restart, and a 2 s timer checks for Heroic having closed. Then `applyHeroicPending()` writes every waiting game through `applyHeroicEdits()`, logs it, and keeps an entry that failed to write. It also runs at startup (`setHeroicPendingFile()`), so edits left by a session that ended with Heroic open are applied if Heroic has since closed. Nothing is polled while the queue is empty.
 

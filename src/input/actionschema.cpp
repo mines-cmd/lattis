@@ -76,6 +76,7 @@ constexpr Action kActions[] = {
     {"window", "scan_roms", "", "Scan ROM folders now"},
     {"window", "sync_steam", "", "Sync the Steam library"},
     {"window", "apply_steam_changes", "", "Close Steam and apply the waiting changes"},
+    {"window", "apply_heroic_changes", "", "Close Heroic and apply the waiting changes"},
     {"window", "setup_guide", "", "Open the setup guide"},
     {"window", "about", "", "About Lattis"},
 

@@ -172,6 +172,23 @@ Item {
                 }
                 SettingsButton {
                     Layout.preferredHeight: Theme.notice.buttonHeight
+                    text: GameRunner.closingHeroic ? qsTr("Closing Heroic") : qsTr("Close Heroic")
+                    flat: true
+                    leftPadding: Theme.layout.spacing
+                    rightPadding: Theme.layout.spacing
+                    textColor: Theme.notice.warningActionText
+                    font.weight: Theme.font.emphasisWeight
+                    visible: Library.heroicWaiting.length > 0
+                    enabled: !GameRunner.closingHeroic
+                    tip: qsTr("Closes Heroic and writes these changes to it. Not while an Epic game runs.")
+                    onClicked: {
+                        const e = GameRunner.closeHeroicAndApply()
+                        if (e !== "")
+                            root.message(e)
+                    }
+                }
+                SettingsButton {
+                    Layout.preferredHeight: Theme.notice.buttonHeight
                     text: qsTr("Undo")
                     flat: true
                     leftPadding: Theme.layout.spacing

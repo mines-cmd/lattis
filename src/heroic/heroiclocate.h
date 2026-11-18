@@ -61,4 +61,6 @@ qint64 gamePid(const QString &appName, const QString &procDir = QStringLiteral("
 // its helper processes (`--type=`). Heroic keeps a game's config in memory and writes it back, so a file
 // edited while it runs is overwritten.
 bool running(const QString &procDir = QStringLiteral("/proc"));
+// Those processes' pids (a Flatpak's too: its pids are visible from outside); `limit` 0 = all of them.
+QList<qint64> mainPids(const QString &procDir = QStringLiteral("/proc"), int limit = 0);
 }

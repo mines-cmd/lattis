@@ -109,6 +109,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `minSessionSeconds` | `int` | Minimum session length that counts |
 | `problems` | `QStringList` | Settings parse errors |
 | `closingSteam` | `bool` | `closeSteamAndApply()` is waiting for Steam to close |
+| `closingHeroic` | `bool` | `closeHeroicAndApply()` is waiting for Heroic to close |
 
 ### `GameRunner` invokables
 
@@ -133,6 +134,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `missingPrefixGame(managerId)` | `string` | The game whose prefix a Proton manager shares, if that prefix doesn't exist yet, else `""` |
 | `missingEmulator(gameId)` | `string` | Emulator ID to install for a ROM game with none installed, or `""` |
 | `closeSteamAndApply()` | `string` | Close Steam, apply queued edits, restart it; toast or `""` |
+| `closeHeroicAndApply()` | `string` | Close Heroic (SIGTERM to its main processes, polled every 500 ms for up to `kHeroicCloseSeconds`, 15 s), then `Library::applyHeroicPending()`; refused while an Epic game runs (its own session or one Heroic started); doesn't restart Heroic; toast or `""` |
 | `steamRunning()` | `bool` | Whether Steam is running |
 | `openSteamUrl(url)` | error | C++ only: hands a `steam://` URL to Steam, bare (`SteamStatus` uses it) |
 | `setLaunchValue(key, value)` | `string` | Write a `[launch]` key to settings.toml; error or `""` |

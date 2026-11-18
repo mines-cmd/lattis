@@ -434,6 +434,13 @@ ColumnLayout {
                     tip: qsTr("Saves, closes Steam, writes the changes and starts Steam again")
                     onClicked: editor.closeSteamAndApply()
                 }
+                SettingsButton {
+                    visible: editor.heroicGame
+                    text: GameRunner.closingHeroic ? qsTr("Closing Heroic") : qsTr("Close Heroic and apply")
+                    enabled: !GameRunner.closingHeroic
+                    tip: qsTr("Saves, closes Heroic and writes the changes. Not while an Epic game runs.")
+                    onClicked: editor.closeHeroicAndApply()
+                }
             }
         }
     }

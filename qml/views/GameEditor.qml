@@ -866,6 +866,15 @@ Item {
             message(e)
     }
 
+    function closeHeroicAndApply() {
+        save()
+        if (dialog.opened) // it said why it didn't save
+            return
+        const e = GameRunner.closeHeroicAndApply()
+        if (e !== "")
+            message(e)
+    }
+
     function save() {
         if (titleField.text.trim() === "") {
             error.text = qsTr("A game needs a title")

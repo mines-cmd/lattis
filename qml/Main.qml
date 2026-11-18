@@ -1010,6 +1010,13 @@ ApplicationWindow {
                     toast.show(error)
             }
             break
+        case "apply_heroic_changes":
+            if (Library.heroicWaiting.length > 0 && !GameRunner.closingHeroic) {
+                const error = GameRunner.closeHeroicAndApply()
+                if (error !== "")
+                    toast.show(error)
+            }
+            break
         case "about":
             aboutDialog.active = true
             aboutDialog.item.open()
