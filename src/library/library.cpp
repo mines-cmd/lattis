@@ -6456,6 +6456,20 @@ QString Library::applyHeroicEdits(const QString &root, const QString &appName, c
     return !any || HeroicGameConfig::write(root, appName, edits, &error) ? QString() : error;
 }
 
+void Library::undoAllHeroicEdits()
+{
+    if (m_heroicPending.isEmpty())
+        return;
+    qCInfo(lcLibrary).noquote() << QStringLiteral("dropped the edits waiting for Heroic: %1")
+                                       .arg(QStringList(m_heroicPending.keys()).join(QStringLiteral(", ")));
+    m_heroicPending.clear();
+    m_heroicPendingTimer.stop();
+    saveHeroicPending();
+    updateHeroicWaiting();
+    emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+    emit gamesChanged();
+}
+
 QString Library::pendingEditsName(const Game &g) const
 {
     if (g.pendingEdits == PendingLauncher::Steam)

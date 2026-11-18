@@ -458,7 +458,7 @@ ApplicationWindow {
     Loader {
         id: steamUndo
         active: false
-        source: "views/SteamUndoPrompt.qml"
+        source: "views/WaitingUndoPrompt.qml"
     }
     Connections {
         target: steamUndo.item

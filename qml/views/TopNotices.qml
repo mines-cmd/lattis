@@ -195,8 +195,11 @@ Item {
                     rightPadding: Theme.layout.spacing
                     textColor: Theme.notice.dangerText
                     font.weight: Theme.font.emphasisWeight
-                    visible: steamNotice.steamWaiting
-                    tip: qsTr("Drops the changes waiting for Steam and keeps what Steam has")
+                    visible: steamNotice.waiting > 0
+                    tip: steamNotice.steamWaiting && Library.heroicWaiting.length > 0
+                         ? qsTr("Drops the waiting changes and keeps what Steam and Heroic have")
+                         : steamNotice.steamWaiting ? qsTr("Drops the changes waiting for Steam and keeps what Steam has")
+                         : qsTr("Drops the changes waiting for Heroic and keeps what Heroic has")
                     onClicked: root.undoRequested()
                 }
             }

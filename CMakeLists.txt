@@ -207,7 +207,7 @@ qt_add_qml_module(lattis
         qml/setup/FindRomFoldersDialog.qml
         qml/views/QuitPrompt.qml
         qml/views/SteamLaunchPrompt.qml
-        qml/views/SteamUndoPrompt.qml
+        qml/views/WaitingUndoPrompt.qml
         qml/views/ForceClosePrompt.qml
         qml/views/PlayHistoryPopup.qml
         qml/views/AddSessionDialog.qml

@@ -639,6 +639,7 @@ Everything QML uses from `Library`. Methods that change something return an erro
 | `steamShortcuts()`, `addSteamShortcuts(appIds)` | "Add existing shortcuts" |
 | `setSteamPresetForAll(preset, on)` | "Apply to all Steam games", "Remove from all" |
 | `undoSteamEdits(id)`, `undoAllSteamEdits()` | Drops edits waiting for Steam |
+| `undoAllHeroicEdits()` | Drops every edit waiting for Heroic (the pending file too); Heroic's files are untouched |
 | `finishSetup()` | Ends the first-start setup and brings the games in |
 
 ### Map shapes
