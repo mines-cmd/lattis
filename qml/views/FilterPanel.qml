@@ -56,11 +56,12 @@ MotionPopup {
     readonly property var shownTags: TagSearch.matching(usableTags, tagQuery, Library.matchesSearch, Library.tagFilter)
 
     readonly property var platformCounts: ({
-        total: General.railHidden ? Library.gameCounts.reduce((sum, c) => sum + c.count, 0) : 0
+        total: platformList.reduce((sum, c) => sum + c.count, 0)
     })
     // Library.gameCounts is a new array on every library change; a string only notifies when it differs, so the
     // Platforms grid isn't rebuilt (and its layout left stale) by changes that don't touch the platforms.
-    readonly property string platformsKey: JSON.stringify(!General.railHidden ? []
+    // Library.showHidden is read because gameCounts changes with it but only notifies on gamesChanged.
+    readonly property string platformsKey: JSON.stringify(!General.railHidden || Library.showHidden === undefined ? []
         : Theme.filters.platformsAlphabetical
           ? Library.gameCounts.slice().sort((a, b) => a.name.localeCompare(b.name))
           : Library.gameCounts)

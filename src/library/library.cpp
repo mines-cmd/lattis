@@ -1249,7 +1249,7 @@ QVariantList Library::gameCounts() const
 {
     QHash<QString, int> counts;
     for (const Game &g : m_games) {
-        if (!g.hidden)
+        if (!g.hidden || m_showHidden)
             ++counts[g.platform];
     }
     QVariantList out;
