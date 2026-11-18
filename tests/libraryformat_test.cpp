@@ -64,6 +64,7 @@ private slots:
     void steamIndexInvalidEntries();
 
     void mergeFileWinsOverIndex();
+    void mergeSteamAppId();
     void mergeSkipsBlockedIndexEntries();
     void romIndex();
     void romIndexInvalidEntries();
@@ -726,6 +727,33 @@ void LibraryFormatTest::mergeFileWinsOverIndex()
     QCOMPARE(g.platform, QStringLiteral("steam"));
     QCOMPARE(g.platformName, QStringLiteral("Steam"));
     QVERIFY(g.favorite);
+}
+
+void LibraryFormatTest::mergeSteamAppId()
+{
+    LibraryContent c;
+    c.platforms = {{"steam", "Steam", "steam"}, {"epic", "Epic", "epic"}};
+    c.steam = {{1145360, "Hades"}};
+    GameFile steam;
+    steam.steamApp = 99;
+    c.games.insert(QStringLiteral("steam-1145360"), steam);
+    GameFile epic;
+    epic.title = QStringLiteral("Fortnite Game");
+    epic.platform = QStringLiteral("epic");
+    epic.steamApp = 1145360;
+    c.games.insert(QStringLiteral("epic-fortnite"), epic);
+    GameFile none;
+    none.title = QStringLiteral("Other");
+    none.platform = QStringLiteral("epic");
+    c.games.insert(QStringLiteral("epic-other"), none);
+
+    const BuiltLibrary lib = buildLibrary(c, {});
+    QHash<QString, qint64> ids;
+    for (const Game &g : lib.games)
+        ids.insert(g.id, g.steamAppId);
+    QCOMPARE(ids.value(QStringLiteral("steam-1145360"), -1), 0);
+    QCOMPARE(ids.value(QStringLiteral("epic-fortnite"), -1), 1145360);
+    QCOMPARE(ids.value(QStringLiteral("epic-other"), -1), 0);
 }
 
 void LibraryFormatTest::mergeSkipsBlockedIndexEntries()

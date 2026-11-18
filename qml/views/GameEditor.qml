@@ -775,7 +775,7 @@ Item {
             if (lookupIds[key] !== undefined && lookupIds[key] !== (game[key] ?? -1))
                 out[key] = lookupIds[key]
         }
-        if (!steamGame && (lookupIds.steam ?? 0) > 0 && lookupIds.steam !== (game.steamApp ?? 0))
+        if (!steamGame && lookupIds.steam !== undefined && lookupIds.steam !== Math.max(0, game.steamApp ?? 0))
             out.steam_app = lookupIds.steam
         if (romGame) {
             if (emulatorId !== game.emulator)
@@ -1036,7 +1036,7 @@ Item {
             }
             onNotOnIgdb: {
                 root.undoFill()
-                root.lookupIds = { igdb: 0 }
+                root.lookupIds = root.steamGame ? { igdb: 0 } : { igdb: 0, steam: 0 }
                 hint = qsTr("Marked as not on IGDB; saving remembers it, so looking up missing info skips this game.")
                 phase = "hint"
             }

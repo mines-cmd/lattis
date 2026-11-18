@@ -43,6 +43,7 @@ struct Game
     QDate added;
     double rating = -1; // 0-5, -1 = unknown
     bool ratingFromIgdb = false;
+    qint64 steamAppId = 0; // steam_app: the Steam app id a lookup found for a game not from Steam; 0 = none
     bool favorite = false;
     QString status;
     double logoScale = 1;

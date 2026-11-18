@@ -1165,8 +1165,11 @@ void BulkLookup::apply()
         };
         QVariantMap values;
         if (r.state != State::Matched) {
-            if (r.state == State::NotOnIgdb)
+            if (r.state == State::NotOnIgdb) {
                 values.insert(QStringLiteral("igdb"), 0);
+                if (r.game.steamApp > 0)
+                    values.insert(QStringLiteral("steam_app"), 0);
+            }
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
             for (auto it = r.art.cbegin(); it != r.art.cend(); ++it) {
@@ -1197,6 +1200,8 @@ void BulkLookup::apply()
                 values.insert(QStringLiteral("igdb"), r.igdb);
             if (r.steamApp > 0)
                 values.insert(QStringLiteral("steam_app"), r.steamApp);
+            else if (r.game.steamApp > 0 && r.game.platform != kSteamPlatform)
+                values.insert(QStringLiteral("steam_app"), 0);
             if (r.steamgriddb > 0)
                 values.insert(QStringLiteral("steamgriddb"), r.steamgriddb);
             QSet<QString> taken;

@@ -1019,6 +1019,7 @@ BuiltLibrary buildLibrary(const LibraryContent &content, const QHash<QString, Ar
         g.year = f.year;
         g.rating = f.rating;
         g.ratingFromIgdb = f.ratingSource == QLatin1String("igdb");
+        g.steamAppId = g.platform == kSteamPlatform ? 0 : qMax(f.steamApp, 0);
         g.favorite = f.favorite;
         g.status = f.status;
         g.logoScale = f.logoScale;
