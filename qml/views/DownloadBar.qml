@@ -25,8 +25,11 @@ Surface {
 
     property bool tooltips: true
 
+    readonly property bool epic: download.epic ?? false
+
     signal message(string text)
     signal collapse()
+    signal openGame(string gameId)
 
     radius: Theme.downloadBar.radius
     // The pill sits right under the bar during the morph and draws the percent and chevron itself;
@@ -76,7 +79,7 @@ Surface {
             Icon {
                 anchors.centerIn: parent
                 visible: !gameIcon.visible
-                path: Icons.steam
+                path: root.epic ? Icons.epic : Icons.steam
                 size: Theme.downloadBar.iconSize
                 color: Theme.downloadBar.text
             }
@@ -103,6 +106,31 @@ Surface {
                     elide: Text.ElideRight
                     color: Theme.downloadBar.title
                     font.weight: Theme.font.emphasisWeight
+                }
+                // Legendary's job is Lattis's to stop; Steam's isn't.
+                Item {
+                    id: cancelItem
+                    visible: root.epic && !root.morphing && Theme.downloadBar.chevronSize > 0
+                    Layout.preferredWidth: Theme.downloadBar.chevronSize
+                    Layout.preferredHeight: Theme.downloadBar.chevronSize
+
+                    Icon {
+                        anchors.centerIn: parent
+                        path: Icons.close
+                        size: Theme.downloadBar.chevronSize
+                        color: cancelArea.containsMouse ? Theme.downloadBar.chevronHover : Theme.downloadBar.text
+                    }
+                    MouseArea {
+                        id: cancelArea
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: GameRunner.legendary.cancel(root.download.appName)
+
+                        ToolTip.visible: containsMouse && root.tooltips
+                        ToolTip.text: qsTr("Cancel the update; it resumes next time")
+                        ToolTip.delay: 500
+                    }
                 }
                 Label {
                     id: percentLabel
@@ -175,12 +203,16 @@ Surface {
         cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
         onClicked: {
+            if (root.epic) {
+                root.openGame(root.download.gameId)
+                return
+            }
             const error = GameRunner.update(root.download.gameId)
             if (error !== "")
                 root.message(error)
         }
     }
     ToolTip.visible: area.containsMouse && !chevronArea.containsMouse && root.tooltips
-    ToolTip.text: qsTr("Open Steam's downloads")
+    ToolTip.text: root.epic ? qsTr("Open the game's page") : qsTr("Open Steam's downloads")
     ToolTip.delay: 500
 }

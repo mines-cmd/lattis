@@ -45,6 +45,7 @@ Item {
     signal launchRequested()
     signal stopRequested()
     signal message(string text)
+    signal gameRequested(string gameId)
     signal emulatorMessage(string text, string gameId)
     signal clicked()
     signal editRequested()
@@ -1316,6 +1317,7 @@ Item {
         target: downloadBar.item
         function onMessage(text) { root.message(text) }
         function onCollapse() { General.setDownloadBarCollapsed(true) }
+        function onOpenGame(gameId) { root.gameRequested(gameId) }
     }
     Connections {
         target: downloadPill.item

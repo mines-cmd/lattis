@@ -91,7 +91,7 @@ constexpr Section kSections[] = {
     {"toast", "Short notifications that pop up at the bottom of the window."},
     {"notice", "The bar above a game's page that explains a lasting state, like a library that opens "
                "read-only."},
-    {"download_bar", "The bar along the bottom of a game's page while Steam downloads a game."},
+    {"download_bar", "The bar along the bottom of a game's page while Steam downloads or Legendary updates a game."},
     {"media", "The row of Steam clips and screenshots on a Steam game's page, and the viewer that shows them."},
     {"window_controls", "The minimize, maximize and close buttons at the top right of each window, and the "
                         "edges you drag to resize it."},
@@ -1181,7 +1181,7 @@ constexpr Setting kSettings[] = {
     integer("notice", "dismiss_duration", "80", 0, 2000, "How long, in milliseconds, a notice takes to fade out when it is dismissed"),
 
     heading("download_bar", "Bar"),
-    boolean("download_bar", "show", "true", "Show the bar while Steam downloads a game"),
+    boolean("download_bar", "show", "true", "Show the bar while Steam or Legendary downloads a game"),
     integer("download_bar", "height", "56", 24, 200, "Height of the whole bar"),
     integer("download_bar", "overhang", "1", 0, 200, "How far the bar reaches past the page content on the left"),
     integer("download_bar", "padding", "12", 0, 100, "Space inside the bar, around its contents"),

@@ -19,7 +19,10 @@ SettingsMenu {
     readonly property bool installed: game.installed ?? true
     // An AppImage game's update: its Installer.games row, once the Installer is made (the menu opens after the first frame).
     readonly property var gameUpdate: !multi && game.platform === "linux" ? Installer.games[game.id] : undefined
-    readonly property bool updating: ["downloading", "extracting", "installing"].includes(gameUpdate?.state ?? "")
+    // An Epic game's update, which Legendary runs: its state, or "none".
+    readonly property string epicUpdate: !multi && game.launcher === "heroic" && (game.installed ?? false)
+                                         ? (game.steamUpdate ?? "none") : "none"
+    readonly property bool updating:["downloading", "extracting", "installing"].includes(gameUpdate?.state ?? "")
 
     readonly property bool allFavorite: games.every(g => g.favorite)
     readonly property bool anyVisible: games.some(g => !g.hidden)
@@ -259,9 +262,12 @@ SettingsMenu {
     Entry {
         actionName: "update_game"
         iconPath: Icons.download
-        visible: !root.multi && (root.gameUpdate?.updateVersion ?? "") !== ""
-        enabled: !root.updating
-        text: root.updating ? qsTr("Updating") : qsTr("Update to %1").arg(root.gameUpdate?.updateVersion ?? "")
+        visible: !root.multi && ((root.gameUpdate?.updateVersion ?? "") !== "" || root.epicUpdate !== "none")
+        enabled: root.epicUpdate !== "none" ? root.epicUpdate === "waiting" : !root.updating
+        text: root.epicUpdate === "queued" ? qsTr("Queued")
+            : root.epicUpdate === "downloading" ? qsTr("Updating")
+            : root.epicUpdate === "waiting" ? qsTr("Update")
+            : root.updating ? qsTr("Updating") : qsTr("Update to %1").arg(root.gameUpdate?.updateVersion ?? "")
     }
     SettingsMenuSeparator { visible: !root.multi }
     Entry {

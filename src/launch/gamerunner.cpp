@@ -253,6 +253,8 @@ QString GameRunner::openSteamProperties(const QString &gameId)
 QString GameRunner::update(const QString &gameId)
 {
     const Game *game = m_library->game(gameId);
+    if (game && game->platform == kEpicPlatform)
+        return updateEpic(*game);
     const SteamRef steam = game ? steamRefOf(*game) : SteamRef();
     if (!steam || steam.shortcut || game->update == GameUpdate::None)
         return {};
@@ -263,6 +265,44 @@ QString GameRunner::update(const QString &gameId)
                          ? QStringLiteral("steam://nav/games/details/%1").arg(steam.runId)
                          : QStringLiteral("steam://open/downloads")},
                     true);
+}
+
+// Errors go out as `message`: the chip and the menu have no other way to show one.
+QString GameRunner::updateEpic(const Game &game)
+{
+    if (!game.installed || game.update != GameUpdate::Waiting)
+        return {};
+    const QString appName = m_library->epicAppName(game.id);
+    if (appName.isEmpty())
+        return {};
+    if (legendaryProgram().isEmpty()) {
+        emit message(tr("Heroic's Legendary isn't found; update %1 in Heroic").arg(game.title));
+        return {};
+    }
+    if (const QString running = runningManagerFor(game.id); !running.isEmpty()) {
+        emit message(tr("%1 is running; close it first").arg(running));
+        return {};
+    }
+    if (running().contains(game.id)) {
+        emit message(tr("%1 is running; close it first").arg(game.title));
+        return {};
+    }
+    qCInfo(lcLaunch).noquote() << QStringLiteral("updating %1").arg(game.id);
+    if (const QString error = m_legendaryJobs.enqueue(LegendaryJobs::Kind::Update, appName); !error.isEmpty())
+        emit message(error);
+    return {};
+}
+
+QStringList GameRunner::epicJobTitles() const
+{
+    QStringList titles;
+    for (const QVariant &v : m_legendaryJobs.jobs()) {
+        const QVariantMap job = v.toMap();
+        const QString state = job.value(QStringLiteral("state")).toString();
+        if (state == QLatin1String("running") || state == QLatin1String("queued"))
+            titles.append(epicTitle(job.value(QStringLiteral("appName")).toString()));
+    }
+    return titles;
 }
 
 QVariantMap GameRunner::uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,
@@ -600,6 +640,8 @@ void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
         }
         return;
     }
+    if (result.ok && result.kind == Kind::Update)
+        m_library->store().refresh();
     if (result.ok || result.cancelled || result.kind == Kind::Check)
         return;
     const QString title = epicTitle(result.appName);
@@ -725,6 +767,8 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
 {
     s_instance = this;
     connect(&m_legendaryJobs, &LegendaryJobs::finished, this, &GameRunner::onLegendaryFinished);
+    connect(&m_legendaryJobs, &LegendaryJobs::jobsChanged, this,
+            [this] { m_library->setEpicJobs(m_legendaryJobs.jobs()); });
     m_reloadTimer.setSingleShot(true);
     m_reloadTimer.setInterval(100);
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, &m_reloadTimer, qOverload<>(&QTimer::start));
@@ -911,8 +955,11 @@ QString GameRunner::launch(const QString &gameId)
             return tr("Updating %1, try again when it finishes").arg(game->title);
         return launchProgram(*game);
     }
-    if (game->platform == kEpicPlatform)
+    if (game->platform == kEpicPlatform) {
+        if (game->installed && game->update != GameUpdate::None)
+            return update(gameId);
         return launchHeroicGame(*game);
+    }
     if (!game->rom)
         return tr("Launching %1 games is not implemented yet").arg(game->platformName);
     if (m_sessions.contains(gameId))

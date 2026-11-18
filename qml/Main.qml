@@ -37,16 +37,17 @@ ApplicationWindow {
 
     function requestQuit() {
         const titles = runningGameTitles()
-        if (titles.length === 0) {
+        const jobs = GameRunner.epicJobTitles()
+        if (titles.length === 0 && jobs.length === 0) {
             Qt.quit()
             return
         }
         quitPrompt.active = true
-        quitPrompt.item.ask(titles)
+        quitPrompt.item.ask(titles, jobs)
     }
 
     onClosing: close => {
-        if (quitConfirmed || runningGameTitles().length === 0)
+        if (quitConfirmed || (runningGameTitles().length === 0 && GameRunner.epicJobTitles().length === 0))
             return
         close.accepted = false
         requestQuit()
@@ -1064,7 +1065,12 @@ ApplicationWindow {
             return
         switch (name) {
         case "launch": launch(game); break
-        case "update_game": Installer.review(game.id); break
+        case "update_game":
+            if (game.launcher === "heroic")
+                GameRunner.update(game.id)
+            else
+                Installer.review(game.id)
+            break
         case "toggle_favorite": activateOn("favorite", game); break
         case "open_platform": activateOn("open_platform", game); break
         case "open_folder": activateOn("folder", game); break
@@ -1449,6 +1455,7 @@ ApplicationWindow {
             onLaunchRequested: window.launch(game)
             onStopRequested: window.askForceClose(game)
             onMessage: text => toast.show(text)
+            onGameRequested: gameId => browser.selectGame(gameId)
             onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
             onClicked: {
                 browser.clearSelection()

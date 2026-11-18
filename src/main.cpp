@@ -188,6 +188,8 @@ int main(int argc, char *argv[])
     library.setViewStateFile(AppPaths::stateDir() + QStringLiteral("/view-") + AppPaths::dataDirKey(dataDir)
                              + QStringLiteral(".json"));
     GameRunner runner(&library, dataDir, AppPaths::cacheDir());
+    if (const QString legendary = qEnvironmentVariable("LATTIS_LEGENDARY"); !legendary.isEmpty())
+        runner.setLegendaryProgram(legendary);
     SteamWebApi::adoptLegacyCache(AppPaths::cacheDir(), AppPaths::dataDirKey(dataDir));
     library.store().setSteamWebCache(SteamWebApi::cachePath(AppPaths::cacheDir(), AppPaths::dataDirKey(dataDir)));
     library.setRarityFetcher([](qint64 appId, QObject *context, auto done) {
@@ -507,6 +509,14 @@ int main(int argc, char *argv[])
                 QTimer::singleShot(when, Qt::PreciseTimer, window, [window, game = select[i]] {
                     logHook("selectGame", game);
                     QMetaObject::invokeMethod(window, "selectGame", Q_ARG(QVariant, game));
+                });
+            }
+            const QStringList epicUpdates =
+                qEnvironmentVariable("LATTIS_EPIC_UPDATE").split(u',', Qt::SkipEmptyParts);
+            for (const QString &game : epicUpdates) {
+                QTimer::singleShot(actualDelay / 2, window, [&runner, game] {
+                    logHook("epicUpdate", game);
+                    runner.update(game);
                 });
             }
             if (const QString game = qEnvironmentVariable("LATTIS_EDIT_GAME"); !game.isEmpty()) {

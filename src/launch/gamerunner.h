@@ -66,7 +66,10 @@ public:
     Q_INVOKABLE QString openFile(const QString &path);
     Q_INVOKABLE QString problemFile(const QString &message) const;
     Q_INVOKABLE QString uninstall(const QString &gameId);
+    // Steam: opens what updates it. Epic: queues `legendary update` (a problem comes as `message`).
     Q_INVOKABLE QString update(const QString &gameId);
+    // The titles of the Epic games whose Legendary job runs or waits, for the quit question.
+    Q_INVOKABLE QStringList epicJobTitles() const;
     Q_INVOKABLE QString openSteamProperties(const QString &gameId);
     Q_INVOKABLE QString forceClose(const QString &gameId);
     Q_INVOKABLE QVariantMap uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,
@@ -245,6 +248,7 @@ private:
     void onLegendaryFinished(const LegendaryJobs::Result &result);
     void finishEpicUninstall(const QString &gameId, const EpicUninstall &uninstall);
     QString epicTitle(const QString &appName) const;
+    QString updateEpic(const Game &game);
     QHash<QString, EpicUninstall> m_epicUninstalling; // by game id
     LegendaryJobs m_legendaryJobs;
     FindSaves m_findSaves;

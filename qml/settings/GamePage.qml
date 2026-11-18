@@ -77,7 +77,7 @@ Item {
 
     readonly property var fieldDefs: Object.assign({
         steam_update: { icon: Icons.download,
-                        hint: qsTr("Only while Steam has an update for the game. Hidden, it still shows on the Launch button and in the list.") },
+                        hint: qsTr("Only while Steam or Heroic has an update for the game; for an Epic game, click runs the update. Hidden, it still shows on the Launch button and in the list.") },
         game_update: { icon: Icons.download,
                        hint: qsTr("Only for a Linux game that is an AppImage with a release source: the chip while an update is waiting or running, the row also when it is up to date. Click reviews the update") },
         steam_family: { icon: Icons.steamLine,

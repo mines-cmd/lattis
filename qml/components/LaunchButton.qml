@@ -13,6 +13,8 @@ Surface {
     property bool running: false
     property string tip
     property string updateState: "none"
+    // The update's percentage when the label should show it (-1: none).
+    property int updatePercent: -1
     // The game's own file is being replaced: reads like an update in progress and can't be pressed.
     property bool updateBlocks: false
     // Set when the game's emulator isn't found but can be installed: the button installs it.
@@ -37,7 +39,7 @@ Surface {
     readonly property bool launchable: (installed || installable || locatable) && !running && !emulatorBusy && !updateBlocks
     readonly property bool updateAction: installed && !running && updateState === "waiting"
     readonly property bool updateBusy: emulatorBusy || (updateBlocks && installed && !running) || ((installed || installable) && !running && !updateAction
-                                       && (updateState === "downloading" || updateState === "paused"))
+                                       && (updateState === "downloading" || updateState === "paused" || updateState === "queued"))
 
     readonly property bool stopping: running && mouse.containsMouse
 
@@ -85,7 +87,10 @@ Surface {
             : root.emulatorBusy ? root.emulatorStep
             : root.emulatorInstall ? qsTr("%1 %2").arg(Theme.launchButton.installLabel).arg(root.emulatorName)
             : root.updateBusy ? (root.updateState === "paused" ? Theme.launchButton.pausedLabel
-                                 : root.installed ? Theme.launchButton.updatingLabel : Theme.launchButton.installingLabel)
+                                 : root.updateState === "queued" ? qsTr("Queued")
+                                 : root.installed ? (root.updatePercent >= 0 ? qsTr("%1 %2%").arg(Theme.launchButton.updatingLabel).arg(root.updatePercent)
+                                                                             : Theme.launchButton.updatingLabel)
+                                 : Theme.launchButton.installingLabel)
             : root.installed ? root.idleLabel
             : root.installing ? Theme.launchButton.installLabel
             : root.rom ? Theme.launchButton.missingRomLabel

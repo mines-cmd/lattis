@@ -54,7 +54,9 @@ QtObject {
         label: (game.installed ?? true) ? qsTr("Update available") : qsTr("Installing"),
         value: (game.steamUpdate ?? "none") !== "none" ? game.steamUpdateText ?? "" : "",
         icon: Icons.download, attention: true,
-        attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground
+        attentionColor: updateAction ? Theme.launchButton.updateBackground : Theme.launchButton.updatingBackground,
+        action: game.launcher === "heroic" && game.steamUpdate === "waiting" ? "epic_update" : "",
+        tip: qsTr("Update the game with Legendary")
     })
     readonly property bool wantsGameUpdate: chipNames.includes("game_update") || General.gamePageInfoRows.includes("game_update")
     readonly property var gameUpdateRow: live && wantsGameUpdate && game.platform === "linux" ? Installer.games[game.id ?? ""] : undefined

@@ -93,6 +93,7 @@ private slots:
     void anEpicGamesLaunchSettings();
     void editsWaitForHeroicToClose();
     void settingsShowWhatWasFound();
+    void updateJobsSetTheGamesState();
     void settingsSaveTheirValues();
     void setupCountsTheScan();
     void setupShowsAFlatpakRoot();
@@ -773,6 +774,56 @@ void LibraryHeroicTest::editsWaitForHeroicToClose()
     QCOMPARE(entry.value(u"launcherArgs"_s).toString(), u"-windowed"_s);
     QVERIFY(library->gameForEditing(u"epic-a-short-hike"_s).value(u"pendingEdits"_s).toString().isEmpty());
     QVERIFY(!QFileInfo::exists(pendingFile));
+}
+
+void LibraryHeroicTest::updateJobsSetTheGamesState()
+{
+    writeLibrary(libraryCache(kLibrary));
+    const auto outdated = [](const QString &app) {
+        return QJsonObject{{u"title"_s, app}, {u"install_path"_s, u"/games/"_s + app},
+                           {u"install_size"_s, 1000}, {u"version"_s, u"1.0"_s}};
+    };
+    writeInstalled(QJsonDocument(QJsonObject{{u"FezApp"_s, outdated(u"FezApp"_s)},
+                                             {u"HikeApp"_s, outdated(u"HikeApp"_s)}}).toJson(QJsonDocument::Compact));
+    QJsonArray assets;
+    for (const QString &app : {u"FezApp"_s, u"HikeApp"_s})
+        assets.append(QJsonObject{{u"app_name"_s, app}, {u"build_version"_s, u"2.0"_s}});
+    writeFile(HeroicScan::assetsPath(heroicRoot()),
+              QJsonDocument(QJsonObject{{u"Windows"_s, assets}}).toJson(QJsonDocument::Compact));
+    auto library = openLibrary();
+
+    const auto state = [&](const QString &id) {
+        return library->gameAt(library->rowOfGame(id)).value(u"steamUpdate"_s).toString();
+    };
+    const auto job = [](const QString &app, const QString &state, double percent) {
+        return QVariantMap{{u"appName"_s, app}, {u"kind"_s, u"update"_s}, {u"state"_s, state}, {u"percent"_s, percent}};
+    };
+    QCOMPARE(state(u"epic-fez"_s), u"waiting"_s);
+    QCOMPARE(library->gameAt(library->rowOfGame(u"epic-fez"_s)).value(u"steamUpdateText"_s).toString(), u"Available"_s);
+    QVERIFY(library->download().isEmpty());
+
+    QSignalSpy bar(library.get(), &Library::downloadChanged);
+    library->setEpicJobs({job(u"FezApp"_s, u"running"_s, 40), job(u"HikeApp"_s, u"queued"_s, 0)});
+    QCOMPARE(state(u"epic-fez"_s), u"downloading"_s);
+    QCOMPARE(library->gameAt(library->rowOfGame(u"epic-fez"_s)).value(u"steamUpdatePercent"_s).toInt(), 40);
+    QCOMPARE(library->gameAt(library->rowOfGame(u"epic-fez"_s)).value(u"steamUpdateText"_s).toString(), u"Updating · 40%"_s);
+    QCOMPARE(state(u"epic-a-short-hike"_s), u"queued"_s);
+    QCOMPARE(library->gameAt(library->rowOfGame(u"epic-a-short-hike"_s)).value(u"steamUpdateText"_s).toString(), u"Queued"_s);
+    // The bar follows the running job only.
+    QCOMPARE(library->download().value(u"gameId"_s).toString(), u"epic-fez"_s);
+    QCOMPARE(library->download().value(u"appName"_s).toString(), u"FezApp"_s);
+    QCOMPARE(library->download().value(u"percent"_s).toInt(), 40);
+    QVERIFY(library->download().value(u"epic"_s).toBool());
+    QVERIFY(bar.count() > 0);
+
+    library->setEpicJobs({job(u"FezApp"_s, u"running"_s, 41), job(u"HikeApp"_s, u"failed"_s, 0)});
+    QCOMPARE(library->download().value(u"percent"_s).toInt(), 41);
+    QCOMPARE(state(u"epic-a-short-hike"_s), u"waiting"_s);
+
+    // A job that leaves puts its game back to waiting; the scan decides whether the update finished.
+    library->setEpicJobs({});
+    QCOMPARE(state(u"epic-fez"_s), u"waiting"_s);
+    QVERIFY(library->download().isEmpty());
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

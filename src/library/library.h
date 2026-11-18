@@ -396,6 +396,8 @@ public:
     // For tests and screenshots: stands in for looking at the running processes.
     void setHeroicRunningCheck(std::function<bool()> check) { m_heroicRunning = std::move(check); }
     Q_INVOKABLE bool heroicRunning() const { return m_heroicRunning(); }
+    // Legendary's visible jobs (LegendaryJobs::jobs()): an update job sets its game Downloading or Queued.
+    void setEpicJobs(const QVariantList &jobs);
     bool heroicChecksUpdates() const { return m_heroicSettings.checkUpdates; }
     void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
@@ -565,6 +567,7 @@ private:
     void updateHeroic();
     void updateDownloads();
     bool applyDownloads();
+    bool applyEpicJobs();
     void updateDownloadBar();
     QStringList effectiveTags() const;
     bool passesFilters(const Game &game, const QStringList &tags) const;
@@ -703,6 +706,14 @@ private:
     QVariantList m_steamWaiting;
     QVariantList m_heroicWaiting;
     QVariantMap m_download;
+    struct EpicJob
+    {
+        bool running = false;
+        int percent = -1;
+        bool operator==(const EpicJob &) const = default;
+    };
+    QHash<QString, EpicJob> m_epicJobs; // by appName: the jobs the runner shows
+    QSet<QString> m_epicOverlaid;       // game ids whose update state comes from a job
     QFileSystemWatcher m_settingsWatcher;
     QTimer m_settingsTimer;
     QVariantMap m_groupChange;

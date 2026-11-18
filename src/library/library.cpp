@@ -91,6 +91,7 @@ QString updateStateName(GameUpdate update)
     case GameUpdate::Waiting: return QStringLiteral("waiting");
     case GameUpdate::Downloading: return QStringLiteral("downloading");
     case GameUpdate::Paused: return QStringLiteral("paused");
+    case GameUpdate::Queued: return QStringLiteral("queued");
     default: return QStringLiteral("none");
     }
 }
@@ -98,6 +99,15 @@ QString updateStateName(GameUpdate update)
 QString updateText(const Game &g)
 {
     const int percent = updatePercent(g);
+    if (g.platform == kEpicPlatform) {
+        switch (g.update) {
+        case GameUpdate::Waiting: return Library::tr("Available");
+        case GameUpdate::Downloading:
+            return percent < 0 ? Library::tr("Updating") : Library::tr("Updating · %1%").arg(percent);
+        case GameUpdate::Queued: return Library::tr("Queued");
+        default: return {};
+        }
+    }
     switch (g.update) {
     case GameUpdate::Waiting:
         if (g.updateBytes <= 0)
@@ -930,7 +940,65 @@ void Library::updateDownloads()
     const QString root = m_store.snapshot().steam.install.root;
     m_downloads.setApps(apps.isEmpty() ? QString() : root + QStringLiteral("/logs/content_log.txt"), apps);
     applyDownloads();
+    applyEpicJobs();
     updateDownloadBar();
+}
+
+void Library::setEpicJobs(const QVariantList &jobs)
+{
+    QHash<QString, EpicJob> next;
+    for (const QVariant &v : jobs) {
+        const QVariantMap job = v.toMap();
+        const QString state = job.value(QStringLiteral("state")).toString();
+        if (job.value(QStringLiteral("kind")).toString() != QLatin1String("update")
+            || (state != QLatin1String("running") && state != QLatin1String("queued")))
+            continue;
+        next.insert(job.value(QStringLiteral("appName")).toString(),
+                    {state == QLatin1String("running"), int(job.value(QStringLiteral("percent")).toDouble())});
+    }
+    if (next == m_epicJobs)
+        return;
+    m_epicJobs = next;
+    applyEpicJobs();
+    updateDownloadBar();
+    if (!m_rows.isEmpty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+}
+
+// A job's state lives here and not in the scan, which only knows the build differs; when a job leaves, its
+// game goes back to Waiting, and the scan corrects that if the update finished.
+bool Library::applyEpicJobs()
+{
+    if (m_epicJobs.isEmpty() && m_epicOverlaid.isEmpty())
+        return false;
+    QHash<QString, EpicJob> byGame;
+    for (const HeroicEntry &entry : m_store.snapshot().content.heroic) {
+        if (const auto it = m_epicJobs.constFind(entry.appName); it != m_epicJobs.cend())
+            byGame.insert(entry.id, it.value());
+    }
+    bool changed = false;
+    QSet<QString> overlaid;
+    for (Game &g : m_games) {
+        if (g.platform != kEpicPlatform)
+            continue;
+        const auto it = byGame.constFind(g.id);
+        if (it == byGame.cend()) {
+            if (m_epicOverlaid.contains(g.id) && (g.update == GameUpdate::Downloading || g.update == GameUpdate::Queued)) {
+                g.update = GameUpdate::Waiting;
+                g.updatePercent = -1;
+                changed = true;
+            }
+            continue;
+        }
+        overlaid.insert(g.id);
+        const GameUpdate update = it->running ? GameUpdate::Downloading : GameUpdate::Queued;
+        const int percent = it->running ? it->percent : -1;
+        changed = changed || update != g.update || percent != g.updatePercent;
+        g.update = update;
+        g.updatePercent = percent;
+    }
+    m_epicOverlaid = overlaid;
+    return changed;
 }
 
 bool Library::applyDownloads()
@@ -954,7 +1022,13 @@ bool Library::applyDownloads()
 void Library::updateDownloadBar()
 {
     const Game *shown = nullptr;
+    const Game *epic = nullptr;
     for (const Game &g : std::as_const(m_games)) {
+        if (g.platform == kEpicPlatform) {
+            if (g.update == GameUpdate::Downloading && !epic)
+                epic = &g;
+            continue;
+        }
         if (g.update == GameUpdate::Downloading) {
             shown = &g;
             break;
@@ -962,6 +1036,10 @@ void Library::updateDownloadBar()
         if (g.update == GameUpdate::Paused && !shown)
             shown = &g;
     }
+    // Steam's download comes first: Lattis can't control it, while the Legendary job it can cancel.
+    const bool epicShown = !shown && epic;
+    if (epicShown)
+        shown = epic;
     QVariantMap download;
     if (shown) {
         download = {{QStringLiteral("gameId"), shown->id},
@@ -969,7 +1047,9 @@ void Library::updateDownloadBar()
                     {QStringLiteral("icon"), shown->iconUrl},
                     {QStringLiteral("state"), updateStateName(shown->update)},
                     {QStringLiteral("percent"), updatePercent(*shown)},
-                    {QStringLiteral("installing"), !shown->installed}};
+                    {QStringLiteral("installing"), !shown->installed},
+                    {QStringLiteral("epic"), epicShown},
+                    {QStringLiteral("appName"), epicShown ? epicAppName(shown->id) : QString()}};
     }
     if (download == m_download)
         return;
@@ -4651,8 +4731,16 @@ QString Library::launchTip(const Game &g) const
         default: return tr("Launch through Steam");
         }
     }
-    if (g.platform == kEpicPlatform)
-        return g.installed ? tr("Launch through Heroic") : tr("Install through Heroic");
+    if (g.platform == kEpicPlatform) {
+        if (!g.installed)
+            return tr("Install through Heroic");
+        switch (g.update) {
+        case GameUpdate::Waiting: return tr("Update the game; Lattis runs Heroic's Legendary");
+        case GameUpdate::Downloading: return tr("Legendary is updating the game");
+        case GameUpdate::Queued: return tr("The update waits for another Legendary job");
+        default: return tr("Launch through Heroic");
+        }
+    }
     if (g.platform == kProtonPlatform && g.shortcut != 0)
         return g.installed ? tr("Launch through Steam") : tr("Locate the game's program");
     if (g.platform == kLinuxPlatform) {

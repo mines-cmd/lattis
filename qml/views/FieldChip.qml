@@ -16,6 +16,7 @@ StatChip {
     readonly property bool opensHistory: field.history ?? false
     readonly property bool opensUrl: (field.action ?? "") === "url"
     readonly property bool opensUpdate: (field.action ?? "") === "update"
+    readonly property bool startsEpicUpdate: (field.action ?? "") === "epic_update"
 
     signal historyRequested()
 
@@ -39,7 +40,7 @@ StatChip {
     icon: General.chipsWithoutIcon.includes(name) ? "" : field.icon
     label: field.chipLabel ?? field.label
     value: field.chipValue ?? field.value
-    clickable: !leaving && (opensHistory || opensUrl || opensUpdate || (field.filterPlatform ?? "") !== "")
+    clickable: !leaving && (opensHistory || opensUrl || opensUpdate || startsEpicUpdate || (field.filterPlatform ?? "") !== "")
     tip: clickable ? field.tip ?? "" : ""
     tipStars: field.stars ?? -1
     ToolTip.visible: chipHover.hovered && (field.hoverTip ?? "") !== ""
@@ -52,6 +53,8 @@ StatChip {
             Qt.openUrlExternally(field.url)
         else if (opensUpdate)
             Installer.review(fields.game.id)
+        else if (startsEpicUpdate)
+            GameRunner.update(fields.game.id)
         else
             Library.platformFilter = field.filterPlatform
     }
