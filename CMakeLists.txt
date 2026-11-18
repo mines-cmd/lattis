@@ -482,6 +482,7 @@ qt_add_qml_module(lattis
         src/steam/steammedia.h src/steam/steammedia.cpp
         src/heroic/heroiclocate.h src/heroic/heroiclocate.cpp
         src/heroic/heroicscan.h src/heroic/heroicscan.cpp
+        src/heroic/heroicgameconfig.h src/heroic/heroicgameconfig.cpp
         src/heroic/heroicsaves.h src/heroic/heroicsaves.cpp
         src/heroic/heroicsettings.h src/heroic/heroicsettings.cpp
         src/theme/theme.h src/theme/theme.cpp

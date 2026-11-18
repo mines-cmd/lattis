@@ -32,11 +32,20 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 
 `expandCloudSaveFolder()` fills `{AppData}` (`AppData/Local`), `{UserDir}` (`Documents`), `{UserSavedGames}`, `{InstallDir}` and `{EpicID}` (`*`, a glob) and cleans the `..` out. It returns nothing when a variable can't be resolved (one under the prefix with no prefix, or an unknown one).
 
+## A game's own settings
+
+`HeroicGameConfig::read(root, appName, out)` returns the keys Lattis shows (`launcherArgs`, `showMangohud`, `useGameMode`, `enviromentOptions` (sic), `wrapperOptions`, `wineVersion`): the game's own value in `GamesConfig/<appName>.json`, else `config.json`'s `defaultSettings`, else empty. `launcherArgs` and `showMangohud` aren't in the file until set. A missing file and an empty `{}` entry (a game Heroic never configured) read as the defaults; a file that isn't a JSON object is refused with an error.
+
+`write(root, appName, edits)` changes only the keys set in `HeroicGameEdits`. It patches the file's text instead of re-serialising it, so every other key, the key order and the indentation stay (Heroic puts new keys in its own order, and `QJsonObject` would sort them). A key that's absent is added after the entry's last one, and `wineVersion` is patched inside, so its `wineserver` stays. A missing file or an empty `{}` entry becomes a full entry: `defaultSettings` plus the edits, with `"version": "v0"` and `"explicit": true`. In that new entry the keys are sorted, as `defaultSettings` is read through `QJsonObject`. A file that isn't JSON is refused and left alone.
+
+Heroic holds a game's config in memory and writes all of it back on its next change, so an edit made while it runs is lost; callers write only while Heroic is closed.
+
 ## Files
 
 | File | Contents |
 |---|---|
 | `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `findLegendary()`, `launchArgs()`, `openArgs()` |
 | `heroicscan.*` | `HeroicState`, `HeroicGame`, `HeroicPlayTime`, `HeroicListing`; `scan()`, `lastPlayed()`, `cachedImage()` |
+| `heroicgameconfig.*` | `HeroicWine`, `HeroicGameSettings`, `HeroicGameEdits`; `HeroicGameConfig::read()`, `write()`, `path()` |
 | `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `ownPrefix()`, `expandCloudSaveFolder()` |
 | `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` |

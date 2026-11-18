@@ -462,6 +462,10 @@ lattis_test(heroicsaves_test
     SOURCES ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
     LIBS Qt6::Core
     DEFINES "HEROIC_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/heroic\"")
+lattis_test(heroicgameconfig_test
+    SOURCES ../src/heroic/heroicgameconfig.h ../src/heroic/heroicgameconfig.cpp
+    LIBS Qt6::Core
+    DEFINES "HEROIC_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/heroic\"")
 lattis_test(savesfinder_test
     SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
             ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
