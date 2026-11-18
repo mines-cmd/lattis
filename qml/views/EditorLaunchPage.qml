@@ -10,6 +10,7 @@ ColumnLayout {
     property alias emulatorBox: emulatorBox
     property alias argsField: argsField
     property alias protonBox: protonBox
+    property alias wineBox: wineBox
     property alias launchOptionsField: launchOptionsField
     property alias makeExecutableBox: makeExecutableBox
 
@@ -132,7 +133,7 @@ ColumnLayout {
                     SettingsButton {
                         visible: editor.heroicGame
                         text: qsTr("Open Heroic")
-                        tip: qsTr("Wine, launch options and updates for this game are in Heroic")
+                        tip: qsTr("This game's other settings and its updates are in Heroic")
                         onClicked: editor.errorLabel.text = GameRunner.openHeroic()
                     }
                 }
@@ -290,7 +291,28 @@ ColumnLayout {
 
     EditorCard {
         title: qsTr("Run")
-        visible: !editor.romGame && !editor.heroicGame
+        visible: !editor.romGame && (!editor.heroicGame || editor.heroicInfo.settings !== undefined
+                                     || (editor.heroicInfo.error ?? "") !== "")
+
+        EditorHint {
+            open: (editor.heroicInfo.error ?? "") !== ""
+            color: Theme.gameEditor.warningColor
+            text: qsTr("Heroic's settings for this game can't be read: %1").arg(editor.heroicInfo.error ?? "")
+        }
+
+        EditorField {
+            visible: editor.heroicGame && editor.heroicInfo.settings !== undefined
+            label: qsTr("Wine version")
+            help: qsTr("The Proton or Wine build Heroic runs the game with, as in its game settings. "
+                       + "Heroic's own builds, Steam's compatibility tools and the system's Wine are listed.")
+
+            SettingsComboBox {
+                id: wineBox
+                Layout.fillWidth: true
+                model: (editor.heroicInfo.wines ?? []).map(w => w.label)
+                onActivated: editor.setHeroic("wine", editor.heroicInfo.wines[currentIndex].wine)
+            }
+        }
 
         EditorField {
             visible: editor.onSteam
@@ -308,7 +330,10 @@ ColumnLayout {
         }
 
         EditorField {
-            visible: (editor.game.steamPresets ?? []).length > 0
+            id: presetsField
+            readonly property bool epic: editor.heroicGame
+            readonly property var presets: epic ? (editor.heroicInfo.presets ?? []) : (editor.game.steamPresets ?? [])
+            visible: presets.length > 0 && (!epic || editor.heroicInfo.settings !== undefined)
             label: qsTr("Presets")
 
             Flow {
@@ -316,22 +341,28 @@ ColumnLayout {
                 spacing: Theme.gameEditor.presetSpacing
 
                 Repeater {
-                    model: editor.game.steamPresets ?? []
+                    model: presetsField.presets
 
                     SettingsCheckBox {
                         id: presetBox
                         required property var modelData
+                        function isOn() {
+                            return editor.heroicGame ? Library.heroicPresetOn(editor.heroicDraft, modelData.id)
+                                                     : Library.steamPresetOn(launchOptionsField.text, modelData.id)
+                        }
                         text: modelData.name
-                        checked: Library.steamPresetOn(launchOptionsField.text, modelData.id)
+                        checked: isOn()
                         ToolTip.visible: hovered
                         ToolTip.delay: Theme.tooltip.delay
                         ToolTip.text: qsTr("Adds %1").arg(modelData.adds)
                         onToggled: {
-                            launchOptionsField.text = Library.setSteamPreset(launchOptionsField.text,
-                                                                             modelData.id, checked)
+                            if (editor.heroicGame)
+                                editor.heroicDraft = Library.setHeroicPreset(editor.heroicDraft, modelData.id, checked)
+                            else
+                                launchOptionsField.text = Library.setSteamPreset(launchOptionsField.text,
+                                                                                 modelData.id, checked)
                             // Clicking broke the binding; the text says what's on.
-                            checked = Qt.binding(() => Library.steamPresetOn(launchOptionsField.text,
-                                                                             presetBox.modelData.id))
+                            checked = Qt.binding(() => presetBox.isOn())
                         }
                     }
                 }
@@ -339,6 +370,24 @@ ColumnLayout {
         }
 
         EditorField {
+            visible: editor.heroicGame && editor.heroicInfo.settings !== undefined
+            label: qsTr("Launch options")
+
+            SettingsTextField {
+                Layout.fillWidth: true
+                placeholderText: qsTr("None")
+                text: editor.heroicDraft.launcherArgs ?? ""
+                onTextEdited: editor.setHeroic("launcherArgs", text)
+                onAccepted: editor.save()
+            }
+            EditorHint {
+                text: qsTr("The arguments Heroic starts the game with, e.g. -windowed. MangoHud and GameMode "
+                           + "are Heroic's own switches; other presets fill its variables and wrappers.")
+            }
+        }
+
+        EditorField {
+            visible: !editor.heroicGame
             label: qsTr("Launch options")
 
             SettingsTextField {

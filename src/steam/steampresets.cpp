@@ -201,11 +201,8 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
     const TomlSection section(bytes, displayPath, "steam");
     Parsed<SteamSettings> out{section.ok, {}, section.warnings};
     out.value.presets = builtInSteamPresets();
-    if (!section.table)
-        return out;
-    const toml::table *table = section.table;
 
-    const auto wordList = [&](const toml::node &node, const QString &name, QStringList *words) {
+    const auto wordList = [&](const TomlSection &from, const toml::node &node, const QString &name, QStringList *words) {
         if (const auto *s = node.as_string()) {
             *words = LaunchOptions::words(toQString(s->get()));
             return true;
@@ -213,7 +210,7 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
         const auto *array = node.as_array();
         if (!array || !array->is_homogeneous(toml::node_type::string) || array->empty()) {
             out.warnings.append(QStringLiteral("%1: %2 must be a list of words, like [\"gamescope\", \"-f\", \"--\"]")
-                                    .arg(section.where(node), name));
+                                    .arg(from.where(node), name));
             return false;
         }
         words->clear();
@@ -222,23 +219,25 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
         return true;
     };
 
-    // The presets first: default_presets refers to them.
-    if (const toml::node *node = table->get("presets")) {
+    // `from` is the file's section the presets table is in, `prefix` its name for the messages.
+    const auto readPresets = [&](const TomlSection &from, const toml::node *node, const QString &prefix) {
+        if (!node)
+            return;
         const toml::table *presets = node->as_table();
         if (!presets)
-            out.warnings.append(QStringLiteral("%1: presets must be [steam.presets.<id>] sections").arg(section.where(*node)));
+            out.warnings.append(QStringLiteral("%1: presets must be [%2.<id>] sections").arg(from.where(*node), prefix));
         static const toml::table kNone;
         for (auto &&[k, presetNode] : presets ? *presets : kNone) {
             const QString id = toQString(k.str());
             const toml::table *def = presetNode.as_table();
             if (!def) {
-                out.warnings.append(QStringLiteral("%1: preset %2 must be a [steam.presets.%2] section")
-                                        .arg(section.where(presetNode), id));
+                out.warnings.append(QStringLiteral("%1: preset %2 must be a [%3.%2] section")
+                                        .arg(from.where(presetNode), id, prefix));
                 continue;
             }
             if (!isValidId(id)) {
                 out.warnings.append(QStringLiteral("%1: preset id %2 must be lowercase letters, digits, - and _")
-                                        .arg(section.where(presetNode), id));
+                                        .arg(from.where(presetNode), id));
                 continue;
             }
             SteamPreset *existing = nullptr;
@@ -257,13 +256,13 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
                     if (s && !s->get().empty())
                         preset.name = toQString(s->get());
                     else
-                        out.warnings.append(QStringLiteral("%1: name must be text").arg(section.where(value)));
+                        out.warnings.append(QStringLiteral("%1: name must be text").arg(from.where(value)));
                 } else if (key == u"env") {
                     const toml::table *env = value.as_table();
                     if (!env) {
                         out.warnings.append(
                             QStringLiteral("%1: env must be a table of variables, like { DXVK_HDR = \"1\" }")
-                                .arg(section.where(value)));
+                                .arg(from.where(value)));
                         continue;
                     }
                     preset.env.clear();
@@ -271,24 +270,24 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
                         const QString name = toQString(ek.str());
                         const auto *s = ev.as_string();
                         if (!isValidEnvName(name))
-                            out.warnings.append(QStringLiteral("%1: %2 isn't a variable name").arg(section.where(ev), name));
+                            out.warnings.append(QStringLiteral("%1: %2 isn't a variable name").arg(from.where(ev), name));
                         else if (!s)
-                            out.warnings.append(QStringLiteral("%1: %2 must be text, like \"1\"").arg(section.where(ev), name));
+                            out.warnings.append(QStringLiteral("%1: %2 must be text, like \"1\"").arg(from.where(ev), name));
                         else
                             preset.env.append({name, toQString(s->get())});
                     }
                 } else if (key == u"wrapper") {
-                    wordList(value, key, &preset.wrapper);
+                    wordList(from, value, key, &preset.wrapper);
                 } else if (key == u"args") {
-                    wordList(value, key, &preset.args);
+                    wordList(from, value, key, &preset.args);
                 } else {
                     out.warnings.append(
-                        QStringLiteral("%1: unknown key %2%3").arg(section.where(value), key, suggestion(key, known)));
+                        QStringLiteral("%1: unknown key %2%3").arg(from.where(value), key, suggestion(key, known)));
                 }
             }
             if (preset.isEmpty()) {
                 out.warnings.append(QStringLiteral("%1: preset %2 adds nothing: give it env, wrapper or args")
-                                        .arg(section.where(presetNode), id));
+                                        .arg(from.where(presetNode), id));
                 continue;
             }
             if (preset.name.isEmpty())
@@ -298,7 +297,18 @@ Parsed<SteamSettings> parseSteamSettings(const QByteArray &bytes, const QString 
             else
                 out.value.presets.append(preset);
         }
-    }
+    };
+
+    // The presets first: default_presets refers to them. [steam.presets.*] is what they were called before
+    // Epic games shared them; [presets.*] is read after it and wins.
+    const TomlSection shared(bytes, displayPath, "presets");
+    if (section.table)
+        readPresets(section, section.table->get("presets"), QStringLiteral("steam.presets"));
+    if (shared.table)
+        readPresets(shared, shared.table, QStringLiteral("presets"));
+    if (!section.table)
+        return out;
+    const toml::table *table = section.table;
 
     const QStringList known = {QStringLiteral("enabled"), QStringLiteral("path"), QStringLiteral("user"),
                                QStringLiteral("default_presets"), QStringLiteral("default_proton"), QStringLiteral("whole_library"),

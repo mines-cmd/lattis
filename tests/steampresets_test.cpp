@@ -12,6 +12,7 @@ private slots:
     void defaults();
     void parseSection();
     void userPresets();
+    void sharedPresets();
     void overrideBuiltIn();
     void badValues_data();
     void badValues();
@@ -135,6 +136,26 @@ void SteamPresetsTest::userPresets()
     // A string is split into words; no name falls back to the id.
     QCOMPARE(s.preset(u"skip"_s)->args, (QStringList{u"-skipintro"_s, u"-nosplash"_s}));
     QCOMPARE(s.preset(u"skip"_s)->name, u"skip"_s);
+}
+
+void SteamPresetsTest::sharedPresets()
+{
+    // [steam.presets.*] is still read; [presets.*] is read after it and wins, and works without a [steam] table.
+    const Parsed<SteamSettings> parsed = parse("[steam.presets.old]\n"
+                                               "args = [\"-old\"]\n"
+                                               "[steam.presets.both]\n"
+                                               "args = [\"-from-steam\"]\n"
+                                               "\n"
+                                               "[presets.new]\n"
+                                               "name = \"New\"\n"
+                                               "args = [\"-new\"]\n"
+                                               "[presets.both]\n"
+                                               "args = [\"-from-shared\"]\n");
+    QVERIFY2(parsed.warnings.isEmpty(), qPrintable(parsed.warnings.join(u'\n')));
+    QCOMPARE(parsed.value.preset(u"old"_s)->args, (QStringList{u"-old"_s}));
+    QCOMPARE(parsed.value.preset(u"new"_s)->name, u"New"_s);
+    QCOMPARE(parsed.value.preset(u"both"_s)->args, (QStringList{u"-from-shared"_s}));
+    QCOMPARE(parsed.value.presets.size(), 6);
 }
 
 void SteamPresetsTest::overrideBuiltIn()

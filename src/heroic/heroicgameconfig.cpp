@@ -17,7 +17,11 @@ const QString kUnit = QStringLiteral("  ");
 
 QJsonObject wineObject(const HeroicWine &wine)
 {
-    return {{QStringLiteral("bin"), wine.bin}, {QStringLiteral("name"), wine.name}, {QStringLiteral("type"), wine.type}};
+    QJsonObject object{{QStringLiteral("bin"), wine.bin}, {QStringLiteral("name"), wine.name},
+                       {QStringLiteral("type"), wine.type}};
+    if (!wine.wineserver.isEmpty())
+        object.insert(QStringLiteral("wineserver"), wine.wineserver);
+    return object;
 }
 
 QList<Edit> editList(const HeroicGameEdits &e)
@@ -276,7 +280,7 @@ bool read(const QString &root, const QString &appName, HeroicGameSettings &out, 
     settings.wrappers = value("wrapperOptions").toArray();
     const QJsonObject wine = value("wineVersion").toObject();
     settings.wine = {wine.value(QStringLiteral("bin")).toString(), wine.value(QStringLiteral("name")).toString(),
-                     wine.value(QStringLiteral("type")).toString()};
+                     wine.value(QStringLiteral("type")).toString(), wine.value(QStringLiteral("wineserver")).toString()};
     out = settings;
     return true;
 }

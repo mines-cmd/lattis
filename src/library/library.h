@@ -4,6 +4,7 @@
 #include "game.h"
 #include "gameid.h"
 #include "herocache.h"
+#include "heroicgameconfig.h"
 #include "heroicsettings.h"
 #include "librarystore.h"
 #include "libraryundo.h"
@@ -396,6 +397,12 @@ public:
                                     const QString &action, bool permanent);
     Q_INVOKABLE QVariantMap epicUninstallChoices(const QString &id);
     QString epicAppName(const QString &id) const;
+    // An Epic game's Heroic settings for Properties; see docs/code/heroic.md.
+    QVariantMap heroicSettingsFor(const QString &id) const;
+    Q_INVOKABLE bool heroicPresetOn(const QVariantMap &settings, const QString &preset) const;
+    Q_INVOKABLE QVariantMap setHeroicPreset(const QVariantMap &settings, const QString &preset, bool on) const;
+    Q_INVOKABLE QString saveHeroicSettings(const QString &id, const QVariantMap &settings);
+    QString applyHeroicEdits(const QString &root, const QString &appName, const HeroicGameEdits &edits);
     QVariantMap removeEpicPrefix(const QString &id, bool permanent);
     void setTrash(const Uninstall::Trash &trash) { m_trash = trash; }
 

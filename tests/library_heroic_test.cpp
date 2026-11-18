@@ -90,6 +90,7 @@ private slots:
     void aRemovedCoverStaysRemoved();
     void aBrokenCachedImageIsSkipped();
     void aGameSaysWhoRunsIt();
+    void anEpicGamesLaunchSettings();
     void settingsShowWhatWasFound();
     void settingsSaveTheirValues();
     void setupCountsTheScan();
@@ -702,6 +703,40 @@ void LibraryHeroicTest::aGameSaysWhoRunsIt()
         game.platform = it.key();
         QCOMPARE(game.launcher(), it.value());
     }
+}
+
+void LibraryHeroicTest::anEpicGamesLaunchSettings()
+{
+    writeLibrary(libraryCache(kLibrary));
+    writeInstalled(installedFile({u"HikeApp"_s}));
+    writeFile(heroicRoot() + u"/config.json"_s,
+              R"({"defaultSettings": {"wineVersion": {"bin": "/w/wine", "name": "Wine-GE-8", "type": "wine"}}})");
+    writeFile(heroicRoot() + u"/tools/proton/Proton-GE-9/proton"_s, "");
+    auto library = openLibrary();
+
+    // A game Heroic never configured reads as Heroic's defaults, and the Wine in use is listed even if gone.
+    const QVariantMap info = library->gameForEditing(u"epic-a-short-hike"_s).value(u"heroic"_s).toMap();
+    QVERIFY(info.value(u"error"_s).toString().isEmpty());
+    QVariantMap settings = info.value(u"settings"_s).toMap();
+    QCOMPARE(settings.value(u"wine"_s).toMap().value(u"name"_s).toString(), u"Wine-GE-8"_s);
+    const QVariantList wines = info.value(u"wines"_s).toList();
+    QCOMPARE(wines.first().toMap().value(u"label"_s).toString(), u"Wine-GE-8 (not installed)"_s);
+    QVERIFY(std::any_of(wines.cbegin(), wines.cend(),
+                        [](const QVariant &w) { return w.toMap().value(u"label"_s).toString() == u"Proton-GE-9"_s; }));
+    QVERIFY(library->gameForEditing(u"epic-fez"_s).value(u"heroic"_s).toMap().contains(u"settings"_s));
+    QVERIFY(library->gameForEditing(u"steam-1145360"_s).value(u"heroic"_s).toMap().isEmpty());
+
+    // Presets turn on in the draft, and Save writes only what changed.
+    QVERIFY(!library->heroicPresetOn(settings, u"mangohud"_s));
+    settings = library->setHeroicPreset(settings, u"mangohud"_s, true);
+    QVERIFY(library->heroicPresetOn(settings, u"mangohud"_s));
+    settings.insert(u"launcherArgs"_s, u"-windowed"_s);
+    QVERIFY(library->saveHeroicSettings(u"epic-a-short-hike"_s, settings).isEmpty());
+    const QJsonObject entry =
+        QJsonDocument::fromJson(readFile(HeroicGameConfig::path(heroicRoot(), u"HikeApp"_s))).object().value(u"HikeApp"_s).toObject();
+    QVERIFY(entry.value(u"showMangohud"_s).toBool());
+    QCOMPARE(entry.value(u"launcherArgs"_s).toString(), u"-windowed"_s);
+    QCOMPARE(entry.value(u"wineVersion"_s).toObject().value(u"name"_s).toString(), u"Wine-GE-8"_s);
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

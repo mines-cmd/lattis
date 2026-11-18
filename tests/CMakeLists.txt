@@ -60,6 +60,9 @@ set(LIBRARY_FILE_SOURCES
     ../src/heroic/heroiclocate.h ../src/heroic/heroiclocate.cpp
     ../src/heroic/heroicscan.h ../src/heroic/heroicscan.cpp
     ../src/heroic/heroicsaves.h ../src/heroic/heroicsaves.cpp
+    ../src/heroic/heroicgameconfig.h ../src/heroic/heroicgameconfig.cpp
+    ../src/heroic/heroicpresets.h ../src/heroic/heroicpresets.cpp
+    ../src/heroic/heroicwines.h ../src/heroic/heroicwines.cpp
     ../src/heroic/heroicsettings.h ../src/heroic/heroicsettings.cpp
     ../src/library/emulators.h ../src/library/emulators.cpp
     ../src/install/releasesource.h ../src/install/releasesource.cpp
@@ -466,6 +469,17 @@ lattis_test(heroicgameconfig_test
     SOURCES ../src/heroic/heroicgameconfig.h ../src/heroic/heroicgameconfig.cpp
     LIBS Qt6::Core
     DEFINES "HEROIC_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/heroic\"")
+lattis_test(heroicpresets_test
+    SOURCES ../src/heroic/heroicpresets.h ../src/heroic/heroicpresets.cpp
+            ../src/heroic/heroicgameconfig.h ../src/heroic/heroicgameconfig.cpp
+            ../src/steam/steampresets.h ../src/steam/steampresets.cpp
+            ../src/launch/launchoptions.h ../src/launch/launchoptions.cpp
+            ${CORE_SOURCES}
+    LIBS Qt6::Core tomlplusplus::tomlplusplus)
+lattis_test(heroicwines_test
+    SOURCES ../src/heroic/heroicwines.h ../src/heroic/heroicwines.cpp
+            ../src/heroic/heroicgameconfig.h ../src/heroic/heroicgameconfig.cpp
+    LIBS Qt6::Core)
 lattis_test(savesfinder_test
     SOURCES ../src/saves/savesindex.h ../src/saves/savesindex.cpp
             ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp

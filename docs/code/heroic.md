@@ -40,6 +40,12 @@ The flags say what the absence of a game means. `libraryKnown` is only true for 
 
 Heroic holds a game's config in memory and writes all of it back on its next change, so an edit made while it runs is lost; callers write only while Heroic is closed.
 
+`HeroicPresets::isOn()`, `turnOn()` and `turnOff()` apply a `SteamPreset` to a `HeroicGameSettings`: the built-in `mangohud` and `gamemode` presets set `showMangohud` and `useGameMode`; any other preset adds its `env` pairs to `enviromentOptions` (`{key, value}`), its `wrapper` to `wrapperOptions` (`{exe, args}`) and its `args` to `launcherArgs` (through `LaunchOptions`, as words after `%command%`).
+
+`HeroicWines::find(root, steamToolDirs, systemWine)` lists the Wine builds a game can use: `<root>/tools/proton/*` (a `proton` file), `<root>/tools/wine/*` (`bin/wine`), the Steam tool folders' Proton builds and the system `wine`, each as a `HeroicWine` and its source.
+
+`Library::gameForEditing()` adds `heroic` for an Epic game, read when Properties opens: `settings` (the keys above), `wines` (`label` and `wine`, the current one listed first with "(not installed)" when it is gone), `presets` and `error`. `heroicPresetOn()` and `setHeroicPreset()` work on that settings map, and `saveHeroicSettings(id, settings)` writes only the keys that differ from the file through `applyHeroicEdits()`, the one place that writes to Heroic, which the wait-for-Heroic rule will gate.
+
 ## Files
 
 | File | Contents |
@@ -47,5 +53,7 @@ Heroic holds a game's config in memory and writes all of it back on its next cha
 | `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `findLegendary()`, `launchArgs()`, `openArgs()` |
 | `heroicscan.*` | `HeroicState`, `HeroicGame`, `HeroicPlayTime`, `HeroicListing`; `scan()`, `lastPlayed()`, `cachedImage()` |
 | `heroicgameconfig.*` | `HeroicWine`, `HeroicGameSettings`, `HeroicGameEdits`; `HeroicGameConfig::read()`, `write()`, `path()` |
+| `heroicpresets.*` | `HeroicPresets::isOn()`, `turnOn()`, `turnOff()`: a launch option preset in a game's Heroic settings |
+| `heroicwines.*` | `HeroicWineChoice`; `HeroicWines::find()` |
 | `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `ownPrefix()`, `expandCloudSaveFolder()` |
 | `heroicsettings.*` | `HeroicSettings` and its parser: `[heroic]` in `settings.toml` |

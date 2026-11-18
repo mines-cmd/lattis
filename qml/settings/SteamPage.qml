@@ -491,8 +491,8 @@ Item {
                                     font.weight: Theme.font.strongWeight
                                 }
                                 SettingsNote {
-                                    text: modelData.builtIn ? qsTr("built in, [steam.presets.%1]").arg(modelData.id)
-                                                            : qsTr("[steam.presets.%1]").arg(modelData.id)
+                                    text: modelData.builtIn ? qsTr("built in, [presets.%1]").arg(modelData.id)
+                                                            : qsTr("[presets.%1]").arg(modelData.id)
                                 }
                                 Item { Layout.fillWidth: true }
                             }
@@ -519,7 +519,7 @@ Item {
                     spacing: Theme.layout.spacing
                     SettingsNote {
                         Layout.fillWidth: true
-                        text: qsTr("Add your own, or change a built-in one, as [steam.presets.<id>] in settings.toml, "
+                        text: qsTr("Add your own, or change a built-in one, as [presets.<id>] in settings.toml, "
                                    + "with a name and any of env, wrapper and args.")
                     }
                     SettingsButton {

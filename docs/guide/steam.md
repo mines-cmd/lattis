@@ -158,16 +158,16 @@ Three presets are built in:
 Add presets in `settings.toml` (**Open settings.toml** on Settings → Steam). A preset has a name and any of `env` (variables), `wrapper` (a command before `%command%`) and `args` (after it):
 
 ```toml
-[steam.presets.gamescope]
+[presets.gamescope]
 name = "Gamescope"
 wrapper = ["gamescope", "-f", "--"]
 
-[steam.presets.hdr]
+[presets.hdr]
 name = "HDR"
 env = { PROTON_ENABLE_HDR = "1", DXVK_HDR = "1" }
 ```
 
-Save the file and they show up as check boxes in every Steam, Windows and Linux game's Properties.
+Save the file and they show up as check boxes in every Steam, Windows, Linux and Epic game's Properties. They used to be `[steam.presets.<id>]`, which Lattis still reads; `[presets.<id>]` wins when both name the same preset.
 
 ## Restoring on another computer
 

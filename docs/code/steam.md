@@ -124,7 +124,7 @@ For Steam games (not shortcuts), the launcher copies art once into `art/<id>/` d
 
 ## Launch option presets
 
-A preset is a named combination of environment variable assignments (before `%command%`), a wrapper program (just before `%command%`) and arguments (just after it). The built-in presets are mangohud, gamemode and a `PROTON_*` variable group for Wayland (which does nothing for Linux games and is Proton-only). Users can add their own presets in `[steam.presets.<id>]` or change a built-in by setting only the keys they want different.
+A preset is a named combination of environment variable assignments (before `%command%`), a wrapper program (just before `%command%`) and arguments (just after it). The built-in presets are mangohud, gamemode and a `PROTON_*` variable group for Wayland (which does nothing for Linux games and is Proton-only). Users can add their own presets in `[presets.<id>]` (`[steam.presets.<id>]` is still read, and loses to it) or change a built-in by setting only the keys they want different.
 
 `LaunchOptions::isOn()` checks whether all of a preset's parts appear in a launch options string, at their expected positions. `turnOn()` adds what's missing; `turnOff()` removes the preset's parts and removes `%command%` too when nothing is left before it, so a round-trip gives back the original string.
 

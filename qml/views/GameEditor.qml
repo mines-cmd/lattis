@@ -116,6 +116,17 @@ Item {
             out.push({ name: current, displayName: qsTr("%1 (not installed)").arg(current) })
         return out
     }
+    // An Epic game's Heroic settings as read when Properties opened (settings, wines, presets, error), and the
+    // copy the Launch tab edits.
+    readonly property var heroicInfo: game.heroic ?? ({})
+    property var heroicDraft: ({})
+    readonly property bool heroicEdited: heroicGame && heroicInfo.settings !== undefined
+                                         && JSON.stringify(heroicDraft) !== JSON.stringify(heroicInfo.settings)
+    function setHeroic(key, value) {
+        const next = Object.assign({}, heroicDraft)
+        next[key] = value
+        heroicDraft = next
+    }
     property bool steamPending: false
     readonly property bool steamEdited: onSteam
         && (launchOptionsField.text.trim() !== (game.launchOptions ?? "").trim()
@@ -158,6 +169,7 @@ Item {
     readonly property alias argsField: launchPage.argsField
     readonly property alias protonBox: launchPage.protonBox
     readonly property alias launchOptionsField: launchPage.launchOptionsField
+    readonly property alias wineBox: launchPage.wineBox
     readonly property alias makeExecutableBox: launchPage.makeExecutableBox
     readonly property alias autoBackupBox: savesPage.autoBackupBox
     readonly property alias noSavesSwitch: savesPage.noSavesSwitch
@@ -362,6 +374,8 @@ Item {
             dirty[3] = true
         if (copiesDirty)
             dirty[4] = true
+        if (heroicEdited)
+            dirty[2] = true
         return dirty
     }
 
@@ -466,6 +480,8 @@ Item {
         argsField.text = Args.join(g.args)
         protonBox.currentIndex = Math.max(0, protonChoices.findIndex(c => c.name === (g.proton ?? "")))
         launchOptionsField.text = g.launchOptions ?? ""
+        heroicDraft = g.heroic?.settings ?? ({})
+        wineBox.currentIndex = Math.max(0, (g.heroic?.wines ?? []).findIndex(w => w.wine.bin === (heroicDraft.wine?.bin ?? "")))
         loadUpdateFields()
         steamPending = g.pendingSteamEdits ?? false
         shortcutQueued = g.shortcutQueued ?? false
@@ -909,6 +925,11 @@ Item {
                 return
             }
             errors.push(...saveManagerLinks())
+            if (heroicEdited) {
+                const heroicError = Library.saveHeroicSettings(id, heroicDraft)
+                if (heroicError !== "")
+                    errors.push(heroicError)
+            }
         }
         if (values.auto_backup === true && !romGame)
             SavesSettings.ensureManifest()

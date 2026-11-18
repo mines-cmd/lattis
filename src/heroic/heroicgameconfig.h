@@ -11,6 +11,8 @@ struct HeroicWine
     QString name;
     // "proton" or "wine".
     QString type;
+    // Heroic's own `wineserver` of a Wine build; empty for Proton, and then not written.
+    QString wineserver;
 
     bool operator==(const HeroicWine &) const = default;
 };

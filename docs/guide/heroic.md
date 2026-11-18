@@ -1,6 +1,6 @@
 # Epic games through Heroic
 
-When [Heroic Games Launcher](https://heroicgameslauncher.com) is installed and signed in to Epic, your Epic games show up in Lattis by themselves, on their own **Epic** platform, and launch through Heroic. Heroic stays in charge of installing, updating, Wine and cloud saves. Lattis only reads Heroic's files and changes nothing in them.
+When [Heroic Games Launcher](https://heroicgameslauncher.com) is installed and signed in to Epic, your Epic games show up in Lattis by themselves, on their own **Epic** platform, and launch through Heroic. Heroic stays in charge of installing, updating and cloud saves. Lattis reads Heroic's files, and writes only a game's Wine version, launch options and presets when you save them in Properties.
 
 GOG and Amazon games in Heroic, and games you added to Heroic yourself, aren't shown yet.
 
@@ -61,7 +61,7 @@ An Epic game's play time and last played are kept by Lattis, and you can correct
 
 ## Properties
 
-The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Wine, launch options and updates for the game are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
+The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Below it, a Run card has the game's **Wine version** (Heroic's Proton and Wine builds, Steam's compatibility tools and the system's Wine), **Presets** and **Launch options**, read from Heroic's settings for the game and written back when you save. MangoHud and GameMode are Heroic's own switches; your own [presets](steam.md#presets) fill Heroic's environment variables, wrappers and launch options. Updates and Heroic's other settings are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
 
 ## Automatic save backups
 
