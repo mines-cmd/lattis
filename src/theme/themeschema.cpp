@@ -1802,6 +1802,7 @@ constexpr Setting kSettings[] = {
     integer("game_editor", "bulk_popup_shadow_size", "@popover.shadow_size", 0, 200, "How far the tags list's shadow spreads; 0 = none"),
     integer("game_editor", "bulk_tag_list_height", "320", 80, 800, "Tallest the tags list gets before it scrolls"),
     color("game_editor", "bulk_progress_track", "@palette.surface_raised", "Behind the progress bar of a lookup"),
+    integer("game_editor", "bulk_progress_margin", "8", 0, 60, "Space above the progress text and bar at the top of the filters"),
     color("game_editor", "bulk_state_matched", "@palette.accent", "A matched result's dot and badge"),
     color("game_editor", "bulk_state_pick", "#4ea1ff", "A result that needs a pick: its dot and badge"),
     color("game_editor", "bulk_state_not_found", "@game_editor.warning_color", "A game IGDB has nothing for: its dot and badge"),

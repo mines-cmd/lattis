@@ -199,6 +199,7 @@ The tab list on the left. Follows the Settings sidebar until set.
 - `bulk_scrollbar_width`: the scroll bars.
 - `bulk_row_padding`, `bulk_icon_size`: each game's row.
 - `bulk_progress_track`: behind a lookup's progress bar.
+- `bulk_progress_margin`: space above the progress text and bar.
 - `bulk_state_matched`, `bulk_state_pick`, `bulk_state_not_found`, `bulk_state_error`, `bulk_state_not_on_igdb`, `bulk_badge_opacity`: the dot and badge for each result.
 - `bulk_card_border_width`: the result cards' outline.
 - `bulk_tray_background`, `bulk_tray_background_end`, `bulk_tray_darkness`: the darker tray under an open match.

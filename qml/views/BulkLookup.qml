@@ -1411,25 +1411,9 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: Theme.layout.spacing
                                 Layout.rightMargin: Theme.layout.spacing
+                                Layout.topMargin: Theme.gameEditor.bulkProgressMargin
                                 spacing: Theme.layout.spacing
 
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 6
-                                    radius: height / 2
-                                    color: Theme.gameEditor.bulkProgressTrack
-                                    clip: true
-                                    Surface {
-                                        width: lookupModel.total > 0 ? parent.width * Math.min(1, lookupModel.done / lookupModel.total)
-                                                                     : parent.width
-                                        Behavior on width { enabled: Motion.on; MotionNumber {} }
-                                        height: parent.height
-                                        radius: height / 2
-                                        fill: Theme.palette.accent
-                                        fillEnd: Theme.palette.accentEnd
-                                        direction: "right"
-                                    }
-                                }
                                 Muted {
                                     Layout.fillWidth: true
                                     wrapMode: Text.WordWrap
@@ -1439,6 +1423,20 @@ ApplicationWindow {
                                         : lookupModel.secondsLeft < 0 ? qsTr("Looking up %1 of %2").arg(Math.min(lookupModel.done + 1, lookupModel.total)).arg(lookupModel.total)
                                         : qsTr("Looking up %1 of %2 · about %3 s left").arg(Math.min(lookupModel.done + 1, lookupModel.total)).arg(lookupModel.total)
                                                                                       .arg(lookupModel.secondsLeft)
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: Theme.gameEditor.progressHeight
+                                    radius: Theme.gameEditor.progressRadius
+                                    color: Theme.gameEditor.bulkProgressTrack
+                                    clip: true
+                                    Rectangle {
+                                        width: lookupModel.total > 0 ? parent.width * Math.min(1, lookupModel.done / lookupModel.total)
+                                                                     : parent.width
+                                        height: parent.height
+                                        radius: parent.radius
+                                        color: Theme.gameEditor.progressFill
+                                    }
                                 }
                             }
 
