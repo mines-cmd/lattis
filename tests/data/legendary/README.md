@@ -15,6 +15,10 @@ To force an update, the copy's `installed.json` version was set to `1.10.0_old` 
 | `cancel-sigterm.stderr` | stopped with SIGTERM after 30% progress |
 | `resume-file.txt` | `<config>/tmp/<appName>.resume` left by the SIGTERM run |
 | `update-resumed.stderr` | `legendary update` run with that resume file in place |
+| `info.stdout`, `info.stderr` | `legendary info <appName> --json` for A Short Hike: `game`, `install` and `manifest` (`download_size`, `disk_size`) |
+| `repair-ok.stdout`, `repair-ok.stderr` | `legendary repair <appName> -y` on intact files; verification progress is on stdout, CR-separated |
+| `repair-broken.stdout`, `repair-broken.stderr` | the same with `UnityPlayer.dll` deleted and `AShortHike.exe` changed: logs the failed files, then downloads them |
+| `install.stderr` | `legendary install fe6c485736bc4ed48c835290ce48099b --base-path <folder> --platform Windows --skip-sdl -y` (Delores, 47 MiB); stdout empty; the game lands in `<folder>/Delores` |
 
 ## Findings
 

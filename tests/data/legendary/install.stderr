@@ -1,0 +1,31 @@
+[Core] INFO: Trying to re-use existing login session...
+[cli] INFO: Preparing download for "Delores: A Thimbleweed Park mini-adventure" (fe6c485736bc4ed48c835290ce48099b)...
+[Core] INFO: Parsing game manifest...
+[Core] INFO: Install path: /home/user/Games/Heroic/Delores
+[Core] INFO: Selected CDN: egs-cloudfront-chunks.epicgamescdn.com (https)
+[DLM] INFO: Found 0 missing files.
+[cli] INFO: Install size: 52.92 MiB
+[cli] INFO: Download size: 47.88 MiB (Compression savings: 9.7%)
+[cli] INFO: Reusable size: 0.00 MiB (chunks) / 0.00 MiB (unchanged / skipped)
+[cli] INFO: Downloads are resumable, you can interrupt the download with CTRL-C and resume it using the same command later on.
+[DLManager] INFO: Download Manager running with process-id: 74071
+[DLManager] INFO: Starting download workers...
+[DLManager] INFO: Starting file writing worker...
+[DLManager] INFO: = Progress: 0.00% (0/69), Running for 00:00:00, ETA: 00:00:00
+[DLManager] INFO:  - Downloaded: 0.00 MiB, Written: 0.00 MiB
+[DLManager] INFO:  - Cache usage: 32.00 MiB, active tasks: 32
+[DLManager] INFO:  + Download	- 0.00 MiB/s (raw) / 0.00 MiB/s (decompressed)
+[DLManager] INFO:  + Disk	- 0.00 MiB/s (write) / 0.00 MiB/s (read)
+[DLManager] INFO: = Progress: 4.35% (3/69), Running for 00:00:01, ETA: 00:00:22
+[DLManager] INFO:  - Downloaded: 42.01 MiB, Written: 2.00 MiB
+[DLManager] INFO:  - Cache usage: 51.00 MiB, active tasks: 7
+[DLManager] INFO:  + Download	- 42.00 MiB/s (raw) / 45.99 MiB/s (decompressed)
+[DLManager] INFO:  + Disk	- 2.00 MiB/s (write) / 0.00 MiB/s (read)
+[DLManager] INFO: = Progress: 100.00% (69/69), Running for 00:00:02, ETA: 00:00:00
+[DLManager] INFO:  - Downloaded: 47.88 MiB, Written: 52.92 MiB
+[DLManager] INFO:  - Cache usage: 0.00 MiB, active tasks: 0
+[DLManager] INFO:  + Download	- 5.87 MiB/s (raw) / 7.00 MiB/s (decompressed)
+[DLManager] INFO:  + Disk	- 50.90 MiB/s (write) / 0.00 MiB/s (read)
+[DLManager] INFO: Waiting for installation to finish...
+[DLManager] INFO: All done! Download manager quitting...
+[cli] INFO: Finished installation process in 3.37 seconds.
