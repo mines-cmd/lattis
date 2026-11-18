@@ -38,10 +38,11 @@ QString digestOf(const QJsonValue &value)
     return text.startsWith(QLatin1String("sha256:")) ? text.mid(7).toLower() : QString();
 }
 
-std::optional<Release> fromGitHub(const QJsonObject &root, QString *error)
+// Forgejo's releases API answers in GitHub's shape.
+std::optional<Release> fromGitHub(const QJsonObject &root, QString *error, const QString &label)
 {
     if (!root.contains(QLatin1String("tag_name"))) {
-        *error = root.value(QLatin1String("message")).toString(QStringLiteral("GitHub sent an answer that isn't a release"));
+        *error = root.value(QLatin1String("message")).toString(QStringLiteral("%1 sent an answer that isn't a release").arg(label));
         return std::nullopt;
     }
     Release release;
@@ -57,7 +58,7 @@ std::optional<Release> fromGitHub(const QJsonObject &root, QString *error)
         asset.url = QUrl(a.value(QLatin1String("browser_download_url")).toString());
         asset.size = qint64(a.value(QLatin1String("size")).toDouble());
         asset.sha256 = digestOf(a.value(QLatin1String("digest")));
-        asset.date = a.value(QLatin1String("updated_at")).toString();
+        asset.date = a.value(QLatin1String("updated_at")).toString(a.value(QLatin1String("created_at")).toString());
         if (!asset.name.isEmpty() && asset.url.isValid())
             release.assets.append(asset);
     }
@@ -95,6 +96,8 @@ QUrl ReleaseSource::apiUrl() const
         return QUrl(QStringLiteral("https://api.github.com/repos/%1/releases%2")
                         .arg(project, prereleases ? QStringLiteral("?per_page=20") : QStringLiteral("/latest")));
     }
+    if (host == Host::Forgejo)
+        return QUrl(QStringLiteral("https://%1/api/v1/repos/%2/releases/latest").arg(server, project));
     return QUrl(QStringLiteral("https://%1/api/v4/projects/%2/releases?per_page=1")
                     .arg(server, QString::fromLatin1(QUrl::toPercentEncoding(project))),
                 QUrl::TolerantMode);
@@ -132,7 +135,16 @@ std::optional<ReleaseSource> parse(const QString &text, QString *error)
         source.project = parts.mid(1).join(u'/');
         return source;
     }
-    return fail(QStringLiteral("release starts with github: or gitlab:, like \"github:owner/repo\""));
+    if (text.startsWith(QLatin1String("forgejo:"))) {
+        const QStringList parts = text.mid(8).split(u'/');
+        if (parts.size() != 3 || !hostName().match(parts.first()).hasMatch() || !allParts(parts.mid(1)))
+            return fail(QStringLiteral("release is \"forgejo:<host>/<owner>/<repo>\""));
+        source.host = ReleaseSource::Host::Forgejo;
+        source.server = parts.first();
+        source.project = parts.mid(1).join(u'/');
+        return source;
+    }
+    return fail(QStringLiteral("release starts with github:, gitlab: or forgejo:, like \"github:owner/repo\""));
 }
 
 std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error,
@@ -151,7 +163,7 @@ std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArra
             if (candidate.value(QLatin1String("draft")).toBool())
                 continue;
             QString ignored;
-            const auto release = fromGitHub(candidate, &ignored);
+            const auto release = fromGitHub(candidate, &ignored, source.label());
             if (release && (assetPatterns.isEmpty() || pickAsset(*release, assetPatterns)))
                 return release;
         }
@@ -170,7 +182,9 @@ std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArra
                                : QStringLiteral("%1 sent an answer that isn't JSON").arg(source.label());
         return std::nullopt;
     }
-    return source.host == ReleaseSource::Host::GitHub ? fromGitHub(root, error) : fromGitLab(root, error);
+    if (source.host == ReleaseSource::Host::GitLab)
+        return fromGitLab(root, error);
+    return fromGitHub(root, error, source.label());
 }
 
 QString fromUrl(const QString &text)

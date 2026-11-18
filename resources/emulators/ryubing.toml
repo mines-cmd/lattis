@@ -1,4 +1,5 @@
-# Ryubing, the maintained Ryujinx fork (Switch). Built into the app; change it in
+# Ryubing, the Ryujinx fork (Switch). No longer developed: Eden comes first on Switch, and this
+# stays so existing installs are still found and launch. Built into the app; change it in
 # library/emulators.toml. Checked against Flathub and the Ryubing docs, 2026-09.
 id = "ryubing"
 name = "Ryubing"

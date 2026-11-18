@@ -1,0 +1,24 @@
+# Eden (Switch), a yuzu fork and the Switch emulator Lattis offers first. Built into the app; change
+# it in library/emulators.toml. Checked against its Forgejo releases, Flathub and the sources, 2026-11.
+id = "eden"
+name = "Eden"
+platforms = ["switch"]
+flatpak = "dev.eden_emu.eden"
+executables = ["eden"]
+# Release AppImages are named like Eden-Linux-v0.2.1-amd64-clang-pgo.AppImage.
+appimage = "eden*.AppImage"
+release = "forgejo:git.eden-emu.dev/eden-emu/eden"
+# The PGO build first (the project recommends it), else the standard one; amd64, not the legacy,
+# steamdeck or rog-ally builds. The v* keeps out the release's .zsync files, which drop the version.
+release_asset = "Eden-Linux-v*-amd64-clang-pgo.AppImage;Eden-Linux-v*-amd64-gcc-standard.AppImage"
+command = ["{exe}", "{args}", "-g", "{rom}"]
+extensions = ["nsp", "nsz", "xci", "xcz", "nro", "nso", "nca"]
+# Its data folder is ~/.local/share/eden (src/common/fs/path_util.cpp). Saves are nand/user/save and
+# the system's nand/system/save; keys are keys/ (prod.keys, title.keys) and the firmware
+# nand/system/Contents/registered (the yuzu layout). Its portable `user/` folder is looked for in
+# the working folder, not next to the program, and the launcher starts emulators in the home
+# folder, so there's no portable entry.
+saves = { native = ["~/.local/share/eden/nand/user/save", "~/.local/share/eden/nand/system/save"], flatpak = ["~/.var/app/dev.eden_emu.eden/data/eden/nand/user/save", "~/.var/app/dev.eden_emu.eden/data/eden/nand/system/save"] }
+keys = { native = ["~/.local/share/eden/keys", "~/.local/share/eden/nand/system/Contents/registered"], flatpak = ["~/.var/app/dev.eden_emu.eden/data/eden/keys", "~/.var/app/dev.eden_emu.eden/data/eden/nand/system/Contents/registered"] }
+# <title ID>_<yyyy-MM-dd_hh-mm-ss-zzz>.png (src/yuzu/main_window.cpp, OnCaptureScreenshot).
+screenshots = { native = "~/.local/share/eden/screenshots/{serial}_[0-9]*.png", flatpak = "~/.var/app/dev.eden_emu.eden/data/eden/screenshots/{serial}_[0-9]*.png" }

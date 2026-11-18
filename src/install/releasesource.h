@@ -11,7 +11,7 @@
 
 struct ReleaseSource
 {
-    enum class Host { GitHub, GitLab };
+    enum class Host { GitHub, GitLab, Forgejo };
 
     Host host = Host::GitHub;
     QString server;

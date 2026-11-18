@@ -196,6 +196,10 @@ void InstallTest::sourceParses_data()
     QTest::newRow("github") << "github:mgba-emu/mgba" << true << "github.com" << "mgba-emu/mgba";
     QTest::newRow("gitlab") << "gitlab:git.ryujinx.app/ryubing/ryujinx" << true << "git.ryujinx.app" << "ryubing/ryujinx";
     QTest::newRow("gitlab subgroup") << "gitlab:gitlab.com/a/b/c" << true << "gitlab.com" << "a/b/c";
+    QTest::newRow("forgejo") << "forgejo:git.eden-emu.dev/eden-emu/eden" << true << "git.eden-emu.dev" << "eden-emu/eden";
+    QTest::newRow("forgejo no owner") << "forgejo:git.eden-emu.dev/eden" << false << "" << "";
+    QTest::newRow("forgejo subgroup") << "forgejo:codeberg.org/a/b/c" << false << "" << "";
+    QTest::newRow("forgejo bad host") << "forgejo:localhost/a/b" << false << "" << "";
     QTest::newRow("no scheme") << "mgba-emu/mgba" << false << "" << "";
     QTest::newRow("github one part") << "github:mgba" << false << "" << "";
     QTest::newRow("github three parts") << "github:a/b/c" << false << "" << "";
@@ -233,6 +237,9 @@ void InstallTest::sourceUrls()
     QCOMPARE(gitlab.toEncoded(), QByteArray("https://git.ryujinx.app/api/v4/projects/ryubing%2Fryujinx/releases?per_page=1"));
     QCOMPARE(ReleaseSources::parse("github:o/r")->label(), QStringLiteral("GitHub"));
     QCOMPARE(ReleaseSources::parse("gitlab:git.ryujinx.app/a/b")->label(), QStringLiteral("git.ryujinx.app"));
+    QCOMPARE(ReleaseSources::parse("forgejo:git.eden-emu.dev/eden-emu/eden")->apiUrl().toString(),
+             QStringLiteral("https://git.eden-emu.dev/api/v1/repos/eden-emu/eden/releases/latest"));
+    QCOMPARE(ReleaseSources::parse("forgejo:git.eden-emu.dev/a/b")->label(), QStringLiteral("git.eden-emu.dev"));
 }
 
 void InstallTest::pastedUrls()

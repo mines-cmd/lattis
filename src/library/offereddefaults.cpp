@@ -222,7 +222,17 @@ TomlPatch::Result apply(const QString &text, const QString &defaults, const QStr
             QStringList list = emulatorsOf(current, p.id);
             if (list.contains(emulator))
                 continue;
-            list.append(emulator);
+            // Where the defaults have it: before the first default listed after it, so a new first
+            // choice (Eden on Switch) also comes first in an existing library.
+            const qsizetype rank = p.emulators.indexOf(emulator);
+            qsizetype at = list.size();
+            for (qsizetype j = 0; j < list.size(); ++j) {
+                if (p.emulators.indexOf(list.at(j)) > rank) {
+                    at = j;
+                    break;
+                }
+            }
+            list.insert(at, emulator);
             QStringList quotedItems;
             for (const QString &item : list)
                 quotedItems.append(quoted(item.toStdString()));

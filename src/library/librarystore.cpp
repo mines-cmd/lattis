@@ -106,7 +106,7 @@ QString defaultTagsFile()
 }
 
 const QString kEmulatorsHeader = QStringLiteral(
-    "# Emulators. Ryubing and Azahar are built in: list one here to set its install or\n"
+    "# Emulators. Eden and Azahar are built in: list one here to set its install or\n"
     "# change a key. Any other id defines a new emulator; see emulators.reference.toml.\n");
 
 const QString kSteamIndexHeader = QStringLiteral(

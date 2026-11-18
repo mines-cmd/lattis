@@ -59,7 +59,7 @@ void LibraryEmulatorsTest::emulatorValuesWriteOnlyChangedKeys()
 
     QCOMPARE(library->setEmulatorValue("ryubing", "path", "~/Apps/Ryujinx.AppImage"), QString());
     QCOMPARE(library->setEmulatorValue("ryubing", "args", QStringList{"--fullscreen"}), QString());
-    const QByteArray header = "# Emulators. Ryubing and Azahar are built in: list one here to set its install or\n"
+    const QByteArray header = "# Emulators. Eden and Azahar are built in: list one here to set its install or\n"
                               "# change a key. Any other id defines a new emulator; see emulators.reference.toml.\n";
     QCOMPARE(readFile(file), header + "\n[[emulator]]\nid = \"ryubing\"\npath = \"~/Apps/Ryujinx.AppImage\"\n"
                                       "args = [\"--fullscreen\"]\n");

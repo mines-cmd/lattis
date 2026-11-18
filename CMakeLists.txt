@@ -48,6 +48,7 @@ set(LIBRARY_RESOURCES
     resources/emulators/cemu.toml
     resources/emulators/dolphin.toml
     resources/emulators/duckstation.toml
+    resources/emulators/eden.toml
     resources/emulators/lichii.toml
     resources/emulators/melonds.toml
     resources/emulators/mgba.toml

@@ -29,7 +29,8 @@ constexpr Field kFields[] = {
     {"appimage", String, "File name pattern for an AppImage in ~/Applications or ~/AppImages, e.g. "
                          "\"ryujinx*.AppImage\" (case doesn't matter); several separated by ;"},
     {"release", String, "Where Install gets the AppImage: \"github:<owner>/<repo>\" or "
-                        "\"gitlab:<host>/<group>/<project>\", the project's latest release"},
+                        "\"gitlab:<host>/<group>/<project>\" or \"forgejo:<host>/<owner>/<repo>\", the project's "
+                        "latest release"},
     {"release_asset", String, "File name pattern of the release's download (case doesn't matter); several "
                               "separated by ;, in order of preference"},
     {"release_unofficial", String, "Set (to whose builds they are) when the release isn't the project's own: Install tags "
@@ -323,7 +324,7 @@ EmulatorEntry readEntry(const toml::table &table, const QString &at, const QStri
             entry.values.insert(key, value);
     }
     if (entry.values.value(QStringLiteral("release_prereleases")).toString() == QLatin1String("true")
-        && entry.values.value(QStringLiteral("release")).toString().startsWith(QLatin1String("gitlab:"))) {
+        && !entry.values.value(QStringLiteral("release")).toString().startsWith(QLatin1String("github:"))) {
         warnings->append(QStringLiteral("%1: release_prereleases works for github: releases only; ignored").arg(at));
         entry.values.remove(QStringLiteral("release_prereleases"));
     }

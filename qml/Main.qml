@@ -638,7 +638,7 @@ ApplicationWindow {
 
     function emulatorNotesForScreenshot(mode) {
         const notes = qsTr("## Highlights\n\n- Faster shader compilation\n- Fixed crash on startup with some controllers\n- New **Vulkan** renderer option\n\nSee the [full changelog](https://example.com).")
-        emulatorUpdated("Ryubing", "1.3.2", notes)
+        emulatorUpdated("Eden", "v0.2.1", notes)
         if (mode === "many")
             emulatorUpdated("DuckStation", "0.1-9000", "")
         if (mode !== "toast")

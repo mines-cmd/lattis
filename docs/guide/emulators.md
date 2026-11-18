@@ -12,13 +12,13 @@ A platform (Switch, 3DS, GameCube…) is a button in the rail and a group in the
 - Behind each platform's name is an id made from it (`switch`, `3ds`). Games refer to their platform by this id, so it can't change once games use it; the name can.
 - **Remove platform** keeps its games in the library, with their favorites and play time. Add a platform with the same id to show them again.
 
-Default platforms and emulators that arrive in an update (Switch 2, and Lichii on Switch) are added to your platforms once, on the first start of that version: a new platform goes after the closest default before it, and a new emulator goes at the end of its platform's list, so the one you use stays first. If you remove one, it stays removed. `platforms.toml` keeps the ids it has already offered in an `offered` line at its top; delete an id from that line to have it offered again.
+Default platforms and emulators that arrive in an update (Switch 2, Lichii on Switch, then Eden on Switch) are added to your platforms once, on the first start of that version: a new platform goes after the closest default before it, and a new emulator goes where the defaults have it: before the first default listed after it, else at the end. Eden goes before Ryubing this way, but launching uses the first one that is installed, so Ryubing keeps launching your games until you install Eden. If you remove one, it stays removed. `platforms.toml` keeps the ids it has already offered in an `offered` line at its top; delete an id from that line to have it offered again.
 
 Steam, Proton and Linux are platforms too. Lattis adds them by itself when they're needed, at the top of the rail in that order, and you can rename or move them like any other.
 
 ## Emulators
 
-Lattis knows thirteen emulators out of the box, among them Ryubing and Lichii (Switch; Lichii also runs Switch 2), Azahar (3DS), Dolphin (GameCube and Wii), Cemu (Wii U), PCSX2 (PS2), RPCS3 (PS3), shadPS4 (PS4), PPSSPP (PSP), mGBA and melonDS. Settings → Emulators lists them all.
+Lattis knows fourteen emulators out of the box, among them Eden, Ryubing and Lichii (Switch; Lichii also runs Switch 2), Azahar (3DS), Dolphin (GameCube and Wii), Cemu (Wii U), PCSX2 (PS2), RPCS3 (PS3), shadPS4 (PS4), PPSSPP (PSP), mGBA and melonDS. Settings → Emulators lists them all. Eden is the Switch emulator Lattis offers first; Ryubing is no longer developed, but an existing Ryubing install is still found and launches your Switch games when Eden isn't installed.
 
 **Installed emulators are found by themselves.** Lattis looks for each one as a Flatpak, as a program on your `PATH`, or as an AppImage in `~/Applications` or `~/AppImages`. If yours is somewhere else, choose its program with **Browse**; **Detect automatically** goes back to finding it. "(portable)" after an install means the emulator keeps its data beside its program.
 

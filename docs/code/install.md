@@ -22,10 +22,10 @@ The install code puts an emulator on the computer from inside the app, as the up
 
 Five emulator keys (see [library](library.md#emulators)) name it:
 
-- `release`: `github:<owner>/<repo>` or `gitlab:<host>/<group>/<project>`.
+- `release`: `github:<owner>/<repo>`, `gitlab:<host>/<group>/<project>` or `forgejo:<host>/<owner>/<repo>` (Forgejo and Gitea: `/api/v1/repos/<owner>/<repo>/releases/latest`, read like GitHub's answer). Eden uses one.
 - `release_asset`: the file's name pattern in the latest release (case-insensitive, `;` separates patterns in order of preference).
 - `release_inside`: for a zip or tarball, the pattern of the AppImage inside it.
-- `release_prereleases`: `"true"` (GitHub only; a `gitlab:` source warns and ignores it) takes the newest release with a matching download, pre-release or not, instead of `/releases/latest`, which skips pre-releases. `ReleaseSource::prereleases` carries it, `Release::prerelease` and the install record's `prerelease` say whether the installed or offered build is one, and the card's version adds "(pre-release)". Lichii sets it.
+- `release_prereleases`: `"true"` (GitHub only; a `gitlab:` or `forgejo:` source warns and ignores it) takes the newest release with a matching download, pre-release or not, instead of `/releases/latest`, which skips pre-releases. `ReleaseSource::prereleases` carries it, `Release::prerelease` and the install record's `prerelease` say whether the installed or offered build is one, and the card's version adds "(pre-release)". Lichii sets it.
 - `release_unofficial`: set (to whose builds they are) when the release isn't the emulator's own project. The `Installer` row then has `unofficial`, and lists the Flatpak route first, so the card tags the AppImage "Unofficial" and recommends the Flatpak.
 
 An emulator with `release` and `release_asset` can be installed as an AppImage. Every built-in emulator has them except Ryubing, whose GitLab server was taken down (Flatpak only); Dolphin's are `pkgforge-dev`'s community builds, so it sets `release_unofficial`. A value that doesn't parse is a warning when the file is read and the key is ignored. An emulator with a `flatpak` id can be installed as a Flatpak.

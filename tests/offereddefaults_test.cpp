@@ -69,7 +69,7 @@ class OfferedDefaultsTest : public QObject
 
 private slots:
     void freshFileIsComplete();
-    void oldFileGetsSwitch2AndLichii();
+    void oldFileGetsSwitch2LichiiAndEden();
     void oldFileGetsOnlyLaterDefaults();
     void deletedBootstrapPlatformStaysDeleted();
     void deletedNewPlatformStaysDeleted();
@@ -77,6 +77,7 @@ private slots:
     void placedFirstWithoutEarlierDefault();
     void usersOrderKept();
     void emulatorAppendedOnce();
+    void emulatorPlacedWhereDefaultsHaveIt();
     void missingPlatformSkipsItsEmulators();
     void nothingChangesWhenAllOffered();
     void offeredWrittenForOldFile();
@@ -105,14 +106,14 @@ void OfferedDefaultsTest::freshFileIsComplete()
     QCOMPARE(r.text, defaults);
 }
 
-void OfferedDefaultsTest::oldFileGetsSwitch2AndLichii()
+void OfferedDefaultsTest::oldFileGetsSwitch2LichiiAndEden()
 {
     const QString old = file(block("switch", "[\"ryubing\"]") + block("3ds", "[\"azahar\"]"));
     QStringList added;
     const TomlPatch::Result r = OfferedDefaults::apply(old, resourceDefaults(), OfferedDefaults::bootstrap(), &added);
     QVERIFY(r.ok);
     QCOMPARE(ids(r.text), QStringList({"switch", "switch-2", "3ds"}));
-    QCOMPARE(emulatorsOf(r.text, "switch"), QStringList({"ryubing", "lichii"}));
+    QCOMPARE(emulatorsOf(r.text, "switch"), QStringList({"eden", "ryubing", "lichii"}));
     QCOMPARE(emulatorsOf(r.text, "switch-2"), QStringList({"lichii"}));
     QVERIFY(r.text.contains("icon = \"switch2\""));
 
@@ -184,6 +185,16 @@ void OfferedDefaultsTest::usersOrderKept()
     const TomlPatch::Result r = OfferedDefaults::apply(old, kDefaults, kBootstrap);
     QVERIFY(r.ok);
     QCOMPARE(ids(r.text), QStringList({"b", "c", "a"}));
+}
+
+void OfferedDefaultsTest::emulatorPlacedWhereDefaultsHaveIt()
+{
+    const QString defaults
+        = QStringLiteral("[[platform]]\nid = \"a\"\nname = \"A\"\nemulators = [\"n\", \"x\", \"m\", \"y\"]\n");
+    const QString old = file(block("a", "[\"mine\", \"y\", \"x\"]"));
+    const TomlPatch::Result r = OfferedDefaults::apply(old, defaults, {"a", "a/x", "a/y"});
+    QVERIFY(r.ok);
+    QCOMPARE(emulatorsOf(r.text, "a"), QStringList({"mine", "n", "m", "y", "x"}));
 }
 
 void OfferedDefaultsTest::emulatorAppendedOnce()
