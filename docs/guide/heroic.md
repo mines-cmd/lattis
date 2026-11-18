@@ -1,6 +1,6 @@
 # Epic games through Heroic
 
-When [Heroic Games Launcher](https://heroicgameslauncher.com) is installed and signed in to Epic, your Epic games show up in Lattis by themselves, on their own **Epic** platform, and launch through Heroic. Heroic stays in charge of installing, updating and cloud saves. Lattis reads Heroic's files, and writes only a game's Wine version, launch options and presets when you save them in Properties.
+When [Heroic Games Launcher](https://heroicgameslauncher.com) is installed and signed in to Epic, your Epic games show up in Lattis by themselves, on their own **Epic** platform, and launch through Heroic. Heroic stays in charge of cloud saves and the game's first launch; installing, updating and verifying run through Heroic's own Legendary. Lattis reads Heroic's files, and writes only a game's Wine version, launch options and presets when you save them in Properties.
 
 GOG and Amazon games in Heroic, and games you added to Heroic yourself, aren't shown yet.
 
@@ -44,7 +44,11 @@ When you run the guide again, the step counts what's already in your library and
 
 The game shows as running until Heroic says it closed. If a launch stops early, for example because the install folder is gone, Heroic opens its own dialog and nothing ends the session in Lattis: use **Close** on the Launch button.
 
-**Install** opens Heroic, copies the game's title and tells you to paste it in Heroic's search, because Heroic has no way to open a game's page from outside.
+**Install** on a game that isn't installed opens a small dialog, and the download runs in Heroic's own Legendary in the background, so Heroic doesn't need to be open. The dialog shows the folder the game goes into (the one you used last time in Lattis, else Heroic's default install folder; **Change** picks another), the download and disk size, and the free space on that drive. The sizes come from Heroic's cache when it has them, else Lattis asks Epic ("Checking size…", or "Size unknown" if that fails). If the drive is too small, **Install** is off and a line says how much is missing. Heroic keeps its own default folder: changing it in Lattis doesn't touch Heroic's settings.
+
+While it runs, the game reads **Installing** with the percentage on its chip, list row and the download bar along the bottom of the game's page (the Launch button shows only the label), or **Queued** while another download runs (one at a time). It stays in the list when **Installed only** is on. Click the bar to open the game's page, × to cancel: Legendary keeps what it downloaded, so Install resumes. A toast says when the game is installed. The first launch goes through Heroic, which makes the Wine prefix and installs DXVK. With a Flatpak Heroic there's no Legendary for Lattis to run, so Install opens Heroic, copies the game's title and tells you to paste it in Heroic's search, because Heroic has no way to open a game's page from outside.
+
+**Verify files** (the game's menu, and Properties → Launch) checks every file of an installed game against Epic's and downloads the ones that are broken or missing. The game reads **Verifying** with the percentage, and a toast ends it with "<title>: all files are fine" or "<title>: fixed N files". It can run while Heroic is open, but not while the game is running. It's hidden with a Flatpak Heroic.
 
 **Uninstall** (the game's menu and Properties) runs Heroic's own copy of Legendary, so Heroic doesn't need to be open. It deletes the game's files for good, not to the trash. If the game has a Wine prefix of its own (one no other game and not Heroic's default prefix uses), you can delete that too; it goes to the trash and holds the game's saves. The game stays in the list as not installed, with its play time, tags and art. With a Flatpak Heroic the button asks you to uninstall in Heroic instead.
 
