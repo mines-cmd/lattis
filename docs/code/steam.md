@@ -59,7 +59,7 @@ The files it reads, in order:
 
 ## Updates
 
-Whether a Steam game has an update comes from Steam's own files; Lattis never contacts Steam's servers, so a patch Steam hasn't seen yet shows nothing. `readManifest` turns `StateFlags` into `SteamApp::update`, checked in this order:
+Whether a Steam game has an update comes from Steam's own files; Lattis never contacts Steam's servers, so a patch Steam hasn't seen yet shows nothing. `readManifest` turns `StateFlags` into `SteamApp::update`, a `GameUpdate` (the enum Epic games share, see [heroic.md](heroic.md#legendary-jobs); it was `SteamUpdate` before Epic got updates), checked in this order:
 
 | State | When |
 |---|---|
