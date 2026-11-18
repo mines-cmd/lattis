@@ -130,7 +130,7 @@ Steam rewrites its settings when it exits, so it would undo any change made whil
 - **Steam closed:** your change goes into Steam as soon as you save.
 - **Steam running:** the change waits. The game's settings button gets a badge, the Launch card says "Waiting for Steam to close to apply this", and a yellow banner right of the toolbar names the games waiting and what changed (launch options, Proton version and so on). **Show** goes to the game, or lists them when there are several. When other banners show too (the one after an Import), this one stays in front, and the others peek out under it with a count; hover the stack to fan them all out. It's applied when Steam next closes.
 - **Close Steam and apply** (on the Launch card, Settings → Steam, the banner's **Close Steam**, or "Apply N Steam changes" in the app menu) closes Steam, writes the changes and starts Steam again.
-- **Undo** on the banner, or per game on Settings → Steam, drops the waiting changes and keeps what Steam has.
+- **Undo** on the banner, or per game on Settings → Steam, drops the waiting changes and keeps what Steam has. With more than one game waiting, the banner's Undo lists them, ticked, so you can untick the ones to keep.
 - **Launching a game with a change waiting** while Steam runs asks: "Restart Steam and launch", "Launch with the old options", or Cancel.
 
 **Changes made in Steam** come into Lattis within a moment. If the same game's value was changed in both before they met, Steam's wins.

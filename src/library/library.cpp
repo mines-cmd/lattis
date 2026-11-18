@@ -6456,18 +6456,29 @@ QString Library::applyHeroicEdits(const QString &root, const QString &appName, c
     return !any || HeroicGameConfig::write(root, appName, edits, &error) ? QString() : error;
 }
 
-void Library::undoAllHeroicEdits()
+QString Library::undoWaitingEdits(const QStringList &steamIds, const QStringList &heroicIds)
 {
-    if (m_heroicPending.isEmpty())
-        return;
-    qCInfo(lcLibrary).noquote() << QStringLiteral("dropped the edits waiting for Heroic: %1")
-                                       .arg(QStringList(m_heroicPending.keys()).join(QStringLiteral(", ")));
-    m_heroicPending.clear();
-    m_heroicPendingTimer.stop();
-    saveHeroicPending();
-    updateHeroicWaiting();
-    emit dataChanged(index(0), index(int(m_rows.size()) - 1));
-    emit gamesChanged();
+    bool heroicChanged = false;
+    for (const QString &id : heroicIds)
+        heroicChanged |= m_heroicPending.remove(epicAppName(id)) > 0;
+    if (heroicChanged) {
+        if (m_heroicPending.isEmpty())
+            m_heroicPendingTimer.stop();
+        saveHeroicPending();
+        updateHeroicWaiting();
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+        emit gamesChanged();
+    }
+    QString error;
+    if (!steamIds.isEmpty()) {
+        m_store.beginBatch();
+        for (const QString &key : steamIds) {
+            if (const QString e = m_store.undoSteamQueue(key); error.isEmpty())
+                error = e;
+        }
+        m_store.endBatch();
+    }
+    return error;
 }
 
 QString Library::pendingEditsName(const Game &g) const

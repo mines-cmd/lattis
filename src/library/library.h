@@ -367,8 +367,8 @@ public:
     Q_INVOKABLE QString setSteamPresetForAll(const QString &preset, bool on);
     Q_INVOKABLE QString undoSteamEdits(const QString &id);
     Q_INVOKABLE QString undoAllSteamEdits();
-    // Drops the edits waiting for Heroic to close; Heroic's files were never touched, so nothing else changes.
-    Q_INVOKABLE void undoAllHeroicEdits();
+    // The Undo dialog's ticked rows: `steamWaiting` ids and `heroicWaiting` game ids; the first error, or "".
+    Q_INVOKABLE QString undoWaitingEdits(const QStringList &steamIds, const QStringList &heroicIds);
 
     Q_INVOKABLE QVariantMap gameForEditing(const QString &id) const;
     Q_INVOKABLE bool steamPresetOn(const QString &launchOptions, const QString &preset) const;
