@@ -61,7 +61,7 @@ An Epic game's play time and last played are kept by Lattis, and you can correct
 
 ## Properties
 
-The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Wine, launch options and updates for the game are in Heroic. Tags, art, status and the rest work as for any game.
+The Launch tab shows the folder Heroic installed the game in, and **Open Heroic**. Wine, launch options and updates for the game are in Heroic. Tags, art, status and the rest work as for any game. Epic games can show the [ProtonDB chip](steam.md) too once a lookup has matched them to a game with a Steam app ID, and count in the overview's Compatibility card while installed.
 
 ## Automatic save backups
 

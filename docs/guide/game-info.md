@@ -34,6 +34,10 @@ In a game's Properties, or the + dialog, click **Look up in IGDB** beside the ti
 
 Nothing is saved until you click Save.
 
+### ProtonDB for other Windows games
+
+When IGDB lists a Steam app ID for the game you matched, a lookup (here, Detailed lookup or Bulk lookup) keeps that ID with a Windows game that isn't from Steam, such as an Epic game, a Proton shortcut or another import. The ProtonDB chip and info row then work for it as they do for Steam games, and the overview's Compatibility card counts it while it's installed. Games you already have get the ID at their next lookup; Bulk lookup fills in a whole library at once. The ID can't be edited by hand: **Not this game?**, Detailed lookup or **Not on IGDB** replaces or clears it, so re-matching fixes a wrong one. A game with no ID has no chip.
+
 ### Detailed lookup
 
 For a game IGDB lists under another name or platform: a recomp or a port, a fan translation, a file name far from the real title. **Detailed lookup** searches any name, on the game's platforms, every platform, or one you pick from about 45. It shows up to 50 results, with each one's cover, year, platforms and description. IGDB's search only finds whole words; when it finds nothing, the text is searched for anywhere in the names instead, so part of a word works too. **Use this game** applies it; **Cancel**, the X in the corner or Escape closes it without changes.
