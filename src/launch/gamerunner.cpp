@@ -394,7 +394,22 @@ QString GameRunner::sizeText(double bytes) const
     return QLocale().formattedDataSize(qint64(bytes), 1, QLocale::DataSizeTraditionalFormat);
 }
 
-QString GameRunner::installEpic(const QString &gameId, const QString &folder)
+QVariantMap GameRunner::epicInstallWine(const QString &gameId) const
+{
+    QVariantMap out = m_library->epicInstallWine(gameId);
+    if (out.isEmpty())
+        return out;
+    QString name = m_library->game(gameId) ? m_library->game(gameId)->title : QString();
+    name.remove(QRegularExpression(QStringLiteral(R"([/\\:*?"<>|])")));
+    name = name.trimmed();
+    if (name.isEmpty())
+        name = m_library->epicAppName(gameId);
+    out.insert(QStringLiteral("prefix"), out.take(QStringLiteral("prefixDir")).toString() + u'/' + name);
+    return out;
+}
+
+QString GameRunner::installEpic(const QString &gameId, const QString &folder, const QVariantMap &wine,
+                                bool ownPrefix)
 {
     const Game *game = m_library->game(gameId);
     const QString appName = m_library->epicAppName(gameId);
@@ -415,6 +430,12 @@ QString GameRunner::installEpic(const QString &gameId, const QString &folder)
     else
         info = EpicInstall::cachedInfo(m_library->store().snapshot().heroic.install.root, appName);
     const QString platform = info ? EpicInstall::platformFor(*info) : QStringLiteral("Windows");
+
+    if (platform == QLatin1String("Windows") && (!wine.isEmpty() || ownPrefix)) {
+        const QString prefix = ownPrefix ? epicInstallWine(gameId).value(QStringLiteral("prefix")).toString() : QString();
+        if (const QString error = m_library->setEpicInstallSettings(gameId, wine, prefix); !error.isEmpty())
+            return error;
+    }
 
     const QString expanded = EpicInstall::expandHome(folder.trimmed());
     qCInfo(lcLaunch).noquote() << QStringLiteral("installing %1 into %2").arg(game->id, expanded);

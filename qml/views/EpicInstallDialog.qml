@@ -10,12 +10,14 @@ AppDialog {
     property string folder: ""
     property double free: -1
     property string error: ""
+    property var wineInfo: ({})
 
     readonly property string sizeState: plan.sizeState ?? "unknown"
     readonly property double downloadSize: plan.downloadSize ?? -1
     readonly property double diskSize: plan.diskSize ?? -1
     readonly property double missing: free >= 0 && diskSize >= 0 && free < diskSize ? diskSize - free : 0
     readonly property bool checking: sizeState === "checking"
+    readonly property bool hasWine: (plan.platform ?? "Windows") === "Windows" && (wineInfo.wines ?? []).length > 0
     readonly property string gameFolder: plan.gameFolder || (game.title ?? "").replace(/[^\p{L}\p{N}]+/gu, "")
 
     function ask(g) {
@@ -23,6 +25,9 @@ AppDialog {
         plan = GameRunner.epicInstallPlan(g.id)
         folder = plan.folder ?? ""
         error = ""
+        wineInfo = GameRunner.epicInstallWine(g.id)
+        sharedBox.checked = false
+        wineBox.currentIndex = Math.max(0, (wineInfo.wines ?? []).findIndex(w => w.wine.bin === (wineInfo.wine?.bin ?? "")))
         refreshFree()
         open()
     }
@@ -32,7 +37,8 @@ AppDialog {
     }
 
     function install() {
-        const e = GameRunner.installEpic(game.id, folder)
+        const e = hasWine ? GameRunner.installEpic(game.id, folder, wineInfo.wines[wineBox.currentIndex].wine, !sharedBox.checked)
+                          : GameRunner.installEpic(game.id, folder)
         if (e !== "")
             error = e
         else
@@ -108,6 +114,50 @@ AppDialog {
             SettingsButton {
                 text: qsTr("Change")
                 onClicked: folderDialog.active = true
+            }
+        }
+    }
+
+    ColumnLayout {
+        visible: root.hasWine
+        Layout.fillWidth: true
+        spacing: Theme.layout.spacing
+
+        SettingsCheckBox {
+            id: sharedBox
+            Layout.fillWidth: true
+            checked: false
+            text: qsTr("Use the shared Wine prefix")
+        }
+        RowLayout {
+            visible: !sharedBox.checked
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
+
+            Label {
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
+                text: qsTr("Wine prefix")
+            }
+            PathField {
+                Layout.fillWidth: true
+                path: root.wineInfo.prefix ?? ""
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Theme.layout.spacing
+
+            Label {
+                Layout.fillWidth: true
+                color: Theme.controls.labelColor
+                font.pixelSize: Theme.controls.labelFontSize
+                text: qsTr("Wine version")
+            }
+            SettingsComboBox {
+                id: wineBox
+                Layout.preferredWidth: Theme.controls.inputHeight * 7
+                model: (root.wineInfo.wines ?? []).map(w => w.label)
             }
         }
     }

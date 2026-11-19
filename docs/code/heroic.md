@@ -79,7 +79,7 @@ A game's row has `pendingEdits` (`"heroic"` while the app name has an entry, `"s
 |---|---|
 | `heroiclocate.*` | `HeroicLocations`, `HeroicInstall`, `HeroicProgram`; `find()`, `findProgram()`, `findLegendary()`, `launchArgs()`, `openArgs()` |
 | `heroicscan.*` | `HeroicState`, `HeroicGame`, `HeroicPlayTime`, `HeroicListing`; `scan()`, `lastPlayed()`, `cachedImage()` |
-| `heroicgameconfig.*` | `HeroicWine`, `HeroicGameSettings`, `HeroicGameEdits`; `HeroicGameConfig::read()`, `write()`, `path()` |
+| `heroicgameconfig.*` | `HeroicWine`, `HeroicGameSettings`, `HeroicGameEdits` (also `winePrefix`, only set by the Install dialog); `HeroicGameConfig::read()`, `write()`, `path()`, `defaultPrefixDir()` |
 | `heroicpresets.*` | `HeroicPresets::isOn()`, `turnOn()`, `turnOff()`: a launch option preset in a game's Heroic settings |
 | `heroicwines.*` | `HeroicWineChoice`; `HeroicWines::find()` |
 | `heroicsaves.*` | `HeroicSavesInfo`; `HeroicSaves::read()`, `ownPrefix()`, `expandCloudSaveFolder()` |

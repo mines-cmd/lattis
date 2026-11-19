@@ -6468,6 +6468,78 @@ HeroicGameSettings heroicFromDraft(const QVariantMap &d)
 }
 }
 
+// Matched by program, so the stored name may differ from the one Lattis lists it under.
+QVariantList Library::wineChoices(const HeroicWine &currentWine) const
+{
+    const LibrarySnapshot &s = m_store.snapshot();
+    QVariantList wines;
+    bool current = currentWine.bin.isEmpty();
+    if (current)
+        wines.append(QVariantMap{{QStringLiteral("label"), tr("Not set")}, {QStringLiteral("wine"), wineMap({})}});
+    for (const HeroicWineChoice &choice : HeroicWines::find(s.heroic.install.root, s.steam.toolDirs,
+                                                           QStandardPaths::findExecutable(QStringLiteral("wine")))) {
+        const bool isCurrent = choice.wine.bin == currentWine.bin;
+        current = current || isCurrent;
+        wines.append(QVariantMap{{QStringLiteral("label"), choice.source == u"steam" ? tr("%1 (Steam)").arg(choice.wine.name)
+                                                                                      : choice.wine.name},
+                                 {QStringLiteral("wine"), wineMap(isCurrent ? currentWine : choice.wine)}});
+    }
+    if (!current) {
+        wines.prepend(QVariantMap{{QStringLiteral("label"), tr("%1 (not installed)").arg(currentWine.name)},
+                                  {QStringLiteral("wine"), wineMap(currentWine)}});
+    }
+    return wines;
+}
+
+QVariantMap Library::epicInstallWine(const QString &id) const
+{
+    const LibrarySnapshot &s = m_store.snapshot();
+    const QString appName = epicAppName(id);
+    HeroicGameSettings settings;
+    if (appName.isEmpty() || !s.heroic.install.found() || !HeroicGameConfig::read(s.heroic.install.root, appName, settings))
+        return {};
+    QString prefixDir = HeroicGameConfig::defaultPrefixDir(s.heroic.install.root);
+    if (prefixDir.isEmpty())
+        prefixDir = QDir::homePath() + QStringLiteral("/Games/Heroic/Prefixes");
+    return {{QStringLiteral("wines"), wineChoices(settings.wine)}, {QStringLiteral("wine"), wineMap(settings.wine)},
+            {QStringLiteral("prefixDir"), prefixDir}};
+}
+
+QString Library::setEpicInstallSettings(const QString &id, const QVariantMap &wine, const QString &prefix)
+{
+    const QString root = m_store.snapshot().heroic.install.root;
+    const QString appName = epicAppName(id);
+    if (appName.isEmpty() || root.isEmpty())
+        return {};
+    HeroicGameSettings before;
+    QString error;
+    if (!HeroicGameConfig::read(root, appName, before, &error))
+        return error;
+    HeroicGameEdits edits;
+    const HeroicGameSettings picked = heroicFromDraft({{QStringLiteral("wine"), wine}});
+    if (!picked.wine.bin.isEmpty() && picked.wine.bin != before.wine.bin)
+        edits.wine = picked.wine;
+    if (!prefix.isEmpty())
+        edits.winePrefix = prefix;
+    return queueHeroicEdits(appName, edits);
+}
+
+QString Library::queueHeroicEdits(const QString &appName, const HeroicGameEdits &edits)
+{
+    if (HeroicGameConfig::isEmpty(edits))
+        return {};
+    if (m_heroicRunning()) {
+        HeroicGameConfig::merge(m_heroicPending[appName], edits);
+        saveHeroicPending();
+        applyHeroicPending();
+        updateHeroicWaiting();
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1));
+        emit gamesChanged();
+        return {};
+    }
+    return applyHeroicEdits(m_store.snapshot().heroic.install.root, appName, edits);
+}
+
 QVariantMap Library::heroicSettingsFor(const QString &id) const
 {
     const LibrarySnapshot &s = m_store.snapshot();
@@ -6479,24 +6551,7 @@ QVariantMap Library::heroicSettingsFor(const QString &id) const
     if (!HeroicGameConfig::read(s.heroic.install.root, appName, settings, &error))
         return {{QStringLiteral("error"), error}};
     HeroicGameConfig::apply(settings, m_heroicPending.value(appName));
-
-    // Matched by program, so the stored name may differ from the one Lattis lists it under.
-    QVariantList wines;
-    bool current = settings.wine.bin.isEmpty();
-    if (current)
-        wines.append(QVariantMap{{QStringLiteral("label"), tr("Not set")}, {QStringLiteral("wine"), wineMap({})}});
-    for (const HeroicWineChoice &choice : HeroicWines::find(s.heroic.install.root, s.steam.toolDirs,
-                                                           QStandardPaths::findExecutable(QStringLiteral("wine")))) {
-        const bool isCurrent = choice.wine.bin == settings.wine.bin;
-        current = current || isCurrent;
-        wines.append(QVariantMap{{QStringLiteral("label"), choice.source == u"steam" ? tr("%1 (Steam)").arg(choice.wine.name)
-                                                                                      : choice.wine.name},
-                                 {QStringLiteral("wine"), wineMap(isCurrent ? settings.wine : choice.wine)}});
-    }
-    if (!current) {
-        wines.prepend(QVariantMap{{QStringLiteral("label"), tr("%1 (not installed)").arg(settings.wine.name)},
-                                  {QStringLiteral("wine"), wineMap(settings.wine)}});
-    }
+    const QVariantList wines = wineChoices(settings.wine);
 
     QVariantList presets;
     for (const SteamPreset &p : m_steamSettings.presets) {
@@ -6556,26 +6611,13 @@ QString Library::saveHeroicSettings(const QString &id, const QVariantMap &settin
         edits.wrappers = after.wrappers;
     if (after.wine.bin != before.wine.bin && !after.wine.bin.isEmpty())
         edits.wine = after.wine;
-    if (HeroicGameConfig::isEmpty(edits))
-        return {};
-    if (m_heroicRunning()) {
-        HeroicGameConfig::merge(m_heroicPending[appName], edits);
-        saveHeroicPending();
-        applyHeroicPending();
-        updateHeroicWaiting();
-        emit dataChanged(index(0), index(int(m_rows.size()) - 1));
-        emit gamesChanged();
-        return {};
-    }
-    return applyHeroicEdits(root, appName, edits);
+    return queueHeroicEdits(appName, edits);
 }
 
 QString Library::applyHeroicEdits(const QString &root, const QString &appName, const HeroicGameEdits &edits)
 {
-    const bool any = edits.launcherArgs || edits.showMangohud || edits.useGameMode || edits.environment
-        || edits.wrappers || edits.wine;
     QString error;
-    return !any || HeroicGameConfig::write(root, appName, edits, &error) ? QString() : error;
+    return HeroicGameConfig::isEmpty(edits) || HeroicGameConfig::write(root, appName, edits, &error) ? QString() : error;
 }
 
 QString Library::undoWaitingEdits(const QStringList &steamIds, const QStringList &heroicIds)

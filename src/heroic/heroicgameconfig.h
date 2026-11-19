@@ -39,9 +39,12 @@ struct HeroicGameEdits
     std::optional<QJsonArray> environment;
     std::optional<QJsonArray> wrappers;
     std::optional<HeroicWine> wine;
+    std::optional<QString> winePrefix;
 };
 
 namespace HeroicGameConfig {
+// config.json's defaultSettings.defaultWinePrefixDir: where Heroic puts a game's own prefix; empty when unset.
+QString defaultPrefixDir(const QString &root);
 // Edits as a JSON object (only the keys set), for the queue that waits for Heroic to close.
 QJsonObject editsToJson(const HeroicGameEdits &edits);
 HeroicGameEdits editsFromJson(const QJsonObject &object);

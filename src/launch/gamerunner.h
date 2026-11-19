@@ -101,7 +101,13 @@ public:
     Q_INVOKABLE double freeSpace(const QString &folder) const;
     Q_INVOKABLE QString sizeText(double bytes) const;
     // Queues `legendary install` into the folder and remembers it for the next install; the error, or empty.
-    Q_INVOKABLE QString installEpic(const QString &gameId, const QString &folder);
+    // `wine` is one of epicInstallWine's `wines[].wine`; `ownPrefix` gives the game a Wine prefix of its own
+    // (epicInstallWine's `prefix`) instead of Heroic's shared one. Both only matter for a Windows build.
+    Q_INVOKABLE QString installEpic(const QString &gameId, const QString &folder, const QVariantMap &wine = {},
+                                    bool ownPrefix = false);
+    // The Install dialog's Wine settings: {wines (label, wine), wine (the default one), prefix (the game's own
+    // would-be prefix folder)}; empty when Heroic isn't found.
+    Q_INVOKABLE QVariantMap epicInstallWine(const QString &gameId) const;
     // Queues `legendary repair` (checks every file, downloads the broken ones); the error, or empty. The result
     // comes as `message`. epicJob is the game's job (appName, kind, percent, state, error), empty when it has none.
     Q_INVOKABLE QString verifyEpic(const QString &gameId);

@@ -39,6 +39,8 @@ QList<Edit> editList(const HeroicGameEdits &e)
         out.append({QStringLiteral("wrapperOptions"), *e.wrappers});
     if (e.wine)
         out.append({QStringLiteral("wineVersion"), wineObject(*e.wine)});
+    if (e.winePrefix)
+        out.append({QStringLiteral("winePrefix"), *e.winePrefix});
     return out;
 }
 
@@ -350,6 +352,8 @@ QJsonObject editsToJson(const HeroicGameEdits &e)
         wine.insert(QStringLiteral("wineserver"), e.wine->wineserver);
         o.insert(QStringLiteral("wine"), wine);
     }
+    if (e.winePrefix)
+        o.insert(QStringLiteral("winePrefix"), *e.winePrefix);
     return o;
 }
 
@@ -371,6 +375,8 @@ HeroicGameEdits editsFromJson(const QJsonObject &o)
                             wine.value(QStringLiteral("type")).toString(),
                             wine.value(QStringLiteral("wineserver")).toString()};
     }
+    if (o.contains(QStringLiteral("winePrefix")))
+        e.winePrefix = o.value(QStringLiteral("winePrefix")).toString();
     return e;
 }
 
@@ -388,6 +394,8 @@ void merge(HeroicGameEdits &into, const HeroicGameEdits &later)
         into.wrappers = later.wrappers;
     if (later.wine)
         into.wine = later.wine;
+    if (later.winePrefix)
+        into.winePrefix = later.winePrefix;
 }
 
 void apply(HeroicGameSettings &s, const HeroicGameEdits &e)
@@ -408,6 +416,11 @@ void apply(HeroicGameSettings &s, const HeroicGameEdits &e)
 
 bool isEmpty(const HeroicGameEdits &e)
 {
-    return !(e.launcherArgs || e.showMangohud || e.useGameMode || e.environment || e.wrappers || e.wine);
+    return !(e.launcherArgs || e.showMangohud || e.useGameMode || e.environment || e.wrappers || e.wine || e.winePrefix);
+}
+
+QString defaultPrefixDir(const QString &root)
+{
+    return defaultSettings(root).value(QStringLiteral("defaultWinePrefixDir")).toString().trimmed();
 }
 }

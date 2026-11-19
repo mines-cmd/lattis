@@ -420,6 +420,14 @@ public:
     Q_INVOKABLE QVariantMap setHeroicPreset(const QVariantMap &settings, const QString &preset, bool on) const;
     Q_INVOKABLE QString saveHeroicSettings(const QString &id, const QVariantMap &settings);
     QString applyHeroicEdits(const QString &root, const QString &appName, const HeroicGameEdits &edits);
+    // Writes the edits now, or queues them while Heroic runs; the error, or empty.
+    QString queueHeroicEdits(const QString &appName, const HeroicGameEdits &edits);
+    QVariantList wineChoices(const HeroicWine &current) const;
+    // The Install dialog's Wine part: {wines, wine (Heroic's default), prefixDir}; empty without Heroic.
+    QVariantMap epicInstallWine(const QString &id) const;
+    // Before an install: the picked Wine (when it differs from the default) and the game's own prefix (empty
+    // for the shared one) go into Heroic's settings for the game.
+    QString setEpicInstallSettings(const QString &id, const QVariantMap &wine, const QString &prefix);
     QVariantMap removeEpicPrefix(const QString &id, bool permanent);
     void setTrash(const Uninstall::Trash &trash) { m_trash = trash; }
 
