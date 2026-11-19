@@ -1193,8 +1193,42 @@ Item {
         clip: true
         z: 1
 
+        // Full width unless the side panel's cards reach down to where the bar sits on screen; then
+        // the bar keeps to the text column. Measured against the full bar, not the current card, so
+        // collapsing and expanding never flips it. Narrowing follows the cards' position through the
+        // last `spacing` above the bar (where the page's end leaves them, so the bar widens there)
+        // and never animates: the cards arrive instantly on a game change and with the scroll, so
+        // any delay would let them overlap. Only widening after a jump (a game change, the panel
+        // resizing) eases; with the scroll it follows too, as restarting the ease every frame
+        // would hold the bar back until the scroll stops.
+        readonly property real sideBottom: content.y + body.y + side.y + side.height - flick.contentY
+        readonly property real barTop: root.height - Theme.details.marginBottom - Theme.downloadBar.height
+        readonly property real ramp: Math.max(1, Theme.details.spacing)
+        readonly property real avoid: root.downloading && !root.compact && side.visible
+            ? Math.max(0, Math.min(1, (sideBottom - barTop + ramp) / ramp)) : 0
+        property real narrow: 0
+        property real avoidScroll: 0
+        onAvoidChanged: {
+            const scrolled = flick.contentY !== avoidScroll
+            avoidScroll = flick.contentY
+            if (avoid >= narrow || scrolled || !Motion.on) {
+                widen.stop()
+                narrow = avoid
+            } else {
+                widen.to = avoid
+                widen.restart()
+            }
+        }
+        MotionNumber {
+            id: widen
+            target: dock
+            property: "narrow"
+            duration: Motion.duration(Theme.downloadBar.avoidDuration)
+        }
+        readonly property real lane: content.width - narrow * (content.width - body.x - side.x + Theme.details.columnSpacing)
+
         readonly property real pillWidth: downloadPill.item ? downloadPill.item.implicitWidth : 0
-        readonly property real morphWidth: content.width + Theme.downloadBar.overhang * (1 - root.slide) + (pillWidth - content.width) * root.slide
+        readonly property real morphWidth: lane + Theme.downloadBar.overhang * (1 - root.slide) + (pillWidth - lane) * root.slide
         readonly property real morphHeight: Theme.downloadBar.height + (Theme.downloadBar.pillHeight - Theme.downloadBar.height) * root.slide
 
         readonly property real rowShift: downloadBar.item
@@ -1206,7 +1240,7 @@ Item {
             id: downloadPill
             active: root.downloading
             visible: root.slide > 0
-            x: content.x + content.width - width
+            x: content.x + dock.lane - width
             y: root.height - Theme.details.marginBottom - height + dock.rowShift * (1 - root.slide)
             width: dock.morphWidth
             height: dock.morphHeight
@@ -1217,7 +1251,7 @@ Item {
             active: root.downloading
             visible: opacity > 0
             opacity: Math.max(0, 1 - root.slide * 1.6)
-            x: content.x + content.width - width
+            x: content.x + dock.lane - width
             y: root.height - Theme.details.marginBottom - height + dock.rowShift * (1 - root.slide)
             width: dock.morphWidth
             height: dock.morphHeight
@@ -1268,7 +1302,7 @@ Item {
     Binding {
         target: downloadPill.item
         property: "fullWidth"
-        value: content.width
+        value: dock.lane
         when: downloadPill.item !== null
     }
     Binding {

@@ -369,6 +369,7 @@ The bar along the bottom of a game's page while Steam downloads a game, which fo
 - `show`: show it at all.
 - `height`, `padding`, `radius`: its height, inner space and roundness.
 - `overhang`: how far it reaches past the page content on the left.
+- `avoid_duration`: how long the bar takes to widen again when a game change or a shorter panel leaves room. With the scroll, and when narrowing, it follows the cards at once.
 - `background`, `background_end`, `gradient_direction`, `border`, `border_width`: its box.
 - `shadow_color`, `shadow_size`: the shadow under it.
 - `icon_size`: the game's icon. 0 hides it.

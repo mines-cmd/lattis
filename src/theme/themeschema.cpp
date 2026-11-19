@@ -1184,6 +1184,8 @@ constexpr Setting kSettings[] = {
     boolean("download_bar", "show", "true", "Show the bar while Steam or Legendary downloads a game"),
     integer("download_bar", "height", "56", 24, 200, "Height of the whole bar"),
     integer("download_bar", "overhang", "1", 0, 200, "How far the bar reaches past the page content on the left"),
+    integer("download_bar", "avoid_duration", "200", 0, 2000,
+            "How long the bar takes to widen when a game change or a shorter side panel leaves room, in ms; 0 = at once"),
     integer("download_bar", "padding", "12", 0, 100, "Space inside the bar, around its contents"),
     integer("download_bar", "radius", "@radius.medium", 0, 100, "Corner radius of the bar"),
     color("download_bar", "background", "@surface", "Behind the bar"),

@@ -168,15 +168,17 @@ Surface {
                 color: Theme.downloadBar.track
 
                 Rectangle {
-                    width: root.percent < 0 ? 0 : track.width * root.percent / 100
-                    height: parent.height
-                    radius: parent.radius
-                    color: root.paused ? Theme.downloadBar.pausedFill : Theme.downloadBar.fill
-
-                    Behavior on width {
+                    // The fraction animates, not the width, so the fill keeps up when the bar itself
+                    // resizes (narrowing beside the side panel, or the window).
+                    property real fraction: root.percent < 0 ? 0 : root.percent / 100
+                    Behavior on fraction {
                         enabled: Motion.on
                         MotionNumber { duration: Motion.duration(Theme.downloadBar.fillDuration) }
                     }
+                    width: track.width * fraction
+                    height: parent.height
+                    radius: parent.radius
+                    color: root.paused ? Theme.downloadBar.pausedFill : Theme.downloadBar.fill
                 }
             }
         }
