@@ -6756,6 +6756,26 @@ QVariantMap Library::epicUninstallChoices(const QString &id)
             {QStringLiteral("prefixRefused"), prefixRefused}};
 }
 
+QString Library::epicInstallDir(const QString &id) const
+{
+    return m_store.snapshot().heroic.installed.value(id).installDir;
+}
+
+void Library::removeEpicLeftovers(const QString &id, const QString &installDir)
+{
+    if (installDir.isEmpty() || readOnly() || !QFileInfo(installDir).isDir())
+        return;
+    if (const QString why = Uninstall::refusal(installDir, uninstallPlaces(id)); !why.isEmpty()) {
+        qCInfo(lcLibrary).noquote() << QStringLiteral("%1: leftovers kept in %2: %3").arg(id, installDir, why);
+        return;
+    }
+    const Uninstall::Removal r = Uninstall::remove(installDir, true, m_trash);
+    if (!r.error.isEmpty())
+        qCWarning(lcLibrary).noquote() << QStringLiteral("%1: leftovers not removed: %2").arg(id, r.error);
+    else
+        qCInfo(lcLibrary).noquote() << QStringLiteral("%1: removed the leftovers in %2").arg(id, installDir);
+}
+
 QVariantMap Library::removeEpicPrefix(const QString &id, bool permanent)
 {
     const auto withError = [](const QString &error) { return QVariantMap{{QStringLiteral("error"), error}}; };

@@ -430,6 +430,9 @@ public:
     // for the shared one) go into Heroic's settings for the game.
     QString setEpicInstallSettings(const QString &id, const QVariantMap &wine, const QString &prefix);
     QVariantMap removeEpicPrefix(const QString &id, bool permanent);
+    QString epicInstallDir(const QString &id) const;
+    // Legendary deletes only the manifest's files, so what the game made while running (shader caches) stays.
+    void removeEpicLeftovers(const QString &id, const QString &installDir);
     void setTrash(const Uninstall::Trash &trash) { m_trash = trash; }
 
     QVariantList tags() const { return m_tags; }

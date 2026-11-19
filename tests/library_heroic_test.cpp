@@ -96,6 +96,7 @@ private slots:
     void updateJobsSetTheGamesState();
     void installJobsSetTheGamesState();
     void installFolderIsRemembered();
+    void uninstallLeftoversGo();
     void settingsSaveTheirValues();
     void setupCountsTheScan();
     void setupShowsAFlatpakRoot();
@@ -878,6 +879,22 @@ void LibraryHeroicTest::installFolderIsRemembered()
     QCOMPARE(library->epicInstallWine(), u"/usr/bin/wine"_s);
     QCOMPARE(library->setHeroicValue(u"epic_install_wine"_s, QString()), QString());
     QVERIFY(library->epicInstallWine().isEmpty());
+}
+
+void LibraryHeroicTest::uninstallLeftoversGo()
+{
+    auto library = openLibrary();
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+
+    const QString folder = m_installs.home + u"/Games/Heroic/Fez"_s;
+    writeFile(folder + u"/vkd3d-proton.cache"_s, "cache");
+    library->removeEpicLeftovers(u"epic-fez"_s, folder);
+    QCOMPARE(trashed, QStringList{folder});
+
+    trashed.clear();
+    library->removeEpicLeftovers(u"epic-fez"_s, m_installs.home);
+    QVERIFY(trashed.isEmpty());
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

@@ -50,7 +50,7 @@ While it runs, the game reads **Installing** with the percentage on its chip, li
 
 **Verify files** (the game's menu, and Properties → Launch) checks every file of an installed game against Epic's and downloads the ones that are broken or missing. The game reads **Verifying** with the percentage, and a toast ends it with "<title>: all files are fine" or "<title>: fixed N files". It can run while Heroic is open, but not while the game is running. It's hidden with a Flatpak Heroic.
 
-**Uninstall** (the game's menu and Properties) runs Heroic's own copy of Legendary, so Heroic doesn't need to be open. It deletes the game's files for good, not to the trash. If the game has a Wine prefix of its own (one no other game and not Heroic's default prefix uses), you can delete that too; it goes to the trash and holds the game's saves. The game stays in the list as not installed, with its play time, tags and art. With a Flatpak Heroic the button asks you to uninstall in Heroic instead.
+**Uninstall** (the game's menu and Properties) runs Heroic's own copy of Legendary, so Heroic doesn't need to be open. It deletes the game's files for good, not to the trash; what the game made while running in its folder, like shader caches, goes to the trash with the folder. If the game has a Wine prefix of its own (one no other game and not Heroic's default prefix uses), you can delete that too; it goes to the trash and holds the game's saves. The game stays in the list as not installed, with its play time, tags and art. With a Flatpak Heroic the button asks you to uninstall in Heroic instead.
 
 **Open Heroic** is on the game's page and in its menu (Ctrl+O), and on Settings → Heroic.
 

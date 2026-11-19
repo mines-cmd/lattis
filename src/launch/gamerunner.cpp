@@ -741,7 +741,7 @@ QString GameRunner::uninstallEpic(const QString &gameId, bool files, bool prefix
     if (m_library->readOnly())
         return tr("The library is read-only; nothing was deleted");
 
-    const EpicUninstall uninstall{appName, prefix, permanent};
+    const EpicUninstall uninstall{appName, prefix, permanent, files ? m_library->epicInstallDir(gameId) : QString()};
     if (!files) {
         finishEpicUninstall(gameId, uninstall);
         return {};
@@ -775,6 +775,7 @@ void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
             const EpicUninstall uninstall = it.value();
             m_epicUninstalling.erase(it);
             if (result.ok) {
+                m_library->removeEpicLeftovers(gameId, uninstall.installDir);
                 finishEpicUninstall(gameId, uninstall);
             } else {
                 const QString why = result.error.isEmpty() ? tr("it failed") : result.error;

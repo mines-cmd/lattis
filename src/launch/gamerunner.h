@@ -263,6 +263,7 @@ private:
         QString appName;
         bool prefix = false;
         bool permanent = false;
+        QString installDir;
     };
     QString legendaryProgram() const;
     void onLegendaryFinished(const LegendaryJobs::Result &result);
