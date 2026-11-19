@@ -762,7 +762,7 @@ void GameRunner::onLegendaryFinished(const LegendaryJobs::Result &result)
         }
         return;
     }
-    if (result.ok && (result.kind == Kind::Update || result.kind == Kind::Install)) {
+    if (result.ok && (result.kind == Kind::Update || result.kind == Kind::Install || result.kind == Kind::Repair)) {
         m_library->store().refresh();
         if (result.kind == Kind::Install)
             emit message(tr("%1 installed").arg(epicTitle(result.appName)));

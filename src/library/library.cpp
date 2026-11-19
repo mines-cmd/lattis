@@ -1002,7 +1002,7 @@ bool Library::applyEpicJobs()
         const auto it = byGame.constFind(g.id);
         if (it == byGame.cend()) {
             if (m_epicOverlaid.contains(g.id) && (g.update == GameUpdate::Downloading || g.update == GameUpdate::Queued)) {
-                g.update = g.installed ? GameUpdate::Waiting : GameUpdate::None;
+                g.update = g.installed ? m_epicOriginal.value(g.id, GameUpdate::Waiting) : GameUpdate::None;
                 g.updatePercent = -1;
                 g.verifying = false;
                 changed = true;
@@ -1010,6 +1010,8 @@ bool Library::applyEpicJobs()
             continue;
         }
         overlaid.insert(g.id);
+        if (!m_epicOverlaid.contains(g.id))
+            m_epicOriginal.insert(g.id, g.update);
         const GameUpdate update = it->running ? GameUpdate::Downloading : GameUpdate::Queued;
         const int percent = it->running ? it->percent : -1;
         changed = changed || update != g.update || percent != g.updatePercent || it->verify != g.verifying;
@@ -1018,6 +1020,7 @@ bool Library::applyEpicJobs()
         g.verifying = it->verify;
     }
     m_epicOverlaid = overlaid;
+    m_epicOriginal.removeIf([&](auto it) { return !overlaid.contains(it.key()); });
     return changed;
 }
 

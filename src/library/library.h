@@ -715,7 +715,8 @@ private:
         bool operator==(const EpicJob &) const = default;
     };
     QHash<QString, EpicJob> m_epicJobs; // by appName: the jobs the runner shows
-    QSet<QString> m_epicOverlaid;       // game ids whose update state comes from a job
+    QHash<QString, GameUpdate> m_epicOriginal; // what each overlaid game showed before its job
+    QSet<QString> m_epicOverlaid;     // game ids whose update state comes from a job
     QFileSystemWatcher m_settingsWatcher;
     QTimer m_settingsTimer;
     QVariantMap m_groupChange;
