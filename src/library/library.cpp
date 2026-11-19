@@ -896,6 +896,18 @@ QVariantList Library::buildSteamWaiting() const
                             describe(it.value())});
             continue;
         }
+        if (it.key().startsWith(ModManagers::kKeyPrefix)) {
+            const QString managerId = it.key().mid(ModManagers::kKeyPrefix.size());
+            for (const QVariant &v : std::as_const(m_modManagers)) {
+                const QVariantMap manager = v.toMap();
+                if (manager.value(QStringLiteral("id")).toString() == managerId) {
+                    entries.append({it.key(), manager.value(QStringLiteral("name")).toString(),
+                                    it.value().contains(SteamSync::kAddShortcut), describe(it.value())});
+                    break;
+                }
+            }
+            continue;
+        }
         const auto g = std::find_if(m_games.cbegin(), m_games.cend(), [&](const Game &g) { return g.id == it.key(); });
         if (g != m_games.cend())
             entries.append({g->id, g->title, it.value().contains(SteamSync::kAddShortcut), describe(it.value())});

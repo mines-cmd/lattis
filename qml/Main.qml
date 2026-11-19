@@ -1786,7 +1786,7 @@ ApplicationWindow {
         startedUp: window.startedUp
         onMessage: text => toast.show(text)
         onUndoRequested: window.askSteamUndo()
-        onGameRequested: id => browser.revealGame(id)
+        onGameRequested: id => id.startsWith("mod-manager:") ? window.openSettingsAt("mod_managers") : browser.revealGame(id)
     }
 
     Loader {
