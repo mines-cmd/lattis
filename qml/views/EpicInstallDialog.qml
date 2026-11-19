@@ -16,6 +16,7 @@ AppDialog {
     readonly property double diskSize: plan.diskSize ?? -1
     readonly property double missing: free >= 0 && diskSize >= 0 && free < diskSize ? diskSize - free : 0
     readonly property bool checking: sizeState === "checking"
+    readonly property string gameFolder: plan.gameFolder || (game.title ?? "").replace(/[^\p{L}\p{N}]+/gu, "")
 
     function ask(g) {
         game = g
@@ -96,24 +97,18 @@ AppDialog {
             spacing: Theme.layout.spacing
 
             Label {
-                Layout.fillWidth: true
-                elide: Text.ElideRight
                 color: Theme.controls.labelColor
                 font.pixelSize: Theme.controls.labelFontSize
                 text: qsTr("Install into")
+            }
+            PathField {
+                Layout.fillWidth: true
+                path: root.folder === "" ? "" : root.folder.replace(/\/+$/, "") + "/" + root.gameFolder
             }
             SettingsButton {
                 text: qsTr("Change")
                 onClicked: folderDialog.active = true
             }
-        }
-        DialogPathHint {
-            indented: false
-            text: root.folder
-        }
-        DialogHint {
-            indented: false
-            text: qsTr("The game gets a folder of its own inside it.")
         }
     }
 

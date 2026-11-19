@@ -27,6 +27,10 @@ std::optional<EpicInstallInfo> cachedInfo(const QString &heroicRoot, const QStri
 // config.json's defaultSettings.defaultInstallPath, else ~/Games/Heroic.
 QString defaultFolder(const QString &heroicRoot);
 
+// The folder Legendary makes inside the install folder: the game's FolderName from Legendary's metadata;
+// empty when the game has none cached.
+QString gameFolder(const QString &heroicRoot, const QString &appName);
+
 // What `legendary install` is given after the game; Windows unless the info says there is a Linux build.
 QString platformFor(const EpicInstallInfo &info);
 QStringList installArgs(const QString &folder, const QString &platform);

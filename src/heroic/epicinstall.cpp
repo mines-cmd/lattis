@@ -52,6 +52,16 @@ std::optional<EpicInstallInfo> EpicInstall::cachedInfo(const QString &heroicRoot
     return fromObject(all.value(appName).toObject());
 }
 
+QString EpicInstall::gameFolder(const QString &heroicRoot, const QString &appName)
+{
+    if (heroicRoot.isEmpty() || appName.isEmpty())
+        return {};
+    const QJsonObject game = readObject(heroicRoot + QStringLiteral("/legendaryConfig/legendary/metadata/")
+                                        + appName + QStringLiteral(".json"));
+    return game.value(QLatin1String("metadata")).toObject().value(QLatin1String("customAttributes")).toObject()
+        .value(QLatin1String("FolderName")).toObject().value(QLatin1String("value")).toString().trimmed();
+}
+
 QString EpicInstall::defaultFolder(const QString &heroicRoot)
 {
     const QString configured = readObject(heroicRoot + QStringLiteral("/config.json"))

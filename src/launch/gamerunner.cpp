@@ -341,6 +341,7 @@ QVariantMap GameRunner::installPlan(const QString &appName, const EpicInstallInf
 {
     return {{QStringLiteral("appName"), appName},
             {QStringLiteral("folder"), installFolder()},
+            {QStringLiteral("gameFolder"), EpicInstall::gameFolder(m_library->store().snapshot().heroic.install.root, appName)},
             {QStringLiteral("sizeState"), sizeState},
             {QStringLiteral("downloadSize"), info ? double(info->downloadSize) : -1.0},
             {QStringLiteral("diskSize"), info ? double(info->diskSize) : -1.0},
