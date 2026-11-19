@@ -29,7 +29,9 @@ MotionPopup {
     // fill in) would stay where it was, as centerIn does not re-run then.
     x: Math.round((parent.width - width) / 2)
     y: Math.round((parent.height - height) / 2)
-    width: Math.min(Math.max(sizeWidth, footerRow.implicitWidth + leftPadding + rightPadding),
+    readonly property real footerWidth: footerRow.implicitWidth
+        + (footerStartRow.implicitWidth > 0 ? footerStartRow.implicitWidth + 2 * Theme.layout.spacing : 0)
+    width: Math.min(Math.max(sizeWidth, footerWidth + leftPadding + rightPadding),
                     parent.width - 2 * Theme.gameEditor.padding)
     modal: true
     focus: true
