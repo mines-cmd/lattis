@@ -400,6 +400,7 @@ public:
     void setEpicJobs(const QVariantList &jobs);
     bool heroicChecksUpdates() const { return m_heroicSettings.checkUpdates; }
     QString epicInstallFolder() const { return m_heroicSettings.epicInstallFolder; }
+    QString epicInstallWine() const { return m_heroicSettings.epicInstallWine; }
     void setViewStateFile(const QString &file);
     LibraryUndo &undoLog() { return m_undo; }
     Q_INVOKABLE void beginEditUndo(const QString &id);

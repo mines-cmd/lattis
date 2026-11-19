@@ -15,6 +15,8 @@ struct HeroicSettings
     bool checkUpdates = true;
     // The folder the last Epic install in Lattis went into; empty until one is picked (Heroic's default then).
     QString epicInstallFolder;
+    // The `bin` of the Wine the last Epic install in Lattis picked; empty until one is (the game's default then).
+    QString epicInstallWine;
 
     bool operator==(const HeroicSettings &) const = default;
 };

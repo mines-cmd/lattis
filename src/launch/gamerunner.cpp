@@ -445,6 +445,9 @@ QString GameRunner::installEpic(const QString &gameId, const QString &folder, co
         return error;
     if (folder.trimmed() != installFolder())
         m_library->setHeroicValue(QStringLiteral("epic_install_folder"), folder.trimmed());
+    if (const QString bin = wine.value(QStringLiteral("bin")).toString();
+        platform == QLatin1String("Windows") && !bin.isEmpty() && bin != m_library->epicInstallWine())
+        m_library->setHeroicValue(QStringLiteral("epic_install_wine"), bin);
     return {};
 }
 

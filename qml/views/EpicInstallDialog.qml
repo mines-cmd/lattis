@@ -11,6 +11,8 @@ AppDialog {
     property double free: -1
     property string error: ""
     property var wineInfo: ({})
+    property bool sharedPrefix: false
+    property bool prefixShownShared: false
 
     readonly property string sizeState: plan.sizeState ?? "unknown"
     readonly property double downloadSize: plan.downloadSize ?? -1
@@ -19,15 +21,24 @@ AppDialog {
     readonly property bool checking: sizeState === "checking"
     readonly property bool hasWine: (plan.platform ?? "Windows") === "Windows" && (wineInfo.wines ?? []).length > 0
     readonly property string gameFolder: plan.gameFolder || (game.title ?? "").replace(/[^\p{L}\p{N}]+/gu, "")
+    readonly property real labelWidth: Math.max(installLabel.implicitWidth, prefixLabel.implicitWidth,
+                                                versionLabel.implicitWidth)
 
-    function ask(g) {
+    // `view` is for screenshots: "shared" picks the shared prefix.
+    function ask(g, view) {
         game = g
         plan = GameRunner.epicInstallPlan(g.id)
         folder = plan.folder ?? ""
         error = ""
         wineInfo = GameRunner.epicInstallWine(g.id)
-        sharedBox.checked = false
-        wineBox.currentIndex = Math.max(0, (wineInfo.wines ?? []).findIndex(w => w.wine.bin === (wineInfo.wine?.bin ?? "")))
+        prefixSwap.stop()
+        sharedPrefix = view === "shared"
+        prefixShownShared = sharedPrefix
+        prefixField.opacity = 1
+        const wines = wineInfo.wines ?? []
+        const remembered = wines.findIndex(w => w.wine.bin === (wineInfo.lastWine ?? ""))
+        wineBox.currentIndex = remembered >= 0 ? remembered
+                                               : Math.max(0, wines.findIndex(w => w.wine.bin === (wineInfo.wine?.bin ?? "")))
         refreshFree()
         open()
     }
@@ -37,7 +48,7 @@ AppDialog {
     }
 
     function install() {
-        const e = hasWine ? GameRunner.installEpic(game.id, folder, wineInfo.wines[wineBox.currentIndex].wine, !sharedBox.checked)
+        const e = hasWine ? GameRunner.installEpic(game.id, folder, wineInfo.wines[wineBox.currentIndex].wine, !sharedPrefix)
                           : GameRunner.installEpic(game.id, folder)
         if (e !== "")
             error = e
@@ -45,11 +56,16 @@ AppDialog {
             close()
     }
 
+    function sizeText(bytes) {
+        return bytes >= 0 ? GameRunner.sizeText(bytes) : checking ? qsTr("Checking…") : qsTr("Unknown")
+    }
+
     carded: false
     size: "medium"
     title: qsTr("Install %1").arg(game.title ?? "")
 
     onOpened: installButton.forceActiveFocus()
+    onSharedPrefixChanged: Motion.fades ? prefixSwap.restart() : prefixShownShared = sharedPrefix
 
     Connections {
         target: GameRunner
@@ -71,130 +87,161 @@ AppDialog {
         }
     }
 
-    component Row2: RowLayout {
-        property string label
+    SequentialAnimation {
+        id: prefixSwap
+        MotionNumber { target: prefixField; property: "opacity"; to: 0; fade: true; speed: "fast" }
+        ScriptAction { script: root.prefixShownShared = root.sharedPrefix }
+        MotionNumber { target: prefixField; property: "opacity"; to: 1; fade: true; speed: "fast" }
+    }
+
+    component FieldLabel: Label {
+        Layout.preferredWidth: root.labelWidth
+        color: Theme.controls.labelColor
+        font.pixelSize: Theme.controls.labelFontSize
+    }
+
+    component SizeItem: Row {
+        property string icon
         property string value
-        property color valueColor: Theme.gameEditor.labelColor
+        property string label
 
-        Layout.fillWidth: true
-        spacing: Theme.layout.spacing
+        spacing: Theme.layout.spacing / 2
 
-        Label {
-            Layout.fillWidth: true
-            elide: Text.ElideRight
-            color: Theme.controls.labelColor
-            font.pixelSize: Theme.controls.labelFontSize
-            text: parent.label
+        Icon {
+            visible: parent.icon !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            path: parent.icon
+            size: Theme.controls.iconSize
+            color: Theme.controls.descriptionColor
         }
         Label {
-            color: parent.valueColor
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent.value
+            color: Theme.controls.labelColor
             font.pixelSize: Theme.controls.labelFontSize
             font.features: { "tnum": 1 }
-            text: parent.value
+        }
+        Label {
+            anchors.verticalCenter: parent.verticalCenter
+            text: parent.label
+            color: Theme.controls.descriptionColor
+            font.pixelSize: Theme.controls.labelFontSize
         }
     }
 
-    ColumnLayout {
+    RowLayout {
         Layout.fillWidth: true
-        spacing: 2
+        spacing: Theme.layout.spacing
 
-        RowLayout {
+        FieldLabel {
+            id: installLabel
+            text: qsTr("Install into")
+        }
+        PathField {
             Layout.fillWidth: true
-            spacing: Theme.layout.spacing
-
-            Label {
-                color: Theme.controls.labelColor
-                font.pixelSize: Theme.controls.labelFontSize
-                text: qsTr("Install into")
-            }
-            PathField {
-                Layout.fillWidth: true
-                path: root.folder === "" ? "" : root.folder.replace(/\/+$/, "") + "/" + root.gameFolder
-            }
-            SettingsButton {
-                text: qsTr("Change")
-                onClicked: folderDialog.active = true
-            }
+            copyable: false
+            path: root.folder === "" ? "" : root.folder.replace(/\/+$/, "") + "/" + root.gameFolder
+        }
+        SettingsButton {
+            text: qsTr("Change")
+            onClicked: folderDialog.active = true
         }
     }
 
     ColumnLayout {
         visible: root.hasWine
         Layout.fillWidth: true
-        spacing: Theme.layout.spacing
+        spacing: Theme.gameEditor.rowSpacing
 
-        SettingsCheckBox {
-            id: sharedBox
-            Layout.fillWidth: true
-            checked: false
-            text: qsTr("Use the shared Wine prefix")
-        }
         RowLayout {
-            visible: !sharedBox.checked
             Layout.fillWidth: true
             spacing: Theme.layout.spacing
 
-            Label {
-                color: Theme.controls.labelColor
-                font.pixelSize: Theme.controls.labelFontSize
+            FieldLabel {
+                id: prefixLabel
                 text: qsTr("Wine prefix")
             }
+            SegmentedToggle {
+                Layout.preferredHeight: Theme.controls.inputHeight
+                accessibleName: qsTr("Wine prefix")
+                choices: [{ id: "own", text: qsTr("Own"), tip: qsTr("A prefix for this game alone") },
+                          { id: "shared", text: qsTr("Shared"), tip: qsTr("The prefix Heroic's games share") }]
+                current: root.sharedPrefix ? "shared" : "own"
+                onPicked: id => root.sharedPrefix = id === "shared"
+            }
             PathField {
+                id: prefixField
                 Layout.fillWidth: true
-                path: root.wineInfo.prefix ?? ""
+                copyable: false
+                path: root.prefixShownShared ? root.wineInfo.sharedPrefix ?? "" : root.wineInfo.prefix ?? ""
             }
         }
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.layout.spacing
 
-            Label {
-                Layout.fillWidth: true
-                color: Theme.controls.labelColor
-                font.pixelSize: Theme.controls.labelFontSize
+            FieldLabel {
+                id: versionLabel
                 text: qsTr("Wine version")
             }
             SettingsComboBox {
                 id: wineBox
-                Layout.preferredWidth: Theme.controls.inputHeight * 7
+                Layout.fillWidth: true
                 model: (root.wineInfo.wines ?? []).map(w => w.label)
             }
         }
     }
 
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: Theme.layout.spacing
-
-        Row2 {
-            label: qsTr("Download")
-            value: root.downloadSize >= 0 ? GameRunner.sizeText(root.downloadSize)
-                 : root.checking ? qsTr("Checking size…") : qsTr("Size unknown")
-        }
-        Row2 {
-            label: qsTr("On disk")
-            value: root.diskSize >= 0 ? GameRunner.sizeText(root.diskSize)
-                 : root.checking ? qsTr("Checking size…") : qsTr("Size unknown")
-        }
-        Row2 {
-            label: qsTr("Free space")
-            value: root.free >= 0 ? GameRunner.sizeText(root.free) : qsTr("Unknown")
-        }
-    }
-
-    Label {
-        visible: root.missing > 0
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: Theme.gameEditor.errorColor
-        text: qsTr("Not enough space: %1 more is needed.").arg(GameRunner.sizeText(root.missing))
-    }
     Label {
         visible: root.error !== ""
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         color: Theme.gameEditor.errorColor
         text: root.error
+    }
+
+    footerStart: ColumnLayout {
+        spacing: Theme.layout.spacing / 2
+
+        Row {
+            spacing: Theme.layout.spacing * 2
+
+            SizeItem {
+                icon: Icons.download
+                value: root.sizeText(root.downloadSize)
+                label: qsTr("download")
+            }
+            SizeItem {
+                icon: Icons.hardDrive2Line
+                value: root.sizeText(root.diskSize)
+                label: qsTr("on disk")
+            }
+            Label {
+                visible: root.free >= 0 && root.missing === 0
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("%1 free").arg(GameRunner.sizeText(root.free))
+                color: Theme.controls.descriptionColor
+                font.pixelSize: Theme.controls.labelFontSize
+                font.features: { "tnum": 1 }
+            }
+        }
+        Row {
+            visible: root.missing > 0
+            spacing: Theme.layout.spacing / 2
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                path: Icons.alertTriangleLine
+                size: Theme.controls.iconSize
+                color: Theme.gameEditor.warningColor
+            }
+            Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Only %1 free on this drive. Pick another folder.").arg(GameRunner.sizeText(root.free))
+                color: Theme.gameEditor.warningColor
+                font.pixelSize: Theme.controls.labelFontSize
+            }
+        }
     }
 
     footer: [

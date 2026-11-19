@@ -872,6 +872,12 @@ void LibraryHeroicTest::installFolderIsRemembered()
     QCOMPARE(library->epicInstallFolder(), u"~/Games/Epic"_s);
     QCOMPARE(library->setHeroicValue(u"epic_install_folder"_s, QString()), QString());
     QVERIFY(library->epicInstallFolder().isEmpty());
+
+    QVERIFY(library->epicInstallWine().isEmpty());
+    QCOMPARE(library->setHeroicValue(u"epic_install_wine"_s, u"/usr/bin/wine"_s), QString());
+    QCOMPARE(library->epicInstallWine(), u"/usr/bin/wine"_s);
+    QCOMPARE(library->setHeroicValue(u"epic_install_wine"_s, QString()), QString());
+    QVERIFY(library->epicInstallWine().isEmpty());
 }
 
 void LibraryHeroicTest::settingsShowWhatWasFound()

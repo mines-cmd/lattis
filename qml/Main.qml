@@ -100,9 +100,9 @@ ApplicationWindow {
         forceClosePrompt.item.ask(game)
     }
 
-    function askEpicInstall(game) {
+    function askEpicInstall(game, view) {
         epicInstall.active = true
-        epicInstall.item.ask(game)
+        epicInstall.item.ask(game, view ?? "")
     }
 
     Loader {

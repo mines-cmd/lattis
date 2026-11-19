@@ -11,7 +11,8 @@ Parsed<HeroicSettings> parseHeroicSettings(const QByteArray &bytes, const QStrin
         return out;
 
     const QStringList known = {QStringLiteral("enabled"), QStringLiteral("path"), QStringLiteral("whole_library"),
-                           QStringLiteral("check_updates"), QStringLiteral("epic_install_folder")};
+                           QStringLiteral("check_updates"), QStringLiteral("epic_install_folder"),
+                           QStringLiteral("epic_install_wine")};
     for (auto &&[k, node] : *section.table) {
         const QString key = toQString(k.str());
         if (key == u"enabled" || key == u"whole_library" || key == u"check_updates") {
@@ -21,9 +22,11 @@ Parsed<HeroicSettings> parseHeroicSettings(const QByteArray &bytes, const QStrin
                                            : out.value.checkUpdates) = b->get();
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be true or false").arg(section.where(node), key));
-        } else if (key == u"path" || key == u"epic_install_folder") {
+        } else if (key == u"path" || key == u"epic_install_folder" || key == u"epic_install_wine") {
             if (const auto *s = node.as_string())
-                (key == u"path" ? out.value.path : out.value.epicInstallFolder) = toQString(s->get());
+                (key == u"path" ? out.value.path
+                 : key == u"epic_install_folder" ? out.value.epicInstallFolder
+                                                 : out.value.epicInstallWine) = toQString(s->get());
             else
                 out.warnings.append(QStringLiteral("%1: %2 must be text in quotes").arg(section.where(node), key));
         } else {

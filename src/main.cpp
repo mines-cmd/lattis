@@ -538,10 +538,12 @@ int main(int argc, char *argv[])
                         qWarning().noquote() << "epicInstall:" << error;
                 });
             }
-            if (const QString game = qEnvironmentVariable("LATTIS_EPIC_INSTALL_DIALOG"); !game.isEmpty()) {
-                QTimer::singleShot(actualDelay * 3 / 4, window, [window, &library, game] {
-                    logHook("epicInstallDialog", game);
-                    QMetaObject::invokeMethod(window, "askEpicInstall", Q_ARG(QVariant, library.gameWithId(game)));
+            if (const QString arg = qEnvironmentVariable("LATTIS_EPIC_INSTALL_DIALOG"); !arg.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, &library, arg] {
+                    logHook("epicInstallDialog", arg);
+                    const QString game = arg.section(u'/', 0, 0);
+                    QMetaObject::invokeMethod(window, "askEpicInstall", Q_ARG(QVariant, library.gameWithId(game)),
+                                              Q_ARG(QVariant, arg.section(u'/', 1)));
                 });
             }
             if (const QString game = qEnvironmentVariable("LATTIS_EDIT_GAME"); !game.isEmpty()) {

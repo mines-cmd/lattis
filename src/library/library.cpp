@@ -1247,7 +1247,7 @@ QString Library::setHeroicValue(const QString &key, const QVariant &value)
     if (key == u"enabled" || key == u"whole_library" || key == u"check_updates") {
         if (!value.toBool())
             formatted = QStringLiteral("false");
-    } else if (key == u"path" || key == u"epic_install_folder") {
+    } else if (key == u"path" || key == u"epic_install_folder" || key == u"epic_install_wine") {
         if (const QString path = value.toString().trimmed(); !path.isEmpty())
             formatted = tomlString(path);
     } else {
@@ -6501,8 +6501,12 @@ QVariantMap Library::epicInstallWine(const QString &id) const
     QString prefixDir = HeroicGameConfig::defaultPrefixDir(s.heroic.install.root);
     if (prefixDir.isEmpty())
         prefixDir = QDir::homePath() + QStringLiteral("/Games/Heroic/Prefixes");
+    QString shared = HeroicGameConfig::sharedPrefix(s.heroic.install.root);
+    if (shared.isEmpty())
+        shared = prefixDir + QStringLiteral("/default");
     return {{QStringLiteral("wines"), wineChoices(settings.wine)}, {QStringLiteral("wine"), wineMap(settings.wine)},
-            {QStringLiteral("prefixDir"), prefixDir}};
+            {QStringLiteral("prefixDir"), prefixDir}, {QStringLiteral("sharedPrefix"), shared},
+            {QStringLiteral("lastWine"), m_heroicSettings.epicInstallWine}};
 }
 
 QString Library::setEpicInstallSettings(const QString &id, const QVariantMap &wine, const QString &prefix)

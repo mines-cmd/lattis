@@ -423,4 +423,12 @@ QString defaultPrefixDir(const QString &root)
 {
     return defaultSettings(root).value(QStringLiteral("defaultWinePrefixDir")).toString().trimmed();
 }
+
+QString sharedPrefix(const QString &root)
+{
+    QString prefix = defaultSettings(root).value(QStringLiteral("winePrefix")).toString().trimmed();
+    if (prefix.startsWith(u'~'))
+        prefix.replace(0, 1, QDir::homePath());
+    return prefix;
+}
 }

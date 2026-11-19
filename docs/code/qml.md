@@ -496,7 +496,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `settings/ListRow.qml` | One row of a Section's list |
 | `settings/LibraryPage.qml` | Library settings: backups, hidden games, tags, problems |
 | `settings/MetadataPage.qml` | API keys for IGDB and SteamGridDB |
-| `settings/PathField.qml` | Path input with a browse button |
+| `settings/PathField.qml` | A path shown read-only with `~` for the home folder, elided in the middle, with a copy button (`copyable: false` drops it where copying isn't what you'd want, as in the Epic Install dialog) |
 | `settings/PlatformRow.qml` | One platform row in the Platforms page |
 | `settings/PlatformsPage.qml` | Platforms: order, name, icon |
 | `settings/ProblemsButton.qml` | Problems indicator button; a problem that names a `.toml` file (`GameRunner.problemFile`) gets an open-file button |

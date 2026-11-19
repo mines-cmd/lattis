@@ -10,6 +10,7 @@ RowLayout {
     property string missingText
     property color missingColor: Theme.controls.descriptionColor
     property int fontSize: Theme.controls.pathFontSize
+    property bool copyable: true
 
     spacing: Theme.layout.spacing
 
@@ -51,12 +52,14 @@ RowLayout {
                 ToolTip.text: root.path
             }
             Rectangle {
+                visible: root.copyable
                 Layout.preferredWidth: Math.max(1, Theme.controls.inputBorderWidth)
                 Layout.preferredHeight: box.height / 2
                 color: Theme.controls.inputBorder
             }
             AbstractButton {
                 id: copyButton
+                visible: root.copyable
                 property bool copied: false
                 Layout.fillHeight: true
                 Layout.preferredWidth: box.height

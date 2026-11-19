@@ -45,6 +45,8 @@ struct HeroicGameEdits
 namespace HeroicGameConfig {
 // config.json's defaultSettings.defaultWinePrefixDir: where Heroic puts a game's own prefix; empty when unset.
 QString defaultPrefixDir(const QString &root);
+// config.json's defaultSettings.winePrefix: the prefix games share unless they have their own; empty when unset.
+QString sharedPrefix(const QString &root);
 // Edits as a JSON object (only the keys set), for the queue that waits for Heroic to close.
 QJsonObject editsToJson(const HeroicGameEdits &edits);
 HeroicGameEdits editsFromJson(const QJsonObject &object);
