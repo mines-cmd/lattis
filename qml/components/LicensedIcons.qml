@@ -9,5 +9,6 @@ QtObject {
     readonly property string wiiu: ""
     readonly property string wii: ""
     readonly property string gamecube: ""
+    readonly property string snes: ""
     readonly property string penguin: ""
 }
