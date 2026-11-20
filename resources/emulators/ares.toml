@@ -1,0 +1,22 @@
+# ares (Master System and Game Gear here). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and ares's sources, 2026-11-20.
+id = "ares"
+name = "ares"
+platforms = ["sms", "gamegear"]
+flatpak = "dev.ares.ares"
+executables = ["ares"]
+# Releases have no Linux build (v148, 2026-05), so there is no appimage and Install offers the Flatpak only.
+# A bare path is the game: ares finds the system from the file's extension (mia/mia.cpp,
+# identify; .sms and .ms are Master System only, .gg Game Gear only), so no --system is
+# needed. Fullscreen is --fullscreen, left to args.
+command = ["{exe}", "{args}", "{rom}"]
+# Each platform scans only its own files. ares reads a zip (and picks the system from what is inside), but not 7z.
+extensions = ["sms", "gg", "zip"]
+platform_extensions = { sms = ["sms", "zip"], gamegear = ["gg", "zip"] }
+# Saves (<ROM name>.ram) and save states (.bs1 to .bs9, .bsu, and .blu, the undo) are written next to the ROM unless
+# Paths/Saves in its settings.bml names a folder, then they go to <that folder>/<system>/
+# (desktop-ui/emulator/emulator.cpp, locate; mia/pak/pak.cpp; desktop-ui/program/states.cpp, 2026-11). So there is no save folder,
+# and no keys (both systems run without a BIOS).
+saves_beside_rom = ["ram", "bs1", "bs2", "bs3", "bs4", "bs5", "bs6", "bs7", "bs8", "bs9", "bsu", "blu"]
+# <ROM name> <yyyy-mm-dd hh-mm-ss>.png next to the ROM unless Paths/Screenshots is set (desktop-ui/program/utility.cpp).
+screenshots = { native = "{romdir}/{rom} [0-9]*.png", flatpak = "{romdir}/{rom} [0-9]*.png" }

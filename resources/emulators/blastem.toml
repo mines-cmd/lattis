@@ -1,0 +1,23 @@
+# BlastEm (Sega Genesis / Mega Drive). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and BlastEm's sources (retrodev.com), 2026-11-20.
+id = "blastem"
+name = "BlastEm"
+platforms = ["genesis"]
+flatpak = "com.retrodev.blastem"
+executables = ["blastem"]
+# Its releases and source are on retrodev.com (Mercurial), not GitHub: Install offers the Flatpak only, and there is no
+# appimage pattern (it has none).
+# A bare path is the ROM (blastem.c); fullscreen is -f, left to args. The path goes before
+# any option that takes a value, and must not look like host:port.
+command = ["{exe}", "{args}", "{rom}"]
+# It opens a zip holding a Genesis ROM (system.c, load_media_zip), so zip is listed. It
+# does not read 7z.
+extensions = ["md", "gen", "bin", "smd", "zip"]
+# Saves and save states go to $USERDATA/blastem/<ROM name>/ (save.sram, save.eeprom,
+# quicksave.state or quicksave.gst; blastem.c, get_save_dir, 2026-11), where $USERDATA is
+# $HOME/.local/share, or $XDG_DATA_HOME in the Flatpak, whose patch adds that
+# (~/.var/app/com.retrodev.blastem/data). A folder per ROM, so the whole folder is listed. It needs no keys.
+saves = { native = "~/.local/share/blastem", flatpak = "~/.var/app/com.retrodev.blastem/data/blastem" }
+# blastem_<yyyymmdd>_<hhmmss>.png in the home folder (default.cfg: screenshot_path, screenshot_template);
+# the name doesn't hold the game, so only screenshots from a play session show.
+screenshots = { native = "~/blastem_[0-9]*.png", flatpak = "~/blastem_[0-9]*.png" }

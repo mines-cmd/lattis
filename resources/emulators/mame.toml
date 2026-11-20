@@ -1,0 +1,21 @@
+# MAME (arcade). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and MAME's sources, 2026-11-20.
+id = "mame"
+name = "MAME"
+platforms = ["arcade"]
+flatpak = "org.mamedev.MAME"
+executables = ["mame"]
+# Its releases are Windows builds and source, so there is no appimage and Install offers the Flatpak only.
+# MAME doesn't open a file: it takes a machine name and looks for its zip on its rompath. A
+# path is cut down to its base name (so /games/arcade/sf2.zip is machine sf2) but its folder
+# isn't added to the rompath, so -rompath gets the ROM's folder.
+command = ["{exe}", "{args}", "-rompath", "{romdir}", "{rom}"]
+extensions = ["zip", "7z"]
+# Only the Flatpak is listed: its mame.ini keeps everything under $HOME/.mame, which is
+# ~/.var/app/org.mamedev.MAME/.mame (--persist=.mame). nvram/ holds the games' battery RAM,
+# sta/ the save states, diff/ the changes to hard disk images. A native MAME writes these
+# to folders its mame.ini names, relative to wherever it is started, so there are none here. It needs no keys
+# (the BIOS zips are ROM sets beside the games).
+saves = { flatpak = ["~/.var/app/org.mamedev.MAME/.mame/nvram", "~/.var/app/org.mamedev.MAME/.mame/sta", "~/.var/app/org.mamedev.MAME/.mame/diff"] }
+# snap/<machine name>/NNNN.png (its default snapname is %g/%i); {rom} is the machine name here.
+screenshots = { flatpak = "~/.var/app/org.mamedev.MAME/.mame/snap/{rom}/*.png" }

@@ -1,8 +1,9 @@
-# mGBA (Game Boy Advance). Built into the app; change it in library/emulators.toml.
-# Checked against Flathub and the releases, 2026-09.
+# mGBA (Game Boy Advance, Game Boy, Game Boy Color). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub and the releases, 2026-09; Game Boy and Game Boy Color added 2026-11-20
+# (it opens all three with a bare path and writes the same saves, states and screenshots for each).
 id = "mgba"
 name = "mGBA"
-platforms = ["gba"]
+platforms = ["gba", "gb", "gbc"]
 flatpak = "io.mgba.mGBA"
 executables = ["mgba-qt", "mgba"]
 # Releases are mGBA-*-appimage-x64.appimage.
@@ -10,8 +11,9 @@ appimage = "mGBA*.AppImage"
 release = "github:mgba-emu/mgba"
 release_asset = "mGBA-*-appimage-x64.appimage"
 command = ["{exe}", "{args}", "{rom}"]
-# mGBA also runs Game Boy (Color) games (gb, gbc): add a platform for them if you like.
-extensions = ["gba"]
+# Each platform scans only its own files, so a GBA folder doesn't pick up .gb.
+extensions = ["gba", "gb", "gbc"]
+platform_extensions = { gba = ["gba"], gb = ["gb"], gbc = ["gbc"] }
 # Saves and save states are written next to the ROM unless its settings choose a folder
 # (savegamePath, savestatePath; src/core/directories.c, 2026-09), so there's no save
 # folder here. It needs no keys (the BIOS is optional, and where it is

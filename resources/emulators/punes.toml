@@ -1,0 +1,26 @@
+# puNES (NES, Famicom Disk System). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and puNES's sources, 2026-11-20.
+id = "punes"
+name = "puNES"
+platforms = ["nes"]
+flatpak = "io.github.punesemu.puNES"
+executables = ["punes"]
+# Releases are puNES-*-x86_64.AppImage (v0.111, 2024-02).
+appimage = "puNES*.AppImage"
+release = "github:punesemu/puNES"
+release_asset = "puNES-*-x86_64.AppImage"
+# A bare path is the ROM (src/gui/cmd_line.cpp); fullscreen is --fullscreen, left to args.
+command = ["{exe}", "{args}", "{rom}"]
+# Zips open without extra software (miniz); 7z only when its 7z library is there (the Flatpak
+# builds p7zip in; not checked for the AppImage), so 7z stays out.
+extensions = ["nes", "fds", "unf", "unif", "zip"]
+# Its data folder is Qt's data location + puNES: ~/.local/share/puNES, in the Flatpak
+# ~/.var/app/io.github.punesemu.puNES/data/puNES (src/gui/qt.cpp, gui_data_folder, 2026-11).
+# save/ holds the save states (<ROM>.pNN), prb/ the battery RAM (<ROM>.prb), diff/ the
+# changes made to Famicom Disk System disks; bios/ holds disksys.rom (the FDS BIOS, src/core/fds.c)
+# and gamegenie.rom. With --portable it uses the program's own folder instead, which isn't
+# listed here (the portable switch is a command line option, not a file, so there is nothing to look for).
+saves = { native = ["~/.local/share/puNES/save", "~/.local/share/puNES/prb", "~/.local/share/puNES/diff"], flatpak = ["~/.var/app/io.github.punesemu.puNES/data/puNES/save", "~/.var/app/io.github.punesemu.puNES/data/puNES/prb", "~/.var/app/io.github.punesemu.puNES/data/puNES/diff"] }
+keys = { native = "~/.local/share/puNES/bios", flatpak = "~/.var/app/io.github.punesemu.puNES/data/puNES/bios" }
+# screenshot/<ROM file name without extension>_<six-digit number>.png (src/gui/qt.cpp, gui_save_screenshot).
+screenshots = { native = "~/.local/share/puNES/screenshot/{rom}_[0-9]*.png", flatpak = "~/.var/app/io.github.punesemu.puNES/data/puNES/screenshot/{rom}_[0-9]*.png" }

@@ -1,0 +1,26 @@
+# Snes9x (Super Nintendo). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and Snes9x's sources, 2026-11-20.
+id = "snes9x"
+name = "Snes9x"
+platforms = ["snes"]
+flatpak = "com.snes9x.Snes9x"
+# The GTK build; Flathub's command is snes9x-gtk.
+executables = ["snes9x-gtk", "snes9x"]
+# Releases are Snes9x-*-x86_64.AppImage (1.63, 2024-07).
+appimage = "Snes9x*.AppImage"
+release = "github:snes9xgit/snes9x"
+release_asset = "Snes9x-*-x86_64.AppImage"
+# A bare path is the ROM (gtk/src/gtk_s9x.cpp); fullscreen is in its settings or -fullscreen, left to args.
+command = ["{exe}", "{args}", "{rom}"]
+# The GTK build is made with zip support (UNZIP_SUPPORT, gtk/CMakeLists.txt); it has no 7z.
+extensions = ["sfc", "smc", "zip"]
+# SRAM, save states and screenshots go to the folders in its settings (SRAMDirectory,
+# SaveStateDirectory, ExportDirectory in ~/.config/snes9x/snes9x.conf), empty by default,
+# and empty means next to the ROM (gtk/src/gtk_file.cpp, S9xGetDirectory, 2026-11). So
+# there's no save folder here, and it needs no keys (the DSP and SuperFX chips are
+# emulated, no firmware files).
+# Next to the ROM, under its name: .srm and the save states .000 to .009 (gtk_file.cpp, save_slot_path),
+# and .undo, written before a state is loaded.
+saves_beside_rom = ["srm", "000", "001", "002", "003", "004", "005", "006", "007", "008", "009", "undo"]
+# <ROM name>-<yyyy-mm-dd-hh-mm-ss>.png beside the ROM (screenshot.cpp), unless ExportDirectory is set.
+screenshots = { native = "{romdir}/{rom}-[0-9]*.png", flatpak = "{romdir}/{rom}-[0-9]*.png" }

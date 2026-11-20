@@ -44,20 +44,26 @@ endforeach()
 set(LIBRARY_RESOURCES
     resources/platforms.toml
     resources/tags.toml
+    resources/emulators/ares.toml
     resources/emulators/azahar.toml
+    resources/emulators/blastem.toml
     resources/emulators/cemu.toml
     resources/emulators/dolphin.toml
     resources/emulators/duckstation.toml
     resources/emulators/eden.toml
+    resources/emulators/flycast.toml
     resources/emulators/lichii.toml
+    resources/emulators/mame.toml
     resources/emulators/melonds.toml
     resources/emulators/mgba.toml
     resources/emulators/pcsx2.toml
     resources/emulators/ppsspp.toml
+    resources/emulators/punes.toml
     resources/emulators/rmg.toml
     resources/emulators/rpcs3.toml
     resources/emulators/ryubing.toml
     resources/emulators/shadps4.toml
+    resources/emulators/snes9x.toml
 )
 
 qt_add_executable(lattis src/main.cpp)

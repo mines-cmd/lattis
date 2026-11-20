@@ -96,9 +96,10 @@ void EmulatorsTest::presetsAreValid()
 {
     const QDir dir(QStringLiteral(":/qt/qml/Launcher/resources/emulators"));
     const QStringList files = dir.entryList({QStringLiteral("*.toml")});
-    QCOMPARE(files, (QStringList{"azahar.toml", "cemu.toml", "dolphin.toml", "duckstation.toml", "lichii.toml", "melonds.toml",
-                                 "mgba.toml", "pcsx2.toml", "ppsspp.toml", "rmg.toml", "rpcs3.toml", "ryubing.toml",
-                                 "shadps4.toml"}));
+    QCOMPARE(files, (QStringList{"ares.toml", "azahar.toml", "blastem.toml", "cemu.toml", "dolphin.toml", "duckstation.toml", "eden.toml",
+                                 "flycast.toml", "lichii.toml", "mame.toml", "melonds.toml",
+                                 "mgba.toml", "pcsx2.toml", "ppsspp.toml", "punes.toml", "rmg.toml", "rpcs3.toml", "ryubing.toml",
+                                 "shadps4.toml", "snes9x.toml"}));
     for (const QString &name : files) {
         QFile file(dir.filePath(name));
         QVERIFY(file.open(QIODevice::ReadOnly));
@@ -111,15 +112,18 @@ void EmulatorsTest::presetsAreValid()
     QStringList warnings;
     const QList<EmulatorDef> defs = Emulators::merge(Emulators::presets(), {}, &warnings);
     QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
-    QCOMPARE(defs.size(), 13);
-    QCOMPARE(defs.at(0).id, QStringLiteral("azahar"));
+    QCOMPARE(defs.size(), 20);
+    QCOMPARE(defs.at(0).id, QStringLiteral("ares"));
     for (const EmulatorDef &d : defs) {
         QVERIFY(d.preset);
         QVERIFY(d.userKeys.isEmpty());
-        QVERIFY2(!d.platforms.isEmpty() && (!d.flatpak.isEmpty() || d.id == QStringLiteral("lichii")) && !d.appimage.isEmpty(),
+        // BlastEm, ares and MAME have no AppImage at all: their sources publish none.
+        const bool flatpakOnly = d.id == QStringLiteral("blastem") || d.id == QStringLiteral("ares") || d.id == QStringLiteral("mame");
+        QVERIFY2(!d.platforms.isEmpty() && (!d.flatpak.isEmpty() || d.id == QStringLiteral("lichii"))
+                     && d.appimage.isEmpty() == flatpakOnly,
                  qPrintable(d.id));
         // Ryubing's release server was taken down: Flatpak only.
-        QVERIFY2(d.release.isEmpty() == (d.id == QStringLiteral("ryubing")), qPrintable(d.id));
+        QVERIFY2(d.release.isEmpty() == (d.id == QStringLiteral("ryubing") || flatpakOnly), qPrintable(d.id));
         // Dolphin's only AppImage is a community build; every other preset is the project's own.
         QCOMPARE(d.releaseUnofficial.isEmpty(), d.id != QStringLiteral("dolphin"));
         QCOMPARE(d.releaseAsset.isEmpty(), d.release.isEmpty());
@@ -145,6 +149,56 @@ void EmulatorsTest::presetsAreValid()
     QVERIFY(lichii->releasePrereleases);
     for (const EmulatorDef &d : defs)
         QCOMPARE(d.releasePrereleases, d.id == QStringLiteral("lichii"));
+
+    // The retro presets: platforms, extensions and install type.
+    const EmulatorDef *punes = Emulators::find(defs, "punes");
+    QVERIFY(punes);
+    QCOMPARE(punes->platforms, QStringList{"nes"});
+    QCOMPARE(punes->extensions, (QStringList{"nes", "fds", "unf", "unif", "zip"}));
+    QCOMPARE(punes->flatpak, QStringLiteral("io.github.punesemu.puNES"));
+    QCOMPARE(punes->releaseAsset, QStringLiteral("puNES-*-x86_64.AppImage"));
+
+    const EmulatorDef *snes9x = Emulators::find(defs, "snes9x");
+    QVERIFY(snes9x);
+    QCOMPARE(snes9x->platforms, QStringList{"snes"});
+    QCOMPARE(snes9x->extensions, (QStringList{"sfc", "smc", "zip"}));
+    QCOMPARE(snes9x->flatpak, QStringLiteral("com.snes9x.Snes9x"));
+    QCOMPARE(snes9x->releaseAsset, QStringLiteral("Snes9x-*-x86_64.AppImage"));
+
+    const EmulatorDef *blastem = Emulators::find(defs, "blastem");
+    QVERIFY(blastem);
+    QCOMPARE(blastem->platforms, QStringList{"genesis"});
+    QCOMPARE(blastem->extensions, (QStringList{"md", "gen", "bin", "smd", "zip"}));
+    QCOMPARE(blastem->flatpak, QStringLiteral("com.retrodev.blastem"));
+
+    const EmulatorDef *ares = Emulators::find(defs, "ares");
+    QVERIFY(ares);
+    QCOMPARE(ares->platforms, (QStringList{"sms", "gamegear"}));
+    QCOMPARE(ares->flatpak, QStringLiteral("dev.ares.ares"));
+    QCOMPARE(ares->extensionsFor("sms"), (QStringList{"sms", "zip"}));
+    QCOMPARE(ares->extensionsFor("gamegear"), (QStringList{"gg", "zip"}));
+
+    const EmulatorDef *flycast = Emulators::find(defs, "flycast");
+    QVERIFY(flycast);
+    QCOMPARE(flycast->platforms, QStringList{"dreamcast"});
+    QCOMPARE(flycast->extensions, (QStringList{"gdi", "cdi", "chd", "cue"}));
+    QCOMPARE(flycast->flatpak, QStringLiteral("org.flycast.Flycast"));
+    QCOMPARE(flycast->releaseAsset, QStringLiteral("flycast-x86_64-*.AppImage"));
+
+    const EmulatorDef *mame = Emulators::find(defs, "mame");
+    QVERIFY(mame);
+    QCOMPARE(mame->platforms, QStringList{"arcade"});
+    QCOMPARE(mame->extensions, (QStringList{"zip", "7z"}));
+    QCOMPARE(mame->flatpak, QStringLiteral("org.mamedev.MAME"));
+    QCOMPARE(mame->command, (QStringList{"{exe}", "{args}", "-rompath", "{romdir}", "{rom}"}));
+
+    const EmulatorDef *mgba = Emulators::find(defs, "mgba");
+    QVERIFY(mgba);
+    QCOMPARE(mgba->platforms, (QStringList{"gba", "gb", "gbc"}));
+    QCOMPARE(mgba->extensionsFor("gba"), QStringList{"gba"});
+    QCOMPARE(mgba->extensionsFor("gb"), QStringList{"gb"});
+    QCOMPARE(mgba->extensionsFor("gbc"), QStringList{"gbc"});
+    QCOMPARE(mgba->extensions, (QStringList{"gba", "gb", "gbc"}));
 }
 
 void EmulatorsTest::prereleasesKey()
@@ -202,7 +256,7 @@ void EmulatorsTest::userDefinedEmulator()
     QStringList warnings;
     const QList<EmulatorDef> defs = mergeText(kCitra, &warnings);
     QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
-    QCOMPARE(defs.size(), 14);
+    QCOMPARE(defs.size(), 21);
     const EmulatorDef &citra = defs.last(); // after the presets
     QCOMPARE(citra.id, QStringLiteral("citra"));
     QVERIFY(!citra.preset);
@@ -221,7 +275,7 @@ id = "ryujing"
 path = "/opt/ryujinx/Ryujinx"
 )",
                                               &warnings);
-    QCOMPARE(defs.size(), 13);
+    QCOMPARE(defs.size(), 20);
     QCOMPARE(warnings.size(), 1);
     const QString w = warnings.first();
     QVERIFY2(w.startsWith(kFile + QStringLiteral(":2:")), qPrintable(w));
@@ -286,7 +340,7 @@ void EmulatorsTest::validation()
     // The preset's own value stays.
     QStringList warnings;
     const QList<EmulatorDef> defs = Emulators::merge(Emulators::presets(), parsed.value, &warnings);
-    QCOMPARE(defs.size(), 13); // the presets, nothing more
+    QCOMPARE(defs.size(), 20); // the presets, nothing more
 }
 
 void EmulatorsTest::extensionsNormalized()
@@ -516,18 +570,21 @@ void EmulatorsTest::presetFolders()
     QStringList warnings;
     const QList<EmulatorDef> defs = Emulators::merge(Emulators::presets(), {}, &warnings);
     // Those that write saves next to the ROM have no save folders; only they have saves_beside_rom.
-    const QStringList besideRom = {QStringLiteral("melonds"), QStringLiteral("mgba")};
-    // Those whose portable folder depends on the working folder have no portable entry.
+    const QStringList besideRom = {QStringLiteral("melonds"), QStringLiteral("mgba"), QStringLiteral("snes9x"), QStringLiteral("ares")};
+    // Those whose portable folder depends on the working folder, or that have none, have no portable entry.
     const QStringList notPortable = {QStringLiteral("azahar"), QStringLiteral("ppsspp"), QStringLiteral("rmg"), QStringLiteral("lichii"),
-                                     QStringLiteral("shadps4")};
+                                     QStringLiteral("shadps4"), QStringLiteral("punes"), QStringLiteral("blastem"),
+                                     QStringLiteral("flycast"), QStringLiteral("mame")};
     for (const EmulatorDef &d : defs) {
         QCOMPARE(d.savesBesideRom.isEmpty(), !besideRom.contains(d.id));
         if (besideRom.contains(d.id)) {
             QVERIFY2(d.saves.isEmpty() && d.keys.isEmpty(), qPrintable(d.id));
-            QVERIFY(d.savesBesideRom.contains(QStringLiteral("sav")));
+            QVERIFY(d.savesBesideRom.contains(d.id == QStringLiteral("snes9x") ? QStringLiteral("srm")
+                                              : d.id == QStringLiteral("ares") ? QStringLiteral("ram") : QStringLiteral("sav")));
             continue;
         }
         const QStringList types = d.id == QStringLiteral("lichii") ? QStringList{"native"}
+                                : d.id == QStringLiteral("mame") ? QStringList{"flatpak"}
                                 : notPortable.contains(d.id) ? QStringList{"flatpak", "native"}
                                                              : QStringList{"flatpak", "native", "portable"};
         QCOMPARE(d.saves.keys(), types);

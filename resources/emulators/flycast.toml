@@ -1,0 +1,28 @@
+# Flycast (Sega Dreamcast). Built into the app; change it in library/emulators.toml.
+# Checked against Flathub, the releases and Flycast's sources, 2026-11-20.
+id = "flycast"
+name = "Flycast"
+platforms = ["dreamcast"]
+flatpak = "org.flycast.Flycast"
+executables = ["flycast"]
+# Releases are flycast-x86_64-*.AppImage (v2.7, 2026-08).
+appimage = "flycast*.AppImage"
+release = "github:flyinghead/flycast"
+release_asset = "flycast-x86_64-*.AppImage"
+# A bare path is the game (core/cfg/cl.cpp); fullscreen is in its settings, left to args.
+command = ["{exe}", "{args}", "{rom}"]
+# Not bin (it comes with a cue, listed once) nor m3u (its discs are listed already).
+extensions = ["gdi", "cdi", "chd", "cue"]
+# Its data folder is ~/.local/share/flycast ($XDG_DATA_HOME/flycast, so
+# ~/.var/app/org.flycast.Flycast/data/flycast in the Flatpak; core/linux-dist/main.cpp,
+# 2026-11). It holds the VMU saves (vmu_save_A1.bin and the like, or <game>_vmu_save_A1.bin), the
+# save states (<ROM name>.state, <ROM name>_N.state), the console's dc_flash.bin and the BIOS, so
+# the whole folder is the saves and the BIOS files are the keys. A save or state path set in its settings
+# moves them, and isn't followed here. It has a built-in BIOS, so dc_boot.bin or dc_bios.bin
+# (core/hw/flashrom/nvmem.cpp) are optional.
+saves = { native = "~/.local/share/flycast", flatpak = "~/.var/app/org.flycast.Flycast/data/flycast" }
+keys = { native = ["~/.local/share/flycast/dc_boot.bin", "~/.local/share/flycast/dc_bios.bin"], flatpak = ["~/.var/app/org.flycast.Flycast/data/flycast/dc_boot.bin", "~/.var/app/org.flycast.Flycast/data/flycast/dc_bios.bin"] }
+# Flycast-<date>.png in the Pictures folder (core/oslib/oslib.cpp, saveScreenshot, which asks xdg-user-dir);
+# the name doesn't hold the game, so only screenshots from a play session show. The Flatpak can
+# read the folder but not write outside its own, so it has no entry (where its screenshots end up wasn't checked).
+screenshots = { native = "~/Pictures/Flycast-[0-9]*.png" }
