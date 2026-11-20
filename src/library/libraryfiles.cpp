@@ -779,7 +779,7 @@ void checkRomType(const GameFile &f, const QString &file, const Platform &platfo
     QStringList takes;
     for (const QString &id : platform.emulators) {
         const EmulatorDef *e = Emulators::find(emulators, id);
-        for (const QString &ext : e->extensions)
+        for (const QString &ext : e->extensionsFor(platform.id))
             takes.append(u'.' + ext);
         takes += e->files;
     }

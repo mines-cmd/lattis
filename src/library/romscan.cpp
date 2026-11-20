@@ -314,7 +314,7 @@ RomPick inspectRomPick(const QString &path, const QList<Platform> &platforms, co
             if (!e)
                 continue;
             const bool byName = e->files.contains(name);
-            if (byName || (!extension.isEmpty() && e->extensions.contains(extension))) {
+            if (byName || (!extension.isEmpty() && e->extensionsFor(platform.id).contains(extension))) {
                 out.platforms.append(platform.id);
                 folderGame = folderGame || byName;
                 break;
@@ -572,7 +572,8 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
         QSet<QString> names;
         for (const QString &id : platform.emulators) {
             if (const EmulatorDef *e = Emulators::find(emulators, id)) {
-                extensions.unite(QSet<QString>(e->extensions.cbegin(), e->extensions.cend()));
+                const QStringList own = e->extensionsFor(platform.id);
+                extensions.unite(QSet<QString>(own.cbegin(), own.cend()));
                 names.unite(QSet<QString>(e->files.cbegin(), e->files.cend()));
             }
         }

@@ -411,7 +411,7 @@ ColumnLayout {
                         }
                         Label {
                             Layout.fillWidth: true
-                            text: qsTr("{exe} is the program, {args} the arguments, {rom} the game.")
+                            text: qsTr("{exe} is the program, {args} the arguments, {rom} the game, {romdir} its folder.")
                             color: Theme.controls.descriptionColor
                             font.pixelSize: Theme.controls.descriptionFontSize
                             wrapMode: Text.WordWrap

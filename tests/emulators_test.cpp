@@ -68,6 +68,9 @@ private slots:
     void validation_data();
     void validation();
     void extensionsNormalized();
+    void platformExtensions();
+    void platformExtensionsMergePerPlatform();
+    void platformExtensionsUnknownPlatform();
     void duplicateAndInvalidIds();
     void syntaxError();
     void referenceRoundTrips();
@@ -300,6 +303,94 @@ saves_beside_rom = [".SAV", "ss1"]
              (QStringList{"nsp", "xci"}));
     QCOMPARE(parsed.value.first().values.value(QStringLiteral("saves_beside_rom")).toStringList(),
              (QStringList{"sav", "ss1"}));
+}
+
+void EmulatorsTest::platformExtensions()
+{
+    const QByteArray twin = R"(
+[[emulator]]
+id = "twin"
+name = "Twin"
+platforms = ["sms", "gamegear"]
+command = ["{exe}", "{args}", "{rom}"]
+extensions = ["sms"]
+platform_extensions = { sms = ["sms", ".SMD"], gamegear = ["gg"] }
+)";
+    QStringList warnings;
+    const QList<EmulatorDef> defs = mergeText(twin, &warnings);
+    QVERIFY(anyContains(warnings, QStringLiteral(":8: write extensions without the dot")));
+    QCOMPARE(warnings.size(), 1);
+    const EmulatorDef *twinDef = Emulators::find(defs, QStringLiteral("twin"));
+    QVERIFY(twinDef);
+    QCOMPARE(twinDef->extensionsFor("sms"), (QStringList{"sms", "smd"}));
+    QCOMPARE(twinDef->extensionsFor("gamegear"), QStringList{"gg"});
+    // A platform not listed uses extensions, which is the union.
+    QCOMPARE(twinDef->extensionsFor("other"), twinDef->extensions);
+    QCOMPARE(twinDef->extensions, (QStringList{"sms", "smd", "gg"}));
+
+    // Printed sorted by platform, and read back as it was.
+    const QString text = Emulators::referenceText(defs);
+    QVERIFY(text.contains(QStringLiteral("platform_extensions = { gamegear = [\"gg\"], sms = [\"sms\", \"smd\"] }\n")));
+    const Parsed<QList<EmulatorEntry>> reread = Emulators::parseFile(text.toUtf8(), kFile);
+    QStringList again;
+    const QList<EmulatorDef> second = Emulators::merge({}, reread.value, &again);
+    QVERIFY2(again.isEmpty(), qPrintable(dump(again)));
+    QCOMPARE(Emulators::find(second, QStringLiteral("twin"))->platformExtensions, twinDef->platformExtensions);
+
+    const Parsed<QList<EmulatorEntry>> bad =
+        Emulators::parseFile("[[emulator]]\nid = \"x\"\nplatform_extensions = \"sms\"\n", kFile);
+    QVERIFY(anyContains(bad.warnings, QStringLiteral(":3: platform_extensions must be a table of extensions by platform id")));
+    const Parsed<QList<EmulatorEntry>> badList =
+        Emulators::parseFile("[[emulator]]\nid = \"x\"\nplatform_extensions = { sms = 3 }\n", kFile);
+    QVERIFY(anyContains(badList.warnings, QStringLiteral("platform_extensions.sms must be a list of text in quotes")));
+}
+
+void EmulatorsTest::platformExtensionsMergePerPlatform()
+{
+    const Parsed<EmulatorEntry> preset = Emulators::parsePreset(R"(
+id = "twin"
+name = "Twin"
+platforms = ["a", "b", "c"]
+command = ["{exe}", "{rom}"]
+extensions = ["a", "b", "c"]
+platform_extensions = { a = ["a"], b = ["b"] }
+)",
+                                                                QStringLiteral("built-in emulators/twin.toml"));
+    QVERIFY(preset.ok);
+    const Parsed<QList<EmulatorEntry>> user = Emulators::parseFile(R"(
+[[emulator]]
+id = "twin"
+platform_extensions = { b = ["bb"], c = ["c"] }
+)",
+                                                                   kFile);
+    QStringList warnings;
+    const QList<EmulatorDef> defs = Emulators::merge({preset.value}, user.value, &warnings);
+    QVERIFY2(warnings.isEmpty(), qPrintable(dump(warnings)));
+    const EmulatorDef *twin = Emulators::find(defs, QStringLiteral("twin"));
+    QVERIFY(twin);
+    QCOMPARE(twin->extensionsFor("a"), QStringList{"a"}); // the preset's, kept
+    QCOMPARE(twin->extensionsFor("b"), QStringList{"bb"}); // the user's
+    QCOMPARE(twin->extensionsFor("c"), QStringList{"c"});  // added
+    QVERIFY(twin->userKeys.contains(QStringLiteral("platform_extensions")));
+}
+
+void EmulatorsTest::platformExtensionsUnknownPlatform()
+{
+    QStringList warnings;
+    const QList<EmulatorDef> defs = mergeText(R"(
+[[emulator]]
+id = "twin"
+name = "Twin"
+platforms = ["a"]
+command = ["{exe}", "{rom}"]
+extensions = ["a"]
+platform_extensions = { a = ["a"], mine = ["x"] }
+)",
+                                              &warnings);
+    QVERIFY(anyContains(warnings, QStringLiteral("platform_extensions has \"mine\", which isn't in platforms of emulator \"twin\"")));
+    const EmulatorDef *twin = Emulators::find(defs, QStringLiteral("twin"));
+    QVERIFY(twin); // kept
+    QCOMPARE(twin->extensionsFor("mine"), QStringList{"x"});
 }
 
 void EmulatorsTest::duplicateAndInvalidIds()

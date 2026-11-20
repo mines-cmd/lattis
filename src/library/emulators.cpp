@@ -39,10 +39,14 @@ constexpr Field kFields[] = {
     {"release_inside", String, "When the download is a zip or tarball: the pattern of the AppImage inside it"},
     {"path", String, "Your install: an absolute path or ~/…; skips detection"},
     {"command", StringList, "The program's arguments, not a shell line: {exe} is the program (or flatpak run "
-                            "<app id>), {args} the args list, {rom} the absolute ROM path. \"Open emulator\" leaves out {rom} and the "
-                            "arguments between {args} and it"},
+                            "<app id>), {args} the args list, {rom} the absolute ROM path, {romdir} the absolute path of its "
+                            "folder. \"Open emulator\" leaves out {rom}, {romdir} and the arguments between {args} and "
+                            "the first of them"},
     {"args", StringList, "Extra arguments for every game, spliced in at {args}"},
     {"extensions", StringList, "ROM file extensions, lowercase, without the dot"},
+    {"platform_extensions", PlatformList, "ROM extensions per platform, for an emulator that runs several, like "
+                                          "{ gba = [\"gba\"], gb = [\"gb\"] }; a platform not listed here uses "
+                                          "extensions, which should list them all"},
     {"files", StringList, "File names that make the folder they're in a game, like \"eboot.bin\" for PS4 games "
                           "(case doesn't matter); the title comes from the game's folder"},
     {"portable", String, "A file or folder next to the program (or the AppImage) that makes the emulator keep its "
@@ -92,7 +96,8 @@ QString typeName(Type type)
     switch (type) {
     case String: return QStringLiteral("string");
     case StringList: return QStringLiteral("list of strings");
-    case PathTable: return QStringLiteral("table");
+    case PathTable:
+    case PlatformList: return QStringLiteral("table");
     }
     return {};
 }
@@ -108,7 +113,8 @@ using EmulatorFields::Field;
 using EmulatorFields::Type;
 
 const QString kId = QStringLiteral("id");
-const QStringList kPlaceholders = {QStringLiteral("{exe}"), QStringLiteral("{args}"), QStringLiteral("{rom}")};
+const QStringList kPlaceholders = {QStringLiteral("{exe}"), QStringLiteral("{args}"), QStringLiteral("{rom}"),
+                                   QStringLiteral("{romdir}")};
 
 QString where(const QString &displayPath, const toml::node &node)
 {
@@ -155,6 +161,20 @@ QStringList stringList(const toml::node &node, bool *ok)
     return out;
 }
 
+// Lowercase, without the dot; true when one had a dot, which is allowed but not what the file should say.
+bool normalizeExtensions(QStringList *list)
+{
+    bool dotted = false;
+    for (QString &ext : *list) {
+        dotted = dotted || ext.startsWith(u'.');
+        while (ext.startsWith(u'.'))
+            ext.remove(0, 1);
+        ext = ext.toLower();
+    }
+    list->removeAll(QString());
+    return dotted;
+}
+
 QString commandError(const QStringList &command)
 {
     if (command.isEmpty() || !command.contains(QStringLiteral("{exe}")))
@@ -164,10 +184,10 @@ QString commandError(const QStringList &command)
         for (const QRegularExpressionMatch &m : placeholder.globalMatch(arg)) {
             const QString name = m.captured();
             if (!kPlaceholders.contains(name))
-                return QStringLiteral("unknown placeholder %1 in command; use {exe}, {args} or {rom}%2")
+                return QStringLiteral("unknown placeholder %1 in command; use {exe}, {args}, {rom} or {romdir}%2")
                     .arg(name, suggestion(name, kPlaceholders));
             // {exe} and {args} stand for several arguments, so they can't be part of one.
-            if (name != QLatin1String("{rom}") && arg != name)
+            if (name != QLatin1String("{rom}") && name != QLatin1String("{romdir}") && arg != name)
                 return QStringLiteral("%1 must be an argument of its own in command, like \"%1\"").arg(name);
         }
     }
@@ -217,16 +237,8 @@ QVariant readValue(const toml::node &node, const Field &field, const QString &di
             if (const QString error = commandError(list); !error.isEmpty())
                 return fail(error);
         } else if (key == QLatin1String("extensions")) {
-            bool dotted = false;
-            for (QString &ext : list) {
-                dotted = dotted || ext.startsWith(u'.');
-                while (ext.startsWith(u'.'))
-                    ext.remove(0, 1);
-                ext = ext.toLower();
-            }
-            if (dotted)
+            if (normalizeExtensions(&list))
                 warnings->append(QStringLiteral("%1: write extensions without the dot, like \"nsp\"").arg(at));
-            list.removeAll(QString());
         } else if (key == QLatin1String("saves_beside_rom")) {
             for (QString &ext : list) {
                 while (ext.startsWith(u'.'))
@@ -246,6 +258,29 @@ QVariant readValue(const toml::node &node, const Field &field, const QString &di
             list.removeAll(QString());
         }
         return list;
+    }
+    case Type::PlatformList: {
+        const toml::table *table = node.as_table();
+        if (!table)
+            return fail(QStringLiteral("%1 must be a table of extensions by platform id, like "
+                                       "{ gba = [\"gba\"], gb = [\"gb\"] }")
+                             .arg(key));
+        QVariantMap out;
+        for (auto &&[k, value] : *table) {
+            const QString platform = toQString(k.str());
+            const QString valueAt = where(displayPath, value);
+            bool ok = false;
+            QStringList list = stringList(value, &ok);
+            if (!ok) {
+                warnings->append(QStringLiteral("%1: %2.%3 must be a list of text in quotes, like [\"a\", \"b\"]")
+                                     .arg(valueAt, key, platform));
+                continue;
+            }
+            if (normalizeExtensions(&list))
+                warnings->append(QStringLiteral("%1: write extensions without the dot, like \"nsp\"").arg(valueAt));
+            out.insert(platform, list);
+        }
+        return out;
     }
     case Type::PathTable: {
         const toml::table *table = node.as_table();
@@ -372,6 +407,15 @@ EmulatorDef build(const QString &id, const QVariantMap &v)
     def.command = v.value(QStringLiteral("command")).toStringList();
     def.args = v.value(QStringLiteral("args")).toStringList();
     def.extensions = v.value(QStringLiteral("extensions")).toStringList();
+    const QVariantMap perPlatform = v.value(QStringLiteral("platform_extensions")).toMap();
+    for (auto it = perPlatform.begin(); it != perPlatform.end(); ++it) {
+        const QStringList list = it.value().toStringList();
+        def.platformExtensions.insert(it.key(), list);
+        for (const QString &ext : list) {
+            if (!def.extensions.contains(ext))
+                def.extensions.append(ext);
+        }
+    }
     def.files = v.value(QStringLiteral("files")).toStringList();
     def.portable = v.value(QStringLiteral("portable")).toString();
     def.saves = pathTable(v.value(QStringLiteral("saves")));
@@ -396,6 +440,21 @@ QStringList missingKeys(const EmulatorDef &def)
         && !def.userKeys.contains(QStringLiteral("files")))
         missing.append(QStringLiteral("extensions or files"));
     return missing;
+}
+
+// Platforms are the user's own, so an id nobody lists isn't an error: it stays, and the scan ignores it.
+void warnUnlistedPlatforms(const EmulatorDef &def, const QString &at, QStringList *warnings)
+{
+    QStringList unlisted;
+    for (auto it = def.platformExtensions.cbegin(); it != def.platformExtensions.cend(); ++it) {
+        if (!def.platforms.contains(it.key()))
+            unlisted.append(it.key());
+    }
+    std::sort(unlisted.begin(), unlisted.end());
+    for (const QString &platform : unlisted)
+        warnings->append(QStringLiteral("%1: platform_extensions has \"%2\", which isn't in platforms of emulator \"%3\"; "
+                                        "kept, but only a platform that uses the emulator reads it")
+                             .arg(at, platform, def.id));
 }
 
 QString joinAnd(const QStringList &items)
@@ -440,6 +499,19 @@ QString formatValue(const EmulatorDef &def, const Field &field)
     if (key == QLatin1String("command")) return list(def.command);
     if (key == QLatin1String("args")) return list(def.args);
     if (key == QLatin1String("extensions")) return list(def.extensions);
+    if (key == QLatin1String("platform_extensions")) {
+        if (def.platformExtensions.isEmpty())
+            return QString();
+        static const QRegularExpression bare(QStringLiteral("^[A-Za-z0-9_-]+$"));
+        QStringList platforms = def.platformExtensions.keys();
+        std::sort(platforms.begin(), platforms.end());
+        QStringList parts;
+        for (const QString &platform : platforms)
+            parts.append(QStringLiteral("%1 = %2")
+                             .arg(bare.match(platform).hasMatch() ? platform : tomlString(platform),
+                                  list(def.platformExtensions.value(platform))));
+        return QStringLiteral("{ %1 }").arg(parts.join(QStringLiteral(", ")));
+    }
     if (key == QLatin1String("files")) return def.files.isEmpty() ? QString() : list(def.files);
     if (key == QLatin1String("portable")) return def.portable.isEmpty() ? QString() : tomlString(def.portable);
     if (key == QLatin1String("saves")) return def.saves.isEmpty() ? QString() : table(def.saves);
@@ -554,7 +626,13 @@ QList<EmulatorDef> merge(const QList<EmulatorEntry> &presets, const QList<Emulat
             if (u.id != preset.id)
                 continue;
             for (auto it = u.values.begin(); it != u.values.end(); ++it) {
-                values.insert(it.key(), it.value());
+                if (it.key() == QLatin1String("platform_extensions")) {
+                    QVariantMap table = values.value(it.key()).toMap();
+                    table.insert(it.value().toMap());
+                    values.insert(it.key(), table);
+                } else {
+                    values.insert(it.key(), it.value());
+                }
                 userKeys.append(it.key());
             }
         }
@@ -566,6 +644,7 @@ QList<EmulatorDef> merge(const QList<EmulatorEntry> &presets, const QList<Emulat
                                  .arg(preset.at, preset.id, joinAnd(missing)));
             continue;
         }
+        warnUnlistedPlatforms(def, preset.at, warnings);
         out.append(def);
     }
 
@@ -579,6 +658,7 @@ QList<EmulatorDef> merge(const QList<EmulatorEntry> &presets, const QList<Emulat
                                  .arg(entry.at, entry.id, joinAnd(missing), suggestion(entry.id, presetIds)));
             continue;
         }
+        warnUnlistedPlatforms(def, entry.at, warnings);
         out.append(def);
     }
     return out;

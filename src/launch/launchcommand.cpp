@@ -1,6 +1,8 @@
 #include "launchcommand.h"
 
 #include <QDir>
+#include <QFileInfo>
+#include <QRegularExpression>
 
 #include <algorithm>
 
@@ -89,8 +91,20 @@ LaunchCommand buildLaunchCommand(const EmulatorDef &emulator, const EmulatorInst
     else
         exe = {install.program};
 
-    const QString rom = QStringLiteral("{rom}");
-    // Without a ROM, the arguments for it go too: {rom} and those between {args} (or {exe})
+    static const QRegularExpression romPlaceholder(QStringLiteral("\\{rom(dir)?\\}"));
+    const QString romDir = QFileInfo(romPath).absolutePath();
+    // One pass, so a folder or file named "{rom}" isn't expanded again.
+    const auto expand = [&](const QString &arg) {
+        QString out;
+        qsizetype from = 0;
+        for (const QRegularExpressionMatch &m : romPlaceholder.globalMatch(arg)) {
+            out += QStringView(arg).mid(from, m.capturedStart() - from);
+            out += m.capturedLength(1) > 0 ? romDir : romPath;
+            from = m.capturedEnd();
+        }
+        return out + QStringView(arg).mid(from);
+    };
+    // Without a ROM, the arguments for it go too: {rom} or {romdir} and those between {args} (or {exe})
     // and it, like Dolphin's `-b -e {rom}`.
     qsizetype skipFrom = emulator.command.size();
     qsizetype skipTo = -1;
@@ -99,7 +113,7 @@ LaunchCommand buildLaunchCommand(const EmulatorDef &emulator, const EmulatorInst
             const QString &arg = emulator.command.at(i);
             if (arg == QLatin1String("{exe}") || arg == QLatin1String("{args}"))
                 skipFrom = i + 1;
-            else if (arg.contains(rom)) {
+            else if (arg.contains(romPlaceholder)) {
                 skipTo = i;
                 break;
             }
@@ -114,10 +128,10 @@ LaunchCommand buildLaunchCommand(const EmulatorDef &emulator, const EmulatorInst
             all += exe;
         else if (arg == QLatin1String("{args}"))
             all += emulator.args + gameArgs;
-        else if (arg.contains(rom) && romPath.isEmpty())
+        else if (romPath.isEmpty() && arg.contains(romPlaceholder))
             continue;
         else
-            all.append(QString(arg).replace(rom, romPath));
+            all.append(expand(arg));
     }
 
     LaunchCommand out;

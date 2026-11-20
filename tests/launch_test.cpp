@@ -296,6 +296,17 @@ void LaunchTest::command_data()
                             << int(Kind::Executable) << "" << QStringList{"/usr/bin/emu", "-f"};
     QTest::newRow("no rom, batch") << QStringList{"{exe}", "{args}", "-batch", "--", "{rom}"} << QStringList{}
                                    << int(Kind::Executable) << "" << QStringList{"/usr/bin/emu"};
+    QTest::newRow("romdir") << QStringList{"{exe}", "{args}", "-rompath", "{romdir}", "{rom}"} << QStringList{}
+                            << int(Kind::Executable) << "/roms/arcade games/sf2.zip"
+                            << QStringList{"/usr/bin/emu", "-rompath", "/roms/arcade games", "/roms/arcade games/sf2.zip"};
+    QTest::newRow("romdir inside an argument") << QStringList{"{exe}", "--path={romdir}", "{rom}"} << QStringList{}
+                                               << int(Kind::Executable) << "/r/a b/x.zip"
+                                               << QStringList{"/usr/bin/emu", "--path=/r/a b", "/r/a b/x.zip"};
+    QTest::newRow("a folder named like a placeholder") << QStringList{"{exe}", "{romdir}", "{rom}"} << QStringList{}
+                                                       << int(Kind::Executable) << "/r/{rom}/x.zip"
+                                                       << QStringList{"/usr/bin/emu", "/r/{rom}", "/r/{rom}/x.zip"};
+    QTest::newRow("no rom, romdir") << QStringList{"{exe}", "{args}", "-rompath", "{romdir}", "{rom}"} << QStringList{"-f"}
+                                    << int(Kind::Executable) << "" << QStringList{"/usr/bin/emu", "-f"};
     QTest::newRow("no rom, after it") << QStringList{"{exe}", "-g", "{rom}", "--quit"} << QStringList{}
                                       << int(Kind::Executable) << "" << QStringList{"/usr/bin/emu", "--quit"};
 }

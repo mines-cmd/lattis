@@ -5776,7 +5776,7 @@ QVariantMap Library::inspectRom(const QString &file) const
         QStringList takes;
         for (const QString &id : p.emulators) {
             const EmulatorDef *e = Emulators::find(m_emulators, id);
-            for (const QString &ext : e->extensions)
+            for (const QString &ext : e->extensionsFor(p.id))
                 takes.append(u'.' + ext);
             takes += e->files;
         }

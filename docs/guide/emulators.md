@@ -68,7 +68,7 @@ Its row, under **Yours**, sets:
 - **Platforms** it runs games for. Adding a platform here doesn't add the emulator to that platform's list; Settings → Platforms does.
 - **ROM extensions**: the files in ROM folders that are its games, like `3ds cci cxi`.
 - **Program**, with **Browse**, or its **Flatpak app id**, like `org.citra_emu.citra`.
-- **Command**: how it's started. `{exe}` is the program, `{args}` the arguments, `{rom}` the game's file. Most emulators take `{exe} {args} {rom}`, the default.
+- **Command**: how it's started. `{exe}` is the program, `{args}` the arguments, `{rom}` the game's file, `{romdir}` the folder it's in. Most emulators take `{exe} {args} {rom}`, the default.
 - **Arguments** and **Screenshot folders**, as for the built-in ones.
 - **Save folders**, as for the built-in ones.
 
@@ -88,7 +88,9 @@ command = ["{exe}", "{args}", "{rom}"]
 extensions = ["3ds", "cci", "cxi", "3dsx"]
 ```
 
-`{exe}` is the program, `{args}` the arguments, `{rom}` the game's file. Save the file and the emulator shows up on the Emulators page.
+`{exe}` is the program, `{args}` the arguments, `{rom}` the game's file, `{romdir}` the folder it's in. Save the file and the emulator shows up on the Emulators page.
+
+An emulator that runs several platforms, with games of different types, can say which files belong to which platform in `emulators.toml`: `platform_extensions = { gba = ["gba"], gb = ["gb", "gbc"] }`. Each platform then picks up only its own files; a platform not listed uses `extensions`, which should hold them all. The Emulators page doesn't edit this; a copy of a built-in emulator keeps it.
 
 ## ROM folders
 

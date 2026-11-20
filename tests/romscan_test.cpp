@@ -42,6 +42,8 @@ private slots:
     void updateNamesUsesTheDatabase();
     void scanRecordsSizes();
     void scanSkipsClaimedFiles();
+    void scanTakesPlatformExtensions();
+    void inspectPickUsesPlatformExtensions();
     void inspectPick_data();
     void inspectPick();
     void scanWithoutEmulators();
@@ -510,6 +512,44 @@ void RomScanTest::scanSkipsClaimedFiles()
                                            dir.filePath("home"), {data + "/roms/switch/Celeste.nsp"});
     QCOMPARE(r.files.value("switch").keys(), QStringList{"Tetris.nro"});
     QCOMPARE(r.indexes.value("switch"), (QList<RomEntry>{named("Tetris.nro", "switch-tetris", "Tetris")}));
+}
+
+namespace {
+EmulatorDef twinEmulator()
+{
+    EmulatorDef twin;
+    twin.id = QStringLiteral("twin");
+    twin.extensions = {QStringLiteral("sms"), QStringLiteral("gg"), QStringLiteral("md")};
+    twin.platformExtensions = {{QStringLiteral("sms"), {QStringLiteral("sms")}},
+                               {QStringLiteral("gamegear"), {QStringLiteral("gg")}}};
+    return twin;
+}
+}
+
+void RomScanTest::scanTakesPlatformExtensions()
+{
+    QTemporaryDir dir;
+    QVERIFY(touch(dir.filePath("both/Alex Kidd.sms")));
+    QVERIFY(touch(dir.filePath("both/Sonic.gg")));
+    QVERIFY(touch(dir.filePath("both/Streets.md")));
+
+    Platform sms{"sms", "Master System", "", {"twin"}, {dir.filePath("both")}, 1};
+    Platform gamegear{"gamegear", "Game Gear", "", {"twin"}, {dir.filePath("both")}, 2};
+    // Not in platform_extensions: takes extensions, all of them.
+    Platform other{"other", "Other", "", {"twin"}, {dir.filePath("both")}, 3};
+
+    const RomScanResult r = scanRomFolders({sms, gamegear, other}, {twinEmulator()}, {}, {}, dir.path(), dir.path());
+    QCOMPARE(r.files.value("sms").keys(), QStringList{"Alex Kidd.sms"});
+    QCOMPARE(r.files.value("gamegear").keys(), QStringList{"Sonic.gg"});
+    QCOMPARE(r.files.value("other").size(), 3);
+}
+
+void RomScanTest::inspectPickUsesPlatformExtensions()
+{
+    const QList<Platform> all = {{"sms", "Master System", "", {"twin"}, {}, 1}, {"gamegear", "Game Gear", "", {"twin"}, {}, 2}};
+    QCOMPARE(inspectRomPick("/dl/Sonic.gg", all, {twinEmulator()}).platforms, QStringList{"gamegear"});
+    QCOMPARE(inspectRomPick("/dl/Alex Kidd.SMS", all, {twinEmulator()}).platforms, QStringList{"sms"});
+    QVERIFY(inspectRomPick("/dl/Streets.md", all, {twinEmulator()}).platforms.isEmpty());
 }
 
 void RomScanTest::inspectPick_data()

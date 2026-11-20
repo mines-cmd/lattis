@@ -13,7 +13,7 @@
 // See docs/code/library.md.
 
 namespace EmulatorFields {
-enum class Type { String, StringList, PathTable };
+enum class Type { String, StringList, PathTable, PlatformList };
 
 struct Field
 {
@@ -56,6 +56,7 @@ struct EmulatorDef
     QStringList command;
     QStringList args;
     QStringList extensions;
+    QHash<QString, QStringList> platformExtensions;
     QStringList files;
     QString portable;
     QMap<QString, QStringList> saves;
@@ -69,6 +70,12 @@ struct EmulatorDef
     QStringList userKeys;
 
     bool operator==(const EmulatorDef &) const = default;
+
+    QStringList extensionsFor(const QString &platformId) const
+    {
+        const auto it = platformExtensions.constFind(platformId);
+        return it == platformExtensions.cend() ? extensions : it.value();
+    }
 };
 
 namespace Emulators {

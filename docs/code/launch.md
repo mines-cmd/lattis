@@ -12,7 +12,7 @@ Everything starts with `GameRunner::launch(gameId)`, which returns a message for
 
 `chooseEmulator()` picks the emulator to use: the game's pinned emulator if it's installed, otherwise the first installed emulator for the platform. If no emulator is installed, `launch()` returns a message saying which one to install, and `missingEmulator()` tells the Emulators page which one to highlight.
 
-`buildLaunchCommand()` fills in the emulator's command template: `{exe}` becomes the emulator's program (or `flatpak run <app id>` for a Flatpak install), `{args}` becomes the emulator's argument list plus the game's `gameArgs`, spliced in, and `{rom}` becomes the ROM's path. Without a ROM (when opening the emulator without a game), `{rom}` and the arguments between `{args}` and it are left out — so a template like `-b -e {rom}` becomes just `-b`, not `-b -e`.
+`buildLaunchCommand()` fills in the emulator's command template: `{exe}` becomes the emulator's program (or `flatpak run <app id>` for a Flatpak install), `{args}` becomes the emulator's argument list plus the game's `gameArgs`, spliced in, `{rom}` becomes the ROM's path and `{romdir}` the absolute path of its folder (both filled in one pass, so a path that contains `{rom}` stays as it is). Without a ROM (when opening the emulator without a game), `{rom}`, `{romdir}` and the arguments between `{args}` and it are left out — so a template like `-b -e {rom}` becomes just `-b`, not `-b -e`.
 
 ## Steam games
 
