@@ -244,7 +244,7 @@ QList<int> igdbPlatformIds(const Platform &platform)
 {
     if (!platform.igdbPlatforms.isEmpty())
         return platform.igdbPlatforms;
-    // From IGDB's platform list (checked 2026-09). The 3DS includes New Nintendo 3DS exclusives.
+    // From IGDB's platform list (checked 2026-09; the retro ones from memory, 2026-11). The 3DS includes New Nintendo 3DS exclusives.
     static const QHash<QString, QList<int>> builtIn = {
         {QStringLiteral("switch"), {130}},
         {QStringLiteral("switch2"), {508}},
@@ -265,6 +265,15 @@ QList<int> igdbPlatformIds(const Platform &platform)
         {QStringLiteral("gba"), {24}},
         {QStringLiteral("n64"), {4}},
         {QStringLiteral("nds"), {20}},
+        {QStringLiteral("nes"), {18, 99}}, // NES, and Famicom
+        {QStringLiteral("snes"), {19, 58}}, // Super Nintendo, and Super Famicom
+        {QStringLiteral("genesis"), {29}},
+        {QStringLiteral("gb"), {33}},
+        {QStringLiteral("gbc"), {22}},
+        {QStringLiteral("sms"), {64}},
+        {QStringLiteral("gamegear"), {35}},
+        {QStringLiteral("dreamcast"), {23}},
+        {QStringLiteral("arcade"), {52}},
     };
     if (const auto it = builtIn.constFind(platform.icon); it != builtIn.cend())
         return *it;

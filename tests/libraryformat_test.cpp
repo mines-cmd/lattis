@@ -553,6 +553,17 @@ igdb_platforms = [0, "130"]
     QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("linux")}), (QList<int>{3, 6})); // Linux, and PC
     QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("switch-2")}), (QList<int>{508}));
     QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("x"), .icon = QStringLiteral("switch2")}), (QList<int>{508}));
+    const auto retro = [](const QString &id) { return igdbPlatformIds(Platform{.id = id, .icon = id}); };
+    QCOMPARE(retro("nes"), (QList<int>{18, 99}));
+    QCOMPARE(retro("snes"), (QList<int>{19, 58}));
+    QCOMPARE(retro("genesis"), (QList<int>{29}));
+    QCOMPARE(retro("gb"), (QList<int>{33}));
+    QCOMPARE(retro("gbc"), (QList<int>{22}));
+    QCOMPARE(retro("sms"), (QList<int>{64}));
+    QCOMPARE(retro("gamegear"), (QList<int>{35}));
+    QCOMPARE(retro("dreamcast"), (QList<int>{23}));
+    QCOMPARE(retro("arcade"), (QList<int>{52}));
+    QCOMPARE(igdbPlatformIds(Platform{.id = QStringLiteral("mine"), .icon = QStringLiteral("snes")}), (QList<int>{19, 58}));
     QCOMPARE(r.warnings.size(), 1);
     QVERIFY(anyContains(r.warnings, QStringLiteral(":18: igdb_platforms must be a list of IGDB platform ids")));
 }

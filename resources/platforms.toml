@@ -26,13 +26,22 @@ offered = [
     "wii", "wii/dolphin",
     "gamecube", "gamecube/dolphin",
     "n64", "n64/rmg",
+    "snes", "snes/snes9x",
+    "nes", "nes/punes",
     "nds", "nds/melonds",
     "gba", "gba/mgba",
+    "gbc", "gbc/mgba",
+    "gb", "gb/mgba",
+    "dreamcast", "dreamcast/flycast",
+    "genesis", "genesis/blastem",
+    "sms", "sms/ares",
+    "gamegear", "gamegear/ares",
     "ps4", "ps4/shadps4",
     "ps3", "ps3/rpcs3",
     "ps2", "ps2/pcsx2",
     "ps1", "ps1/duckstation",
     "psp", "psp/ppsspp",
+    "arcade", "arcade/mame",
 ]
 
 [[platform]]
@@ -78,6 +87,18 @@ icon = "n64"
 emulators = ["rmg"]
 
 [[platform]]
+id = "snes"
+name = "SNES"
+icon = "snes"
+emulators = ["snes9x"]
+
+[[platform]]
+id = "nes"
+name = "NES"
+icon = "nes"
+emulators = ["punes"]
+
+[[platform]]
 id = "nds"
 name = "Nintendo DS"
 icon = "nds"
@@ -88,6 +109,42 @@ id = "gba"
 name = "Game Boy Advance"
 icon = "gba"
 emulators = ["mgba"]
+
+[[platform]]
+id = "gbc"
+name = "Game Boy Color"
+icon = "gbc"
+emulators = ["mgba"]
+
+[[platform]]
+id = "gb"
+name = "Game Boy"
+icon = "gb"
+emulators = ["mgba"]
+
+[[platform]]
+id = "dreamcast"
+name = "Dreamcast"
+icon = "dreamcast"
+emulators = ["flycast"]
+
+[[platform]]
+id = "genesis"
+name = "Genesis"
+icon = "genesis"
+emulators = ["blastem"]
+
+[[platform]]
+id = "sms"
+name = "Master System"
+icon = "sms"
+emulators = ["ares"]
+
+[[platform]]
+id = "gamegear"
+name = "Game Gear"
+icon = "gamegear"
+emulators = ["ares"]
 
 [[platform]]
 id = "ps4"
@@ -118,3 +175,9 @@ id = "psp"
 name = "PSP"
 icon = "psp"
 emulators = ["ppsspp"]
+
+[[platform]]
+id = "arcade"
+name = "Arcade"
+icon = "arcade"
+emulators = ["mame"]

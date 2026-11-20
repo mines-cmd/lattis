@@ -76,6 +76,8 @@ private slots:
     void placedAfterNearestEarlierDefault();
     void placedFirstWithoutEarlierDefault();
     void usersOrderKept();
+    void oldFileGetsTheRetroPlatformsOnce();
+    void retroPlatformsKeepAUsersOrder();
     void emulatorAppendedOnce();
     void emulatorPlacedWhereDefaultsHaveIt();
     void missingPlatformSkipsItsEmulators();
@@ -112,7 +114,7 @@ void OfferedDefaultsTest::oldFileGetsSwitch2LichiiAndEden()
     QStringList added;
     const TomlPatch::Result r = OfferedDefaults::apply(old, resourceDefaults(), OfferedDefaults::bootstrap(), &added);
     QVERIFY(r.ok);
-    QCOMPARE(ids(r.text), QStringList({"switch", "switch-2", "3ds"}));
+    QCOMPARE(ids(r.text).mid(0, 3), QStringList({"switch", "switch-2", "3ds"}));
     QCOMPARE(emulatorsOf(r.text, "switch"), QStringList({"eden", "ryubing", "lichii"}));
     QCOMPARE(emulatorsOf(r.text, "switch-2"), QStringList({"lichii"}));
     QVERIFY(r.text.contains("icon = \"switch2\""));
@@ -195,6 +197,44 @@ void OfferedDefaultsTest::emulatorPlacedWhereDefaultsHaveIt()
     const TomlPatch::Result r = OfferedDefaults::apply(old, defaults, {"a", "a/x", "a/y"});
     QVERIFY(r.ok);
     QCOMPARE(emulatorsOf(r.text, "a"), QStringList({"mine", "n", "m", "y", "x"}));
+}
+
+void OfferedDefaultsTest::oldFileGetsTheRetroPlatformsOnce()
+{
+    const QStringList retro = {"snes", "nes", "gbc", "gb", "dreamcast", "genesis", "sms", "gamegear", "arcade"};
+    const QStringList emulators = {"snes9x", "punes", "mgba", "mgba", "flycast", "blastem", "ares", "ares", "mame"};
+    QString text = file(block("switch", "[\"eden\"]") + block("n64", "[\"rmg\"]") + block("nds", "[\"melonds\"]")
+                        + block("gba", "[\"mgba\"]") + block("ps4", "[\"shadps4\"]") + block("psp", "[\"ppsspp\"]"));
+    QStringList added;
+    const TomlPatch::Result r = OfferedDefaults::apply(text, resourceDefaults(), OfferedDefaults::bootstrap(), &added);
+    QVERIFY(r.ok);
+    QCOMPARE(ids(r.text), QStringList({"switch", "switch-2", "n64", "snes", "nes", "nds", "gba", "gbc", "gb", "dreamcast",
+                                       "genesis", "sms", "gamegear", "ps4", "psp", "arcade"}));
+    for (int i = 0; i < retro.size(); ++i) {
+        QCOMPARE(emulatorsOf(r.text, retro.at(i)), QStringList({emulators.at(i)}));
+        QVERIFY(offeredOf(r.text).contains(retro.at(i)));
+        QVERIFY(offeredOf(r.text).contains(retro.at(i) + u'/' + emulators.at(i)));
+    }
+    QCOMPARE(added.size(), 10);
+
+    const TomlPatch::Result again = OfferedDefaults::apply(r.text, resourceDefaults(), OfferedDefaults::bootstrap());
+    QVERIFY(again.ok);
+    QCOMPARE(again.text, r.text);
+
+    const TomlPatch::Result removed = TomlPatch::removeBlock(r.text, {QStringLiteral("platform"), QStringLiteral("gb")});
+    const TomlPatch::Result second = OfferedDefaults::apply(removed.text, resourceDefaults(), OfferedDefaults::bootstrap());
+    QVERIFY(second.ok);
+    QVERIFY(!ids(second.text).contains("gb"));
+    QVERIFY(ids(second.text).contains("gbc"));
+}
+
+void OfferedDefaultsTest::retroPlatformsKeepAUsersOrder()
+{
+    const QString old = file(block("psp", "[]") + block("gba", "[\"mgba\"]") + block("n64", "[\"rmg\"]"));
+    const TomlPatch::Result r = OfferedDefaults::apply(old, resourceDefaults(), OfferedDefaults::bootstrap());
+    QVERIFY(r.ok);
+    QCOMPARE(ids(r.text), QStringList({"switch-2", "psp", "arcade", "gba", "gbc", "gb", "dreamcast", "genesis", "sms", "gamegear",
+                                       "n64", "snes", "nes"}));
 }
 
 void OfferedDefaultsTest::emulatorAppendedOnce()

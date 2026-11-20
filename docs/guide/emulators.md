@@ -18,7 +18,7 @@ Steam, Proton and Linux are platforms too. Lattis adds them by itself when they'
 
 ## Emulators
 
-Lattis knows fourteen emulators out of the box, among them Eden, Ryubing and Lichii (Switch; Lichii also runs Switch 2), Azahar (3DS), Dolphin (GameCube and Wii), Cemu (Wii U), PCSX2 (PS2), RPCS3 (PS3), shadPS4 (PS4), PPSSPP (PSP), mGBA and melonDS. Settings → Emulators lists them all. Eden is the Switch emulator Lattis offers first; Ryubing is no longer developed, but an existing Ryubing install is still found and launches your Switch games when Eden isn't installed.
+Lattis knows twenty emulators out of the box, among them Eden, Ryubing and Lichii (Switch; Lichii also runs Switch 2), Azahar (3DS), Dolphin (GameCube and Wii), Cemu (Wii U), PCSX2 (PS2), RPCS3 (PS3), shadPS4 (PS4), PPSSPP (PSP), mGBA and melonDS. Settings → Emulators lists them all. Eden is the Switch emulator Lattis offers first; Ryubing is no longer developed, but an existing Ryubing install is still found and launches your Switch games when Eden isn't installed.
 
 **Installed emulators are found by themselves.** Lattis looks for each one as a Flatpak, as a program on your `PATH`, or as an AppImage in `~/Applications` or `~/AppImages`. If yours is somewhere else, choose its program with **Browse**; **Detect automatically** goes back to finding it. "(portable)" after an install means the emulator keeps its data beside its program.
 
