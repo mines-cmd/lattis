@@ -6,7 +6,7 @@ Most games come in by themselves: ROMs from your [ROM folders](emulators.md#rom-
 
 Click **+** at the bottom of the rail (Ctrl+N), or "Add a game" in an empty library, and pick a file. What it becomes depends on the file:
 
-- **A ROM** becomes a game on the platform whose emulators run it. When several could (an `.iso` can be PS2, GameCube or PSP), the first in rail order is picked, and you can choose another. The file stays where it is; nothing is copied or moved.
+- **A ROM** becomes a game on the platform whose emulators run it. When several could (an `.iso` can be PS2, GameCube or PSP), the first in rail order is picked, and you can choose another. The older systems (NES, SNES, Game Boy, Game Boy Color, Genesis, Master System, Game Gear, Dreamcast) work the same way, and so does Arcade, where a game is MAME's zip named as MAME knows it (`sf2.zip`); BIOS zips like `neogeo.zip` are skipped. See [ROM folders](emulators.md#rom-folders). The file stays where it is; nothing is copied or moved.
 - **A Windows program** (`.exe`, offered when Steam is installed) becomes a Proton game. See [Windows games](windows-games.md).
 - **A Linux program** (a script, a program or an AppImage) becomes a Linux game. See [Linux games](linux-games.md).
 
