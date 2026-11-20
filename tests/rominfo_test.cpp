@@ -42,6 +42,9 @@ private slots:
     void gameCubeAndWiiDiscs();
     void switchTitleIdFromTicket();
     void cartridgeChecksums();
+    void cartridgeHeadersAreSkipped();
+    void zipsGiveTheirStoredChecksum();
+    void arcadeKeyIsTheFileName();
 };
 
 void RomInfoTest::reads()
@@ -337,6 +340,84 @@ void RomInfoTest::cartridgeChecksums()
     for (const auto &[file, bytes] : {std::pair{"n.z64", named}, {"n.v64", namedV64}, {"n.n64", namedN64}})
         QCOMPARE(read(write(QString::fromLatin1(file), bytes), QStringLiteral("n64")).headerName,
                  QStringLiteral("SUPER MARIO 64"));
+}
+
+namespace {
+QByteArray bytesOf(int length, int seed)
+{
+    QByteArray out(length, '\0');
+    for (int i = 0; i < length; ++i)
+        out[i] = char(i * seed + 3);
+    return out;
+}
+}
+
+void RomInfoTest::cartridgeHeadersAreSkipped()
+{
+    const QByteArray body = bytesOf(32768, 11);
+    const QByteArray ines = QByteArray("NES\x1a\x02\x01\x01\x00", 8) + QByteArray(8, '\0');
+
+    // An iNES header is left out of crc32 and kept in crc32WithHeader (both are in the lists).
+    RomInfo nes = read(write(QStringLiteral("a.nes"), ines + body), QStringLiteral("nes"));
+    QCOMPARE(nes.crc32, crcOf(body));
+    QCOMPARE(nes.crc32WithHeader, crcOf(ines + body));
+    // No header: the file as it is, and nothing second.
+    nes = read(write(QStringLiteral("b.nes"), body), QStringLiteral("nes"));
+    QCOMPARE(nes.crc32, crcOf(body));
+    QVERIFY(nes.crc32WithHeader.isEmpty());
+    // A Famicom Disk System dump has its own 16-byte header; a `NES` one on an .fds is not skipped.
+    const QByteArray fds = QByteArray("FDS\x1a\x01", 5) + QByteArray(11, '\0');
+    QCOMPARE(read(write(QStringLiteral("a.fds"), fds + body), QStringLiteral("nes")).crc32, crcOf(body));
+    QCOMPARE(read(write(QStringLiteral("b.fds"), ines + body), QStringLiteral("nes")).crc32, crcOf(ines + body));
+
+    // A SNES copier header is 512 bytes on a file 512 over a multiple of 1024.
+    const QByteArray rom = bytesOf(65536, 5);
+    const QByteArray copier = bytesOf(512, 9);
+    RomInfo snes = read(write(QStringLiteral("a.smc"), copier + rom), QStringLiteral("snes"));
+    QCOMPARE(snes.crc32, crcOf(rom));
+    QCOMPARE(snes.crc32WithHeader, crcOf(copier + rom));
+    snes = read(write(QStringLiteral("b.sfc"), rom), QStringLiteral("snes"));
+    QCOMPARE(snes.crc32, crcOf(rom));
+    QVERIFY(snes.crc32WithHeader.isEmpty());
+
+    // The others are hashed whole, a Genesis .bin included.
+    QCOMPARE(read(write(QStringLiteral("a.bin"), rom), QStringLiteral("genesis")).crc32, crcOf(rom));
+    QCOMPARE(read(write(QStringLiteral("a.md"), copier + rom), QStringLiteral("genesis")).crc32, crcOf(copier + rom));
+    QCOMPARE(read(write(QStringLiteral("a.gb"), rom), QStringLiteral("gb")).crc32, crcOf(rom));
+    QCOMPARE(read(write(QStringLiteral("a.gbc"), rom), QStringLiteral("gbc")).crc32, crcOf(rom));
+    QCOMPARE(read(write(QStringLiteral("a.sms"), rom), QStringLiteral("sms")).crc32, crcOf(rom));
+    QCOMPARE(read(write(QStringLiteral("a.gg"), rom), QStringLiteral("gamegear")).crc32, crcOf(rom));
+    // A platform doesn't read another's extension.
+    QVERIFY(read(write(QStringLiteral("c.gb"), rom), QStringLiteral("gbc")).crc32.isEmpty());
+    QVERIFY(!RomInfoReader::reads(QStringLiteral("dreamcast"), QStringLiteral("gdi")));
+}
+
+void RomInfoTest::zipsGiveTheirStoredChecksum()
+{
+    // One file: the CRC32 in the central directory, as the zip has it (not recomputed, so a header
+    // inside is still in it).
+    QCOMPARE(read(write(QStringLiteral("one.zip"), zip({{"Game (USA).nes", 0xDEADBEEFu}})), QStringLiteral("nes")).crc32,
+             QStringLiteral("DEADBEEF"));
+    QCOMPARE(read(write(QStringLiteral("dir.zip"), zip({{"folder/", 0}, {"folder/g.sfc", 0x00000A0Bu}})),
+                  QStringLiteral("snes")).crc32,
+             QStringLiteral("00000A0B"));
+    // Several files, no files, a damaged zip and a file that isn't one give no checksum.
+    QVERIFY(read(write(QStringLiteral("two.zip"), zip({{"a.nes", 1}, {"b.nes", 2}})), QStringLiteral("nes")).crc32.isEmpty());
+    QVERIFY(read(write(QStringLiteral("none.zip"), zip({})), QStringLiteral("nes")).crc32.isEmpty());
+    QVERIFY(read(write(QStringLiteral("bad.zip"), zip({{"a.nes", 1}}).left(30)), QStringLiteral("nes")).crc32.isEmpty());
+    QVERIFY(read(write(QStringLiteral("junk.zip"), QByteArray(100, 'x')), QStringLiteral("nes")).crc32.isEmpty());
+    // A 7z is not looked up, and a zip is only read on the cartridge platforms.
+    QVERIFY(!RomInfoReader::reads(QStringLiteral("nes"), QStringLiteral("7z")));
+    QVERIFY(!RomInfoReader::reads(QStringLiteral("gba"), QStringLiteral("zip")));
+}
+
+void RomInfoTest::arcadeKeyIsTheFileName()
+{
+    QVERIFY(RomInfoReader::reads(QStringLiteral("arcade"), QStringLiteral("zip")));
+    QVERIFY(RomInfoReader::reads(QStringLiteral("arcade"), QStringLiteral("7z")));
+    QCOMPARE(read(write(QStringLiteral("sf2.zip"), "PK"), QStringLiteral("arcade")).serial, QStringLiteral("sf2"));
+    QCOMPARE(read(write(QStringLiteral("sf2.7z"), "7z"), QStringLiteral("arcade")).serial, QStringLiteral("sf2"));
+    QVERIFY(read(write(QStringLiteral("sf2.zip"), "PK"), QStringLiteral("arcade")).crc32.isEmpty());
 }
 
 QTEST_APPLESS_MAIN(RomInfoTest)

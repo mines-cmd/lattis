@@ -205,4 +205,34 @@ inline QByteArray nsp(const QList<QByteArray> &names)
     put(d, 8, strings.size(), 4);
     return d + entries + strings;
 }
+
+// A stored zip whose central directory carries each file's CRC32. The CRC is given, not computed, so a test
+// can tell which value was read; a name ending in `/` is a folder entry.
+inline QByteArray zip(const QList<std::pair<QByteArray, quint32>> &files)
+{
+    QByteArray local;
+    QByteArray central;
+    for (const auto &[name, crc] : files) {
+        QByteArray header("PK\x03\x04", 4);
+        header.append(QByteArray(26, '\0'));
+        put(header, 14, crc, 4);
+        put(header, 26, name.size(), 2);
+        header.append(name);
+        QByteArray entry("PK\x01\x02", 4);
+        entry.append(QByteArray(42, '\0'));
+        put(entry, 16, crc, 4);
+        put(entry, 28, name.size(), 2);
+        put(entry, 42, local.size(), 4);
+        entry.append(name);
+        central.append(entry);
+        local.append(header);
+    }
+    QByteArray end("PK\x05\x06", 4);
+    end.append(QByteArray(18, '\0'));
+    put(end, 8, files.size(), 2);
+    put(end, 10, files.size(), 2);
+    put(end, 12, central.size(), 4);
+    put(end, 16, local.size(), 4);
+    return local + central + end;
+}
 }

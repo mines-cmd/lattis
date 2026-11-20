@@ -10,6 +10,10 @@
 Q_LOGGING_CATEGORY(lcRomDb, "launcher.romdb")
 
 namespace {
+const QSet<QString> kCrcPlatforms = {QStringLiteral("gba"),     QStringLiteral("n64"), QStringLiteral("nes"),
+                                     QStringLiteral("snes"),    QStringLiteral("genesis"), QStringLiteral("gb"),
+                                     QStringLiteral("gbc"),     QStringLiteral("sms"), QStringLiteral("gamegear")};
+
 // What a platform's database is searched by.
 QString keyOf(const QString &platform, const QString &fileTitleId, const RomInfo &info)
 {
@@ -17,10 +21,13 @@ QString keyOf(const QString &platform, const QString &fileTitleId, const RomInfo
         const QString id = (!fileTitleId.isEmpty() ? fileTitleId : info.titleId).toUpper();
         return id.endsWith(QLatin1String("000")) ? id : QString();
     }
-    if (platform == QLatin1String("gba") || platform == QLatin1String("n64"))
+    if (kCrcPlatforms.contains(platform))
         return info.crc32.toUpper();
     return info.serial.toUpper();
 }
+
+// What stands for "not a game" in a database: arcade.tsv names a BIOS or device zip this.
+constexpr QLatin1String kNotAGame("-");
 }
 
 RomDb::RomDb(RomDbOptions options) : m_options(std::move(options)) {}
@@ -30,9 +37,8 @@ QString RomDb::fileOf(const QString &platform)
     if (platform == QLatin1String("wii") || platform == QLatin1String("gamecube"))
         return QStringLiteral("wii");
     static const QSet<QString> kPlatforms = {QStringLiteral("switch"), QStringLiteral("3ds"), QStringLiteral("nds"),
-                                             QStringLiteral("ps1"), QStringLiteral("ps2"), QStringLiteral("gba"),
-                                             QStringLiteral("n64")};
-    return kPlatforms.contains(platform) ? platform : QString();
+                                             QStringLiteral("ps1"), QStringLiteral("ps2"), QStringLiteral("arcade")};
+    return kPlatforms.contains(platform) || kCrcPlatforms.contains(platform) ? platform : QString();
 }
 
 bool RomDb::covers(const QString &platform)
@@ -78,12 +84,24 @@ const QHash<QString, QString> &RomDb::database(const QString &platform)
     return m_loaded.insert(file, parse(bytes)).value();
 }
 
+bool RomDb::isNotAGame(const QString &platform, const QString &path)
+{
+    if (platform != QLatin1String("arcade"))
+        return false;
+    return database(platform).value(QFileInfo(path).completeBaseName().toUpper()) == kNotAGame;
+}
+
 void RomDb::name(const QString &platform, const QString &fileTitleId, RomInfo *info)
 {
     if (!info->title.isEmpty())
         return;
-    if (const QString key = keyOf(platform, fileTitleId, *info); !key.isEmpty()) {
-        const QString found = database(platform).value(key);
+    // A file with a header the list leaves out can match either way.
+    for (const QString &crc : {keyOf(platform, fileTitleId, *info), info->crc32WithHeader.toUpper()}) {
+        if (crc.isEmpty())
+            continue;
+        const QString found = database(platform).value(crc);
+        if (found == kNotAGame)
+            continue;
         if (const QString title = RomName::cleanName(found, platform); !title.isEmpty()) {
             info->title = title;
             info->fromDatabase = true;

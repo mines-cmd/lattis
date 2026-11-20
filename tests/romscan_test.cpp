@@ -40,6 +40,7 @@ private slots:
     void scanNamesNewGamesFromFilesOnce();
     void scanNamesNewGamesFromADatabase();
     void updateNamesUsesTheDatabase();
+    void scanNamesRetroPlatformsFromTheirDatabases();
     void scanRecordsSizes();
     void scanSkipsClaimedFiles();
     void scanTakesPlatformExtensions();
@@ -806,6 +807,81 @@ void RomScanTest::updateNamesUsesTheDatabase()
     QCOMPARE(update.entries.first().titleSource, QStringLiteral("database"));
     const QList<RomNameJob> again = romNameJobs(gbaP, presets(), update.entries, {{"emerald.gba", dir.path()}}, {});
     QVERIFY(!applyRomNames(update.entries, readRomNames("gba", again, {dir.filePath("db"), {}})).changed);
+}
+
+void RomScanTest::scanNamesRetroPlatformsFromTheirDatabases()
+{
+    QTemporaryDir dir;
+    const QString data = dir.filePath("data");
+    const QString db = dir.filePath("db");
+    const auto body = [](int seed) { return QByteArray(2048, char(seed)); };
+    const QByteArray ines = QByteArray("NES\x1a\x01\x01\x00\x00", 8) + QByteArray(8, '\0');
+    const QByteArray copier(512, '\x07');
+    const auto list = [&](const QString &file, const QStringList &lines) {
+        QVERIFY(writeBytes(db + '/' + file + ".tsv", lines.join('\n').toUtf8() + '\n'));
+    };
+
+    // NES: an iNES header is skipped, a zip's stored CRC covers it, a zip of several files has no name.
+    QVERIFY(writeBytes(data + "/roms/nes/mario.nes", ines + body(1)));
+    QVERIFY(writeBytes(data + "/roms/nes/zelda.zip", RomBytes::zip({{"z.nes", crc32Of(ines + body(2)).toUInt(nullptr, 16)}})));
+    QVERIFY(writeBytes(data + "/roms/nes/pack.zip", RomBytes::zip({{"a.nes", 1}, {"b.nes", 2}})));
+    QVERIFY(writeBytes(data + "/roms/nes/unknown.nes", ines + body(3)));
+    list("nes", {crc32Of(body(1)) + "\tSuper Mario Bros (World)", crc32Of(ines + body(2)) + "\tLegend of Zelda, The (USA)"});
+    // SNES: a copier header is skipped.
+    QVERIFY(writeBytes(data + "/roms/snes/metroid.smc", copier + body(4)));
+    list("snes", {crc32Of(body(4)) + "\tSuper Metroid (Japan, USA) (En,Ja)"});
+    QVERIFY(writeBytes(data + "/roms/genesis/sonic.bin", body(5)));
+    list("genesis", {crc32Of(body(5)) + "\tSonic The Hedgehog (USA, Europe)"});
+    QVERIFY(writeBytes(data + "/roms/gb/tetris.gb", body(6)));
+    list("gb", {crc32Of(body(6)) + "\tTetris (World) (Rev 1)"});
+    QVERIFY(writeBytes(data + "/roms/gbc/zelda.gbc", body(7)));
+    list("gbc", {crc32Of(body(7)) + "\tLegend of Zelda, The - Link's Awakening DX (USA, Europe)"});
+    QVERIFY(writeBytes(data + "/roms/sms/alex.sms", body(8)));
+    list("sms", {crc32Of(body(8)) + "\tAlex Kidd in Miracle World (USA, Europe)"});
+    QVERIFY(writeBytes(data + "/roms/gamegear/columns.gg", body(9)));
+    list("gamegear", {crc32Of(body(9)) + "\tColumns (USA, Europe)"});
+    // Arcade: named by the file's name, BIOS and device sets left out.
+    QVERIFY(writeBytes(data + "/roms/arcade/sf2.zip", "PK"));
+    QVERIFY(writeBytes(data + "/roms/arcade/sf2.7z", "7z"));
+    QVERIFY(writeBytes(data + "/roms/arcade/neogeo.zip", "PK"));
+    QVERIFY(writeBytes(data + "/roms/arcade/qsound.zip", "PK"));
+    QVERIFY(writeBytes(data + "/roms/arcade/mystery.zip", "PK"));
+    list("arcade", {"SF2\tStreet Fighter II: The World Warrior (World 910522)", "NEOGEO\t-", "QSOUND\t-"});
+    // Dreamcast: the file name.
+    QVERIFY(writeBytes(data + "/roms/dreamcast/Crazy Taxi.gdi", body(10)));
+
+    const auto platform = [](const char *id, const char *name, const char *emulator) {
+        return Platform{id, name, {}, {emulator}, {QStringLiteral("roms/%1").arg(id)}, 3};
+    };
+    const RomScanResult r = scanRomFolders({platform("nes", "NES", "punes"), platform("snes", "SNES", "snes9x"),
+                                            platform("genesis", "Genesis", "blastem"), platform("gb", "Game Boy", "mgba"),
+                                            platform("gbc", "Game Boy Color", "mgba"), platform("sms", "Master System", "ares"),
+                                            platform("gamegear", "Game Gear", "ares"), platform("arcade", "Arcade", "mame"),
+                                            platform("dreamcast", "Dreamcast", "flycast")},
+                                           presets(), {}, {}, data, dir.filePath("home"), {}, {db, {}});
+
+    const auto titles = [&](const char *id) {
+        QMap<QString, QString> out;
+        for (const RomEntry &e : r.indexes.value(QString::fromLatin1(id)))
+            out.insert(e.path, e.title + u'|' + e.titleSource);
+        return out;
+    };
+    QCOMPARE(titles("nes"), (QMap<QString, QString>{{"mario.nes", "Super Mario Bros|database"},
+                                                     {"zelda.zip", "The Legend of Zelda|database"},
+                                                     {"pack.zip", "Pack|filename"},
+                                                     {"unknown.nes", "Unknown|filename"}}));
+    QCOMPARE(titles("snes"), (QMap<QString, QString>{{"metroid.smc", "Super Metroid|database"}}));
+    QCOMPARE(titles("genesis"), (QMap<QString, QString>{{"sonic.bin", "Sonic The Hedgehog|database"}}));
+    QCOMPARE(titles("gb"), (QMap<QString, QString>{{"tetris.gb", "Tetris|database"}}));
+    QCOMPARE(titles("gbc"), (QMap<QString, QString>{{"zelda.gbc", "The Legend of Zelda: Link's Awakening DX|database"}}));
+    QCOMPARE(titles("sms"), (QMap<QString, QString>{{"alex.sms", "Alex Kidd in Miracle World|database"}}));
+    QCOMPARE(titles("gamegear"), (QMap<QString, QString>{{"columns.gg", "Columns|database"}}));
+    QCOMPARE(titles("arcade"), (QMap<QString, QString>{{"sf2.zip", "Street Fighter II: The World Warrior|database"},
+                                                        {"sf2.7z", "Street Fighter II: The World Warrior|database"},
+                                                        {"mystery.zip", "Mystery|filename"}}));
+    QCOMPARE(titles("dreamcast"), (QMap<QString, QString>{{"Crazy Taxi.gdi", "Crazy Taxi|filename"}}));
+    QVERIFY(anyContains(r.log, "arcade: left out 2 files that are not games"));
+    QVERIFY(!r.files.value("arcade").contains("neogeo.zip"));
 }
 
 void RomScanTest::scanRecordsSizes()

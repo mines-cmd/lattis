@@ -10,6 +10,8 @@ struct RomInfo
     // What a name database is searched by: the product or game code, the disc's serial, a file checksum.
     QString serial;
     QString crc32;
+    // The checksum of the whole file when `crc32` skips a header (iNES, a SNES copier's), tried second.
+    QString crc32WithHeader;
     // A name the file carries that a database's should replace (a GameCube disc's internal name).
     QString fallbackTitle;
     // IDs some emulators name screenshots by that no database is searched with: a PSP disc's DISC_ID, an N64 cartridge's header name.

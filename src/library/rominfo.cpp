@@ -25,6 +25,8 @@ constexpr qint64 kSfoMax = 1 << 16;
 constexpr qint64 kIsoSector = 2048;
 constexpr qint64 kCnfMax = 1 << 12;
 constexpr qint64 kCartridgeMax = qint64(64) << 20;
+constexpr qint64 kNesHeader = 16;
+constexpr qint64 kCopierHeader = 512;
 
 class Reader
 {
@@ -511,10 +513,10 @@ enum class ByteOrder { Native, SwapPairs, ReverseWords };
 // The checksum of the whole file, as the No-Intro lists have it: a Nintendo 64 ROM is the big-endian
 // `.z64` form, whichever way the dump is stored. Not counted in the 1 MB budget: only cartridges up
 // to 64 MB come here.
-QString fileCrc(const QString &path, ByteOrder order)
+QString fileCrc(const QString &path, ByteOrder order, qint64 skip = 0)
 {
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
+    if (!file.open(QIODevice::ReadOnly) || (skip > 0 && !file.seek(skip)))
         return {};
     quint32 crc = 0xFFFFFFFFu;
     while (!file.atEnd()) {
@@ -534,6 +536,55 @@ QString fileCrc(const QString &path, ByteOrder order)
         crc = crcOf(chunk, crc);
     }
     return QStringLiteral("%1").arg(~crc, 8, 16, QLatin1Char('0')).toUpper();
+}
+
+QString crcText(quint32 crc)
+{
+    return QStringLiteral("%1").arg(crc, 8, 16, QLatin1Char('0')).toUpper();
+}
+
+// The CRC32 a zip's central directory stores for its only file, without unpacking it; empty when the zip
+// holds none or several files (or is zip64 or damaged). The CRC covers the file as it was zipped, so a
+// header the lists leave out (a copier header) is still in it.
+QString zipCrc(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    // The end-of-central-directory record is 22 bytes plus a comment of up to 64 KB.
+    const qint64 tailSize = qMin<qint64>(file.size(), 22 + 0xFFFF);
+    if (!file.seek(file.size() - tailSize))
+        return {};
+    const QByteArray tail = file.read(tailSize);
+    const qsizetype end = tail.lastIndexOf("PK\x05\x06");
+    if (end < 0 || tail.size() - end < 22)
+        return {};
+    const quint32 entries = u16(tail, end + 10);
+    const quint32 size = u32(tail, end + 12);
+    const quint32 offset = u32(tail, end + 16);
+    if (entries == 0xFFFF || size == 0xFFFFFFFFu || offset == 0xFFFFFFFFu || size > kBudget)
+        return {};
+    if (!file.seek(offset))
+        return {};
+    const QByteArray directory = file.read(size);
+    QString crc;
+    int files = 0;
+    qsizetype at = 0;
+    for (quint32 i = 0; i < entries; ++i) {
+        if (at + 46 > directory.size() || directory.mid(at, 4) != "PK\x01\x02")
+            return {};
+        const quint32 nameLength = u16(directory, at + 28);
+        const quint32 skip = nameLength + u16(directory, at + 30) + u16(directory, at + 32);
+        if (at + 46 + qsizetype(nameLength) > directory.size())
+            return {};
+        if (nameLength == 0 || directory.at(at + 46 + nameLength - 1) != '/') {
+            if (++files > 1)
+                return {};
+            crc = crcText(u32(directory, at + 16));
+        }
+        at += 46 + skip;
+    }
+    return crc;
 }
 
 ByteOrder n64Order(const QByteArray &first)
@@ -622,6 +673,15 @@ const QHash<QString, QStringList> &formats()
         {QStringLiteral("gba"), {QStringLiteral("gba")}},
         {QStringLiteral("n64"), {QStringLiteral("z64"), QStringLiteral("v64"), QStringLiteral("n64")}},
         {QStringLiteral("switch"), {QStringLiteral("nsp")}},
+        {QStringLiteral("nes"), {QStringLiteral("nes"), QStringLiteral("fds"), QStringLiteral("zip")}},
+        {QStringLiteral("snes"), {QStringLiteral("sfc"), QStringLiteral("smc"), QStringLiteral("zip")}},
+        {QStringLiteral("genesis"), {QStringLiteral("md"), QStringLiteral("gen"), QStringLiteral("bin"),
+                                     QStringLiteral("zip")}},
+        {QStringLiteral("gb"), {QStringLiteral("gb"), QStringLiteral("zip")}},
+        {QStringLiteral("gbc"), {QStringLiteral("gbc"), QStringLiteral("zip")}},
+        {QStringLiteral("sms"), {QStringLiteral("sms"), QStringLiteral("zip")}},
+        {QStringLiteral("gamegear"), {QStringLiteral("gg"), QStringLiteral("zip")}},
+        {QStringLiteral("arcade"), {QStringLiteral("zip"), QStringLiteral("7z")}},
     };
     return kFormats;
 }
@@ -674,6 +734,20 @@ RomInfo read(const QString &path, const QString &platform)
         const ByteOrder order = n64Order(r.read(0, 4));
         out.crc32 = fileCrc(path, order);
         out.headerName = n64HeaderName(r.read(0, 0x34), order);
+    } else if (platform == QLatin1String("arcade")) {
+        // The machine name is the file's name; the list says what it is.
+        out.serial = QFileInfo(path).completeBaseName();
+    } else if (extension == QLatin1String("zip")) {
+        out.crc32 = zipCrc(path);
+    } else if (r.size() <= kCartridgeMax / 2) {
+        qint64 skip = 0;
+        if (platform == QLatin1String("nes"))
+            skip = r.read(0, 4) == (extension == QLatin1String("fds") ? "FDS\x1a" : "NES\x1a") ? kNesHeader : 0;
+        else if (platform == QLatin1String("snes") && r.size() % 1024 == kCopierHeader)
+            skip = kCopierHeader;
+        out.crc32 = fileCrc(path, ByteOrder::Native, skip);
+        if (skip > 0)
+            out.crc32WithHeader = fileCrc(path, ByteOrder::Native);
     }
     if (out.title.isEmpty() && out.serial.isEmpty() && out.crc32.isEmpty() && out.titleId.isEmpty()
         && out.fallbackTitle.isEmpty())

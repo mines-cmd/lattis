@@ -21,6 +21,8 @@ private slots:
     void parsesLines();
     void filesPerPlatform();
     void namesFromTheDatabase();
+    void retroPlatformsAreKeyedByChecksum();
+    void arcadeListsMachinesAndNonGames();
     void switchOnlyNamesBaseGames();
     void keepsTheNameTheFileGave();
     void fallsBackToTheDiscsOwnName();
@@ -45,6 +47,69 @@ void RomDbTest::filesPerPlatform()
     QVERIFY(RomDb::fileOf("psp").isEmpty());
     QVERIFY(!RomDb::covers("wiiu"));
     QVERIFY(RomDb::covers("gba"));
+    for (const char *id : {"nes", "snes", "genesis", "gb", "gbc", "sms", "gamegear", "arcade"})
+        QCOMPARE(RomDb::fileOf(id), QString::fromLatin1(id));
+    QVERIFY(!RomDb::covers("dreamcast"));
+}
+
+void RomDbTest::retroPlatformsAreKeyedByChecksum()
+{
+    QTemporaryDir dir;
+    write(dir.filePath("nes.tsv"), "00000001\tFoo (USA)\n00000002\tBar (Europe)\n");
+    write(dir.filePath("gb.tsv"), "00000003\tBaz (World)\n");
+    RomDb db({dir.path(), {}});
+
+    // The checksum without the header first, then the whole file's.
+    RomInfo plain;
+    plain.crc32 = "00000001";
+    plain.crc32WithHeader = "00000002";
+    db.name("nes", {}, &plain);
+    QCOMPARE(plain.title, QStringLiteral("Foo"));
+    RomInfo headered;
+    headered.crc32 = "0000FFFF";
+    headered.crc32WithHeader = "00000002";
+    db.name("nes", {}, &headered);
+    QCOMPARE(headered.title, QStringLiteral("Bar"));
+    QVERIFY(headered.fromDatabase);
+    RomInfo neither;
+    neither.crc32 = "0000FFFF";
+    neither.crc32WithHeader = "0000EEEE";
+    db.name("nes", {}, &neither);
+    QVERIFY(neither.title.isEmpty());
+
+    // Each platform searches its own list: a Game Boy's checksum isn't a NES's.
+    RomInfo gb;
+    gb.crc32 = "00000003";
+    db.name("nes", {}, &gb);
+    QVERIFY(gb.title.isEmpty());
+    db.name("gb", {}, &gb);
+    QCOMPARE(gb.title, QStringLiteral("Baz"));
+}
+
+void RomDbTest::arcadeListsMachinesAndNonGames()
+{
+    QTemporaryDir dir;
+    write(dir.filePath("arcade.tsv"), "SF2\tStreet Fighter II: The World Warrior (World 910522)\nNEOGEO\t-\n");
+    RomDb db({dir.path(), {}});
+
+    RomInfo sf2;
+    sf2.serial = "sf2";
+    db.name("arcade", {}, &sf2);
+    QCOMPARE(sf2.title, QStringLiteral("Street Fighter II: The World Warrior"));
+    // The marker is never a name.
+    RomInfo bios;
+    bios.serial = "neogeo";
+    db.name("arcade", {}, &bios);
+    QVERIFY(bios.title.isEmpty());
+
+    QVERIFY(db.isNotAGame("arcade", "neogeo.zip"));
+    QVERIFY(db.isNotAGame("arcade", "Sub folder/NeoGeo.ZIP"));
+    QVERIFY(!db.isNotAGame("arcade", "sf2.zip"));
+    QVERIFY(!db.isNotAGame("arcade", "unlisted.zip"));
+    // Only arcade has them, and without a database nothing is left out.
+    QVERIFY(!db.isNotAGame("nes", "neogeo.zip"));
+    RomDb without;
+    QVERIFY(!without.isNotAGame("arcade", "neogeo.zip"));
 }
 
 void RomDbTest::namesFromTheDatabase()

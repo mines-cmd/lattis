@@ -596,6 +596,7 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
         QHash<QString, qint64> sizes;
         QSet<QString> folders;
         int foldersScanned = 0;
+        int notGames = 0;
         for (const QString &written : platform.romFolders) {
             const QString folder = resolveRomFolder(written, dataDir, home);
             if (folders.contains(folder)) {
@@ -613,6 +614,10 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
             for (const auto &[path, size] : listRoms(folder, extensions, names)) {
                 if (claimed.contains(folder + u'/' + path))
                     continue;
+                if (romDb.isNotAGame(platform.id, path)) {
+                    ++notGames;
+                    continue;
+                }
                 if (files.contains(path)) {
                     out.warnings.append(QStringLiteral("%1: %2 is in two ROM folders of %3; using the one in %4")
                                             .arg(at, path, platform.name, files.value(path)));
@@ -673,6 +678,9 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
             line += QStringLiteral("; skipped %1 and %2")
                         .arg(plural(update.updates, "update", "updates"), plural(update.dlc, "DLC file", "DLC files"));
         out.log.append(line);
+        if (notGames > 0)
+            out.log.append(QStringLiteral("%1: left out %2 that are not games (BIOS or device sets)")
+                               .arg(platform.id, plural(notGames, "file", "files")));
         if (update.named > 0)
             out.log.append(QStringLiteral("%1: named %2 from their files")
                                .arg(platform.id, plural(update.named, "new game", "new games")));
