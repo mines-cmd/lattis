@@ -8,7 +8,7 @@
 # `emulators` lists emulator ids in order of preference (see emulators.reference.toml).
 # `rom_folders` are scanned for games at startup; a relative path is inside the data dir.
 
-offered = ["switch", "switch/ryubing", "switch/lichii", "switch-2", "switch-2/lichii", "3ds", "3ds/azahar", "wiiu", "wiiu/cemu", "wii", "wii/dolphin", "gamecube", "gamecube/dolphin", "n64", "n64/rmg", "nds", "nds/melonds", "gba", "gba/mgba", "ps4", "ps4/shadps4", "ps3", "ps3/rpcs3", "ps2", "ps2/pcsx2", "ps1", "ps1/duckstation", "psp", "psp/ppsspp"]
+offered = ["switch", "switch/eden", "switch/ryubing", "switch/lichii", "switch-2", "switch-2/lichii", "3ds", "3ds/azahar", "wiiu", "wiiu/cemu", "wii", "wii/dolphin", "gamecube", "gamecube/dolphin", "n64", "n64/rmg", "snes", "snes/snes9x", "nes", "nes/punes", "nds", "nds/melonds", "gba", "gba/mgba", "gbc", "gbc/mgba", "gb", "gb/mgba", "dreamcast", "dreamcast/flycast", "genesis", "genesis/blastem", "sms", "sms/ares", "gamegear", "gamegear/ares", "ps4", "ps4/shadps4", "ps3", "ps3/rpcs3", "ps2", "ps2/pcsx2", "ps1", "ps1/duckstation", "psp", "psp/ppsspp", "arcade", "arcade/mame"]
 
 [[platform]]
 id = "switch"

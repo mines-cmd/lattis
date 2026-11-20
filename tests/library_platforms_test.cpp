@@ -323,8 +323,9 @@ void LibraryPlatformsTest::defaultPlatforms()
                                                          "[[platform]]\nid = \"proton\"\nname = \"Proton\"\nicon = \"proton\"\n\n"
                                                          "[[platform]]\nid = \"linux\"\nname = \"Linux\"\nicon = \"linux\"\n\n");
     QCOMPARE(readFile(file), withSteam);
-    QCOMPARE(platformIds(*library), QStringList({"steam", "proton", "linux", "switch", "switch-2", "3ds", "wiiu", "wii", "gamecube",
-                                                 "n64", "nds", "gba", "ps4", "ps3", "ps2", "ps1", "psp"}));
+    QCOMPARE(platformIds(*library), QStringList({"steam", "proton", "linux", "switch", "switch-2", "3ds", "wiiu", "wii", "gamecube", "n64",
+                                                 "snes", "nes", "nds", "gba", "gbc", "gb", "dreamcast", "genesis", "sms", "gamegear", "ps4", "ps3", "ps2",
+                                                 "ps1", "psp", "arcade"}));
     // Every default platform's emulator is a preset. Steam, Proton and Linux need none.
     for (const QVariant &p : library->platformSettings()) {
         const QVariantMap platform = p.toMap();
@@ -346,7 +347,8 @@ void LibraryPlatformsTest::builtInPlatformsFollowTheUsersOrder()
               "[[platform]]\nid = \"steam\"\nname = \"Steam\"\n\n"
               "[[platform]]\nid = \"3ds\"\nname = \"3DS\"\nemulators = [\"azahar\"]\n");
     auto library = openLibrary();
-    QCOMPARE(platformIds(*library), QStringList({"switch", "switch-2", "steam", "proton", "linux", "3ds"})); // Switch 2 comes in after Switch, once
+    QCOMPARE(platformIds(*library), QStringList({"switch", "switch-2", "steam", "proton", "linux", "3ds", "snes", "nes", "gbc", "gb", "dreamcast",
+                                                 "genesis", "sms", "gamegear", "arcade"})); // Switch 2 comes in after Switch, once, and the retro ones after 3DS
 }
 
 void LibraryPlatformsTest::linuxPlatformAdded()

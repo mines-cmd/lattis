@@ -193,7 +193,7 @@ private slots:
                                        "update_asset = \"dist/x.AppImage\"\nupdate_prereleases = \"yes\"\n",
                                        file);
         QCOMPARE(bad.warnings.size(), 3);
-        QVERIFY2(anyContains(bad.warnings, QStringLiteral("update_source starts with github: or gitlab:")), qPrintable(dump(bad.warnings)));
+        QVERIFY2(anyContains(bad.warnings, QStringLiteral("update_source starts with github:, gitlab: or forgejo:")), qPrintable(dump(bad.warnings)));
         QVERIFY(anyContains(bad.warnings, QStringLiteral("update_asset is a file name pattern, without folders")));
         QVERIFY(anyContains(bad.warnings, QStringLiteral("update_prereleases must be true or false")));
         QVERIFY(bad.game.updateSource.isEmpty());

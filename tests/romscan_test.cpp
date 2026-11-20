@@ -918,7 +918,7 @@ void RomScanTest::scanWithoutEmulators()
     const RomScanResult r = scanRomFolders({platform}, presets(), {}, {}, dir.path(), dir.path());
     QVERIFY(r.files.isEmpty());
     QCOMPARE(r.warnings, QStringList{"library/platforms.toml:7: Switch has ROM folders but no emulators, so they "
-                                     "aren't scanned; add emulators = [\"lichii\", \"ryubing\"]"});
+                                     "aren't scanned; add emulators = [\"eden\", \"lichii\", \"ryubing\"]"});
 }
 
 void RomScanTest::resolveFolders()

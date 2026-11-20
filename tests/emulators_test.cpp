@@ -207,6 +207,7 @@ void EmulatorsTest::prereleasesKey()
     const QList<EmulatorDef> defs = mergeText(kCitra + R"(
 [[emulator]]
 id = "azahar"
+release = "github:azahar-emu/azahar"
 release_prereleases = "true"
 )",
                                               &warnings);
@@ -313,7 +314,7 @@ void EmulatorsTest::validation_data()
                                         << "saves_beside_rom are extensions without dots";
     QTest::newRow("relative path") << QByteArray("path = \"bin/ryujinx\"") << "path must be absolute";
     QTest::newRow("release scheme") << QByteArray("release = \"mgba-emu/mgba\"")
-                                    << "release starts with github: or gitlab:";
+                                    << "release starts with github:, gitlab: or forgejo:";
     QTest::newRow("release github") << QByteArray("release = \"github:mgba-emu\"")
                                     << "release is \"github:<owner>/<repo>\"";
     QTest::newRow("release gitlab") << QByteArray("release = \"gitlab:git.example.org/project\"")
@@ -380,7 +381,7 @@ platform_extensions = { sms = ["sms", ".SMD"], gamegear = ["gg"] }
     QCOMPARE(twinDef->extensionsFor("gamegear"), QStringList{"gg"});
     // A platform not listed uses extensions, which is the union.
     QCOMPARE(twinDef->extensionsFor("other"), twinDef->extensions);
-    QCOMPARE(twinDef->extensions, (QStringList{"sms", "smd", "gg"}));
+    QCOMPARE(twinDef->extensions, (QStringList{"sms", "gg", "smd"}));
 
     // Printed sorted by platform, and read back as it was.
     const QString text = Emulators::referenceText(defs);
@@ -573,7 +574,7 @@ void EmulatorsTest::presetFolders()
     const QStringList besideRom = {QStringLiteral("melonds"), QStringLiteral("mgba"), QStringLiteral("snes9x"), QStringLiteral("ares")};
     // Those whose portable folder depends on the working folder, or that have none, have no portable entry.
     const QStringList notPortable = {QStringLiteral("azahar"), QStringLiteral("ppsspp"), QStringLiteral("rmg"), QStringLiteral("lichii"),
-                                     QStringLiteral("shadps4"), QStringLiteral("punes"), QStringLiteral("blastem"),
+                                     QStringLiteral("shadps4"), QStringLiteral("eden"), QStringLiteral("punes"), QStringLiteral("blastem"),
                                      QStringLiteral("flycast"), QStringLiteral("mame")};
     for (const EmulatorDef &d : defs) {
         QCOMPARE(d.savesBesideRom.isEmpty(), !besideRom.contains(d.id));
@@ -596,6 +597,7 @@ void EmulatorsTest::presetFolders()
                 QVERIFY2(!it.value().isEmpty(), qPrintable(d.id));
                 // Each type lists the same things, in the same order.
                 QCOMPARE(it.value().size(), table->first().size());
+                const QStringList &reference = table->contains(QStringLiteral("native")) ? table->value(QStringLiteral("native")) : table->first();
                 for (const QString &path : it.value()) {
                     const QString what = d.id + u' ' + it.key() + u' ' + path;
                     if (it.key() == QLatin1String("native"))
@@ -605,7 +607,7 @@ void EmulatorsTest::presetFolders()
                     else
                         QVERIFY2(!path.startsWith(u'/') && !path.startsWith(u'~'), qPrintable(what));
                     // The same place under each root.
-                    QVERIFY2(path.endsWith(table->value(QStringLiteral("native")).at(it.value().indexOf(path))
+                    QVERIFY2(path.endsWith(reference.at(it.value().indexOf(path))
                                                .section(u'/', -1)),
                              qPrintable(what));
                 }

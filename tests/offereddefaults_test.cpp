@@ -215,7 +215,7 @@ void OfferedDefaultsTest::oldFileGetsTheRetroPlatformsOnce()
         QVERIFY(offeredOf(r.text).contains(retro.at(i)));
         QVERIFY(offeredOf(r.text).contains(retro.at(i) + u'/' + emulators.at(i)));
     }
-    QCOMPARE(added.size(), 10);
+    QCOMPARE(added.size(), 11); // Lichii on Switch, Switch 2 and the nine
 
     const TomlPatch::Result again = OfferedDefaults::apply(r.text, resourceDefaults(), OfferedDefaults::bootstrap());
     QVERIFY(again.ok);

@@ -122,8 +122,8 @@ void EmulatorScreenshotsTest::presetsParse()
             withShots.append(e.id);
     }
     withShots.sort();
-    QCOMPARE(withShots, (QStringList{"azahar", "cemu", "dolphin", "duckstation", "lichii", "mgba", "pcsx2", "ppsspp", "rmg",
-                                     "rpcs3", "ryubing", "shadps4"}));
+    QCOMPARE(withShots, (QStringList{"ares", "azahar", "blastem", "cemu", "dolphin", "duckstation", "eden", "flycast", "lichii", "mame", "mgba", "pcsx2", "ppsspp", "punes", "rmg",
+                                     "rpcs3", "ryubing", "shadps4", "snes9x"}));
     QVERIFY(emulator(QStringLiteral("melonds")).screenshots.isEmpty());
 }
 
