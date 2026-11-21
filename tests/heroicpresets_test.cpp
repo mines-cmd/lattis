@@ -57,7 +57,7 @@ private slots:
         QCOMPARE(s.wrappers.size(), 1);
         QCOMPARE(s.wrappers.at(0).toObject().value(QStringLiteral("exe")).toString(), QStringLiteral("gamescope"));
         QCOMPARE(s.wrappers.at(0).toObject().value(QStringLiteral("args")).toString(), QStringLiteral("-f --"));
-        QCOMPARE(s.launcherArgs, QStringLiteral("-testarg -windowed"));
+        QCOMPARE(s.launcherArgs, QStringLiteral("-windowed -testarg"));
         QVERIFY(HeroicPresets::isOn(s, own()));
     }
 

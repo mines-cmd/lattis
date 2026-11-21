@@ -32,21 +32,21 @@ def unlinked(result, dirs):
 
 SCENARIOS = [
     Scenario("Unlink all waits for Save, shows the unsaved dot's note and writes once",
-             [(select("Hades") + COPIES + "expect-has Together\nclick Unlink all\nwait 300\n"
-               "expect-has The combined numbers update\nexpect-not-has Together\n"
+             [(select("Hades") + COPIES + "expect-has Together\nclick-first Make main or unlink\nwait 300\nclick Unlink all\nwait 300\n"
+               "expect-has Unlinks when you save\nexpect Unsaved changes in Copies\n"
                "click Save\nwait 800\nexpect-not Properties\n", unlinked),
               (select("Hades") + COPIES + "expect-has Copies of one game from different\n"
                "click Cancel\nwait 300\n", None)],
              with_linked),
     Scenario("Cancel drops a pending change",
-             [(select("Hades") + COPIES + "click Unlink all\nwait 300\nclick Cancel\nwait 400\n", None),
+             [(select("Hades") + COPIES + "click-first Make main or unlink\nwait 300\nclick Unlink all\nwait 300\nclick Cancel\nwait 400\n", None),
               (select("Hades") + COPIES + "expect-has Together\nclick Cancel\nwait 300\n", None)],
              with_linked),
     Scenario("Choose games links a copy with another title, and Open asks before dropping it",
-             [(select("Hades") + COPIES + "click Choose games…\nwait 400\nexpect-has Choose games to link\n"
-               "type celeste\nwait 300\nclick Celeste\nwait 200\nclick Link\nwait 500\nexpect New\n"
-               "click Open\nwait 400\nexpect-has Discard your changes\nclick Keep editing\nwait 300\nexpect New\n"
-               "click Open\nwait 400\nclick Discard and open\nwait 600\nexpect Properties\nexpect-not New\n"
+             [(select("Hades") + COPIES + "click Link another copy…\nwait 400\nexpect-has Choose games to link\n"
+               "type celeste\nwait 300\nclick Celeste\nwait 200\nclick Link\nwait 500\nexpect-has · New\n"
+               "click Open this copy's Properties\nwait 400\nexpect-has Discard your changes\nclick Keep editing\nwait 300\nexpect-has · New\n"
+               "click Open this copy's Properties\nwait 400\nclick Discard and open\nwait 600\nexpect Properties\nexpect-not-has · New\n"
                "click Cancel\nwait 300\n", None)],
              with_linked),
 ]

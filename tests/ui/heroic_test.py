@@ -96,13 +96,13 @@ SCENARIOS = [
              [(select("A Short Hike") + "click Launch\nwait 2500\nexpect Launch\nexpect-not Close\n",
                lambda r, d: (called_with("--no-gui heroic://launch?appName=HikeApp&runner=legendary&gui=false")(r, d) or [])
                + (adds_the_growth(r, d) or []))], demo_with_heroic),
-    Scenario("a game that isn't installed has Install, which opens Heroic and doesn't start a session",
-             [(select_hidden("Fez") + "expect Install\nexpect-not Launch\nclick Install\nwait 800\nexpect Fez copied; paste it in Heroic's search\n"
-               "expect-not Close\n",
-               called_with(""))], demo_with_heroic),
-    Scenario("Properties shows where it's installed and Open Heroic, with no launch settings",
+    Scenario("a game that isn't installed has Install, which asks where to put it and doesn't start a session",
+             [(select_hidden("Fez") + "expect Install\nexpect-not Launch\nclick Install\nwait 800\nexpect Install Fez\nexpect-not Close\n"
+               "click Cancel\nwait 300\n",
+               called_with())], demo_with_heroic),
+    Scenario("Properties shows where it's installed and Open Heroic, with Heroic's launch settings",
              [(select("A Short Hike") + "key Alt+Return\nexpect Properties\nclick Launch\nwait 300\n"
-               "expect-has /games/AShortHike\nexpect Open Heroic\nexpect-not Proton version\nexpect-not Launch options\n"
+               "expect-has /games/AShortHike\nexpect Open Heroic\nexpect-not Proton version\nexpect Wine version\nexpect Launch options\n"
                "click Open Heroic\nwait 500\nclick Cancel\nexpect-not Properties\n", called_with(""))],
              demo_with_heroic),
     Scenario("play time can be edited in Properties",

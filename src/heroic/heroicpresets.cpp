@@ -34,8 +34,8 @@ bool isWrapper(const QJsonValue &entry, const SteamPreset &preset)
         && o.value(QStringLiteral("args")).toString().trimmed() == wrapperArgs(preset);
 }
 
-// A preset's arguments go after Heroic's launcher arguments, which LaunchOptions handles as the words after
-// %command%.
+// Heroic's launcher arguments are the words after %command%, which LaunchOptions edits as in a Steam launch
+// option: a preset's arguments go right after %command%, before the user's own.
 QString asOptions(const QString &launcherArgs)
 {
     return launcherArgs.trimmed().isEmpty() ? kCommand : kCommand + u' ' + launcherArgs.trimmed();

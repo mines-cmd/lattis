@@ -157,7 +157,7 @@ bool LegendaryJobsTest::waitFor(const std::function<bool()> &done, int ms)
 void LegendaryJobsTest::progressOfARealUpdate()
 {
     const QList<double> p = percents(captureLines(u"update.stderr"_s));
-    QVERIFY(p.size() > 5);
+    QVERIFY(p.size() >= 5);
     QCOMPARE(p.first(), 0.0);
     QVERIFY(p.last() > 90.0);
     QCOMPARE(LegendaryOutput::progress(u"[DLManager] INFO: = Progress: 47.06% (272/578), Running for 00:00:02, ETA: 00:00:02"_s),

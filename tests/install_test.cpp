@@ -1681,7 +1681,7 @@ void InstallTest::installerUpdatesGames()
     QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("2.1"), 5000);
 
     // A download that fails its checksum leaves the file and the record alone.
-    QVERIFY(write(h.fixtures + "/Hero-2.1.AppImage", "bad bytes"));
+    QVERIFY(write(h.fixtures + "/Hero-2.1.AppImage", "bad bytes!!"));
     installer.updateGame("hero");
     QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 5000);
     QVERIFY(row().value("error").toString().contains("checksum"));
