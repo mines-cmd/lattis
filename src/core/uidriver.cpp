@@ -111,6 +111,15 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
+    if (command.name == u"click-first") {
+        QQuickItem *item = find(command.argument, false, true);
+        if (!item)
+            return false;
+        click(item);
+        qInfo().noquote() << "uitest: click-first" << command.argument;
+        settle();
+        return true;
+    }
     if (command.name == u"shift-click") {
         QQuickItem *item = find(command.argument);
         if (!item)
@@ -210,15 +219,19 @@ QQuickWindow *UiDriver::keyTarget() const
     return windows().last();
 }
 
-QQuickItem *UiDriver::find(const QString &text, bool contains) const
+QQuickItem *UiDriver::find(const QString &text, bool contains, bool first) const
 {
     QQuickItem *found = nullptr;
     // The last match is the one drawn on top; a window opened later is above the main one.
     for (QQuickWindow *window : windows()) {
         collect(window->contentItem(), [&](QQuickItem *item) {
-            const QVariant value = item->property("text");
-            if (value.typeId() == QMetaType::QString
-                && (contains ? value.toString().contains(text) : value.toString() == text) && shownOnScreen(item))
+            // An icon button has no text; its tip names it, and a disabled one can't be clicked.
+            const auto matches = [&](const char *name) {
+                const QVariant value = item->property(name);
+                return value.typeId() == QMetaType::QString
+                    && (contains ? value.toString().contains(text) : value.toString() == text) && shownOnScreen(item);
+            };
+            if (!(first && found) && (matches("text") || (matches("tip") && item->isEnabled())))
                 found = item;
         });
     }

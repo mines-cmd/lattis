@@ -151,7 +151,8 @@ Only created when `LATTIS_UI_SCRIPT=<file>` is set (main.cpp); it starts after t
 | Command | Does |
 |---|---|
 | `wait <ms>` | Pauses. |
-| `click <text>` | Mouse move, press and release at the center of the visible item whose `text` is exactly `<text>` (the one drawn last when several match). |
+| `click <text>` | Mouse move, press and release at the center of the visible item whose `text`, or `tip` (an icon button has no text), is exactly `<text>` (the one drawn last when several match). |
+| `click-first <text>` | The same, on the first match in the tree instead of the last: the first of several rows' identical buttons. |
 | `shift-click <text>` | The same with Shift held (the modifier is on the mouse events themselves, so a shift-click range in a list of checks can be tested). |
 | `rightclick <text>` | The same with the right button, for a right-click menu. |
 | `drag <text> by <dx> <dy>` | Presses on the center of that item, moves the pointer `<dx> <dy>` pixels (a short first move gets past the drag distance) and releases, all at once: no timer runs while the pointer is down, so a drag that scrolls the page at its edge can't be tested. |

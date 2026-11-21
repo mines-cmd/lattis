@@ -34,7 +34,7 @@ private:
     QList<QQuickWindow *> windows() const;
     QQuickWindow *keyTarget() const;
     QQuickItem *checkableBeside(const QString &text) const;
-    QQuickItem *find(const QString &text, bool contains = false) const;
+    QQuickItem *find(const QString &text, bool contains = false, bool first = false) const;
     QStringList visibleTexts() const;
     void click(QQuickItem *item, Qt::MouseButton button = Qt::LeftButton, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void drag(QQuickItem *item, const QPointF &offset);
