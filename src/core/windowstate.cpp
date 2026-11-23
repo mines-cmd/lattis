@@ -1,5 +1,7 @@
 #include "windowstate.h"
 
+#include "launchcommand.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -150,6 +152,7 @@ int WindowState::compositorRounding()
         if (qEnvironmentVariableIsEmpty("HYPRLAND_INSTANCE_SIGNATURE"))
             return -1;
         QProcess hyprctl;
+        hyprctl.setProcessEnvironment(childEnvironment());
         hyprctl.start(QStringLiteral("hyprctl"), {QStringLiteral("-j"), QStringLiteral("getoption"), QStringLiteral("decoration:rounding")});
         if (!hyprctl.waitForFinished(500) || hyprctl.exitCode() != 0)
             return -1;

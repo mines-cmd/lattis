@@ -1,5 +1,7 @@
 #include "legendaryjobs.h"
 
+#include "launchcommand.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -205,7 +207,7 @@ void LegendaryJobs::queryInfo(const QString &appName)
     }
     m_infoRunning.insert(appName);
     auto *process = new QProcess(this);
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    QProcessEnvironment env = childEnvironment();
     if (!tool.configPath.isEmpty())
         env.insert(QStringLiteral("LEGENDARY_CONFIG_PATH"), tool.configPath);
     process->setProcessEnvironment(env);
@@ -307,7 +309,7 @@ void LegendaryJobs::startNext()
         }
 
         m_process = new QProcess(this);
-        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        QProcessEnvironment env = childEnvironment();
         if (!tool.configPath.isEmpty())
             env.insert(QStringLiteral("LEGENDARY_CONFIG_PATH"), tool.configPath);
         m_process->setProcessEnvironment(env);

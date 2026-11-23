@@ -209,7 +209,7 @@ ColumnLayout {
                     linkColor: Theme.gameEditor.linkColor
                     text: qsTr("Fetches the games you own, not the family's, without signing in. Your Game details "
                                + "must be public. <a href=\"%1\">Get a key</a>").arg(SteamLibrary.keyUrl())
-                    onLinkActivated: link => Qt.openUrlExternally(link)
+                    onLinkActivated: link => GameRunner.openUrl(link)
                 }
             }
         }

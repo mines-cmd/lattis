@@ -24,7 +24,6 @@
 #include "tomlpatch.h"
 #include "videothumbnails.h"
 
-#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QImageReader>
@@ -4286,7 +4285,7 @@ bool Library::clipExists(const QString &videoDir) const
 
 bool Library::showClipFolder(const QString &folder)
 {
-    return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
+    return ::openUrl(QUrl::fromLocalFile(folder));
 }
 
 bool Library::showSteamMediaFolder(const QString &id)
@@ -4299,7 +4298,7 @@ bool Library::showSteamMediaFolder(const QString &id)
         return false;
     const QString screenshots = QStringLiteral("%1/760/remote/%2/screenshots").arg(user).arg(appId);
     const QString folder = QFileInfo::exists(screenshots) ? screenshots : user + QStringLiteral("/gamerecordings");
-    return QFileInfo::exists(folder) && QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
+    return QFileInfo::exists(folder) && ::openUrl(QUrl::fromLocalFile(folder));
 }
 
 QString Library::shortPlayTime(int minutes) const

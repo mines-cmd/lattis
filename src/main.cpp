@@ -98,8 +98,10 @@ int main(int argc, char *argv[])
     // file picker the user configured for their desktop. A global gtk3 theme, set for GTK-flavoured
     // Qt apps, would force the GNOME picker, so it is overridden too.
     const QByteArray platformTheme = qgetenv("QT_QPA_PLATFORMTHEME");
-    if (platformTheme.isEmpty() || platformTheme == "gtk3")
+    if (platformTheme.isEmpty() || platformTheme == "gtk3") {
         qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+        restorePlatformTheme(QString::fromLocal8Bit(platformTheme));
+    }
 
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("lattis"));

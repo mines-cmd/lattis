@@ -1,3 +1,4 @@
+#include "appimageenv.h"
 #include "steammedia.h"
 
 #include <QDir>
@@ -40,6 +41,7 @@ private slots:
     void movedRecordingFolder();
     void remuxMakesOneFile();
     void remuxWithoutFfmpeg();
+    void remuxKeepsNoAppImageEnvironment();
     void screenshotsNewestFirst();
     void screenshotsOfNoOne();
     void listAllOnePass();
@@ -161,6 +163,23 @@ void SteamMediaTest::remuxMakesOneFile()
     QVERIFY2(text.contains(u"codec_type=video"_s) && text.contains(u"codec_type=audio"_s), qPrintable(text));
     const double seconds = text.section(u"duration="_s, 1).section(u'\n', 0, 0).toDouble();
     QVERIFY2(seconds > 3.5 && seconds < 4.5, qPrintable(text));
+}
+
+void SteamMediaTest::remuxKeepsNoAppImageEnvironment()
+{
+    const AppImageEnv appImage;
+    QTemporaryDir dir;
+    const QString dump = dir.filePath(u"env.txt"_s);
+    const QString ffmpeg = dir.filePath(u"ffmpeg"_s);
+    QFile f(ffmpeg);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write(AppImageEnv::dumpScript(dump, "for last; do :; done\n: > \"$last\"\n"));
+    f.close();
+    QVERIFY(f.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+
+    const SteamMedia::Clip clip = SteamMedia::listClips(fakeInstall(), 8000).first();
+    QCOMPARE(SteamMedia::remuxClip(clip, ffmpeg, dir.filePath(u"clip.mp4"_s)), QString());
+    AppImageEnv::noBundleIn(dump);
 }
 
 void SteamMediaTest::remuxWithoutFfmpeg()

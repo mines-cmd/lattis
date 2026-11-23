@@ -36,7 +36,7 @@ ColumnLayout {
             ToolTip.visible: hovered
             ToolTip.delay: Theme.tooltip.delay
             ToolTip.text: helpTip !== "" ? helpTip : helpUrl
-            onClicked: Qt.openUrlExternally(helpUrl)
+            onClicked: GameRunner.openUrl(helpUrl)
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             background: null
             contentItem: Row {

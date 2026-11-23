@@ -36,7 +36,7 @@ Item {
         color: root.labelColor
         textFormat: Text.StyledText
         linkColor: root.linkColor
-        onLinkActivated: link => Qt.openUrlExternally(link)
+        onLinkActivated: link => GameRunner.openUrl(link)
 
         HoverHandler {
             enabled: parent.hoveredLink !== ""

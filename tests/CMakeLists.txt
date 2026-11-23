@@ -152,6 +152,7 @@ lattis_test(general_test OFFSCREEN
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(windowstate_test OFFSCREEN
     SOURCES ../src/core/windowstate.h ../src/core/windowstate.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
 # The fake Secret Service needs a bus of its own whose config has no activatable services, so nothing here
 # can reach (or start) the real keyring.
@@ -314,6 +315,7 @@ lattis_test(librarycache_test OFFSCREEN
             ../src/core/apppaths.h ../src/core/apppaths.cpp
             ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
             ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${LIBRARY_FILE_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus)
@@ -355,6 +357,7 @@ lattis_test(vdf_test
     DEFINES ${VDF_DATA})
 lattis_test(legendaryjobs_test
     SOURCES ../src/heroic/legendaryjobs.h ../src/heroic/legendaryjobs.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
     LIBS Qt6::Core Qt6::Qml
     DEFINES "LEGENDARY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/legendary\"")
 lattis_test(epicinstall_test
@@ -369,6 +372,7 @@ lattis_test(heroic_test
 lattis_test(steam_test OFFSCREEN
     SOURCES ../src/steam/steamsync.h ../src/steam/steamsync.cpp
             ../src/steam/steamart.h ../src/steam/steamart.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
             ../src/steam/steammedia.h ../src/steam/steammedia.cpp
             ${STEAM_SOURCES}
     LIBS Qt6::Gui tomlplusplus::tomlplusplus
@@ -383,6 +387,7 @@ lattis_test(steamstatus_test
     LIBS Qt6::Qml)
 lattis_test(steammedia_test
     SOURCES ../src/steam/steammedia.h ../src/steam/steammedia.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
             ${STEAM_SOURCES}
     LIBS tomlplusplus::tomlplusplus
     DEFINES ${STEAM_DATA})
@@ -456,6 +461,7 @@ lattis_test(install_test
     SOURCES fakehttpserver.h
             ../src/install/appimageinstall.h ../src/install/appimageinstall.cpp
             ../src/install/desktopentry.h ../src/install/desktopentry.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
             ../src/install/installrecord.h ../src/install/installrecord.cpp
             ../src/install/flatpakinstall.h ../src/install/flatpakinstall.cpp
             ../src/install/installer.h ../src/install/installer.cpp

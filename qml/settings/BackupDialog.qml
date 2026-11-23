@@ -576,7 +576,7 @@ AppDialog {
         SettingsButton {
             visible: root.done !== null && !root.busy
             text: qsTr("Show")
-            onClicked: Qt.openUrlExternally(root.done.folder)
+            onClicked: GameRunner.openUrl(root.done.folder)
         },
         SettingsButton {
             text: root.busy ? qsTr("Cancel") : root.done !== null ? qsTr("Close") : qsTr("Cancel")

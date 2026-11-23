@@ -80,7 +80,23 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 
 ## The environment
 
-`programEnvironment()` builds the environment for a launched program. It starts from the launcher's own environment, then applies the command's variables on top. When the launcher runs as an AppImage, `programEnvironment()` strips what AppImage adds — `APPDIR`, `APPIMAGE`, `ARGV0`, `OWD`, and the folders inside `APPDIR` that AppImage injected into `PATH`, `LD_LIBRARY_PATH`, `QT_PLUGIN_PATH` and similar — so games and emulators don't accidentally load the launcher's Qt or libraries.
+`programEnvironment()` builds the environment for a launched program. It starts from the launcher's own environment, then applies the command's variables on top. When the launcher runs as an AppImage, `programEnvironment()` strips what AppImage adds — `APPDIR`, `APPIMAGE`, `ARGV0`, `OWD`, and the folders inside `APPDIR` that AppImage injected into `PATH`, `LD_LIBRARY_PATH`, `QT_PLUGIN_PATH` and similar — so games and emulators don't accidentally load the launcher's Qt or libraries. It also takes out `QT_QPA_PLATFORMTHEME` when `main()` set it to `xdgdesktopportal` itself (the launcher's file dialogs use the portal), and puts back the value the user had, through `restorePlatformTheme()`; a child never gets a theme the launcher chose for itself.
+
+**The rule: every child goes through `programEnvironment`.** Nothing the launcher starts inherits its environment as it is. `childEnvironment()` is `programEnvironment()` of the launcher's own environment as a `QProcessEnvironment`, for `QProcess::setProcessEnvironment`. The starters:
+
+| Starter | Program |
+|---|---|
+| `DetachedProcess` | games, emulators and mod managers |
+| `GameRunner::runSteam`, `openFile` | `steam`, the terminal editor |
+| `GameRunner` (Hyprland focus) and `WindowState::compositorRounding` | `hyprctl` |
+| `LegendaryJobs` (jobs and `legendary info`) | Legendary |
+| `SteamMedia::remuxClip` | `ffmpeg` |
+| `FfmpegTool` and `FlatpakJob` (`main()` hands them `programEnvironment()` of the launcher's own) | the ffmpeg check, `flatpak` |
+| `DesktopEntry` | `--appimage-extract` |
+| `Restart` | the new launcher |
+| `openUrl()` | `xdg-open` |
+
+`openUrl(url)` runs `xdg-open <url>` detached with the cleaned environment. It is the one way the app opens a folder, a file or a web link: `QDesktopServices::openUrl` and `Qt.openUrlExternally` start `xdg-open` with the launcher's own environment, so a file manager started from the AppImage would load the bundle's Qt. QML calls `GameRunner.openUrl(url)`; `tools/ui-lint.py` fails on `Qt.openUrlExternally`. A new starter uses `childEnvironment()` or `programEnvironment()`, and its test runs a fake program that dumps its environment (`tests/appimageenv.h`).
 
 ## Settings
 
@@ -127,6 +143,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `openSaveFolder(gameId)` | `string` | Opens the first own save location that exists; else, for a game that isn't a ROM, asks `setFindSaves()`'s function (main.cpp: `GameSaves::findPaths`) for the saves a backup would find and opens the first one's folder once they're found, falling back to the guessed folder; a ROM game opens the guessed folder at once. Returns the toast or `""`; a failure after the search arrives through `message` |
 | `folderExists(path)` | `bool` | Whether `path` (`~` expanded) is a folder; Properties uses it to dim a media folder that isn't found |
 | `shownPath(path)` | `string` | The path with `~` for the home folder, as written to the game files |
+| `openUrl(url)` | `bool` | Open a link, folder or file with `xdg-open` (the environment rule above); false when `xdg-open` can't start |
 | `openDataFolder()` | `string` | Open the data dir in the file manager |
 | `openFile(path)` | `string` | Open a file in its default app; a terminal editor gets a terminal window. The path on failure |
 | `uninstall(gameId)` | `string` | Uninstall a Steam game through Steam |

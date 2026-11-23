@@ -26,7 +26,7 @@ RowLayout {
             visible: text !== ""
             Layout.fillWidth: true
             linkColor: Theme.gameEditor.linkColor
-            onLinkActivated: link => Qt.openUrlExternally(link)
+            onLinkActivated: link => GameRunner.openUrl(link)
         }
     }
     RowLayout {

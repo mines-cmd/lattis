@@ -1,5 +1,6 @@
 #include "steammedia.h"
 
+#include "launchcommand.h"
 #include "localtime.h"
 #include "vdf.h"
 
@@ -275,6 +276,7 @@ QString remuxClip(const Clip &clip,const QString &ffmpeg, const QString &outPath
     args << u"-c"_s << u"copy"_s << u"-f"_s << u"mp4"_s << outPath;
 
     QProcess process;
+    process.setProcessEnvironment(childEnvironment());
     process.start(ffmpeg, args);
     const bool finished = process.waitForFinished(60000);
     cleanUp();

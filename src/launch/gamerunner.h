@@ -14,6 +14,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
+#include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
 #include <functional>
@@ -61,6 +62,7 @@ public:
     Q_INVOKABLE QString saveFolder(const QString &gameId) const;
     Q_INVOKABLE QString openSaveFolder(const QString &gameId);
     Q_INVOKABLE QString shownPath(const QString &path) const;
+    Q_INVOKABLE bool openUrl(const QUrl &url) const;
     Q_INVOKABLE QString openDataFolder();
     Q_INVOKABLE QString openPath(const QString &path);
     Q_INVOKABLE bool folderExists(const QString &path) const;

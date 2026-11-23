@@ -331,7 +331,7 @@ Item {
                         SettingsButton {
                             visible: AppUpdate.hasUpdate && AppUpdate.canReplace
                             text: qsTr("Release page")
-                            onClicked: Qt.openUrlExternally(AppUpdate.releasePage)
+                            onClicked: GameRunner.openUrl(AppUpdate.releasePage)
                         }
                         SettingsButton {
                             visible: AppUpdate.hasUpdate || AppUpdate.state === "ready"

@@ -37,7 +37,7 @@ SettingsCard {
         SteamLibrary.signOut()
         message(qsTr("Signed out. Steam still lists the session until you remove it there."), {
             text: qsTr("Open Steam's list"),
-            run: () => Qt.openUrlExternally(SteamLibrary.devicesUrl())
+            run: () => GameRunner.openUrl(SteamLibrary.devicesUrl())
         })
     }
 
@@ -77,7 +77,7 @@ SettingsCard {
                 visible: text !== ""
                 Layout.fillWidth: true
                 linkColor: Theme.gameEditor.linkColor
-                onLinkActivated: link => Qt.openUrlExternally(link)
+                onLinkActivated: link => GameRunner.openUrl(link)
             }
         }
         RowLayout {
@@ -141,7 +141,7 @@ SettingsCard {
         SettingsButton {
             visible: SteamLibrary.messageKind === "private"
             text: qsTr("Open privacy settings")
-            onClicked: Qt.openUrlExternally(SteamLibrary.privacyUrl())
+            onClicked: GameRunner.openUrl(SteamLibrary.privacyUrl())
         }
     }
 
@@ -179,7 +179,7 @@ SettingsCard {
             text: qsTr("Fetches the games you own, not the family's, without signing in. Your Game details must be "
                        + "public. The key also finds which friends play a game; friends who hide their Game details "
                        + "are simply missing. <a href=\"%1\">Get a key</a>").arg(SteamLibrary.keyUrl())
-            onLinkActivated: link => Qt.openUrlExternally(link)
+            onLinkActivated: link => GameRunner.openUrl(link)
         }
     }
 

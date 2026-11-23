@@ -429,7 +429,7 @@ Item {
                                 SettingsButton {
                                     text: qsTr("Show")
                                     iconPath: Icons.folder
-                                    onClicked: Qt.openUrlExternally(asideRow.modelData.folder)
+                                    onClicked: GameRunner.openUrl(asideRow.modelData.folder)
                                 }
                                 SettingsButton {
                                     text: qsTr("Delete")

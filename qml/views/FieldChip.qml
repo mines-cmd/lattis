@@ -50,7 +50,7 @@ StatChip {
         if (opensHistory)
             historyRequested()
         else if (opensUrl)
-            Qt.openUrlExternally(field.url)
+            GameRunner.openUrl(field.url)
         else if (opensUpdate)
             Installer.review(fields.game.id)
         else if (startsEpicUpdate)

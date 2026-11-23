@@ -107,7 +107,7 @@ ColumnLayout {
             linkColor: Theme.gameEditor.linkColor
             text: qsTr("Lattis reads your Epic games from Heroic, which is free. <a href=\"%1\">Get Heroic</a>")
                       .arg("https://heroicgameslauncher.com")
-            onLinkActivated: link => Qt.openUrlExternally(link)
+            onLinkActivated: link => GameRunner.openUrl(link)
         }
     }
 

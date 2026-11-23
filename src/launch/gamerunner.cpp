@@ -9,7 +9,6 @@
 #include "steamshortcuts.h"
 #include "tomlpatch.h"
 
-#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -189,12 +188,7 @@ QString GameRunner::runSteam(const QStringList &args, bool raiseWindow)
     const QString log = m_logDir + QStringLiteral("/launch/steam.log");
     QDir().mkpath(QFileInfo(log).absolutePath());
     QProcess process;
-    QProcessEnvironment env;
-    for (const QString &var : programEnvironment(QProcess::systemEnvironment())) {
-        const qsizetype eq = var.indexOf(u'=');
-        env.insert(var.left(eq), var.mid(eq + 1));
-    }
-    process.setProcessEnvironment(env);
+    process.setProcessEnvironment(childEnvironment());
     process.setProgram(command.first());
     process.setArguments(command.mid(1) + args);
     process.setWorkingDirectory(QDir::homePath());
@@ -215,11 +209,16 @@ QString GameRunner::runSteam(const QStringList &args, bool raiseWindow)
             connect(lua, &QProcess::finished, this, [lua](int code) {
                 const bool failed = code != 0 || lua->readAllStandardOutput().contains("rror");
                 lua->deleteLater();
-                if (failed)
-                    QProcess::startDetached(QStringLiteral("hyprctl"),
-                                            {QStringLiteral("dispatch"), QStringLiteral("focuswindow"),
-                                             QStringLiteral("class:^steam$")});
+                if (failed) {
+                    QProcess legacy;
+                    legacy.setProgram(QStringLiteral("hyprctl"));
+                    legacy.setArguments({QStringLiteral("dispatch"), QStringLiteral("focuswindow"),
+                                         QStringLiteral("class:^steam$")});
+                    legacy.setProcessEnvironment(childEnvironment());
+                    legacy.startDetached();
+                }
             });
+            lua->setProcessEnvironment(childEnvironment());
             lua->start(QStringLiteral("hyprctl"),
                        {QStringLiteral("dispatch"),
                         QStringLiteral("hl.dsp.focus({ window = \"class:^steam$\" })")});
@@ -1436,7 +1435,7 @@ QString GameRunner::openFolder(const QString &gameId)
                                   : QFileInfo(game->romPath).absolutePath();
     if (proton && !QFileInfo(folder).isDir())
         return tr("%1's folder isn't found: %2").arg(game->title, folder);
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder)))
+    if (!::openUrl(QUrl::fromLocalFile(folder)))
         return tr("Could not open %1").arg(folder);
     return {};
 }
@@ -1522,7 +1521,7 @@ QString GameRunner::openSaveFolder(const QString &gameId)
     auto open = [this, title](const QString &folder) -> QString {
         if (folder.isEmpty())
             return tr("%1's save folder isn't found; add its save location in its properties").arg(title);
-        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(folder)))
+        if (!::openUrl(QUrl::fromLocalFile(folder)))
             return tr("Could not open %1").arg(folder);
         return {};
     };
@@ -1551,9 +1550,14 @@ QString GameRunner::shownPath(const QString &path) const
     return m_library->store().writtenPath(path);
 }
 
+bool GameRunner::openUrl(const QUrl &url) const
+{
+    return ::openUrl(url);
+}
+
 QString GameRunner::openDataFolder()
 {
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(m_dataDir)))
+    if (!::openUrl(QUrl::fromLocalFile(m_dataDir)))
         return tr("Could not open %1").arg(m_dataDir);
     return {};
 }
@@ -1563,7 +1567,7 @@ QString GameRunner::openPath(const QString &path)
     const QString expanded = Emulators::expandHome(path, QDir::homePath());
     if (!QFileInfo::exists(expanded))
         return tr("%1 doesn't exist yet").arg(path);
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(expanded)))
+    if (!::openUrl(QUrl::fromLocalFile(expanded)))
         return tr("Could not open %1").arg(path);
     return {};
 }
@@ -1592,7 +1596,7 @@ QString GameRunner::openFile(const QString &path)
         if (const QStringList command = terminalEntryCommand(entry, path); !command.isEmpty())
             if (startInTerminal(command, env))
                 return {};
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(path)))
+    if (!::openUrl(QUrl::fromLocalFile(path)))
         return path;
     return {};
 }

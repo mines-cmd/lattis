@@ -307,7 +307,7 @@ AppDialog {
                                     color: Theme.gameEditor.updateNotesText
                                     text: AppUpdate.notesHtml(row.modelData.notes !== "" ? row.modelData.notes : qsTr("No release notes."),
                                                               Qt.alpha(Theme.gameEditor.updateNotesText, 0.25))
-                                    onLinkActivated: link => Qt.openUrlExternally(link)
+                                    onLinkActivated: link => GameRunner.openUrl(link)
                                 }
                             }
                         }

@@ -1,5 +1,7 @@
 #include "desktopentry.h"
 
+#include "launchcommand.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -26,10 +28,7 @@ QString quoted(const QString &path)
 bool extract(const QString &appImage, const QString &pattern, const QString &folder)
 {
     QProcess process;
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    for (const char *name : {"APPIMAGE", "APPDIR", "ARGV0", "OWD"})
-        env.remove(QString::fromLatin1(name));
-    process.setProcessEnvironment(env);
+    process.setProcessEnvironment(childEnvironment());
     process.setWorkingDirectory(folder);
     process.start(appImage, {QStringLiteral("--appimage-extract"), pattern});
     if (!process.waitForFinished(ExtractTimeoutMs)) {

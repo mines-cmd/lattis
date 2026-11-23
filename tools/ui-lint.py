@@ -35,7 +35,8 @@ STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 OPEN = re.compile(r"(?:([\w.]+)\s*:\s*)?([A-Za-z_][\w.]*)?\s*$")
 
 RULES = {
-    "popup-background": "a popup draws its own background; use the shared dialog or popover one",
+    "open-url": "Qt.openUrlExternally keeps the AppImage's environment; use GameRunner.openUrl",
+    "popup-background":"a popup draws its own background; use the shared dialog or popover one",
     "border-width": "literal border width; use layout.border_width or a theme setting",
     "font-size": "literal font size; use a type step (@font.*) through a theme setting",
     "radius": "literal radius above 1; use a [radius] tier through a theme setting",
@@ -67,6 +68,8 @@ def lint_qml(path, rel, hits):
             raw, in_comment = raw[:raw.find("/*")], True
 
         allowed_here = bool(ALLOW.search(raw))
+        if "Qt.openUrlExternally" in code_of(raw):
+            hits.append(("open-url", rel, number, raw.strip()))
 
         def hit(rule):
             if not allowed_here:

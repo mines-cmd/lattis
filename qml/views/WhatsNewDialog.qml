@@ -48,7 +48,7 @@ AppDialog {
                     textFormat: Text.RichText
                     color: Theme.gameEditor.updateNotesText
                     text: AppUpdate.notesHtml(root.notes !== "" ? root.notes : qsTr("No release notes."), Qt.alpha(Theme.gameEditor.updateNotesText, 0.25))
-                    onLinkActivated: link => Qt.openUrlExternally(link)
+                    onLinkActivated: link => GameRunner.openUrl(link)
                 }
 
                 Repeater {
@@ -82,7 +82,7 @@ AppDialog {
                                 textFormat: Text.RichText
                                 color: Theme.gameEditor.updateNotesText
                                 text: AppUpdate.notesHtml(modelData.notes !== "" ? modelData.notes : qsTr("No release notes."), Qt.alpha(Theme.gameEditor.updateNotesText, 0.25))
-                                onLinkActivated: link => Qt.openUrlExternally(link)
+                                onLinkActivated: link => GameRunner.openUrl(link)
                             }
                         }
                     }

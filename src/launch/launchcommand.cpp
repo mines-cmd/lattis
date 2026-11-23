@@ -2,9 +2,11 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QProcess>
 #include <QRegularExpression>
 
 #include <algorithm>
+#include <optional>
 
 namespace {
 QString quoted(const QString &arg)
@@ -38,6 +40,36 @@ LaunchCommand buildProgramCommand(const QString &exe, const LaunchOptions::Parts
     return {words.first(), words.mid(1), options.env};
 }
 
+namespace {
+std::optional<QString> g_platformTheme;
+}
+
+void restorePlatformTheme(const std::optional<QString> &original)
+{
+    g_platformTheme = original;
+}
+
+QProcessEnvironment childEnvironment()
+{
+    QProcessEnvironment out;
+    for (const QString &var : programEnvironment(QProcess::systemEnvironment())) {
+        const qsizetype eq = var.indexOf(u'=');
+        out.insert(var.left(eq), var.mid(eq + 1));
+    }
+    return out;
+}
+
+bool openUrl(const QUrl &url)
+{
+    QProcess process;
+    process.setProgram(QStringLiteral("xdg-open"));
+    process.setArguments({QString::fromLatin1(url.toEncoded())});
+    process.setProcessEnvironment(childEnvironment());
+    process.setStandardOutputFile(QProcess::nullDevice());
+    process.setStandardErrorFile(QProcess::nullDevice());
+    return process.startDetached();
+}
+
 QStringList programEnvironment(const QStringList &environment, const QList<std::pair<QString, QString>> &env)
 {
     QString appDir;
@@ -58,6 +90,11 @@ QStringList programEnvironment(const QStringList &environment, const QList<std::
         const QString name = var.left(eq);
         if (eq <= 0 || std::any_of(env.cbegin(), env.cend(), [&](const auto &e) { return e.first == name; }))
             continue;
+        if (g_platformTheme && name == QLatin1String("QT_QPA_PLATFORMTHEME")) {
+            if (!g_platformTheme->isEmpty())
+                out.append(name + u'=' + *g_platformTheme);
+            continue;
+        }
         if (appDir.isEmpty() || appDir == u'/') {
             out.append(var);
             continue;

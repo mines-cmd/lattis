@@ -84,7 +84,7 @@ UpdateRowsDialog {
             visible: !root.downloading && !root.ready && (!AppUpdate.canReplace || AppUpdate.noChecksum)
             text: qsTr("Open release page")
             primary: true
-            onClicked: Qt.openUrlExternally(AppUpdate.releasePage)
+            onClicked: GameRunner.openUrl(AppUpdate.releasePage)
         },
         SettingsButton {
             visible: !root.downloading && !root.ready && AppUpdate.canReplace && !AppUpdate.noChecksum

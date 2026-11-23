@@ -34,7 +34,7 @@ Item {
             rightPadding: Theme.layout.spacing
             textColor: Theme.notice.actionText
             font.weight: Theme.font.emphasisWeight
-            onClicked: Qt.openUrlExternally(root.notice.folder)
+            onClicked: GameRunner.openUrl(root.notice.folder)
         }
         SettingsButton {
             visible: root.notice.canDelete === true

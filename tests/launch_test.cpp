@@ -6,6 +6,7 @@
 #include "launchsettings.h"
 #include "library.h"
 #include "restart.h"
+#include "appimageenv.h"
 #include "steamshortcuts.h"
 
 #include <QDirIterator>
@@ -171,6 +172,8 @@ private slots:
     void launchRomKeyGame();
     void cannotLaunch();
     void programEnvironment();
+    void openUrlKeepsNoAppImageEnvironment();
+    void platformThemeGoesBack();
     void restartCommand();
     void linuxGameSession();
     void linuxGameRunsWhileItsSessionLives();
@@ -427,6 +430,45 @@ void LaunchTest::programEnvironment()
     // The command's variables win.
     QCOMPARE(::programEnvironment(plain, {{"PATH", "/x"}, {"NEW", "a b"}}),
              (QStringList{"HOME=/home/u", "LD_LIBRARY_PATH=/opt/lib", "PATH=/x", "NEW=a b"}));
+}
+
+void LaunchTest::openUrlKeepsNoAppImageEnvironment()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dump = dir.filePath(QStringLiteral("env.txt"));
+    writeFile(dir.filePath(QStringLiteral("xdg-open")),
+              AppImageEnv::dumpScript(dump, "echo \"$1\" > '" + dir.filePath(QStringLiteral("url.txt")).toUtf8() + "'\n"),
+              true);
+    const AppImageEnv appImage;
+    const QByteArray path = qgetenv("PATH");
+    qputenv("PATH", dir.path().toUtf8() + ':' + path);
+    const bool started = ::openUrl(QUrl::fromLocalFile(QStringLiteral("/tmp/a folder")));
+    QVERIFY(started);
+    QTRY_VERIFY(QFile::exists(dump));
+    qputenv("PATH", path);
+    AppImageEnv::noBundleIn(dump);
+    QTRY_VERIFY(QFile::exists(dir.filePath(QStringLiteral("url.txt"))));
+    QFile url(dir.filePath(QStringLiteral("url.txt")));
+    QVERIFY(url.open(QIODevice::ReadOnly));
+    QCOMPARE(url.readAll().trimmed(), QByteArray("file:///tmp/a%20folder"));
+}
+
+void LaunchTest::platformThemeGoesBack()
+{
+    const QStringList env = {"HOME=/home/u", "QT_QPA_PLATFORMTHEME=xdgdesktopportal"};
+    QCOMPARE(::programEnvironment(env), env);
+
+    // main() set it: a child gets what the user had, or nothing.
+    ::restorePlatformTheme(QStringLiteral("gtk3"));
+    QCOMPARE(::programEnvironment(env), (QStringList{"HOME=/home/u", "QT_QPA_PLATFORMTHEME=gtk3"}));
+    ::restorePlatformTheme(QString());
+    QCOMPARE(::programEnvironment(env), (QStringList{"HOME=/home/u"}));
+    // The command's own value still wins.
+    QCOMPARE(::programEnvironment(env, {{"QT_QPA_PLATFORMTHEME", "qt6ct"}}),
+             (QStringList{"HOME=/home/u", "QT_QPA_PLATFORMTHEME=qt6ct"}));
+    ::restorePlatformTheme(std::nullopt);
+    QCOMPARE(::programEnvironment(env), env);
 }
 
 void LaunchTest::restartCommand()

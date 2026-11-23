@@ -1,3 +1,4 @@
+#include "appimageenv.h"
 #include "legendaryjobs.h"
 
 #include <QDateTime>
@@ -103,6 +104,7 @@ private slots:
     void argumentsPerKind();
     void checkDueAfterADay();
     void runsAJobWithProgress();
+    void jobsKeepNoAppImageEnvironment();
     void aSecondJobWaits();
     void cancelSendsSigint();
     void cancelAQueuedJob();
@@ -272,6 +274,28 @@ void LegendaryJobsTest::checkDueAfterADay()
     QVERIFY(LegendaryJobs::checkDue(now.addSecs(-24 * 3600), now));
     QVERIFY(LegendaryJobs::checkDue(now.addSecs(3600), now));
     QVERIFY(!LegendaryJobs::readCheckTime(m_dir.filePath(u"nothing.txt"_s)));
+}
+
+void LegendaryJobsTest::jobsKeepNoAppImageEnvironment()
+{
+    const AppImageEnv appImage;
+    const QString dump = m_dir.filePath(u"env.txt"_s);
+    QFile f(m_program);
+    QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    f.write(AppImageEnv::dumpScript(dump));
+    f.close();
+
+    LegendaryJobs *jobs = make();
+    QSignalSpy finished(jobs, &LegendaryJobs::finished);
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Game"_s), QString());
+    QVERIFY(waitFor([&] { return finished.count() == 1; }));
+    AppImageEnv::noBundleIn(dump);
+
+    QVERIFY(QFile::remove(dump));
+    QSignalSpy info(jobs, &LegendaryJobs::infoReady);
+    jobs->queryInfo(u"Game"_s);
+    QVERIFY(waitFor([&] { return info.count() == 1; }));
+    AppImageEnv::noBundleIn(dump);
 }
 
 void LegendaryJobsTest::runsAJobWithProgress()
