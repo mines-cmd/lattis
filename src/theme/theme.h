@@ -179,6 +179,7 @@ private:
     bool createHalf(Half half, const QString &name, const QString &basedOn, const QString &description = {});
     static constexpr int kMaxDescription = 48;
     static constexpr int kMaxNameBytes = 200;
+    static constexpr int kMaxReferenceChain = 64;
     static QString capDescription(const QString &text);
     QString halfPath(Half half, const QString &name, bool builtInOnly = false) const;
     QString userThemePath(const QString &name) const;

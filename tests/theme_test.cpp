@@ -4,6 +4,7 @@
 
 #include <QColor>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QSet>
@@ -36,6 +37,8 @@ private slots:
     void migrationSkipsExistingNewKey();
     void createColorsAndStyleSwitchTheActiveOnes();
     void newNamesAreChecked();
+    void aLongChainOfColorsLoads();
+    void nanIsRefused();
     void saveThemeNamesTheActivePair();
     void halfModelsListOnlyTheirOwnSettings();
     void customizeModelListsBothHalves();
@@ -789,6 +792,40 @@ void ThemeTest::activeThemeIsEmptyWhenThePairMatchesNone()
     theme.setStyle("Round");
     QCOMPARE(theme.activeTheme(), QStringLiteral("Mine"));
     QCOMPARE(theme.availableThemes().last(), QStringLiteral("Mine"));
+}
+
+void ThemeTest::aLongChainOfColorsLoads()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    QByteArray colors = "[palette]\n";
+    const int links = 100000;
+    for (int i = 1; i < links; ++i)
+        colors += "c" + QByteArray::number(i) + " = \"@c" + QByteArray::number(i + 1) + "\"\n";
+    colors += "c" + QByteArray::number(links) + " = \"#123456\"\n";
+    write(dataDir + "/themes/colors/Chain.toml", colors);
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Chain\"\nstyle = \"Soft\"\n");
+
+    QElapsedTimer timer;
+    timer.start();
+    Theme theme(dataDir);
+    QVERIFY2(timer.elapsed() < 1000, qPrintable(QString::number(timer.elapsed()) + " ms"));
+    QVERIFY(theme.problems().join('\n').contains(QStringLiteral("or refers back to this setting")));
+}
+
+void ThemeTest::nanIsRefused()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/styles/Nan.toml", "extends = \"Soft\"\n[motion]\nduration_scale = nan\n");
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Ember\"\nstyle = \"Nan\"\n");
+
+    Theme theme(dataDir);
+    QVERIFY2(theme.problems().join('\n').contains(QStringLiteral("duration_scale")), qPrintable(theme.problems().join('\n')));
+    const double scale = theme.resolvedValue("motion", "duration_scale").toDouble();
+    QVERIFY(scale == scale);
 }
 
 void ThemeTest::missingFileFallsBackToBuiltIn()

@@ -892,12 +892,19 @@ QVariant Theme::convert(const QVariant &raw, const Setting &s, QString *error)
                 value = valueOf(*t);
                 targetType = t->type;
             } else if (target.startsWith(QLatin1String("palette.")) && m_merged.contains(target)) {
-                if (m_resolving.contains(target))
-                    return fail(QStringLiteral("\"%1\" refers back to itself").arg(str));
-                m_resolving.insert(target);
-                QString ignored;
-                value = convert(m_merged.value(target).raw, kColorProto, &ignored);
-                m_resolving.remove(target);
+                // Each custom color is resolved once; a chain longer than kMaxReferenceChain is cut like a loop,
+                // because a shared theme file can hold a chain long enough to overflow the stack.
+                if (auto cached = m_resolved.constFind(target); cached != m_resolved.constEnd()) {
+                    value = *cached;
+                } else {
+                    if (m_resolving.contains(target) || m_resolving.size() >= kMaxReferenceChain)
+                        return fail(QStringLiteral("\"%1\" refers back to itself").arg(str));
+                    m_resolving.insert(target);
+                    QString ignored;
+                    value = convert(m_merged.value(target).raw, kColorProto, &ignored);
+                    m_resolving.remove(target);
+                    m_resolved.insert(target, value);
+                }
             } else {
                 return fail(QStringLiteral("unknown setting \"%1\"").arg(str));
             }
@@ -934,7 +941,7 @@ QVariant Theme::convert(const QVariant &raw, const Setting &s, QString *error)
         if (!isNumber)
             return fail(QStringLiteral("expected a number"));
         const double v = raw.toDouble();
-        if (v < s.min || v > s.max)
+        if (!(v >= s.min && v <= s.max))
             return fail(QStringLiteral("must be between %1 and %2").arg(s.min).arg(s.max));
         if (s.type == Type::Int)
             return int(std::lround(v));
