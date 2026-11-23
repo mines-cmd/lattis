@@ -1,11 +1,72 @@
 #include "apppaths.h"
 #include "librarycache.h"
 
+#include <QCryptographicHash>
 #include <QDataStream>
 #include <QFile>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimeZone>
+
+// The cache streams each struct's fields by hand. A struct that gains a field changes its size, and
+// these fail until `everyFieldRoundTrips` sets the new field and the stream carries it (S7.11).
+static_assert(sizeof(GameFile) == 744, "GameFile changed: stream the new field and set it in fullGame()");
+static_assert(sizeof(Collection) == 384, "Collection changed: stream the new field and set it in the test");
+static_assert(sizeof(ModManager) == 200, "ModManager changed: stream the new field and set it in the test");
+static_assert(sizeof(RomEntry) == 128, "RomEntry changed: stream the new field and set it in the test");
+static_assert(sizeof(RomFile) == 32, "RomFile changed: stream the new field and set it in the test");
+static_assert(sizeof(EmulatorEntry) == 56, "EmulatorEntry changed: stream the new field and set it in the test");
+
+static GameFile fullGame()
+{
+    GameFile g;
+    g.title = QStringLiteral("T");
+    g.platform = QStringLiteral("linux");
+    g.rom = QStringLiteral("/r/x.rom");
+    g.romLine = 7;
+    g.description = QStringLiteral("D");
+    g.year = 2001;
+    g.rating = 4.5;
+    g.ratingSource = QStringLiteral("igdb");
+    g.tags = {QStringLiteral("a"), QStringLiteral("b")};
+    g.favorite = true;
+    g.status = QStringLiteral("playing");
+    g.logoScale = 2.5;
+    g.logoPosition = QStringLiteral("bottom_left");
+    g.logoOffsetX = 0.25;
+    g.logoOffsetY = -0.75;
+    g.logoScrim = QStringLiteral("gradient");
+    g.logoScrimSide = QStringLiteral("right");
+    g.logoScrimStrength = 0.5;
+    g.igdb = 11;
+    g.steamgriddb = 12;
+    g.steamApp = 13;
+    g.unavailable = {QStringLiteral("u")};
+    g.playMinutes = 14;
+    g.lastPlayed = QDateTime(QDate(2025, 5, 5), QTime(5, 5), QTimeZone::UTC);
+    g.added = QDate(2024, 4, 4);
+    g.hidden = true;
+    g.emulator = QStringLiteral("e");
+    g.args = {QStringLiteral("--x")};
+    g.launchOptions = QStringLiteral("lo");
+    g.proton = QStringLiteral("p");
+    g.skipSteamArt = {QStringLiteral("hero")};
+    g.exe = QStringLiteral("/e.exe");
+    g.startDir = QStringLiteral("/s");
+    g.installDir = QStringLiteral("/i");
+    g.mediaFolders = {QStringLiteral("/m")};
+    g.updateSource = QStringLiteral("github:a/b");
+    g.updateAsset = QStringLiteral("*.AppImage");
+    g.updatePrereleases = true;
+    g.savePaths = {QStringLiteral("/sv")};
+    g.savesGame = QStringLiteral("sg");
+    g.autoBackup = 1;
+    g.noSaves = true;
+    g.shortcut = 15;
+    g.installed = false;
+    g.sameAs = QStringLiteral("other");
+    return g;
+}
 
 class LibraryCacheTest : public QObject
 {
@@ -22,6 +83,9 @@ private slots:
     void truncatedIsNoCache();
     void pathPerDataDir();
     void diffDetectsChanges();
+    void everyFieldRoundTrips();
+    void flippedByteIsRefusedAndRemoved();
+    void hugeCountIsNoCache();
 
 private:
     LibrarySnapshot sample() const;
@@ -247,6 +311,90 @@ void LibraryCacheTest::diffDetectsChanges()
     QCOMPARE(c.removed, QStringList{"gone"});
     QVERIFY(!c.isEmpty());
     QVERIFY(LibraryCache::diff({{"same", {10, 1}}}, {{"same", {{10, 1}, {}}}}).isEmpty());
+}
+
+void LibraryCacheTest::everyFieldRoundTrips()
+{
+    LibrarySnapshot s;
+    s.content.games.insert(QStringLiteral("full"), fullGame());
+
+    Collection c;
+    c.id = QStringLiteral("c");
+    c.name = QStringLiteral("C");
+    c.rules = CollectionRules{};
+    c.rules->platform = QStringLiteral("3ds");
+    c.added = {QStringLiteral("a")};
+    c.removed = {QStringLiteral("r")};
+    c.sort = QStringLiteral("title");
+    c.sortDescending = true;
+    c.groupBy = QStringLiteral("platform");
+    c.steamId = QStringLiteral("uc-1");
+    s.content.collections = {c};
+
+    ModManager m;
+    m.id = QStringLiteral("m");
+    m.name = QStringLiteral("M");
+    m.exe = QStringLiteral("/m.exe");
+    m.startDir = QStringLiteral("/m");
+    m.launchOptions = QStringLiteral("lo");
+    m.games = {QStringLiteral("g")};
+    m.prefix = QStringLiteral("own");
+    m.proton = QStringLiteral("p");
+    m.shortcut = 99;
+    m.inSteam = false;
+    s.content.modManagers.insert(m.id, m);
+
+    s.content.roms.insert(QStringLiteral("3ds"), {RomEntry{QStringLiteral("/r.3ds"), QStringLiteral("id"), QStringLiteral("Title"),
+                                                           QStringLiteral("tid"), 123, QStringLiteral("file")}});
+    s.romGameFiles.insert(QStringLiteral("g"), RomFile{QStringLiteral("/r.3ds"), 456});
+    s.content.emulators = {EmulatorEntry{QStringLiteral("e"), {{QStringLiteral("k"), QStringLiteral("v")}}, QStringLiteral("/at")}};
+
+    QVERIFY(LibraryCache::save(m_cachePath, m_dataDir, s));
+    const auto loaded = LibraryCache::load(m_cachePath, m_dataDir);
+    QVERIFY(loaded);
+    QCOMPARE(loaded->content.games, s.content.games);
+    QCOMPARE(loaded->content.collections, s.content.collections);
+    QCOMPARE(loaded->content.modManagers, s.content.modManagers);
+    QCOMPARE(loaded->content.roms, s.content.roms);
+    QCOMPARE(loaded->romGameFiles, s.romGameFiles);
+    QCOMPARE(loaded->content.emulators, s.content.emulators);
+}
+
+void LibraryCacheTest::flippedByteIsRefusedAndRemoved()
+{
+    QVERIFY(LibraryCache::save(m_cachePath, m_dataDir, sample()));
+    QFile file(m_cachePath);
+    QVERIFY(file.open(QIODevice::ReadWrite));
+    QVERIFY(file.seek(file.size() - 5));
+    char byte = 0;
+    QVERIFY(file.read(&byte, 1) == 1);
+    QVERIFY(file.seek(file.size() - 5));
+    byte = char(byte ^ 0x01);
+    QVERIFY(file.write(&byte, 1) == 1);
+    file.close();
+    QVERIFY(!LibraryCache::load(m_cachePath, m_dataDir));
+    QVERIFY(!QFile::exists(m_cachePath));
+}
+
+void LibraryCacheTest::hugeCountIsNoCache()
+{
+    QByteArray body;
+    {
+        QDataStream out(&body, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_6_8);
+        out << QDir(m_dataDir).absolutePath() << qint32(1) << quint32(0x7fffffffu);
+    }
+    QVERIFY(QDir().mkpath(QFileInfo(m_cachePath).absolutePath()));
+    QFile file(m_cachePath);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    QDataStream out(&file);
+    out << quint32(0x474c4c43) << LibraryCache::kFormatVersion << qint32(QDataStream::Qt_6_8)
+        << QCryptographicHash::hash(body, QCryptographicHash::Sha256);
+    file.write(body);
+    file.close();
+    std::optional<LibrarySnapshot> loaded;
+    QVERIFY_THROWS_NO_EXCEPTION(loaded = LibraryCache::load(m_cachePath, m_dataDir));
+    QVERIFY(!loaded);
 }
 
 QTEST_APPLESS_MAIN(LibraryCacheTest)

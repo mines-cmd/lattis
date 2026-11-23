@@ -1,6 +1,7 @@
 #include "librarycache.h"
 #include "apppaths.h"
 
+#include <QCryptographicHash>
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
@@ -46,13 +47,13 @@ static QDataStream &operator>>(QDataStream &s, GameFile &g)
 static QDataStream &operator<<(QDataStream &s, const ModManager &m)
 {
     return s << m.id << m.name << m.exe << m.startDir << m.launchOptions << m.games << m.prefix << m.proton
-             << m.shortcut;
+             << m.shortcut << m.inSteam;
 }
 
 static QDataStream &operator>>(QDataStream &s, ModManager &m)
 {
     return s >> m.id >> m.name >> m.exe >> m.startDir >> m.launchOptions >> m.games >> m.prefix >> m.proton
-        >> m.shortcut;
+        >> m.shortcut >> m.inSteam;
 }
 
 static QDataStream &operator<<(QDataStream &s, const Platform &p)
@@ -83,7 +84,8 @@ static QDataStream &operator>>(QDataStream &s, TagDef &t)
 
 static QDataStream &operator<<(QDataStream &s, const Collection &c)
 {
-    s << c.id << c.name << c.added << c.removed << c.steamId << c.rules.has_value();
+    s << c.id << c.name << c.added << c.removed << c.steamId << c.sort << c.sortDescending << c.groupBy
+      << c.rules.has_value();
     if (c.rules) {
         s << c.rules->platform << c.rules->installedOnly << c.rules->favoritesOnly << c.rules->statuses << c.rules->tags
           << c.rules->matchAllTags << c.rules->steamOwnership << qint32(c.rules->yearFrom) << qint32(c.rules->yearTo)
@@ -95,7 +97,7 @@ static QDataStream &operator<<(QDataStream &s, const Collection &c)
 static QDataStream &operator>>(QDataStream &s, Collection &c)
 {
     bool hasRules = false;
-    s >> c.id >> c.name >> c.added >> c.removed >> c.steamId >> hasRules;
+    s >> c.id >> c.name >> c.added >> c.removed >> c.steamId >> c.sort >> c.sortDescending >> c.groupBy >> hasRules;
     c.rules.reset();
     if (hasRules) {
         CollectionRules r;
@@ -381,22 +383,13 @@ QString pathFor(const QString &cacheDir, const QString &dataDir)
     return QStringLiteral("%1/library-%2.bin").arg(cacheDir, AppPaths::dataDirKey(dataDir));
 }
 
-std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dataDir)
+namespace {
+// The body (data dir and snapshot) is what the checksum covers; the header says how to read it.
+std::optional<LibrarySnapshot> readBody(const QByteArray &body, const QString &dataDir)
 {
-    QFile file(cachePath);
-    if (!file.open(QIODevice::ReadOnly))
-        return std::nullopt;
-    QDataStream in(&file);
-
-    quint32 magic = 0;
-    quint32 format = 0;
-    qint32 streamVersion = 0;
-    QString cachedDataDir;
-    in >> magic >> format >> streamVersion;
-    if (in.status() != QDataStream::Ok || magic != kMagic || format != kFormatVersion
-        || streamVersion != qint32(kStreamVersion))
-        return std::nullopt;
+    QDataStream in(body);
     in.setVersion(kStreamVersion);
+    QString cachedDataDir;
     in >> cachedDataDir;
     if (cachedDataDir != QDir(dataDir).absolutePath())
         return std::nullopt;
@@ -412,20 +405,69 @@ std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dat
     return s;
 }
 
+QByteArray checksum(const QByteArray &body)
+{
+    return QCryptographicHash::hash(body, QCryptographicHash::Sha256);
+}
+}
+
+std::optional<LibrarySnapshot> load(const QString &cachePath, const QString &dataDir)
+{
+    QFile file(cachePath);
+    if (!file.open(QIODevice::ReadOnly))
+        return std::nullopt;
+    QDataStream in(&file);
+
+    quint32 magic = 0;
+    quint32 format = 0;
+    qint32 streamVersion = 0;
+    in >> magic >> format >> streamVersion;
+    if (in.status() != QDataStream::Ok || magic != kMagic || format != kFormatVersion
+        || streamVersion != qint32(kStreamVersion))
+        return std::nullopt;
+
+    QByteArray expected;
+    in >> expected;
+    const QByteArray body = file.readAll();
+    file.close();
+    if (in.status() != QDataStream::Ok || expected != checksum(body)) {
+        QFile::remove(cachePath);
+        return std::nullopt;
+    }
+
+    // A count field the checksum didn't catch (a build that changed a struct without bumping
+    // kFormatVersion) can still make Qt ask for an absurd allocation.
+    try {
+        const auto snapshot = readBody(body, dataDir);
+        return snapshot;
+    } catch (const std::exception &) {
+        QFile::remove(cachePath);
+        return std::nullopt;
+    }
+}
+
 bool save(const QString &cachePath, const QString &dataDir, const LibrarySnapshot &s)
 {
     QDir().mkpath(QFileInfo(cachePath).absolutePath());
+
+    QByteArray body;
+    {
+        QDataStream out(&body, QIODevice::WriteOnly);
+        out.setVersion(kStreamVersion);
+        out << QDir(dataDir).absolutePath();
+        out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.collections << s.content.steam << s.content.heroic
+            << s.content.roms << s.content.emulators << s.content.games << s.content.modManagers << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
+            << s.romGameFiles << s.programFiles << s.steam << s.steamQueued << s.heroic;
+        if (out.status() != QDataStream::Ok)
+            return false;
+    }
+
     QSaveFile file(cachePath);
     if (!file.open(QIODevice::WriteOnly))
         return false;
     QDataStream out(&file);
-    out << kMagic << kFormatVersion << qint32(kStreamVersion);
-    out.setVersion(kStreamVersion);
-    out << QDir(dataDir).absolutePath();
-    out << qint32(s.version) << s.files << s.content.platforms << s.content.tags << s.content.collections << s.content.steam << s.content.heroic
-        << s.content.roms << s.content.emulators << s.content.games << s.content.modManagers << s.art << s.artChecks << s.romFiles << s.romWarnings << s.romMissingFolders
-        << s.romGameFiles << s.programFiles << s.steam << s.steamQueued << s.heroic;
-    if (out.status() != QDataStream::Ok) {
+    out << kMagic << kFormatVersion << qint32(kStreamVersion) << checksum(body);
+    if (out.status() != QDataStream::Ok || file.write(body) != body.size()) {
         file.cancelWriting();
         return false;
     }
