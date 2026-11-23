@@ -52,6 +52,22 @@ public:
     std::atomic<int> removals{0};
 };
 
+// A keyring whose write waits (a locked keyring and a prompt) or is refused.
+class SlowStore : public MemorySecretStore
+{
+public:
+    bool persistent() const override { return true; }
+    bool store(const QString &label, const Attributes &attributes, const QByteArray &secret,
+               QString *error = nullptr) override
+    {
+        QThread::msleep(300);
+        if (refuse)
+            return false;
+        return MemorySecretStore::store(label, attributes, secret, error);
+    }
+    std::atomic<bool> refuse{false};
+};
+
 QStringList listing(const QString &dir)
 {
     QStringList all;
@@ -296,6 +312,32 @@ private slots:
 
         auth.signOut();
         QCOMPARE(auth.status(), SteamAuth::Status::SignedOut);
+    }
+
+    void aSignOutDuringASlowKeyringWriteLeavesNoToken()
+    {
+        auto slow = std::make_shared<SlowStore>();
+        SteamAuth auth(slow, m_server->url());
+        signedInTokens(jwt(kSteamId, 86400));
+        auth.startSignIn();
+        QTRY_COMPARE(auth.status(), SteamAuth::Status::SignedIn);
+        auth.signOut();
+        QTest::qWait(900);
+        QVERIFY(!slow->read(SteamAuth::itemAttributes(kSteamId)));
+    }
+
+    void aRefusedKeyringWriteIsReported()
+    {
+        auto refusing = std::make_shared<SlowStore>();
+        refusing->refuse = true;
+        SteamAuth auth(refusing, m_server->url());
+        signedInTokens(jwt(kSteamId, 86400));
+        auth.startSignIn();
+        QTRY_COMPARE(auth.status(), SteamAuth::Status::SignedIn);
+        QTRY_VERIFY(auth.keyringRefused());
+        QVERIFY(!auth.keptInKeyring());
+        auth.signOut();
+        QVERIFY(!auth.keyringRefused());
     }
 
     void nothingIsWrittenToTheDataDir()

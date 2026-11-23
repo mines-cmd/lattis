@@ -29,6 +29,8 @@ class SteamLibrary : public QObject
     Q_PROPERTY(bool enabled READ enabled NOTIFY changed)
     // Without a Secret Service the sign-in lasts until Lattis quits.
     Q_PROPERTY(bool keyringAvailable READ keyringAvailable NOTIFY changed)
+    // A keyring answers but refused to keep the sign-in.
+    Q_PROPERTY(bool keyringRefused READ keyringRefused NOTIFY changed)
     Q_PROPERTY(int gameCount READ gameCount NOTIFY changed)
     // "1 204 games, synced 2 h ago", empty before the first fetch.
     Q_PROPERTY(QString statusLine READ statusLine NOTIFY changed)
@@ -52,6 +54,7 @@ public:
     bool configured() const;
     bool enabled() const;
     bool keyringAvailable() const;
+    bool keyringRefused() const;
     int gameCount() const;
     QString statusLine() const;
     QString messageKind() const;

@@ -128,6 +128,8 @@ void SavesBackupTest::writesTheSavesAndAManifest()
     QCOMPARE(result.archive, m_folder + "/linux-celeste/2026-11-03-120000.tar.zst");
     QVERIFY(QFileInfo::exists(result.archive));
     QVERIFY(!QFileInfo::exists(result.archive + ".partial"));
+    QVERIFY(!(QFile::permissions(result.archive) & (QFileDevice::ReadGroup | QFileDevice::ReadOther | QFileDevice::WriteGroup | QFileDevice::WriteOther)));
+    QVERIFY(QFile::permissions(result.archive) & QFileDevice::ReadOwner);
 
     QString error;
     const std::optional<QByteArray> bytes = Archive::readFirst(result.archive, "manifest.toml", &error);

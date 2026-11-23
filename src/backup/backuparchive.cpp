@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -109,6 +110,13 @@ bool Writer::open(const QString &path, int level)
     abort();
     m_error.clear();
     m_bytes = 0;
+    // An archive can carry the API keys; the file starts owner-only (the user can loosen it afterwards).
+    const int fd = ::open(QFile::encodeName(path).constData(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        m_error = tr("Can't write %1: %2").arg(path, QString::fromLocal8Bit(strerror(errno)));
+        return false;
+    }
+    ::fchmod(fd, 0600);
     m_archive = archive_write_new();
     archive_write_add_filter_zstd(m_archive);
     archive_write_set_filter_option(m_archive, "zstd", "compression-level", QByteArray::number(level).constData());
@@ -116,12 +124,15 @@ bool Writer::open(const QString &path, int level)
     archive_write_set_filter_option(m_archive, "zstd", "threads",
                                     QByteArray::number(QThread::idealThreadCount()).constData());
     archive_write_set_format_pax_restricted(m_archive);
-    if (archive_write_open_filename(m_archive, QFile::encodeName(path).constData()) != ARCHIVE_OK) {
+    if (archive_write_open_fd(m_archive, fd) != ARCHIVE_OK) {
         m_error = tr("Can't write %1: %2").arg(path, errorOf(m_archive));
         archive_write_free(m_archive);
         m_archive = nullptr;
+        ::close(fd);
+        QFile::remove(path);
         return false;
     }
+    m_fd = fd;
     m_path = path;
     return true;
 }
@@ -284,6 +295,8 @@ bool Writer::finish()
         return fail(tr("Can't write %1: %2").arg(m_path, errorOf(m_archive)));
     archive_write_free(m_archive);
     m_archive = nullptr;
+    ::close(m_fd);
+    m_fd = -1;
     m_path.clear();
     return true;
 }
@@ -294,6 +307,8 @@ void Writer::abort()
         return;
     archive_write_free(m_archive);
     m_archive = nullptr;
+    ::close(m_fd);
+    m_fd = -1;
     QFile::remove(m_path);
     m_path.clear();
 }

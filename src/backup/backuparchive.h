@@ -54,6 +54,7 @@ private:
 
     struct archive *m_archive = nullptr;
     QString m_path;
+    int m_fd = -1;
     QString m_error;
     qint64 m_bytes = 0;
     Control m_control;

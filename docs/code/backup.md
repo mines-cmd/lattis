@@ -48,7 +48,7 @@ Planning is a two-step process: make the plan (cheap), then measure it (slow, of
 `Backup::write()` runs on a worker thread and is the only function that touches the filesystem outside the plan. It:
 
 1. Measures the plan if it hasn't been yet (the dialog always measures first, but the function is self-contained).
-2. Opens a `<path>.partial` file. A failed or cancelled write removes it; only once everything is in does `finish()` rename it into place. No half-written archive is ever left behind.
+2. Opens a `<path>.partial` file, created `0600` (owner only) because a library archive can carry the API keys; the mode is kept when it is renamed. A failed or cancelled write removes it; only once everything is in does `finish()` rename it into place. No half-written archive is ever left behind.
 3. Writes `manifest.toml` as the first entry (so `Restore::open()` can read it without extracting the rest).
 4. Adds the content: for a library backup, the data dir under `data/`; for a saves backup, each emulator's save and key folders under `emulators/<id>/saves/<n>/` and `keys/<n>/` (one number per folder in the definition's order, found or not), saves next to ROMs under `emulators/<id>/beside-roms/<game id>/`, each Proton game's saves under `proton/<game id>/` (not for a superseded one), and each found game's places under `games/<game id>/files/<n>/` (one number per place, in `GamePart::places` order).
 

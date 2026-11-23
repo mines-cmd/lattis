@@ -88,6 +88,13 @@ bool SteamLibrary::keyringAvailable() const
     return m_sync->auth()->keyringAvailable();
 }
 
+bool SteamLibrary::keyringRefused() const
+{
+    if (!m_sync->fixturesDir().isEmpty())
+        return fixtureSignIn(m_sync->fixturesDir()).value(QLatin1String("keyring_refused")).toBool(false);
+    return m_sync->auth()->keyringRefused();
+}
+
 int SteamLibrary::gameCount() const
 {
     return m_sync->gameCount();
@@ -177,6 +184,7 @@ void SteamLibrary::signIn()
             updateCode();
             emit changed();
         });
+        connect(auth, &SteamAuth::keyringRefusedChanged, this, &SteamLibrary::changed);
         connect(auth, &SteamAuth::statusChanged, this, [this, auth] {
             const bool waiting = auth->status() == SteamAuth::Status::Waiting;
             if (m_wasWaiting && auth->status() == SteamAuth::Status::SignedIn) {

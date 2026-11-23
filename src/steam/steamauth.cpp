@@ -24,17 +24,38 @@ QString interfaceMethod(const QString &name)
     return QStringLiteral("/IAuthenticationService/%1/v1/").arg(name);
 }
 
-// Runs `work` on a worker thread (the keyring can block on a prompt) and `done` on the main one.
+// Runs `work` on a worker thread (the keyring can block on a prompt) and `done` on the main one, then `next`.
 template<typename Result, typename Work, typename Done>
-void inBackground(QObject *context, Work work, Done done)
+void inBackground(QObject *context, Work work, Done done, std::function<void()> next = {})
 {
     auto *watcher = new QFutureWatcher<Result>(context);
-    QObject::connect(watcher, &QFutureWatcherBase::finished, context, [watcher, done] {
+    QObject::connect(watcher, &QFutureWatcherBase::finished, context, [watcher, done, next] {
         done(watcher->result());
         watcher->deleteLater();
+        if (next)
+            next();
     });
     watcher->setFuture(QtConcurrent::run(std::move(work)));
 }
+}
+
+void SteamAuth::enqueue(std::function<void()> start)
+{
+    m_jobs.push_back(std::move(start));
+    if (!m_jobRunning)
+        jobFinished();
+}
+
+void SteamAuth::jobFinished()
+{
+    if (m_jobs.empty()) {
+        m_jobRunning = false;
+        return;
+    }
+    m_jobRunning = true;
+    auto next = std::move(m_jobs.front());
+    m_jobs.pop_front();
+    next();
 }
 
 SteamAuth::SteamAuth(std::shared_ptr<SecretStore> store, QUrl apiBase, QObject *parent)
@@ -221,15 +242,25 @@ void SteamAuth::storeItem(const QString &refreshToken)
 {
     const auto store = m_store;
     const QString id = m_steamId;
-    inBackground<bool>(
-        this,
-        [store, id, refreshToken] {
-            return store->store(QStringLiteral("Lattis Steam sign-in"), itemAttributes(id), refreshToken.toUtf8());
-        },
-        [this, id](bool kept) {
-            if (id == m_steamId && m_status == Status::SignedIn)
+    enqueue([this, store, id, refreshToken] {
+        inBackground<bool>(
+            this,
+            [store, id, refreshToken] {
+                return store->store(QStringLiteral("Lattis Steam sign-in"), itemAttributes(id),
+                                    refreshToken.toUtf8());
+            },
+            [this, id](bool kept) {
+                if (id != m_steamId || m_status != Status::SignedIn)
+                    return;
                 m_keptInKeyring = kept && m_store->persistent();
-        });
+                const bool refused = !kept && m_store->persistent();
+                if (refused != m_keyringRefused) {
+                    m_keyringRefused = refused;
+                    emit keyringRefusedChanged();
+                }
+            },
+            [this] { jobFinished(); });
+    });
 }
 
 void SteamAuth::deleteItem()
@@ -238,8 +269,10 @@ void SteamAuth::deleteItem()
         return;
     const auto store = m_store;
     const QString id = m_steamId;
-    inBackground<bool>(
-        this, [store, id] { return store->remove(itemAttributes(id)); }, [](bool) {});
+    enqueue([this, store, id] {
+        inBackground<bool>(
+            this, [store, id] { return store->remove(itemAttributes(id)); }, [](bool) {}, [this] { jobFinished(); });
+    });
 }
 
 void SteamAuth::forgetTokens()
@@ -248,6 +281,10 @@ void SteamAuth::forgetTokens()
     m_accessToken.clear();
     m_accessExpires = {};
     m_keptInKeyring = false;
+    if (m_keyringRefused) {
+        m_keyringRefused = false;
+        emit keyringRefusedChanged();
+    }
 }
 
 void SteamAuth::cancel()

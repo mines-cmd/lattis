@@ -27,6 +27,8 @@ The games are found with the saves list, which is only downloaded once you turn 
 
 An emulator that isn't installed, or one Lattis doesn't know where it keeps saves, is skipped and named in the dialog.
 
+Every backup file (library, saves and the automatic save backups) is created readable by you alone (mode `0600`), because a library backup can hold your API keys. Change the file's permissions afterwards if you want to share it.
+
 Each dialog shows how big the backup will be, what the other backup covers, and what neither does.
 
 ## What isn't backed up

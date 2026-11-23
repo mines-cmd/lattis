@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QUrl>
 
+#include <deque>
 #include <functional>
 #include <memory>
 
@@ -45,6 +46,8 @@ public:
     QString error() const { return m_error; }
     // Whether the refresh token is in the keyring, not only in memory.
     bool keptInKeyring() const { return m_keptInKeyring; }
+    // A keyring answers but refused the write: the sign-in lasts until Lattis quits.
+    bool keyringRefused() const { return m_keyringRefused; }
     // A Secret Service answers; without one the sign-in lasts until Lattis quits.
     bool keyringAvailable() const { return m_store->persistent(); }
 
@@ -63,6 +66,7 @@ signals:
     void statusChanged();
     void challengeUrlChanged();
     void restored();
+    void keyringRefusedChanged();
 
 private:
     struct Answer
@@ -81,6 +85,9 @@ private:
     void forgetTokens();
     void deleteItem();
     void storeItem(const QString &refreshToken);
+    // Keyring writes and deletes run one at a time, in the order asked.
+    void enqueue(std::function<void()> start);
+    void jobFinished();
 
     std::shared_ptr<SecretStore> m_store;
     QUrl m_base;
@@ -101,6 +108,9 @@ private:
     int m_pollIntervalMs = 5000;
     int m_pollFailures = 0;
     bool m_keptInKeyring = false;
+    bool m_keyringRefused = false;
+    std::deque<std::function<void()>> m_jobs;
+    bool m_jobRunning = false;
     bool m_refreshing = false;
     QList<std::pair<QPointer<QObject>, TokenCallback>> m_waiting;
 };

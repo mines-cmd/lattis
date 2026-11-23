@@ -195,6 +195,7 @@ void BackupTest::library()
                                         {[&](qint64 b, const QString &p) { bytes = b, part = p; }, nullptr});
     QVERIFY2(error.isEmpty(), qPrintable(error));
     QVERIFY(!QFile::exists(archive + QStringLiteral(".partial")));
+    QVERIFY(!(QFile::permissions(archive) & (QFileDevice::ReadGroup | QFileDevice::ReadOther | QFileDevice::WriteGroup | QFileDevice::WriteOther)));
     QCOMPARE(part, QStringLiteral("The library"));
     QCOMPARE(bytes, 6); // the six 1-byte files
 
@@ -252,6 +253,7 @@ void BackupTest::saves()
                                          },
                                          nullptr});
     QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(!(QFile::permissions(archive) & (QFileDevice::ReadGroup | QFileDevice::ReadOther | QFileDevice::WriteGroup | QFileDevice::WriteOther)));
     QCOMPARE(parts, QStringList({QStringLiteral("Cemu's keys and firmware"), QStringLiteral("mGBA's saves next to ROMs"),
                                  QStringLiteral("Ryubing's saves"), QStringLiteral("Ryubing's keys and firmware"),
                                  QStringLiteral("Cave Story")}));
