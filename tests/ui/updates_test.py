@@ -68,6 +68,7 @@ def emulator_updates(*ids):
             with open(os.path.join(fixtures, release_file), "w") as f:
                 json.dump({"tag_name": new_tag, "body": f"## {id}\n- a change in {new_tag}",
                            "assets": [{"id": 2, "name": new, "size": 9, "updated_at": "2026-11-01T10:00:00Z",
+                                       "digest": "sha256:" + "ab" * 32,
                                        "browser_download_url": f"https://example.invalid/{new}"}]}, f)
             records += (f'[{id}]\nroute = "appimage"\nfile = "{os.path.join(applications, old)}"\ntag = "{old_tag}"\n'
                         'asset_id = "1"\nasset_date = "2026-10-01T10:00:00Z"\n\n')
