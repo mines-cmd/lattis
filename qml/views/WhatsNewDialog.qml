@@ -67,7 +67,7 @@ AppDialog {
                             anchors.margins: Theme.gameEditor.updateNotesPadding
                             spacing: Theme.layout.spacing
 
-                            Label {
+                            PlainLabel {
                                 Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
                                 font.bold: true

@@ -773,7 +773,7 @@ MotionPopup {
                                         Layout.minimumWidth: 0
                                         spacing: 0
 
-                                        Label {
+                                        PlainLabel {
                                             visible: root.game !== undefined
                                             Layout.fillWidth: true
                                             elide: Text.ElideRight

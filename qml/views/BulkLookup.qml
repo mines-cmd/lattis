@@ -1236,7 +1236,7 @@ ApplicationWindow {
                                         source: gameRow.modelData.icon
                                         title: gameRow.modelData.title
                                     }
-                                    Label {
+                                    PlainLabel {
                                         Layout.preferredWidth: root.gameColumn(3)
                                         text: gameRow.modelData.title
                                         color: Theme.gameEditor.lookupText
@@ -1601,7 +1601,7 @@ ApplicationWindow {
                                                 source: result.r.match?.coverLarge ?? result.r.match?.cover ?? ""
                                             }
                                             Muted { text: qsTr("Matched"); font.pixelSize: Theme.font.size }
-                                            Label {
+                                            PlainLabel {
                                                 Layout.fillWidth: true
                                                 text: result.r.match?.name ?? ""
                                                 color: Theme.gameEditor.lookupText
@@ -1652,7 +1652,7 @@ ApplicationWindow {
                                                         size: Theme.controls.iconSize
                                                         color: Theme.gameEditor.bulkBannerIcon
                                                     }
-                                                    Label {
+                                                    PlainLabel {
                                                         Layout.fillWidth: true
                                                         elide: Text.ElideRight
                                                         text: qsTr("IGDB didn't find it, but SteamGridDB has art for \"%1\".").arg(result.r.searched)
@@ -1835,6 +1835,7 @@ ApplicationWindow {
                                                 elide: Text.ElideRight
                                             }
                                             Muted {
+                                                textFormat: Text.PlainText
                                                 Layout.fillWidth: true
                                                 font.pixelSize: Theme.font.size - 1
                                                 text: result.r.searched !== result.r.title ? qsTr("%1 · searched as %2").arg(result.r.platformName).arg(result.r.searched)
@@ -1921,7 +1922,7 @@ ApplicationWindow {
                                                         ArtThumb { source: candidate.modelData.cover }
                                                         ColumnLayout {
                                                             spacing: 2
-                                                            Label {
+                                                            PlainLabel {
                                                                 text: candidate.modelData.name
                                                                 color: Theme.gameEditor.lookupText
                                                                 Layout.maximumWidth: 200
@@ -1975,7 +1976,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.leftMargin: root.detailIndent
                                             spacing: Theme.layout.spacing
-                                            Label {
+                                            PlainLabel {
                                                 Layout.fillWidth: true
                                                 text: result.r.error
                                                 color: Theme.gameEditor.errorColor
@@ -2006,7 +2007,7 @@ ApplicationWindow {
                                             }
                                         }
 
-                                        Label {
+                                        PlainLabel {
                                             visible: result.r.applyError !== ""
                                             Layout.fillWidth: true
                                             Layout.leftMargin: root.detailIndent

@@ -716,7 +716,7 @@ FocusScope {
                                     text: tileReveal.modelData.label
                                     color: Theme.overview.textMuted
                                 }
-                                Label {
+                                PlainLabel {
                                     text: tileReveal.modelData.value
                                     color: tileReveal.modelData.color
                                     font.pixelSize: Theme.overview.tileValueSize
@@ -871,7 +871,7 @@ FocusScope {
                                             anchors.topMargin: Theme.layout.spacing
                                             width: parent.width
 
-                                            Label {
+                                            PlainLabel {
                                                 width: parent.width
                                                 text: entry.modelData.title
                                                 color: Theme.palette.text

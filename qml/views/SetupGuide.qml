@@ -350,7 +350,7 @@ FocusScope {
                                         Behavior on color { enabled: Motion.fades && root.ready; MotionColor { speed: "normal" } }
                                     }
                                 }
-                                Label {
+                                PlainLabel {
                                     text: step.modelData.name
                                     font.pixelSize: Theme.onboarding.stepLabelFontSize
                                     font.weight: step.isCurrent ? Theme.font.strongWeight : Font.Normal
@@ -513,7 +513,7 @@ FocusScope {
                                                     font.weight: Theme.font.strongWeight
                                                     wrapMode: Text.Wrap
                                                 }
-                                                Label {
+                                                PlainLabel {
                                                     visible: text !== ""
                                                     Layout.fillWidth: true
                                                     text: header.description

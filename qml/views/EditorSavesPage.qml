@@ -350,7 +350,7 @@ ColumnLayout {
                         color: Theme.controls.inputText
                     }
                 }
-                Label {
+                PlainLabel {
                     Layout.fillWidth: true
                     text: managerRow.modelData.name
                     color: Theme.controls.inputText

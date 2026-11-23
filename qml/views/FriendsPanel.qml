@@ -138,7 +138,7 @@ Surface {
                 Layout.fillWidth: true
                 spacing: 0
 
-                Label {
+                PlainLabel {
                     Layout.fillWidth: true
                     text: row.modelData.name
                     color: row.playing ? Theme.friends.playingColor
@@ -156,7 +156,7 @@ Surface {
                     font.pixelSize: Theme.friends.hoursFontSize
                     elide: Text.ElideRight
                 }
-                Label {
+                PlainLabel {
                     visible: row.playing && (row.modelData.gameName ?? "") !== ""
                     Layout.fillWidth: true
                     text: row.modelData.gameName ?? ""

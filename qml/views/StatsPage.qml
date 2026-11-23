@@ -964,7 +964,7 @@ FocusScope {
                                 RowLayout {
                                     required property var modelData
                                     Layout.fillWidth: true
-                                    Label {
+                                    PlainLabel {
                                         Layout.fillWidth: true
                                         text: modelData.title ?? modelData.id
                                         color: Theme.tooltip.text
@@ -1525,7 +1525,7 @@ FocusScope {
                                             RowLayout {
                                                 required property var modelData
                                                 Layout.fillWidth: true
-                                                Label {
+                                                PlainLabel {
                                                     Layout.fillWidth: true
                                                     text: modelData.title
                                                     color: Theme.tooltip.text

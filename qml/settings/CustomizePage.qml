@@ -443,7 +443,7 @@ Item {
                                     radius: Theme.settingsWindow.themePopupRowRadius
                                     color: picked ? Theme.settingsWindow.themePopupSelectedBackground : "transparent"
 
-                                    Label {
+                                    PlainLabel {
                                         id: groupLabel
                                         anchors.left: parent.left
                                         anchors.leftMargin: Theme.layout.spacing

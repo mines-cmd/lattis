@@ -55,7 +55,7 @@ AppDialog {
         implicitHeight: Theme.controls.inputHeight
         onAccepted: if (renameButton.enabled) root.rename()
     }
-    Label {
+    PlainLabel {
         visible: root.error !== ""
         Layout.fillWidth: true
         text: root.error

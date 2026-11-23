@@ -121,7 +121,7 @@ ColumnLayout {
             anchors.margins: Theme.settingsWindow.installTilePadding
             spacing: Theme.controls.controlSpacing
 
-            Label {
+            PlainLabel {
                 Layout.fillWidth: true
                 text: head.info?.error ?? ""
                 color: Theme.settingsWindow.installError

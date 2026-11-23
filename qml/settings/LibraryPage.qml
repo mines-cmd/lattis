@@ -332,7 +332,7 @@ Item {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
-                                    Label {
+                                    PlainLabel {
                                         text: backupRow.modelData.name
                                         color: Theme.controls.labelColor
                                         font.pixelSize: Theme.controls.labelFontSize
@@ -400,7 +400,7 @@ Item {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
-                                    Label {
+                                    PlainLabel {
                                         Layout.fillWidth: true
                                         text: asideRow.modelData.title
                                         color: Theme.controls.labelColor
@@ -578,7 +578,7 @@ Item {
                                 Layout.margins: Theme.settingsWindow.rowPadding
                                 spacing: Theme.layout.spacing
 
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     text: hiddenRow.modelData.title
                                     color: Theme.controls.labelColor
@@ -685,7 +685,7 @@ Item {
                                         }
                                     }
 
-                                    Label {
+                                    PlainLabel {
                                         visible: root.renaming !== tagRow.modelData.name
                                         Layout.fillWidth: true
                                         text: tagRow.modelData.name

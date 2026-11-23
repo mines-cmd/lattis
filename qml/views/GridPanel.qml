@@ -127,7 +127,7 @@ Rectangle {
                 asynchronous: true
                 smooth: true
             }
-            Label {
+            PlainLabel {
                 id: titleLabel
                 anchors.fill: parent
                 visible: root.game.id !== undefined && !parent.hasLogo

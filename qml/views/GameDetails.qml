@@ -131,7 +131,7 @@ Item {
             section: "description"
             onFailed: text => block.failed(text)
         }
-        Label {
+        PlainLabel {
             id: desc
             opacity: contentOpacity
             transform: Translate { y: contentShift }
@@ -692,7 +692,7 @@ Item {
 
         Behavior on opacity { enabled: Motion.fades && root.startedUp; MotionNumber { fade: true; speed: "normal" } }
 
-        Label {
+        PlainLabel {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
@@ -1047,6 +1047,7 @@ Item {
 
                     Text {
                         id: fullText
+                        textFormat: Text.PlainText
                         visible: false
                         width: textColumn.description.width
                         text: textColumn.description.text

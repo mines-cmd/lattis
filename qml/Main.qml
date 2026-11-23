@@ -1329,6 +1329,8 @@ ApplicationWindow {
                 tooltipSetup.enabled = false
                 tooltipHost.ToolTip.toolTip.enter = tooltipEnter
                 tooltipHost.ToolTip.toolTip.exit = tooltipExit
+                // Tooltips show lookup summaries and names; none uses markup.
+                tooltipHost.ToolTip.toolTip.contentItem.textFormat = Text.PlainText
                 tooltipHost.ToolTip.toolTip.background = tooltipBackground.createObject(tooltipHost)
             }
         }

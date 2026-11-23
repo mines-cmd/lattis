@@ -349,7 +349,7 @@ Item {
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: Theme.layout.spacing
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     text: modelData.title
                                     color: Theme.controls.labelColor
@@ -484,7 +484,7 @@ Item {
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: Theme.layout.spacing
-                                Label {
+                                PlainLabel {
                                     text: modelData.name
                                     color: Theme.controls.labelColor
                                     font.pixelSize: Theme.controls.labelFontSize

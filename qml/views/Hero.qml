@@ -422,7 +422,7 @@ Item {
                     asynchronous: true
                 }
 
-                Label {
+                PlainLabel {
                     id: titleLabel
                     opacity: !root.logoOnly && (!layer.hasLogo || logoImage.status !== Image.Ready) ? layer.logoIn : 0
                     transform: Translate { y: layer.logoRise }
@@ -451,7 +451,7 @@ Item {
                     verticalAlignment: layer.vAlign === "top" ? Image.AlignTop : layer.vAlign === "bottom" ? Image.AlignBottom : Image.AlignVCenter
                     asynchronous: true
                 }
-                Label {
+                PlainLabel {
                     id: plainTitleLabel
                     opacity: root.logoOnly && (!layer.hasLogo || plainLogoImage.status !== Image.Ready) ? layer.logoIn : 0
                     transform: Translate { y: layer.logoRise }

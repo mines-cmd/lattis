@@ -68,7 +68,7 @@ OverviewCard {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Theme.layout.spacing
 
-                Label {
+                PlainLabel {
                     Layout.fillWidth: true
                     text: entry.modelData.title
                     color: Theme.palette.text

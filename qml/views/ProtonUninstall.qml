@@ -259,7 +259,7 @@ AppDialog {
         color: Theme.gameEditor.errorColor
         text: ""
     }
-    Label {
+    PlainLabel {
         visible: root.running
         Layout.fillWidth: true
         wrapMode: Text.WordWrap

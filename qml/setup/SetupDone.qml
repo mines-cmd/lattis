@@ -154,7 +154,7 @@ ColumnLayout {
                                 font.pixelSize: Theme.onboarding.tileCountSize
                                 font.weight: Theme.font.strongWeight
                             }
-                            Label {
+                            PlainLabel {
                                 Layout.fillWidth: true
                                 text: modelData.name
                                 color: Theme.onboarding.descriptionColor

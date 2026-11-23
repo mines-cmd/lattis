@@ -220,7 +220,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Theme.layout.spacing
 
-                            Label {
+                            PlainLabel {
                                 Layout.maximumWidth: backupRow.width / 2
                                 text: backupRow.named ? backupRow.modelData.name : backupRow.modelData.when
                                 color: Theme.palette.text

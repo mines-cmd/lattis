@@ -160,7 +160,7 @@ OverviewCard {
                     spacing: 0
 
                     OverviewQuiet { text: parent.parent.modelData.label }
-                    Label {
+                    PlainLabel {
                         text: parent.parent.modelData.value
                         color: Theme.palette.text
                         font.pixelSize: Theme.overview.cardTitleSize

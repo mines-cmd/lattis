@@ -271,7 +271,7 @@ Item {
                                         border.color: tint
                                         border.width: Theme.settingsWindow.sourceTagBorderWidth
 
-                                        Label {
+                                        PlainLabel {
                                             id: chipText
                                             anchors.centerIn: parent
                                             text: modelData.name + "  " + count

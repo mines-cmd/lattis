@@ -209,7 +209,7 @@ AppDialog {
                                 RowLayout {
                                     Layout.fillWidth: true
 
-                                    Label {
+                                    PlainLabel {
                                         Layout.fillWidth: true
                                         text: result.modelData.title
                                         color: Theme.gameEditor.headingColor
@@ -222,7 +222,7 @@ AppDialog {
                                         font.pixelSize: Theme.controls.labelFontSize
                                     }
                                 }
-                                Label {
+                                PlainLabel {
                                     visible: result.modelData.detail !== ""
                                     Layout.fillWidth: true
                                     text: result.modelData.detail

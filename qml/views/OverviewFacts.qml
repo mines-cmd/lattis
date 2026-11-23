@@ -69,7 +69,7 @@ OverviewCard {
                         elide: Text.ElideRight
                     }
                 }
-                Label {
+                PlainLabel {
                     text: fact.modelData.value
                     color: Theme.palette.text
                     font.weight: Theme.font.strongWeight

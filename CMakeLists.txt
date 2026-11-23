@@ -114,6 +114,7 @@ qt_add_qml_module(lattis
         qml/components/DropdownEnter.qml
         qml/components/DropdownExit.qml
         qml/components/MotionPop.qml
+        qml/components/PlainLabel.qml
         qml/components/PopLeave.qml
         qml/components/BoxBump.qml
         qml/components/MarkPop.qml

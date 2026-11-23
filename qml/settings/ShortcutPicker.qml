@@ -110,7 +110,7 @@ AppDialog {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.layout.spacing
-                    Label {
+                    PlainLabel {
                         Layout.fillWidth: true
                         text: row.modelData.name
                         color: Theme.controls.labelColor

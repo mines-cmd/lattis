@@ -184,7 +184,7 @@ AppDialog {
                                     Layout.fillWidth: true
                                     spacing: 2
 
-                                    Label {
+                                    PlainLabel {
                                         Layout.fillWidth: true
                                         text: row.modelData.name
                                         color: Theme.controls.labelColor
@@ -280,7 +280,7 @@ AppDialog {
                             }
                         }
 
-                        Label {
+                        PlainLabel {
                             visible: row.current.status === "failed" && row.current.error !== ""
                             Layout.fillWidth: true
                             Layout.leftMargin: root.single ? 0 : Theme.settingsWindow.rowPadding * 2 + Theme.controls.iconSize

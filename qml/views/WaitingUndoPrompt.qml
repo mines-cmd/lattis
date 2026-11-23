@@ -72,7 +72,7 @@ AppDialog {
     Repeater {
         model: root.many ? [] : root.rows
 
-        Label {
+        PlainLabel {
             required property var modelData
             Layout.fillWidth: true
             wrapMode: Text.WordWrap

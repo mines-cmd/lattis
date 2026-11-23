@@ -193,7 +193,7 @@ Item {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 2
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     text: row.modelData.name
                                     color: Theme.gameEditor.lookupText
@@ -245,7 +245,7 @@ Item {
                             loops: Animation.Infinite
                         }
                     }
-                    Label {
+                    PlainLabel {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
@@ -309,7 +309,7 @@ Item {
                             fillMode: Image.PreserveAspectCrop
                         }
                     }
-                    Label {
+                    PlainLabel {
                         Layout.fillWidth: true
                         text: root.current?.name ?? ""
                         color: Theme.gameEditor.headingColor
@@ -337,7 +337,7 @@ Item {
                         color: Theme.gameEditor.hintColor
                         wrapMode: Text.WordWrap
                     }
-                    Label {
+                    PlainLabel {
                         Layout.fillWidth: true
                         text: (root.current?.summary ?? "") !== "" ? root.current.summary : qsTr("No description")
                         color: (root.current?.summary ?? "") !== "" ? Theme.gameEditor.lookupText : Theme.gameEditor.hintColor

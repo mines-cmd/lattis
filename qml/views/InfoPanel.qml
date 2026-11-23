@@ -72,7 +72,7 @@ Surface {
                                  : infoRow.valueColor
                             Behavior on color { enabled: Motion.fades; MotionColor {} }
                         }
-                        Label {
+                        PlainLabel {
                             id: valueLabel
                             Layout.maximumWidth: infoRow.width * 0.6
                             elide: Text.ElideRight

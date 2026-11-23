@@ -76,7 +76,7 @@ Rectangle {
                     loops: Animation.Infinite
                 }
             }
-            Label {
+            PlainLabel {
                 Layout.fillWidth: true
                 text: qsTr("Looking up %1…").arg(root.title)
                 color: Theme.gameEditor.lookupText
@@ -97,7 +97,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: Theme.layout.spacing / 2
 
-                Label {
+                PlainLabel {
                     Layout.fillWidth: true
                     readonly property string game: root.match === null ? ""
                         : root.match.year > 0 ? qsTr("%1 (%2)").arg(root.match.name).arg(root.match.year) : root.match.name
@@ -180,7 +180,7 @@ Rectangle {
                         Cover { source: candidate.modelData.cover }
                         ColumnLayout {
                             spacing: 2
-                            Label {
+                            PlainLabel {
                                 text: candidate.modelData.name
                                 color: Theme.gameEditor.lookupText
                                 font.weight: Theme.font.strongWeight

@@ -146,7 +146,7 @@ OverviewCard {
                     spacing: 0
 
                     OverviewQuiet { text: parent.parent.modelData.label }
-                    Label {
+                    PlainLabel {
                         Layout.fillWidth: true
                         text: parent.parent.modelData.value
                         color: Theme.palette.text

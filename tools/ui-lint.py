@@ -19,6 +19,11 @@ BACKGROUND_OWNERS = {
     "qml/settings/SettingsComboBox.qml",
     "qml/settings/SettingsMenu.qml",
 }
+# Items that draw `text` and take Text.AutoText by default, so a string that starts with a tag is drawn as rich text.
+TEXT_TYPES = {"Label", "Text", "CaptionLabel", "Muted", "CardLabel", "CardTitle", "DialogHint", "DialogPathHint"}
+# The fields that hold a name or a sentence somebody else wrote: a game's, a lookup candidate's, a Steam friend's.
+OUTSIDE_TEXT = re.compile(r"\??\.(?:summary|description|gameName|error|applyError|searched|searchedName)\b"
+                          r"|\b(?:game|modelData|Library|Metadata|match|current)\??\.(?:title|name|value|detail)\b")
 POPUP_TYPES = {"Popup", "MotionPopup", "Dialog", "Drawer", "Menu"}
 
 # Theme settings whose default stays a fixed number, with why. Keep this short.
@@ -35,6 +40,7 @@ STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 OPEN = re.compile(r"(?:([\w.]+)\s*:\s*)?([A-Za-z_][\w.]*)?\s*$")
 
 RULES = {
+    "plain-text": "text from a game, a lookup or a file bound to a Label or Text that is not plain; use PlainLabel or set textFormat",
     "open-url": "Qt.openUrlExternally keeps the AppImage's environment; use GameRunner.openUrl",
     "popup-background":"a popup draws its own background; use the shared dialog or popover one",
     "border-width": "literal border width; use layout.border_width or a theme setting",
@@ -56,6 +62,7 @@ def code_of(line):
 
 def lint_qml(path, rel, hits):
     stack = []  # (property, type) for each open brace
+    texts = []  # for each open brace: [line, an outside `text` binding, whether textFormat is set]
     in_comment = False
     for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if in_comment:
@@ -81,6 +88,9 @@ def lint_qml(path, rel, hits):
             if part == "}":
                 if stack:
                     stack.pop()
+                    line, source, formatted = texts.pop()
+                    if source and not formatted:
+                        hits.append(("plain-text", rel, line, source))
             elif part == "{":
                 opener = OPEN.search(previous)
                 name, kind = (opener.group(1), opener.group(2)) if opener else (None, None)
@@ -90,7 +100,13 @@ def lint_qml(path, rel, hits):
                         and stack[-1][1] in POPUP_TYPES and rel not in BACKGROUND_OWNERS):
                     hit("popup-background")
                 stack.append((name, kind))
+                texts.append([number, None, False])
             elif part != ";":
+                if stack and stack[-1][1] in TEXT_TYPES:
+                    if re.match(r"\s*textFormat\s*:", part):
+                        texts[-1][2] = True
+                    elif re.match(r"\s*text\s*:", part) and OUTSIDE_TEXT.search(part) and not allowed_here:
+                        texts[-1][:2] = [number, raw.strip()]
                 check_property(part, stack[-1][1] if stack else None, hit)
             previous = part
 

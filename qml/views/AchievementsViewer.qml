@@ -169,7 +169,7 @@ MotionPopup {
                                 Layout.fillWidth: true
                                 spacing: Theme.layout.spacing * 2
 
-                                Label {
+                                PlainLabel {
                                     Layout.maximumWidth: parent.width - (year.visible ? year.implicitWidth + parent.spacing : 0)
                                     Layout.alignment: Qt.AlignBaseline
                                     text: root.game.title ?? ""
@@ -454,14 +454,14 @@ MotionPopup {
                                           leftMargin: Theme.layout.spacing * 3; rightMargin: Theme.layout.spacing * 3 }
                                 spacing: 0
 
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     text: row.summary ? qsTr("%n hidden achievement(s)", "", row.modelData.count) : row.modelData.name
                                     elide: Text.ElideRight
                                     color: Theme.achievements.viewerNameColor
                                     font.weight: Theme.achievements.viewerNameWeight
                                 }
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     visible: text !== ""
                                     text: row.summary ? qsTr("Details for each will be revealed once you've unlocked it. Click to show them anyway.")

@@ -515,7 +515,7 @@ Item {
                             id: tabRow
                             anchors.centerIn: parent
                             spacing: Theme.layout.spacingSmall
-                            Label {
+                            PlainLabel {
                                 text: tabButton.modelData.name
                                 color: Theme.controls.buttonText
                                 font.weight: tabButton.current ? Theme.font.strongWeight : Font.Normal
@@ -665,7 +665,7 @@ Item {
                         anchors.rightMargin: Theme.layout.spacing
                         spacing: Theme.layout.spacing
 
-                        Label {
+                        PlainLabel {
                             Layout.fillWidth: true
                             text: resultRow.modelData.name
                             color: Theme.controls.buttonText
@@ -724,7 +724,7 @@ Item {
                     loops: Animation.Infinite
                 }
             }
-            Label {
+            PlainLabel {
                 anchors.centerIn: parent
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
@@ -849,7 +849,7 @@ Item {
                     text: qsTr("Load more")
                     onClicked: root.load(root.kind)
                 }
-                Label {
+                PlainLabel {
                     id: status
                     anchors.centerIn: parent
                     visible: root.tab.loading || grid.count === 0 || (root.tab.error ?? "") !== ""
@@ -971,7 +971,7 @@ Item {
                     loops: Animation.Infinite
                 }
             }
-            Label {
+            PlainLabel {
                 anchors.centerIn: parent
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter

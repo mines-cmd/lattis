@@ -31,7 +31,7 @@ AppDialog {
 
     onOpened: restartButton.forceActiveFocus()
 
-    Label {
+    PlainLabel {
         Layout.fillWidth: true
         Layout.topMargin: -Theme.layout.spacingSmall
         text: root.game.title ?? ""

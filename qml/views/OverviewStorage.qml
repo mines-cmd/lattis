@@ -93,7 +93,7 @@ OverviewCard {
                         Layout.fillWidth: true
                         spacing: Theme.layout.spacing
 
-                        Label {
+                        PlainLabel {
                             text: drive.modelData.name
                             color: Theme.palette.text
                             font.weight: Theme.font.emphasisWeight
@@ -343,7 +343,7 @@ OverviewCard {
                             Layout.fillWidth: true
                             spacing: Theme.layout.spacing
 
-                            Label {
+                            PlainLabel {
                                 Layout.fillWidth: true
                                 text: entry.modelData.title
                                 color: Theme.palette.text

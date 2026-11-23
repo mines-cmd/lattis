@@ -147,7 +147,7 @@ Item {
 
                                 RowLayout {
                                     spacing: Theme.controls.controlSpacing
-                                    Label {
+                                    PlainLabel {
                                         text: row.modelData.name
                                         color: Theme.controls.labelColor
                                         font.pixelSize: Theme.controls.labelFontSize
@@ -177,7 +177,7 @@ Item {
                                     }
                                     Repeater {
                                         model: row.modelData.games
-                                        Label {
+                                        PlainLabel {
                                             required property var modelData
                                             required property int index
                                             text: (modelData.missing ? qsTr("%1 (missing)").arg(modelData.title) : modelData.title)

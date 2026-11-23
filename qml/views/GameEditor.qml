@@ -1168,7 +1168,7 @@ Item {
                                     Behavior on color { enabled: Motion.fades; MotionColor {} }
                                 }
 
-                                Label {
+                                PlainLabel {
                                     Layout.fillWidth: true
                                     text: tabItem.modelData.name
                                     color: tabItem.selected ? Theme.gameEditor.railSelectedText : Theme.gameEditor.railText

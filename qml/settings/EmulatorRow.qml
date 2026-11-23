@@ -628,7 +628,7 @@ ColumnLayout {
                     }
                 }
 
-                Label {
+                PlainLabel {
                     visible: root.error !== ""
                     Layout.fillWidth: true
                     text: root.error
@@ -756,7 +756,7 @@ ColumnLayout {
                 font.pixelSize: Theme.controls.descriptionFontSize
                 wrapMode: Text.WordWrap
             }
-            Label {
+            PlainLabel {
                 visible: popup.error !== ""
                 Layout.fillWidth: true
                 text: popup.error

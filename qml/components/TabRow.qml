@@ -80,7 +80,7 @@ Item {
                 }
                 // The count is a label of its own, so a tab is found by its name alone.
                 contentItem: Item {
-                    Label {
+                    PlainLabel {
                         id: label
                         x: Theme.layout.spacing
                         anchors.verticalCenter: parent.verticalCenter

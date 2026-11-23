@@ -162,7 +162,7 @@ SettingsMenu {
                     color: Theme.controls.inputText
                 }
             }
-            Label {
+            PlainLabel {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 text: collectionRow.modelData.name

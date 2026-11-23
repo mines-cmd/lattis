@@ -401,7 +401,7 @@ ApplicationWindow {
                                         Behavior on color { enabled: Motion.fades; MotionColor {} }
                                     }
 
-                                    Label {
+                                    PlainLabel {
                                         Layout.fillWidth: true
                                         text: category.modelData.name
                                         color: category.selected ? Theme.settingsWindow.sidebarSelectedText
@@ -515,7 +515,7 @@ ApplicationWindow {
                                                     color: Theme.settingsWindow.sidebarSectionMarker
                                                 }
 
-                                                Label {
+                                                PlainLabel {
                                                     anchors.fill: parent
                                                     anchors.leftMargin: Theme.layout.spacing
                                                     anchors.rightMargin: entry.subsections.length > 0 ? 10 + chevron.width + 4 : 10
@@ -600,7 +600,7 @@ ApplicationWindow {
                                                                 color: Theme.settingsWindow.sidebarSectionMarker
                                                             }
 
-                                                            Label {
+                                                            PlainLabel {
                                                                 anchors.fill: parent
                                                                 anchors.leftMargin: Theme.layout.spacing
                                                                 anchors.rightMargin: Theme.layout.spacing
@@ -664,7 +664,7 @@ ApplicationWindow {
                     Repeater {
                         model: root.categories
 
-                        Label {
+                        PlainLabel {
                             required property var modelData
 
                             anchors.left: parent.left

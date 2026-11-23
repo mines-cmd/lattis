@@ -16,7 +16,7 @@ ComboBox {
 
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
-    contentItem: Label {
+    contentItem: PlainLabel {
         text: root.displayText
         color: root.textColor
         verticalAlignment: Text.AlignVCenter
@@ -55,7 +55,7 @@ ComboBox {
         highlighted: root.highlightedIndex === index
         hoverEnabled: true
 
-        contentItem: Label {
+        contentItem: PlainLabel {
             text: root.textRole ? item.modelData[root.textRole] : item.modelData
             color: Theme.controls.inputText
             font.weight: root.currentIndex === item.index ? Theme.font.strongWeight : Font.Normal

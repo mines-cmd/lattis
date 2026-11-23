@@ -192,7 +192,7 @@ AppDialog {
         }
     }
 
-    Label {
+    PlainLabel {
         visible: root.error !== ""
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
