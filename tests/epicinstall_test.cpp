@@ -122,7 +122,8 @@ void EpicInstallTest::freeSpaceOfAFolderThatDoesNotExistYet()
     QTemporaryDir dir;
     const qint64 here = EpicInstall::freeSpace(dir.path());
     QVERIFY(here > 0);
-    QCOMPARE(EpicInstall::freeSpace(dir.filePath(u"a/b/c"_s)), here);
+    // Another process may write between the two reads.
+    QVERIFY(qAbs(EpicInstall::freeSpace(dir.filePath(u"a/b/c"_s)) - here) < 64 * 1024 * 1024);
     QCOMPARE(EpicInstall::freeSpace({}), qint64(-1));
     QCOMPARE(EpicInstall::freeSpace(u"relative/path"_s), qint64(-1));
 }

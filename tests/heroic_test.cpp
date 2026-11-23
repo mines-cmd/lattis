@@ -553,7 +553,8 @@ void HeroicTest::updateWaiting()
     writeFile(HeroicScan::assetsPath(m_root), legendaryFile(u"assets.after-check.json"_s));
     const HeroicState state = HeroicScan::scan(m_root);
     QVERIFY(state.warnings.isEmpty());
-    const HeroicGame *hike = findGame(state.games(), kHikeApp);
+    const QList<HeroicGame> games = state.games();
+    const HeroicGame *hike = findGame(games, kHikeApp);
     QVERIFY(hike);
     QVERIFY(hike->installed);
     QCOMPARE(hike->version, u"1.10.0_old"_s);
@@ -565,7 +566,8 @@ void HeroicTest::updateCurrent()
     writeInstalled(m_root, legendaryFile(u"installed.json"_s));
     for (const QString &assets : {u"assets.before-check.json"_s, u"assets.after-check.json"_s}) {
         writeFile(HeroicScan::assetsPath(m_root), legendaryFile(assets));
-        const HeroicGame *hike = findGame(HeroicScan::scan(m_root).games(), kHikeApp);
+        const QList<HeroicGame> games = HeroicScan::scan(m_root).games();
+        const HeroicGame *hike = findGame(games, kHikeApp);
         QVERIFY(hike);
         QCOMPARE(hike->version, u"1.10.1_patched_Windows"_s);
         QCOMPARE(hike->update, GameUpdate::None);

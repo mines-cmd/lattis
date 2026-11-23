@@ -1209,6 +1209,9 @@ void GeneralTest::overviewSetters()
     QFile created(data.filePath(QStringLiteral("settings.toml")));
     QVERIFY(created.open(QIODevice::WriteOnly));
     created.close();
+    QStringList left;
+    QStringList right;
+    {
     General general(data.path());
     QSignalSpy changed(&general, &General::overviewChanged);
     QSignalSpy window(&general, &General::settingsChanged);
@@ -1231,12 +1234,16 @@ void GeneralTest::overviewSetters()
     QCOMPARE(general.overviewBelow(), QStringList{"continue_playing"});
     QCOMPARE(window.size(), 0);
 
-    // It survives a new reader.
-    General again(data.path());
-    QCOMPARE(again.overviewLeft(), general.overviewLeft());
-    QCOMPARE(again.overviewRight(), general.overviewRight());
-    QCOMPARE(again.overviewHidden(), (QStringList{"tiles", "years"}));
-    QCOMPARE(again.overviewBelow(), QStringList{"continue_playing"});
+    left = general.overviewLeft();
+    right = general.overviewRight();
+    }
+
+    // It survives a new reader. The first General is gone: only one may live.
+    General general(data.path());
+    QCOMPARE(general.overviewLeft(), left);
+    QCOMPARE(general.overviewRight(), right);
+    QCOMPARE(general.overviewHidden(), (QStringList{"tiles", "years"}));
+    QCOMPARE(general.overviewBelow(), QStringList{"continue_playing"});
 
     // The default rows leave no keys.
     QCOMPARE(general.setOverviewRows({"tiles", "continue_playing"}, {}), QString());

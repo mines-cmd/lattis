@@ -32,6 +32,7 @@ struct FakeState
     bool locked = false;
     bool dismissPrompts = false;
     int nextItem = 1;
+    QObject *itemRoot = nullptr;
 };
 
 FakeState &fake()
@@ -147,6 +148,8 @@ public slots:
     {
         QMutexLocker lock(&fake().mutex);
         fake().items.remove(path());
+        QDBusConnection(QStringLiteral("fake-keyring")).unregisterObject(path());
+        parent()->deleteLater();
         prompt = QDBusObjectPath(QStringLiteral("/"));
     }
 
@@ -160,6 +163,7 @@ void exportItem(const QString &path)
     if (bus.objectRegisteredAt(path))
         return;
     auto *object = new FakeObject;
+    object->setParent(fake().itemRoot);
     object->path = path;
     new FakeItemAdaptor(object);
     bus.registerObject(path, object, QDBusConnection::ExportAdaptors);
@@ -200,6 +204,8 @@ protected:
     void run() override
     {
         QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-keyring"));
+        FakeObject itemRoot;
+        fake().itemRoot = &itemRoot;
         FakeObject service;
         new FakeServiceAdaptor(&service);
         FakeObject collection;
@@ -213,6 +219,7 @@ protected:
                                   QDBusConnection::ExportAdaptors);
         ready.release();
         exec();
+        fake().itemRoot = nullptr;
     }
 };
 

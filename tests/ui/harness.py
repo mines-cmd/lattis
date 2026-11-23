@@ -89,6 +89,10 @@ def run_app(binary, dirs, script):
         # No session bus: nothing here may reach the real keyring or other services.
         "DBUS_SESSION_BUS_ADDRESS": "unix:path=/nonexistent",
     }
+    # A sanitizer build of the app reads these; the rest of the environment is deliberately not inherited.
+    for name in ("ASAN_OPTIONS", "UBSAN_OPTIONS", "LSAN_OPTIONS"):
+        if name in os.environ:
+            env[name] = os.environ[name]
     env.update(dirs.env)
     try:
         proc = subprocess.run([binary], env=env, capture_output=True, text=True, timeout=90)

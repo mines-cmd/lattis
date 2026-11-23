@@ -1,0 +1,11 @@
+# System-library leaks: none has a frame in Lattis code.
+# Font lookup through the Qt platform theme.
+leak:libfontconfig.so
+leak:libpangoft2-1.0.so
+leak:libpango-1.0.so
+# One-time initialisers of the Vulkan drivers Qt probes and unloads. The drivers are unloaded before the
+# report, so their frames show as <unknown module>; the only symbolised frames are libasan's realloc and
+# libc's pthread_once, and a rule matches one frame, so this one is as narrow as the report allows.
+# It also hides a leak made inside a pthread_once or std::call_once initialiser. Lattis uses neither
+# (grep src/ and tests/); if that changes, drop this line and look at the report instead.
+leak:__pthread_once_slow

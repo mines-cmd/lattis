@@ -164,11 +164,11 @@ QVariantList LibraryMediaTest::media(Library &library, const QString &id, bool *
     bool got = false;
     if (limited)
         *limited = false;
-    QObject::connect(&library, &Library::mediaLimited, &library, [&](const QString &game) {
+    const auto limitedConnection = QObject::connect(&library, &Library::mediaLimited, &library, [&](const QString &game) {
         if (limited && game == id)
             *limited = true;
     });
-    QObject::connect(&library, &Library::mediaReady, &library, [&](const QString &game, const QVariantList &list) {
+    const auto readyConnection = QObject::connect(&library, &Library::mediaReady, &library, [&](const QString &game, const QVariantList &list) {
         if (game == id) {
             items = list;
             got = true;
@@ -177,6 +177,8 @@ QVariantList LibraryMediaTest::media(Library &library, const QString &id, bool *
     library.media(id);
     if (!QTest::qWaitFor([&] { return got; }, 10000))
         qWarning("media: no mediaReady");
+    QObject::disconnect(limitedConnection);
+    QObject::disconnect(readyConnection);
     return items;
 }
 
