@@ -42,6 +42,7 @@ class Theme : public QQmlPropertyMap
     Q_PROPERTY(QString activeColors READ activeColors NOTIFY activeColorsChanged)
     Q_PROPERTY(QString activeStyle READ activeStyle NOTIFY activeStyleChanged)
     Q_PROPERTY(QString activeTheme READ activeTheme NOTIFY activeThemeChanged)
+    Q_PROPERTY(int maxNameLength READ maxNameLength CONSTANT)
     Q_PROPERTY(QStringList availableColors READ availableColors NOTIFY availableChanged)
     Q_PROPERTY(QStringList availableStyles READ availableStyles NOTIFY availableChanged)
     Q_PROPERTY(QStringList availableThemes READ availableThemes NOTIFY availableChanged)
@@ -62,6 +63,8 @@ public:
     QString activeColors() const { return m_activeColors; }
     QString activeStyle() const { return m_activeStyle; }
     QString activeTheme() const { return m_activeTheme; }
+    // The most characters a theme name field takes; nameError() also limits the bytes.
+    static int maxNameLength() { return 64; }
     // The details.* keys that moved to [game_page] (see GamePageMigration), as the active style sets them.
     QVariantMap legacyGamePage() const { return m_legacyGamePage; }
     QStringList availableColors() const;
@@ -175,6 +178,7 @@ private:
     bool isBuiltInName(Half half, const QString &name) const;
     bool createHalf(Half half, const QString &name, const QString &basedOn, const QString &description = {});
     static constexpr int kMaxDescription = 48;
+    static constexpr int kMaxNameBytes = 200;
     static QString capDescription(const QString &text);
     QString halfPath(Half half, const QString &name, bool builtInOnly = false) const;
     QString userThemePath(const QString &name) const;

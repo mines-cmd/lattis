@@ -1,4 +1,5 @@
 #include "modmanagers.h"
+#include "tomlstring.h"
 #include "gamefile.h"
 #include "libraryfiles.h"
 #include "suggestion.h"
@@ -29,10 +30,6 @@ const Key *find(const QString &key)
     return nullptr;
 }
 
-QString quoted(const QString &text)
-{
-    return tomlString(text);
-}
 }
 
 QStringList keys()
@@ -94,10 +91,10 @@ QString format(const QString &key, const QVariant &value)
     if (find(key)->list) {
         QStringList items;
         for (const QString &item : value.toStringList())
-            items.append(quoted(item));
+            items.append(tomlQuote(item));
         return QStringLiteral("[") + items.join(QLatin1String(", ")) + u']';
     }
-    return quoted(value.toString());
+    return tomlQuote(value.toString());
 }
 
 void apply(ModManager &m, const QString &key, const QVariant &value)

@@ -1,4 +1,5 @@
 #include "theme.h"
+#include "tomlstring.h"
 #include "gamepagemigration.h"
 #include "tomlsection.h"
 #include "schemamodel.h"
@@ -136,12 +137,6 @@ QVariant defaultRaw(const Setting &s)
     }
 }
 
-QString quoted(const QString &s)
-{
-    QString escaped = s;
-    escaped.replace(u'\\', QLatin1String("\\\\")).replace(u'"', QLatin1String("\\\""));
-    return u'"' + escaped + u'"';
-}
 
 QString formatDefault(const Setting &s)
 {
@@ -151,15 +146,15 @@ QString formatDefault(const Setting &s)
     case Type::ColorList: {
         QStringList items = def.split(u' ', Qt::SkipEmptyParts);
         for (QString &item : items)
-            item = quoted(item);
+            item = tomlQuote(item);
         return u'[' + items.join(QLatin1String(", ")) + u']';
     }
     case Type::Int:
     case Type::Real:
     case Type::Bool:
-        return def.startsWith(u'@') ? quoted(def) : def;
+        return def.startsWith(u'@') ? tomlQuote(def) : def;
     default:
-        return quoted(def);
+        return tomlQuote(def);
     }
 }
 
@@ -168,7 +163,7 @@ QString formatScalar(const QVariant &v, Type type)
     if (v.typeId() == QMetaType::QString) {
         const QString str = v.toString();
         if (str.startsWith(u'@'))
-            return quoted(str);
+            return tomlQuote(str);
     }
     switch (type) {
     case Type::Color: {
@@ -181,7 +176,7 @@ QString formatScalar(const QVariant &v, Type type)
                           .arg(c.blue(), 2, 16, QChar(u'0'));
         if (c.alpha() != 255)
             hex += QStringLiteral("%1").arg(c.alpha(), 2, 16, QChar(u'0'));
-        return quoted(hex.toLower());
+        return tomlQuote(hex.toLower());
     }
     case Type::Int:
         return QString::number(v.toLongLong());
@@ -191,11 +186,11 @@ QString formatScalar(const QVariant &v, Type type)
         return v.toBool() ? QStringLiteral("true") : QStringLiteral("false");
     case Type::String:
     case Type::Enum:
-        return quoted(v.toString());
+        return tomlQuote(v.toString());
     case Type::StringList: {
         QStringList items;
         for (const QVariant &item : v.toList())
-            items.append(quoted(item.toString()));
+            items.append(tomlQuote(item.toString()));
         return u'[' + items.join(QLatin1String(", ")) + u']';
     }
     case Type::ColorList: {
@@ -406,7 +401,7 @@ void Theme::dropMaterialTheme()
         try {
             const toml::table tbl = toml::parse_file(path.toStdString());
             if (tbl["extends"].value<std::string>() == "material")
-                TomlPatch::setValueInFile(path, QString(), QStringLiteral("extends"), quoted(QStringLiteral("default")));
+                TomlPatch::setValueInFile(path, QString(), QStringLiteral("extends"), tomlQuote(QStringLiteral("default")));
         } catch (const toml::parse_error &) {
         }
     }
@@ -414,7 +409,7 @@ void Theme::dropMaterialTheme()
         QString error;
         const QString settings = m_dataDir + QStringLiteral("/settings.toml");
         if (!TomlPatch::setValueInFile(settings, QStringLiteral("appearance"), QStringLiteral("theme"),
-                                       quoted(QStringLiteral("Mythos")), &error))
+                                       tomlQuote(QStringLiteral("Mythos")), &error))
             warn(QStringLiteral("could not update %1: %2").arg(settings, error));
     }
 }
@@ -1216,7 +1211,7 @@ bool Theme::setStyleDescription(const QString &name, const QString &text)
         return false;
     const QString capped = text.simplified().left(kMaxDescription);
     return capped.isEmpty() ? TomlPatch::removeValueInFile(path, QString(), QStringLiteral("description"))
-                            : TomlPatch::setValueInFile(path, QString(), QStringLiteral("description"), quoted(capped));
+                            : TomlPatch::setValueInFile(path, QString(), QStringLiteral("description"), tomlQuote(capped));
 }
 
 std::optional<Theme::Half> Theme::halfNamed(const QString &word)
@@ -1624,7 +1619,7 @@ void Theme::setAppearance(const QString &colors, const QString &style)
     const QString path = m_dataDir + QStringLiteral("/settings.toml");
     for (const auto &[key, value] : {std::pair(QStringLiteral("colors"), colors), std::pair(QStringLiteral("style"), style)}) {
         QString error;
-        if (!TomlPatch::setValueInFile(path, QStringLiteral("appearance"), key, quoted(value), &error)) {
+        if (!TomlPatch::setValueInFile(path, QStringLiteral("appearance"), key, tomlQuote(value), &error)) {
             warn(QStringLiteral("could not switch theme: %1").arg(error));
             return;
         }
@@ -1654,16 +1649,17 @@ void Theme::setTheme(const QString &name)
                   pair->style.isEmpty() ? m_activeStyle : pair->style);
 }
 
-bool Theme::createHalf(Half half, const QString &name, const QString &basedOn, const QString &description)
+bool Theme::createHalf(Half half, const QString &rawName, const QString &basedOn, const QString &description)
 {
+    const QString name = rawName.trimmed();
     if (!nameError(word(half), name).isEmpty())
         return false;
 
     const QString path = userHalfPath(half, name);
-    QString content = QStringLiteral("extends = %1\n").arg(quoted(basedOn.isEmpty() ? activeName(half) : basedOn));
+    QString content = QStringLiteral("extends = %1\n").arg(tomlQuote(basedOn.isEmpty() ? activeName(half) : basedOn));
     const QString capped = description.simplified().left(kMaxDescription);
     if (half == Half::Style && !capped.isEmpty())
-        content += QStringLiteral("description = %1\n").arg(quoted(capped));
+        content += QStringLiteral("description = %1\n").arg(tomlQuote(capped));
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly) || (file.write(content.toUtf8()), !file.commit())) {
         warn(QStringLiteral("could not create %1").arg(path));
@@ -1686,12 +1682,22 @@ bool Theme::createStyle(const QString &name, const QString &basedOn, const QStri
     return createHalf(Half::Style, name, basedOn, description);
 }
 
-QString Theme::nameError(const QString &kind, const QString &name) const
+QString Theme::nameError(const QString &kind, const QString &rawName) const
 {
-    if (name.trimmed().isEmpty())
+    const QString name = rawName.trimmed();
+    if (name.isEmpty())
         return tr("Give it a name");
     if (name.contains(u'/') || name.contains(u'\\'))
         return tr("A name can't contain / or \\");
+    for (const QChar c : name) {
+        if (c.category() == QChar::Other_Control)
+            return tr("A name can't contain a line break or another control character");
+    }
+    if (name.startsWith(u'.'))
+        return tr("A name can't start with a dot");
+    // The file system's 255 bytes, less the extension and the ".partial" a save writes first.
+    if (name.toUtf8().size() > kMaxNameBytes)
+        return tr("That name is too long");
     if (name == QLatin1String("reference"))
         return tr("\"reference\" is the file listing every setting");
     const bool theme = kind == QLatin1String("theme");
@@ -1711,15 +1717,16 @@ bool Theme::themeExists(const QString &name) const
     return pairOf(name).has_value();
 }
 
-bool Theme::saveTheme(const QString &name, bool replace)
+bool Theme::saveTheme(const QString &rawName, bool replace)
 {
+    const QString name = rawName.trimmed();
     if (!nameError(QStringLiteral("theme"), name).isEmpty() || (themeExists(name) && !replace))
         return false;
 
     const QString path = userThemePath(name);
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)
-        || (file.write(QStringLiteral("colors = %1\nstyle = %2\n").arg(quoted(m_activeColors), quoted(m_activeStyle)).toUtf8()),
+        || (file.write(QStringLiteral("colors = %1\nstyle = %2\n").arg(tomlQuote(m_activeColors), tomlQuote(m_activeStyle)).toUtf8()),
             !file.commit())) {
         warn(QStringLiteral("could not create %1").arg(path));
         return false;
@@ -1796,8 +1803,9 @@ bool Theme::deleteUserFile(const QString &kind, const QString &name, bool perman
     return true;
 }
 
-bool Theme::renameUserFile(const QString &kind, const QString &name, const QString &newName)
+bool Theme::renameUserFile(const QString &kind, const QString &name, const QString &rawNewName)
 {
+    const QString newName = rawNewName.trimmed();
     const std::optional<Half> half = halfNamed(kind);
     const bool theme = kind == QLatin1String("theme");
     if ((!theme && !half) || name.isEmpty() || name.contains(u'/') || name.contains(u'\\')
@@ -1820,7 +1828,7 @@ bool Theme::renameUserFile(const QString &kind, const QString &name, const QStri
     if (!theme) {
         const auto repoint = [this, &newName](const QString &path, const QString &section, const QString &key) {
             QString error;
-            if (!TomlPatch::setValueInFile(path, section, key, quoted(newName), &error))
+            if (!TomlPatch::setValueInFile(path, section, key, tomlQuote(newName), &error))
                 warn(QStringLiteral("could not update %1: %2").arg(path, error));
         };
 

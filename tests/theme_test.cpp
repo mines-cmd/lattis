@@ -313,6 +313,23 @@ void ThemeTest::newNamesAreChecked()
     QVERIFY(theme.nameError("style", "Taken").isEmpty());
     QVERIFY(theme.nameError("style", "Ember").isEmpty());
 
+    // A name is a file name the user can see: no control character, no leading dot, no more than 200 bytes.
+    for (const QString kind : {"colors", "style"}) {
+        QVERIFY(!theme.nameError(kind, "a\nb").isEmpty());
+        QVERIFY(!theme.nameError(kind, QStringLiteral("a\u0007b")).isEmpty());
+        QVERIFY(!theme.nameError(kind, ".mine").isEmpty());
+        QVERIFY(!theme.nameError(kind, QString(300, QLatin1Char('n'))).isEmpty());
+        QVERIFY(!theme.nameError(kind, QString(101, QChar(0x00e9))).isEmpty());
+        QCOMPARE(theme.nameError(kind, QString(200, QLatin1Char('n'))), QString());
+        QCOMPARE(theme.nameError(kind, "  padded  "), QString());
+    }
+    QVERIFY(!theme.createColors("a\nb", "Ember"));
+    QVERIFY(!theme.createColors(".mine", "Ember"));
+    QVERIFY(!theme.createColors(QString(300, QLatin1Char('n')), "Ember"));
+    QVERIFY(!theme.createStyle("a\nb", "Soft"));
+    QVERIFY(!theme.saveTheme("a\nb"));
+    QCOMPARE(theme.activeColors(), QStringLiteral("Ember"));
+
     QVERIFY(!theme.createColors("Ember", "Ember"));
     QVERIFY(!theme.createColors("reference", "Ember"));
     QVERIFY(!theme.createColors("Taken", "Ember"));

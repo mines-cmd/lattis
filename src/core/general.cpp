@@ -1,4 +1,5 @@
 #include "general.h"
+#include "tomlstring.h"
 #include "autostart.h"
 #include "tomlpatch.h"
 
@@ -167,10 +168,8 @@ QString General::setSkippedUpdate(const QString &version)
     if (version.isEmpty()) {
         TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("skipped_update"), &error);
     } else {
-        QString quoted = version;
-        quoted.replace(u'\\', QStringLiteral("\\\\")).replace(u'"', QStringLiteral("\\\""));
         TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("skipped_update"),
-                                  u'"' + quoted + u'"', &error);
+                                  tomlQuote(version), &error);
     }
     if (error.isEmpty())
         load();
@@ -306,7 +305,7 @@ QString General::writeGamePage(const QString &place, const QStringList &order, c
     const auto quoted = [](const QStringList &names) {
         QStringList out;
         for (const QString &name : names)
-            out.append(u'"' + name + u'"');
+            out.append(tomlQuote(name));
         return u'[' + out.join(QLatin1String(", ")) + u']';
     };
     QString error;

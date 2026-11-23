@@ -1,4 +1,5 @@
 #include "listsettings.h"
+#include "tomlstring.h"
 #include "tomlsection.h"
 #include "suggestion.h"
 
@@ -18,12 +19,6 @@ bool defaultDescending(const QString &sort)
     return sort != QLatin1String("title") && sort != QLatin1String("platform");
 }
 
-QString quoted(const QString &s)
-{
-    QString escaped = s;
-    escaped.replace(u'\\', QLatin1String("\\\\")).replace(u'"', QLatin1String("\\\""));
-    return u'"' + escaped + u'"';
-}
 
 QString boolText(bool b)
 {
@@ -34,7 +29,7 @@ QString quotedList(const QStringList &list)
 {
     QStringList items;
     for (const QString &s : list)
-        items.append(quoted(s));
+        items.append(tomlQuote(s));
     return items.join(QLatin1String(", "));
 }
 
@@ -44,7 +39,7 @@ void parseChoices(const toml::node &node, const TomlSection &section, const QStr
     const auto *array = node.as_array();
     if (!array || (!array->empty() && !array->is_homogeneous(toml::node_type::string))) {
         warnings->append(QStringLiteral("%1: %2 must be a list of names, like [%3]")
-                             .arg(section.where(node), key, quoted(allowed.first())));
+                             .arg(section.where(node), key, tomlQuote(allowed.first())));
         return;
     }
     for (const toml::node &item : *array) {
@@ -237,7 +232,7 @@ QList<std::pair<QString, QString>> listSettingsChanges(const ListSettings &from,
         if (changed)
             out.append({QString::fromLatin1(key), isDefault ? QString() : value});
     };
-    add("sort", from.sort != to.sort, to.sort == defaults.sort, quoted(to.sort));
+    add("sort", from.sort != to.sort, to.sort == defaults.sort, tomlQuote(to.sort));
     // Written only when it isn't the sort's usual direction; a sort change rechecks it.
     add("descending", from.descending != to.descending || from.sort != to.sort,
         to.descending == defaultDescending(to.sort), boolText(to.descending));
@@ -258,11 +253,11 @@ QList<std::pair<QString, QString>> listSettingsChanges(const ListSettings &from,
     add("min_rating", from.minRating != to.minRating, to.minRating == defaults.minRating,
         QString::number(to.minRating, 'f', 1));
     add("play_times", from.playTimes != to.playTimes, to.playTimes.isEmpty(), u'[' + quotedList(to.playTimes) + u']');
-    add("last_played", from.lastPlayed != to.lastPlayed, to.lastPlayed.isEmpty(), quoted(to.lastPlayed));
+    add("last_played", from.lastPlayed != to.lastPlayed, to.lastPlayed.isEmpty(), tomlQuote(to.lastPlayed));
     add("achievements", from.achievements != to.achievements, to.achievements.isEmpty(),
         u'[' + quotedList(to.achievements) + u']');
     add("more_open", from.moreOpen != to.moreOpen, to.moreOpen == defaults.moreOpen, boolText(to.moreOpen));
-    add("group_by", from.groupBy != to.groupBy, to.groupBy == defaults.groupBy, quoted(to.groupBy));
+    add("group_by", from.groupBy != to.groupBy, to.groupBy == defaults.groupBy, tomlQuote(to.groupBy));
     // The old key goes with any change of the grouping, so it can't contradict group_by.
     add("group_by_platform", from.groupBy != to.groupBy, true, {});
     return out;

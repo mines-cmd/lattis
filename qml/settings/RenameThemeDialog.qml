@@ -14,8 +14,11 @@ AppDialog {
     readonly property var usage: Theme.usedBy(kind, name)
     readonly property var themes: usage.themes ?? []
     readonly property var files: usage.files ?? []
+    property string failure
     readonly property string error: {
-        const text = field.text
+        if (failure !== "")
+            return failure
+        const text = field.text.trim()
         const base = Theme.nameError(kind, text)
         if (base !== "")
             return base
@@ -27,6 +30,7 @@ AppDialog {
     function openFor(kind, name) {
         root.kind = kind
         root.name = name
+        root.failure = ""
         field.text = name
         open()
         field.forceActiveFocus()
@@ -40,11 +44,14 @@ AppDialog {
     }
 
     function rename() {
-        const to = field.text
+        const to = field.text.trim()
         const ok = kind === "colors" ? Theme.renameColors(name, to)
                  : kind === "style" ? Theme.renameStyle(name, to) : Theme.renameTheme(name, to)
-        if (ok)
-            renamed(qsTr("Renamed %1 to %2").arg(name).arg(to))
+        if (!ok) {
+            failure = qsTr("Couldn't rename it. The Customize page's problems list says why.")
+            return
+        }
+        renamed(qsTr("Renamed %1 to %2").arg(name).arg(to))
         close()
     }
 
@@ -53,6 +60,8 @@ AppDialog {
         id: field
         Layout.fillWidth: true
         implicitHeight: Theme.controls.inputHeight
+        maximumLength: Theme.maxNameLength
+        onTextChanged: root.failure = ""
         onAccepted: if (renameButton.enabled) root.rename()
     }
     PlainLabel {

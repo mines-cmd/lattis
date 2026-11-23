@@ -284,15 +284,21 @@ Item {
         title: qsTr("Save as theme")
 
         function openFresh() {
+            failure = ""
             saveName.text = Theme.activeTheme !== "" ? "" : Theme.activeColors + " " + Theme.activeStyle
             open()
             saveName.forceActiveFocus()
         }
 
+        property string failure
+
         function save(replace) {
             if (Theme.saveTheme(saveName.text, replace)) {
-                root.message(qsTr("Saved the theme %1").arg(saveName.text), null)
+                root.message(qsTr("Saved the theme %1").arg(saveName.text.trim()), null)
                 close()
+            } else {
+                failure = qsTr("Couldn't make the file. The Customize page's problems list says why.")
+                replaceDialog.close()
             }
         }
 
@@ -308,10 +314,12 @@ Item {
             id: saveName
             Layout.fillWidth: true
             implicitHeight: Theme.controls.inputHeight
+            maximumLength: Theme.maxNameLength
+            onTextChanged: saveDialog.failure = ""
             onAccepted: if (saveButton.enabled) saveButton.clicked()
         }
-        Label {
-            readonly property string error: Theme.nameError("theme", saveName.text)
+        PlainLabel {
+            readonly property string error: saveDialog.failure !== "" ? saveDialog.failure : Theme.nameError("theme", saveName.text)
             visible: error !== ""
             Layout.fillWidth: true
             text: error
@@ -326,7 +334,7 @@ Item {
                 primary: true
                 text: qsTr("Save")
                 enabled: Theme.nameError("theme", saveName.text) === ""
-                onClicked: Theme.themeExists(saveName.text) ? replaceDialog.open() : saveDialog.save(false)
+                onClicked: Theme.themeExists(saveName.text.trim()) ? replaceDialog.open() : saveDialog.save(false)
             }
         ]
     }

@@ -295,6 +295,11 @@ void GeneralTest::updateSettings()
     QVERIFY(!general.checkForUpdates());
     QCOMPARE(general.setSkippedUpdate("1.2"), QString());
     QCOMPARE(general.skippedUpdate(), QStringLiteral("1.2"));
+    // A control character is written as an escape, so the file still parses and holds one value.
+    const QString odd = QStringLiteral("1.2\n[x]\a");
+    QCOMPARE(general.setSkippedUpdate(odd), QString());
+    QCOMPARE(general.skippedUpdate(), odd);
+    QCOMPARE(general.setSkippedUpdate("1.2"), QString());
     QVERIFY(settings.open(QIODevice::ReadOnly));
     const QByteArray written = settings.readAll();
     settings.close();
@@ -996,6 +1001,25 @@ void GeneralTest::gamePageMigration()
     QVERIFY(f.open(QIODevice::ReadOnly));
     QVERIFY(!f.readAll().contains("game_page"));
     f.close();
+
+    // A style is a file people share: a quote, a backslash or a line break can't change the file, and only
+    // names the game page knows get in.
+    QVERIFY(QFile::remove(marker));
+    write("# mine\n[general]\nview = \"grid\"\n");
+    QVariantMap hostile;
+    hostile.insert(QStringLiteral("stats"), QVariantList{QStringLiteral("a\"b"), QStringLiteral("C:\\x"),
+                                                         QStringLiteral("x\"]\n[metadata]\nlook_up_new_games = true\n#"),
+                                                         QStringLiteral("rating")});
+    QVERIFY(GamePageMigration::run(settings, marker, hostile, &error));
+    QVERIFY(QFileInfo::exists(marker));
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    const QByteArray written = f.readAll();
+    f.close();
+    QVERIFY(!written.contains("metadata"));
+    QVERIFY(written.contains("view = \"grid\""));
+    r = parsed();
+    QVERIFY(r.warnings.isEmpty());
+    QCOMPARE(r.value.chips, QStringList{"rating"});
 
     // A list in the info panel's own order.
     QVERIFY(QFile::remove(marker));

@@ -9,11 +9,13 @@ AppDialog {
     title: isColors ? qsTr("New colors") : qsTr("New style")
 
     property string half: "colors"
+    property string failure
     readonly property bool isColors: half === "colors"
     readonly property var names: isColors ? Theme.availableColors : Theme.availableStyles
 
     function openFor(half, basedOn) {
         root.half = half
+        root.failure = ""
         nameField.text = isColors ? qsTr("My colors") : qsTr("My style")
         descriptionField.text = ""
         basedCombo.currentIndex = Math.max(0, basedCombo.indexOfValue(basedOn))
@@ -25,9 +27,11 @@ AppDialog {
         id: nameField
         Layout.fillWidth: true
         implicitHeight: Theme.controls.inputHeight
+        maximumLength: Theme.maxNameLength
+        onTextChanged: root.failure = ""
     }
-    Label {
-        readonly property string error: Theme.nameError(root.half, nameField.text)
+    PlainLabel {
+        readonly property string error: root.failure !== "" ? root.failure : Theme.nameError(root.half, nameField.text)
         visible: error !== ""
         Layout.fillWidth: true
         text: error
@@ -74,6 +78,8 @@ AppDialog {
                                          : Theme.createStyle(nameField.text, basedCombo.currentValue, descriptionField.text)
                 if (ok)
                     root.close()
+                else
+                    root.failure = qsTr("Couldn't make the file. The Customize page's problems list says why.")
             }
         }
     ]

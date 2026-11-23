@@ -1,4 +1,5 @@
 #include "actions.h"
+#include "tomlstring.h"
 #include "tomlsection.h"
 #include "actionschema.h"
 #include "suggestion.h"
@@ -61,12 +62,6 @@ QString canonical(const QString &text)
     return seq.toString(QKeySequence::PortableText);
 }
 
-QString quoted(const QString &s)
-{
-    QString escaped = s;
-    escaped.replace(u'\\', QLatin1String("\\\\")).replace(u'"', QLatin1String("\\\""));
-    return u'"' + escaped + u'"';
-}
 }
 
 ActionListModel::ActionListModel(Actions *actions)
@@ -251,12 +246,12 @@ void Actions::migrateRenamedActions()
         if (!section->contains(newName)) {
             QString value;
             if (auto text = node->value<std::string>()) {
-                value = quoted(QString::fromStdString(*text));
+                value = tomlQuote(QString::fromStdString(*text));
             } else if (const toml::array *list = node->as_array()) {
                 QStringList items;
                 for (const toml::node &item : *list) {
                     if (auto text = item.value<std::string>())
-                        items.append(quoted(QString::fromStdString(*text)));
+                        items.append(tomlQuote(QString::fromStdString(*text)));
                 }
                 value = u'[' + items.join(QLatin1String(", ")) + u']';
             } else {
@@ -510,8 +505,8 @@ void Actions::setKeys(const QString &name, const QStringList &keys)
     QStringList formatted;
     for (const QString &k : keys) {
         const QString key = canonical(k);
-        if (!key.isEmpty() && !formatted.contains(quoted(key)))
-            formatted.append(quoted(key));
+        if (!key.isEmpty() && !formatted.contains(tomlQuote(key)))
+            formatted.append(tomlQuote(key));
     }
     const QString value = formatted.size() == 1 ? formatted.constFirst()
                                                 : u'[' + formatted.join(QLatin1String(", ")) + u']';

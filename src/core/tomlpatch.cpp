@@ -1,4 +1,5 @@
 #include "tomlpatch.h"
+#include "tomlstring.h"
 
 #include <QFile>
 #include <QSaveFile>
@@ -373,13 +374,6 @@ std::string insertBlockText(std::string text, size_t at, const std::string &bloc
     return text + block + after;
 }
 
-QString quotedString(const QString &value)
-{
-    QString escaped = value;
-    escaped.replace(QLatin1Char('\\'), QLatin1String("\\\\"));
-    escaped.replace(QLatin1Char('"'), QLatin1String("\\\""));
-    return QLatin1Char('"') + escaped + QLatin1Char('"');
-}
 }
 
 Result setBlockValue(const QString &text, const Block &block, const QString &key,
@@ -394,7 +388,7 @@ Result setBlockValue(const QString &text, const Block &block, const QString &key
     const toml::table *t = findBlock(*tbl, block.array, block.key, block.value);
     if (!t) {
         return appendBlock(text, block.array,
-                           {{block.key, quotedString(block.value)}, {key, formattedValue}});
+                           {{block.key, tomlQuote(block.value)}, {key, formattedValue}});
     }
 
     const std::string keyName = key.toStdString();

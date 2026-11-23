@@ -1,4 +1,5 @@
 #include "gamefile.h"
+#include "tomlstring.h"
 #include "tomlsection.h"
 #include "suggestion.h"
 #include "releasesource.h"
@@ -166,29 +167,6 @@ bool isIntegral(const QVariant &value)
     default:
         return false;
     }
-}
-
-QString quoted(const QString &s)
-{
-    QString out;
-    out.reserve(s.size() + 2);
-    out += u'"';
-    for (const QChar c : s) {
-        switch (c.unicode()) {
-        case '"': out += QLatin1String("\\\""); break;
-        case '\\': out += QLatin1String("\\\\"); break;
-        case '\n': out += QLatin1String("\\n"); break;
-        case '\t': out += QLatin1String("\\t"); break;
-        case '\r': out += QLatin1String("\\r"); break;
-        default:
-            if (c.unicode() < 0x20 || c.unicode() == 0x7f)
-                out += QStringLiteral("\\u%1").arg(uint(c.unicode()), 4, 16, u'0');
-            else
-                out += c;
-        }
-    }
-    out += u'"';
-    return out;
 }
 }
 
@@ -437,7 +415,7 @@ QString format(const QString &key, const QVariant &value)
     switch (field->type) {
     case String:
     case Choice:
-        return quoted(value.toString());
+        return tomlQuote(value.toString());
     case Integer:
         return QString::number(value.toLongLong());
     case Float: {
@@ -451,7 +429,7 @@ QString format(const QString &key, const QVariant &value)
     case StringList: {
         QStringList items;
         for (const QString &s : value.toStringList())
-            items.append(quoted(s));
+            items.append(tomlQuote(s));
         return u'[' + items.join(QLatin1String(", ")) + u']';
     }
     case DateTime: {
@@ -522,5 +500,5 @@ ParsedGameFile parseGameFile(const QByteArray &bytes, const QString &displayPath
 
 QString tomlString(const QString &text)
 {
-    return GameFields::quoted(text);
+    return tomlQuote(text);
 }

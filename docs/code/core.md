@@ -59,7 +59,7 @@ A name that isn't a choice is dropped with a warning in `General.problems`; a ch
 
 `resolveOverview()` gives every card a place, and `General` keeps its answer: unknown names and repeats drop, a card in both columns stays in the left one, and a card missing from both (one added in a later version) goes to the end of the shorter column by count, ties to the left, in catalog order. A row card named in neither `above` nor `below` goes to the end of `above`. With neither `left` nor `right` the layout is `automatic`: the page deals the cards itself, and its `left` and `right` are empty. A hidden card keeps its place in its list, so showing it again puts it back where it was.
 
-The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
+The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_description` and `show_tags`. `GamePageMigration::run()` copies what the active style (and what it extends) set into `[game_page]` the first time the app starts after that change, under the new names (`stats` is `chips`, `action_buttons` is `buttons`), never over a key `[game_page]` already has. `Theme` hands it the values (`legacyGamePage()`, collected while the style loads, since the keys are no longer in the schema). A marker file in the state dir (`game-page-migrated-<data dir key>`) makes it run once, so a theme that sets them later isn't copied; after that the keys are unknown settings and show in Problems like any other. Only the names the game page knows for a list are written (a style is a file people share), each through `tomlQuote()`; the new text is made in memory and parsed before anything is written, so a value that would break `settings.toml` writes nothing and no marker. A write error stops it before the marker, so the next start tries again. `main.cpp` runs it right after `Theme` is created, before `General` reads the file.
 
 **Memory.** glibc keeps memory that threads free for reuse instead of returning it, so what the image reader, video decoding and worker threads use stays counted after they're done (about 50 MB after a few game pages). `main.cpp` calls `malloc_trim(0)` once a minute (under 2 ms), and a window that drops a lot of QML at once calls `WindowState.releaseMemory()` (the Settings window when it closes).
 
@@ -82,6 +82,8 @@ The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_desc
 ## Editing settings files
 
 `TomlPatch` edits a TOML file's raw text rather than parsing it into a table and writing back. This keeps a user's comments, blank lines, and key order intact when the settings window writes a value.
+
+**One way to quote a string.** `tomlstring.h` has `tomlQuote(QString)`, the only function that turns text into a TOML string: it writes `\`, `"` and every character below 0x20 or 0x7F as an escape (`\n`, `\t`, `\uXXXX`), so nothing it returns can make a file unreadable or add a line to it. `TomlPatch`, `General`, `Actions`, the library and theme writers all call it; a new writer must not escape by hand. `tomlString()` in `gamefile.h` is the same function for the library code. `tomlstring_test` parses its output with toml++ for every character from 0x00 to 0x7F.
 
 The callers pass already-formatted TOML right-hand sides — string literals in TOML syntax, integers, arrays — and `TomlPatch` splices the new value into the right place in the file. Adding a key inserts it after the section's last key; adding a section appends it at the end; the rest of the bytes are untouched.
 
@@ -136,6 +138,7 @@ The tests (`secretstore_test`) run a fake Secret Service on a private session bu
 | `singleinstance.*` | One running copy per data dir: lock, socket, activate |
 | `suggestion.*` | "did you mean" hint for unknown names in user files |
 | `tomlpatch.*` | In-place TOML editing preserving comments and formatting |
+| `tomlstring.h` | `tomlQuote()`, the one way to write a string into a TOML file |
 | `tomlsection.*` | A settings section parsed: the table, its warnings, `where()`; `toQString()` |
 | `uidriver.*` | `UiDriver`: replays a UI test script of clicks and keys in the running app |
 | `windowstate.*` | Window size and maximized state across starts |

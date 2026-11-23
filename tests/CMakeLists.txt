@@ -133,6 +133,9 @@ set(VDF_DATA "VDF_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/vdf\"")
 set(HISTORY_DATA "HISTORY_DATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/history\"")
 
 # Core
+lattis_test(tomlstring_test
+    SOURCES ../src/core/tomlstring.h
+    LIBS tomlplusplus::tomlplusplus)
 lattis_test(tomlpatch_test
     SOURCES ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
     LIBS tomlplusplus::tomlplusplus)
@@ -222,6 +225,7 @@ lattis_test(theme_test OFFSCREEN
             ../src/theme/themeschema.h ../src/theme/themeschema.cpp
             ../src/theme/schemamodel.h ../src/theme/schemamodel.cpp
             ../src/core/gamepagemigration.h ../src/core/gamepagemigration.cpp
+            ../src/core/gamepagesettings.h ../src/core/gamepagesettings.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp ${CORE_SOURCES}
             ../src/library/uninstall.h ../src/library/uninstall.cpp
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)

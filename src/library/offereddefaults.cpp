@@ -1,4 +1,5 @@
 #include "offereddefaults.h"
+#include "tomlstring.h"
 
 #include <toml++/toml.hpp>
 
@@ -28,21 +29,11 @@ struct DefaultPlatform
     QList<std::pair<QString, QString>> values;
 };
 
-QString quoted(const std::string &s)
-{
-    QString out = QStringLiteral("\"");
-    for (const QChar c : QString::fromStdString(s)) {
-        if (c == u'"' || c == u'\\')
-            out += u'\\';
-        out += c;
-    }
-    return out + u'"';
-}
 
 QString formatted(const toml::node &node)
 {
     if (const auto *s = node.as_string())
-        return quoted(s->get());
+        return tomlQuote(QString::fromStdString(s->get()));
     if (const auto *a = node.as_array()) {
         QStringList items;
         for (const toml::node &item : *a)
@@ -99,7 +90,7 @@ QString offeredValue(const QStringList &items)
         } else {
             out += u' ';
         }
-        out += quoted(item.toStdString()) + u',';
+        out += tomlQuote(item) + u',';
     }
     return out + (open ? QStringLiteral("\n]") : QStringLiteral("]"));
 }
@@ -235,7 +226,7 @@ TomlPatch::Result apply(const QString &text, const QString &defaults, const QStr
             list.insert(at, emulator);
             QStringList quotedItems;
             for (const QString &item : list)
-                quotedItems.append(quoted(item.toStdString()));
+                quotedItems.append(tomlQuote(item));
             const TomlPatch::Result r = TomlPatch::setBlockValue(
                 current, {QStringLiteral("platform"), p.id}, QStringLiteral("emulators"),
                 u'[' + quotedItems.join(QStringLiteral(", ")) + u']');
