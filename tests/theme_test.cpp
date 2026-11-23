@@ -810,7 +810,12 @@ void ThemeTest::aLongChainOfColorsLoads()
     QElapsedTimer timer;
     timer.start();
     Theme theme(dataDir);
-    QVERIFY2(timer.elapsed() < 1000, qPrintable(QString::number(timer.elapsed()) + " ms"));
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_UNDEFINED__)
+    const qint64 limit = 60000; // sanitizers make the 100,000 problem lines about 50 times slower
+#else
+    const qint64 limit = 1000;
+#endif
+    QVERIFY2(timer.elapsed() < limit, qPrintable(QString::number(timer.elapsed()) + " ms"));
     QVERIFY(theme.problems().join('\n').contains(QStringLiteral("or refers back to this setting")));
 }
 
