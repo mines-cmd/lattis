@@ -165,7 +165,14 @@ EditorCard {
             visible: card.statusText() === ""
         }
         SettingsButton {
-            visible: card.updateVersion !== "" && !card.working
+            visible: card.statusFresh && card.state === "failed" && (card.info.unchecked ?? false)
+            text: qsTr("Install anyway")
+            primary: true
+            tip: qsTr("Downloads the new AppImage without checking it, this once; the old file goes to the trash")
+            onClicked: Installer.installAnyway("game:" + card.editor.game.id)
+        }
+        SettingsButton {
+            visible: card.updateVersion !== "" && !card.working && !(card.info.unchecked ?? false)
             text: qsTr("Update")
             primary: true
             tip: qsTr("Downloads the new AppImage over this one; the old file goes to the trash")

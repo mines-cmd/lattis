@@ -106,8 +106,9 @@ SettingsCard {
                : root.auth === "waiting" ? qsTr("Waiting for the Steam app")
                : qsTr("Steam account")
         note: root.signedIn
-              ? (SteamLibrary.keyringAvailable ? qsTr("The sign-in is kept in your keyring.")
-                                                : qsTr("No keyring found: the sign-in lasts until Lattis quits."))
+              ? (!SteamLibrary.keyringAvailable ? qsTr("No keyring found: the sign-in lasts until Lattis quits.")
+                 : SteamLibrary.keyringRefused ? qsTr("Your keyring refused the sign-in: it lasts only until Lattis quits.")
+                 : qsTr("The sign-in is kept in your keyring."))
               : qsTr("Not available for now: Steam can flag a new sign-in as suspicious. Use a Web API key below.")
 
         SettingsButton {

@@ -124,6 +124,10 @@ private slots:
     void downloadChecksum();
     void downloadCutShort();
     void downloadRefusesPlainHttp();
+    void downloadRefusesNoChecksum();
+    void downloadRefusesUnsafeNames();
+    void installerAsksWithoutChecksum();
+    void releaseDropsUnsafeNames();
     void downloadNotFound();
     void downloadCancelled();
     void downloadFromZip();
@@ -631,6 +635,7 @@ void InstallTest::downloadCutShort()
     QNetworkAccessManager network;
     AppImageDownload download(&network, asset, {}, home.filePath("Applications"));
     download.setRelaxed(true);
+    download.setRequireChecksum(false);
     const auto result = runDownload(download);
     QVERIFY(!result.ok);
     QVERIFY2(result.error.contains(QStringLiteral("cut short")), qPrintable(result.error));
@@ -649,6 +654,68 @@ void InstallTest::downloadRefusesPlainHttp()
     QVERIFY2(result.error.contains(QStringLiteral("HTTPS")), qPrintable(result.error));
     QVERIFY(server.requests.isEmpty());
     QVERIFY(!QFileInfo::exists(home.filePath("Applications")) || names(home.filePath("Applications")).isEmpty());
+}
+
+void InstallTest::downloadRefusesNoChecksum()
+{
+    FakeHttpServer server;
+    server.on("/d/Emu.AppImage", {200, "data"});
+    QTemporaryDir home;
+    QNetworkAccessManager network;
+    {
+        AppImageDownload download(&network, assetFor(server, "/d/Emu.AppImage", "data", false), {},
+                                  home.filePath("Applications"));
+        download.setRelaxed(true);
+        const auto result = runDownload(download);
+        QVERIFY(!result.ok);
+        QCOMPARE(result.error, AppImageInstall::noChecksumText());
+        QVERIFY(server.requests.isEmpty()); // nothing is downloaded before the user chooses
+        QVERIFY(!QFileInfo::exists(home.filePath("Applications")) || names(home.filePath("Applications")).isEmpty());
+    }
+    {
+        AppImageDownload download(&network, assetFor(server, "/d/Emu.AppImage", "data", false), {},
+                                  home.filePath("Applications"));
+        download.setRelaxed(true);
+        download.setRequireChecksum(false);
+        const auto result = runDownload(download);
+        QVERIFY2(result.ok, qPrintable(result.error));
+        QCOMPARE(names(home.filePath("Applications")), QStringList{"Emu.AppImage"});
+    }
+}
+
+void InstallTest::downloadRefusesUnsafeNames()
+{
+    FakeHttpServer server;
+    server.on("/d/x", {200, "data"});
+    QTemporaryDir home;
+    QNetworkAccessManager network;
+    for (const QString &name : {QStringLiteral("../x"), QStringLiteral("/../x"), QStringLiteral("a/b"), QStringLiteral(".hidden"),
+                                QStringLiteral(".."), QStringLiteral("a\\b")}) {
+        ReleaseAsset asset = assetFor(server, "/d/x", "data");
+        asset.name = name;
+        AppImageDownload download(&network, asset, {}, home.filePath("Applications"));
+        download.setRelaxed(true);
+        const auto result = runDownload(download);
+        QVERIFY2(!result.ok, qPrintable(name));
+    }
+    QVERIFY(server.requests.isEmpty());
+    QVERIFY(!QFileInfo::exists(home.filePath("x")) && !QFileInfo::exists(home.filePath("Applications/x")));
+}
+
+void InstallTest::releaseDropsUnsafeNames()
+{
+    const QByteArray json = R"({"tag_name":"v1","assets":[
+        {"id":1,"name":"../x.AppImage","browser_download_url":"https://h/a"},
+        {"id":2,"name":"a/b.AppImage","browser_download_url":"https://h/b"},
+        {"id":3,"name":".hidden.AppImage","browser_download_url":"https://h/c"},
+        {"id":4,"name":"ok.AppImage","browser_download_url":"https://h/d"}]})";
+    const auto source = ReleaseSources::parse(QStringLiteral("github:a/b"));
+    QVERIFY(source);
+    QString error;
+    const auto release = ReleaseSources::parseRelease(*source, json, &error);
+    QVERIFY2(release, qPrintable(error));
+    QCOMPARE(release->assets.size(), 1);
+    QCOMPARE(release->assets.first().name, QStringLiteral("ok.AppImage"));
 }
 
 void InstallTest::downloadNotFound()
@@ -933,6 +1000,38 @@ struct InstallerHome
         QVERIFY(write(fixtures + "/DuckStation-x64.AppImage", asset));
     }
 };
+}
+
+void InstallTest::installerAsksWithoutChecksum()
+{
+    InstallerHome h;
+    const QByteArray asset = "#!/bin/sh\nsleep 600\n" + QByteArray(5000, '#');
+    h.release(asset, false);
+    Installer installer(h.setup());
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+
+    installer.install("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 5000);
+    QVERIFY(row().value("unchecked").toBool());
+    QCOMPARE(row().value("error").toString(), AppImageInstall::noChecksumText());
+    QVERIFY(names(h.home + "/Applications").isEmpty());
+    QVERIFY(InstallRecords::read(InstallRecords::path(h.state)).value.isEmpty());
+
+    // Asking again asks again: the choice is for one download.
+    installer.retry("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("unchecked").toBool(), 5000);
+
+    installer.installAnyway("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+    QVERIFY(!row().value("unchecked").toBool());
+    QCOMPARE(names(h.home + "/Applications"), QStringList{"mGBA-0.10.5-appimage-x64.appimage"});
+
+    // Install anyway on a job that didn't ask does nothing.
+    installer.installAnyway("mgba");
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
 }
 
 void InstallTest::installerInstalls()
@@ -1385,6 +1484,8 @@ void InstallTest::installerChecksByFileForARollingTag()
     plain.setFixtureTick(0);
     const auto mgba = [&] { return plain.emulators().value("mgba").toMap(); };
     plain.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(mgba().value("unchecked").toBool(), 5000);
+    plain.installAnyway("mgba");
     QTRY_VERIFY_WITH_TIMEOUT(mgba().value("installedByApp").toBool(), 10000);
     plain.checkUpdates();
     QTRY_COMPARE_WITH_TIMEOUT(mgba().value("state").toString(), QStringLiteral("idle"), 5000);
@@ -2355,6 +2456,7 @@ void InstallTest::appUpdateRefusesWithoutChecksum()
     update.check();
     QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
     QVERIFY(update.hasUpdate());
+    QVERIFY(update.noChecksum()); // the dialog says so before Update is clicked
     update.update();
     QCOMPARE(update.state(), QStringLiteral("failed"));
     QVERIFY2(update.error().contains(QStringLiteral("checksum")), qPrintable(update.error()));

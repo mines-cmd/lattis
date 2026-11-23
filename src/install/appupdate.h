@@ -44,6 +44,8 @@ class AppUpdate : public QObject
     Q_PROPERTY(bool skipped READ skipped NOTIFY changed)
     // Worth showing in the menu and on the logo: a newer version the user hasn't skipped.
     Q_PROPERTY(bool notify READ notify NOTIFY changed)
+    // The newer release lists no checksum for its AppImage, so Update would refuse it; the dialog says so up front.
+    Q_PROPERTY(bool noChecksum READ noChecksum NOTIFY changed)
     Q_PROPERTY(qint64 size READ size NOTIFY changed)
     Q_PROPERTY(QString notes READ notes NOTIFY changed)
     Q_PROPERTY(double progress READ progress NOTIFY changed)
@@ -90,6 +92,7 @@ public:
     bool hasUpdate() const { return m_hasUpdate; }
     bool skipped() const;
     bool notify() const { return m_hasUpdate && !skipped(); }
+    bool noChecksum() const { return m_hasUpdate && m_asset.sha256.isEmpty(); }
     qint64 size() const { return m_asset.size; }
     QString notes() const { return m_release.notes; }
     double progress() const { return m_progress; }

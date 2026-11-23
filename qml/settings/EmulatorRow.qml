@@ -57,7 +57,7 @@ ColumnLayout {
     }
     readonly property string badgeText: {
         if (installFailed)
-            return qsTr("Install failed")
+            return installInfo?.unchecked ? qsTr("No checksum") : qsTr("Install failed")
         if (hasUpdate)
             return qsTr("Update %1").arg(installInfo.updateVersion)
         return kindLabel

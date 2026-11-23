@@ -111,6 +111,9 @@ public:
     Q_INVOKABLE static QString sourceFromText(const QString &text);
     // Runs a failed job again.
     Q_INVOKABLE void retry(const QString &id);
+    // The user's choice on a job whose release lists no checksum (row field `unchecked`): downloads it unverified, this
+    // once.
+    Q_INVOKABLE void installAnyway(const QString &id);
     Q_INVOKABLE void cancel(const QString &id);
     Q_INVOKABLE void refresh();
     // Asks the main window to open the Updates dialog on one game (its chip, info row and menu entry), or on every
@@ -170,6 +173,10 @@ private:
         QString folder;
         QString oldFile;
         QString appId;
+        // The release lists no checksum: the job is Failed with that text until the user clicks Install anyway.
+        bool unchecked = false;
+        bool allowUnchecked = false;
+        ReleaseTarget target;
     };
 
     struct Update

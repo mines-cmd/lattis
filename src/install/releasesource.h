@@ -52,6 +52,8 @@ std::optional<ReleaseSource> parse(const QString &text, QString *error = nullptr
 std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArray &json, QString *error,
                                     const QString &assetPatterns = QString());
 
+// False for a name with a separator, a leading dot or "..": it would leave the download folder or hide the file.
+bool safeFileName(const QString &name);
 QString fromUrl(const QString &text);
 QString withoutZsync(const QString &patterns);
 bool matches(const QString &name, const QString &patterns);

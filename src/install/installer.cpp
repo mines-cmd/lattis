@@ -222,6 +222,7 @@ void Installer::rebuild()
                                {QStringLiteral("state"), stateName(job.state)},
                                {QStringLiteral("progress"), job.progress},
                                {QStringLiteral("error"), job.error},
+                               {QStringLiteral("unchecked"), job.unchecked},
                                {QStringLiteral("jobRoute"), job.state == State::Idle ? QString()
                                     : job.flatpak.isNull() ? QStringLiteral("appimage") : QStringLiteral("flatpak")},
                                {QStringLiteral("routes"), routes},
@@ -276,6 +277,7 @@ void Installer::rebuild()
                                      {QStringLiteral("state"), stateName(job.state)},
                                      {QStringLiteral("progress"), job.progress},
                                      {QStringLiteral("error"), job.error},
+                                     {QStringLiteral("unchecked"), job.unchecked},
                                      {QStringLiteral("version"), version},
                                      {QStringLiteral("updateVersion"), updateVersion},
                                      {QStringLiteral("upToDate"), upToDate},
@@ -668,11 +670,30 @@ void Installer::gotRelease(const ReleaseTarget &emulator, quint64 serial, const 
     }
     it->release = *release;
     it->asset = *asset;
+    it->target = emulator;
     m_matched.insert(emulator.id, asset->name);
-    if (it->kind == Kind::Check)
+    if (it->kind == Kind::Check) {
         checked(emulator);
-    else
+    } else if (asset->sha256.isEmpty() && !it->allowUnchecked) {
+        fail(emulator.id, AppImageInstall::noChecksumText());
+        if (const auto failed = m_jobs.find(emulator.id); failed != m_jobs.end()) {
+            failed->unchecked = true;
+            rebuild();
+        }
+    } else {
         download(emulator);
+    }
+}
+
+void Installer::installAnyway(const QString &id)
+{
+    const auto it = m_jobs.find(id);
+    if (it == m_jobs.end() || it->state != State::Failed || !it->unchecked)
+        return;
+    it->unchecked = false;
+    it->allowUnchecked = true;
+    it->error.clear();
+    download(it->target);
 }
 
 void Installer::checked(const ReleaseTarget &emulator)
@@ -816,6 +837,8 @@ void Installer::download(const ReleaseTarget &emulator)
     auto *transfer = new AppImageDownload(network(), job.asset, emulator.inside, job.folder, this);
     job.download = transfer;
     transfer->setReplace(updating);
+    // Only Install anyway, or a fixture's made-up file, goes without one.
+    transfer->setRequireChecksum(!job.allowUnchecked && !(fixtures && job.asset.sha256.isEmpty()));
     // The same path keeps the game's program, Steam shortcuts and menu entries working.
     if (emulator.game)
         transfer->setTargetName(QFileInfo(emulator.file).fileName());

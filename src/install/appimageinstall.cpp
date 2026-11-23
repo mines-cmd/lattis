@@ -28,6 +28,11 @@ struct ReadCloser
 };
 }
 
+QString noChecksumText()
+{
+    return tr("This release has no checksum. Lattis can't check the download.");
+}
+
 QString targetFolder(const QStringList &applicationsDirs, const QString &home)
 {
     for (const QString &dir : applicationsDirs) {
@@ -146,6 +151,14 @@ QString AppImageDownload::partialPath(const QString &name) const
 
 void AppImageDownload::start()
 {
+    if (!ReleaseSources::safeFileName(m_asset.name)) {
+        QTimer::singleShot(0, this, [this] { fail(tr("The release names a file that isn't safe to save, so it was refused")); });
+        return;
+    }
+    if (m_requireChecksum && m_asset.sha256.isEmpty()) {
+        QTimer::singleShot(0, this, [this] { fail(AppImageInstall::noChecksumText()); });
+        return;
+    }
     const QString scheme = m_asset.url.scheme();
     if (scheme != QLatin1String("https") && !(m_relaxed && (scheme == QLatin1String("http") || scheme == QLatin1String("file")))) {
         QTimer::singleShot(0, this, [this] { fail(tr("The download is not over HTTPS, so it was refused")); });

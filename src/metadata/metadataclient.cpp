@@ -511,6 +511,13 @@ int MetadataClient::download(const QString &url, const QString &kind)
     int request = 0;
     QObject *context = start(&request);
     const QUrl source(url);
+    const bool local = source.scheme() == QLatin1String("http") && source.host() == QLatin1String("127.0.0.1");
+    if (source.scheme() != QLatin1String("https") && !local) {
+        QTimer::singleShot(0, context, [this, request] {
+            finish(request, failure(tr("The launcher only downloads art over https")));
+        });
+        return request;
+    }
     QString extension = QFileInfo(source.path()).suffix().toLower();
     if (extension.isEmpty() || extension.size() > 4)
         extension = QStringLiteral("png");

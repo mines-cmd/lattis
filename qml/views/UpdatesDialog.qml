@@ -14,6 +14,9 @@ UpdateRowsDialog {
     readonly property bool busy: queue.length > 0 || rows.some(r => statusOf(r.id) === "active")
     readonly property bool onlyFailed: pendingCount > 0 && rows.filter(r => statusOf(r.id) === "pending").length === 0
 
+    // Rows whose release lists no checksum: the notice is their error, and the primary button says Install anyway.
+    readonly property bool anyUnchecked: rows.some(r => statusOf(r.id) === "failed" && (infoOf(r)?.unchecked ?? false))
+
     // The one game this was opened on (its chip, info row or menu entry); empty: every update.
     property string onlyGame: ""
 
@@ -64,7 +67,7 @@ UpdateRowsDialog {
             : info.state === "downloading" && info.progress >= 0 ? qsTr("Downloading %1%").arg(Math.round(info.progress * 100))
             : info.state === "downloading" ? qsTr("Downloading")
             : qsTr("Installing")
-        return { status, progress: info ? info.progress : -1, step, error: info && status === "failed" ? info.error : "" }
+        return { status, progress: info ? info.progress : -1, step, error: info && status === "failed" && !info.unchecked ? info.error : "" }
     }
     onUpdateRequested: id => enqueue([id])
 
@@ -90,7 +93,10 @@ UpdateRowsDialog {
         while (queue.length > 0 && !rows.some(r => statusOf(r.id) === "active")) {
             const id = queue[0]
             queue = queue.slice(1)
-            Installer.update(id)
+            if (infoOf(rowById(id) ?? { id })?.unchecked)
+                Installer.installAnyway(id)
+            else
+                Installer.update(id)
         }
         pumping = false
     }
@@ -98,6 +104,14 @@ UpdateRowsDialog {
     Connections {
         target: Installer
         function onEmulatorsChanged() { root.pump() }
+    }
+
+    Label {
+        visible: root.anyUnchecked
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.warningColor
+        text: qsTr("This release has no checksum. Lattis can't check the download.")
     }
 
     footer: [
@@ -114,7 +128,7 @@ UpdateRowsDialog {
         SettingsButton {
             visible: !root.busy && root.pendingCount > 0
             primary: true
-            text: root.onlyFailed ? qsTr("Try again") : root.pendingCount === 1 ? qsTr("Update") : qsTr("Update all")
+            text: root.anyUnchecked ? qsTr("Install anyway") : root.onlyFailed ? qsTr("Try again") : root.pendingCount === 1 ? qsTr("Update") : qsTr("Update all")
             onClicked: root.updateAll()
         },
         SettingsButton {

@@ -14,6 +14,8 @@ Q_LOGGING_CATEGORY(lcRomDbFetch, "launcher.romdb")
 namespace RomDbFetch {
 namespace {
 bool s_enabled = false;
+// The largest real database is 2 MB.
+constexpr qint64 kMaxBytes = qint64(16) * 1024 * 1024;
 }
 
 void setEnabled(bool enabled)
@@ -42,6 +44,15 @@ bool download(const QString &base, const QString &platform, const QString &path,
     QNetworkRequest request{QUrl(base + file + QStringLiteral(".tsv"))};
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     QNetworkReply *reply = network.get(request);
+    bool tooLarge = false;
+    QObject::connect(reply, &QNetworkReply::downloadProgress, reply, [&](qint64 received, qint64 total) {
+        if (!tooLarge && (received > kMaxBytes || total > kMaxBytes)) {
+            tooLarge = true;
+            qCDebug(lcRomDbFetch).noquote() << "stopped" << request.url().toString() << "after" << received
+                                            << "bytes: the limit is" << kMaxBytes;
+            reply->abort();
+        }
+    });
     QEventLoop loop;
     QTimer timer;
     timer.setSingleShot(true);
@@ -50,8 +61,8 @@ bool download(const QString &base, const QString &platform, const QString &path,
     timer.start(timeoutMs);
     loop.exec();
 
-    const QByteArray body = reply->error() == QNetworkReply::NoError ? reply->readAll() : QByteArray();
-    if (reply->error() != QNetworkReply::NoError)
+    const QByteArray body = reply->error() == QNetworkReply::NoError && !tooLarge ? reply->readAll() : QByteArray();
+    if (reply->error() != QNetworkReply::NoError && !tooLarge)
         qCDebug(lcRomDbFetch).noquote() << "could not download" << request.url().toString() << reply->errorString();
     reply->deleteLater();
     // A page that isn't a database (an error page with a 200) parses to nothing.

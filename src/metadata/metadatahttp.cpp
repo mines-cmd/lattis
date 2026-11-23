@@ -22,6 +22,14 @@ namespace {
 const QString kTokenFile = QStringLiteral("igdb-token");
 constexpr int kIgdbMaxOpen = 8; // IGDB's limit on open requests
 constexpr int kTokenMarginSeconds = 60;
+constexpr qint64 kApiLimit = qint64(4) * 1024 * 1024;
+constexpr qint64 kImageLimit = qint64(32) * 1024 * 1024;
+
+// Keys travel in headers and a body, so a redirect to another origin must not take them along.
+void keepToOrigin(QNetworkRequest &request)
+{
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
+}
 
 QByteArray largestAsPng(const QByteArray &data)
 {
@@ -89,8 +97,19 @@ QString MetadataHttp::serviceName(Service service)
     }
 }
 
-void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject> context, Callback done, bool json)
+void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject> context, Callback done, bool json,
+                        qint64 limit)
 {
+    if (limit <= 0)
+        limit = kApiLimit;
+    connect(reply, &QNetworkReply::downloadProgress, reply, [reply, limit](qint64 received, qint64 total) {
+        if ((received > limit || total > limit) && !reply->property("tooLarge").toBool()) {
+            reply->setProperty("tooLarge", true);
+            qCDebug(lcMetadata).noquote() << "stopped" << reply->url().path() << "after" << received
+                                          << "bytes: the limit is" << limit;
+            reply->abort();
+        }
+    });
     // Without data for m_timeoutMs, not in total: a large image on a slow line still arrives.
     auto *timer = new QTimer(reply);
     timer->setSingleShot(true);
@@ -109,6 +128,8 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
         const QByteArray body = reply->readAll();
         if (reply->property("timedOut").toBool()) {
             out.error = tr("Couldn't reach %1 (no answer in %2 s)").arg(name).arg(m_timeoutMs / 1000.0);
+        } else if (reply->property("tooLarge").toBool()) {
+            out.error = tr("%1 sent more than the launcher accepts").arg(name);
         } else if (out.status == 401 || out.status == 403 || (service == Service::Twitch && out.status == 400)) {
             out.error = tr("%1 didn't accept your keys").arg(name);
         } else if (out.status == 429) {
@@ -226,6 +247,7 @@ void MetadataHttp::sendIgdb(Pending pending)
     request.setRawHeader("Client-ID", m_credentials.igdbClientId.toUtf8());
     request.setRawHeader("Authorization", "Bearer " + m_token.toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("text/plain"));
+    keepToOrigin(request);
     const QString sentToken = m_token;
     send(Service::Igdb, network()->post(request, pending.query), this,
          [this, pending, sentToken](const MetadataReply &reply) mutable {
@@ -255,6 +277,7 @@ void MetadataHttp::fetchToken()
     form.addQueryItem(QStringLiteral("grant_type"), QStringLiteral("client_credentials"));
     QNetworkRequest request(m_endpoints.twitchToken);
     request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/x-www-form-urlencoded"));
+    keepToOrigin(request);
     // In the body, not the URL, so the secret never shows up in a URL.
     send(Service::Twitch, network()->post(request, form.toString(QUrl::FullyEncoded).toUtf8()), this,
          [this](const MetadataReply &reply) {
@@ -343,6 +366,7 @@ void MetadataHttp::steamGridDb(const QString &path, const QUrlQuery &query, QObj
     url.setQuery(query);
     QNetworkRequest request(url);
     request.setRawHeader("Authorization", "Bearer " + m_credentials.steamGridDbKey.toUtf8());
+    keepToOrigin(request);
     send(Service::SteamGridDb, network()->get(request), context, std::move(done));
 }
 
@@ -540,7 +564,7 @@ void MetadataHttp::download(const QUrl &url, const QString &fileName, QObject *c
              }
              done(path, {});
          },
-         false);
+         false, kImageLimit);
 }
 
 void MetadataHttp::testIgdb(QObject *context, std::function<void(const QString &)> done)

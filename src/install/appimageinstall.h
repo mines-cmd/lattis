@@ -17,6 +17,8 @@ class QNetworkReply;
 // See docs/code/install.md.
 
 namespace AppImageInstall {
+// What the card and the dialog say when a release lists no checksum.
+QString noChecksumText();
 QString targetFolder(const QStringList &applicationsDirs, const QString &home);
 bool isArchive(const QString &fileName);
 
@@ -53,6 +55,8 @@ public:
 
     // http: and file: URLs are allowed too (tests and the install fixtures).
     void setRelaxed(bool relaxed) { m_relaxed = relaxed; }
+    // On by default: an asset that lists no sha256 is refused. Only the user's explicit "Install anyway" turns it off.
+    void setRequireChecksum(bool require) { m_requireChecksum = require; }
     // An update: a file with the target's name is moved aside instead of refusing the install.
     void setReplace(bool replace) { m_replace = replace; }
     // Installs under this name instead of the asset's (an update keeps the running file's path).
@@ -87,6 +91,7 @@ private:
     QString m_folder;
     QString m_targetName;
     bool m_relaxed = false;
+    bool m_requireChecksum = true;
     bool m_replace = false;
     bool m_downloadOnly = false;
     qint64 m_paceBytes = 0;

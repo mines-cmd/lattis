@@ -94,7 +94,9 @@ private:
     };
 
     QNetworkAccessManager *network();
-    void send(Service service, QNetworkReply *reply, QPointer<QObject> context, Callback done, bool json = true);
+    // A reply is stopped once its body passes `limit` bytes (0: an API answer's).
+    void send(Service service, QNetworkReply *reply, QPointer<QObject> context, Callback done, bool json = true,
+              qint64 limit = 0);
     void pumpIgdb();
     void sendIgdb(Pending pending);
     void fetchToken();

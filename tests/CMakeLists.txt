@@ -266,6 +266,9 @@ lattis_test(rominfo_test SOURCES ../src/library/rominfo.h ../src/library/rominfo
 lattis_test(romdb_test
     SOURCES ${LIBRARY_FILE_SOURCES}
     LIBS tomlplusplus::tomlplusplus)
+lattis_test(romdbfetch_test
+    SOURCES fakehttpserver.h ../src/library/romdbfetch.h ../src/library/romdbfetch.cpp ${LIBRARY_FILE_SOURCES}
+    LIBS Qt6::Network tomlplusplus::tomlplusplus)
 find_program(PYTHON3 python3)
 if(PYTHON3)
     add_test(NAME romdb_tool_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/../tools/romdb.py --test)

@@ -68,6 +68,9 @@ private slots:
     void timeoutAndUnreachable();
     void igdbRateLimit();
     void destroyedContextNotCalled();
+    void redirectKeepsKeysAtHome();
+    void bodyOverTheLimitIsStopped();
+    void downloadsOnlyOverHttps();
 
     void igdbSearchQuery();
     void igdbPlatforms();
@@ -381,6 +384,90 @@ void MetadataTest::igdbWrongKeys()
     MetadataHttp noKeys(cache.path(), endpoints(server));
     QCOMPARE(igdbQuery(noKeys).error, QStringLiteral("Add your IGDB keys in Settings → Metadata"));
     QVERIFY(!noKeys.hasNetworkManager());
+}
+
+void MetadataTest::redirectKeepsKeysAtHome()
+{
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    FakeHttpServer elsewhere;
+    const auto redirectTo = [&](const QString &path) {
+        return FakeHttpServer::Response{307, "{}", 0, "Location: " + elsewhere.url(path).toEncoded() + "\r\n"};
+    };
+
+    // The token request carries the client secret in its body, and a 307 posts it again.
+    server.on("/oauth2/token", redirectTo("/oauth2/token"));
+    MetadataHttp tokenHttp(cache.path(), endpoints(server));
+    tokenHttp.setCredentials(kKeys);
+    QVERIFY(!igdbQuery(tokenHttp).error.isEmpty());
+    QVERIFY(elsewhere.requests.isEmpty());
+
+    // The IGDB query carries Client-ID and the bearer token.
+    QTemporaryDir cache2;
+    FakeHttpServer ok;
+    ok.on("/oauth2/token", {200, kToken1});
+    ok.on("/v4/games", redirectTo("/v4/games"));
+    MetadataHttp igdbHttp(cache2.path(), endpoints(ok));
+    igdbHttp.setCredentials(kKeys);
+    QVERIFY(!igdbQuery(igdbHttp).error.isEmpty());
+    QCOMPARE(ok.requestsTo("/v4/games").size(), 1);
+    QVERIFY(elsewhere.requests.isEmpty());
+
+    // SteamGridDB's bearer key.
+    ok.on("/api/v2/search/autocomplete/x", redirectTo("/api/v2/search/autocomplete/x"));
+    MetadataHttp gridHttp(cache2.path(), endpoints(ok));
+    gridHttp.setCredentials(kKeys);
+    QVERIFY(!gridQuery(gridHttp, QStringLiteral("/search/autocomplete/x")).error.isEmpty());
+    QVERIFY(elsewhere.requests.isEmpty());
+}
+
+void MetadataTest::bodyOverTheLimitIsStopped()
+{
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    // 5 MB of valid JSON: over an API answer's 4 MB.
+    server.on("/v4/games", {200, "[\"" + QByteArray(5 * 1024 * 1024, 'x') + "\"]"});
+    MetadataHttp http(cache.path(), endpoints(server));
+    http.setCredentials(kKeys);
+    QCOMPARE(igdbQuery(http).error, QStringLiteral("IGDB sent more than the launcher accepts"));
+
+    // An image gets 32 MB: 5 MB is kept, 33 MB is stopped.
+    server.on("/grid/small.png", {200, QByteArray(5 * 1024 * 1024, 'x')});
+    server.on("/grid/big.png", {200, QByteArray(33 * 1024 * 1024, 'x')});
+    QString error = QStringLiteral("not called");
+    http.download(server.url(QStringLiteral("/grid/small.png")), QStringLiteral("cover-1.png"), &http,
+                  [&](const QString &, const QString &e) { error = e; });
+    QTRY_COMPARE_WITH_TIMEOUT(error, QString(), 10000);
+    error = QStringLiteral("not called");
+    http.download(server.url(QStringLiteral("/grid/big.png")), QStringLiteral("cover-2.png"), &http,
+                  [&](const QString &, const QString &e) { error = e; });
+    QTRY_COMPARE_WITH_TIMEOUT(error, QStringLiteral("SteamGridDB sent more than the launcher accepts"), 10000);
+    QVERIFY(!QFile::exists(QDir(http.downloadsDir()).filePath(QStringLiteral("cover-2.png"))));
+}
+
+namespace {
+QVariantMap result(MetadataClient &client, int id);
+}
+
+void MetadataTest::downloadsOnlyOverHttps()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/art.png", {200, "not really a png"});
+    MetadataClient client(data.path(), cache.path());
+
+    for (const QString &url : {QStringLiteral("file:///etc/hostname"), QStringLiteral("http://example.com/art.png"),
+                               QStringLiteral("ftp://127.0.0.1/art.png")}) {
+        const QVariantMap r = result(client, client.download(url, QStringLiteral("cover")));
+        QVERIFY2(r.value("error").toString().contains(QStringLiteral("https")), qPrintable(url));
+    }
+    QVERIFY(!client.http()->hasNetworkManager());
+
+    // The fixture mode's own server on 127.0.0.1 is allowed.
+    const QVariantMap r = result(client, client.download(server.url(QStringLiteral("/art.png")).toString(), QStringLiteral("cover")));
+    QVERIFY2(r.value("error").toString().isEmpty(), qPrintable(r.value("error").toString()));
 }
 
 void MetadataTest::errorMessages_data()

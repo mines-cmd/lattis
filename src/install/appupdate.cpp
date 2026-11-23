@@ -309,7 +309,7 @@ void AppUpdate::update()
     }
     // The file is run, so one without a checksum is refused.
     if (m_asset.sha256.isEmpty()) {
-        fail(tr("The release lists no checksum for %1, so it was not downloaded").arg(m_asset.name));
+        fail(AppImageInstall::noChecksumText());
         return;
     }
     const quint64 serial = ++m_serial;

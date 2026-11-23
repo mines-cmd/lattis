@@ -128,6 +128,7 @@ ColumnLayout {
                 wrapMode: Text.WordWrap
             }
             SettingsButton {
+                visible: !(head.info?.unchecked ?? false)
                 text: qsTr("Try again")
                 onClicked: Installer.retry(row.emulator.id)
             }
@@ -241,7 +242,10 @@ ColumnLayout {
                             primary: tile.index === 0
                             fillOverride: tile.index === 0 ? "transparent" : Theme.settingsWindow.installTileButtonBackground
                             text: qsTr("Install %1").arg(head.routeName(tile.modelData))
-                            onClicked: Installer.install(row.emulator.id, tile.modelData)
+                            // After the no-checksum notice, choosing the AppImage again is the choice to go on.
+                            onClicked: head.info?.unchecked && tile.modelData === "appimage"
+                                       ? Installer.installAnyway(row.emulator.id)
+                                       : Installer.install(row.emulator.id, tile.modelData)
                         }
                     }
                 }

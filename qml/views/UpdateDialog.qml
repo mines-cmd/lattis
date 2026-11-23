@@ -48,6 +48,15 @@ UpdateRowsDialog {
     }
 
     Label {
+        visible: AppUpdate.canReplace && AppUpdate.noChecksum && !root.ready && !root.downloading
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.warningColor
+        text: qsTr("This release has no checksum. Lattis can't check the download, so it won't update itself this time. "
+                   + "Download it from the release page instead.")
+    }
+
+    Label {
         visible: root.ready && AppUpdate.runningGame !== ""
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
@@ -72,13 +81,13 @@ UpdateRowsDialog {
             onClicked: AppUpdate.cancel()
         },
         SettingsButton {
-            visible: !root.downloading && !root.ready && !AppUpdate.canReplace
+            visible: !root.downloading && !root.ready && (!AppUpdate.canReplace || AppUpdate.noChecksum)
             text: qsTr("Open release page")
             primary: true
             onClicked: Qt.openUrlExternally(AppUpdate.releasePage)
         },
         SettingsButton {
-            visible: !root.downloading && !root.ready && AppUpdate.canReplace
+            visible: !root.downloading && !root.ready && AppUpdate.canReplace && !AppUpdate.noChecksum
             text: root.failed ? qsTr("Try again") : qsTr("Update")
             primary: true
             onClicked: AppUpdate.update()

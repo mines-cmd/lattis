@@ -59,7 +59,7 @@ std::optional<Release> fromGitHub(const QJsonObject &root, QString *error, const
         asset.size = qint64(a.value(QLatin1String("size")).toDouble());
         asset.sha256 = digestOf(a.value(QLatin1String("digest")));
         asset.date = a.value(QLatin1String("updated_at")).toString(a.value(QLatin1String("created_at")).toString());
-        if (!asset.name.isEmpty() && asset.url.isValid())
+        if (ReleaseSources::safeFileName(asset.name) && asset.url.isValid())
             release.assets.append(asset);
     }
     return release;
@@ -83,7 +83,7 @@ std::optional<Release> fromGitLab(const QJsonObject &root, QString *error)
         const QString direct = a.value(QLatin1String("direct_asset_url")).toString();
         asset.url = QUrl(direct.isEmpty() ? a.value(QLatin1String("url")).toString() : direct);
         asset.date = release.date;
-        if (!asset.name.isEmpty() && asset.url.isValid())
+        if (ReleaseSources::safeFileName(asset.name) && asset.url.isValid())
             release.assets.append(asset);
     }
     return release;
@@ -185,6 +185,11 @@ std::optional<Release> parseRelease(const ReleaseSource &source, const QByteArra
     if (source.host == ReleaseSource::Host::GitLab)
         return fromGitLab(root, error);
     return fromGitHub(root, error, source.label());
+}
+
+bool safeFileName(const QString &name)
+{
+    return !name.isEmpty() && !name.startsWith(u'.') && !name.contains(u'/') && !name.contains(u'\\');
 }
 
 QString fromUrl(const QString &text)
