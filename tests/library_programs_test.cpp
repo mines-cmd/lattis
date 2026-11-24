@@ -341,7 +341,7 @@ void LibraryProgramsTest::addExistingShortcuts()
     // Recorded as they are in Steam, so nothing waits for Steam.
     const QString record = SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data));
     QStringList warnings;
-    const SteamSync::Record r = SteamSync::readRecord(record, libraryId(), &warnings);
+    const SteamSync::Record r = SteamSync::readRecord(record, libraryId(), QString(), &warnings);
     QVERIFY(warnings.isEmpty());
     QCOMPARE(r.shortcuts.value(2900000001),
              (SteamSync::ShortcutRecord{QStringLiteral("Cave Story"), QStringLiteral("/home/user/Games/Cave Story/Doukutsu.exe"),
@@ -458,7 +458,7 @@ void LibraryProgramsTest::shortcutRestore()
 
     QStringList warnings;
     const SteamSync::Record record =
-        SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), &warnings);
+        SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), QString(), &warnings);
     QCOMPARE(record.shortcuts.value(2458135266).proton, QStringLiteral("proton_experimental"));
     QCOMPARE(record.shortcuts.value(3110441846).launchOptions, QStringLiteral("mangohud %command%"));
     QCOMPARE(readFile(m_state + QStringLiteral("/steam-backup") + kShortcutsVdf), before);

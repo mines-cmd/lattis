@@ -1035,7 +1035,7 @@ void SteamTest::syncRecordFile()
     const QString library = QStringLiteral("lib-1");
     const SteamSync::Record none{library};
     QStringList warnings;
-    QCOMPARE(SteamSync::readRecord(path, library, &warnings), none);
+    QCOMPARE(SteamSync::readRecord(path, library, QString(), &warnings), none);
     QVERIFY(warnings.isEmpty());
 
     SteamSync::Record record;
@@ -1080,28 +1080,51 @@ void SteamTest::syncRecordFile()
                            "icon = { art = \"icon.webp\", art_modified = 1, art_size = 1, file = \"2900000001_icon.png\", "
                            "modified = 1, size = 1 }\n"),
              text.constData());
-    QCOMPARE(SteamSync::readRecord(path, library, &warnings), record);
+    QCOMPARE(SteamSync::readRecord(path, library, QString(), &warnings), record);
     QVERIFY(warnings.isEmpty());
 
     // Another library's record (a new data dir at the same path) counts as none, as does one
     // without an id, or any record when the library has no id.
-    QCOMPARE(SteamSync::readRecord(path, QStringLiteral("lib-2"), &warnings), SteamSync::Record{QStringLiteral("lib-2")});
+    QCOMPARE(SteamSync::readRecord(path, QStringLiteral("lib-2"), QString(), &warnings), SteamSync::Record{QStringLiteral("lib-2")});
     QCOMPARE(warnings.size(), 1);
     QVERIFY(warnings.first().startsWith(path + QStringLiteral(" isn't this library's")));
-    QCOMPARE(SteamSync::readRecord(path, QString(), &warnings), SteamSync::Record());
+    QCOMPARE(SteamSync::readRecord(path, QString(), QString(), &warnings), SteamSync::Record());
     file.close();
     QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
     file.write(text.mid(text.indexOf("[games]")));
     file.close();
-    QCOMPARE(SteamSync::readRecord(path, library, &warnings), none);
+    QCOMPARE(SteamSync::readRecord(path, library, QString(), &warnings), none);
     QCOMPARE(warnings.size(), 3);
+
+    // The account: a record without one is taken to be this account's, one of another account
+    // reads as empty, and no account asked for (Steam not found) keeps the record as it is.
+    warnings.clear();
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write(text);
+    file.close();
+    SteamSync::Record accounted = record;
+    accounted.steamUser = u"39734273"_s;
+    QVERIFY2(SteamSync::writeRecord(path, accounted, QStringLiteral("/data"), &error), qPrintable(error));
+    QVERIFY(SteamSync::readRecord(path, library, u"39734273"_s, &warnings) == accounted);
+    QVERIFY(warnings.isEmpty());
+    QVERIFY(SteamSync::readRecord(path, library, QString(), &warnings) == accounted);
+    SteamSync::Record other{library, u"39734274"_s};
+    QVERIFY(SteamSync::readRecord(path, library, u"39734274"_s, &warnings) == other);
+    QCOMPARE(warnings.size(), 1);
+    QVERIFY(warnings.first().startsWith(path + QStringLiteral(" is of another Steam account's")));
+    warnings.clear();
+    QVERIFY2(SteamSync::writeRecord(path, record, QStringLiteral("/data"), &error), qPrintable(error));
+    SteamSync::Record adopted = record;
+    adopted.steamUser = u"39734274"_s;
+    QVERIFY(SteamSync::readRecord(path, library, u"39734274"_s, &warnings) == adopted);
+    QVERIFY(warnings.isEmpty());
 
     // A broken file counts as no record, with a warning.
     warnings.clear();
     QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
     file.write("[games\n");
     file.close();
-    QCOMPARE(SteamSync::readRecord(path, library, &warnings), none);
+    QCOMPARE(SteamSync::readRecord(path, library, QString(), &warnings), none);
     QCOMPARE(warnings.size(), 1);
     QVERIFY(warnings.first().startsWith(path + ":1:"));
 }
@@ -1378,6 +1401,20 @@ void SteamTest::syncShortcuts()
     QVERIFY(r.queued.isEmpty());
     QVERIFY(r.copies.isEmpty());
     QVERIFY(r.record.shortcuts.isEmpty());
+
+    // No shortcuts.vdf at all while the record lists shortcuts: unknown, not "all deleted".
+    SteamState missing = steam;
+    missing.shortcuts.clear();
+    missing.shortcutsMissing = true;
+    SteamSync::Record listed;
+    listed.shortcuts.insert(2900000001, caveRecord());
+    r = SteamSync::sync({}, missing, listed, {caveGame()});
+    QVERIFY(r.queued.isEmpty());
+    QVERIFY(r.copies.isEmpty());
+    QCOMPARE(r.record, listed);
+    // With no shortcuts in the record the file is just not made yet: the shortcut is added.
+    r = SteamSync::sync({}, missing, {}, {caveGame()});
+    QCOMPARE(r.queued.value(u"proton-cave-story"_s), QStringList{SteamSync::kAddShortcut});
 }
 
 void SteamTest::syncRemovedShortcuts()

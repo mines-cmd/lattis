@@ -9,6 +9,7 @@ private slots:
     void steamSyncFollowsBothSides();
     void steamSyncRestore();
     void steamSyncNewLibraryAtOldPath();
+    void steamAccountSwitch();
     void steamDefaultPresetsForNewGames();
     void steamApplyWhenSteamCloses();
     void steamApplyRestore();
@@ -141,6 +142,59 @@ void LibrarySteamSyncTest::steamSyncNewLibraryAtOldPath()
     QCOMPARE(readFile(localConfig), steamBefore);
     QCOMPARE(readFile(root + QStringLiteral("/config/config.vdf")), configBefore);
     QVERIFY(readFile(record).contains(QStringLiteral("library = \"%1\"\n").arg(libraryId()).toUtf8()));
+}
+
+void LibrarySteamSyncTest::steamAccountSwitch()
+{
+    // Two Steam accounts and no [steam] user: Steam's own account switch changes which one
+    // Lattis follows. Steam runs throughout, so what is queued isn't written.
+    const QString root = installFakeSteam();
+    const auto steam = startFakeSteam(root);
+    const QString loginUsers = root + QStringLiteral("/config/loginusers.vdf");
+    const QByteArray original = readFile(loginUsers);
+    const QString shortcutsA = root + QStringLiteral("/userdata/39734273/config/shortcuts.vdf");
+    const QString shortcutsB = root + QStringLiteral("/userdata/39734274/config/shortcuts.vdf");
+    QVERIFY(!QFileInfo::exists(shortcutsB));
+    const auto signInAs = [&](bool second) {
+        QByteArray text = original;
+        if (second) {
+            text.replace("\"MostRecent\"\t\t\"1\"", "\"MostRecent\"\t\t\"X\"");
+            text.replace("\"MostRecent\"\t\t\"0\"", "\"MostRecent\"\t\t\"1\"");
+            text.replace("\"MostRecent\"\t\t\"X\"", "\"MostRecent\"\t\t\"0\"");
+        }
+        writeFile(loginUsers, text);
+    };
+    const QString cave = QStringLiteral("proton-cave-story");
+
+    // On A: Cave Story's shortcut is added to the library and recorded.
+    QFile::remove(gamePath("proton-diablo-iv"));
+    QFile::remove(gamePath("proton-final-fantasy-xiv-online"));
+    auto library = openLibrary();
+    QCOMPARE(library->addSteamShortcuts({qint64(2900000001)}), QString());
+    library->store().waitForIdle();
+    QCoreApplication::processEvents();
+    const QString record = SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data));
+    QVERIFY(readFile(record).contains("steam_user = \"39734273\""));
+    library.reset();
+    const QByteArray shortcutsBefore = readFile(shortcutsA);
+
+    // On B, which has no shortcuts.vdf: A's record isn't B's, so the shortcut is not "deleted".
+    signInAs(true);
+    library = openLibrary();
+    QVERIFY(!readFile(gamePath(cave)).contains("installed"));
+    QCOMPARE(library->store().snapshot().steamQueued.value(cave), QStringList{SteamSync::kAddShortcut});
+    QVERIFY(readFile(record).contains("steam_user = \"39734274\""));
+    QVERIFY(!readFile(record).contains("[shortcuts]"));
+    library.reset();
+
+    // Back on A: no shortcut is removed, and the game is still installed.
+    signInAs(false);
+    library = openLibrary();
+    QVERIFY(!readFile(gamePath(cave)).contains("installed"));
+    QVERIFY(!library->store().snapshot().steamQueued.value(cave).contains(SteamSync::kRemoveShortcut));
+    QVERIFY(library->store().snapshot().steamQueued.value(cave).isEmpty());
+    QCOMPARE(readFile(shortcutsA), shortcutsBefore);
+    QVERIFY(!QFileInfo::exists(shortcutsB));
 }
 
 void LibrarySteamSyncTest::steamDefaultPresetsForNewGames()

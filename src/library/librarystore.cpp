@@ -644,7 +644,7 @@ void syncSteam(LibrarySnapshot &s, ScanResult &out, const SteamSettings &setting
                const QString &libraryId,
                const QString &dataDir, const QString &home)
 {
-    out.steamRecordBefore = SteamSync::readRecord(recordPath, libraryId, &out.steamSyncLog);
+    out.steamRecordBefore = SteamSync::readRecord(recordPath, libraryId, s.steam.install.userId, &out.steamSyncLog);
 
     // On top of what Steam has, so only once Steam's launch options are known.
     QHash<QString, QString> defaults;
@@ -2609,7 +2609,9 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
     // Recorded as in step with Steam, so nothing is queued for these shortcuts.
     QStringList ignored;
     SteamSync::Record record =
-        m_steamRecord ? *m_steamRecord : SteamSync::readRecord(m_steamSyncRecord, m_versionStatus.id, &ignored);
+        m_steamRecord ? *m_steamRecord
+                      : SteamSync::readRecord(m_steamSyncRecord, m_versionStatus.id,
+                                              m_snapshot.steam.install.userId, &ignored);
 
     beginBatch();
     for (const quint32 appId : appIds) {
@@ -2704,7 +2706,9 @@ LibraryStore::AddedModManager LibraryStore::addShortcutAsModManager(quint32 appI
     // Recorded as in step with Steam, so nothing is queued for the shortcut.
     QStringList ignored;
     SteamSync::Record record =
-        m_steamRecord ? *m_steamRecord : SteamSync::readRecord(m_steamSyncRecord, m_versionStatus.id, &ignored);
+        m_steamRecord ? *m_steamRecord
+                      : SteamSync::readRecord(m_steamSyncRecord, m_versionStatus.id,
+                                              m_snapshot.steam.install.userId, &ignored);
     record.shortcuts.insert(appId, SteamSync::recordOf(*s, manager.proton));
     if (!m_steamSyncRecord.isEmpty()) {
         QString error;

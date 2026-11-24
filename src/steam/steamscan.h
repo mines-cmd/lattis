@@ -88,6 +88,8 @@ struct SteamState
     QList<SteamShortcut> shortcuts;
     // shortcuts.vdf was read, or doesn't exist (no shortcuts yet): `shortcuts` is what Steam has
     bool shortcutsOk = false;
+    // ...and it doesn't exist. A record that lists shortcuts then can't say whether they were deleted.
+    bool shortcutsMissing = false;
 
     SteamStamp configStamp;
     bool configOk = false;

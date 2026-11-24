@@ -29,6 +29,8 @@ struct ShortcutRecord
 struct Record
 {
     QString library;
+    // The Steam account (its account id, the userdata folder's name) the record describes.
+    QString steamUser;
     QHash<qint64, QString> launchOptions;
     QHash<qint64, QString> proton;
     QHash<qint64, ShortcutRecord> shortcuts;
@@ -42,7 +44,9 @@ ShortcutRecord recordOf(const SteamShortcut &shortcut, const QString &proton);
 
 QString recordPath(const QString &stateDir, const QString &dataDirKey);
 
-Record readRecord(const QString &path, const QString &library, QStringList *warnings);
+// A record of another library, or of another Steam account than `steamUser`, reads as empty. One
+// with no account (from before it was recorded) is taken to be this account's.
+Record readRecord(const QString &path, const QString &library, const QString &steamUser, QStringList *warnings);
 bool writeRecord(const QString &path, const Record &record, const QString &dataDir, QString *error);
 
 enum class Side { InSync, Queued, FromSteam };

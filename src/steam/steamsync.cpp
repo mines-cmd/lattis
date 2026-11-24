@@ -252,10 +252,11 @@ QString recordPath(const QString &stateDir, const QString &dataDirKey)
     return stateDir + QStringLiteral("/steam-sync-") + dataDirKey + QStringLiteral(".toml");
 }
 
-Record readRecord(const QString &path, const QString &library, QStringList *warnings)
+Record readRecord(const QString &path, const QString &library, const QString &steamUser, QStringList *warnings)
 {
     Record out;
     out.library = library;
+    out.steamUser = steamUser;
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
         return out;
@@ -275,6 +276,15 @@ Record readRecord(const QString &path, const QString &library, QStringList *warn
     if (library.isEmpty() || !id || toQString(id->get()) != library) {
         warnings->append(QStringLiteral("%1 isn't this library's; comparing with Steam from scratch").arg(path));
         return out;
+    }
+    if (const auto *user = root["steam_user"].as_string()) {
+        if (steamUser.isEmpty()) {
+            out.steamUser = toQString(user->get());
+        } else if (toQString(user->get()) != steamUser) {
+            warnings->append(QStringLiteral("%1 is of another Steam account's; comparing with Steam from scratch")
+                                 .arg(path));
+            return out;
+        }
     }
     if (const toml::table *shortcuts = root["shortcuts"].as_table()) {
         for (auto &&[key, node] : *shortcuts) {
@@ -349,6 +359,8 @@ bool writeRecord(const QString &path, const Record &record, const QString &dataD
     std::ostringstream text;
     toml::table library;
     library.insert("library", toStd(record.library));
+    if (!record.steamUser.isEmpty())
+        library.insert("steam_user", toStd(record.steamUser));
     text << toml::toml_formatter(library, toml::format_flags::none) << "\n\n[games]\n";
     for (const qint64 appId : std::as_const(appIds)) {
         toml::table values;
@@ -547,7 +559,7 @@ Result sync(const QList<Game> &games, const SteamState &steam, const Record &rec
 {
     Result out;
     out.record = record;
-    if (steam.shortcutsOk) {
+    if (steam.shortcutsOk && !(steam.shortcutsMissing && !record.shortcuts.isEmpty())) {
         for (const ShortcutGame &game : shortcutGames) {
             if (game.appId != 0)
                 syncShortcut(game, steam, &out);

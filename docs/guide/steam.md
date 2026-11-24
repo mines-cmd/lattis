@@ -6,6 +6,8 @@ When Steam is installed, its installed games show up in Lattis by themselves, la
 
 Lattis looks for Steam in `~/.steam/steam` (a native install), then in the Flatpak's folder. The account is the one that logged in last. Settings → Steam shows what was found, with **Change** to pick another folder and a choice of account if there are several.
 
+**Another account.** Lattis remembers, per Steam account, what it last matched with Steam: launch options, Proton versions and the shortcuts it made. When Steam's account changes (someone else signs in), Lattis starts from scratch for the new account: your Proton games and mod managers aren't marked not installed, and their shortcuts are added to the new account's Steam. Signing back in to the first account finds its shortcuts as they were; Lattis removes nothing there. A shortcuts file that is missing is likewise never taken to mean you deleted your shortcuts.
+
 To turn Steam off in Lattis, switch off **Import Steam games** on Settings → Steam. Steam games then show as not installed.
 
 ## Your Steam games

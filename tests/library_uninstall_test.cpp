@@ -109,7 +109,7 @@ void LibraryUninstallTest::uninstallKeptThenRemoved()
     QTRY_VERIFY_WITH_TIMEOUT(library->store().snapshot().steamQueued.isEmpty(), 5000);
     const auto record = [&] {
         QStringList warnings;
-        return SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), &warnings);
+        return SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), QString(), &warnings);
     };
     QTRY_VERIFY_WITH_TIMEOUT(!record().grid.contains(appId), 5000);
     QVERIFY(record().removed.isEmpty());
@@ -192,7 +192,7 @@ void LibraryUninstallTest::uninstallForgets()
     const QByteArray heroBefore = readFile(hero.arg(appId));
     const auto record = [&] {
         QStringList warnings;
-        return SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), &warnings);
+        return SteamSync::readRecord(SteamSync::recordPath(m_state, AppPaths::dataDirKey(m_data)), libraryId(), QString(), &warnings);
     };
     QTRY_VERIFY_WITH_TIMEOUT(record().grid.contains(appId), 5000);
 

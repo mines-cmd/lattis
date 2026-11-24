@@ -376,6 +376,7 @@ SteamState scan(const SteamSettings &settings, const SteamLocations &where, cons
         }
         s.shortcutsPath = userDir + QStringLiteral("/config/shortcuts.vdf");
         s.shortcutsStamp = stampOf(s.shortcutsPath);
+        s.shortcutsMissing = !QFileInfo::exists(s.shortcutsPath);
         if (s.shortcutsPath == prev.shortcutsPath && s.shortcutsStamp == prev.shortcutsStamp) {
             s.shortcuts = prev.shortcuts;
             s.shortcutsOk = prev.shortcutsOk;

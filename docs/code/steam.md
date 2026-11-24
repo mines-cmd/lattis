@@ -110,6 +110,8 @@ For each value, the comparison is:
 
 `SteamSync::apply()` writes the queue to Steam's files. It writes `shortcuts.vdf` first, then `config.vdf` (CompatToolMapping), then `localconfig.vdf`. The order matters: a new shortcut's Proton version in `config.vdf` should follow the shortcut being created. Each file is re-parsed after the edit to confirm correctness, backed up once into `backupDir` under its path within the Steam folder (an existing backup is kept), and replaced atomically. Before and again immediately before each file is written, `steamRunning` is called: Steam overwrites its files on exit, so nothing is written while it runs. An `Edit` carries the value Steam had at the last scan; if the file now says something different, the edit is set aside as stale for the next scan rather than overwriting the newer value.
 
+The record also names the Steam account it describes (`steam_user`, the account id that is the `userdata/` folder's name), because shortcuts, launch options and play time are per account while the record is per library. `readRecord()` takes the active account and reads a record of another account as empty (with a log line), as it does one of another library; the next write then names the new account. A record with no `steam_user` (written before it existed) is taken to be the current account's, and with no account asked for (Steam not found) the record is kept as it is. A missing `shortcuts.vdf` reads as "no shortcuts yet" (`shortcutsOk`), and `SteamState::shortcutsMissing` marks it: while the record lists shortcuts, `sync()` treats the shortcuts as unknown (as for an unreadable file), so a vanished file never marks games not installed. Without it the account switch would: Steam's other account has no shortcuts, so every Proton game's shortcut would look deleted, and when the first account came back the shortcuts would be queued for removal.
+
 The record lives in the state dir, not the data dir, and includes the library's ID. This means: after a backup restore the state dir is fresh (no record), so the game files' values are queued back to Steam instead of being overwritten by what Steam had at restore time. And a newly created library at the same path as an old one doesn't inherit the old record, since the IDs won't match.
 
 ## Art in Steam's grid
@@ -406,7 +408,7 @@ artSize, artModified  source file's size and mtime at write time
 | `SteamSync::apply(steam, edits, backupDir, steamRunning, shortcuts)` | Writes the queue to Steam's files; returns what was applied and what was stale |
 | `SteamSync::compare(gameFile, steam, record)` | Which side changed one value: `InSync`, `Queued` or `FromSteam` |
 | `SteamSync::withDefaults(launchOptions, settings, forLinux)` | Turns on the default presets in a launch options string |
-| `SteamSync::readRecord(path, library, warnings)` | Reads the record; empty when missing or a different library's |
+| `SteamSync::readRecord(path, library, steamUser, warnings)` | Reads the record; empty when missing or a different library or Steam account's |
 | `SteamSync::writeRecord(path, record, dataDir, error)` | Writes the record atomically |
 | `SteamSync::recordOf(shortcut, proton)` | A `ShortcutRecord` from a current `SteamShortcut` |
 | `SteamSync::recordPath(stateDir, dataDirKey)` | `<stateDir>/steam-sync-<dataDirKey>.toml` |
