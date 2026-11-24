@@ -22,6 +22,9 @@ namespace {
 const QString kTokenFile = QStringLiteral("igdb-token");
 constexpr int kIgdbMaxOpen = 8; // IGDB's limit on open requests
 constexpr int kTokenMarginSeconds = 60;
+constexpr int kIgdbMaxAttempts = 4; // sends of one request that end in a 429 or a 5xx before its row gets the error
+constexpr int kIgdbDefaultRetryAfter = 5; // seconds, without a Retry-After header
+constexpr int kIgdbMaxRetryAfter = 120;
 constexpr qint64 kApiLimit = qint64(4) * 1024 * 1024;
 constexpr qint64 kImageLimit = qint64(32) * 1024 * 1024;
 
@@ -124,6 +127,10 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
         reply->deleteLater();
         MetadataReply out;
         out.status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        bool hasRetryAfter = false;
+        const int retryAfter = reply->rawHeader("Retry-After").trimmed().toInt(&hasRetryAfter);
+        if (hasRetryAfter && retryAfter >= 0)
+            out.retryAfterSeconds = retryAfter;
         const QString name = serviceName(service);
         const QByteArray body = reply->readAll();
         if (reply->property("timedOut").toBool()) {
@@ -168,6 +175,12 @@ void MetadataHttp::send(Service service, QNetworkReply *reply, QPointer<QObject>
 void MetadataHttp::igdb(const QString &endpoint, const QByteArray &query, QObject *context, Callback done)
 {
     if (usesFixtures()) {
+        // A screenshot of a failed lookup: igdb-error.txt holds the error every IGDB request answers with.
+        if (QFile failure(QDir(m_fixturesDir).filePath(QStringLiteral("igdb-error.txt"))); failure.open(QIODevice::ReadOnly)) {
+            QTimer::singleShot(m_fixtureDelayMs, context, [error = QString::fromUtf8(failure.readAll()).trimmed(),
+                                                           done = std::move(done)] { done({{}, error, 503}); });
+            return;
+        }
         static const QRegularExpression search(QStringLiteral("^search \"([^\"]*)\""));
         static const QRegularExpression byId(QStringLiteral("^where id = (\\d+)"));
         static const QRegularExpression byIds(QStringLiteral("^where id = \\(([\\d,]+)\\)"));
@@ -219,7 +232,11 @@ void MetadataHttp::pumpIgdb()
     }
     if (!m_tokenLoaded)
         loadToken();
-    if (m_token.isEmpty() || QDateTime::currentDateTimeUtc().secsTo(m_tokenExpires) < kTokenMarginSeconds) {
+    const qint64 left = QDateTime::currentDateTimeUtc().secsTo(m_tokenExpires);
+    // A token that lives less than twice the margin is never "fresh": it serves the requests that were
+    // waiting when it came, and the next ones fetch another.
+    const bool shortLived = left < kTokenMarginSeconds && left > 0 && m_shortTokenUses > 0;
+    if (m_token.isEmpty() || (left < kTokenMarginSeconds && !shortLived)) {
         fetchToken();
         return;
     }
@@ -241,6 +258,8 @@ void MetadataHttp::sendIgdb(Pending pending)
 {
     m_lastIgdbSend = QDateTime::currentDateTimeUtc();
     ++m_igdbOpen;
+    if (m_shortTokenUses > 0)
+        --m_shortTokenUses;
     QUrl url = m_endpoints.igdb;
     url.setPath(url.path() + u'/' + pending.endpoint);
     QNetworkRequest request(url);
@@ -260,6 +279,14 @@ void MetadataHttp::sendIgdb(Pending pending)
                  }
                  pending.retried = true;
                  m_igdbQueue.prepend(pending);
+             } else if ((reply.status == 429 || reply.status >= 500) && ++pending.attempts < kIgdbMaxAttempts
+                        && pending.context) {
+                 // Back to the head, and the queue waits: the next request would be refused the same way.
+                 const int seconds = reply.retryAfterSeconds >= 0 ? std::min(reply.retryAfterSeconds, kIgdbMaxRetryAfter)
+                                                                  : kIgdbDefaultRetryAfter;
+                 qCInfo(lcMetadata).noquote() << "IGDB answered" << reply.status << "- trying again in" << seconds << "s";
+                 m_igdbQueue.prepend(pending);
+                 m_igdbTimer.start(std::max(1, int(seconds * 1000 * m_igdbRetryScale)));
              } else if (pending.context) {
                  pending.done(reply);
              }
@@ -286,6 +313,9 @@ void MetadataHttp::fetchToken()
              QString error = reply.error;
              if (reply.ok() && o.value(QLatin1String("access_token")).toString().isEmpty())
                  error = tr("IGDB sent an answer the launcher couldn't read");
+             const qint64 lifetime = o.value(QLatin1String("expires_in")).toInteger();
+             if (error.isEmpty() && lifetime <= 0)
+                 error = tr("IGDB sent an answer the launcher couldn't read");
              if (!error.isEmpty()) {
                  const QList<Pending> failed = std::exchange(m_igdbQueue, {});
                  for (const Pending &p : failed) {
@@ -295,7 +325,8 @@ void MetadataHttp::fetchToken()
                  return;
              }
              m_token = o.value(QLatin1String("access_token")).toString();
-             m_tokenExpires = QDateTime::currentDateTimeUtc().addSecs(o.value(QLatin1String("expires_in")).toInteger());
+             m_tokenExpires = QDateTime::currentDateTimeUtc().addSecs(lifetime);
+             m_shortTokenUses = lifetime < 2 * kTokenMarginSeconds ? int(m_igdbQueue.size()) : 0;
              saveToken();
              pumpIgdb();
          });

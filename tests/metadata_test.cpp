@@ -67,6 +67,11 @@ private slots:
     void errorMessages();
     void timeoutAndUnreachable();
     void igdbRateLimit();
+    void igdbShortToken_data();
+    void igdbShortToken();
+    void igdbRetriesBusy();
+    void igdbGivesUpAfterFour();
+    void scanLookupCountsFailures();
     void destroyedContextNotCalled();
     void redirectKeepsKeysAtHome();
     void bodyOverTheLimitIsStopped();
@@ -539,6 +544,129 @@ void MetadataTest::igdbRateLimit()
     QCOMPARE(games.size(), 5);
     for (qsizetype i = 1; i < games.size(); ++i)
         QVERIFY2(games[i].atMs - games[i - 1].atMs >= 90, qPrintable(QString::number(games[i].atMs - games[i - 1].atMs)));
+}
+
+void MetadataTest::igdbShortToken_data()
+{
+    QTest::addColumn<QByteArray>("token");
+    QTest::addColumn<bool>("works");
+    QTest::newRow("30 seconds") << QByteArray(R"({"access_token":"short","expires_in":30})") << true;
+    QTest::newRow("no expires_in") << QByteArray(R"({"access_token":"short"})") << false;
+}
+
+void MetadataTest::igdbShortToken()
+{
+    QFETCH(QByteArray, token);
+    QFETCH(bool, works);
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, token});
+    server.on("/v4/games", {200, "[]"});
+    MetadataHttp http(cache.path(), endpoints(server));
+    http.setCredentials(kKeys);
+    http.setIgdbInterval(10);
+
+    // Three requests wait together: one token serves all of them.
+    int ok = 0;
+    QStringList errors;
+    for (int i = 0; i < 3; ++i) {
+        http.igdb(QStringLiteral("games"), "fields id;", &http, [&](const MetadataReply &r) {
+            if (r.ok())
+                ++ok;
+            else
+                errors.append(r.error);
+        });
+    }
+    QTRY_COMPARE_WITH_TIMEOUT(ok + int(errors.size()), 3, 5000);
+    QCOMPARE(server.requestsTo("/oauth2/token").size(), 1);
+    if (works) {
+        QCOMPARE(ok, 3);
+        QCOMPARE(server.requestsTo("/v4/games").size(), 3);
+        // A request that comes later gets a token of its own.
+        QVERIFY(igdbQuery(http).ok());
+        QCOMPARE(server.requestsTo("/oauth2/token").size(), 2);
+    } else {
+        QCOMPARE(errors, QStringList(3, QStringLiteral("IGDB sent an answer the launcher couldn't read")));
+        QVERIFY(server.requestsTo("/v4/games").isEmpty());
+    }
+}
+
+void MetadataTest::igdbRetriesBusy()
+{
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    server.on("/v4/games", {429, "{}", 0, "Retry-After: 1\r\n"});
+    server.on("/v4/games", {429, "{}", 0, "Retry-After: 1\r\n"});
+    server.on("/v4/games", {200, "[]"});
+    MetadataHttp http(cache.path(), endpoints(server));
+    http.setCredentials(kKeys);
+    http.setIgdbInterval(20);
+    http.setIgdbRetryScale(0.05); // a 1 s Retry-After waits 50 ms here
+    int ok = 0;
+    QStringList errors;
+    for (int i = 0; i < 8; ++i) {
+        http.igdb(QStringLiteral("games"), "fields id;", &http, [&](const MetadataReply &r) {
+            if (r.ok())
+                ++ok;
+            else
+                errors.append(r.error);
+        });
+    }
+    QTRY_COMPARE_WITH_TIMEOUT(ok + int(errors.size()), 8, 10000);
+    QCOMPARE(errors, QStringList());
+    QCOMPARE(server.requestsTo("/v4/games").size(), 10); // the two refused ones went out again
+    QCOMPARE(server.requestsTo("/oauth2/token").size(), 1);
+
+    // A 5xx without Retry-After is tried again too (after 5 s, scaled).
+    server.clear("/v4/games");
+    server.on("/v4/games", {503, "{}"});
+    server.on("/v4/games", {200, "[]"});
+    QVERIFY(igdbQuery(http).ok());
+}
+
+void MetadataTest::igdbGivesUpAfterFour()
+{
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    server.on("/v4/games", {429, "{}", 0, "Retry-After: 0\r\n"});
+    MetadataHttp http(cache.path(), endpoints(server));
+    http.setCredentials(kKeys);
+    http.setIgdbInterval(10);
+    http.setIgdbRetryScale(0.01);
+    QCOMPARE(igdbQuery(http).error, QStringLiteral("IGDB is busy; try again in a minute"));
+    QCOMPARE(server.requestsTo("/v4/games").size(), 4);
+}
+
+void MetadataTest::scanLookupCountsFailures()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/oauth2/token", {200, kToken1});
+    server.on("/v4/games", {500, "{}"});
+    MetadataClient client(data.path(), cache.path(), endpoints(server));
+    QCOMPARE(client.setKey(QStringLiteral("igdb"), QStringLiteral("client_id"), QStringLiteral("client-id")), QString());
+    QCOMPARE(client.setKey(QStringLiteral("igdb"), QStringLiteral("client_secret"), QStringLiteral("client-secret")),
+             QString());
+    client.http()->setIgdbInterval(5);
+    client.http()->setIgdbRetryScale(0.001);
+    LookupGame game;
+    game.id = QStringLiteral("switch-unknown");
+    game.title = QStringLiteral("Unknown Game");
+    game.platform = QStringLiteral("switch");
+    game.igdbPlatforms = {130};
+    QList<LookupGame> games{game};
+    ScanLookup scan([&] { return games; }, {}, {}, data.filePath("settings.toml"), &client);
+    QSignalSpy finished(&scan, &ScanLookup::finished);
+    QSignalSpy message(&scan, &ScanLookup::message);
+    scan.add({game.id});
+    QTRY_COMPARE_WITH_TIMEOUT(finished.size(), 1, 10000);
+    QCOMPARE(finished.first().at(1).toInt(), 0); // not "no clear match"
+    QCOMPARE(finished.first().at(2).toInt(), 1);
+    QCOMPARE(message.size(), 1);
+    QCOMPARE(message.first().at(0).toString(), QStringLiteral("1 new game couldn't be looked up"));
 }
 
 void MetadataTest::destroyedContextNotCalled()
@@ -1271,6 +1399,7 @@ void MetadataTest::clientLookupIdsBatches()
     server.clear("/v4/games");
     server.on("/v4/games", {200, "[]"});
     server.on("/v4/games", {500, "{}"});
+    client.http()->setIgdbRetryScale(0.001);
     platforms.removeIf([](auto it) { return it.key() > 600; });
     r = result(client, client.lookupIds(platforms));
     QVERIFY(!r.value("error").toString().isEmpty());

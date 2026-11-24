@@ -19,14 +19,16 @@ ColumnLayout {
     property bool lookedUpAny: false
     property int lookedUp: 0
     property int unresolved: 0
+    property int failedLookups: 0
 
     Connections {
         target: ScanLookup
         enabled: root.summary
-        function onFinished(written, unresolved) {
+        function onFinished(written, unresolved, failed) {
             root.lookedUpAny = true
             root.lookedUp += written
             root.unresolved += unresolved
+            root.failedLookups += failed
         }
     }
 
@@ -46,6 +48,8 @@ ColumnLayout {
         let text = games + " " + (lookedUp === 1 ? qsTr("1 was looked up") : qsTr("%1 were looked up").arg(lookedUp))
         if (unresolved > 0)
             text += qsTr("; %n had no clear match and wait in “Look up missing info”", "", unresolved)
+        if (failedLookups > 0)
+            text += qsTr("; %n couldn't be looked up and can be tried again in “Look up missing info”", "", failedLookups)
         return text + "."
     }
 

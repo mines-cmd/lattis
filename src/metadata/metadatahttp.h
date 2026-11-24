@@ -37,6 +37,7 @@ struct MetadataReply
     QString error;
     int status = 0;
     QByteArray body;
+    int retryAfterSeconds = -1; // the Retry-After header; -1 when there is none
 
     bool ok() const { return error.isEmpty(); }
 };
@@ -77,6 +78,8 @@ public:
 
     void setTimeout(int ms) { m_timeoutMs = ms; }
     void setIgdbInterval(int ms) { m_igdbIntervalMs = ms; }
+    // Tests: scales the wait after a 429 or a 5xx (Retry-After, or 5 s without one).
+    void setIgdbRetryScale(double scale) { m_igdbRetryScale = scale; }
     void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
     // Tests: the HTTP status a fixture-mode download answers with for a URL (0 = it works).
     void setFixtureDownloadStatus(std::function<int(const QUrl &)> status) { m_fixtureDownloadStatus = std::move(status); }
@@ -95,6 +98,7 @@ private:
         QPointer<QObject> context;
         Callback done;
         bool retried = false;
+        int attempts = 0; // sends so far that ended in a 429 or a 5xx
     };
 
     QNetworkAccessManager *network();
@@ -129,9 +133,11 @@ private:
     bool m_tokenLoaded = false;
     bool m_fetchingToken = false;
     int m_tokenFetches = 0;
+    int m_shortTokenUses = 0; // requests a token too short-lived to keep may still be sent with
 
     QList<Pending> m_igdbQueue;
     QTimer m_igdbTimer;
     QDateTime m_lastIgdbSend;
     int m_igdbOpen = 0;
+    double m_igdbRetryScale = 1.0;
 };

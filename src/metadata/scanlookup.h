@@ -43,7 +43,7 @@ signals:
     void progressChanged();
     void enabledChanged();
     void message(const QString &text, bool review);
-    void finished(int written, int unresolved);
+    void finished(int written, int unresolved, int failed);
 
 private:
     void next();
@@ -62,6 +62,7 @@ private:
     BulkLookup *m_bulk = nullptr;
     bool m_applying = false;
     int m_unresolved = 0;
+    int m_failed = 0;
     int m_batchesDone = 0; // games in the batches done since it last stopped running
     static inline ScanLookup *s_instance = nullptr;
 };

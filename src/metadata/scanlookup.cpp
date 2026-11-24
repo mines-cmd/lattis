@@ -118,6 +118,7 @@ void ScanLookup::next()
     m_waiting.clear();
     m_applying = false;
     m_unresolved = 0;
+    m_failed = 0;
     m_bulk = new BulkLookup(
         client,
         [this] {
@@ -140,7 +141,9 @@ void ScanLookup::progressed()
     m_applying = true;
     for (const QVariant &r : m_bulk->results()) {
         const QString state = r.toMap().value(QStringLiteral("state")).toString();
-        if (state != QLatin1String("matched"))
+        if (state == QLatin1String("error"))
+            ++m_failed;
+        else if (state != QLatin1String("matched"))
             ++m_unresolved;
     }
     // Without art to download, it's done within apply(); with nothing to write, it never is.
@@ -155,9 +158,11 @@ void ScanLookup::done(int written)
     if (!m_bulk)
         return;
     const int unresolved = m_unresolved;
-    qCInfo(lcMetadata).noquote() << QStringLiteral("looked up the new games: %1 filled in, %2 without a clear match")
+    const int failed = m_failed;
+    qCInfo(lcMetadata).noquote() << QStringLiteral("looked up the new games: %1 filled in, %2 without a clear match, %3 failed")
                                         .arg(written)
-                                        .arg(unresolved);
+                                        .arg(unresolved)
+                                        .arg(failed);
     // Only while more wait: stopped, its progress starts over.
     m_batchesDone = m_waiting.isEmpty() ? 0 : m_batchesDone + int(m_batch.size());
     // Called from the BulkLookup's own signals.
@@ -167,7 +172,7 @@ void ScanLookup::done(int written)
     m_applying = false;
     emit runningChanged();
     emit progressChanged();
-    emit finished(written, unresolved);
+    emit finished(written, unresolved, failed);
 
     QString text;
     if (written > 0)
@@ -176,8 +181,15 @@ void ScanLookup::done(int written)
         text += unresolved == 1 ? tr(", 1 had no clear match") : tr(", %1 had no clear match").arg(unresolved);
     else if (unresolved > 0)
         text = unresolved == 1 ? tr("1 new game had no clear match") : tr("%1 new games had no clear match").arg(unresolved);
+    if (failed > 0) {
+        const QString failedText = failed == 1 ? tr("1 couldn't be looked up") : tr("%1 couldn't be looked up").arg(failed);
+        if (text.isEmpty())
+            text = failed == 1 ? tr("1 new game couldn't be looked up") : tr("%1 new games couldn't be looked up").arg(failed);
+        else
+            text += tr(", ") + failedText;
+    }
     if (!text.isEmpty())
-        emit message(text, unresolved > 0);
+        emit message(text, unresolved > 0 || failed > 0);
     // Not from within the BulkLookup's signals.
     QTimer::singleShot(0, this, &ScanLookup::next);
 }

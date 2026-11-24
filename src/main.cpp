@@ -560,6 +560,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "addGameFile", Q_ARG(QVariant, file));
                 });
             }
+            if (const QString ids = qEnvironmentVariable("LATTIS_SCAN_LOOKUP"); !ids.isEmpty()) {
+                QTimer::singleShot(actualDelay / 2, window, [&scanLookup, ids] {
+                    logHook("scanLookup", ids);
+                    scanLookup.add(ids.split(u',', Qt::SkipEmptyParts));
+                });
+            }
             if (const QString change = qEnvironmentVariable("LATTIS_UNDO"); !change.isEmpty()) {
                 QTimer::singleShot(actualDelay * 5 / 8, window, [window, change] {
                     logHook("makeUndoableChange", change);
