@@ -256,6 +256,8 @@ private:
     // The index to write: the scan's, less what couldn't be saved.
     QList<HeroicEntry> applyHeroicPlay(const ScanResult &result);
     void onScanFinished();
+    // Whether a file the result would write was edited since the scan read it.
+    bool writesAreStale(const ScanResult &result) const;
     void onShrinkFinished();
     void updateWatches();
     void scheduleCacheSave();
@@ -274,6 +276,7 @@ private:
     void assignManagerShortcuts();
     void updateSteamQueue();
     // No changedHere().
+    QSet<QString> takenIdsForNewGame() const;
     QString writeNewGameFile(const QString &id, const QList<std::pair<QString, QVariant>> &values);
     QString writeRomIndex(const QString &platform, const QList<RomEntry> &entries);
     void changedHere();

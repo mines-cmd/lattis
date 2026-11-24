@@ -29,6 +29,7 @@ private slots:
     void linuxProgramKind();
     void addLinuxProgram();
     void addLinuxProgramRefused();
+    void addKeepsAGameFileOnDisk();
     void addLinuxProgramReadOnly();
     void protonArtToSteam();
 };
@@ -848,6 +849,35 @@ void LibraryProgramsTest::addLinuxProgram()
     library->store().waitForIdle();
     QCoreApplication::processEvents();
     QVERIFY(!library->game(c.value("id").toString())->installed);
+}
+
+// A file that doesn't parse isn't in the snapshot, and one written a moment ago isn't scanned yet:
+// the id of neither is free.
+void LibraryProgramsTest::addKeepsAGameFileOnDisk()
+{
+    const QString script = m_installs.home + QStringLiteral("/Games/Foo/run.sh");
+    writeFile(script, "#!/bin/sh\nsleep 1\n");
+    const QByteArray broken = "title = \"My own Foo\nnote = \"half written\"\n";
+    writeFile(gamePath("linux-foo"), broken);
+    auto library = openLibrary();
+    QVERIFY(!library->problems().isEmpty());
+
+    const QVariantMap added = library->addGame(script, QStringLiteral("linux"), QStringLiteral("Foo"),
+                                               {{"makeExecutable", true}}, {});
+    QCOMPARE(added.value("error").toString(), QString());
+    QCOMPARE(added.value("id").toString(), QStringLiteral("linux-foo-2"));
+    QCOMPARE(readFile(gamePath("linux-foo")), broken);
+
+    // Written just now, with the watcher not having looked yet.
+    const QByteArray fresh = "title = \"My own Bar\"\nnotes = \"mine\"\n";
+    const QString bar = m_installs.home + QStringLiteral("/Games/Bar/run.sh");
+    writeFile(bar, "#!/bin/sh\nsleep 1\n");
+    writeFile(gamePath("linux-bar"), fresh);
+    const QVariantMap other = library->addGame(bar, QStringLiteral("linux"), QStringLiteral("Bar"),
+                                               {{"makeExecutable", true}}, {});
+    QCOMPARE(other.value("error").toString(), QString());
+    QCOMPARE(other.value("id").toString(), QStringLiteral("linux-bar-2"));
+    QCOMPARE(readFile(gamePath("linux-bar")), fresh);
 }
 
 void LibraryProgramsTest::addLinuxProgramRefused()

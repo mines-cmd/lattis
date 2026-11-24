@@ -76,6 +76,7 @@ private slots:
     void ownedAndSharedIsOnlyOwned();
     void gamesThatLeaveGo();
     void anEmptyCacheRemovesNothing();
+    void aScanNeverWritesOverAnEditMadeDuringIt();
     void anotherAccountsCacheIsIgnored();
     void blockedAndNonGamesAreSkipped();
     void turningItOffRemovesWhatTheApiBrought();
@@ -310,6 +311,39 @@ void LibrarySteamLibraryTest::anEmptyCacheRemovesNothing()
     SteamWebApi::saveCache(SteamWebApi::cachePath(m_cache, QStringLiteral("test")), cache);
     rescan(*library);
     QCOMPARE(readFile(steamIndexPath()), before);
+}
+
+// A scan that is reading the Web API's cache while the user fixes a title in steam.toml: its
+// result is thrown away and the scan runs again, so the fix stays.
+void LibrarySteamLibraryTest::aScanNeverWritesOverAnEditMadeDuringIt()
+{
+    installFakeSteam();
+    const SteamWebApi::Cache cache = baseCache();
+    auto library = openWith(&cache);
+    rescan(*library);
+    QVERIFY(readFile(steamIndexPath()).contains("2231450 = \"Pizza Tower\"\n"));
+
+    SteamWebApi::Cache later = cache;
+    later.owned.append({1002, QStringLiteral("Added Later"), 0, 0});
+    later.types.insert(1002, 0);
+    const QString cachePath = SteamWebApi::cachePath(m_cache, QStringLiteral("test"));
+    const QString scratch = m_dir->filePath(QStringLiteral("later.json"));
+    QVERIFY(SteamWebApi::saveCache(scratch, later));
+
+    HeldFile held;
+    QVERIFY(held.hold(cachePath));
+    library->store().refresh();
+    QVERIFY(held.waitForReader());
+    QVERIFY(library->store().scanning());
+
+    QByteArray index = readFile(steamIndexPath());
+    index.replace("2231450 = \"Pizza Tower\"", "2231450 = \"My Pizza\"");
+    writeFile(steamIndexPath(), index);
+    QVERIFY(held.release(readFile(scratch)));
+
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(steamIndexPath()).contains("1002 = "), 10000);
+    library->store().waitForIdle();
+    QVERIFY(readFile(steamIndexPath()).contains("2231450 = \"My Pizza\"\n"));
 }
 
 void LibrarySteamLibraryTest::anotherAccountsCacheIsIgnored()

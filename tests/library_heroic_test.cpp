@@ -73,6 +73,7 @@ private slots:
     void wholeLibraryOffListsTheInstalledOnes();
     void turnedOffKeepsTheGames();
     void aFixedTitleStays();
+    void aScanNeverWritesOverAnEditMadeDuringIt();
     void theCacheShowsTheListBeforeTheFirstScan();
     void aBrokenIndexIsNotOverwritten();
     void heroicShortcutsAreNotOffered();
@@ -451,6 +452,36 @@ void LibraryHeroicTest::aFixedTitleStays()
     const QByteArray after = readFile(heroicIndexPath());
     QVERIFY(after.contains("epic-fez = { title = \"FEZ\""));
     QVERIFY(after.contains("epic-new = "));
+}
+
+// A scan that is reading Heroic's files while the user fixes a title in heroic.toml: its result
+// is thrown away and the scan runs again, so the fix stays.
+void LibraryHeroicTest::aScanNeverWritesOverAnEditMadeDuringIt()
+{
+    writeLibrary(libraryCache(kLibrary));
+    auto library = openLibrary();
+    QVERIFY(readFile(heroicIndexPath()).contains("epic-fez = { title = \"Fez\""));
+    // The changes the first scan set in motion (Steam's sync) bump the generation too; the check
+    // here is the file's stamp alone.
+    QTest::qWait(500);
+
+    writeLibrary(libraryCache(kLibrary + QList<CacheGame>{{u"New"_s, u"New"_s}}));
+    HeldFile held;
+    QVERIFY(held.hold(HeroicScan::playTimePath(heroicRoot())));
+    library->store().refresh();
+    QVERIFY(held.waitForReader());
+    QVERIFY(library->store().scanning());
+
+    QByteArray index = readFile(heroicIndexPath());
+    index.replace("title = \"Fez\"", "title = \"FEZ\"");
+    writeFile(heroicIndexPath(), index);
+    QVERIFY(held.release("{}"));
+
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(heroicIndexPath()).contains("epic-new = "), 10000);
+    library->store().waitForIdle();
+    const QByteArray after = readFile(heroicIndexPath());
+    QVERIFY(after.contains("epic-fez = { title = \"FEZ\""));
+    QVERIFY(after.contains("epic-a-short-hike = "));
 }
 
 void LibraryHeroicTest::theCacheShowsTheListBeforeTheFirstScan()

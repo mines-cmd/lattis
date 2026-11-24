@@ -13,6 +13,7 @@ private slots:
     void loadsFromFiles();
     void badFilesAreProblems();
     void addWritesUniqueFiles();
+    void addKeepsAFileOnDisk();
     void editingKeepsTheRest();
     void removedGameDropsOut();
     void hiddenGameStaysLinked();
@@ -157,6 +158,18 @@ void LibraryModManagersTest::badFilesAreProblems()
     // The typo'd file still loads, named after its file.
     QCOMPARE(library->modManagers().size(), 1);
     QCOMPARE(library->modManagers().first().toMap().value("name").toString(), QStringLiteral("typo"));
+}
+
+void LibraryModManagersTest::addKeepsAFileOnDisk()
+{
+    const QByteArray broken = "name = \"My Vortex\nexe = \"/x\"\n";
+    writeFile(managerPath("vortex"), broken);
+    auto library = openLibrary();
+    QVERIFY(library->modManagers().isEmpty());
+    const QVariantMap added = library->addModManager({{"name", "Vortex"}, {"exe", "/mods/Vortex/Vortex.exe"}});
+    QVERIFY2(!added.contains("error"), qPrintable(added.value("error").toString()));
+    QCOMPARE(added.value("id").toString(), QStringLiteral("vortex-2"));
+    QCOMPARE(readFile(managerPath("vortex")), broken);
 }
 
 void LibraryModManagersTest::addWritesUniqueFiles()

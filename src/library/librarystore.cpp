@@ -1061,8 +1061,9 @@ void LibraryStore::onScanFinished()
     }
     const ScanResult result = m_scan.result();
     m_filesParsed += result.parsed;
-    if (m_scanGeneration != m_generation) {
-        // Something changed here while the scan ran; its result is out of date.
+    if (m_scanGeneration != m_generation || writesAreStale(result)) {
+        // Something changed here, or in a file the result would write, while the scan ran; its
+        // result is out of date.
         m_scanAgain = true;
         m_scanRoms = m_scanRoms || result.installsDetected;
         // Except for the grid files it wrote or deleted, which the record must know about.
@@ -1230,6 +1231,30 @@ void LibraryStore::saveCache()
         return;
     }
     m_save.setFuture(QtConcurrent::run(LibraryCache::save, m_cachePath, m_dataDir, m_snapshot));
+}
+
+bool LibraryStore::writesAreStale(const ScanResult &result) const
+{
+    if (m_versionStatus.readOnly)
+        return false;
+    QStringList paths;
+    for (auto it = result.romWrites.cbegin(); it != result.romWrites.cend(); ++it)
+        paths.append(kRomsPrefix + it.key() + QStringLiteral(".toml"));
+    if (result.steamWebWrite)
+        paths.append(kSteamIndex);
+    if (result.heroicWrite)
+        paths.append(kHeroicIndex);
+    for (const QString &path : std::as_const(paths)) {
+        const QFileInfo info(m_dataDir + u'/' + path);
+        const auto recorded = result.snapshot.files.constFind(path);
+        const bool same = recorded == result.snapshot.files.cend() ? !info.exists()
+                                                                   : info.exists() && recorded->stamp == stampOf(info);
+        if (!same) {
+            qCInfo(lcLibrary).noquote() << path << "changed during the scan; scanning again";
+            return true;
+        }
+    }
+    return false;
 }
 
 void LibraryStore::writeRomIndexes(const QMap<QString, QList<RomEntry>> &indexes)
@@ -2421,9 +2446,7 @@ LibraryStore::AddedGame LibraryStore::addGame(const QString &romPath, const QStr
     }
 
     // Ids of games that are gone may still have art; a new game doesn't take it over.
-    QSet<QString> taken = takenIds(m_snapshot.content);
-    for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
-        taken.insert(it.key());
+    QSet<QString> taken = takenIdsForNewGame();
     const QString id = GameId::forTitle(platform, title.trimmed(), taken);
 
     for (const QString &written : platformIt->romFolders) {
@@ -2478,6 +2501,21 @@ LibraryStore::AddedGame LibraryStore::addGame(const QString &romPath, const QStr
     return out;
 }
 
+// A file that doesn't parse, or one the watcher hasn't scanned yet, is not in the snapshot but is
+// still somebody's work: its id is taken.
+QSet<QString> LibraryStore::takenIdsForNewGame() const
+{
+    QSet<QString> taken = takenIds(m_snapshot.content);
+    for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
+        taken.insert(it.key());
+    const QHash<QString, FileStamp> onDisk = listLibraryFiles(m_dataDir);
+    for (auto it = onDisk.cbegin(); it != onDisk.cend(); ++it) {
+        if (it.key().startsWith(kGamesPrefix))
+            taken.insert(gameIdOf(it.key()));
+    }
+    return taken;
+}
+
 QString LibraryStore::writeNewGameFile(const QString &id, const QList<std::pair<QString, QVariant>> &values)
 {
     for (const auto &[key, value] : values) {
@@ -2500,6 +2538,8 @@ QString LibraryStore::writeNewGameFile(const QString &id, const QList<std::pair<
 
     const QString relative = kGamesPrefix + id + QStringLiteral(".toml");
     const QString filePath = m_dataDir + u'/' + relative;
+    if (const QFileInfo existing(filePath); existing.exists() || existing.isSymLink())
+        return tr("%1 already exists, so it wasn't replaced").arg(relative);
     QDir().mkpath(QFileInfo(filePath).absolutePath());
     QSaveFile file(filePath);
     if (!file.open(QIODevice::WriteOnly) || file.write(text.toUtf8()) < 0 || !file.commit())
@@ -2531,9 +2571,7 @@ LibraryStore::AddedShortcuts LibraryStore::addShortcuts(const QList<quint32> &ap
         if (m.shortcut > 0)
             inLibrary.insert(m.shortcut);
     }
-    QSet<QString> taken = takenIds(m_snapshot.content);
-    for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
-        taken.insert(it.key());
+    QSet<QString> taken = takenIdsForNewGame();
 
     // Recorded as in step with Steam, so nothing is queued for these shortcuts.
     QStringList ignored;
@@ -2714,9 +2752,7 @@ LibraryStore::AddedGame LibraryStore::addProtonGame(const QString &exePath, cons
         return out;
     }
 
-    QSet<QString> taken = takenIds(m_snapshot.content);
-    for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
-        taken.insert(it.key());
+    QSet<QString> taken = takenIdsForNewGame();
     const QString id = GameId::forTitle(kProtonPlatform, title.trimmed(), taken);
 
     QSet<quint32> appIds;
@@ -2820,9 +2856,7 @@ LibraryStore::AddedGame LibraryStore::addLinuxGame(const QString &exePath, const
         }
     }
 
-    QSet<QString> taken = takenIds(m_snapshot.content);
-    for (auto it = m_snapshot.art.cbegin(); it != m_snapshot.art.cend(); ++it)
-        taken.insert(it.key());
+    QSet<QString> taken = takenIdsForNewGame();
     const QString id = GameId::forTitle(kLinuxPlatform, title.trimmed(), taken);
     QList<std::pair<QString, QVariant>> all = {
         {QStringLiteral("title"), title.trimmed()},
@@ -2893,12 +2927,22 @@ LibraryStore::AddedModManager LibraryStore::addModManager(const ModManager &mana
     QString base = GameId::slug(manager.name);
     if (base.isEmpty())
         base = QStringLiteral("mod-manager");
+    QSet<QString> taken;
+    const QHash<QString, FileStamp> onDisk = listLibraryFiles(m_dataDir);
+    for (auto it = onDisk.cbegin(); it != onDisk.cend(); ++it) {
+        if (it.key().startsWith(kModManagersPrefix))
+            taken.insert(modManagerIdOf(it.key()));
+    }
     QString id = base;
-    for (int n = 2; m_snapshot.content.modManagers.contains(id); ++n)
+    for (int n = 2; m_snapshot.content.modManagers.contains(id) || taken.contains(id); ++n)
         id = base + u'-' + QString::number(n);
 
     const QString relative = kModManagersPrefix + id + QStringLiteral(".toml");
     const QString path = m_dataDir + u'/' + relative;
+    if (const QFileInfo existing(path); existing.exists() || existing.isSymLink()) {
+        out.error = tr("%1 already exists, so it wasn't replaced").arg(relative);
+        return out;
+    }
     const QString text = ModManagers::formatNew(manager);
     QDir().mkpath(QFileInfo(path).absolutePath());
     QSaveFile file(path);

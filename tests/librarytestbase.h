@@ -27,6 +27,10 @@
 
 #include <memory>
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 inline void copyTree(const QString &from, const QString &to)
 {
     QDirIterator it(from, QDir::Files, QDirIterator::Subdirectories);
@@ -150,6 +154,48 @@ inline QByteArray elf(quint16 type, quint16 machine, quint32 segment = 1, bool i
     put32(64, segment);
     return b;
 }
+
+// A named pipe in the place of a file a scan reads: the scan blocks on it until release(), so a test
+// can edit the library while a scan is running and then let the scan go on.
+class HeldFile
+{
+public:
+    // Replaces `path` with the pipe. False when it can't be made.
+    bool hold(const QString &path)
+    {
+        m_path = path;
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile::remove(path);
+        return ::mkfifo(QFile::encodeName(path).constData(), 0600) == 0;
+    }
+
+    // Waits until a scan is blocked reading it, and lets its read start (it then waits for the end).
+    bool waitForReader()
+    {
+        return QTest::qWaitFor(
+            [&] {
+                m_fd = ::open(QFile::encodeName(m_path).constData(), O_WRONLY | O_NONBLOCK);
+                return m_fd >= 0;
+            },
+            10000);
+    }
+
+    // The scan's read gets `content` and ends, and `path` is a plain file with it from then on.
+    bool release(const QByteArray &content)
+    {
+        const bool wrote = m_fd >= 0 && ::write(m_fd, content.constData(), size_t(content.size())) == content.size();
+        if (m_fd >= 0)
+            ::close(m_fd);
+        m_fd = -1;
+        QFile::remove(m_path);
+        QFile file(m_path);
+        return wrote && file.open(QIODevice::WriteOnly) && file.write(content) == content.size();
+    }
+
+private:
+    QString m_path;
+    int m_fd = -1;
+};
 
 class LibraryTestBase : public QObject
 {

@@ -1,5 +1,9 @@
 #include "librarytestbase.h"
+#include "fakehttpserver.h"
 #include "rombytes.h"
+#include "romdbfetch.h"
+
+#include <QScopeGuard>
 
 // The library tests on the ROM folder scan.
 class LibraryRomTest : public LibraryTestBase
@@ -9,6 +13,7 @@ class LibraryRomTest : public LibraryTestBase
 private slots:
     void romScanAddsNewRoms();
     void romScanSecondStartWritesNothing();
+    void romScanKeepsATitleFixedDuringIt();
     void romScanReportsNewGames();
     void romRenamedFileKeepsItsGame();
     void romRenamedFileMatchedBySize();
@@ -76,6 +81,42 @@ void LibraryRomTest::romScanSecondStartWritesNothing()
     QCOMPARE(QFileInfo(index).lastModified(), indexTime);
     QCOMPARE(QFileInfo(reference).lastModified(), referenceTime);
     QVERIFY(library->problems().isEmpty());
+}
+
+// The index invites "You can fix a title here". A first scan that waits for a name database
+// must not write its copy of the index over a fix made meanwhile.
+void LibraryRomTest::romScanKeepsATitleFixedDuringIt()
+{
+    FakeHttpServer server;
+    server.on("/switch.tsv", {200, "0100AAAA0000A000\tNew Game\n", 1500});
+    qputenv("LATTIS_ROMDB_URL", server.url("/").toString().toUtf8());
+    RomDbFetch::setEnabled(true);
+    const auto restore = qScopeGuard([] {
+        RomDbFetch::setEnabled(false);
+        qunsetenv("LATTIS_ROMDB_URL");
+    });
+    writeFile(m_data + QStringLiteral("/settings.toml"), demoSettings() + "\n[metadata]\nlook_up_new_games = true\n");
+    writeFile(m_data + QStringLiteral("/roms/switch/New Game [0100AAAA0000A000][v0].nsp"), "no header");
+
+    Library library(m_data, m_cache);
+    library.store().setInstallLocations(m_installs);
+    library.store().setSteamLocations({m_installs.home, {}});
+    library.store().setHeroicLocations(fakeHeroic());
+    library.store().setStateDir(m_state);
+    library.setUndoDir(m_state + QStringLiteral("/undo"));
+    library.startRefresh();
+    QTRY_VERIFY_WITH_TIMEOUT(!server.requestsTo("/switch.tsv").isEmpty(), 10000);
+
+    QByteArray index = readFile(romIndexPath("switch"));
+    QVERIFY(index.contains("title = \"Pikmin 4\""));
+    index.replace("title = \"Pikmin 4\"", "title = \"Pikmin Four\"");
+    writeFile(romIndexPath("switch"), index);
+
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(romIndexPath("switch")).contains("title = \"New Game\""), 15000);
+    library.store().waitForIdle();
+    const QByteArray after = readFile(romIndexPath("switch"));
+    QVERIFY(after.contains("title = \"Pikmin Four\""));
+    QVERIFY(!after.contains("title = \"Pikmin 4\""));
 }
 
 void LibraryRomTest::romScanReportsNewGames()

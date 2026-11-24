@@ -85,6 +85,8 @@ After the first scan the store watches the library and art folders and rescans w
 
 The user can change something while a scan is running. Every change made on the main thread bumps the store's generation counter. When a scan finishes with an older generation, its result is out of date and is thrown away, and another scan runs. The one thing kept from an outdated result is the list of grid files it wrote into Steam, because the sync record has to know about those.
 
+Edits made outside the store don't bump the counter, so a result also carries a second check. Before the store writes an index from a scan result (the ROM indexes, the Steam web index and the Heroic index, which a scan rewrites from its own copy), `writesAreStale()` compares each file's stamp on disk with the one the scan recorded in `result.snapshot.files`. If any differs (the user fixed a title while the scan waited for a name database, say), the result is out of date for the same reason and is handled the same way: thrown away, and another scan runs. Nothing is written from it, so the edit stays.
+
 ## Writing changes
 
 Every write goes through `LibraryStore`, and every method that writes returns an error message to show, or an empty string when it worked. Writes follow the same pattern:
@@ -100,7 +102,8 @@ Game file values are checked against `GameFields`, the table in `gamefile.cpp` t
 Nothing is written when:
 
 - the library is **read-only** (saved by a newer version of the app, or an upgrade failed), or
-- the file has a syntax error, since the user is editing it, or
+- the file has a syntax error, since the user is editing it,
+- the file is a new one and something is already at its path. `writeNewGameFile()` (every way of adding a game) and `addModManager()` refuse when the path exists, and the id they pick counts the files on disk as taken (`takenIdsForNewGame()`, from `listLibraryFiles()`), not only the games the snapshot parsed: a file with a syntax error, or one the watcher hasn't scanned yet, still has its id. So a new "Foo" gets `linux-foo-2` beside a half-written `linux-foo.toml`, or
 - a library Import is replacing the data dir. `hold()` stops scans and writes until the restore is done.
 
 ## Undo
