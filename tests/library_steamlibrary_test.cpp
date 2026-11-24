@@ -3,6 +3,9 @@
 #include "steamwebmerge.h"
 
 #include <QElapsedTimer>
+#include <QThread>
+
+#include <thread>
 
 namespace {
 const QString kMe = QStringLiteral("76561198000000001");
@@ -77,6 +80,7 @@ private slots:
     void gamesThatLeaveGo();
     void anEmptyCacheRemovesNothing();
     void aScanNeverWritesOverAnEditMadeDuringIt();
+    void holdStopsARunningScanBeforeItWritesArt();
     void anotherAccountsCacheIsIgnored();
     void blockedAndNonGamesAreSkipped();
     void turningItOffRemovesWhatTheApiBrought();
@@ -344,6 +348,48 @@ void LibrarySteamLibraryTest::aScanNeverWritesOverAnEditMadeDuringIt()
     QTRY_VERIFY_WITH_TIMEOUT(readFile(steamIndexPath()).contains("1002 = "), 10000);
     library->store().waitForIdle();
     QVERIFY(readFile(steamIndexPath()).contains("2231450 = \"My Pizza\"\n"));
+}
+
+// A library Import moves the data folder away while it holds the store: a scan still copying Steam's
+// art would make the folder again between the two moves.
+void LibrarySteamLibraryTest::holdStopsARunningScanBeforeItWritesArt()
+{
+    installFakeSteam();
+    const SteamWebApi::Cache cache = baseCache();
+    auto library = openWith(&cache);
+    const QString art = m_data + QStringLiteral("/art/steam-2231450/hero.jpg");
+    QVERIFY(QFile::exists(art));
+    QVERIFY(QDir(m_data + QStringLiteral("/art")).removeRecursively());
+
+    const QString cachePath = SteamWebApi::cachePath(m_cache, QStringLiteral("test"));
+    const QByteArray content = readFile(cachePath);
+    HeldFile held;
+    QVERIFY(held.hold(cachePath));
+    library->store().refresh();
+    QVERIFY(held.waitForReader());
+    QVERIFY(library->store().scanning());
+
+    // hold() waits for the scan, which waits for the pipe: let it go from another thread.
+    std::thread release([&] {
+        QThread::msleep(200);
+        held.release(content);
+    });
+    library->store().hold(true);
+    release.join();
+
+    const QString away = m_data + QStringLiteral(".away");
+    QVERIFY(QDir().rename(m_data, away));
+    QTest::qWait(100); // the scan's result arrives, and is dropped
+    QCoreApplication::processEvents();
+    QVERIFY(!QFileInfo::exists(m_data));
+    QVERIFY(QDir().rename(away, m_data));
+
+    // A refresh asked for during the hold waits for its end, then runs.
+    library->store().refresh();
+    QVERIFY(!QFile::exists(art));
+    library->store().hold(false);
+    library->store().waitForIdle();
+    QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(art), 10000);
 }
 
 void LibrarySteamLibraryTest::anotherAccountsCacheIsIgnored()

@@ -359,7 +359,7 @@ QString *artPath(ArtSet &art, const QString &kind)
 }
 
 // Copied under a hidden name, then renamed, so a scan never sees half a file.
-QStringList copySteamArt(const QString &dataDir, LibrarySnapshot &s)
+QStringList copySteamArt(const QString &dataDir, LibrarySnapshot &s, const std::atomic_bool *cancel)
 {
     QList<std::pair<QString, qint64>> games;
     QSet<QString> seen;
@@ -380,6 +380,8 @@ QStringList copySteamArt(const QString &dataDir, LibrarySnapshot &s)
 
     QStringList copied;
     for (const auto &[id, appId] : std::as_const(games)) {
+        if (cancel && cancel->load())
+            break;
         ArtSet have = s.art.value(id);
         const QStringList skip = s.content.games.value(id).skipSteamArt;
         QStringList missing;
@@ -418,7 +420,8 @@ QStringList copySteamArt(const QString &dataDir, LibrarySnapshot &s)
 }
 
 // Only for games the scan just added: art the user removed later stays removed.
-QStringList copyHeroicArt(const QString &dataDir, LibrarySnapshot &s, const QStringList &added)
+QStringList copyHeroicArt(const QString &dataDir, LibrarySnapshot &s, const QStringList &added,
+                           const std::atomic_bool *cancel)
 {
     const QSet<QString> ids(added.cbegin(), added.cend());
     QHash<QString, const HeroicGame *> games;
@@ -427,6 +430,8 @@ QStringList copyHeroicArt(const QString &dataDir, LibrarySnapshot &s, const QStr
 
     QStringList copied;
     for (const HeroicEntry &entry : std::as_const(s.content.heroic)) {
+        if (cancel && cancel->load())
+            break;
         const HeroicGame *game = games.value(entry.appName);
         if (!game || !ids.contains(entry.id))
             continue;
@@ -628,7 +633,7 @@ void scanHeroic(LibrarySnapshot &s, ScanResult &out, const QByteArray &settings,
         out.heroicWrite = s.content.heroic != in.index;
         out.heroicAdded = std::move(merged.added);
         if (options.copyArt)
-            out.heroicArtCopied = copyHeroicArt(dataDir, s, out.heroicAdded);
+            out.heroicArtCopied = copyHeroicArt(dataDir, s, out.heroicAdded, options.cancel);
         listing.installed = std::move(merged.installed);
         listing.gone = std::move(merged.gone);
     }
@@ -712,12 +717,12 @@ void diffSteamPlay(const LibrarySnapshot &s, ScanResult &out, const QString &dat
 }
 
 // Name databases are downloaded only with the lookup of new games on: it is the same consent.
-static RomDbOptions romDbOptions(const QString &dataDir, const QString &cacheDir)
+static RomDbOptions romDbOptions(const QString &dataDir, const QString &cacheDir, const std::atomic_bool *cancel)
 {
     QFile file(dataDir + QStringLiteral("/settings.toml"));
     const QByteArray bytes = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
     const bool consent = parseMetadataSettings(bytes, QStringLiteral("settings.toml")).value.lookUpNewGames;
-    return RomDbFetch::options(cacheDir, consent);
+    return RomDbFetch::options(cacheDir, consent, [cancel] { return cancel && cancel->load(); });
 }
 
 ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, const ScanOptions &options)
@@ -728,6 +733,11 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     ScanResult out;
     out.snapshot = previous;
     LibrarySnapshot &s = out.snapshot;
+    // Between the stages, and inside the slow ones (the downloads, the ROM walk, the art copies).
+    const auto stop = [&] {
+        out.cancelled = out.cancelled || (options.cancel && options.cancel->load());
+        return out.cancelled;
+    };
 
     const QHash<QString, FileStamp> onDisk = listLibraryFiles(dataDir);
     const LibraryCache::Changes changes = LibraryCache::diff(onDisk, previous.files);
@@ -780,6 +790,8 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     };
     const bool emulatorsChanged = (touched(kPlatforms) && !samePlatformsBesidesOrder(previous.content.platforms, s.content.platforms))
         || touched(kEmulators);
+    if (stop())
+        return out;
     const bool romsDue = !options.setup && (options.roms || !previous.romsScanned || emulatorsChanged);
     if (romsDue || (options.setup && (options.redetect || !previous.installsDetected || emulatorsChanged))) {
         QElapsedTimer romTimer;
@@ -789,7 +801,7 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         if (romsDue) {
             RomScanResult roms = scanRomFolders(s.content.platforms, out.emulators, s.content.roms,
                                                 takenIds(s.content), dataDir, options.installs.home,
-                                                claimedRoms(s.romGameFiles), romDbOptions(dataDir, options.cacheDir));
+                                                claimedRoms(s.romGameFiles), romDbOptions(dataDir, options.cacheDir, options.cancel));
             for (auto it = roms.indexes.cbegin(); it != roms.indexes.cend(); ++it) {
                 s.content.roms.insert(it.key(), it.value());
                 const QString path = kRomsPrefix + it.key() + QStringLiteral(".toml");
@@ -813,6 +825,9 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         out.changed = out.changed || s.installs != previous.installs;
         out.romsMs = romTimer.nsecsElapsed() / 1e6;
     }
+
+    if (stop())
+        return out;
 
     QByteArray settings;
     if (QFile file(root.filePath(QStringLiteral("settings.toml"))); file.open(QIODevice::ReadOnly))
@@ -865,6 +880,8 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
     out.changed = out.changed || out.steamChanged || s.content.steam != previous.content.steam;
 
     scanHeroic(s, out, settings, options, dataDir, previous.heroicScan);
+    if (stop())
+        return out;
     // Setup merges nothing, so Library.heroic's counts have only the scan to change with. The disk
     // cache doesn't keep it either, so this also covers a guide reopened after a restart.
     out.changed = out.changed || s.heroic != previous.heroic || s.content.heroic != previous.content.heroic
@@ -880,9 +897,10 @@ ScanResult scanLibrary(const QString &dataDir, const LibrarySnapshot &previous, 
         diffSteamPlay(s, out, dataDir, options.steamStartup);
 
     if (options.copyArt && s.steam.install.found() && !options.setup)
-        out.steamArtCopied = copySteamArt(dataDir, s);
+        out.steamArtCopied = copySteamArt(dataDir, s, options.cancel);
     out.changed = out.changed || !out.steamArtCopied.isEmpty();
 
+    stop();
     out.elapsedMs = timer.elapsed();
     return out;
 }
@@ -974,6 +992,7 @@ LibraryStore::~LibraryStore()
         m_save.waitForFinished();
         LibraryCache::save(m_cachePath, m_dataDir, m_snapshot);
     }
+    m_cancelScan = true;
     waitForIdle();
 }
 
@@ -988,9 +1007,11 @@ void LibraryStore::refresh()
         return;
     }
     m_scanGeneration = m_generation;
+    m_cancelScan = false;
     ScanOptions options;
     options.setup = m_setupPending;
     options.redetect = std::exchange(m_scanRoms, false);
+    m_runningRoms = options.redetect;
     options.roms = !m_setupPending && options.redetect;
     options.presets = Emulators::presets();
     options.cacheDir = m_cacheDir;
@@ -998,6 +1019,7 @@ void LibraryStore::refresh()
     options.steam = m_steamLocations;
     options.heroic = m_heroicLocations;
     options.steamWebCache = m_steamWebCache;
+    options.cancel = &m_cancelScan;
     options.copyArt = !m_versionStatus.readOnly;
     if (!m_versionStatus.readOnly)
         options.steamSyncRecord = m_steamSyncRecord;
@@ -1021,6 +1043,9 @@ void LibraryStore::hold(bool on)
         m_saveTimer.stop();
         m_watchTimer.stop();
         m_steamTimer.stop();
+        // A running scan writes art into the data folder: stop it, and return only when it has.
+        m_cancelScan = true;
+        m_scan.waitForFinished();
     } else if (std::exchange(m_refreshOnResume, false)) {
         refresh();
     }
@@ -1056,11 +1081,19 @@ void LibraryStore::onScanFinished()
     if (m_held) {
         // It read the files as they were; what it would write must wait for the hold to end.
         m_refreshOnResume = true;
+        m_scanRoms = m_scanRoms || m_runningRoms;
         emit scanningChanged();
         return;
     }
     const ScanResult result = m_scan.result();
     m_filesParsed += result.parsed;
+    if (result.cancelled) {
+        // Stopped by a hold that ended before this ran: it holds only part of what a scan finds.
+        m_scanAgain = true;
+        m_scanRoms = m_scanRoms || m_runningRoms;
+        emit scanningChanged();
+        return;
+    }
     if (m_scanGeneration != m_generation || writesAreStale(result)) {
         // Something changed here, or in a file the result would write, while the scan ran; its
         // result is out of date.

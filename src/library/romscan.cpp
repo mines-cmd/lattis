@@ -563,7 +563,10 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
 {
     RomScanResult out;
     RomDb romDb(romDbOptions);
+    const auto stopped = [&] { return romDbOptions.cancelled && romDbOptions.cancelled(); };
     for (const Platform &platform : platforms) {
+        if (stopped())
+            break;
         if (platform.romFolders.isEmpty())
             continue;
         const QString at = QStringLiteral("library/platforms.toml:%1").arg(platform.line);
@@ -649,6 +652,8 @@ RomScanResult scanRomFolders(const QList<Platform> &platforms, const QList<Emula
         for (const QString &path : std::as_const(found)) {
             if (indexed.contains(path) || isFolderUpdate(path, names))
                 continue;
+            if (stopped())
+                return out;
             const QString folder = files.value(path);
             const bool isFolder = isFolderGame(path, names);
             const RomInfo inside = readRom(romDb, platform.id,

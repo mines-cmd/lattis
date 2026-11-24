@@ -11,12 +11,13 @@ inline constexpr const char *kDefaultUrl = "https://raw.githubusercontent.com/mi
 // Where the databases come from: LATTIS_ROMDB_URL (a folder URL, `file://` too), else the default.
 QString baseUrl();
 
-// Downloads `<base><file>.tsv` for the platform into `path`. Blocks until done or `timeoutMs`:
+// Downloads `<base><file>.tsv` for the platform into `path`. Blocks until done, `timeoutMs` or `cancelled()` (polled every 50 ms):
 // call it from the scan's thread, never the main one. Nothing is kept for a reply that isn't a database.
-bool download(const QString &base, const QString &platform, const QString &path, int timeoutMs = 20000);
+bool download(const QString &base, const QString &platform, const QString &path, int timeoutMs = 20000,
+              const std::function<bool()> &cancelled = {});
 
 // Off until the app turns it on, so no test or tool reaches the network by scanning.
 void setEnabled(bool enabled);
 
-RomDbOptions options(const QString &cacheDir, bool allowDownload);
+RomDbOptions options(const QString &cacheDir, bool allowDownload, std::function<bool()> cancelled = {});
 }

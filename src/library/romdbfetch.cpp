@@ -31,8 +31,11 @@ QString baseUrl()
     return url.endsWith(u'/') ? url : url + u'/';
 }
 
-bool download(const QString &base, const QString &platform, const QString &path, int timeoutMs)
+bool download(const QString &base, const QString &platform, const QString &path, int timeoutMs,
+              const std::function<bool()> &cancelled)
 {
+    if (cancelled && cancelled())
+        return false;
     const QString file = RomDb::fileOf(platform);
     if (file.isEmpty())
         return false;
@@ -59,6 +62,15 @@ bool download(const QString &base, const QString &platform, const QString &path,
     QObject::connect(&timer, &QTimer::timeout, reply, &QNetworkReply::abort);
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     timer.start(timeoutMs);
+    // The scan's thread sets the flag; nothing here can signal this loop from outside.
+    QTimer poll;
+    if (cancelled) {
+        QObject::connect(&poll, &QTimer::timeout, reply, [&] {
+            if (cancelled())
+                reply->abort();
+        });
+        poll.start(50);
+    }
     loop.exec();
 
     const QByteArray body = reply->error() == QNetworkReply::NoError && !tooLarge ? reply->readAll() : QByteArray();
@@ -79,15 +91,16 @@ bool download(const QString &base, const QString &platform, const QString &path,
     return out.rename(path);
 }
 
-RomDbOptions options(const QString &cacheDir, bool allowDownload)
+RomDbOptions options(const QString &cacheDir, bool allowDownload, std::function<bool()> cancelled)
 {
     RomDbOptions out;
+    out.cancelled = cancelled;
     if (cacheDir.isEmpty())
         return out;
     out.dir = QDir(cacheDir).filePath(QStringLiteral("romdb"));
     if (allowDownload && s_enabled) {
-        out.download = [base = baseUrl()](const QString &platform, const QString &path) {
-            return download(base, platform, path);
+        out.download = [base = baseUrl(), cancelled](const QString &platform, const QString &path) {
+            return download(base, platform, path, 20000, cancelled);
         };
     }
     return out;

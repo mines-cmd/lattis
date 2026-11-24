@@ -3,6 +3,7 @@
 #include "rombytes.h"
 #include "romdbfetch.h"
 
+#include <QElapsedTimer>
 #include <QScopeGuard>
 
 // The library tests on the ROM folder scan.
@@ -14,6 +15,7 @@ private slots:
     void romScanAddsNewRoms();
     void romScanSecondStartWritesNothing();
     void romScanKeepsATitleFixedDuringIt();
+    void quittingDuringAScanDoesNotWaitForTheNetwork();
     void romScanReportsNewGames();
     void romRenamedFileKeepsItsGame();
     void romRenamedFileMatchedBySize();
@@ -117,6 +119,36 @@ void LibraryRomTest::romScanKeepsATitleFixedDuringIt()
     const QByteArray after = readFile(romIndexPath("switch"));
     QVERIFY(after.contains("title = \"Pikmin Four\""));
     QVERIFY(!after.contains("title = \"Pikmin 4\""));
+}
+
+// A server that never answers holds the scan inside the name database's download (20 s a database).
+void LibraryRomTest::quittingDuringAScanDoesNotWaitForTheNetwork()
+{
+    FakeHttpServer server;
+    server.on("/switch.tsv", {200, "0100AAAA0000A000\tNew Game\n", 600000});
+    qputenv("LATTIS_ROMDB_URL", server.url("/").toString().toUtf8());
+    RomDbFetch::setEnabled(true);
+    const auto restore = qScopeGuard([] {
+        RomDbFetch::setEnabled(false);
+        qunsetenv("LATTIS_ROMDB_URL");
+    });
+    writeFile(m_data + QStringLiteral("/settings.toml"), demoSettings() + "\n[metadata]\nlook_up_new_games = true\n");
+    writeFile(m_data + QStringLiteral("/roms/switch/New Game [0100AAAA0000A000][v0].nsp"), "no header");
+
+    auto library = std::make_unique<Library>(m_data, m_cache);
+    library->store().setInstallLocations(m_installs);
+    library->store().setSteamLocations({m_installs.home, {}});
+    library->store().setHeroicLocations(fakeHeroic());
+    library->store().setStateDir(m_state);
+    library->setUndoDir(m_state + QStringLiteral("/undo"));
+    library->startRefresh();
+    QTRY_VERIFY_WITH_TIMEOUT(!server.requestsTo("/switch.tsv").isEmpty(), 10000);
+    QVERIFY(library->store().scanning());
+
+    QElapsedTimer timer;
+    timer.start();
+    library.reset();
+    QVERIFY2(timer.elapsed() < 1000, qPrintable(QString::number(timer.elapsed())));
 }
 
 void LibraryRomTest::romScanReportsNewGames()

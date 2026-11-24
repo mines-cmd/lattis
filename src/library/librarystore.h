@@ -15,6 +15,7 @@
 #include <QSize>
 #include <QTimer>
 
+#include <atomic>
 #include <functional>
 
 Q_DECLARE_LOGGING_CATEGORY(lcLibrary)
@@ -37,12 +38,15 @@ struct ScanOptions
     QString cacheDir;
     // The Web API cache (steamwebapi.h); empty: the whole library is not merged.
     QString steamWebCache;
+    // Set by quit and by hold(): the scan stops at its next check and its result is thrown away.
+    const std::atomic_bool *cancel = nullptr;
 };
 
 struct ScanResult
 {
     LibrarySnapshot snapshot;
     bool changed = false;
+    bool cancelled = false; // stopped early: nothing in it may be written
     int parsed = 0;
     qint64 elapsedMs = 0;
 
@@ -330,6 +334,8 @@ private:
     QTimer m_saveTimer;
     bool m_saveAgain = false;
     bool m_held = false;
+    std::atomic_bool m_cancelScan{false};
+    bool m_runningRoms = false; // the running scan was asked for the ROM folders
     bool m_refreshOnResume = false;
     bool m_setupPending = false;
 };

@@ -14,6 +14,8 @@ struct RomDbOptions
     QString dir;
     // Fetches a platform's database into `path`; empty means never (the scan then uses only what is in `dir`).
     std::function<bool(const QString &platform, const QString &path)> download;
+    // Polled by the scan's thread between slow steps; true means stop and return what there is.
+    std::function<bool()> cancelled;
 };
 
 class RomDb
