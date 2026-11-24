@@ -337,6 +337,32 @@ private slots:
         QCOMPARE(cachedLibrary().owned.size(), 2);
     }
 
+    void signOutDuringASyncEndsTheSync()
+    {
+        m_store->store(QStringLiteral("x"), SteamAuth::itemAttributes(kMe), jwt(kMe, 86400 * 100));
+        m_server->on(kAccess, {200,
+                               QJsonDocument(QJsonObject{{"response", QJsonObject{{"access_token", QString::fromUtf8(jwt(kMe, 86400))}}}})
+                                   .toJson(QJsonDocument::Compact),
+                               400, "x-eresult: 1\r\n"});
+        makeSync();
+        m_sync->syncNow();
+        QTRY_VERIFY(m_sync->authStarted());
+        QTRY_VERIFY(!m_server->requestsTo(kAccess).isEmpty());
+        QCOMPARE(m_sync->state(), SteamLibrarySync::State::Syncing);
+
+        m_sync->auth()->signOut();
+        QTRY_COMPARE(m_sync->state(), SteamLibrarySync::State::Idle);
+        QCOMPARE(m_sync->outcome(), SteamLibrarySync::Outcome::Failed);
+        QCOMPARE(m_sync->error(), QStringLiteral("Signed out"));
+
+        // Sync now works again afterwards.
+        withKey();
+        answerEverything();
+        m_sync->syncNow();
+        QTRY_COMPARE(m_sync->state(), SteamLibrarySync::State::Idle);
+        QCOMPARE(m_sync->outcome(), SteamLibrarySync::Outcome::Synced);
+    }
+
     void theDailyCheckWaitsADay()
     {
         withKey();

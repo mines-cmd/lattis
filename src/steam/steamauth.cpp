@@ -221,6 +221,8 @@ void SteamAuth::finishSignIn(const QJsonObject &response)
     const QString refresh = response.value(QLatin1String("refresh_token")).toString();
     const TokenClaims claims = parseToken(refresh.toUtf8());
     if (!claims.valid) {
+        m_challengeUrl.clear();
+        emit challengeUrlChanged();
         setStatus(Status::SignedOut, QStringLiteral("Steam sent a sign-in Lattis can't read"));
         return;
     }
@@ -287,19 +289,29 @@ void SteamAuth::forgetTokens()
     }
 }
 
+void SteamAuth::failWaiting(const QString &error)
+{
+    m_refreshing = false;
+    const auto waiting = std::exchange(m_waiting, {});
+    for (const auto &[context, callback] : waiting) {
+        if (context)
+            callback({}, error);
+    }
+}
+
 void SteamAuth::cancel()
 {
     ++m_generation;
     m_pollTimer.stop();
     if (m_pending)
         m_pending->abort();
-    m_waiting.clear();
     m_refreshing = false;
     if (m_status == Status::Waiting || m_status == Status::CodeExpired) {
         m_challengeUrl.clear();
         emit challengeUrlChanged();
         setStatus(Status::SignedOut);
     }
+    failWaiting(QStringLiteral("Signed out"));
 }
 
 void SteamAuth::signOut()
@@ -308,7 +320,6 @@ void SteamAuth::signOut()
     m_pollTimer.stop();
     if (m_pending)
         m_pending->abort();
-    m_waiting.clear();
     m_refreshing = false;
     deleteItem();
     forgetTokens();
@@ -318,6 +329,7 @@ void SteamAuth::signOut()
         emit challengeUrlChanged();
     }
     setStatus(Status::SignedOut);
+    failWaiting(QStringLiteral("Signed out"));
 }
 
 void SteamAuth::restore(const QString &steamId)

@@ -206,6 +206,39 @@ private slots:
         QCOMPARE(m_auth->status(), SteamAuth::Status::SignedOut);
     }
 
+    void anUnreadableRefreshTokenClearsTheCode()
+    {
+        m_server->on(kBegin, answer(1, {{"challenge_url", "https://s.team/q/1/100"},
+                                        {"client_id", "100"},
+                                        {"request_id", "cmVx"},
+                                        {"interval", 0.01}}));
+        m_server->on(kPoll, answer(1, {{"refresh_token", "nonsense"}, {"account_name", "someone"}}));
+        m_auth->startSignIn();
+        QTRY_COMPARE(m_auth->status(), SteamAuth::Status::SignedOut);
+        QVERIFY(!m_auth->error().isEmpty());
+        QVERIFY(m_auth->challengeUrl().isEmpty());
+    }
+
+    void signOutAndCancelAnswerWaitingCallbacks()
+    {
+        m_server->on(kBegin, answer(1, {{"challenge_url", "https://s.team/q/1/100"},
+                                        {"client_id", "100"},
+                                        {"request_id", "cmVx"},
+                                        {"interval", 0.01}}));
+        m_server->on(kPoll, answer(1, {{"refresh_token", QString::fromUtf8(jwt(kSteamId, 86400))},
+                                       {"account_name", "someone"}}));
+        m_auth->startSignIn();
+        QTRY_COMPARE(m_auth->status(), SteamAuth::Status::SignedIn);
+        // No access token came with the sign-in, so asking for one is a request that stays waiting.
+        m_server->on(kAccess, {200, QByteArray(R"({"response":{}})"), 300, "x-eresult: 1\r\n"});
+        QStringList errors;
+        m_auth->accessToken(this, [&](const QString &, const QString &error) { errors.append(error); });
+        m_auth->accessToken(this, [&](const QString &, const QString &error) { errors.append(error); });
+        QVERIFY(errors.isEmpty());
+        m_auth->signOut();
+        QCOMPARE(errors, (QStringList{QStringLiteral("Signed out"), QStringLiteral("Signed out")}));
+    }
+
     void signOutDeletesTheItemAndTheTokens()
     {
         signedInTokens(jwt(kSteamId, 86400));

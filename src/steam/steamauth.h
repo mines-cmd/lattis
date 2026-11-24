@@ -83,6 +83,7 @@ private:
     void finishSignIn(const QJsonObject &response);
     void setStatus(Status status, const QString &error = {});
     void forgetTokens();
+    void failWaiting(const QString &error);
     void deleteItem();
     void storeItem(const QString &refreshToken);
     // Keyring writes and deletes run one at a time, in the order asked.
