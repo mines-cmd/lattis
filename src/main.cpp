@@ -720,6 +720,12 @@ int main(int argc, char *argv[])
                     QMetaObject::invokeMethod(window, "selectGamesForScreenshot", Q_ARG(QVariant, ids));
                 });
             }
+            if (const QString id = qEnvironmentVariable("LATTIS_COLLECTION_DIALOG"); !id.isEmpty()) {
+                QTimer::singleShot(actualDelay * 3 / 4, window, [window, id] {
+                    logHook("collectionDialogForScreenshot", id);
+                    QMetaObject::invokeMethod(window, "collectionDialogForScreenshot", Q_ARG(QVariant, id));
+                });
+            }
             if (const QString id = qEnvironmentVariable("LATTIS_PLAY_HISTORY"); !id.isEmpty()) {
                 QTimer::singleShot(actualDelay * 3 / 4, window, [window, id] {
                     logHook("playHistoryForScreenshot", id);

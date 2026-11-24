@@ -21,6 +21,7 @@ ColumnLayout {
     property bool favoritesOnly: false
     property var statuses: []
     property var tags: []
+    property var deletedTags: []
     property bool matchAllTags: false
     property var steam: []
     property int yearFrom: 0
@@ -183,6 +184,7 @@ ColumnLayout {
         favoritesOnly = d.favoritesOnly ?? false
         statuses = d.statuses ?? []
         tags = d.tags ?? []
+        deletedTags = d.deletedTags ?? []
         matchAllTags = d.matchAllTags ?? false
         steam = d.steam ?? []
         yearFrom = d.yearFrom ?? 0
@@ -662,7 +664,7 @@ ColumnLayout {
 
                                     FilterChip {
                                         required property string modelData
-                                        text: modelData
+                                        text: root.deletedTags.includes(modelData) ? qsTr("%1 · tag deleted").arg(modelData) : modelData
                                         tagColor: root.tagColor(modelData)
                                         onClicked: root.tags = root.toggled(root.tags, modelData)
                                         onRemoved: root.tags = root.toggled(root.tags, modelData)

@@ -63,7 +63,8 @@ struct CollectionValues
 CollectionValues collectionValues(const Collection &collection);
 
 // Membership of many games in one collection: the id lists are looked up in sets. With `knownTags`, a
-// rule's tags that aren't in it (a deleted tag) are ignored, as the tag filter ignores them.
+// rule's tags that aren't in it (a deleted tag) are ignored; a rule whose tags are all gone matches no game
+// (the games added by hand still belong), so a collection never turns into every game.
 //
 // `achievementState` answers a game's achievements state (not_started, in_progress, completed, none).
 // Without it every game is "none", which is also what a Steam game's count not read yet counts as.
@@ -78,6 +79,7 @@ public:
 private:
     CollectionRules m_rules;
     bool m_hasRules = false;
+    bool m_tagsGone = false;
     QSet<QString> m_added;
     QSet<QString> m_removed;
     AchievementState m_achievementState;

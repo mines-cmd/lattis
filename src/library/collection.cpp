@@ -312,8 +312,11 @@ CollectionMatcher::CollectionMatcher(const Collection &collection, const QSet<QS
 {
     if (m_hasRules)
         m_rules = *collection.rules;
-    if (m_hasRules && knownTags)
+    if (m_hasRules && knownTags) {
+        const bool hadTags = !m_rules.tags.isEmpty();
         m_rules.tags.removeIf([&](const QString &tag) { return !knownTags->contains(tag); });
+        m_tagsGone = hadTags && m_rules.tags.isEmpty();
+    }
 }
 
 bool CollectionMatcher::isMember(const Game &game) const
@@ -327,7 +330,7 @@ bool CollectionMatcher::isMember(const Game &game) const
     };
     if (listed(m_added))
         return true;
-    if (!m_hasRules || listed(m_removed))
+    if (!m_hasRules || m_tagsGone || listed(m_removed))
         return false;
 
     const CollectionRules &r = m_rules;

@@ -40,6 +40,9 @@ private slots:
     void savedFiltersAreAFixedScope();
     void rulesIgnoreADeletedTag();
     void renamingATagUpdatesTheRules();
+    void renamingATagKeepsItsGames();
+    void openCollectionViewFollowsUndo();
+    void openCollectionViewFollowsAHandEdit();
     void editRulesAndExceptions();
     void countsMatchesOfUnsavedRules();
     void countIgnoresUnknownTags();
@@ -730,12 +733,28 @@ void LibraryCollectionsTest::rulesIgnoreADeletedTag()
 
     QSignalSpy offered(library.get(), &Library::undoOffered);
     QCOMPARE(library->removeTag(QStringLiteral("Co-op")), QString());
-    // Its only tag is gone, so the rules name no tag: everything not hidden matches, as an empty tag filter does.
-    QTRY_VERIFY(library->collections().first().toMap().value("count").toInt() > coOp);
+    // Its only tag is gone, so the rule matches no game, and the dialog's details say which tag is gone.
+    QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), 0);
+    library->openCollection(QStringLiteral("tagged"));
+    QVERIFY(gameIds(*library).isEmpty());
+    library->closeCollection();
+    const QVariantMap details = library->collectionDetails(QStringLiteral("tagged"));
+    QCOMPARE(details.value("tags").toStringList(), QStringList{"Co-op"});
+    QCOMPARE(details.value("deletedTags").toStringList(), QStringList{"Co-op"});
     // The rule keeps the name, so Undo brings the tag and the rule back together.
     QVERIFY(library->store().collections().first().rules->tags.contains(QStringLiteral("Co-op")));
     QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
     QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), coOp);
+    QVERIFY(library->collectionDetails(QStringLiteral("tagged")).value("deletedTags").toStringList().isEmpty());
+
+    // Some of its tags gone: the others still decide. All gone: only a hand-picked game belongs.
+    c.rules->tags = {"Co-op", "No such tag"};
+    QCOMPARE(library->store().setCollection(c), QString());
+    QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), coOp);
+    c.rules->tags = {"No such tag"};
+    c.added = {"steam-1145360"};
+    QCOMPARE(library->store().setCollection(c), QString());
+    QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), 1);
 }
 
 void LibraryCollectionsTest::renamingATagUpdatesTheRules()
@@ -748,9 +767,111 @@ void LibraryCollectionsTest::renamingATagUpdatesTheRules()
     QCOMPARE(library->store().setCollection(c), QString());
     const int before = library->collections().first().toMap().value("count").toInt();
 
+    QSignalSpy offered(library.get(), &Library::undoOffered);
     QCOMPARE(library->renameTag(QStringLiteral("Co-op"), QStringLiteral("Together")), QString());
     QCOMPARE(library->store().collections().first().rules->tags, (QStringList{"Together", "RPG"}));
     QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), before);
+
+    // The tag, its games and the rule are one step: one Undo puts all three back.
+    QCOMPARE(offered.count(), 1);
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    QCOMPARE(library->store().collections().first().rules->tags, (QStringList{"Co-op", "RPG"}));
+    QTRY_COMPARE(library->collections().first().toMap().value("count").toInt(), before);
+    QVERIFY(library->collectionDetails(QStringLiteral("tagged")).value("deletedTags").toStringList().isEmpty());
+}
+
+void LibraryCollectionsTest::renamingATagKeepsItsGames()
+{
+    auto library = openLibrary();
+    Collection c = named(QStringLiteral("race"), QStringLiteral("Race"));
+    c.rules = CollectionRules{};
+    c.rules->tags = {"Racing"};
+    QCOMPARE(library->store().setCollection(c), QString());
+    library->openCollection(QStringLiteral("race"));
+    const QStringList racing = sorted(gameIds(*library));
+    QVERIFY(!racing.isEmpty() && racing.size() < library->gameCount());
+    library->closeCollection();
+
+    QCOMPARE(library->renameTag(QStringLiteral("Racing"), QStringLiteral("Driving")), QString());
+    QCOMPARE(library->store().collections().first().rules->tags, QStringList{"Driving"});
+    library->openCollection(QStringLiteral("race"));
+    QCOMPARE(sorted(gameIds(*library)), racing);
+    library->closeCollection();
+
+    // collections.toml can't be written (the user is editing it): the rename says so, and the
+    // collection matches nothing instead of every game.
+    const QString path = m_data + QStringLiteral("/library/collections.toml");
+    writeFile(path, "[[collection]\n");
+    library->store().reloadFiles({QStringLiteral("library/collections.toml")});
+    const QString error = library->renameTag(QStringLiteral("Driving"), QStringLiteral("Racing"));
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(readFile(path), QByteArray("[[collection]\n"));
+    library->openCollection(QStringLiteral("race"));
+    QVERIFY(gameIds(*library).isEmpty());
+}
+
+void LibraryCollectionsTest::openCollectionViewFollowsUndo()
+{
+    auto library = openLibrary();
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    Collection c = named(QStringLiteral("view"), QStringLiteral("View"));
+    c.added = {"steam-1145360", "switch-pikmin-4"};
+    c.sort = QStringLiteral("rating");
+    c.groupBy = QStringLiteral("platform");
+    QCOMPARE(library->store().setCollection(c), QString());
+    const QString listSort = library->sort();
+    const QString listGroup = library->groupBy();
+
+    // Opening applies the collection's sort and grouping; leaving puts the list's own back.
+    library->openCollection(QStringLiteral("view"));
+    QCOMPARE(library->sort(), QStringLiteral("rating"));
+    QCOMPARE(library->groupBy(), QStringLiteral("platform"));
+
+    QVariantMap rules = library->collectionDetails(QStringLiteral("view"));
+    rules.insert("sort", QStringLiteral("year"));
+    rules.insert("sortDescending", true);
+    rules.insert("groupBy", QStringLiteral("status"));
+    QCOMPARE(library->editCollection(QStringLiteral("view"), rules, {}, {}), QString());
+    QCOMPARE(library->sort(), QStringLiteral("year"));
+    QVERIFY(library->sortDescending());
+    QCOMPARE(library->groupBy(), QStringLiteral("status"));
+
+    // Undo puts the file back, and the open list follows it.
+    QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
+    QTRY_COMPARE(library->sort(), QStringLiteral("rating"));
+    QVERIFY(!library->sortDescending());
+    QCOMPARE(library->groupBy(), QStringLiteral("platform"));
+
+    library->closeCollection();
+    QCOMPARE(library->sort(), listSort);
+    QCOMPARE(library->groupBy(), listGroup);
+}
+
+void LibraryCollectionsTest::openCollectionViewFollowsAHandEdit()
+{
+    auto library = openLibrary();
+    Collection c = named(QStringLiteral("view"), QStringLiteral("View"));
+    c.added = {"steam-1145360", "switch-pikmin-4"};
+    c.sort = QStringLiteral("rating");
+    QCOMPARE(library->store().setCollection(c), QString());
+    const QString listSort = library->sort();
+    const QString listGroup = library->groupBy();
+    library->openCollection(QStringLiteral("view"));
+    QCOMPARE(library->sort(), QStringLiteral("rating"));
+
+    // The file edited by hand while the collection is open: its sort, then no sort of its own.
+    const QString path = m_data + QStringLiteral("/library/collections.toml");
+    writeFile(path, "[[collection]]\nid = \"view\"\nname = \"View\"\nadded = [\"steam-1145360\"]\nsort = \"year\"\n"
+                    "sort_descending = true\ngroup_by = \"platform\"\n");
+    library->store().reloadFiles({QStringLiteral("library/collections.toml")});
+    QTRY_COMPARE(library->sort(), QStringLiteral("year"));
+    QVERIFY(library->sortDescending());
+    QCOMPARE(library->groupBy(), QStringLiteral("platform"));
+
+    writeFile(path, "[[collection]]\nid = \"view\"\nname = \"View\"\nadded = [\"steam-1145360\"]\n");
+    library->store().reloadFiles({QStringLiteral("library/collections.toml")});
+    QTRY_COMPARE(library->sort(), listSort);
+    QCOMPARE(library->groupBy(), listGroup);
 }
 
 void LibraryCollectionsTest::editRulesAndExceptions()
@@ -806,8 +927,10 @@ void LibraryCollectionsTest::editRulesAndExceptions()
     QCOMPARE(int(offered.size()), steps + 1);
     QVERIFY(!library->editCollection(QStringLiteral("nope"), rules, {}, {}).isEmpty());
 
-    // The details show only the tags that exist, so saving them as they are drops a deleted tag's name.
-    QCOMPARE(library->collectionDetails(QStringLiteral("fav")).value("tags").toStringList(), QStringList{"Co-op"});
+    // The details list every tag of the rules and name the deleted ones, so saving keeps them.
+    const QVariantMap kept = library->collectionDetails(QStringLiteral("fav"));
+    QCOMPARE(kept.value("tags").toStringList(), (QStringList{"Co-op", "Gone"}));
+    QCOMPARE(kept.value("deletedTags").toStringList(), QStringList{"Gone"});
 
     QCOMPARE(library->undo(offered.last().at(0).value<quint64>()), QString());
     QCOMPARE(library->store().collections().first(), c);
@@ -874,9 +997,9 @@ void LibraryCollectionsTest::countIgnoresUnknownTags()
     const int coOp = library->countCollectionMatches(QStringLiteral("t"), rules, {}, {});
     QVERIFY(coOp > 0 && coOp < everything);
 
-    // A tag that doesn't exist is ignored, as the tag filter ignores it.
+    // A rule whose tags are all gone matches no game.
     rules.insert("tags", QStringList{"No such tag"});
-    QCOMPARE(library->countCollectionMatches(QStringLiteral("t"), rules, {}, {}), everything);
+    QCOMPARE(library->countCollectionMatches(QStringLiteral("t"), rules, {}, {}), 0);
 }
 
 void LibraryCollectionsTest::savedFromTheMoreFilters()

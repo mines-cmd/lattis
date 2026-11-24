@@ -316,6 +316,8 @@ Item {
 
     function focusList() { grid.forceActiveFocus() }
 
+    function askCollection(mode, id, name, ids) { searchRow.askCollection(mode, id, name, ids) }
+
     function selectGame(id) {
         selectedId = id
         syncSelection()

@@ -570,7 +570,7 @@ private:
         return CollectionMatcher(collection, &m_tagNames, [this](const Game &g) { return achievementStateOf(g); });
     }
     QString makeCollection(const QString &name, const QStringList &ids, const std::optional<CollectionRules> &rules);
-    void renameTagInCollections(const QString &from, const QString &to);
+    QString renameTagInCollections(const QString &from, const QString &to);
     bool enterCollection(const QString &id, bool rebuildNow);
     void leaveCollection(bool rebuildNow);
     void applyListSettings(const ListSettings &settings);

@@ -2202,8 +2202,10 @@ void Library::updateCollections()
         const auto open = std::find_if(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == m_collectionId; });
         if (open == all.cend())
             leaveCollection(false); // deleted while open; the caller builds the rows
-        else
+        else {
             m_matcher.emplace(matcherOf(*open));
+            applyCollectionView(*open); // Undo and a hand edit of the file change the view too
+        }
     }
     if (!m_restoreCollection.isEmpty()) {
         if (std::any_of(all.cbegin(), all.cend(), [&](const Collection &c) { return c.id == m_restoreCollection; }))
@@ -2565,10 +2567,10 @@ QVariantMap Library::collectionDetails(const QString &id) const
         return out;
     };
     const CollectionRules rules = found->rules.value_or(CollectionRules{});
-    QStringList tags;
+    QStringList deletedTags;
     for (const QString &tag : rules.tags) {
-        if (m_tagNames.contains(tag))
-            tags.append(tag);
+        if (!m_tagNames.contains(tag))
+            deletedTags.append(tag);
     }
     return QVariantMap{{QStringLiteral("name"), found->name},
                        {QStringLiteral("enabled"), found->rules.has_value()},
@@ -2576,7 +2578,8 @@ QVariantMap Library::collectionDetails(const QString &id) const
                        {QStringLiteral("installedOnly"), rules.installedOnly},
                        {QStringLiteral("favoritesOnly"), rules.favoritesOnly},
                        {QStringLiteral("statuses"), rules.statuses},
-                       {QStringLiteral("tags"), tags},
+                       {QStringLiteral("tags"), rules.tags},
+                       {QStringLiteral("deletedTags"), deletedTags},
                        {QStringLiteral("matchAllTags"), rules.matchAllTags},
                        {QStringLiteral("steam"), rules.steamOwnership},
                        {QStringLiteral("yearFrom"), rules.yearFrom},
@@ -2637,15 +2640,23 @@ QString Library::editCollection(const QString &id, const QVariantMap &rules, con
     return error;
 }
 
-void Library::renameTagInCollections(const QString &from, const QString &to)
+QString Library::renameTagInCollections(const QString &from, const QString &to)
 {
+    QString firstError;
     const QList<Collection> all = m_store.collections();
     for (Collection c : all) {
         if (!c.rules || !c.rules->tags.contains(from))
             continue;
-        c.rules->tags.replace(c.rules->tags.indexOf(from), to);
-        m_store.setCollection(c);
+        const qsizetype at = c.rules->tags.indexOf(from);
+        if (c.rules->tags.contains(to))
+            c.rules->tags.removeAt(at);
+        else
+            c.rules->tags.replace(at, to);
+        const QString error = m_store.setCollection(c);
+        if (firstError.isEmpty())
+            firstError = error;
     }
+    return firstError;
 }
 
 QString Library::renameCollection(const QString &id, const QString &name)
@@ -2901,26 +2912,49 @@ void Library::filtersEdited()
 
 QString Library::renameTag(const QString &from, const QString &to)
 {
-    const QString error = m_store.renameTag(from, to);
-    if (error.isEmpty() && from != to.trimmed())
-        renameTagInCollections(from, to.trimmed());
-    if (error.isEmpty() && m_held && m_held->list.tags.contains(from)) {
-        QStringList &held = m_held->list.tags;
-        const qsizetype at = held.indexOf(from);
-        if (held.contains(to))
-            held.removeAt(at);
-        else
-            held[at] = to;
-        saveListSettings();
+    const QString target = to.trimmed();
+    QStringList games;
+    for (auto it = m_store.snapshot().content.games.cbegin(); it != m_store.snapshot().content.games.cend(); ++it) {
+        if (it->tags.contains(from))
+            games.append(it.key());
     }
-    if (error.isEmpty() && m_tagFilter.contains(from)) {
-        const qsizetype at = m_tagFilter.indexOf(from);
-        if (m_tagFilter.contains(to))
-            m_tagFilter.removeAt(at);
-        else
-            m_tagFilter[at] = to;
-        m_tagNames.insert(to);
-        filtersEdited();
+    m_undo.start();
+    m_undo.keepCopy(QStringLiteral("library/tags.toml"));
+    m_undo.keepCopy(QStringLiteral("library/collections.toml"));
+    for (const QString &id : std::as_const(games))
+        m_undo.keepCopy(gameFileOf(id));
+
+    QString error = m_store.renameTag(from, to);
+    const bool renamed = error.isEmpty() && from != target;
+    // The rename stands even when a collection can't be written: its rule then names a tag that is gone,
+    // which matches nothing and says so, and the error tells the user why.
+    if (renamed)
+        error = renameTagInCollections(from, target);
+    const bool undoable = commitUndo(tr("Tag %1 renamed to %2").arg(from, target)) != 0;
+
+    // The filters follow the tag, and follow it back when Undo renames it again.
+    const auto follow = [this](const QString &oldName, const QString &newName) {
+        const auto rename = [&](QStringList &tags) {
+            const qsizetype at = tags.indexOf(oldName);
+            if (at < 0)
+                return false;
+            if (tags.contains(newName))
+                tags.removeAt(at);
+            else
+                tags[at] = newName;
+            return true;
+        };
+        if (m_held && rename(m_held->list.tags))
+            saveListSettings();
+        if (rename(m_tagFilter)) {
+            m_tagNames.insert(newName);
+            filtersEdited();
+        }
+    };
+    if (renamed) {
+        follow(from, target);
+        if (undoable)
+            m_afterUndo = [follow, from, target] { follow(target, from); };
     }
     return error;
 }

@@ -157,6 +157,10 @@ ApplicationWindow {
         playHistory.item.openFor(game)
     }
 
+    function collectionDialogForScreenshot(id) {
+        browser.askCollection("edit", id, "", [])
+    }
+
     function playHistoryForScreenshot(id) {
         browser.selectGame(id)
         openPlayHistory(browser.currentGame)
