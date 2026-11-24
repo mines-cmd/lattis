@@ -87,6 +87,10 @@ The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_desc
 
 The callers pass already-formatted TOML right-hand sides — string literals in TOML syntax, integers, arrays — and `TomlPatch` splices the new value into the right place in the file. Adding a key inserts it after the section's last key; adding a section appends it at the end; the rest of the bytes are untouched.
 
+**Sub-tables.** A table's sub-tables (`[steam.presets.x]` under `[steam]`, `[emulator.extras]` under `[[emulator]]`) belong to it. A new key goes after the table's own last key, never after a sub-table; a block's span runs to the next header that isn't one of its own sub-tables, so `removeBlock` and `moveBlock` take its sub-tables along and `appendBlock` goes after the last block's. A section that only exists through its sub-tables (`[a.b]` without `[a]`) gets a `[a]` of its own.
+
+**Every edit checks itself.** Each function parses the text it is about to return and compares the result with the table the edit meant to produce (the old table with that one key or block changed). When they differ, or the result doesn't parse, or a value isn't valid TOML, it returns `ok = false` and the caller writes nothing, the way `Vdf::setValue` does.
+
 `setValue` / `removeValue` operate on `[section]` / key pairs. `setBlockValue` / `removeBlockValue` / `appendBlock` / `removeBlock` / `moveBlock` work on `[[array]]` blocks identified by one of their key values (e.g. the `[[platform]]` whose `id` is `"switch"`). The file-level helpers `setValueInFile` and `removeValueInFile` wrap read → patch → atomic write and are no-ops if the value is already correct.
 
 ---

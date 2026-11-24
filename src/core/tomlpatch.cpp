@@ -55,136 +55,6 @@ size_t lineEndInclusive(const std::string &text, size_t line)
     return nl == std::string::npos ? text.size() : nl + 1;
 }
 
-const toml::table *findSection(const toml::table &tbl, const std::string &section)
-{
-    const toml::node *node = tbl.get(section);
-    return node ? node->as_table() : nullptr;
-}
-
-Result fail(const std::string &what)
-{
-    return {false, {}, QString::fromStdString(what)};
-}
-
-// A key/value written at the top of the file, as opposed to a [section] or [[array]] that
-// toml++ also stores in the root table.
-bool isRootKeyValue(const toml::node &node)
-{
-    if (const toml::table *t = node.as_table())
-        return t->is_inline();
-    return !node.is_array_of_tables();
-}
-
-Result setRootValue(const std::string &src, const toml::table &tbl, const std::string &keyName,
-                    const std::string &value)
-{
-    std::string out = src;
-    if (const toml::node *existing = tbl.get(keyName)) {
-        if (!isRootKeyValue(*existing))
-            return fail("'" + keyName + "' is a section, not a value");
-        const toml::source_region &region = existing->source();
-        const size_t begin = byteOffset(src, region.begin.line, region.begin.column);
-        const size_t end = byteOffset(src, region.end.line, region.end.column);
-        out.replace(begin, end - begin, value);
-        return {true, QString::fromStdString(out), {}};
-    }
-
-    // After the last top-level key; never after a [section] header, where the key would
-    // land inside that section.
-    size_t insertAfterLine = 0;
-    for (auto &&[k, v] : tbl) {
-        if (isRootKeyValue(v))
-            insertAfterLine = std::max(insertAfterLine, size_t(v.source().end.line));
-    }
-    size_t at = 0;
-    if (insertAfterLine > 0) {
-        at = lineEndInclusive(src, insertAfterLine);
-    } else {
-        while (at < src.size() && src[at] == '#') {
-            const size_t nl = src.find('\n', at);
-            at = nl == std::string::npos ? src.size() : nl + 1;
-        }
-    }
-    std::string line = keyName + " = " + value + "\n";
-    if (at == src.size() && !src.empty() && src.back() != '\n')
-        line.insert(0, 1, '\n');
-    out.insert(at, line);
-    return {true, QString::fromStdString(out), {}};
-}
-}
-
-Result setValue(const QString &text, const QString &section, const QString &key,
-                 const QString &formattedValue)
-{
-    const std::string src = text.toStdString();
-    const std::string sectionName = section.toStdString();
-    const std::string keyName = key.toStdString();
-    const std::string value = formattedValue.toStdString();
-
-    toml::table tbl;
-    try {
-        tbl = toml::parse(src);
-    } catch (const toml::parse_error &e) {
-        return fail(std::string(e.description()));
-    }
-
-    if (sectionName.empty())
-        return setRootValue(src, tbl, keyName, value);
-
-    if (const toml::table *sectionTbl = findSection(tbl, sectionName)) {
-        if (const toml::node *existing = sectionTbl->get(keyName)) {
-            const toml::source_region &region = existing->source();
-            const size_t begin = byteOffset(src, region.begin.line, region.begin.column);
-            const size_t end = byteOffset(src, region.end.line, region.end.column);
-            std::string out = src;
-            out.replace(begin, end - begin, value);
-            return {true, QString::fromStdString(out), {}};
-        }
-
-        size_t insertAfterLine = sectionTbl->source().begin.line;
-        for (auto &&[k, v] : *sectionTbl)
-            insertAfterLine = std::max(insertAfterLine, size_t(v.source().end.line));
-
-        const size_t at = lineEndInclusive(src, insertAfterLine);
-        std::string out = src;
-        out.insert(at, keyName + " = " + value + "\n");
-        return {true, QString::fromStdString(out), {}};
-    }
-
-    std::string out = src;
-    if (!out.empty() && out.back() != '\n')
-        out += '\n';
-    out += "\n[" + sectionName + "]\n" + keyName + " = " + value + "\n";
-    return {true, QString::fromStdString(out), {}};
-}
-
-Result removeValue(const QString &text, const QString &section, const QString &key)
-{
-    const std::string src = text.toStdString();
-    const std::string sectionName = section.toStdString();
-    const std::string keyName = key.toStdString();
-
-    toml::table tbl;
-    try {
-        tbl = toml::parse(src);
-    } catch (const toml::parse_error &e) {
-        return fail(std::string(e.description()));
-    }
-
-    const toml::table *sectionTbl = sectionName.empty() ? &tbl : findSection(tbl, sectionName);
-    const toml::node *existing = sectionTbl ? sectionTbl->get(keyName) : nullptr;
-    if (!existing || (sectionName.empty() && !isRootKeyValue(*existing)))
-        return {true, text, {}};
-
-    const toml::source_region &region = existing->source();
-    const size_t begin = lineStart(src, region.begin.line);
-    const size_t end = lineEndInclusive(src, region.end.line);
-    std::string out = src;
-    out.erase(begin, end - begin);
-    return {true, QString::fromStdString(out), {}};
-}
-
-namespace {
 // The file's lines, 1-indexed; line i spans [start(i), start(i + 1)), its newline included.
 class Lines
 {
@@ -232,6 +102,96 @@ private:
     const std::string &m_text;
     std::vector<size_t> m_starts;
 };
+
+const toml::table *findSection(const toml::table &tbl, const std::string &section)
+{
+    const toml::node *node = tbl.get(section);
+    return node ? node->as_table() : nullptr;
+}
+
+Result fail(const std::string &what)
+{
+    return {false, {}, QString::fromStdString(what)};
+}
+
+// Parses `result.text` and compares it with the table the edit meant to produce, so a wrong
+// text never reaches a caller as `ok`.
+Result verified(Result result, const toml::table &expected)
+{
+    if (!result.ok)
+        return result;
+    try {
+        if (toml::parse(result.text.toStdString()) != expected)
+            return fail("the edit would not produce the intended file");
+    } catch (const toml::parse_error &e) {
+        return fail("the edit would produce a file that does not parse: "
+                    + std::string(e.description()));
+    }
+    return result;
+}
+
+// The value `formatted` as a node to put into an expected table; false when it isn't valid TOML.
+bool parseValue(const std::string &formatted, toml::table *holder)
+{
+    try {
+        *holder = toml::parse("v = " + formatted);
+    } catch (const toml::parse_error &) {
+        return false;
+    }
+    return holder->get("v") != nullptr;
+}
+
+toml::table *tableAt(toml::table &tbl, const std::string &name)
+{
+    toml::node *node = tbl.get(name);
+    return node ? node->as_table() : nullptr;
+}
+
+// A key/value written at the top of the file, as opposed to a [section] or [[array]] that
+// toml++ also stores in the root table.
+bool isRootKeyValue(const toml::node &node)
+{
+    if (const toml::table *t = node.as_table())
+        return t->is_inline();
+    return !node.is_array_of_tables();
+}
+
+Result setRootValue(const std::string &src, const toml::table &tbl, const std::string &keyName,
+                    const std::string &value)
+{
+    std::string out = src;
+    if (const toml::node *existing = tbl.get(keyName)) {
+        if (!isRootKeyValue(*existing))
+            return fail("'" + keyName + "' is a section, not a value");
+        const toml::source_region &region = existing->source();
+        const size_t begin = byteOffset(src, region.begin.line, region.begin.column);
+        const size_t end = byteOffset(src, region.end.line, region.end.column);
+        out.replace(begin, end - begin, value);
+        return {true, QString::fromStdString(out), {}};
+    }
+
+    // After the last top-level key; never after a [section] header, where the key would
+    // land inside that section.
+    size_t insertAfterLine = 0;
+    for (auto &&[k, v] : tbl) {
+        if (isRootKeyValue(v))
+            insertAfterLine = std::max(insertAfterLine, size_t(v.source().end.line));
+    }
+    size_t at = 0;
+    if (insertAfterLine > 0) {
+        at = lineEndInclusive(src, insertAfterLine);
+    } else {
+        while (at < src.size() && src[at] == '#') {
+            const size_t nl = src.find('\n', at);
+            at = nl == std::string::npos ? src.size() : nl + 1;
+        }
+    }
+    std::string line = keyName + " = " + value + "\n";
+    if (at == src.size() && !src.empty() && src.back() != '\n')
+        line.insert(0, 1, '\n');
+    out.insert(at, line);
+    return {true, QString::fromStdString(out), {}};
+}
 
 std::optional<toml::table> parseText(const std::string &src, Result *failure)
 {
@@ -297,12 +257,42 @@ const toml::table *findBlock(const toml::table &tbl, const QString &array, const
     return nullptr;
 }
 
-size_t lastKeyLine(const toml::table &block)
+// A [table] or [[array]] written with a header line, as opposed to a value, an inline table or
+// the table a dotted key makes.
+bool isHeaderNode(const toml::node &node, const Lines &lines)
 {
-    size_t last = block.source().begin.line;
-    for (auto &&[k, v] : block) {
-        if (!isHeaderTable(v) && !v.is_array_of_tables())
-            last = std::max(last, size_t(v.source().end.line));
+    if (const toml::table *t = node.as_table())
+        return !t->is_inline() && lines.isHeader(t->source().begin.line);
+    if (const toml::array *a = node.as_array())
+        return !a->empty() && isHeaderNode(a->front(), lines);
+    return false;
+}
+
+// The last line of `node` and of everything below it, sub-tables included.
+size_t contentEnd(const toml::node &node, const Lines &lines)
+{
+    if (const toml::table *t = node.as_table(); t && !t->is_inline()) {
+        size_t last = t->source().begin.line;
+        for (auto &&[k, v] : *t)
+            last = std::max(last, contentEnd(v, lines));
+        return last;
+    }
+    if (const toml::array *a = node.as_array(); a && isHeaderNode(*a, lines)) {
+        size_t last = 0;
+        for (auto &&el : *a)
+            last = std::max(last, contentEnd(el, lines));
+        return last;
+    }
+    return node.source().end.line;
+}
+
+// The last line of the table's own keys: where a new key goes. A sub-table's lines don't count.
+size_t lastKeyLine(const toml::table &table, const Lines &lines)
+{
+    size_t last = table.source().begin.line;
+    for (auto &&[k, v] : table) {
+        if (!isHeaderNode(v, lines))
+            last = std::max(last, contentEnd(v, lines));
     }
     return last;
 }
@@ -310,18 +300,27 @@ size_t lastKeyLine(const toml::table &block)
 struct Span
 {
     size_t first = 0; // the first comment line above the header, or the header
-    size_t last = 0;  // the last key's last line, or the last comment line below it
+    size_t last = 0;  // the last line of the block or its last sub-table, or the comment lines below
 };
 
+// The block runs to the next header that isn't one of its own sub-tables.
 Span spanOf(const toml::table &block, const Lines &lines, const std::vector<size_t> &headers)
 {
     const size_t header = block.source().begin.line;
-    Span span{header, lastKeyLine(block)};
+    Span span{header, contentEnd(block, lines)};
     while (span.first > 1 && lines.isComment(span.first - 1))
         span.first--;
 
-    const auto next = std::upper_bound(headers.begin(), headers.end(), header);
-    const size_t nextHeader = next == headers.end() ? lines.count() + 1 : *next;
+    std::vector<size_t> own;
+    collectHeaders(block, lines, own);
+    size_t nextHeader = lines.count() + 1;
+    for (auto it = std::upper_bound(headers.begin(), headers.end(), header); it != headers.end();
+         ++it) {
+        if (std::find(own.begin(), own.end(), *it) == own.end()) {
+            nextHeader = *it;
+            break;
+        }
+    }
     size_t j = span.last + 1;
     while (j < nextHeader && lines.isComment(j))
         j++;
@@ -357,6 +356,26 @@ const toml::table *lastBlock(const toml::table &tbl, const QString &array)
     return last;
 }
 
+size_t indexIn(const toml::table &tbl, const QString &array, const toml::table *block)
+{
+    const toml::array *arr = tbl.get_as<toml::array>(array.toStdString());
+    for (size_t i = 0; arr && i < arr->size(); ++i) {
+        if (arr->get(i) == block)
+            return i;
+    }
+    return 0;
+}
+
+toml::array *arrayAt(toml::table &tbl, const QString &array)
+{
+    return tbl.get_as<toml::array>(array.toStdString());
+}
+
+toml::table &blockAt(toml::table &tbl, const QString &array, size_t index)
+{
+    return *arrayAt(tbl, array)->get(index)->as_table();
+}
+
 std::string insertBlockText(std::string text, size_t at, const std::string &block)
 {
     std::string after;
@@ -373,7 +392,97 @@ std::string insertBlockText(std::string text, size_t at, const std::string &bloc
         text += '\n';
     return text + block + after;
 }
+}
 
+
+Result setValue(const QString &text, const QString &section, const QString &key,
+                 const QString &formattedValue)
+{
+    const std::string src = text.toStdString();
+    const std::string sectionName = section.toStdString();
+    const std::string keyName = key.toStdString();
+    const std::string value = formattedValue.toStdString();
+
+    toml::table tbl;
+    try {
+        tbl = toml::parse(src);
+    } catch (const toml::parse_error &e) {
+        return fail(std::string(e.description()));
+    }
+
+    toml::table holder;
+    if (!parseValue(value, &holder))
+        return fail("'" + value + "' is not a TOML value");
+    toml::table expected = tbl;
+    toml::table *expectedSection = &expected;
+    if (!sectionName.empty()) {
+        toml::node *node = expected.get(sectionName);
+        if (!node) {
+            expected.insert(sectionName, toml::table{});
+            node = expected.get(sectionName);
+        }
+        if (!(expectedSection = node->as_table()))
+            return fail("'" + sectionName + "' is a value, not a section");
+    }
+    expectedSection->insert_or_assign(keyName, *holder.get("v"));
+
+    if (sectionName.empty())
+        return verified(setRootValue(src, tbl, keyName, value), expected);
+
+    const Lines lines(src);
+    if (const toml::table *sectionTbl = findSection(tbl, sectionName)) {
+        std::string out = src;
+        if (const toml::node *existing = sectionTbl->get(keyName)) {
+            const toml::source_region &region = existing->source();
+            const size_t begin = byteOffset(src, region.begin.line, region.begin.column);
+            const size_t end = byteOffset(src, region.end.line, region.end.column);
+            out.replace(begin, end - begin, value);
+        } else {
+            out.insert(lineEndInclusive(src, lastKeyLine(*sectionTbl, lines)),
+                       keyName + " = " + value + "\n");
+        }
+        const Result result = verified({true, QString::fromStdString(out), {}}, expected);
+        if (result.ok || sectionTbl->get(keyName))
+            return result;
+        // A section only made by its sub-tables ([a.b] alone) has no header of its own to
+        // insert under; write one.
+    }
+
+    std::string out = src;
+    if (!out.empty() && out.back() != '\n')
+        out += '\n';
+    out += "\n[" + sectionName + "]\n" + keyName + " = " + value + "\n";
+    return verified({true, QString::fromStdString(out), {}}, expected);
+}
+
+Result removeValue(const QString &text, const QString &section, const QString &key)
+{
+    const std::string src = text.toStdString();
+    const std::string sectionName = section.toStdString();
+    const std::string keyName = key.toStdString();
+
+    toml::table tbl;
+    try {
+        tbl = toml::parse(src);
+    } catch (const toml::parse_error &e) {
+        return fail(std::string(e.description()));
+    }
+
+    const toml::table *sectionTbl = sectionName.empty() ? &tbl : findSection(tbl, sectionName);
+    const toml::node *existing = sectionTbl ? sectionTbl->get(keyName) : nullptr;
+    if (!existing || (sectionName.empty() && !isRootKeyValue(*existing)))
+        return {true, text, {}};
+
+    const toml::source_region &region = existing->source();
+    const size_t begin = lineStart(src, region.begin.line);
+    const size_t end = lineEndInclusive(src, region.end.line);
+    std::string out = src;
+    out.erase(begin, end - begin);
+
+    toml::table expected = tbl;
+    toml::table *expectedSection = sectionName.empty() ? &expected : tableAt(expected, sectionName);
+    expectedSection->erase(keyName);
+    return verified({true, QString::fromStdString(out), {}}, expected);
 }
 
 Result setBlockValue(const QString &text, const Block &block, const QString &key,
@@ -393,23 +502,31 @@ Result setBlockValue(const QString &text, const Block &block, const QString &key
 
     const std::string keyName = key.toStdString();
     const std::string value = formattedValue.toStdString();
+    toml::table holder;
+    if (!parseValue(value, &holder))
+        return fail("'" + value + "' is not a TOML value");
+    toml::table expected = *tbl;
+    blockAt(expected, block.array, indexIn(*tbl, block.array, t))
+        .insert_or_assign(keyName, *holder.get("v"));
+
+    const Lines lines(src);
     std::string out = src;
     if (const toml::node *existing = t->get(keyName)) {
-        if (isHeaderTable(*existing) || existing->is_array_of_tables())
+        if (isHeaderNode(*existing, lines))
             return fail("'" + keyName + "' is a table, not a value");
         const toml::source_region &region = existing->source();
         const size_t begin = byteOffset(src, region.begin.line, region.begin.column);
         const size_t end = byteOffset(src, region.end.line, region.end.column);
         out.replace(begin, end - begin, value);
-        return {true, QString::fromStdString(out), {}};
+        return verified({true, QString::fromStdString(out), {}}, expected);
     }
 
-    const size_t at = lineEndInclusive(src, lastKeyLine(*t));
+    const size_t at = lineEndInclusive(src, lastKeyLine(*t, lines));
     std::string line = keyName + " = " + value + "\n";
     if (at == src.size() && !src.empty() && src.back() != '\n')
         line.insert(0, 1, '\n');
     out.insert(at, line);
-    return {true, QString::fromStdString(out), {}};
+    return verified({true, QString::fromStdString(out), {}}, expected);
 }
 
 QStringList blockValues(const QString &text, const QString &array, const QString &key)
@@ -460,7 +577,7 @@ Result removeBlockValue(const QString &text, const Block &block, const QString &
 
     const toml::table *t = findBlock(*tbl, block.array, block.key, block.value);
     const toml::node *existing = t ? t->get(key.toStdString()) : nullptr;
-    if (!existing || isHeaderTable(*existing) || existing->is_array_of_tables())
+    if (!existing || isHeaderNode(*existing, Lines(src)))
         return {true, text, {}};
 
     const toml::source_region &region = existing->source();
@@ -468,7 +585,10 @@ Result removeBlockValue(const QString &text, const Block &block, const QString &
     const size_t end = lineEndInclusive(src, region.end.line);
     std::string out = src;
     out.erase(begin, end - begin);
-    return {true, QString::fromStdString(out), {}};
+
+    toml::table expected = *tbl;
+    blockAt(expected, block.array, indexIn(*tbl, block.array, t)).erase(key.toStdString());
+    return verified({true, QString::fromStdString(out), {}}, expected);
 }
 
 Result appendBlock(const QString &text, const QString &array,
@@ -481,15 +601,31 @@ Result appendBlock(const QString &text, const QString &array,
         return failure;
 
     std::string block = "[[" + array.toStdString() + "]]\n";
-    for (const auto &[key, value] : values)
+    toml::table element;
+    for (const auto &[key, value] : values) {
         block += key.toStdString() + " = " + value.toStdString() + "\n";
+        toml::table holder;
+        if (!parseValue(value.toStdString(), &holder))
+            return fail("'" + value.toStdString() + "' is not a TOML value");
+        element.insert_or_assign(key.toStdString(), *holder.get("v"));
+    }
+    toml::table expected = *tbl;
+    if (toml::array *arr = arrayAt(expected, array)) {
+        arr->push_back(element);
+    } else if (!expected.get(array.toStdString())) {
+        toml::array created;
+        created.push_back(element);
+        expected.insert(array.toStdString(), std::move(created));
+    } else {
+        return fail("'" + array.toStdString() + "' is not an array of tables");
+    }
 
     size_t at = std::string::npos;
     if (const toml::table *last = lastBlock(*tbl, array)) {
         const Lines lines(src);
         at = lines.start(spanOf(*last, lines, headerLines(*tbl, lines)).last + 1);
     }
-    return {true, QString::fromStdString(insertBlockText(src, at, block)), {}};
+    return verified({true, QString::fromStdString(insertBlockText(src, at, block)), {}}, expected);
 }
 
 Result removeBlock(const QString &text, const Block &block)
@@ -508,7 +644,13 @@ Result removeBlock(const QString &text, const Block &block)
     const auto [begin, end] = removalRange(spanOf(*t, lines, headerLines(*tbl, lines)), lines);
     std::string out = src;
     out.erase(begin, end - begin);
-    return {true, QString::fromStdString(out), {}};
+
+    toml::table expected = *tbl;
+    toml::array *arr = arrayAt(expected, block.array);
+    arr->erase(arr->cbegin() + indexIn(*tbl, block.array, t));
+    if (arr->empty())
+        expected.erase(block.array.toStdString());
+    return verified({true, QString::fromStdString(out), {}}, expected);
 }
 
 Result moveBlock(const QString &text, const Block &block, const QString &beforeValue)
@@ -533,6 +675,18 @@ Result moveBlock(const QString &text, const Block &block, const QString &beforeV
             return {true, text, {}};
     }
 
+    toml::table expected = *tbl;
+    {
+        toml::array *arr = arrayAt(expected, block.array);
+        const size_t from = indexIn(*tbl, block.array, t);
+        size_t to = target ? indexIn(*tbl, block.array, target) : arr->size();
+        toml::table moving = *arr->get(from)->as_table();
+        arr->erase(arr->cbegin() + from);
+        if (to > from)
+            to--;
+        arr->insert(arr->cbegin() + to, std::move(moving));
+    }
+
     const Lines lines(src);
     const std::vector<size_t> headers = headerLines(*tbl, lines);
     const Span span = spanOf(*t, lines, headers);
@@ -546,7 +700,7 @@ Result moveBlock(const QString &text, const Block &block, const QString &beforeV
         const size_t at = lines.start(spanOf(*last, lines, headers).last + 1);
         const std::string rest = src.substr(0, begin) + src.substr(end);
         const std::string out = insertBlockText(rest, at - (end - begin), moved);
-        return {true, QString::fromStdString(out), {}};
+        return verified({true, QString::fromStdString(out), {}}, expected);
     }
 
     // Spans don't overlap, so the target starts either before or after the removed bytes.
@@ -556,7 +710,7 @@ Result moveBlock(const QString &text, const Block &block, const QString &beforeV
         out = src.substr(0, at) + moved + "\n" + src.substr(at, begin - at) + src.substr(end);
     else
         out = src.substr(0, begin) + src.substr(end, at - end) + moved + "\n" + src.substr(at);
-    return {true, QString::fromStdString(out), {}};
+    return verified({true, QString::fromStdString(out), {}}, expected);
 }
 
 namespace {

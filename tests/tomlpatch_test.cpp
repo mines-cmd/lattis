@@ -3,6 +3,14 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <toml++/toml.hpp>
+
+#include <algorithm>
+#include <map>
+#include <random>
+#include <string>
+#include <vector>
+
 class TomlPatchTest : public QObject
 {
     Q_OBJECT
@@ -56,6 +64,15 @@ private slots:
     void moveMissingBlockFails();
     void blocksNextToSections();
     void blockKeysInFileOrder();
+    void setValueSkipsSubTable();
+    void setValueIntoSectionMadeOfSubTables();
+    void appendBlockAfterSubTable();
+    void removeBlockTakesSubTable();
+    void removeBlockWithSameSubTableAbove();
+    void moveBlockTakesSubTable();
+    void setBlockValueSkipsSubTable();
+    void invalidValueFails();
+    void randomDocuments();
 };
 
 namespace {
@@ -560,6 +577,301 @@ void TomlPatchTest::fileRoundTrip()
     QVERIFY(readBack2.open(QIODevice::ReadOnly));
     QCOMPARE(QString::fromUtf8(readBack2.readAll()),
              QStringLiteral("extends = \"default\"\n\n[palette]\n"));
+}
+
+namespace {
+const QString kSteamOld = QStringLiteral(
+    "[steam]\n"
+    "enabled = true\n"
+    "\n"
+    "[steam.presets.gamescope]\n"
+    "label = \"Gamescope\"\n"
+    "\n"
+    "[other]\n"
+    "x = 1\n");
+
+const QString kEmulators = QStringLiteral(
+    "[[emulator]]\n"
+    "id = \"a\"\n"
+    "\n"
+    "[emulator.platform_extensions]\n"
+    "switch = [\"nsp\"]\n"
+    "\n"
+    "# second\n"
+    "[[emulator]]\n"
+    "id = \"b\"\n"
+    "\n"
+    "[emulator.platform_extensions]\n"
+    "gba = [\"gba\"]\n");
+
+TomlPatch::Block emulator(const QString &id)
+{
+    return {QStringLiteral("emulator"), id};
+}
+
+void expectSameTable(const QString &text, const QString &expected)
+{
+    QVERIFY(toml::parse(text.toStdString()) == toml::parse(expected.toStdString()));
+}
+}
+
+void TomlPatchTest::setValueSkipsSubTable()
+{
+    const auto r = TomlPatch::setValue(kSteamOld, "steam", "default_presets", "[\"gamescope\"]");
+    QVERIFY2(r.ok, qPrintable(r.error));
+    QVERIFY(r.text.contains(
+        QStringLiteral("enabled = true\ndefault_presets = [\"gamescope\"]\n\n[steam.presets")));
+}
+
+void TomlPatchTest::setValueIntoSectionMadeOfSubTables()
+{
+    const auto r = TomlPatch::setValue(QStringLiteral("[a.b]\nx = 1\n"), "a", "k", "2");
+    QVERIFY2(r.ok, qPrintable(r.error));
+    expectSameTable(r.text, QStringLiteral("[a]\nk = 2\n[a.b]\nx = 1\n"));
+}
+
+void TomlPatchTest::appendBlockAfterSubTable()
+{
+    const auto r = TomlPatch::appendBlock(kEmulators, "emulator", {{"id", "\"c\""}});
+    QVERIFY2(r.ok, qPrintable(r.error));
+    QVERIFY(r.text.endsWith(QStringLiteral("gba = [\"gba\"]\n\n[[emulator]]\nid = \"c\"\n")));
+}
+
+void TomlPatchTest::removeBlockTakesSubTable()
+{
+    const auto r = TomlPatch::removeBlock(kEmulators, emulator("a"));
+    QVERIFY2(r.ok, qPrintable(r.error));
+    QCOMPARE(r.text, QStringLiteral("# second\n[[emulator]]\nid = \"b\"\n\n"
+                                    "[emulator.platform_extensions]\ngba = [\"gba\"]\n"));
+}
+
+void TomlPatchTest::removeBlockWithSameSubTableAbove()
+{
+    const auto r = TomlPatch::removeBlock(kEmulators, emulator("b"));
+    QVERIFY2(r.ok, qPrintable(r.error));
+    expectSameTable(r.text, QStringLiteral("[[emulator]]\nid = \"a\"\n"
+                                           "[emulator.platform_extensions]\nswitch = [\"nsp\"]\n"));
+}
+
+void TomlPatchTest::moveBlockTakesSubTable()
+{
+    const auto r = TomlPatch::moveBlock(kEmulators, emulator("a"), QString());
+    QVERIFY2(r.ok, qPrintable(r.error));
+    expectSameTable(r.text, QStringLiteral(
+        "[[emulator]]\nid = \"b\"\n[emulator.platform_extensions]\ngba = [\"gba\"]\n"
+        "[[emulator]]\nid = \"a\"\n[emulator.platform_extensions]\nswitch = [\"nsp\"]\n"));
+}
+
+void TomlPatchTest::setBlockValueSkipsSubTable()
+{
+    const auto r = TomlPatch::setBlockValue(kEmulators, emulator("a"), "name", "\"A\"");
+    QVERIFY2(r.ok, qPrintable(r.error));
+    QVERIFY(r.text.contains(
+        QStringLiteral("id = \"a\"\nname = \"A\"\n\n[emulator.platform_extensions]")));
+}
+
+void TomlPatchTest::invalidValueFails()
+{
+    QVERIFY(!TomlPatch::setValue(kSteamOld, "steam", "k", "not a value").ok);
+    QVERIFY(!TomlPatch::setValue(kSteamOld, "steam", "k", "1\n[evil]").ok);
+    QVERIFY(!TomlPatch::appendBlock(kEmulators, "emulator", {{"id", "\"c\"\n[x]"}}).ok);
+}
+
+namespace {
+using Keys = std::map<std::string, int>;
+
+struct Section
+{
+    bool header = true;
+    Keys keys;
+    bool hasSub = false;
+    Keys subKeys;
+};
+
+struct BlockModel
+{
+    std::string id;
+    Keys keys;
+    bool hasSub = false;
+    Keys subKeys;
+};
+
+struct Model
+{
+    std::map<std::string, Section> sections;
+    std::vector<BlockModel> blocks;
+};
+
+// With `rng`, the text gets comments and blank lines the patch has to keep out of the way.
+std::string keysText(const Keys &keys, std::mt19937 *rng)
+{
+    std::string out;
+    for (const auto &[k, v] : keys) {
+        out += k + " = " + std::to_string(v) + "\n";
+        if (rng && (*rng)() % 5 == 0)
+            out += "# note\n";
+        if (rng && (*rng)() % 7 == 0)
+            out += "\n";
+    }
+    return out;
+}
+
+std::string sectionText(const std::string &name, const Section &s, std::mt19937 *rng)
+{
+    std::string out;
+    if (rng && (*rng)() % 3 == 0)
+        out += "# about " + name + "\n";
+    if (s.header)
+        out += "[" + name + "]\n" + keysText(s.keys, rng);
+    if (s.hasSub)
+        out += "[" + name + ".sub]\n" + keysText(s.subKeys, rng);
+    if (rng && (*rng)() % 2 == 0)
+        out += "\n";
+    return out;
+}
+
+std::string blockText(const BlockModel &b, std::mt19937 *rng)
+{
+    std::string out;
+    if (rng && (*rng)() % 3 == 0)
+        out += "# about " + b.id + "\n";
+    out += "[[blk]]\nid = \"" + b.id + "\"\n" + keysText(b.keys, rng);
+    if (b.hasSub)
+        out += "[blk.sub]\n" + keysText(b.subKeys, rng);
+    if (rng && (*rng)() % 2 == 0)
+        out += "\n";
+    return out;
+}
+
+std::string modelText(const Model &m, std::mt19937 *rng)
+{
+    std::vector<std::string> names;
+    for (const auto &entry : m.sections)
+        names.push_back(entry.first);
+    std::string out;
+    size_t si = 0;
+    size_t bi = 0;
+    while (si < names.size() || bi < m.blocks.size()) {
+        const bool section = bi == m.blocks.size()
+            || (si < names.size() && (!rng || (*rng)() % 2 == 0));
+        if (section) {
+            out += sectionText(names[si], m.sections.at(names[si]), rng);
+            si++;
+        } else {
+            out += blockText(m.blocks[bi++], rng);
+        }
+    }
+    return out;
+}
+
+Keys randomKeys(std::mt19937 &rng)
+{
+    Keys keys;
+    const int n = rng() % 4;
+    for (int i = 0; i < n; ++i)
+        keys["k" + std::to_string(rng() % 5)] = int(rng() % 100);
+    return keys;
+}
+
+Model randomModel(std::mt19937 &rng)
+{
+    Model m;
+    const int sections = rng() % 4;
+    for (int i = 0; i < sections; ++i) {
+        Section s;
+        s.keys = randomKeys(rng);
+        s.hasSub = rng() % 2;
+        if (s.hasSub)
+            s.subKeys = randomKeys(rng);
+        s.header = !s.hasSub || !s.keys.empty() || rng() % 2;
+        m.sections["s" + std::to_string(i)] = s;
+    }
+    const int blocks = rng() % 5;
+    for (int i = 0; i < blocks; ++i) {
+        BlockModel b;
+        b.id = "b" + std::to_string(i);
+        b.keys = randomKeys(rng);
+        b.hasSub = rng() % 2;
+        if (b.hasSub)
+            b.subKeys = randomKeys(rng);
+        m.blocks.push_back(b);
+    }
+    return m;
+}
+}
+
+// Random documents with sub-tables, edited four times each: every edit must succeed and parse to
+// the table a model of the edit says, checked here with toml++ and not with the patch's own check.
+void TomlPatchTest::randomDocuments()
+{
+    std::mt19937 rng(20261124);
+    int checked = 0;
+    for (int doc = 0; doc < 3000; ++doc) {
+        Model model = randomModel(rng);
+        QString text = QString::fromStdString(modelText(model, &rng));
+        for (int step = 0; step < 4; ++step) {
+            const int op = rng() % 5;
+            TomlPatch::Result r;
+            if (op == 0) {
+                const std::string name = "s" + std::to_string(rng() % 5);
+                const std::string key = "k" + std::to_string(rng() % 5);
+                const int value = int(rng() % 100);
+                r = TomlPatch::setValue(text, QString::fromStdString(name),
+                                        QString::fromStdString(key), QString::number(value));
+                Section &s = model.sections[name];
+                s.keys[key] = value;
+                s.header = true;
+            } else if (op == 1) {
+                const std::string id = "n" + std::to_string(doc * 10 + step);
+                r = TomlPatch::appendBlock(
+                    text, "blk", {{"id", "\"" + QString::fromStdString(id) + "\""}, {"k0", "1"}});
+                BlockModel b;
+                b.id = id;
+                b.keys["k0"] = 1;
+                model.blocks.push_back(b);
+            } else if (model.blocks.empty()) {
+                continue;
+            } else {
+                const size_t i = rng() % model.blocks.size();
+                const TomlPatch::Block block{"blk", QString::fromStdString(model.blocks[i].id)};
+                if (op == 2) {
+                    r = TomlPatch::removeBlock(text, block);
+                    model.blocks.erase(model.blocks.begin() + i);
+                } else if (op == 3) {
+                    const std::string key = "k" + std::to_string(rng() % 5);
+                    const int value = int(rng() % 100);
+                    r = TomlPatch::setBlockValue(text, block, QString::fromStdString(key),
+                                                 QString::number(value));
+                    model.blocks[i].keys[key] = value;
+                } else {
+                    const size_t j = rng() % (model.blocks.size() + 1);
+                    const bool toEnd = j == model.blocks.size();
+                    const std::string before = toEnd ? "" : model.blocks[j].id;
+                    r = TomlPatch::moveBlock(text, block, QString::fromStdString(before));
+                    if (j != i) {
+                        BlockModel moving = model.blocks[i];
+                        model.blocks.erase(model.blocks.begin() + i);
+                        auto at = model.blocks.end();
+                        if (!toEnd) {
+                            at = std::find_if(model.blocks.begin(), model.blocks.end(),
+                                              [&](const BlockModel &b) { return b.id == before; });
+                        }
+                        model.blocks.insert(at, moving);
+                    }
+                }
+            }
+            QVERIFY2(r.ok, qPrintable(QStringLiteral("doc %1 step %2 op %3: %4\n%5")
+                                          .arg(doc).arg(step).arg(op).arg(r.error, text)));
+            const QString expected = QString::fromStdString(modelText(model, nullptr));
+            if (toml::parse(r.text.toStdString()) != toml::parse(expected.toStdString())) {
+                QFAIL(qPrintable(QStringLiteral("doc %1 step %2 op %3 differs:\n%4\nfrom:\n%5")
+                                     .arg(doc).arg(step).arg(op).arg(r.text, text)));
+            }
+            text = r.text;
+            checked++;
+        }
+    }
+    QVERIFY(checked > 5000);
 }
 
 QTEST_MAIN(TomlPatchTest)
