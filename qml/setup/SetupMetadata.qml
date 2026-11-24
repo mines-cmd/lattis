@@ -10,12 +10,29 @@ ColumnLayout {
 
     spacing: Theme.onboarding.spacing
 
+    // Fields the user is typing in, or has typed in and not saved, keep their text.
+    function loadKeys() {
+        const stored = [Metadata.keys.igdbClientId, Metadata.keys.igdbClientSecret, Metadata.keys.steamGridDbKey]
+        const fields = [igdbId, igdbSecret, gridKey]
+        for (let i = 0; i < fields.length; ++i) {
+            if (!fields[i].activeFocus && save.dirty.indexOf(i) < 0 && fields[i].text !== stored[i])
+                fields[i].text = stored[i]
+        }
+    }
+
+    Connections {
+        target: Metadata
+        function onKeysChanged() { root.loadKeys() }
+    }
+
     property var testing: ({})
     property var tested: ({})
 
     function testForScreenshot() {
         igdbId.text = "screenshot-id"
         igdbSecret.text = "screenshot-secret"
+        save.touch(0)
+        save.touch(1)
         test("igdb")
     }
 
@@ -47,9 +64,7 @@ ColumnLayout {
 
     Component.onCompleted: {
         Metadata.reloadKeys()
-        igdbId.text = Metadata.keys.igdbClientId
-        igdbSecret.text = Metadata.keys.igdbClientSecret
-        gridKey.text = Metadata.keys.steamGridDbKey
+        loadKeys()
     }
 
     Timer {
@@ -57,25 +72,36 @@ ColumnLayout {
         interval: 500
         onTriggered: flush()
 
+        // Only the fields the user typed in are written, so a key stored since the page loaded
+        // is never overwritten by an old copy.
+        property var dirty: []
+
+        function touch(index) {
+            if (dirty.indexOf(index) < 0)
+                dirty.push(index)
+            restart()
+        }
+
         function saveNow() {
             stop()
             flush()
         }
 
         function flush() {
-            const fields = [["igdb", "client_id", igdbId], ["igdb", "client_secret", igdbSecret],
-                            ["steamgriddb", "api_key", gridKey]]
-            const stored = [Metadata.keys.igdbClientId, Metadata.keys.igdbClientSecret, Metadata.keys.steamGridDbKey]
-            for (let i = 0; i < fields.length; ++i) {
-                const [section, key, field] = fields[i]
-                if (field.text.trim() !== stored[i]) {
-                    const error = Metadata.setKey(section, key, field.text)
-                    if (error !== "") {
-                        root.guide.message(error)
-                        return
-                    }
+            const keys = [["igdb", "client_id", igdbId], ["igdb", "client_secret", igdbSecret],
+                          ["steamgriddb", "api_key", gridKey]]
+            const todo = dirty
+            dirty = []
+            for (let i = 0; i < todo.length; ++i) {
+                const [section, key, field] = keys[todo[i]]
+                const e = Metadata.setKey(section, key, field.text)
+                if (e !== "") {
+                    dirty = todo.slice(i)
+                    root.guide.message(e)
+                    return
                 }
             }
+            
         }
     }
 
@@ -101,7 +127,7 @@ ColumnLayout {
             id: igdbRow
             label: qsTr("Client ID")
             buttonWidth: root.smallButtonWidth
-            onEdited: save.restart()
+            onEdited: save.touch(0)
             onFinished: save.saveNow()
         }
         KeyRow {
@@ -109,7 +135,7 @@ ColumnLayout {
             label: qsTr("Client secret")
             secret: true
             buttonWidth: root.smallButtonWidth
-            onEdited: save.restart()
+            onEdited: save.touch(1)
             onFinished: save.saveNow()
         }
         ConnectionRow {
@@ -134,7 +160,7 @@ ColumnLayout {
             label: qsTr("API key")
             secret: true
             buttonWidth: root.smallButtonWidth
-            onEdited: save.restart()
+            onEdited: save.touch(2)
             onFinished: save.saveNow()
         }
         ConnectionRow {

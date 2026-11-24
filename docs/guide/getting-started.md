@@ -12,7 +12,7 @@ Keeping it in `~/Applications` or `~/AppImages` is a good habit. The first time 
 
 To keep the file where Lattis puts emulator AppImages, use **Move** in Settings → General (or on the setup guide's last step): it moves the AppImage to `~/Applications` (or `~/AppImages` if that's the one you have), and the menu entry and Start at login follow it. It isn't offered when the file is already there, when Gear Lever or AppImageLauncher manages it, or when a file with that name is already in the folder. A Steam shortcut to Lattis would need its path changed by hand.
 
-To open Lattis when you log in, turn on **Start at login** in Settings → General.
+To open Lattis when you log in, turn on **Start at login** in Settings → General. The entry belongs to the copy that made it: a copy started with another data folder (`LATTIS_DATA`) or from another file doesn't change it.
 
 To build it yourself instead, see the project's README.
 

@@ -49,7 +49,7 @@ A custom palette color can be a reference to another (`c1 = "@c2"`). Each one is
 
 ## Live editing from the Settings window
 
-`Theme.setValue(section, key, value)` applies a change immediately and schedules a save after 400 ms. The debounce keeps the save timer from churning the disk while a slider is dragged. Until the save is written, the override is kept in `m_overrides` and layered on top of any hot-reload. This way, if the file watcher fires because of the launcher's own save — or a concurrent hand edit — the override isn't lost.
+`Theme.setValue(section, key, value)` applies a change immediately and schedules a save after 400 ms. The debounce keeps the save timer from churning the disk while a slider is dragged. Until the save is written, the override is kept in `m_overrides` and layered on top of any hot-reload. This way, if the file watcher fires because of the launcher's own save — or a concurrent hand edit — the override isn't lost. Pending saves are also written when the application emits `aboutToQuit` and in `Theme`'s destructor, so an edit made less than 400 ms before quitting is kept.
 
 `Theme.resetValue(section, key)` removes the key from the active theme's file (and from `m_overrides`), so the inherited or default value takes over again.
 

@@ -71,11 +71,11 @@ The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_desc
 
 ## Autostart
 
-`Autostart` manages the XDG autostart desktop entry (`~/.config/autostart/lattis.desktop`). The entry uses `env LATTIS_DATA=<dir>` in its `Exec` line when a custom data dir is set, so the autostarted copy uses the same dir the user configured.
+`Autostart` manages the XDG autostart desktop entry (`~/.config/autostart/lattis.desktop`). The entry's `Exec` line is `env LATTIS_DATA=<dir> <program>` only when the copy that wrote it was started with `LATTIS_DATA` set, and just `<program>` otherwise, so a copy on the default dir never pins its login entry to a path. Arguments are quoted by the Desktop Entry rules: a literal `%` is written `%%` (else `%f`, `%u` and the like are field codes), and a backslash in a quoted argument is written as four. `execDataDir()` reads the dir an `Exec` line names back (the same rules in reverse).
 
 `readEntry()` checks whether `lattis.desktop` exists, whether it belongs to Lattis (`X-Lattis-Autostart=true`), and whether it is enabled (`Hidden` and `X-GNOME-Autostart-enabled` are absent or affirmative). A foreign entry is reported as `ours = false` — General shows it in the UI rather than overwriting it.
 
-`General::refreshAutostart()` runs after the first frame. If the entry's `Exec` line is stale — the program path changed, e.g. after an AppImage update — it rewrites it. Foreign entries are never touched.
+`General::refreshAutostart()` runs after the first frame. If the entry's `Exec` line is stale — the program path changed, e.g. after an AppImage update — it rewrites it, keeping the data dir the entry names. The entry belongs to the copy that set it, so it is rewritten only when it names this copy's data dir, or names none and this copy runs on the default dir (`LATTIS_DATA` unset); an entry that names another dir, or none while this copy has a custom dir, is left as it is. Foreign entries are never touched.
 
 ---
 

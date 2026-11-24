@@ -57,6 +57,7 @@ class Theme : public QQmlPropertyMap
 
 public:
     explicit Theme(QString dataDir, Uninstall::Trash trash = Uninstall::systemTrash, QObject *parent = nullptr);
+    ~Theme() override;
 
     static Theme *create(QQmlEngine *, QJSEngine *);
 

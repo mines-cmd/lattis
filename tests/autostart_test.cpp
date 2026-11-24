@@ -11,6 +11,8 @@ class AutostartTest : public QObject
 private slots:
     void entryExec_data();
     void entryExec();
+    void execDataDirReadsWhatEntryExecWrote_data();
+    void execDataDirReadsWhatEntryExecWrote();
     void readWriteRemove();
     void readMissing();
     void readDisabled();
@@ -27,7 +29,11 @@ void AutostartTest::entryExec_data()
     QTest::newRow("plain program") << "/usr/bin/lattis" << QString() << "/usr/bin/lattis";
     QTest::newRow("program with spaces") << "/home/user/my apps/lattis" << QString()
                                          << "\"/home/user/my apps/lattis\"";
-    QTest::newRow("program with percent") << "/opt/la%ttis" << QString() << "/opt/la%ttis";
+    QTest::newRow("program with percent") << "/opt/la%ttis" << QString() << "/opt/la%%ttis";
+    QTest::newRow("data dir with percent") << "/usr/bin/lattis" << "/mnt/100%d/lib"
+                                           << "env LATTIS_DATA=/mnt/100%%d/lib /usr/bin/lattis";
+    QTest::newRow("data dir with backslash") << "/usr/bin/lattis" << "/mnt/a\\b"
+                                             << "env \"LATTIS_DATA=/mnt/a\\\\\\\\b\" /usr/bin/lattis";
     QTest::newRow("with data dir") << "/usr/bin/lattis" << "/home/user/.local/share/lattis"
                                    << "env LATTIS_DATA=/home/user/.local/share/lattis /usr/bin/lattis";
     QTest::newRow("data dir with spaces") << "/usr/bin/lattis" << "/home/user/my data"
@@ -41,6 +47,24 @@ void AutostartTest::entryExec()
     QFETCH(QString, expected);
 
     QCOMPARE(Autostart::entryExec(program, dataDir), expected);
+}
+
+void AutostartTest::execDataDirReadsWhatEntryExecWrote_data()
+{
+    QTest::addColumn<QString>("dataDir");
+    QTest::newRow("plain") << "/home/user/.local/share/lattis";
+    QTest::newRow("spaces") << "/home/user/my data";
+    QTest::newRow("percent") << "/mnt/100%d/lib";
+    QTest::newRow("backslash") << "/mnt/a\\b";
+    QTest::newRow("quote and dollar") << "/mnt/\"a\"/$b";
+}
+
+void AutostartTest::execDataDirReadsWhatEntryExecWrote()
+{
+    QFETCH(QString, dataDir);
+    QCOMPARE(Autostart::execDataDir(Autostart::entryExec("/opt/my apps/lattis", dataDir)), dataDir);
+    QVERIFY(Autostart::execDataDir(Autostart::entryExec("/opt/my apps/lattis")).isEmpty());
+    QVERIFY(Autostart::execDataDir(QStringLiteral("/usr/bin/lattis --minimized")).isEmpty());
 }
 
 void AutostartTest::readWriteRemove()

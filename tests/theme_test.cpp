@@ -22,6 +22,7 @@ class ThemeTest : public QObject
 
 private slots:
     void setValueAppliesLiveAndSaves();
+    void pendingSaveIsWrittenWhenThemeIsDestroyed();
     void typedHexWithAlphaSavesAsRgba();
     void changedOnlyFiltersToCustomizedSettings();
     void resetValueRemovesKey();
@@ -180,6 +181,22 @@ void ThemeTest::setValueAppliesLiveAndSaves()
     const QString contents = read(dataDir + "/themes/colors/Ember.toml");
     QVERIFY2(contents.contains("accent = \"#ff0000\""), qPrintable(contents));
     QVERIFY(!QFile::exists(dataDir + "/themes/styles/Soft.toml"));
+}
+
+void ThemeTest::pendingSaveIsWrittenWhenThemeIsDestroyed()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+
+    {
+        Theme theme(dataDir);
+        theme.setValue("palette", "accent", QColor("#00ff00"));
+        QTest::qWait(100); // under the 400 ms debounce
+        QVERIFY(!read(dataDir + "/themes/colors/Ember.toml").contains("#00ff00"));
+    }
+    const QString contents = read(dataDir + "/themes/colors/Ember.toml");
+    QVERIFY2(contents.contains("accent = \"#00ff00\""), qPrintable(contents));
 }
 
 // The settings window passes typed text through as-is. "#rrggbbaa" must be saved in that

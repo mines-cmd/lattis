@@ -157,7 +157,7 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 |---|---|
 | `hasIgdbKeys` | Both IGDB keys are present |
 | `hasSteamGridDbKey` | The SteamGridDB key is present |
-| `keys` | `{igdbClientId, igdbClientSecret, steamGridDbKey}`, for the Metadata settings page |
+| `keys` | `{igdbClientId, igdbClientSecret, steamGridDbKey}`, for the Metadata settings page and the setup guide's Game info step. Both reload a field when `keysChanged` fires (unless it is focused or has unsaved typing) and write only the fields the user edited |
 
 ### Methods
 

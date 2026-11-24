@@ -45,6 +45,8 @@ private slots:
     void gamePageMigration();
     void startAtLogin();
     void staleAutostartRewritten();
+    void loginEntryNamesTheVariableOnlyWhenSet();
+    void loginEntryBelongsToItsCopy();
 
 private:
     // The autostart folder goes to a scratch config folder, never the real one.
@@ -1041,7 +1043,7 @@ void GeneralTest::startAtLogin()
     QVERIFY(general.startAtLoginOurs());
     QCOMPARE(changed.size(), 1);
     const Autostart::Entry entry = Autostart::readEntry(Autostart::autostartFolder());
-    QCOMPARE(entry.exec, Autostart::entryExec(Autostart::currentProgram(), data.path()));
+    QCOMPARE(entry.exec, Autostart::entryExec(Autostart::currentProgram()));
 
     // Turned off in the desktop's own settings: there, but not starting.
     QFile file(Autostart::autostartFolder() + QStringLiteral("/lattis.desktop"));
@@ -1082,6 +1084,71 @@ void GeneralTest::staleAutostartRewritten()
     QVERIFY(general.startAtLogin());
     QVERIFY(!general.startAtLoginOurs());
     QCOMPARE(Autostart::readEntry(folder).exec, QStringLiteral("/usr/bin/lattis --minimized"));
+    QVERIFY(Autostart::removeEntry(folder).isEmpty());
+}
+
+namespace {
+// LATTIS_DATA set for one test and put back after it.
+struct DataEnv
+{
+    explicit DataEnv(const QString &value)
+    {
+        if (value.isEmpty())
+            qunsetenv("LATTIS_DATA");
+        else
+            qputenv("LATTIS_DATA", QFile::encodeName(value));
+    }
+    ~DataEnv() { qunsetenv("LATTIS_DATA"); }
+};
+}
+
+void GeneralTest::loginEntryNamesTheVariableOnlyWhenSet()
+{
+    QTemporaryDir data;
+    const QString folder = Autostart::autostartFolder();
+    {
+        DataEnv env{QString()};
+        General general(data.path());
+        QCOMPARE(general.setStartAtLogin(true), QString());
+        QCOMPARE(Autostart::readEntry(folder).exec, Autostart::entryExec(Autostart::currentProgram()));
+        QVERIFY(Autostart::execDataDir(Autostart::readEntry(folder).exec).isEmpty());
+    }
+    {
+        DataEnv env{data.path()};
+        General general(data.path());
+        QCOMPARE(general.setStartAtLogin(true), QString());
+        QCOMPARE(Autostart::execDataDir(Autostart::readEntry(folder).exec), data.path());
+    }
+    QVERIFY(Autostart::removeEntry(folder).isEmpty());
+}
+
+void GeneralTest::loginEntryBelongsToItsCopy()
+{
+    QTemporaryDir mine;
+    QTemporaryDir other;
+    const QString folder = Autostart::autostartFolder();
+    const QString old = QStringLiteral("/old/place/lattis");
+    const auto execAfter = [&](const QString &named, const QString &envDir) {
+        DataEnv env{envDir};
+        Autostart::writeEntry(folder, old, named);
+        General general(mine.path());
+        general.refreshAutostart();
+        return Autostart::readEntry(folder).exec;
+    };
+    const QString oldExec = Autostart::entryExec(old);
+    const QString oldOther = Autostart::entryExec(old, other.path());
+    const QString oldMine = Autostart::entryExec(old, mine.path());
+
+    // A copy on a custom dir leaves the default copy's entry (no variable) alone...
+    QCOMPARE(execAfter(QString(), mine.path()), oldExec);
+    // ...and another copy's entry.
+    QCOMPARE(execAfter(other.path(), mine.path()), oldOther);
+    // A copy on the default dir leaves a custom copy's entry alone, but follows its own entry.
+    QCOMPARE(execAfter(other.path(), QString()), oldOther);
+    QCOMPARE(execAfter(QString(), QString()), Autostart::entryExec(Autostart::currentProgram()));
+    // A copy on a custom dir follows an entry that names its dir, and keeps naming it.
+    QCOMPARE(execAfter(mine.path(), mine.path()), Autostart::entryExec(Autostart::currentProgram(), mine.path()));
+    QVERIFY(oldMine != oldExec);
     QVERIFY(Autostart::removeEntry(folder).isEmpty());
 }
 

@@ -9,8 +9,11 @@
 
 namespace Autostart {
 namespace {
-QString quoteExecArg(const QString &arg)
+QString quoteExecArg(const QString &argument)
 {
+    // A literal % is %%, or Exec reads %d, %f and %u as field codes.
+    QString arg = argument;
+    arg.replace(u'%', QStringLiteral("%%"));
     bool needsQuoting = false;
     for (const QChar &c : arg) {
         if (c == u' ' || c == u'"' || c == u'\\' || c == u'\'' || c == u'`'
@@ -28,12 +31,58 @@ QString quoteExecArg(const QString &arg)
     out.reserve(arg.size() + 2);
     out += u'"';
     for (const QChar &c : arg) {
-        if (c == u'"' || c == u'\\' || c == u'`' || c == u'$')
+        if (c == u'\\')
+            out += QStringLiteral("\\\\\\"); // the string escape and the quoting escape both apply
+        else if (c == u'"' || c == u'`' || c == u'$')
             out += u'\\';
         out += c;
     }
     out += u'"';
     return out;
+}
+
+// The reverse of quoteExecArg for a whole Exec value: string escapes, then quotes, then %%.
+QStringList splitExec(const QString &exec)
+{
+    QString text;
+    for (int i = 0; i < exec.size(); ++i) {
+        if (exec[i] == u'\\' && i + 1 < exec.size() && exec[i + 1] == u'\\')
+            ++i;
+        text += exec[i];
+    }
+
+    QStringList args;
+    QString current;
+    bool inArg = false;
+    bool quoted = false;
+    for (int i = 0; i < text.size(); ++i) {
+        const QChar c = text[i];
+        if (quoted) {
+            if (c == u'"') {
+                quoted = false;
+            } else if (c == u'\\' && i + 1 < text.size()) {
+                current += text[++i];
+            } else {
+                current += c;
+            }
+        } else if (c == u'"') {
+            quoted = true;
+            inArg = true;
+        } else if (c == u' ') {
+            if (inArg)
+                args << current;
+            current.clear();
+            inArg = false;
+        } else {
+            current += c;
+            inArg = true;
+        }
+    }
+    if (inArg)
+        args << current;
+    for (QString &arg : args)
+        arg.replace(QStringLiteral("%%"), QStringLiteral("%"));
+    return args;
 }
 
 const QString kFileName = QStringLiteral("lattis.desktop");
@@ -48,6 +97,15 @@ QString entryExec(const QString &program, const QString &dataDir)
     // The variable's value is not an Exec argument itself; quote the whole env arg.
     return QStringLiteral("env ") + quoteExecArg(QStringLiteral("LATTIS_DATA=") + dataDir)
            + u' ' + quoteExecArg(program);
+}
+
+QString execDataDir(const QString &exec)
+{
+    const QStringList args = splitExec(exec);
+    if (args.size() < 2 || args[0] != u"env")
+        return {};
+    const QString prefix = QStringLiteral("LATTIS_DATA=");
+    return args[1].startsWith(prefix) ? args[1].mid(prefix.size()) : QString();
 }
 
 Entry readEntry(const QString &folder)

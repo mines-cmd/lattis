@@ -3,6 +3,7 @@
 #include "autostart.h"
 #include "tomlpatch.h"
 
+#include <QDir>
 #include <QFile>
 #include <QJSEngine>
 #include <QLoggingCategory>
@@ -586,7 +587,7 @@ QString General::setStartAtLogin(bool on)
     const QString folder = Autostart::autostartFolder();
     QString error;
     if (on) {
-        error = Autostart::writeEntry(folder, Autostart::currentProgram(), m_dataDir);
+        error = Autostart::writeEntry(folder, Autostart::currentProgram(), dataDirFromEnv() ? m_dataDir : QString());
     } else {
         error = Autostart::removeEntry(folder);
     }
@@ -606,11 +607,17 @@ void General::refreshAutostart()
     loadAutostart();
     if (!m_loginExists || !m_loginOurs)
         return;
-    const QString expected = Autostart::entryExec(Autostart::currentProgram(), m_dataDir);
-    if (m_loginExec == expected)
+    // The entry belongs to the copy that set it: another copy's data dir, or the default one
+    // from a copy on a custom dir, is left alone.
+    const QString named = Autostart::execDataDir(m_loginExec);
+    const bool mine = named.isEmpty() ? !dataDirFromEnv()
+                                      : QDir::cleanPath(named) == QDir::cleanPath(m_dataDir);
+    if (!mine)
+        return;
+    if (m_loginExec == Autostart::entryExec(Autostart::currentProgram(), named))
         return;
     qCInfo(lcGeneral) << "rewriting stale autostart entry";
-    Autostart::writeEntry(Autostart::autostartFolder(), Autostart::currentProgram(), m_dataDir);
+    Autostart::writeEntry(Autostart::autostartFolder(), Autostart::currentProgram(), named);
     loadAutostart();
 }
 

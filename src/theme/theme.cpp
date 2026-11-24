@@ -8,6 +8,7 @@
 #include "tomlpatch.h"
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -331,6 +332,9 @@ Theme::Theme(QString dataDir, Uninstall::Trash trash, QObject *parent)
     m_saveTimer.setSingleShot(true);
     m_saveTimer.setInterval(400);
     connect(&m_saveTimer, &QTimer::timeout, this, &Theme::flushPendingSaves);
+    // An edit made less than 400 ms before the app closes would be lost with the timer.
+    if (QCoreApplication::instance())
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &Theme::flushPendingSaves);
 
     ensureFiles();
     reload();
@@ -1570,6 +1574,11 @@ QVariantList Theme::sessionChanges() const
         });
     }
     return out;
+}
+
+Theme::~Theme()
+{
+    flushPendingSaves();
 }
 
 void Theme::scheduleSave(const QString &, const QString &)
