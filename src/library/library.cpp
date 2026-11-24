@@ -6149,6 +6149,8 @@ QString Library::setArt(const QString &id, const QString &kind, const QString &f
 
 QString Library::removeGame(const QString &id, bool wipe)
 {
+    if (!GameId::isValid(id) || !m_store.snapshot().content.games.contains(id))
+        return tr("Unknown game");
     // A Proton game's files, prefix and shortcut are Uninstall's, which checks it isn't running.
     if (wipe && m_store.snapshot().content.games.value(id).platform == kProtonPlatform)
         return tr("A Proton game is removed with Uninstall");
@@ -6157,11 +6159,11 @@ QString Library::removeGame(const QString &id, bool wipe)
     const bool fileOnly = wipe && !m_store.inIndex(id);
     m_undo.start(id);
     m_undo.keepCopy(gameFileOf(id));
-    if (wipe) {
-        m_undo.keepMove(QStringLiteral("art/") + id);
-        if (fileOnly)
-            m_undo.keepMove(QStringLiteral("library/history/%1.toml").arg(id));
-    }
+    if (fileOnly)
+        m_undo.keepCopy(QStringLiteral("library/history/%1.toml").arg(id));
+    // The art goes into the undo folder only once the game file has changed, so a change that
+    // fails leaves the art where it is.
+    const QString artFolder = QStringLiteral("art/") + id;
     const auto done = [&](const QString &error) {
         if (error.isEmpty())
             commitUndo(wipe ? tr("%1 deleted").arg(title) : tr("%1 is hidden").arg(title));
@@ -6169,8 +6171,19 @@ QString Library::removeGame(const QString &id, bool wipe)
             m_undo.discard();
         return error;
     };
-    if (fileOnly)
-        return done(m_store.removeGameFile(id, true));
+    if (fileOnly) {
+        if (const QString error = m_store.removeGameFile(id, false); !error.isEmpty())
+            return done(error);
+        m_undo.keepMove(artFolder);
+        for (const QString &kind : kArtKinds) {
+            if (const QString error = m_store.removeArt(id, kind); !error.isEmpty())
+                return done(error);
+        }
+        // With Undo off nothing moved it, and a delete leaves nothing of the game behind.
+        if (!m_undo.enabled())
+            QDir(m_store.dataDir() + u'/' + artFolder).removeRecursively();
+        return done({});
+    }
     QList<std::pair<QString, QVariant>> values = {{QStringLiteral("hidden"), true}};
     if (wipe) {
         for (const QString &key : GameFields::keys()) {
@@ -6181,6 +6194,7 @@ QString Library::removeGame(const QString &id, bool wipe)
     if (const QString error = m_store.setGameValues(id, values); !error.isEmpty())
         return done(error);
     if (wipe) {
+        m_undo.keepMove(artFolder);
         for (const QString &kind : kArtKinds) {
             if (const QString error = m_store.removeArt(id, kind); !error.isEmpty())
                 return done(error);

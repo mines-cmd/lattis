@@ -109,11 +109,12 @@ Nothing is written when:
 
 - **What each change keeps:**
   - an editor Save: the game file, and `art/<id>/` when the editor called `beginEditUndo(id)` first (its Save does, then applies the art before `saveGame()`, which takes the entry; `discardEditUndo()` drops a started one);
-  - deleting a game: the game file, `art/<id>/`, and for a game only its file makes also its history file, the last two moved rather than deleted;
+  - deleting a game: the game file, `art/<id>/` and, for a game only its file makes, its history file. The file is changed first; the art is moved into the undo folder only after that worked, so a delete that fails leaves the art where it is. `removeGame` refuses an empty, malformed or unknown id;
   - deleting a tag: `tags.toml` and the file of every game that had it, plus the tag filter (`m_afterUndo`);
   - moving a platform: `platforms.toml`.
 - **No Undo** when nothing the entry kept differs from what's there after the change, or when a Save changes a ROM (it may merge another game into this one) or a Linux game's program (it is made executable). `undoOffered(0, text)` says so.
 - **Where:** `<state dir>/undo/<n>/data/<path in the data dir>`, set with `Library::setUndoDir()`; an empty folder turns Undo off. A folder goes when its entry is replaced, restored or expired (60 s, which outlasts the toast's 15 s so a hovered toast still works), at quit and, after the first frame, at startup (`startRefresh()`). A deleted game's art and history are really gone only then.
+- **Putting files back.** One helper moves every kept file: a rename, and when that crosses file systems (the undo folder is under the state dir, the library may be on another drive) a copy and then the removal of the source. `keepMove`, `discard()` (a file that couldn't go back keeps its folder) and `restore()` use it. `restore()` copies the kept file next to the current one first, removes the current one and renames the copy into place, so a kept file that can't be read leaves both files. An item that failed stays kept (the token stays valid until it expires) and is named in the error.
 - **Signals:** `undoOffered(token, text)` after a change, `undoExpired(token)`. `Library.undo(token)` returns an error message (`Nothing to undo` for a replaced or expired token) or `""`.
 - **Hide** keeps the game file too ("<title> is hidden"). **Not covered yet:** bulk changes (they will keep each game's file).
 

@@ -32,6 +32,21 @@ bool removeAny(const QString &path)
     return !QFileInfo::exists(path) || QFile::remove(path);
 }
 
+// The one way a kept file moves: a rename, and when that can't cross file systems, a copy and
+// then the removal of the source. `to` must not exist. A failed copy removes what it wrote, so
+// `from` is never the only half.
+bool moveAcross(const QString &from, const QString &to)
+{
+    QDir().mkpath(QFileInfo(to).absolutePath());
+    if (QFile::rename(from, to))
+        return true;
+    if (!copyRecursive(from, to)) {
+        removeAny(to);
+        return false;
+    }
+    return removeAny(from);
+}
+
 bool sameContent(const QString &a, const QString &b)
 {
     const QFileInfo ia(a);
@@ -112,14 +127,8 @@ void LibraryUndo::keep(const QString &relative, bool move)
     item.existed = QFileInfo::exists(source);
     if (item.existed) {
         QDir().mkpath(QFileInfo(saved).absolutePath());
-        // Another drive than the state dir's can't rename, so it's copied and then removed.
-        bool kept = move && QFile::rename(source, saved);
-        item.moved = kept;
-        if (!kept) {
-            kept = copyRecursive(source, saved);
-            if (kept && move)
-                item.moved = kept = removeAny(source);
-        }
+        const bool kept = move ? moveAcross(source, saved) : copyRecursive(source, saved);
+        item.moved = move && kept;
         if (!kept) {
             // The entry would put back half of it, so there is none.
             discard();
@@ -157,16 +166,17 @@ void LibraryUndo::discard()
 {
     if (!m_recording)
         return;
+    bool allBack = true;
     for (const Item &i : std::as_const(m_pending)) {
         if (!i.moved)
             continue;
         const QString target = m_dataDir + u'/' + i.relative;
-        if (!QFileInfo::exists(target)) {
-            QDir().mkpath(QFileInfo(target).absolutePath());
-            QFile::rename(folderOf(m_pendingNumber) + QStringLiteral("/data/") + i.relative, target);
-        }
+        if (!QFileInfo::exists(target) && !moveAcross(folderOf(m_pendingNumber) + QStringLiteral("/data/") + i.relative, target))
+            allBack = false;
     }
-    QDir(folderOf(m_pendingNumber)).removeRecursively();
+    // A file that could not go back stays in its folder; quit and startup remove the folder.
+    if (allBack)
+        QDir(folderOf(m_pendingNumber)).removeRecursively();
     m_pending.clear();
     m_recording = false;
     m_subject.clear();
@@ -188,26 +198,38 @@ QStringList LibraryUndo::restore(quint64 token, QString *error)
         return {};
     }
     QStringList put;
-    QStringList failed;
+    QList<Item> failedItems;
     for (const Item &i : std::as_const(m_items)) {
         const QString target = m_dataDir + u'/' + i.relative;
         const QString saved = folderOf(m_token) + QStringLiteral("/data/") + i.relative;
-        if (!removeAny(target)) {
-            failed.append(i.relative);
-            continue;
-        }
+        bool ok = true;
         if (i.existed) {
+            // The kept copy is made next to the target first, so the current file goes only
+            // once the old one is there to take its place.
+            const QString staged = target + QStringLiteral(".lattis-undo");
+            removeAny(staged);
             QDir().mkpath(QFileInfo(target).absolutePath());
-            if (!QFile::rename(saved, target) && !copyRecursive(saved, target)) {
-                failed.append(i.relative);
-                continue;
-            }
+            ok = copyRecursive(saved, staged) && removeAny(target) && QFile::rename(staged, target);
+            if (!ok)
+                removeAny(staged);
+        } else {
+            ok = removeAny(target);
         }
-        put.append(i.relative);
+        if (ok)
+            put.append(i.relative);
+        else
+            failedItems.append(i);
     }
-    dropCurrent();
-    if (!failed.isEmpty())
-        *error = tr("Could not put back %1").arg(failed.join(QLatin1String(", ")));
+    if (failedItems.isEmpty()) {
+        dropCurrent();
+        return put;
+    }
+    // What failed stays kept (and the folder with it) until it expires.
+    m_items = failedItems;
+    QStringList names;
+    for (const Item &i : std::as_const(failedItems))
+        names.append(i.relative);
+    *error = tr("Could not put back %1").arg(names.join(QLatin1String(", ")));
     return put;
 }
 

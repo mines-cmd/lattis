@@ -1,5 +1,9 @@
 #include "librarytestbase.h"
 
+#include "libraryundo.h"
+
+#include <QTemporaryDir>
+
 namespace {
 
 // Every file under a folder with its bytes, or just the one file; for comparing before and after.
@@ -39,6 +43,9 @@ private slots:
     void newerChangeReplacesOlder();
     void startupRemovesLeftovers();
     void expires();
+    void discardPutsArtBackAcrossFileSystems();
+    void restoreWithUnreadableKeptCopyKeepsBoth();
+    void removeGameRefusesUnknownIds();
 };
 
 namespace {
@@ -313,6 +320,76 @@ void LibraryUndoTest::expires()
     QTRY_COMPARE(expired.count(), 1);
     QCOMPARE(library->undo(token), QStringLiteral("Nothing to undo"));
     QVERIFY(!QFileInfo::exists(m_state + QStringLiteral("/undo/") + QString::number(token)));
+}
+
+void LibraryUndoTest::discardPutsArtBackAcrossFileSystems()
+{
+    // /dev/shm is another file system than the temporary folder, so keepMove can't rename.
+    if (!QFileInfo(QStringLiteral("/dev/shm")).isDir())
+        QSKIP("no /dev/shm");
+    QTemporaryDir shm(QStringLiteral("/dev/shm/lattis-undo-XXXXXX"));
+    QVERIFY(shm.isValid());
+    const QString art = m_dir->filePath(QStringLiteral("art/foo"));
+    writeFile(art + QStringLiteral("/cover.png"), "cover bytes");
+    writeFile(art + QStringLiteral("/sub/logo.png"), "logo bytes");
+    const auto before = snapshotOf(art);
+
+    LibraryUndo undo;
+    undo.setFolders(m_dir->path(), shm.path());
+    undo.start(QStringLiteral("foo"));
+    undo.keepMove(QStringLiteral("art/foo"));
+    QVERIFY(!QFileInfo::exists(art));
+    undo.discard();
+    QCOMPARE(snapshotOf(art), before);
+}
+
+void LibraryUndoTest::restoreWithUnreadableKeptCopyKeepsBoth()
+{
+    if (!QFileInfo(QStringLiteral("/dev/shm")).isDir())
+        QSKIP("no /dev/shm");
+    QTemporaryDir shm(QStringLiteral("/dev/shm/lattis-undo-XXXXXX"));
+    QVERIFY(shm.isValid());
+    const QString relative = QStringLiteral("library/games/foo.toml");
+    const QString file = m_dir->filePath(relative);
+    writeFile(file, "title = \"Before\"\n");
+
+    LibraryUndo undo;
+    undo.setFolders(m_dir->path(), shm.path());
+    undo.start(QStringLiteral("foo"));
+    undo.keepCopy(relative);
+    writeFile(file, "title = \"After\"\n");
+    const quint64 token = undo.commit();
+    QVERIFY(token != 0);
+
+    const QString kept = shm.path() + u'/' + QString::number(token) + QStringLiteral("/data/") + relative;
+    QVERIFY(QFileInfo::exists(kept));
+    QVERIFY(QFile::setPermissions(kept, QFileDevice::Permissions{}));
+    if (QFile(kept).open(QIODevice::ReadOnly))
+        QSKIP("the kept copy stays readable (running as root)");
+
+    QString error;
+    QVERIFY(undo.restore(token, &error).isEmpty());
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(readFile(file), QByteArray("title = \"After\"\n"));
+    QVERIFY(QFileInfo::exists(kept));
+    QVERIFY(undo.valid(token));
+
+    // The item that failed stays kept: with the copy readable again, the retry works.
+    QVERIFY(QFile::setPermissions(kept, QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+    error.clear();
+    QCOMPARE(undo.restore(token, &error), QStringList{relative});
+    QVERIFY(error.isEmpty());
+    QCOMPARE(readFile(file), QByteArray("title = \"Before\"\n"));
+}
+
+void LibraryUndoTest::removeGameRefusesUnknownIds()
+{
+    auto library = openLibrary();
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+    QVERIFY(!library->removeGame(QString(), true).isEmpty());
+    QVERIFY(!library->removeGame(QStringLiteral("no-such-game"), true).isEmpty());
+    QVERIFY(!library->removeGame(QStringLiteral("../art"), false).isEmpty());
+    QCOMPARE(offered.count(), 0);
 }
 
 QTEST_GUILESS_MAIN(LibraryUndoTest)
