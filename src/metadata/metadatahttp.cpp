@@ -513,56 +513,64 @@ QString MetadataHttp::writePlaceholder(const QString &path, const QString &kind,
     return image.save(path, "PNG", 100) ? path : QString();
 }
 
-QString MetadataHttp::downloadsDir() const
+QString MetadataHttp::downloadsDir(const QString &folder) const
 {
-    return QDir(m_cacheDir).filePath(QStringLiteral("downloads"));
+    const QString root = QDir(m_cacheDir).filePath(QStringLiteral("downloads"));
+    return folder.isEmpty() ? root : QDir(root).filePath(folder);
 }
 
-void MetadataHttp::removeDownloads()
+void MetadataHttp::removeDownloads(const QString &folder)
 {
-    QDir(downloadsDir()).removeRecursively();
+    QDir(downloadsDir(folder)).removeRecursively();
 }
 
 void MetadataHttp::download(const QUrl &url, const QString &fileName, QObject *context,
-                            std::function<void(const QString &, const QString &)> done)
+                            std::function<void(const QString &, const QString &, int)> done, const QString &folder)
 {
     // The library takes png, jpg and webp art; anything else (SteamGridDB's .ico icons) is
     // saved as a PNG of its largest image.
     static const QStringList kept = {QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
                                      QStringLiteral("webp")};
     const bool convert = !kept.contains(QFileInfo(fileName).suffix().toLower());
-    const QString path = QDir(downloadsDir()).filePath(convert ? QFileInfo(fileName).completeBaseName() + QStringLiteral(".png")
+    const QString path = QDir(downloadsDir(folder)).filePath(convert ? QFileInfo(fileName).completeBaseName() + QStringLiteral(".png")
                                                                : fileName);
     if (usesFixtures()) {
         const QString kind = fileName.section(u'-', 0, 0);
+        const int failing = m_fixtureDownloadStatus ? m_fixtureDownloadStatus(url) : 0;
+        if (failing) {
+            QTimer::singleShot(m_fixtureDelayMs, context, [failing, done = std::move(done)] {
+                done({}, failing == 404 ? tr("SteamGridDB answered with an error (404)") : tr("The connection dropped"), failing);
+            });
+            return;
+        }
         QTimer::singleShot(m_fixtureDelayMs, context, [this, path, kind, url, done = std::move(done)] {
             const QString written = writePlaceholder(path, kind, url.toString());
-            done(written, written.isEmpty() ? tr("Couldn't save the image") : QString());
+            done(written, written.isEmpty() ? tr("Couldn't save the image") : QString(), 200);
         });
         return;
     }
     send(Service::SteamGridDb, network()->get(QNetworkRequest(url)), context,
-         [this, path, convert, done = std::move(done)](const MetadataReply &reply) {
+         [this, path, convert, folder, done = std::move(done)](const MetadataReply &reply) {
              if (!reply.ok()) {
-                 done({}, reply.error);
+                 done({}, reply.error, reply.status);
                  return;
              }
-             QDir().mkpath(downloadsDir());
+             QDir().mkpath(downloadsDir(folder));
              QByteArray body = reply.body;
              if (convert) {
                  body = largestAsPng(reply.body);
                  if (body.isEmpty()) {
-                     done({}, tr("SteamGridDB sent an image the launcher can't read"));
+                     done({}, tr("SteamGridDB sent an image the launcher can't read"), reply.status);
                      return;
                  }
              }
              QSaveFile file(path);
              if (!file.open(QIODevice::WriteOnly) || file.write(body) < 0 || !file.commit()) {
                  qCWarning(lcMetadata) << "couldn't save" << path << file.errorString();
-                 done({}, tr("Couldn't save the image"));
+                 done({}, tr("Couldn't save the image"), reply.status);
                  return;
              }
-             done(path, {});
+             done(path, {}, reply.status);
          },
          false, kImageLimit);
 }

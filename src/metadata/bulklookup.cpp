@@ -688,7 +688,7 @@ void BulkLookup::finished(int request, const QVariantMap &result)
             // Steam's logo path doesn't say whether the app has one.
             art->image = image;
             ++r->pending;
-            m_requests.insert(m_client->download(image.value(QStringLiteral("url")).toString(), kind),
+            m_requests.insert(m_client->download(image.value(QStringLiteral("url")).toString(), kind, QStringLiteral("bulk")),
                               {r->game.id, Step::SteamLogo, kind});
         }
         break;
@@ -696,8 +696,11 @@ void BulkLookup::finished(int request, const QVariantMap &result)
         Art &art = r->art[req.kind];
         if (error.isEmpty())
             art = {art.image, art.image, true, false, false};
-        else
+        else {
             art.image = {};
+            // Only a 404 says the app has no logo; a dropped connection says nothing.
+            r->artFailed = r->artFailed || result.value(QStringLiteral("status")).toInt() != 404;
+        }
         break;
     }
     case Step::Download:
@@ -1255,7 +1258,7 @@ void BulkLookup::pumpDownloads()
     while (m_applying && m_downloading < kDownloads && !m_toDownload.isEmpty()) {
         const std::array<QString, 3> d = m_toDownload.takeFirst();
         ++m_downloading;
-        m_requests.insert(m_client->download(d[2], d[1]), {d[0], Step::Download, d[1]});
+        m_requests.insert(m_client->download(d[2], d[1], QStringLiteral("bulk")), {d[0], Step::Download, d[1]});
     }
     if (m_applying && m_downloading == 0 && m_toDownload.isEmpty()) {
         flushArt(true);

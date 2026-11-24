@@ -112,6 +112,7 @@ private slots:
     void bulkStopKeepsResults();
     void bulkArtDefaults();
     void bulkArtFromSteam();
+    void bulkSteamLogoStatus();
     void bulkApply();
     void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
@@ -121,6 +122,8 @@ private slots:
     void bulkFetchedAhead();
     void bulkFetchedAheadBatches();
     void steamArtFetch();
+    void steamArtFetchCountsFiles();
+    void downloadFoldersAreSeparate();
     void scanLookup();
     void metadataSettings();
     void idListModel();
@@ -437,13 +440,13 @@ void MetadataTest::bodyOverTheLimitIsStopped()
     server.on("/grid/big.png", {200, QByteArray(33 * 1024 * 1024, 'x')});
     QString error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/grid/small.png")), QStringLiteral("cover-1.png"), &http,
-                  [&](const QString &, const QString &e) { error = e; });
+                  [&](const QString &, const QString &e, int) { error = e; });
     QTRY_COMPARE_WITH_TIMEOUT(error, QString(), 10000);
     error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/grid/big.png")), QStringLiteral("cover-2.png"), &http,
-                  [&](const QString &, const QString &e) { error = e; });
+                  [&](const QString &, const QString &e, int) { error = e; });
     QTRY_COMPARE_WITH_TIMEOUT(error, QStringLiteral("SteamGridDB sent more than the launcher accepts"), 10000);
-    QVERIFY(!QFile::exists(QDir(http.downloadsDir()).filePath(QStringLiteral("cover-2.png"))));
+    QVERIFY(!QFile::exists(QDir(http.downloadsDir(QStringLiteral("editor"))).filePath(QStringLiteral("cover-2.png"))));
 }
 
 namespace {
@@ -923,21 +926,21 @@ void MetadataTest::downloads()
     QString path;
     QString error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/grid/abc.png")), QStringLiteral("cover-1.png"), &http,
-                  [&](const QString &p, const QString &e) {
+                  [&](const QString &p, const QString &e, int) {
                       path = p;
                       error = e;
                   });
     QTRY_COMPARE(error, QString());
-    QCOMPARE(path, QDir(http.downloadsDir()).filePath(QStringLiteral("cover-1.png")));
+    QCOMPARE(path, QDir(http.downloadsDir(QStringLiteral("editor"))).filePath(QStringLiteral("cover-1.png")));
     QCOMPARE(readAll(path), QStringLiteral("not really a png"));
     // No key needed: the images are on SteamGridDB's CDN.
     QVERIFY(!server.requests.first().headers.contains("authorization"));
 
     error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/grid/missing.png")), QStringLiteral("hero-2.png"), &http,
-                  [&](const QString &, const QString &e) { error = e; });
+                  [&](const QString &, const QString &e, int) { error = e; });
     QTRY_COMPARE(error, QStringLiteral("SteamGridDB answered with an error (404)"));
-    QVERIFY(!QFile::exists(QDir(http.downloadsDir()).filePath(QStringLiteral("hero-2.png"))));
+    QVERIFY(!QFile::exists(QDir(http.downloadsDir(QStringLiteral("editor"))).filePath(QStringLiteral("hero-2.png"))));
 
     http.removeDownloads();
     QVERIFY(!QFile::exists(path));
@@ -961,7 +964,7 @@ void MetadataTest::downloadsConvertIcons()
     QString path;
     QString error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/icon/a.ico")), QStringLiteral("icon-1.ico"), &http,
-                  [&](const QString &p, const QString &e) {
+                  [&](const QString &p, const QString &e, int) {
                       path = p;
                       error = e;
                   });
@@ -974,7 +977,7 @@ void MetadataTest::downloadsConvertIcons()
 
     error = QStringLiteral("not called");
     http.download(server.url(QStringLiteral("/icon/broken.ico")), QStringLiteral("icon-2.ico"), &http,
-                  [&](const QString &, const QString &e) { error = e; });
+                  [&](const QString &, const QString &e, int) { error = e; });
     QTRY_COMPARE(error, QStringLiteral("SteamGridDB sent an image the launcher can't read"));
 }
 
@@ -1314,7 +1317,7 @@ void MetadataTest::clientArt()
 
     r = result(client, client.download(first.value("url").toString(), QStringLiteral("cover")));
     const QString path = QUrl(r.value("path").toString()).toLocalFile();
-    QVERIFY(path.startsWith(client.http()->downloadsDir()));
+    QVERIFY(path.startsWith(client.http()->downloadsDir(QStringLiteral("editor"))));
     QVERIFY(path.endsWith(QStringLiteral(".png")));
     QCOMPARE(QImage(path).size(), QSize(300, 450));
 
@@ -2555,6 +2558,92 @@ void MetadataTest::steamArtFetch()
     QCOMPARE(fetch.progressTotal(), 2);
     QTest::qWait(50);
     QVERIFY(s.art.isEmpty());
+}
+
+void MetadataTest::steamArtFetchCountsFiles()
+{
+    BulkSetup s;
+    SteamArtFetch fetch(
+        [](const QStringList &ids) {
+            QList<SteamArtFetch::Wanted> out;
+            for (const QString &id : ids)
+                out.append({id, id.mid(6).toLongLong(), {QStringLiteral("cover"), QStringLiteral("hero"), QStringLiteral("logo")}});
+            return out;
+        },
+        [&s](const QList<std::array<QString, 3>> &a) {
+            s.art += a;
+            QHash<QString, QString> errors;
+            for (const auto &r : a)
+                errors.insert(r[0], QStringLiteral("disk full"));
+            return errors;
+        },
+        &s.client);
+    QSignalSpy finished(&fetch, &SteamArtFetch::finished);
+    fetch.add({QStringLiteral("steam-1145360")});
+    QTRY_COMPARE(finished.size(), 1);
+    QVERIFY(s.art.size() > 1); // a game with several files, all refused: none was saved
+    QCOMPARE(finished.first().at(0).toInt(), 0);
+}
+
+void MetadataTest::downloadFoldersAreSeparate()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    server.on("/art.png", {200, "not really a png"});
+    MetadataClient client(data.path(), cache.path());
+    const QString url = server.url(QStringLiteral("/art.png")).toString();
+
+    QHash<QString, QString> files;
+    for (const QString &folder : {QStringLiteral("editor"), QStringLiteral("bulk"), QStringLiteral("steam")}) {
+        const QVariantMap r = result(client, client.download(url, QStringLiteral("cover"), folder));
+        QVERIFY2(r.value("error").toString().isEmpty(), qPrintable(r.value("error").toString()));
+        const QString path = QUrl(r.value("path").toString()).toLocalFile();
+        QVERIFY(path.startsWith(client.http()->downloadsDir(folder) + u'/'));
+        QVERIFY(QFile::exists(path));
+        files.insert(folder, path);
+    }
+    QVERIFY(!result(client, client.download(url, QStringLiteral("cover"), QStringLiteral("../x"))).value("error").toString().isEmpty());
+
+    // Closing the editor removes what the editor downloaded and nothing else.
+    client.discardDownloads();
+    QVERIFY(!QFile::exists(files.value("editor")));
+    QVERIFY(QFile::exists(files.value("bulk")));
+    QVERIFY(QFile::exists(files.value("steam")));
+}
+
+void MetadataTest::bulkSteamLogoStatus()
+{
+    // Steam's logo path doesn't say whether the app has one: a 404 means it has none, anything
+    // else (a dropped connection, a 500) says nothing and must not mark the logo unavailable.
+    for (const int status : {404, 500, 502}) {
+        BulkSetup s;
+        s.client.http()->setFixtureDownloadStatus([status](const QUrl &url) {
+            return url.path().endsWith(QLatin1String("/logo.png")) ? status : 0;
+        });
+        LookupGame game;
+        game.id = QStringLiteral("epic-hades");
+        game.title = QStringLiteral("Hades");
+        game.platform = QStringLiteral("epic");
+        game.igdbPlatforms = {6};
+        s.games = {game};
+        s.bulk.reload();
+        s.bulk.start();
+        QTRY_VERIFY(!s.bulk.running());
+        const QVariantList candidates = resultFor(s.bulk, "epic-hades").value("candidates").toList();
+        const auto steamGame = std::find_if(candidates.cbegin(), candidates.cend(), [](const QVariant &c) {
+            return c.toMap().value("steamAppId").toLongLong() == 1145360;
+        });
+        QVERIFY(steamGame != candidates.cend());
+        s.bulk.pick(game.id, int(steamGame - candidates.cbegin()));
+        QTRY_COMPARE(resultFor(s.bulk, "epic-hades").value("state").toString(), QStringLiteral("matched"));
+
+        const QStringList marked = resultFor(s.bulk, "epic-hades").value("unavailable").toStringList();
+        if (status == 404)
+            QVERIFY(marked.contains(QStringLiteral("logo")));
+        else
+            QVERIFY2(!marked.contains(QStringLiteral("logo")), qPrintable(QString::number(status)));
+    }
 }
 
 void MetadataTest::scanLookup()

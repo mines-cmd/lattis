@@ -506,12 +506,17 @@ int MetadataClient::findSteamApp(const QString &title)
     return request;
 }
 
-int MetadataClient::download(const QString &url, const QString &kind)
+int MetadataClient::download(const QString &url, const QString &kind, const QString &folder)
 {
     int request = 0;
     QObject *context = start(&request);
     const QUrl source(url);
+    static const QStringList folders = {QStringLiteral("editor"), QStringLiteral("bulk"), QStringLiteral("steam")};
     const bool local = source.scheme() == QLatin1String("http") && source.host() == QLatin1String("127.0.0.1");
+    if (!folders.contains(folder)) {
+        QTimer::singleShot(0, context, [this, request] { finish(request, failure(tr("Unknown downloads folder"))); });
+        return request;
+    }
     if (source.scheme() != QLatin1String("https") && !local) {
         QTimer::singleShot(0, context, [this, request] {
             finish(request, failure(tr("The launcher only downloads art over https")));
@@ -524,11 +529,17 @@ int MetadataClient::download(const QString &url, const QString &kind)
     const QString name = QStringLiteral("%1-%2.%3").arg(
         kind, QString::fromLatin1(QCryptographicHash::hash(source.toEncoded(), QCryptographicHash::Sha1).toHex().left(16)),
         extension);
-    m_http.download(source, name, context, [this, request](const QString &path, const QString &error) {
-        if (!error.isEmpty())
-            return finish(request, failure(error));
-        finish(request, {{QStringLiteral("path"), QUrl::fromLocalFile(path).toString()}});
-    });
+    m_http.download(
+        source, name, context,
+        [this, request](const QString &path, const QString &error, int status) {
+            if (!error.isEmpty()) {
+                QVariantMap failed = failure(error);
+                failed.insert(QStringLiteral("status"), status);
+                return finish(request, failed);
+            }
+            finish(request, {{QStringLiteral("path"), QUrl::fromLocalFile(path).toString()}, {QStringLiteral("status"), status}});
+        },
+        folder);
     return request;
 }
 

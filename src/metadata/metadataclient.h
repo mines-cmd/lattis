@@ -48,10 +48,11 @@ public:
     Q_INVOKABLE int artChoices(int steamGridDbId, const QString &kind, const QString &style, int page);
     Q_INVOKABLE int steamArt(qint64 appId);
     Q_INVOKABLE int findSteamApp(const QString &title);
-    Q_INVOKABLE int download(const QString &url, const QString &kind);
+    // `folder` is "editor" (the default), "bulk" or "steam": each user of the downloads has its own.
+    Q_INVOKABLE int download(const QString &url, const QString &kind, const QString &folder = QStringLiteral("editor"));
     Q_INVOKABLE int testKeys(const QString &service);
     Q_INVOKABLE void cancel(int request);
-    Q_INVOKABLE void discardDownloads() { m_http.removeDownloads(); }
+    Q_INVOKABLE void discardDownloads() { m_http.removeDownloads(QStringLiteral("editor")); }
 
     Q_INVOKABLE QVariantList styles(const QString &kind) const;
 

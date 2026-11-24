@@ -342,7 +342,7 @@ void SteamFriends::fetchAvatars(QStringList urls, std::function<void()> done)
             return;
         }
         http->download(QUrl(url), pictureName(url), this,
-                       [this, path, urls, done = std::move(done)](const QString &file, const QString &error) mutable {
+                       [this, path, urls, done = std::move(done)](const QString &file, const QString &error, int) mutable {
                            if (error.isEmpty() && !file.isEmpty()) {
                                QFile::remove(path);
                                if (!QFile::rename(file, path) && !QFile::copy(file, path))
@@ -351,7 +351,7 @@ void SteamFriends::fetchAvatars(QStringList urls, std::function<void()> done)
                                emit changed();
                            }
                            fetchAvatars(urls, std::move(done));
-                       });
+                       }, QStringLiteral("friends"));
     });
 }
 

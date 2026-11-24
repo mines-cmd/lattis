@@ -96,7 +96,7 @@ void SteamArtFetch::onFinished(int request, const QVariantMap &result)
                 continue;
             asked.insert(kind);
             ++job->pending;
-            m_downloads.insert(client()->download(image.value(QStringLiteral("url")).toString(), kind), {id, kind});
+            m_downloads.insert(client()->download(image.value(QStringLiteral("url")).toString(), kind, QStringLiteral("steam")), {id, kind});
         }
         if (job->pending == 0)
             jobDone(job);
@@ -163,5 +163,8 @@ void SteamArtFetch::flush(bool all)
     const QHash<QString, QString> errors = m_writeArt(write);
     for (auto it = errors.cbegin(); it != errors.cend(); ++it)
         qCWarning(lcMetadata).noquote() << "could not save Steam art for" << it.key() << it.value();
-    m_written += int(write.size()) - int(errors.size());
+    for (const auto &file : std::as_const(write)) {
+        if (!errors.contains(file[0]))
+            ++m_written;
+    }
 }

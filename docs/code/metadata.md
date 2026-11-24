@@ -25,7 +25,8 @@ Neither IGDB nor SteamGridDB is touched before a lookup is actually started. `Me
 - **Steam store requests** (`steamStore`, `steamStoreSearch`) are keyless GETs to the two Steam hosts.
 - **Steam Web API requests** (`steamWeb`, for the whole Steam library) are GETs to `api.steampowered.com`; the access token or Web API key is in the query, so only the path is logged, and Qt's error text has the query removed. `setSteamWebFixturesDir()` answers them from files (see [steam.md](steam.md#the-whole-library)).
 - **ProtonDB requests** (`protonDb(path, context, done)`) are keyless GETs to `www.protondb.com`, spaced at least `m_protonDbIntervalMs` (1000, `setProtonDbInterval()`) apart since ProtonDB documents no limit. A 404 is a normal answer there and logs nothing. With fixtures set, `protondb-<appid>.json` in the fixtures folder answers (a missing file is a 404).
-- **Downloads** (art picked in an editor or bulk dialog) are saved under `<cache dir>/downloads/`, under a name that includes the kind (`cover`, `hero`, `logo`, `icon`), so two concurrent editors don't collide. `removeDownloads()` empties that folder when the editor is discarded.
+- **Downloads** (art picked in an editor, the bulk dialog or the Steam art fetch) are saved under `<cache dir>/downloads/<folder>/`, under a name that includes the kind (`cover`, `hero`, `logo`, `icon`). Each user has its own folder: `editor` (the game editor, the default), `bulk` (`BulkLookup`, which also keeps the file of a Steam logo check there), `steam` (`SteamArtFetch`), `friends` (Steam friends' pictures, which move out at once). Closing the editor (`discardDownloads()`, `removeDownloads("editor")`) removes only `downloads/editor/`, so art that bulk lookup or the Steam fetch has downloaded and not yet written stays. The whole folder is emptied when the client starts.
+- **Download status**: `MetadataHttp::download`'s callback and `MetadataClient::download`'s result carry the HTTP `status` (0 when the request got no answer). Steam's logo check in `BulkLookup` marks the logo unavailable only on a 404; any other failure sets `artFailed`, so nothing is marked and the game is looked up again later.
 - **Redirects**: the IGDB, Twitch-token and SteamGridDB requests use `SameOriginRedirectPolicy`, so a redirect to another origin fails the request instead of carrying the keys (the headers, and a 307's body) along. Image downloads keep Qt's default.
 - **Size limits**: `send()` stops a reply once its body passes a limit (checked on `Content-Length` and as the bytes arrive): 4 MB for an API answer, 32 MB for an image. The reply fails with "<service> sent more than the launcher accepts" and the debug log says which limit. `MetadataClient::download` also refuses any URL that isn't `https:` (or `http:` to 127.0.0.1, for the fixtures and tests).
 - **Timeouts** apply per chunk of data arriving, not to the total transfer time, so a large image on a slow line still arrives. Tests shorten the timeout.
@@ -169,12 +170,12 @@ The file is created with a mode of 0600, and an existing one is set to 0600 befo
 | `findArt(name, year, steamAppId)` | Finds the game on SteamGridDB |
 | `searchArtGames(text)` | One plain SteamGridDB search: no numeral retry, no clear-match rule |
 | `artChoices(steamGridDbId, kind, style, page)` | A page of art images |
-| `download(url, kind)` | Downloads a picked image |
+| `download(url, kind, folder = "editor")` | Downloads a picked image into `downloads/<folder>/` (`editor`, `bulk` or `steam`); the result has `path` or `error`, and `status` |
 | `steamArt(appId)` | Steam's library art for an app: one request |
 | `findSteamApp(title)` | Steam's store search for a title, clear match only |
 | `testKeys(service)` | Checks the keys of `"igdb"` or `"steamgriddb"` |
 | `cancel(id)` | Drops a result |
-| `discardDownloads()` | Removes images picked but not saved |
+| `discardDownloads()` | Removes the editor's downloads (`downloads/editor/`), not other users' |
 | `styles(kind)` | SteamGridDB styles for a kind, as `[{id, name}]` |
 
 ### Map shapes

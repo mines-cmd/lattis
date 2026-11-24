@@ -61,9 +61,11 @@ public:
     void steamWeb(const QString &path, const QUrlQuery &query, QObject *context, Callback done);
     void protonDb(const QString &path, QObject *context, Callback done);
     void download(const QUrl &url, const QString &fileName, QObject *context,
-                  std::function<void(const QString &path, const QString &error)> done);
-    QString downloadsDir() const;
-    void removeDownloads();
+                  std::function<void(const QString &path, const QString &error, int status)> done,
+                  const QString &folder = QStringLiteral("editor"));
+    // `folder` is one of the subfolders each user of the downloads has; empty is the root.
+    QString downloadsDir(const QString &folder = {}) const;
+    void removeDownloads(const QString &folder = {});
 
     void testIgdb(QObject *context, std::function<void(const QString &error)> done);
     void testSteamGridDb(QObject *context, std::function<void(const QString &error)> done);
@@ -76,6 +78,8 @@ public:
     void setTimeout(int ms) { m_timeoutMs = ms; }
     void setIgdbInterval(int ms) { m_igdbIntervalMs = ms; }
     void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
+    // Tests: the HTTP status a fixture-mode download answers with for a URL (0 = it works).
+    void setFixtureDownloadStatus(std::function<int(const QUrl &)> status) { m_fixtureDownloadStatus = std::move(status); }
     void setProtonDbInterval(int ms) { m_protonDbIntervalMs = ms; }
 
     bool hasNetworkManager() const { return m_network != nullptr; }
@@ -115,6 +119,7 @@ private:
     QNetworkAccessManager *m_network = nullptr;
     int m_timeoutMs = 10000;
     int m_igdbIntervalMs = 260; // IGDB allows 4 requests a second
+    std::function<int(const QUrl &)> m_fixtureDownloadStatus;
     int m_fixtureDelayMs = 300; // long enough for a screenshot to catch "Looking up…"
     int m_protonDbIntervalMs = 1000; // ProtonDB documents no limit: stay well under one request a second
     QDateTime m_nextProtonDbSend;
