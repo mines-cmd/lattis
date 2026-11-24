@@ -10,6 +10,10 @@
 #include <QRegularExpression>
 
 #include <csignal>
+#include <utility>
+
+#include <sys/types.h>
+#include <unistd.h>
 
 Q_LOGGING_CATEGORY(lcLegendary, "lattis.legendary")
 
@@ -40,6 +44,8 @@ QString kindName(LegendaryJobs::Kind kind)
 
 constexpr qint64 kDaySeconds = 24 * 60 * 60;
 constexpr int kTailLines = 300;
+constexpr int kGroupPollMs = 100;
+constexpr int kAfterKillMs = 2000;
 }
 
 std::optional<double> LegendaryOutput::progress(const QString &line)
@@ -90,22 +96,71 @@ LegendaryJobs::LegendaryJobs(std::function<Tool()> tool, QObject *parent)
 {
     qRegisterMetaType<LegendaryJobs::Result>();
     m_cancelTimer.setSingleShot(true);
-    connect(&m_cancelTimer, &QTimer::timeout, this, [this] {
-        if (m_process)
-            m_process->kill();
-    });
+    // The grace is over: the whole group goes, not only the main process, as its workers are what write the files.
+    connect(&m_cancelTimer, &QTimer::timeout, this, [this] { signalGroup(SIGKILL); });
+    m_groupTimer.setInterval(kGroupPollMs);
+    connect(&m_groupTimer, &QTimer::timeout, this, &LegendaryJobs::pollGroup);
     m_checkTimer.setSingleShot(true);
     connect(&m_checkTimer, &QTimer::timeout, this, &LegendaryJobs::runDailyCheck);
 }
 
 LegendaryJobs::~LegendaryJobs()
 {
-    if (!m_process)
-        return;
-    m_process->disconnect(this);
-    ::kill(pid_t(m_process->processId()), SIGINT);
-    if (!m_process->waitForFinished(5000))
-        m_process->kill();
+    // Quitting goes through stopAll() first; this is for what that didn't cover, and it can't wait for a polite stop.
+    signalGroup(SIGKILL);
+    if (m_process) {
+        m_process->disconnect(this);
+        m_process->waitForFinished(1000);
+    }
+}
+
+bool LegendaryJobs::groupAlive() const
+{
+    return m_group > 0 && ::kill(-m_group, 0) == 0;
+}
+
+void LegendaryJobs::signalGroup(int signal)
+{
+    if (m_group > 0)
+        ::kill(-m_group, signal);
+}
+
+bool LegendaryJobs::stopAll()
+{
+    m_stopping = true;
+    const bool running = !m_queue.isEmpty() && m_queue.first().state == State::Running;
+    const bool dropped = m_queue.size() > (running ? 1 : 0);
+    while (m_queue.size() > (running ? 1 : 0))
+        m_queue.removeLast();
+    if (dropped)
+        emit jobsChanged();
+    if (!running)
+        return false;
+    if (!m_cancelling) {
+        m_cancelling = true;
+        signalGroup(SIGINT);
+        m_cancelTimer.start(m_cancelGraceMs);
+    }
+    return true;
+}
+
+void LegendaryJobs::pollGroup()
+{
+    if (!groupAlive() || m_groupWaitedMs >= m_cancelGraceMs + kAfterKillMs)
+        completeJob();
+    m_groupWaitedMs += kGroupPollMs;
+}
+
+void LegendaryJobs::completeJob()
+{
+    m_groupTimer.stop();
+    m_cancelTimer.stop();
+    m_cancelling = false;
+    m_group = 0;
+    const Result result = *std::exchange(m_waiting, std::nullopt);
+    finishJob(result);
+    if (m_stopping && m_queue.isEmpty())
+        emit allStopped();
 }
 
 QStringList LegendaryJobs::arguments(Kind kind, const QString &appName, const QStringList &extraArgs)
@@ -131,6 +186,16 @@ QVariantList LegendaryJobs::jobs() const
     }
     for (const Job &job : m_failed)
         add(job, QStringLiteral("failed"));
+    return out;
+}
+
+QStringList LegendaryJobs::uninstalling() const
+{
+    QStringList out;
+    for (const Job &job : m_queue) {
+        if (job.kind == Kind::Uninstall)
+            out.append(job.appName);
+    }
     return out;
 }
 
@@ -173,7 +238,7 @@ void LegendaryJobs::cancel(const QString &appName)
             if (m_cancelling || !m_process)
                 return;
             m_cancelling = true;
-            ::kill(pid_t(m_process->processId()), SIGINT);
+            signalGroup(SIGINT);
             m_cancelTimer.start(m_cancelGraceMs);
             return;
         }
@@ -295,7 +360,8 @@ void LegendaryJobs::runDailyCheck()
 
 void LegendaryJobs::startNext()
 {
-    while (!m_process && !m_queue.isEmpty()) {
+    // A finished job whose workers are still there keeps the queue: a new job would write beside them.
+    while (!m_process && !m_waiting && !m_queue.isEmpty()) {
         Job &job = m_queue.first();
         const Tool tool = m_tool();
         Result result;
@@ -314,6 +380,9 @@ void LegendaryJobs::startNext()
             env.insert(QStringLiteral("LEGENDARY_CONFIG_PATH"), tool.configPath);
         m_process->setProcessEnvironment(env);
         m_process->setProcessChannelMode(QProcess::MergedChannels);
+        // Its own process group, so every signal reaches the download workers too, and not only Legendary itself.
+        m_process->setChildProcessModifier([] { ::setsid(); });
+        connect(m_process, &QProcess::started, this, [this] { m_group = pid_t(m_process->processId()); });
         m_pending.clear();
         m_tail.clear();
         m_cancelling = false;
@@ -329,6 +398,7 @@ void LegendaryJobs::startNext()
             r.error = tr("Could not start Legendary: %1").arg(m_process->errorString());
             m_process->deleteLater();
             m_process = nullptr;
+            m_group = 0;
             finishJob(r);
         });
         qCInfo(lcLegendary).noquote() << QStringLiteral("legendary %1").arg(job.args.join(u' '));
@@ -384,7 +454,6 @@ void LegendaryJobs::onFinished(int exitCode, QProcess::ExitStatus status)
         m_tail.append(QString::fromLocal8Bit(m_pending).trimmed());
         m_pending.clear();
     }
-    m_cancelTimer.stop();
     m_process->deleteLater();
     m_process = nullptr;
 
@@ -396,14 +465,23 @@ void LegendaryJobs::onFinished(int exitCode, QProcess::ExitStatus status)
     result.ok = !m_cancelling && status == QProcess::NormalExit && exitCode == 0;
     if (result.ok && result.kind == Kind::Repair)
         result.repaired = LegendaryOutput::repairedFiles(m_tail);
-    m_cancelling = false;
     if (!result.ok && !result.cancelled) {
         result.error = status == QProcess::NormalExit ? LegendaryOutput::failureLine(m_tail)
                                                       : tr("Legendary stopped unexpectedly");
         qCWarning(lcLegendary).noquote() << QStringLiteral("legendary %1 failed (%2):\n%3")
                                                 .arg(kindName(result.kind)).arg(exitCode).arg(m_tail.join(u'\n'));
     }
-    finishJob(result);
+    m_waiting = result;
+    // The main process is gone; its workers may not be (they ignore SIGINT, or it crashed). The job is over only when
+    // none are left, so a new install of the game never finds a second writer in its folder.
+    if (groupAlive()) {
+        if (!m_cancelling)
+            signalGroup(SIGKILL);
+        m_groupWaitedMs = 0;
+        m_groupTimer.start();
+        return;
+    }
+    completeJob();
 }
 
 void LegendaryJobs::finishJob(const Result &result)

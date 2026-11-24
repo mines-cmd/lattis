@@ -15,6 +15,8 @@
 #include <functional>
 #include <optional>
 
+#include <sys/types.h>
+
 // See docs/code/heroic.md.
 namespace LegendaryOutput {
 // The percentage of a `= Progress: 47.06% (272/578), …` line or a `Verification progress: 12/219 (5.5%)` one;
@@ -67,15 +69,21 @@ public:
     QVariantList jobs() const;
     Q_INVOKABLE QVariantMap job(const QString &appName) const;
     bool busy() const { return !m_queue.isEmpty(); }
+    // The games whose uninstall is running or queued: a hidden job, but one that quitting would leave half done.
+    QStringList uninstalling() const;
 
     // Queues `legendary <verb> <appName> <extraArgs> -y`. Empty on success, else why not (no Legendary, the
     // game already has a job). A failed job of the game is replaced.
     QString enqueue(Kind kind, const QString &appName, const QStringList &extraArgs = {});
 
-    // Cancels a queued or a running job of the game: the process gets SIGINT, as Ctrl-C does, which keeps the
-    // resume file. SIGTERM would leave its workers downloading.
+    // Cancels a queued or a running job of the game: its process group gets SIGINT, as Ctrl-C does, which keeps the
+    // resume file, and SIGKILL after the grace. The job ends (`finished`) only when no process of the group is left.
     Q_INVOKABLE void cancel(const QString &appName);
     Q_INVOKABLE void dismiss(const QString &appName);
+
+    // For quitting: drops the queue and cancels the running job, without waiting. True when a job is running, and
+    // `allStopped` comes once its group is gone (after the grace at most); false when there is nothing to wait for.
+    Q_INVOKABLE bool stopAll();
 
     // `legendary info <appName> --json` beside the queue: it only asks Epic, so it needn't wait for a download.
     // The answer comes as `infoReady` (stdout, or why not); a second ask for a game still being asked is ignored.
@@ -99,6 +107,7 @@ public:
 
 signals:
     void jobsChanged();
+    void allStopped();
     void finished(const LegendaryJobs::Result &result);
     void infoReady(const QString &appName, const QByteArray &json, const QString &error);
 
@@ -118,6 +127,10 @@ private:
     void onProcessOutput();
     void onFinished(int exitCode, QProcess::ExitStatus status);
     void finishJob(const Result &result);
+    bool groupAlive() const;
+    void signalGroup(int signal);
+    void pollGroup();
+    void completeJob();
     void runDailyCheck();
     void scheduleCheck(int ms);
 
@@ -129,6 +142,11 @@ private:
     QByteArray m_pending;
     QStringList m_tail;
     bool m_cancelling = false;
+    bool m_stopping = false;
+    pid_t m_group = 0; // the running job's process group (its process id: it leads the group)
+    std::optional<Result> m_waiting; // the job's result, held until its group is gone
+    int m_groupWaitedMs = 0;
+    QTimer m_groupTimer;
     QTimer m_cancelTimer;
     int m_cancelGraceMs = 10'000;
 

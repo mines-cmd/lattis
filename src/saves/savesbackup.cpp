@@ -39,6 +39,12 @@ bool isFolder(const QFileInfo &info)
     return !info.isSymLink() && info.isDir();
 }
 
+// A saved path that is itself a link to a folder is followed (it was moved to another drive); links inside are not.
+bool isSourceFolder(const QFileInfo &info)
+{
+    return info.isDir();
+}
+
 void walk(const QString &folder, const QString &name, const QString &relative, const Archive::Skip &skip,
           QList<Entry> &out)
 {
@@ -63,7 +69,7 @@ QList<Entry> collect(const QList<Source> &sources)
         const Source &source = sources.at(n);
         const QFileInfo info(source.path);
         const QString name = QString::number(n);
-        if (isFolder(info))
+        if (isSourceFolder(info))
             walk(source.path, name, {}, source.skip, out);
         else if (info.exists() || info.isSymLink())
             out.append({name + u'/' + info.fileName(), info.isSymLink() ? 0 : info.size(),
@@ -128,7 +134,7 @@ QByteArray manifest(const Input &input, const QString &matched, const QList<Sour
         out += QStringLiteral("\n[[path]]\nn = %1\nfrom = %2\ntype = %3\n")
                    .arg(n)
                    .arg(quote(tilde(source.path, input.env.home)),
-                        quote(isFolder(QFileInfo(source.path)) ? QStringLiteral("folder") : QStringLiteral("file")));
+                        quote(isSourceFolder(QFileInfo(source.path)) ? QStringLiteral("folder") : QStringLiteral("file")));
         if (source.wholePrefix)
             out += QStringLiteral("prefix = true   # a Proton prefix without Proton's own files\n");
     }
@@ -171,7 +177,7 @@ bool writeArchive(const QString &path, const QByteArray &manifestText, const QLi
         const Source &source = sources.at(n);
         const QFileInfo info(source.path);
         const QString prefix = QStringLiteral("files/%1").arg(n);
-        const bool ok = isFolder(info) ? writer.addTree(source.path, prefix, source.skip)
+        const bool ok = isSourceFolder(info) ? writer.addTree(source.path, prefix, source.skip)
                                        : writer.addPath(source.path, prefix + u'/' + info.fileName());
         if (!ok) {
             *error = writer.error();

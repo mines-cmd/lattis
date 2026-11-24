@@ -28,6 +28,31 @@ struct ReadCloser
 };
 }
 
+QString asidePath(const QString &folder, const QString &name)
+{
+    const QDir asideFolder(QDir(folder).filePath(QStringLiteral(".%1.replaced").arg(name)));
+    QString aside = asideFolder.filePath(name);
+    for (int n = 2; QFileInfo(aside).exists() || QFileInfo(aside).isSymLink(); ++n)
+        aside = asideFolder.filePath(QStringLiteral("%1.%2").arg(name).arg(n));
+    return aside;
+}
+
+QString trashOld(const QString &old, bool aside, const std::function<bool(const QString &, QString *)> &trash)
+{
+    QString problem;
+    if (!trash)
+        problem = tr("there is no trash to use");
+    else if (!trash(old, &problem))
+        problem = problem.isEmpty() ? tr("the trash refused it") : problem;
+    else {
+        if (aside)
+            QDir().rmdir(QFileInfo(old).absolutePath());
+        return {};
+    }
+    return tr("Couldn't move the old %1 to the trash (%2). It is still in %3")
+        .arg(QFileInfo(old).fileName(), problem, QFileInfo(old).absolutePath());
+}
+
 QString noChecksumText()
 {
     return tr("This release has no checksum. Lattis can't check the download.");
@@ -303,10 +328,8 @@ void AppImageDownload::install(const QString &partial, const QString &name)
             fail(tr("%1 is already in %2").arg(name, m_folder));
             return;
         }
-        const QString asideFolder = QDir(m_folder).filePath(QStringLiteral(".%1.replaced").arg(name));
-        aside = QDir(asideFolder).filePath(name);
-        if (!QDir().mkpath(asideFolder) || (QFileInfo::exists(aside) && !QFile::remove(aside))
-            || !QFile::rename(target, aside)) {
+        aside = AppImageInstall::asidePath(m_folder, name);
+        if (!QDir().mkpath(QFileInfo(aside).absolutePath()) || !QFile::rename(target, aside)) {
             QFile::remove(partial);
             fail(tr("Couldn't move the old %1 aside").arg(name));
             return;

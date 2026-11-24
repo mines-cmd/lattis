@@ -107,6 +107,7 @@ private slots:
     void savedGamesWithoutManifest();
     void savedGamesChoice();
     void savedGamesTooBig();
+    void aSaveFolderThatIsALinkIsFollowed();
 
 private:
     BackupPlan::Sources savedSources(bool withManifest = true) const;
@@ -770,6 +771,32 @@ void BackupPlanTest::savedGamesTooBig()
     QVERIFY(plan.savedGames.at(1).tooBig);
     QCOMPARE(plan.savedGames.at(1).bytes(), 0);
     QCOMPARE(plan.bytes(), 3 + 7 + 5 + 2 + 7);
+}
+
+// The user moved the save folder to another drive and left a link: its size counts (so the cap applies) and the
+// manifest says it is a folder. A link inside the folder still counts for nothing.
+void BackupPlanTest::aSaveFolderThatIsALinkIsFollowed()
+{
+    BackupPlan::Sources sources = savedSources();
+    const QString saves = m_home + QStringLiteral("/.local/share/Celeste/Saves");
+    const QString moved = m_home + QStringLiteral("/elsewhere/Saves");
+    QDir().mkpath(QFileInfo(moved).path());
+    QVERIFY(QDir().rename(saves, moved));
+    QVERIFY(QFile::link(moved, saves));
+    writeFile(m_home + QStringLiteral("/outside/big.dat"), 500);
+    QVERIFY(QFile::link(m_home + QStringLiteral("/outside/big.dat"), moved + QStringLiteral("/inside-link")));
+
+    BackupPlan::SavesPlan plan = BackupPlan::planSaves(sources, {});
+    BackupPlan::measure(plan);
+    QCOMPARE(plan.savedGames.at(0).bytes(), 7);
+    const QByteArray text = BackupPlan::manifest(plan, kCreated, QStringLiteral("0.1"));
+    QVERIFY2(text.contains("type = \"folder\""), text.constData());
+    QVERIFY(!text.contains("type = \"file\"\n\n[[saved]]"));
+
+    plan = BackupPlan::planSaves(sources, {});
+    plan.maxBytes = 6;
+    BackupPlan::measure(plan);
+    QVERIFY(plan.savedGames.at(0).tooBig);
 }
 
 QTEST_GUILESS_MAIN(BackupPlanTest)

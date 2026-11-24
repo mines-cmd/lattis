@@ -10,6 +10,7 @@
 #include <QTimer>
 
 #include <atomic>
+#include <functional>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -21,6 +22,14 @@ namespace AppImageInstall {
 QString noChecksumText();
 QString targetFolder(const QStringList &applicationsDirs, const QString &home);
 bool isArchive(const QString &fileName);
+
+// Where an update moves the file it replaces: `.<name>.replaced/<name>`, or the first of `<name>.2`, `<name>.3`…
+// in that folder that is free. Never a path that exists.
+QString asidePath(const QString &folder, const QString &name);
+
+// Trashes the file an update replaced (`replaced` is Result::replaced, `old` the file otherwise) and removes its aside
+// folder. Returns what to tell the user when the trash refuses, naming the folder the old file stays in; empty when done.
+QString trashOld(const QString &old, bool aside, const std::function<bool(const QString &, QString *)> &trash);
 
 struct Extracted
 {

@@ -304,6 +304,14 @@ QStringList GameRunner::epicJobTitles() const
     return titles;
 }
 
+QStringList GameRunner::epicUninstallTitles() const
+{
+    QStringList titles;
+    for (const QString &appName : m_legendaryJobs.uninstalling())
+        titles.append(epicTitle(appName));
+    return titles;
+}
+
 QString GameRunner::verifyEpic(const QString &gameId)
 {
     const Game *game = m_library->game(gameId);

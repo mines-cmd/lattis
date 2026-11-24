@@ -56,7 +56,7 @@ An emulator with `release` and `release_asset` can be installed as an AppImage. 
 1. Only an `https` URL is requested; redirects may not go to a less safe scheme (`NoLessSafeRedirectPolicy`). `setRelaxed(true)` also allows `http` and `file` URLs, for the tests and the fixtures.
 2. The bytes go to `.<name>.partial` in the target folder while a SHA-256 is computed. At the end the size must match the asset's, when the release lists one, and the hash must match its `sha256`, when it has one. A mismatch deletes the file and fails.
 3. A zip or tarball is unpacked on a worker thread by `AppImageInstall::extractOne()`: one entry, the first regular file whose name matches `release_inside`, written to `.<name>.partial`. An entry whose path is absolute or holds `..` makes the whole archive refused; a matching entry that is a link is refused; nothing larger than 2 GiB is written. The archive's partial file is then deleted.
-4. The AppImage is made executable (0755) and renamed to its upstream name. A file with that name already in the folder fails the install, unless `setReplace(true)` (an update): then the old file is first moved to `.<name>.replaced/<name>` beside it, the new one renamed in, and `Result::replaced` names the moved file for the caller to trash. If the new file can't be put in place, the old one is moved back.
+4. The AppImage is made executable (0755) and renamed to its upstream name. A file with that name already in the folder fails the install, unless `setReplace(true)` (an update): then the old file is first moved to `.<name>.replaced/<name>` beside it (`AppImageInstall::asidePath()`; when that exists, because an earlier update's old build is still there, the first free `<name>.2`, `<name>.3`… in that folder: an existing aside is never removed), the new one renamed in, and `Result::replaced` names the moved file for the caller to trash with `AppImageInstall::trashOld()`. When the trash refuses, that returns a text naming the folder the old file stays in: `Installer::message` (a toast) for an emulator's or a game's update, `AppUpdate::notice` (a line on the ready card) for Lattis's own. If the new file can't be put in place, the old one is moved back.
 5. A failure or `cancel()` deletes every partial file. Destroying the object does too.
 
 `setDownloadOnly(true)` ends after step 2 with `Result::path` the partial file itself, for the caller to unpack (ffmpeg's archive; see [ffmpeg](#ffmpeg)).
@@ -246,6 +246,7 @@ AppUpdate.size                the download's size in bytes
 AppUpdate.notes               the release notes (Markdown)
 AppUpdate.progress            0 to 1 while downloading, -1 otherwise
 AppUpdate.error               the message of a failure
+AppUpdate.notice              said with the ready card: the old build the trash refused, and its folder
 AppUpdate.canReplace          the running file can be replaced
 AppUpdate.replaceBlocker      why not
 AppUpdate.releasePage         the release's page on GitHub

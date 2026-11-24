@@ -134,6 +134,8 @@ signals:
     void updatesChecked(int checked, int failed);
     // An AppImage update (an emulator's or a game's, by its name) finished; notes is the release's, possibly empty.
     void emulatorUpdated(const QString &name, const QString &version, const QString &notes);
+    // Something to tell the user that no card shows (the old build the trash refused, and where it is).
+    void message(const QString &text);
 
 private:
     enum class State { Idle, Checking, Downloading, Extracting, Installing, Removing, Failed };
@@ -214,6 +216,7 @@ private:
     void saveRecord(const QString &id, const InstallRecord *record);
     void saveGameRecord(const QString &gameId, const GameUpdateRecord &record);
     QString trashFile(const QString &path);
+    void trashOld(const QString &old, bool aside);
     void fail(const QString &id, const QString &error);
     void changed();
     void useFixtureAsset(ReleaseAsset *asset) const;

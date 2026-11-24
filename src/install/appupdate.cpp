@@ -227,6 +227,7 @@ void AppUpdate::check(bool quiet)
     if (!m_available || m_state == State::Checking || m_state == State::Downloading || m_state == State::Ready)
         return;
     m_error.clear();
+    m_notice.clear();
     const quint64 serial = ++m_serial;
 
     // Only the answer from the real API is cached.
@@ -356,11 +357,11 @@ void AppUpdate::downloadFinished(quint64 serial, const AppImageDownload::Result 
         fail(result.error);
         return;
     }
+    m_notice.clear();
     if (!result.replaced.isEmpty()) {
-        QString problem;
-        if (!m_setup.trash || !m_setup.trash(result.replaced, &problem))
-            qCWarning(lcAppUpdate).noquote() << "can't trash the old AppImage" << result.replaced << problem;
-        QDir().rmdir(QFileInfo(result.replaced).absolutePath());
+        m_notice = AppImageInstall::trashOld(result.replaced, true, m_setup.trash);
+        if (!m_notice.isEmpty())
+            qCWarning(lcAppUpdate).noquote() << m_notice;
     }
     saveUpdated();
     setState(State::Ready);

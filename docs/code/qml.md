@@ -440,7 +440,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `views/RomFileDialog.qml` | File picker for ROMs |
 | `views/SetupGuide.qml` | Setup guide overlay; lazy |
 | `views/ForceClosePrompt.qml` | "Force close <game>?" from the running Launch button; lazy |
-| `views/QuitPrompt.qml` | "Quit Lattis?" dialog while a game runs or Legendary is updating one (`ask(titles, jobs)`; quitting stops the job, which resumes next time), from Quit and the window's close; lazy |
+| `views/QuitPrompt.qml` | "Quit Lattis?" dialog while a game runs or Legendary is updating one (`ask(titles, jobs, uninstalls)`; Quit stops the job, which resumes next time, and the dialog reads "Stopping downloads…" until Legendary's group is gone: `stopping`), from Quit and the window's close; lazy |
 | `views/SteamLaunchPrompt.qml` | "Restart Steam and launch?" dialog; lazy |
 | `views/WaitingUndoPrompt.qml` | "Undo the changes waiting for Steam / Heroic?" dialog; lazy |
 | `views/SteamUninstallPrompt.qml` | "Uninstall \<game\>?" for Steam games; lazy |

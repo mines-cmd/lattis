@@ -150,6 +150,8 @@ private slots:
     void installerNoFlatpak();
 
     void replacingKeepsTheOldUntilTheNewIsIn();
+    void twoUpdatesKeepBothOldBuilds();
+    void aTrashThatRefusesIsTold();
     void installerChecksUpdates();
     void installerChecksByFileForARollingTag();
     void installerAskedCheckSaysWhenDone();
@@ -1339,6 +1341,57 @@ void InstallTest::installerNoFlatpak()
     QCOMPARE(failed.value("state").toString(), QStringLiteral("failed"));
     QVERIFY2(failed.value("error").toString().contains(QStringLiteral("isn't installed")),
              qPrintable(failed.value("error").toString()));
+}
+
+// The trash refused the first update's old build, so it sits in its aside folder: the next update must not remove it.
+void InstallTest::twoUpdatesKeepBothOldBuilds()
+{
+    QTemporaryDir home;
+    const QString folder = home.filePath("Applications");
+    QVERIFY(write(folder + "/Emu.AppImage", "build one"));
+    QNetworkAccessManager network;
+    QStringList asides;
+    for (const char *next : {"build two", "build three"}) {
+        FakeHttpServer server;
+        server.on("/d/Emu.AppImage", {200, next});
+        AppImageDownload download(&network, assetFor(server, "/d/Emu.AppImage", next), {}, folder);
+        download.setRelaxed(true);
+        download.setReplace(true);
+        const auto result = runDownload(download);
+        QVERIFY2(result.ok, qPrintable(result.error));
+        QVERIFY(!asides.contains(result.replaced));
+        asides.append(result.replaced);
+    }
+    QCOMPARE(asides.at(0), folder + "/.Emu.AppImage.replaced/Emu.AppImage");
+    QCOMPARE(asides.at(1), folder + "/.Emu.AppImage.replaced/Emu.AppImage.2");
+    QFile first(asides.at(0));
+    QVERIFY(first.open(QIODevice::ReadOnly));
+    QCOMPARE(first.readAll(), QByteArray("build one"));
+    QFile second(asides.at(1));
+    QVERIFY(second.open(QIODevice::ReadOnly));
+    QCOMPARE(second.readAll(), QByteArray("build two"));
+    QCOMPARE(AppImageInstall::asidePath(folder, "Emu.AppImage"), folder + "/.Emu.AppImage.replaced/Emu.AppImage.3");
+}
+
+void InstallTest::aTrashThatRefusesIsTold()
+{
+    QTemporaryDir home;
+    const QString folder = home.filePath("Applications");
+    const QString aside = folder + "/.Emu.AppImage.replaced/Emu.AppImage";
+    QVERIFY(write(aside, "old"));
+    const auto refuses = [](const QString &, QString *error) {
+        *error = QStringLiteral("no trash on this drive");
+        return false;
+    };
+    const QString problem = AppImageInstall::trashOld(aside, true, refuses);
+    QVERIFY2(problem.contains("no trash on this drive") && problem.contains(folder + "/.Emu.AppImage.replaced"),
+             qPrintable(problem));
+    QVERIFY(QFileInfo::exists(aside));
+    QVERIFY(!AppImageInstall::trashOld(aside, true, {}).isEmpty());
+
+    const auto accepts = [](const QString &path, QString *) { return QFile::remove(path); };
+    QCOMPARE(AppImageInstall::trashOld(aside, true, accepts), QString());
+    QVERIFY(!QFileInfo::exists(folder + "/.Emu.AppImage.replaced"));
 }
 
 void InstallTest::replacingKeepsTheOldUntilTheNewIsIn()

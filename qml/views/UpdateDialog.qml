@@ -57,6 +57,14 @@ UpdateRowsDialog {
     }
 
     Label {
+        visible: root.ready && AppUpdate.notice !== ""
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        color: Theme.gameEditor.warningColor
+        text: AppUpdate.notice
+    }
+
+    Label {
         visible: root.ready && AppUpdate.runningGame !== ""
         Layout.fillWidth: true
         wrapMode: Text.WordWrap

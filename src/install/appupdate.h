@@ -50,6 +50,8 @@ class AppUpdate : public QObject
     Q_PROPERTY(QString notes READ notes NOTIFY changed)
     Q_PROPERTY(double progress READ progress NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    // Said with the ready card: the old build the trash refused, and where it is.
+    Q_PROPERTY(QString notice READ notice NOTIFY changed)
     // The running file can be replaced; false: open releasePage instead.
     Q_PROPERTY(bool canReplace READ canReplace NOTIFY changed)
     Q_PROPERTY(QString replaceBlocker READ replaceBlocker NOTIFY changed)
@@ -97,6 +99,7 @@ public:
     QString notes() const { return m_release.notes; }
     double progress() const { return m_progress; }
     QString error() const { return m_error; }
+    QString notice() const { return m_notice; }
     bool canReplace() const { return m_available && m_blocker.isEmpty(); }
     QString replaceBlocker() const { return m_blocker; }
     QUrl releasePage() const;
@@ -163,6 +166,7 @@ private:
     State m_state = State::Idle;
     double m_progress = -1;
     QString m_error;
+    QString m_notice;
     quint64 m_serial = 0;
     Release m_release;
     ReleaseAsset m_asset;

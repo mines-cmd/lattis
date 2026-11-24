@@ -3,6 +3,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QRegularExpression>
 #include <QSignalSpy>
@@ -75,6 +76,16 @@ Slow)
     done
     echo "[cli] INFO: Finished installation process in 2 seconds." >&2
     exit 0 ;;
+Worker)
+    # Stops on SIGINT, but leaves a download worker that ignores it behind, as Legendary's workers can.
+    trap 'exit 0' INT
+    sh -c 'trap "" INT; echo $$ > "$0"; while :; do sleep 1; done' "$(dirname "$0")/worker.pid" &
+    wait ;;
+Stubborn)
+    # Ignores SIGINT itself.
+    trap '' INT
+    sh -c 'trap "" INT; echo $$ > "$0"; while :; do sleep 1; done' "$(dirname "$0")/worker.pid" &
+    while :; do sleep 1; done ;;
 esac
 if [ "$1" = list-installed ]; then
     echo "Logging in to check for updates..." >&2
@@ -108,6 +119,10 @@ private slots:
     void aSecondJobWaits();
     void cancelSendsSigint();
     void cancelAQueuedJob();
+    void aWorkerThatIgnoresSigintIsGoneAfterTheCancel();
+    void aMainProcessThatIgnoresSigintIsKilledWithItsWorker();
+    void stopAllDoesNotBlockAndEndsTheGroup();
+    void destroyingTheJobsKillsTheGroup();
     void failureKeepsTheJobAndTheLine();
     void infoAnswersWithItsStdout();
     void infoFailureGivesTheLine();
@@ -350,6 +365,95 @@ void LegendaryJobsTest::cancelSendsSigint()
     QVERIFY(jobs->jobs().isEmpty());
 }
 
+namespace {
+// The pid the fake's worker wrote once it runs; 0 until then.
+qint64 workerPid(const QString &dir)
+{
+    QFile f(dir + u"/worker.pid"_s);
+    if (!f.open(QIODevice::ReadOnly))
+        return 0;
+    return f.readAll().trimmed().toLongLong();
+}
+
+// Gone, or only a zombie nobody has reaped yet.
+bool processGone(qint64 pid)
+{
+    QFile f(u"/proc/%1/stat"_s.arg(pid));
+    if (!f.open(QIODevice::ReadOnly))
+        return true;
+    return f.readAll().contains(") Z");
+}
+}
+
+void LegendaryJobsTest::aWorkerThatIgnoresSigintIsGoneAfterTheCancel()
+{
+    LegendaryJobs *jobs = make();
+    jobs->setCancelGraceMs(500);
+    QSignalSpy finished(jobs, &LegendaryJobs::finished);
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Worker"_s), QString());
+    QVERIFY(waitFor([&] { return workerPid(m_dir.path()) > 0; }));
+    const qint64 worker = workerPid(m_dir.path());
+    QVERIFY(!processGone(worker));
+    jobs->cancel(u"Worker"_s);
+    QVERIFY(waitFor([&] { return finished.count() == 1; }));
+    // The job is over only when its workers are, so a new install finds no second writer.
+    QVERIFY(processGone(worker));
+    QVERIFY(finished.first().first().value<LegendaryJobs::Result>().cancelled);
+    QVERIFY(jobs->jobs().isEmpty());
+}
+
+void LegendaryJobsTest::aMainProcessThatIgnoresSigintIsKilledWithItsWorker()
+{
+    LegendaryJobs *jobs = make();
+    jobs->setCancelGraceMs(300);
+    QSignalSpy finished(jobs, &LegendaryJobs::finished);
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Stubborn"_s), QString());
+    QVERIFY(waitFor([&] { return workerPid(m_dir.path()) > 0; }));
+    const qint64 worker = workerPid(m_dir.path());
+    jobs->cancel(u"Stubborn"_s);
+    QVERIFY(waitFor([&] { return finished.count() == 1; }));
+    QVERIFY(processGone(worker));
+    QVERIFY(finished.first().first().value<LegendaryJobs::Result>().cancelled);
+    // The next job of the game can start.
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Stubborn"_s), QString());
+}
+
+void LegendaryJobsTest::stopAllDoesNotBlockAndEndsTheGroup()
+{
+    LegendaryJobs *jobs = make();
+    jobs->setCancelGraceMs(1000);
+    QSignalSpy stopped(jobs, &LegendaryJobs::allStopped);
+    QSignalSpy finished(jobs, &LegendaryJobs::finished);
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Worker"_s), QString());
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Other"_s), QString());
+    QVERIFY(waitFor([&] { return workerPid(m_dir.path()) > 0; }));
+    const qint64 worker = workerPid(m_dir.path());
+    QElapsedTimer timer;
+    timer.start();
+    QVERIFY(jobs->stopAll());
+    QVERIFY(timer.elapsed() < 200);
+    QCOMPARE(stopped.count(), 0);
+    // SIGINT stops the main process at once; the worker that ignores it goes with the kill at the grace's end.
+    QVERIFY(waitFor([&] { return stopped.count() == 1; }, 15000));
+    QVERIFY(processGone(worker));
+    QCOMPARE(finished.count(), 1);
+    QVERIFY(jobs->jobs().isEmpty());
+    QVERIFY(!jobs->stopAll());
+}
+
+void LegendaryJobsTest::destroyingTheJobsKillsTheGroup()
+{
+    LegendaryJobs *jobs = make();
+    QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Update, u"Stubborn"_s), QString());
+    QVERIFY(waitFor([&] { return workerPid(m_dir.path()) > 0; }));
+    const qint64 worker = workerPid(m_dir.path());
+    QElapsedTimer timer;
+    timer.start();
+    m_jobs.reset();
+    QVERIFY(timer.elapsed() < 3000);
+    QVERIFY(waitFor([&] { return processGone(worker); }, 2000));
+}
+
 void LegendaryJobsTest::cancelAQueuedJob()
 {
     LegendaryJobs *jobs = make();
@@ -455,10 +559,12 @@ void LegendaryJobsTest::uninstallAndCheckAreHidden()
     QCOMPARE(jobs->enqueue(LegendaryJobs::Kind::Uninstall, u"Gone"_s), QString());
     QVERIFY(jobs->jobs().isEmpty());
     QVERIFY(jobs->busy());
+    QCOMPARE(jobs->uninstalling(), QStringList{u"Gone"_s});
     QVERIFY(!jobs->checkUpdates());
     QVERIFY(waitFor([&] { return finished.count() == 1; }));
     QVERIFY(finished.first().first().value<LegendaryJobs::Result>().ok);
     QVERIFY(!jobs->busy());
+    QVERIFY(jobs->uninstalling().isEmpty());
 }
 
 void LegendaryJobsTest::theCheckWritesItsTime()

@@ -900,6 +900,15 @@ QString Installer::trashFile(const QString &path)
     return {};
 }
 
+void Installer::trashOld(const QString &old, bool aside)
+{
+    const QString problem = AppImageInstall::trashOld(old, aside, m_setup.trash);
+    if (problem.isEmpty())
+        return;
+    qCWarning(lcInstall).noquote() << problem;
+    emit message(problem);
+}
+
 void Installer::downloadFinished(const QString &id, const AppImageDownload::Result &result)
 {
     const auto it = m_jobs.find(id);
@@ -951,12 +960,8 @@ void Installer::downloadFinished(const QString &id, const AppImageDownload::Resu
     if (updated) {
         m_updates.remove(id);
         const QString old = result.replaced.isEmpty() ? oldFile : result.replaced;
-        if (!old.isEmpty() && old != result.path) {
-            if (const QString problem = trashFile(old); !problem.isEmpty())
-                qCWarning(lcInstall).noquote() << "couldn't trash the old" << old << problem;
-            if (!result.replaced.isEmpty())
-                QDir().rmdir(QFileInfo(result.replaced).absolutePath());
-        }
+        if (!old.isEmpty() && old != result.path)
+            trashOld(old, !result.replaced.isEmpty());
     }
     rebuild();
     if (m_setup.redetect)
@@ -1001,12 +1006,8 @@ void Installer::gameDownloadFinished(const QString &key, const AppImageDownload:
 
     // The new file is in place and recorded; only now does the old one go.
     const QString old = result.replaced.isEmpty() ? oldFile : result.replaced;
-    if (!old.isEmpty() && old != result.path) {
-        if (const QString problem = trashFile(old); !problem.isEmpty())
-            qCWarning(lcInstall).noquote() << "couldn't trash the old" << old << problem;
-        if (!result.replaced.isEmpty())
-            QDir().rmdir(QFileInfo(result.replaced).absolutePath());
-    }
+    if (!old.isEmpty() && old != result.path)
+        trashOld(old, !result.replaced.isEmpty());
     rebuild();
     if (m_setup.redetect)
         m_setup.redetect();

@@ -34,10 +34,11 @@ bool inside(const QString &path, const QString &folder)
     return path.startsWith(folder + u'/');
 }
 
-qint64 sizeOf(const QString &path, const Archive::Skip &skip = {}, const QString &relative = {})
+// A path that is itself a link is followed (a save folder moved to another drive); one inside the folder is not.
+qint64 sizeOf(const QString &path, const Archive::Skip &skip = {}, const QString &relative = {}, bool top = true)
 {
     const QFileInfo info(path);
-    if (info.isSymLink() || !info.exists())
+    if ((!top && info.isSymLink()) || !info.exists())
         return 0;
     if (!info.isDir())
         return info.size();
@@ -48,7 +49,7 @@ qint64 sizeOf(const QString &path, const Archive::Skip &skip = {}, const QString
         const QString name = relative.isEmpty() ? entry.fileName() : relative + u'/' + entry.fileName();
         if (skip && skip(name))
             continue;
-        total += sizeOf(entry.absoluteFilePath(), skip, name);
+        total += sizeOf(entry.absoluteFilePath(), skip, name, false);
     }
     return total;
 }
@@ -605,8 +606,7 @@ QByteArray manifest(const SavesPlan &plan, const QDateTime &created, const QStri
             out += QStringLiteral("\n[[saved.path]]\nn = %1\nfrom = %2\ntype = %3\n")
                        .arg(n)
                        .arg(tomlString(tilde(p.path, plan.home)),
-                            tomlString(!info.isSymLink() && info.isDir() ? QStringLiteral("folder")
-                                                                        : QStringLiteral("file")));
+                            tomlString(info.isDir() ? QStringLiteral("folder") : QStringLiteral("file")));
         }
     }
     return out.toUtf8();

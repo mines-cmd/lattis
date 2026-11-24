@@ -103,6 +103,8 @@ private slots:
     void unchangedSavesMakeNoNewBackup();
     void keepsTheLastFewAndTrashesTheRest();
     void aGameOverTheSizeCapIsSkipped();
+    void aSaveFolderThatIsALinkIsBackedUp();
+    void aLinkInsideTheSaveFolderIsNotFollowed();
     void noMatchAndNoOwnPathsWritesNothing();
     void ownPathsBackUpWithoutAMatch();
     void aProtonGameWithNoMatchFallsBackToItsPrefix();
@@ -207,6 +209,48 @@ void SavesBackupTest::aGameOverTheSizeCapIsSkipped()
     QCOMPARE(result.status, Status::TooBig);
     QCOMPARE(result.bytes, 2048);
     QVERIFY(!QFileInfo::exists(m_folder));
+}
+
+void SavesBackupTest::aSaveFolderThatIsALinkIsBackedUp()
+{
+    // The save folder was moved to another drive and a link left in its place.
+    write(m_home + "/moved/Saves/0.celeste", QByteArray(2048, 'x'));
+    QDir().mkpath(m_home + "/.local/share/Celeste");
+    QVERIFY(QFile::link(m_home + "/moved/Saves", m_home + "/.local/share/Celeste/Saves"));
+
+    Input capped = input();
+    capped.options.maxBytes = 1024;
+    const Result tooBig = run(capped);
+    QCOMPARE(tooBig.status, Status::TooBig);
+    QCOMPARE(tooBig.bytes, 2048);
+
+    const Result result = run(input());
+    QCOMPARE(result.status, Status::Written);
+    QCOMPARE(result.bytes, 2048);
+    QProcess tar;
+    tar.start("tar", {"--zstd", "-tf", result.archive});
+    if (!tar.waitForFinished() || tar.exitCode() != 0)
+        QSKIP("tar can't list a zstd archive here");
+    const QString listing = QString::fromUtf8(tar.readAllStandardOutput());
+    QVERIFY2(listing.contains("files/0/0.celeste"), qPrintable(listing));
+    tar.start("tar", {"--zstd", "-xOf", result.archive, "manifest.toml"});
+    QVERIFY(tar.waitForFinished());
+    QVERIFY(tar.readAllStandardOutput().contains("type = \"folder\""));
+}
+
+void SavesBackupTest::aLinkInsideTheSaveFolderIsNotFollowed()
+{
+    saveSlot();
+    write(m_dir.filePath("secret/big.dat"), QByteArray(4096, 'x'));
+    QVERIFY(QFile::link(m_dir.filePath("secret"), m_home + "/.local/share/Celeste/Saves/inside"));
+    const Result result = run(input());
+    QCOMPARE(result.status, Status::Written);
+    QCOMPARE(result.bytes, 4); // "slot": the link counts for nothing and its target isn't entered
+    QProcess tar;
+    tar.start("tar", {"--zstd", "-tf", result.archive});
+    if (!tar.waitForFinished() || tar.exitCode() != 0)
+        QSKIP("tar can't list a zstd archive here");
+    QVERIFY(!QString::fromUtf8(tar.readAllStandardOutput()).contains("big.dat"));
 }
 
 void SavesBackupTest::noMatchAndNoOwnPathsWritesNothing()

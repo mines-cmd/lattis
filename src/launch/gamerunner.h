@@ -73,6 +73,8 @@ public:
     Q_INVOKABLE QString update(const QString &gameId);
     // The titles of the Epic games whose Legendary job runs or waits, for the quit question.
     Q_INVOKABLE QStringList epicJobTitles() const;
+    // The Epic games being uninstalled: quitting would leave their files half deleted.
+    Q_INVOKABLE QStringList epicUninstallTitles() const;
     Q_INVOKABLE QString openSteamProperties(const QString &gameId);
     Q_INVOKABLE QString forceClose(const QString &gameId);
     Q_INVOKABLE QVariantMap uninstallProton(const QString &gameId, bool files, bool prefix, bool shortcut,

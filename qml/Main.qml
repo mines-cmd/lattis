@@ -44,16 +44,18 @@ ApplicationWindow {
     function requestQuit() {
         const titles = runningGameTitles()
         const jobs = GameRunner.epicJobTitles()
-        if (titles.length === 0 && jobs.length === 0) {
+        const uninstalls = GameRunner.epicUninstallTitles()
+        if (titles.length === 0 && jobs.length === 0 && uninstalls.length === 0) {
             Qt.quit()
             return
         }
         quitPrompt.active = true
-        quitPrompt.item.ask(titles, jobs)
+        quitPrompt.item.ask(titles, jobs, uninstalls)
     }
 
     onClosing: close => {
-        if (quitConfirmed || (runningGameTitles().length === 0 && GameRunner.epicJobTitles().length === 0))
+        if (quitConfirmed || (runningGameTitles().length === 0 && GameRunner.epicJobTitles().length === 0
+                            && GameRunner.epicUninstallTitles().length === 0))
             return
         close.accepted = false
         requestQuit()
@@ -608,6 +610,7 @@ ApplicationWindow {
     Connections {
         target: Installer
         function onEmulatorUpdated(name, version, notes) { window.emulatorUpdated(name, version, notes) }
+        function onMessage(text) { toast.show(text) }
         function onReviewRequested(gameId) { window.openUpdates(gameId) }
         function onUpdatesChecked(checked, failed) {
             if (!window.emulatorCheckAsked)
@@ -1211,7 +1214,18 @@ ApplicationWindow {
         function onClosed() { browser.focusList() }
         function onQuitConfirmed() {
             window.quitConfirmed = true
+            if (GameRunner.legendary.stopAll()) {
+                quitPrompt.item.stopping = true
+                return
+            }
             Qt.quit()
+        }
+    }
+    Connections {
+        target: GameRunner.legendary
+        function onAllStopped() {
+            if (window.quitConfirmed)
+                Qt.quit()
         }
     }
 
