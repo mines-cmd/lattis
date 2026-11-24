@@ -51,7 +51,7 @@ Link changes wait for **Save** like the rest: a copy to be linked says **New**, 
 
 Adding a game (the + button) has no tabs: the General and Launch pages show together, as one short form.
 
-**Save** (or Enter in a one-line field) writes what you changed. **Cancel** or Escape throws everything away, art included.
+**Save** (or Enter in a one-line field) writes what you changed. **Cancel**, Escape or the ✕ throws everything away, art included. When something isn't saved (a tab shows its dot, or, in Add a game, any field differs from the empty form), they ask **Discard your changes?** first: **Keep editing** returns to the dialog, **Discard and close** drops it. With nothing changed they close at once.
 
 **Launch arguments** for a ROM game go after the emulator's own arguments, shown under the field. Quote an argument that has spaces: `--mod "Farewell Map"`.
 

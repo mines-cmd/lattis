@@ -535,6 +535,7 @@ private:
     static QString gameFileOf(const QString &id);
     QString editGames(const QStringList &ids, const QString &text, const std::function<QString(const QString &)> &change);
     quint64 commitUndo(const QString &text);
+    void rollBackEdit();
     QHash<QString, QString> planCopyChanges(const QString &gameId, const QVariantList &changes, QString &error) const;
     QString writeCopyPlan(const QHash<QString, QString> &plan, const QString &text, bool joinPendingUndo = false);
     QString otherGroupTitle(const Game &g, const Game &other) const;

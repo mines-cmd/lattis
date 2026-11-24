@@ -56,7 +56,7 @@ You can also use your own images: click a kind of art's preview to choose any im
 
 1. **Pick the games.** The sidebar on the left chooses which games are listed, and the list on the right has a box to search titles. Check the games to look up (the box at the top of the list checks or unchecks them all), and click **Look up N**.
 2. **Review.** Results come in one game at a time; **Stop** keeps what's come in so far. Click a result's row, or the arrow beside its badge, to fold its details away; **Collapse all** and **Expand all** do it for every result. Apply N counts folded results too.
-3. **Apply.** Nothing is written until **Apply N**. Only empty fields and missing art are filled, so anything you edited meanwhile wins. **Back to the list** returns to the games you picked.
+3. **Apply.** Nothing is written until **Apply N**. Closing the window while Apply is still saving art asks **Stop saving art?** ("The art of N games isn't saved yet"): **Keep working** leaves the window open, **Stop** closes it and the art that hasn't come yet isn't saved. Only empty fields and missing art are filled, so anything you edited meanwhile wins. **Back to the list** returns to the games you picked.
 
 ### Picking the games
 

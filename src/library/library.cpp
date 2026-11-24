@@ -5967,32 +5967,35 @@ QString Library::saveGame(const QString &id, const QVariantMap &values)
     const bool newProgram = exe != pairs.cend() && !exe->second.toString().isEmpty()
         && m_store.snapshot().content.games.value(id).platform == kLinuxPlatform;
 
-    // A new ROM may merge another game into this one and a new program is made executable,
-    // and neither can be put back from the game file alone.
-    if (newRom || newProgram) {
-        m_undo.discard();
-    } else if (!m_undo.pending() || m_undo.subject() != id) {
+    // The editor's Save has taken its Undo already (art and links are in it). A new ROM may merge
+    // another game into this one and a new program is made executable, and neither can be put
+    // back from the game file alone: that Undo is dropped once the change can't be taken back,
+    // not before, so a refused Save leaves the art and the links as they were.
+    if (!m_undo.pending() || m_undo.subject() != id) {
         m_undo.start(id);
         m_undo.keepCopy(gameFileOf(id));
     }
     const QString title = game(id) ? game(id)->title : id;
     const auto fail = [this](const QString &error) {
-        m_undo.discard();
+        rollBackEdit();
         return error;
     };
 
     // A picked ROM (a file: URL or path) goes first: it may merge another game into this one.
-    if (newRom) {
-        if (const QString error = m_store.relocateRom(id, localPath(rom->second.toString())); !error.isEmpty())
-            return fail(error);
-        pairs.erase(rom);
-    }
     if (newProgram) {
         if (const QString problem = linuxProgramProblem(localPath(exe->second.toString())); !problem.isEmpty())
             return fail(problem);
     }
+    if (newRom) {
+        if (const QString error = m_store.relocateRom(id, localPath(rom->second.toString())); !error.isEmpty())
+            return fail(error);
+        pairs.erase(rom);
+        m_undo.discard();
+    }
     if (const QString error = m_store.setGameValues(id, pairs); !error.isEmpty())
         return fail(error);
+    if (newProgram)
+        m_undo.discard();
     if (std::any_of(pairs.cbegin(), pairs.cend(), [](const auto &p) { return p.first == QLatin1String("media_folders"); }))
         emit mediaFoldersChanged(id);
     if (newRom || newProgram)
@@ -6000,6 +6003,14 @@ QString Library::saveGame(const QString &id, const QVariantMap &values)
     else
         commitUndo(tr("Changes to %1 saved").arg(title));
     return {};
+}
+
+// A refused Save puts back what its Undo kept, the art and the links the editor had already
+// written included. Nothing kept differs: nothing to put back.
+void Library::rollBackEdit()
+{
+    if (const quint64 token = m_undo.commit(); token != 0)
+        undo(token);
 }
 
 QString Library::gameFileOf(const QString &id)

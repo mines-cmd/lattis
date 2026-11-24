@@ -110,6 +110,11 @@ ApplicationWindow {
     }
 
     onClosing: close => {
+        if (!closeAnyway && lookupModel.applying && lookupModel.gamesWithArtLeft() > 0) {
+            close.accepted = false
+            confirmStop.open()
+            return
+        }
         if (!closeAnyway && lookupModel.resultModel.count > 0 && !lookupModel.applying) {
             close.accepted = false
             confirmDiscard.open()
@@ -908,6 +913,38 @@ ApplicationWindow {
                 text: qsTr("Discard")
                 onClicked: {
                     confirmDiscard.close()
+                    root.closeAnyway = true
+                    root.close()
+                }
+            }
+        ]
+    }
+
+    AppDialog {
+        id: confirmStop
+
+        // Read when it opens: the run goes on behind it, so the count would drop while it is up.
+        property int left: 0
+        onAboutToShow: left = lookupModel.gamesWithArtLeft()
+        carded: false
+        title: qsTr("Stop saving art?")
+        onOpened: keepWorking.forceActiveFocus()
+
+        Label {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Theme.gameEditor.labelColor
+            text: confirmStop.left === 1 ? qsTr("The art of 1 game isn't saved yet. Stop?")
+                                          : qsTr("The art of %1 games isn't saved yet. Stop?").arg(confirmStop.left)
+        }
+
+        footer: [
+            SettingsButton { id: keepWorking; text: qsTr("Keep working"); onClicked: confirmStop.close() },
+            SettingsButton {
+                danger: true
+                text: qsTr("Stop")
+                onClicked: {
+                    confirmStop.close()
                     root.closeAnyway = true
                     root.close()
                 }

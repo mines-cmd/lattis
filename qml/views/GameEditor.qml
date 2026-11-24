@@ -361,10 +361,11 @@ Item {
         update_source: 2, update_asset: 2, update_prereleases: 2,
         save_folder: 3, save_paths: 3, auto_backup: 3, no_saves: 3
     })
-    // Which tabs hold unsaved changes. Empty while closed, so nothing reads the controls then.
+    // Which tabs hold unsaved changes (for Add a game: any field that differs from the empty
+    // form). Empty while closed, so nothing reads the controls then.
     readonly property var dirtyTabs: {
         const dirty = [false, false, false, false, false]
-        if (!dialog.opened || adding || game.id === undefined)
+        if (!dialog.opened || (!adding && game.id === undefined))
             return dirty
         for (const key of Object.keys(changes()))
             dirty[changeTabs[key] ?? 0] = true
@@ -409,6 +410,14 @@ Item {
             confirmSwitch.ask(id)
         else
             openFor(id, tab)
+    }
+
+    // Escape, Cancel and the ✕ come here: edits that aren't saved are asked about first.
+    function requestClose() {
+        if (dirtyTabs.some(d => d))
+            confirmSwitch.ask("")
+        else
+            dialog.close()
     }
 
     function openMediaFolders() {
@@ -931,15 +940,16 @@ Item {
             // Joins the Undo taken above, so one Undo puts the links back with the rest.
             const copyOps = copyChanges()
             const copyError = copyOps.length > 0 ? Library.applyCopyChanges(id, copyOps) : ""
-            if (copyOps.length > 0 && copyError === "")
-                refreshCopies()
             if (copyError !== "")
                 errors.push(copyError)
             const e = Library.saveGame(id, values)
             if (e !== "") {
+                // Nothing was kept: saveGame put the art and the links back, and the editor still holds them.
                 error.text = errors.concat([e]).join("\n")
                 return
             }
+            if (copyOps.length > 0 && copyError === "")
+                refreshCopies()
             errors.push(...saveManagerLinks())
             if (heroicEdited) {
                 const heroicError = Library.saveHeroicSettings(id, heroicDraft)
@@ -1013,7 +1023,9 @@ Item {
         title: root.adding ? qsTr("Add a game") : qsTr("Properties")
         width: Math.min(Theme.gameEditor.width, parent.width - 2 * Theme.layout.margin)
         height: Math.min(root.adding ? implicitHeight : Theme.gameEditor.height, parent.height * Theme.gameEditor.maxHeight)
-        closePolicy: Popup.CloseOnEscape
+        closePolicy: Popup.NoAutoClose
+        guarded: true
+        onCloseRequested: root.requestClose()
         onClosed: {
             confirmRemove.close()
             confirmSwitch.close()
@@ -1298,7 +1310,7 @@ Item {
         footer: [
             SettingsButton {
                 text: qsTr("Cancel")
-                onClicked: dialog.close()
+                onClicked: root.requestClose()
             },
             SettingsButton {
                 text: root.adding ? qsTr("Add") : qsTr("Save")
@@ -1394,7 +1406,9 @@ Item {
     AppDialog {
         id: confirmSwitch
 
+        // Empty while it asks about closing, not about opening another copy.
         property string target: ""
+        readonly property bool closing: target === ""
         function ask(id) {
             target = id
             open()
@@ -1409,7 +1423,10 @@ Item {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             color: Theme.gameEditor.labelColor
-            text: qsTr("This copy has changes you haven't saved. Opening the other copy drops them.")
+            text: confirmSwitch.closing
+                  ? (root.adding ? qsTr("This game has changes you haven't saved. Closing drops them.")
+                                 : qsTr("This copy has changes you haven't saved. Closing drops them."))
+                  : qsTr("This copy has changes you haven't saved. Opening the other copy drops them.")
         }
 
         footer: [
@@ -1419,11 +1436,14 @@ Item {
                 onClicked: confirmSwitch.close()
             },
             SettingsButton {
-                text: qsTr("Discard and open")
+                text: confirmSwitch.closing ? qsTr("Discard and close") : qsTr("Discard and open")
                 danger: true
                 onClicked: {
                     confirmSwitch.close()
-                    root.openFor(confirmSwitch.target, root.tab)
+                    if (confirmSwitch.closing)
+                        dialog.close()
+                    else
+                        root.openFor(confirmSwitch.target, root.tab)
                 }
             }
         ]

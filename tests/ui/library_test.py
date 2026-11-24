@@ -96,13 +96,14 @@ SCENARIOS = [
                + "expect Diablo IV Remastered\n", None),
               (search("Diablo") + "expect Diablo IV Remastered\nclick Diablo IV Remastered\nkey Alt+Return\n"
                + "expect Properties\nclick Launch\nexpect mangohud %command% --fullscreen\n", None)], demo),
-    Scenario("a tab with unsaved changes shows a dot, and Cancel clears it",
+    Scenario("a tab with unsaved changes shows a dot, and Cancel (after the question) clears it",
              [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\n"
                + "expect-not Unsaved changes in General\nexpect-not Unsaved changes in Launch\n"
                + "click Diablo IV\ntype X\nexpect Unsaved changes in General\nexpect-not Unsaved changes in Launch\n"
                + "click Launch\nclick mangohud %command%\nkey Ctrl+A\ntype mangohud\n"
                + "expect Unsaved changes in General\nexpect Unsaved changes in Launch\n"
-               + "expect-not Unsaved changes in Images\nclick Cancel\nexpect-not Properties\n"
+               + "expect-not Unsaved changes in Images\nclick Cancel\nwait 300\nexpect Discard your changes?\n"
+               + "click Discard and close\nwait 400\nexpect-not Properties\n"
                + "key Alt+Return\nexpect Properties\nexpect-not Unsaved changes in General\n"
                + "expect-not Unsaved changes in Launch\n", None)], demo),
     Scenario("Save clears the dots, and Ctrl+Tab and Ctrl+Shift+Tab go through the tabs",
@@ -120,7 +121,8 @@ SCENARIOS = [
              [(FIRST + search("Diablo") + "click Show not installed\nwait 400\nclick Diablo IV\nkey Alt+Return\nexpect Properties\nclick Launch\n"
                + "expect Proton version\nclick General\nclick Diablo IV\nkey Ctrl+A\nkey Delete\nclick Launch\n"
                + "expect Proton version\nclick Save\nexpect A game needs a title\nexpect Look up in IGDB\nexpect-not Proton version\n"
-               + "key Escape\nexpect-not Properties\nkey Alt+Return\nexpect Properties\nexpect Look up in IGDB\n"
+               + "key Escape\nwait 300\nexpect Discard your changes?\nclick Discard and close\nwait 400\nexpect-not Properties\n"
+               + "key Alt+Return\nexpect Properties\nexpect Look up in IGDB\n"
                + "expect-not Proton version\n", None)], demo),
     Scenario("the Saves tab shows the save locations for an emulator game, and the Launch tab no longer does",
              [(FIRST + "click Mario Kart 8 Deluxe\nkey Alt+Return\nexpect Properties\nclick Launch\n"

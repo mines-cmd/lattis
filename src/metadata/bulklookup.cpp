@@ -1253,6 +1253,20 @@ void BulkLookup::apply()
     pumpDownloads();
 }
 
+int BulkLookup::gamesWithArtLeft() const
+{
+    if (!m_applying)
+        return 0;
+    QSet<QString> ids;
+    for (const std::array<QString, 3> &d : m_toDownload)
+        ids.insert(d[0]);
+    for (const Request &r : m_requests) {
+        if (r.step == Step::Download)
+            ids.insert(r.id);
+    }
+    return int(ids.size());
+}
+
 void BulkLookup::pumpDownloads()
 {
     while (m_applying && m_downloading < kDownloads && !m_toDownload.isEmpty()) {

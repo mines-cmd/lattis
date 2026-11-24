@@ -79,7 +79,7 @@ The year in an IGDB result is the earliest full release on one of the search's p
 
 ## Bulk lookup
 
-`BulkLookup` runs "Look up missing info": a dialog that looks up a filtered set of games, reviews what was found and writes what the user approves. One `BulkLookup` is created per dialog instance.
+`BulkLookup` runs "Look up missing info": a dialog that looks up a filtered set of games, reviews what was found and writes what the user approves. One `BulkLookup` is created per dialog instance. While it applies, `gamesWithArtLeft()` is how many games still wait for their art (queued or downloading); the window asks "Stop saving art?" with it before closing, since `clearResults()` stops the downloads.
 
 **Choosing** which games to list respects three filters: which fields are missing (`missing`), whether to offer replacements for games that already have values (`replaceExisting`), and whether to include games that are missing nothing (`includeComplete`). Checked games are the ones to look up. A game is checked when first shown if it's missing something unmarked and not already marked as not on IGDB; games revealed later by changing a filter start unchecked.
 

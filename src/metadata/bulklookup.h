@@ -109,6 +109,8 @@ public:
     int applyCount() const;
     bool applying() const { return m_applying; }
 
+    // While applying: the games whose art is still to be downloaded (closing now stops it).
+    Q_INVOKABLE int gamesWithArtLeft() const;
     Q_INVOKABLE void reload();
     Q_INVOKABLE void setChecked(const QString &id, bool checked);
     Q_INVOKABLE void setAllChecked(bool checked);

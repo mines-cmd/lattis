@@ -39,7 +39,8 @@ SCENARIOS = [
                "click Cancel\nwait 300\n", None)],
              with_linked),
     Scenario("Cancel drops a pending change",
-             [(select("Hades") + COPIES + "click-first Make main or unlink\nwait 300\nclick Unlink all\nwait 300\nclick Cancel\nwait 400\n", None),
+             [(select("Hades") + COPIES + "click-first Make main or unlink\nwait 300\nclick Unlink all\nwait 300\nclick Cancel\nwait 400\n"
+               "expect Discard your changes?\nclick Discard and close\nwait 400\n", None),
               (select("Hades") + COPIES + "expect-has Together\nclick Cancel\nwait 300\n", None)],
              with_linked),
     Scenario("Choose games links a copy with another title, and Open asks before dropping it",

@@ -63,7 +63,7 @@ Rectangle {
                         switch (button.modelData) {
                         case "minimize": root.window.showMinimized(); break
                         case "maximize": root.maximized ? root.window.showNormal() : root.window.showMaximized(); break
-                        case "close": root.dialog !== null ? root.dialog.close() : root.window.close(); break
+                        case "close": root.dialog !== null ? root.dialog.requestClose() : root.window.close(); break
                         }
                     }
                 }

@@ -114,6 +114,7 @@ private slots:
     void bulkArtFromSteam();
     void bulkSteamLogoStatus();
     void bulkApply();
+    void bulkApplyClosedWhileSavingArt();
     void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
     void bulkReplaceArt();
@@ -2130,6 +2131,33 @@ void MetadataTest::bulkApply()
     QCOMPARE(applied.first().first().toInt(), 3);
     QCOMPARE(bulk.results().size(), 1);
     QCOMPARE(resultFor(bulk, "switch-metroid-dread").value("applyError").toString(), QStringLiteral("Not saved: read-only"));
+}
+
+// S15.5: art downloads that answer slowly leave a window to close in. Closing then drops the
+// rest of the art, so the window asks first, and the model says how many games that is.
+void MetadataTest::bulkApplyClosedWhileSavingArt()
+{
+    BulkSetup s;
+    BulkLookup &bulk = s.bulk;
+    bulk.start();
+    QTRY_VERIFY(!bulk.running());
+    QCOMPARE(bulk.gamesWithArtLeft(), 0);
+
+    s.client.http()->setFixtureDelay(400);
+    QSignalSpy applied(&bulk, &BulkLookup::applied);
+    bulk.apply();
+    QVERIFY(bulk.applying());
+    const int left = bulk.gamesWithArtLeft();
+    QVERIFY(left > 0);
+    QVERIFY(s.art.isEmpty());
+
+    // What closing the window does: the art that was still coming is never saved, and the rows
+    // that said so are emptied before anyone reads them.
+    bulk.clearResults();
+    QVERIFY(!bulk.applying());
+    QCOMPARE(bulk.gamesWithArtLeft(), 0);
+    QVERIFY(s.art.isEmpty());
+    QVERIFY(bulk.results().isEmpty());
 }
 
 void MetadataTest::bulkArtForGameNotOnIgdb()

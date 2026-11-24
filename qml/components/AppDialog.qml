@@ -23,6 +23,17 @@ MotionPopup {
     // False while the dialog does something its Escape would not interrupt: the ✕ goes too.
     property bool closable: true
     property bool footerVisible: true
+    // A dialog that must be asked about before it closes (unsaved edits) sets guarded and answers
+    // closeRequested; its ✕ and Escape then ask instead of closing. Its caller sets closePolicy
+    // to NoAutoClose, or Popup would close on Escape itself.
+    property bool guarded: false
+    signal closeRequested()
+    function requestClose() {
+        if (guarded)
+            closeRequested()
+        else
+            close()
+    }
 
     parent: Overlay.overlay
     // Not anchors.centerIn: a dialog whose content changes height after it opens (lists that
@@ -49,6 +60,12 @@ MotionPopup {
 
     contentItem: ColumnLayout {
         spacing: Theme.gameEditor.rowSpacing
+        Keys.onEscapePressed: event => {
+            if (root.guarded)
+                root.closeRequested()
+            else
+                event.accepted = false
+        }
 
         RowLayout {
             visible: root.title !== "" || root.windowLike || root.header !== null

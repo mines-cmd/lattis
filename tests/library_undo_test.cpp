@@ -46,6 +46,8 @@ private slots:
     void discardPutsArtBackAcrossFileSystems();
     void restoreWithUnreadableKeptCopyKeepsBoth();
     void removeGameRefusesUnknownIds();
+    void refusedSaveLeavesArtAndLinks();
+    void refusedProgramKeepsTheUndoUntilItSaves();
 };
 
 namespace {
@@ -390,6 +392,68 @@ void LibraryUndoTest::removeGameRefusesUnknownIds()
     QVERIFY(!library->removeGame(QStringLiteral("no-such-game"), true).isEmpty());
     QVERIFY(!library->removeGame(QStringLiteral("../art"), false).isEmpty());
     QCOMPARE(offered.count(), 0);
+}
+
+// S15.3: the Properties Save applies the art and the links first and asks saveGame() last; a
+// saveGame() that refuses must not leave them done with no Undo.
+void LibraryUndoTest::refusedSaveLeavesArtAndLinks()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("linux-supertuxkart");
+    const QString other = QStringLiteral("switch-metroid-dread");
+    const QString art = m_data + QStringLiteral("/art/") + id;
+    QImage image(8, 8, QImage::Format_RGB32);
+    image.fill(Qt::green);
+    const QString png = m_dir->filePath(QStringLiteral("a.png"));
+    QVERIFY(image.save(png));
+    QCOMPARE(library->setArt(id, "cover", png), QString());
+    const QString notAProgram = m_dir->filePath(QStringLiteral("notes.txt"));
+    writeFile(notAProgram, "just text\n");
+
+    const QByteArray gameBefore = readFile(gamePath(id));
+    const QByteArray otherBefore = readFile(gamePath(other));
+    const auto artBefore = snapshotOf(art);
+    QVERIFY(!artBefore.isEmpty());
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+
+    library->beginEditUndo(id);
+    QCOMPARE(library->removeArt(id, "cover"), QString());
+    QCOMPARE(library->applyCopyChanges(id, {QVariantMap{{"op", "link"}, {"id", other}}}), QString());
+    QVERIFY(snapshotOf(art) != artBefore);
+    const QString error = library->saveGame(id, {{"exe", QUrl::fromLocalFile(notAProgram).toString()}});
+    QVERIFY(!error.isEmpty());
+
+    QCOMPARE(snapshotOf(art), artBefore);
+    QCOMPARE(readFile(gamePath(id)), gameBefore);
+    QCOMPARE(readFile(gamePath(other)), otherBefore);
+    QVERIFY(!library->undoLog().pending());
+    QCOMPARE(offered.count(), 0);
+
+    // The same Save with a program that is one goes through, art and links with it, and one Undo.
+    library->beginEditUndo(id);
+    QCOMPARE(library->removeArt(id, "cover"), QString());
+    QCOMPARE(library->saveGame(id, {{"description", "Changed"}}), QString());
+    QCOMPARE(offered.count(), 1);
+    QCOMPARE(library->undo(lastToken(offered)), QString());
+    QCOMPARE(snapshotOf(art), artBefore);
+}
+
+// A new program can't be undone, but a Save that never gets that far still can be rolled back.
+void LibraryUndoTest::refusedProgramKeepsTheUndoUntilItSaves()
+{
+    auto library = openLibrary();
+    const QString id = QStringLiteral("linux-supertuxkart");
+    const QString program = m_dir->filePath(QStringLiteral("run.sh"));
+    writeFile(program, "#!/bin/sh\nexit 0\n");
+    QVERIFY(QFile::setPermissions(program, QFile::permissions(program) | QFileDevice::ExeOwner));
+    QSignalSpy offered(library.get(), &Library::undoOffered);
+
+    library->beginEditUndo(id);
+    QCOMPARE(library->saveGame(id, {{"exe", QUrl::fromLocalFile(program).toString()}}), QString());
+    QCOMPARE(offered.count(), 1);
+    QCOMPARE(lastToken(offered), quint64(0));
+    QVERIFY(offered.last().at(1).toString().contains("program"));
+    QVERIFY(!library->undoLog().pending());
 }
 
 QTEST_GUILESS_MAIN(LibraryUndoTest)
