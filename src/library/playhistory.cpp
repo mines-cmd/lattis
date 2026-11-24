@@ -259,6 +259,44 @@ QString remove(const QString &dataDir, const QString &id, const QDateTime &end, 
         if (src[i] == '\n')
             lineStarts.push_back(i + 1);
     }
+    const auto lineText = [&](size_t number) {
+        const size_t begin = lineStarts.at(number - 1);
+        const size_t stop = number < lineStarts.size() ? lineStarts.at(number) : src.size();
+        return QByteArray(src.data() + begin, qsizetype(stop - begin)).trimmed();
+    };
+
+    // Entries that aren't [[session]] blocks (an inline array) share lines, so a cut by lines would take the others.
+    bool allBlocks = sessions != nullptr;
+    if (sessions) {
+        for (const toml::node &entry : *sessions)
+            allBlocks = allBlocks && entry.source().begin.line <= lineStarts.size()
+                && lineText(entry.source().begin.line).startsWith("[[");
+    }
+    if (!allBlocks) {
+        Parsed<File> parsed = parse(bytes, QFileInfo(file).fileName());
+        // The rewrite keeps only what was read, so anything it skipped would be lost.
+        if (!parsed.warnings.isEmpty())
+            return QStringLiteral("%1 has entries Lattis can't keep when it rewrites it, so the session wasn't "
+                                  "deleted: %2")
+                .arg(QFileInfo(file).fileName(), parsed.warnings.value(0));
+        const auto it = std::find_if(parsed.value.sessions.begin(), parsed.value.sessions.end(), [&](const Session &s) {
+            return s.end.toSecsSinceEpoch() == end.toSecsSinceEpoch();
+        });
+        if (it != parsed.value.sessions.end())
+            parsed.value.sessions.erase(it);
+        QByteArray rewritten;
+        if (parsed.value.deletedMinutes > 0)
+            rewritten = "deleted_minutes = " + QByteArray::number(parsed.value.deletedMinutes) + "\n";
+        for (const Session &s : std::as_const(parsed.value.sessions))
+            rewritten += (rewritten.isEmpty() ? QByteArray() : QByteArray("\n")) + sessionText(s);
+        if (rewritten.isEmpty()) {
+            if (!QFile::remove(file))
+                return QStringLiteral("Could not remove %1").arg(QFileInfo(file).fileName());
+            return {};
+        }
+        return writeText(file, rewritten);
+    }
+
     size_t next = SIZE_MAX;
     const auto consider = [&](const toml::node &node) {
         const size_t begin = node.source().begin.line;
@@ -274,6 +312,11 @@ QString remove(const QString &dataDir, const QString &id, const QDateTime &end, 
         }
     }
     const size_t from = lineStarts.at(line - 1);
+    // A comment right above the next block belongs to it.
+    if (next != SIZE_MAX && next <= lineStarts.size()) {
+        while (next - 1 > line && lineText(next - 1).startsWith('#'))
+            --next;
+    }
     const size_t to = next == SIZE_MAX || next > lineStarts.size() ? src.size() : lineStarts.at(next - 1);
     std::string out = src;
     out.erase(from, to - from);

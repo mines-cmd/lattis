@@ -47,6 +47,6 @@ Each game's saves live in its Wine prefix, in Steam's `steamapps/compatdata/` fo
 
 Then choose what happens in Lattis: **Keep it** (as not installed), **Keep it, hidden**, or **Remove it from the library**. The button says what will happen.
 
-Deleted files go to the trash. Lattis refuses to delete folders that hold anything else: your home folder, a Steam library, another game's files, an emulator.
+Deleted files go to the trash. If one of the folders has no trash (a Steam library on another drive, say), Lattis says so before it moves any of them, and you can delete them all for good or cancel. Lattis refuses to delete folders that hold anything else: your home folder, a Steam library, another game's files, an emulator.
 
 Hiding a Windows game only hides it in Lattis; its shortcut stays in Steam.

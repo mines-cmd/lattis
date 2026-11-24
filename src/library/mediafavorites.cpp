@@ -12,24 +12,35 @@
 #include <sstream>
 
 namespace MediaFavorites {
-QSet<QString> read(const QString &path, const QString &home)
+Parsed<QSet<QString>> read(const QString &path, const QString &home)
 {
+    Parsed<QSet<QString>> out;
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
-        return {};
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (QFileInfo::exists(path))
+            out.warnings.append(
+                QStringLiteral("Could not read %1: %2").arg(QFileInfo(path).fileName(), file.errorString()));
+        else
+            out.ok = true;
+        return out;
+    }
     toml::table root;
     try {
         root = toml::parse(file.readAll().toStdString());
-    } catch (const toml::parse_error &) {
-        return {};
+    } catch (const toml::parse_error &e) {
+        out.warnings.append(QStringLiteral("%1:%2: %3")
+                                .arg(QFileInfo(path).fileName())
+                                .arg(e.source().begin.line)
+                                .arg(QString::fromUtf8(e.description().data(), qsizetype(e.description().size()))));
+        return out;
     }
-    QSet<QString> out;
+    out.ok = true;
     const toml::array *list = root["favorites"].as_array();
     if (!list)
         return out;
     for (const toml::node &entry : *list) {
         if (const auto value = entry.value<std::string>(); value && !value->empty())
-            out.insert(Emulators::expandHome(QString::fromStdString(*value), home));
+            out.value.insert(Emulators::expandHome(QString::fromStdString(*value), home));
     }
     return out;
 }

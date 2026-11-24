@@ -48,6 +48,8 @@ class PlayHistoryTest : public LibraryTestBase
 private slots:
     void appendAndReadBack();
     void malformedEntriesStay();
+    void deletingKeepsCommentsAboveTheNextBlock();
+    void deletingFromAnInlineArrayKeepsTheOthers();
     void brokenFileIsNotTouched();
     void romSessionLandsInBothFiles();
     void shortSessionIsNotRecorded();
@@ -147,6 +149,50 @@ void PlayHistoryTest::malformedEntriesStay()
     file = PlayHistory::read(m_data, id);
     QCOMPARE(file.value.sessions.size(), 1);
     QCOMPARE(file.value.sessions.at(0).minutes, 20);
+}
+
+void PlayHistoryTest::deletingKeepsCommentsAboveTheNextBlock()
+{
+    const QString id = QStringLiteral("switch-test");
+    writeFile(historyFile(id),
+              "deleted_minutes = 4\n\n[[session]]\nend = 2026-01-01T10:00:00+02:00\nminutes = 30\n\n# the long one\n"
+              "[[session]]\nend = 2026-01-02T10:00:00+02:00\nminutes = 40\n");
+    QCOMPARE(PlayHistory::remove(m_data, id, at(2026, 1, 1, 10, 0), nullptr), QString());
+    const QByteArray text = readFile(historyFile(id));
+    QVERIFY(text.contains("# the long one\n[[session]]"));
+    QVERIFY(!text.contains("minutes = 30"));
+    QCOMPARE(PlayHistory::read(m_data, id).value.sessions.size(), 1);
+}
+
+void PlayHistoryTest::deletingFromAnInlineArrayKeepsTheOthers()
+{
+    const QString id = QStringLiteral("switch-test");
+    writeFile(historyFile(id),
+              "deleted_minutes = 4\nsession = [{ end = 2026-01-01T10:00:00+02:00, minutes = 30 }, "
+              "{ end = 2026-01-02T10:00:00+02:00, minutes = 40 }, { end = 2026-01-03T10:00:00+02:00, minutes = 50, "
+              "manual = true }]\n");
+    PlayHistory::Session removed;
+    QCOMPARE(PlayHistory::remove(m_data, id, at(2026, 1, 1, 10, 0), &removed), QString());
+    QCOMPARE(removed.minutes, 30);
+    const Parsed<PlayHistory::File> file = PlayHistory::read(m_data, id);
+    QVERIFY(file.ok);
+    QVERIFY(file.warnings.isEmpty());
+    QCOMPARE(file.value.deletedMinutes, 4);
+    QCOMPARE(file.value.sessions.size(), 2);
+    QCOMPARE(file.value.sessions.at(0).minutes, 40);
+    QVERIFY(file.value.sessions.at(1).manual);
+
+    // The last two go one after another; with nothing left the file goes.
+    QCOMPARE(PlayHistory::remove(m_data, id, at(2026, 1, 2, 10, 0), nullptr), QString());
+    QCOMPARE(PlayHistory::read(m_data, id).value.sessions.size(), 1);
+    QCOMPARE(PlayHistory::remove(m_data, id, at(2026, 1, 3, 10, 0), nullptr), QString());
+    QCOMPARE(PlayHistory::read(m_data, id).value.deletedMinutes, 4);
+
+    // An entry that can't be read isn't dropped by a rewrite: the deletion is refused.
+    writeFile(historyFile(id), "session = [{ end = 2026-01-01T10:00:00+02:00, minutes = 30 }, { minutes = 5 }]\n");
+    const QByteArray before = readFile(historyFile(id));
+    QVERIFY(!PlayHistory::remove(m_data, id, at(2026, 1, 1, 10, 0), nullptr).isEmpty());
+    QCOMPARE(readFile(historyFile(id)), before);
 }
 
 void PlayHistoryTest::brokenFileIsNotTouched()

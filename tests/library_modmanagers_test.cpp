@@ -26,6 +26,7 @@ private slots:
     void settingsPage();
     void removeOptions();
     void removeDeletesWhatIsAsked();
+    void removeAsksEveryFolderFirst();
     void removeLeavesShortcut();
 
 private:
@@ -481,6 +482,47 @@ void LibraryModManagersTest::removeDeletesWhatIsAsked()
     // The folder takes the shortcut with it.
     QTRY_VERIFY_WITH_TIMEOUT(!shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
     QVERIFY(library->modManagers().isEmpty());
+}
+
+void LibraryModManagersTest::removeAsksEveryFolderFirst()
+{
+    const QString root = installFakeSteam();
+    const QString folder = m_installs.home + QStringLiteral("/Mods/Vortex");
+    writeFile(folder + QStringLiteral("/Vortex.exe"), "MZ");
+    writeFile(managerPath("vortex"), "name = \"Vortex\"\nexe = \"" + folder.toUtf8() +
+                                         "/Vortex.exe\"\nprefix = \"own\"\ngames = []\n");
+    auto library = openLibrary();
+    QTRY_VERIFY_WITH_TIMEOUT(shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex")).has_value(), 5000);
+    const quint32 appId = shortcutNamed(shortcutsIn(root), QStringLiteral("Vortex"))->appId;
+    const QString prefix = root + QStringLiteral("/steamapps/compatdata/%1").arg(appId);
+    QDir().mkpath(prefix);
+    QTRY_VERIFY_WITH_TIMEOUT(library->store().snapshot().steamQueued.isEmpty(), 5000);
+
+    QStringList trashed;
+    const Uninstall::Trash working = fakeTrash(&trashed);
+    const auto onHomeDrive = [](const QString &path) { return !path.contains(QStringLiteral("compatdata")); };
+    library->setTrash(
+        [&](const QString &path, QString *error) {
+            if (!onHomeDrive(path)) {
+                *error = QStringLiteral("there's no trash here");
+                return false;
+            }
+            return working(path, error);
+        },
+        onHomeDrive);
+
+    const QVariantMap asked = library->uninstallModManager(QStringLiteral("vortex"), true, true, false, false);
+    QVERIFY(asked.value("trashless").toString().contains(QStringLiteral("compatdata")));
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFileInfo::exists(folder + QStringLiteral("/Vortex.exe")));
+    QVERIFY(QFileInfo::exists(managerPath("vortex")));
+
+    // Repeated for good, with the folder gone already by another way: the rest is done.
+    QVERIFY(QDir(folder).removeRecursively());
+    const QVariantMap r = library->uninstallModManager(QStringLiteral("vortex"), true, true, false, true);
+    QCOMPARE(r.value("error").toString(), QString());
+    QVERIFY(!QFileInfo::exists(prefix));
+    QVERIFY(!QFileInfo::exists(managerPath("vortex")));
 }
 
 void LibraryModManagersTest::removeLeavesShortcut()

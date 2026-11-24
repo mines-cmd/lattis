@@ -13,6 +13,8 @@ private slots:
     void steamUndoUninstalls();
     void uninstallWithoutTrash();
     void uninstallStopsAtAFolder();
+    void uninstallAsksEveryFolderFirst();
+    void uninstallRepeatedAfterAFolderIsGone();
     void uninstallRefused();
     void uninstallReadOnly();
     void uninstallRefusals();
@@ -360,6 +362,69 @@ void LibraryUninstallTest::uninstallStopsAtAFolder()
     QVERIFY(QFileInfo::exists(games + QStringLiteral("/Hollow Knight/save.dat")));
     QVERIFY(QFileInfo::exists(root + QStringLiteral("/steamapps/compatdata/%1/pfx/user.reg").arg(appId)));
     QCOMPARE(readFile(gamePath(game)), before);
+}
+
+void LibraryUninstallTest::uninstallAsksEveryFolderFirst()
+{
+    const QString root = installFakeSteam();
+    auto library = openLibrary();
+    QStringList trashed;
+    // The game's folder is in the home trash's reach; its prefix, in a library on another drive, is not.
+    const Uninstall::Trash working = fakeTrash(&trashed);
+    const auto onHomeDrive = [](const QString &path) { return !path.contains(QStringLiteral("compatdata")); };
+    library->setTrash(
+        [&](const QString &path, QString *error) {
+            if (!onHomeDrive(path)) {
+                *error = QStringLiteral("there's no trash here");
+                return false;
+            }
+            return working(path, error);
+        },
+        onHomeDrive);
+    quint32 appId = 0;
+    const QString game = addUninstallGame(*library, &appId);
+    const QString folder = m_installs.home + QStringLiteral("/Games/Hollow Knight");
+    const QString prefix = root + QStringLiteral("/steamapps/compatdata/%1").arg(appId);
+    const QByteArray before = readFile(gamePath(game));
+
+    // The answer names the prefix, and the game's folder has not been moved.
+    QVariantMap r = library->uninstallProtonGame(game, true, true, false, QStringLiteral("remove"), false);
+    QVERIFY(r.value("trashless").toString().contains(QStringLiteral("compatdata/%1").arg(appId)));
+    QVERIFY(!r.value("trashless").toString().contains(QStringLiteral("Hollow Knight")));
+    QCOMPARE(r.value("error").toString(), QString());
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFileInfo::exists(folder + QStringLiteral("/save.dat")));
+    QVERIFY(QFileInfo::exists(prefix));
+    QCOMPARE(readFile(gamePath(game)), before);
+
+    // The same call, confirmed for good, finishes the job.
+    r = library->uninstallProtonGame(game, true, true, false, QStringLiteral("remove"), true);
+    QCOMPARE(r.value("error").toString(), QString());
+    QVERIFY(!r.contains("trashless"));
+    QVERIFY(!QFileInfo::exists(folder));
+    QVERIFY(!QFileInfo::exists(prefix));
+}
+
+void LibraryUninstallTest::uninstallRepeatedAfterAFolderIsGone()
+{
+    const QString root = installFakeSteam();
+    auto library = openLibrary();
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+    quint32 appId = 0;
+    const QString game = addUninstallGame(*library, &appId);
+    const QString folder = m_installs.home + QStringLiteral("/Games/Hollow Knight");
+    const QString prefix = root + QStringLiteral("/steamapps/compatdata/%1").arg(appId);
+
+    // The game's folder went in an earlier call: it counts as done, and the prefix still goes.
+    QVERIFY(QDir(folder).removeRecursively());
+    QVariantMap r = library->uninstallProtonGame(game, true, true, false, QStringLiteral("keep"), false);
+    QCOMPARE(r.value("error").toString(), QString());
+    QCOMPARE(trashed, QStringList{prefix});
+
+    // Nothing left to remove is still said.
+    r = library->uninstallProtonGame(game, true, false, false, QStringLiteral("keep"), false);
+    QVERIFY(r.value("error").toString().contains(QStringLiteral("gone already")));
 }
 
 void LibraryUninstallTest::uninstallRefused()

@@ -266,7 +266,7 @@ public:
     Q_INVOKABLE QVariantMap madeVideoThumbnail(const QString &file) const;
     Q_INVOKABLE QVariantMap mediaGames(const QStringList &ids) const;
     Q_INVOKABLE QString mediaKey(const QString &id) const;
-    Q_INVOKABLE void setMediaFavorite(const QString &path, bool on);
+    Q_INVOKABLE QString setMediaFavorite(const QString &path, bool on);
     // Reads the set the media workers loaded; false before that. Bind it together with mediaFavoriteRevision.
     Q_INVOKABLE bool isMediaFavorite(const QString &path) const;
     int mediaFavoriteRevision() const { return m_mediaFavoriteRevision; }
@@ -433,7 +433,14 @@ public:
     QString epicInstallDir(const QString &id) const;
     // Legendary deletes only the manifest's files, so what the game made while running (shader caches) stays.
     void removeEpicLeftovers(const QString &id, const QString &installDir);
-    void setTrash(const Uninstall::Trash &trash) { m_trash = trash; }
+    // Without `can`, every folder counts as trashable up front (the move itself can still refuse).
+    void setTrash(const Uninstall::Trash &trash, const Uninstall::CanTrash &can = {})
+    {
+        m_trash = trash;
+        m_canTrash = can ? can : [](const QString &) { return true; };
+    }
+    // The folders among `folders` the trash would refuse, written for the dialog; empty when `permanent`.
+    QString trashRefusals(const QStringList &folders, bool permanent) const;
 
     QVariantList tags() const { return m_tags; }
     QStringList missingDefaultTags() const { return m_missingDefaultTags; }
@@ -627,6 +634,7 @@ private:
     LibraryUndo m_undo;
     std::function<void()> m_afterUndo;
     Uninstall::Trash m_trash = Uninstall::systemTrash;
+    Uninstall::CanTrash m_canTrash = Uninstall::systemCanTrash;
     QList<Game> m_games;
     int m_visibleCount = 0;
     QStringList m_foldedTitles;

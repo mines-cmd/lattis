@@ -19,7 +19,7 @@ private slots:
     void homeFolderIsWrittenAsTilde();
     void tildeEntriesAreExpanded();
     void aMissingFileIsEmpty();
-    void aBadFileIsEmpty();
+    void aBadFileIsAnError();
     void wrongTypesAreSkipped();
     void aClipFolderIsAnEntry();
     void movedFilesKeepTheirEntry();
@@ -47,7 +47,7 @@ void MediaFavoritesTest::roundTrip()
 {
     const QSet<QString> set{u"/mnt/shots/a.png"_s, u"/mnt/shots/b \"quoted\".jpg"_s, u"/mnt/clips/c.mp4"_s};
     QVERIFY(MediaFavorites::write(file(), set, home()));
-    QCOMPARE(MediaFavorites::read(file(), home()), set);
+    QCOMPARE(MediaFavorites::read(file(), home()).value, set);
 }
 
 void MediaFavoritesTest::homeFolderIsWrittenAsTilde()
@@ -67,22 +67,26 @@ void MediaFavoritesTest::tildeEntriesAreExpanded()
     f.write("favorites = [\"~/Videos/a.mp4\", \"/abs/b.png\"]\n");
     f.close();
     const QSet<QString> expected{home() + u"/Videos/a.mp4"_s, u"/abs/b.png"_s};
-    QCOMPARE(MediaFavorites::read(file(), home()), expected);
+    QCOMPARE(MediaFavorites::read(file(), home()).value, expected);
 }
 
 void MediaFavoritesTest::aMissingFileIsEmpty()
 {
-    QVERIFY(MediaFavorites::read(file(), home()).isEmpty());
+    QVERIFY(MediaFavorites::read(file(), home()).ok);
+    QVERIFY(MediaFavorites::read(file(), home()).value.isEmpty());
 }
 
-void MediaFavoritesTest::aBadFileIsEmpty()
+void MediaFavoritesTest::aBadFileIsAnError()
 {
     QDir().mkpath(m_dir->path() + u"/library"_s);
     QFile f(file());
     QVERIFY(f.open(QIODevice::WriteOnly));
     f.write("favorites = [\"a\", \n not toml");
     f.close();
-    QVERIFY(MediaFavorites::read(file(), home()).isEmpty());
+    const Parsed<QSet<QString>> read = MediaFavorites::read(file(), home());
+    QVERIFY(!read.ok);
+    QVERIFY(read.value.isEmpty());
+    QVERIFY(read.warnings.value(0).contains(u"media.toml:"_s));
 }
 
 void MediaFavoritesTest::wrongTypesAreSkipped()
@@ -93,26 +97,26 @@ void MediaFavoritesTest::wrongTypesAreSkipped()
     f.write("favorites = [1, \"\", \"/ok.png\", true]\n");
     f.close();
     const QSet<QString> expected{u"/ok.png"_s};
-    QCOMPARE(MediaFavorites::read(file(), home()), expected);
+    QCOMPARE(MediaFavorites::read(file(), home()).value, expected);
 
     QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
     f.write("favorites = \"/ok.png\"\n");
     f.close();
-    QVERIFY(MediaFavorites::read(file(), home()).isEmpty());
+    QVERIFY(MediaFavorites::read(file(), home()).value.isEmpty());
 }
 
 void MediaFavoritesTest::aClipFolderIsAnEntry()
 {
     const QString clip = home() + u"/.local/share/Steam/userdata/1/gamerecordings/clips/clip_1145360_20261012_211533"_s;
     QVERIFY(MediaFavorites::write(file(), {clip}, home()));
-    QCOMPARE(MediaFavorites::read(file(), home()), QSet<QString>{clip});
+    QCOMPARE(MediaFavorites::read(file(), home()).value, QSet<QString>{clip});
 }
 
 void MediaFavoritesTest::movedFilesKeepTheirEntry()
 {
     const QString gone = u"/mnt/old/deleted.png"_s;
     QVERIFY(MediaFavorites::write(file(), {gone, u"/mnt/new/b.png"_s}, home()));
-    QVERIFY(MediaFavorites::read(file(), home()).contains(gone));
+    QVERIFY(MediaFavorites::read(file(), home()).value.contains(gone));
 }
 
 void MediaFavoritesTest::writeLeavesNoPartialFile()
@@ -120,7 +124,7 @@ void MediaFavoritesTest::writeLeavesNoPartialFile()
     QVERIFY(MediaFavorites::write(file(), {u"/a.png"_s}, home()));
     QVERIFY(MediaFavorites::write(file(), {u"/b.png"_s}, home()));
     QVERIFY(!QFile::exists(file() + u".partial"_s));
-    QCOMPARE(MediaFavorites::read(file(), home()), QSet<QString>{u"/b.png"_s});
+    QCOMPARE(MediaFavorites::read(file(), home()).value, QSet<QString>{u"/b.png"_s});
 }
 
 QTEST_MAIN(MediaFavoritesTest)

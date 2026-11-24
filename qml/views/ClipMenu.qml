@@ -18,7 +18,11 @@ SettingsMenu {
 
     SettingsMenuItem {
         text: root.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
-        onTriggered: Library.setMediaFavorite(root.media.path, !root.favorite)
+        onTriggered: {
+            const problem = Library.setMediaFavorite(root.media.path, !root.favorite)
+            if (problem)
+                root.message(problem)
+        }
     }
     SettingsMenuItem {
         text: qsTr("Show in folder")

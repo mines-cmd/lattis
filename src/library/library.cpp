@@ -3676,6 +3676,7 @@ struct MediaFavoriteState
     QMutex mutex;
     bool loaded = false;
     QSet<QString> set;
+    QString problem; // set when the file couldn't be read: nothing is written over it then
     QString file;
     QString home;
 
@@ -3690,7 +3691,11 @@ struct MediaFavoriteState
     void load() // with the mutex held
     {
         if (!loaded) {
-            set = MediaFavorites::read(file, home);
+            Parsed<QSet<QString>> read = MediaFavorites::read(file, home);
+            set = std::move(read.value);
+            if (!read.ok)
+                problem = QStringLiteral("%1 can't be read, so favorites weren't saved: %2")
+                              .arg(QFileInfo(file).fileName(), read.warnings.value(0));
             loaded = true;
         }
     }
@@ -3988,16 +3993,18 @@ bool Library::isMediaFavorite(const QString &path) const
     return m_mediaFavorites->loaded && m_mediaFavorites->set.contains(path);
 }
 
-void Library::setMediaFavorite(const QString &path, bool on)
+QString Library::setMediaFavorite(const QString &path, bool on)
 {
     if (path.isEmpty())
-        return;
+        return {};
     const QSharedPointer<MediaFavoriteState> state = mediaFavoriteState();
     {
         const QMutexLocker lock(&state->mutex);
         state->load();
+        if (!state->problem.isEmpty())
+            return state->problem;
         if (state->set.contains(path) == on)
-            return;
+            return {};
         if (on)
             state->set.insert(path);
         else
@@ -4011,6 +4018,7 @@ void Library::setMediaFavorite(const QString &path, bool on)
         if (!MediaFavorites::write(state->file, state->set, state->home))
             qCWarning(lcLibrary).noquote() << QStringLiteral("could not write %1").arg(state->file);
     });
+    return {};
 }
 
 QString Library::mediaKey(const QString &id) const
@@ -6392,6 +6400,18 @@ QVariantMap Library::uninstallChoices(const QString &id)
             {QStringLiteral("prefix"), prefix.isEmpty() ? QString() : m_store.writtenPath(prefix)}};
 }
 
+QString Library::trashRefusals(const QStringList &folders, bool permanent) const
+{
+    QStringList refused;
+    if (!permanent) {
+        for (const QString &folder : folders) {
+            if (!m_canTrash(folder))
+                refused.append(m_store.writtenPath(folder));
+        }
+    }
+    return refused.join(QStringLiteral(", "));
+}
+
 QVariantMap Library::uninstallProtonGame(const QString &id, bool files, bool prefix, bool shortcut,
                                          const QString &action, bool permanent)
 {
@@ -6415,9 +6435,11 @@ QVariantMap Library::uninstallProtonGame(const QString &id, bool files, bool pre
         const QString dir = programFiles.files();
         if (const QString why = Uninstall::refusal(dir, places); !why.isEmpty())
             return withError(tr("The game's files can't be deleted: %1").arg(why));
-        if (programFiles.singleFile ? !QFileInfo(dir).isFile() : !QFileInfo(dir).isDir())
+        // Gone already counts as done: the call is repeated after a refused trash.
+        if (programFiles.singleFile ? QFileInfo(dir).isFile() : QFileInfo(dir).isDir())
+            folders.append(dir);
+        else if (!prefix)
             return withError(tr("%1's files are gone already").arg(game.title));
-        folders.append(dir);
     }
     if (prefix) {
         const QString dir = protonPrefix(quint32(game.shortcut));
@@ -6427,7 +6449,9 @@ QVariantMap Library::uninstallProtonGame(const QString &id, bool files, bool pre
             return withError(tr("The Wine prefix can't be deleted: %1").arg(why));
         folders.append(dir);
     }
-    // Every folder first, then the game: a folder that can't go stops the rest.
+    // Every folder is asked first, so a refusal leaves them all where they are; then the game.
+    if (const QString refused = trashRefusals(folders, permanent); !refused.isEmpty())
+        return {{QStringLiteral("trashless"), refused}};
     for (const QString &folder : std::as_const(folders)) {
         const Uninstall::Removal r = Uninstall::remove(folder, permanent, m_trash);
         if (r.needsPermanent)
@@ -6878,11 +6902,15 @@ QVariantMap Library::uninstallModManager(const QString &id, bool files, bool pre
     const Uninstall::Places places = uninstallPlaces({});
     if (files) {
         const QString dir = managerFolder(manager);
-        if (dir.isEmpty())
-            return withError(tr("%1's folder is gone already").arg(manager.name));
-        if (const QString why = Uninstall::refusal(dir, places); !why.isEmpty())
-            return withError(tr("The folder can't be deleted: %1").arg(why));
-        folders.append(dir);
+        if (dir.isEmpty()) {
+            // Gone already counts as done: the call is repeated after a refused trash.
+            if (!prefix)
+                return withError(tr("%1's folder is gone already").arg(manager.name));
+        } else {
+            if (const QString why = Uninstall::refusal(dir, places); !why.isEmpty())
+                return withError(tr("The folder can't be deleted: %1").arg(why));
+            folders.append(dir);
+        }
     }
     if (prefix) {
         if (m_store.modManagerPrefix(id))
@@ -6894,6 +6922,8 @@ QVariantMap Library::uninstallModManager(const QString &id, bool files, bool pre
             return withError(tr("The Wine prefix can't be deleted: %1").arg(why));
         folders.append(dir);
     }
+    if (const QString refused = trashRefusals(folders, permanent); !refused.isEmpty())
+        return {{QStringLiteral("trashless"), refused}};
     for (const QString &folder : std::as_const(folders)) {
         const Uninstall::Removal r = Uninstall::remove(folder, permanent, m_trash);
         if (r.needsPermanent)

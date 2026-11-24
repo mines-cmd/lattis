@@ -24,6 +24,10 @@ QString refusal(const QString &folder, const Places &places);
 using Trash = std::function<bool(const QString &path, QString *error)>;
 bool systemTrash(const QString &path, QString *error);
 
+// Whether the trash would take a folder, asked without moving it.
+using CanTrash = std::function<bool(const QString &path)>;
+bool systemCanTrash(const QString &path);
+
 struct Removal
 {
     QString error;

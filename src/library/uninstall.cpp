@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QStandardPaths>
+#include <QStorageInfo>
 
 namespace Uninstall {
 namespace {
@@ -80,6 +82,22 @@ bool systemTrash(const QString &path, QString *error)
         return true;
     *error = file.errorString();
     return false;
+}
+
+bool systemCanTrash(const QString &path)
+{
+    const QFileInfo info(path);
+    if (!info.exists() && !info.isSymLink())
+        return true;
+    // The trash in the data folder's file system takes anything there; on another one it needs a trash folder at
+    // that file system's root, which Qt makes when it can write there.
+    QString anchor = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    while (!anchor.isEmpty() && !QFileInfo::exists(anchor) && anchor != u'/')
+        anchor = QFileInfo(anchor).absolutePath();
+    const QStorageInfo mount(info.absolutePath());
+    if (!mount.isValid())
+        return false;
+    return mount == QStorageInfo(anchor) || QFileInfo(mount.rootPath()).isWritable();
 }
 
 Removal remove(const QString &folder, bool permanent, const Trash &trash)

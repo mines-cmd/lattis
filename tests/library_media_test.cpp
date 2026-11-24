@@ -23,6 +23,7 @@ private slots:
     void aHugeFolderIsLimited();
     void videoThumbnailsArriveAfterTheList();
     void allMediaIncludesOwnFolders();
+    void aFavoritesFileThatDoesNotParseIsNotWrittenOver();
     void favoritesMarkItemsAndSurviveARestart();
 
 private:
@@ -357,6 +358,29 @@ void LibraryMediaTest::allMediaIncludesOwnFolders()
     QCOMPARE(perGame.value(u"steam-1145360"_s), (QStringList{u"screenshot"_s})); // Steam's, once
 }
 
+void LibraryMediaTest::aFavoritesFileThatDoesNotParseIsNotWrittenOver()
+{
+    const HomeGuard home(m_installs.home);
+    const QString favoritesFile = m_data + QStringLiteral("/library/media.toml");
+    const QByteArray typo = "favorites = [\"~/Videos/a.mp4\", \"~/Videos/b.mp4\"\n[oops\n";
+    writeFile(favoritesFile, typo);
+
+    auto library = openLibrary();
+    QSignalSpy changed(library.get(), &Library::mediaFavoriteChanged);
+    const QString problem = library->setMediaFavorite(QStringLiteral("/x/c.png"), true);
+    QVERIFY(problem.contains(QStringLiteral("media.toml")));
+    QCOMPARE(changed.count(), 0);
+    QVERIFY(!library->isMediaFavorite(QStringLiteral("/x/c.png")));
+    QThreadPool::globalInstance()->waitForDone();
+    QCOMPARE(readFile(favoritesFile), typo);
+
+    // Once the file is fixed, a new copy of the library writes again.
+    writeFile(favoritesFile, "favorites = [\"/x/a.png\"]\n");
+    auto fixed = openLibrary();
+    QCOMPARE(fixed->setMediaFavorite(QStringLiteral("/x/c.png"), true), QString());
+    QTRY_VERIFY(MediaFavorites::read(favoritesFile, QDir::homePath()).value.contains(QStringLiteral("/x/c.png")));
+}
+
 void LibraryMediaTest::favoritesMarkItemsAndSurviveARestart()
 {
     const HomeGuard home(m_installs.home);
@@ -403,7 +427,7 @@ void LibraryMediaTest::favoritesMarkItemsAndSurviveARestart()
         QCOMPARE(v.toMap().value("favorite").toBool(), v.toMap().value("path").toString() == marked);
 
     library->setMediaFavorite(marked, false);
-    QTRY_VERIFY(MediaFavorites::read(favoritesFile, QDir::homePath()).isEmpty());
+    QTRY_VERIFY(MediaFavorites::read(favoritesFile, QDir::homePath()).value.isEmpty());
 }
 
 QTEST_MAIN(LibraryMediaTest)

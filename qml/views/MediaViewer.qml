@@ -201,8 +201,11 @@ MotionPopup {
     readonly property bool favorite: Library.mediaFavoriteRevision >= 0 && Library.isMediaFavorite(current.path ?? "")
 
     function toggleFavorite() {
-        if (current.path !== undefined)
-            Library.setMediaFavorite(current.path, !favorite)
+        if (current.path === undefined)
+            return
+        const problem = Library.setMediaFavorite(current.path, !favorite)
+        if (problem)
+            root.message(problem)
     }
 
     Connections {
