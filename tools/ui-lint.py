@@ -32,6 +32,11 @@ SCHEMA_EXEMPT = {
     "settings_window.preview_dot_radius": "a 4 px dot; the smallest tier is as wide as the dot",
 }
 
+# Settings read by a name built at run time, so no file names them whole. Keep this short.
+UNUSED_EXEMPT_PREFIXES = {
+    "stat_chip.protondb_": "GameFields.qml picks the color by the rating's name",
+}
+
 # A line ends with `// ui-lint: allow <why>` when the literal is data, not styling.
 ALLOW = re.compile(r"//\s*ui-lint:\s*allow\s+\S")
 
@@ -51,6 +56,7 @@ RULES = {
     "schema-type": "text size default doesn't end at a type step in [font]",
     "schema-border": "border width default doesn't end at layout.border_width, hairline_width, ring_width or 0",
     "schema-radius": "radius default doesn't end at a [radius] tier, 0 or 1",
+    "schema-unused": "no QML or C++ file reads this theme setting, and no other setting follows it; delete it",
 }
 
 
@@ -160,6 +166,36 @@ def lint_schema(hits):
         if key in SCHEMA_EXEMPT:
             continue
         hits.append((rule, key, 0, key + " = " + defaults.get(key, "?")))
+    lint_unused(source, hits)
+
+
+def camel(name):
+    head, *rest = name.split("_")
+    return head + "".join(part.capitalize() for part in rest)
+
+
+def lint_unused(schema, hits):
+    # A setting nothing reads does nothing, and the Customize page still offers it. It counts as read when a QML
+    # or C++ file names both its section and its key (as Theme.<section>.<key>, or "section", "key"), or when
+    # another setting's default points at it.
+    rows = re.findall(r'^\s+(?:color|integer|integerOnRelease|real|boolean|text|choice|list|colors)\(\s*'
+                      r'"(\w+)",\s*"(\w+)",\s*"([^"]*)"', schema, re.M)
+    pointed_at = {default[1:] for _, _, default in rows if default.startswith("@")}
+    files = [p for p in (ROOT / "qml").rglob("*.qml")]
+    files += [p for pattern in ("*.cpp", "*.h") for p in (ROOT / "src").rglob(pattern)
+              if p.name != "themeschema.cpp"]
+    texts = [p.read_text(encoding="utf-8") for p in files]
+
+    def mentioned(section, key):
+        names = (camel(section), section), (camel(key), key)
+        return any(all(re.search(r"\b(?:%s)\b" % "|".join(map(re.escape, n)), text) for n in names) for text in texts)
+
+    for section, key, _ in rows:
+        full = section + "." + key
+        if full.startswith(tuple(UNUSED_EXEMPT_PREFIXES)):
+            continue
+        if full not in pointed_at and not mentioned(section, key):
+            hits.append(("schema-unused", full, 0, full))
 
 
 def main():

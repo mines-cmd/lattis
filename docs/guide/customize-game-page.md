@@ -143,7 +143,6 @@ The small boxes beside the Launch button: play time, last played, rating, Proton
 - `label_color`, `label_font_size`, `uppercase_labels`: the label (PLAY TIME).
 - `value_color`: the value (40.9 hours).
 - `hover_value_color`, `hover_label_color`, `hover_icon_color`: all three under the mouse, on a chip that opens something (play time opens play history).
-- `button_height`: the Apply button inside the Steam changes chip.
 - `star_size`: the stars in the rating chip's tooltip.
 - `protondb_native`, `protondb_platinum`, `protondb_gold`, `protondb_silver`, `protondb_bronze`, `protondb_borked`, `protondb_pending`: the ProtonDB chip's icon color for each rating.
 

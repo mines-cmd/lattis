@@ -177,7 +177,7 @@ The picker that opens from a color swatch in Customize, on the tag palette and o
 
 The hints that appear when you hover a button.
 
-- `background`, `background_end`, `gradient_direction`: the tooltip's fill.
+- `background`: the tooltip's fill.
 - `border`, `border_width`: its outline.
 - `text`: its text color.
 - `delay`: how many milliseconds you hover before it appears.

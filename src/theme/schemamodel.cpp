@@ -570,9 +570,13 @@ QList<int> ThemeSettingsModel::visibleRows() const
     if (m_mode == Mode::Both) {
         // The schema may interleave a section's colors and style settings; within a sub-heading,
         // colors come first.
+        // Numbered from the whole schema, so a filter never changes the order of the sections.
         QHash<QByteArray, int> order;
-        for (const int i : rows)
-            order.insert(QByteArray(settings[i].section.data(), settings[i].section.size()), order.size());
+        for (const auto &s : settings) {
+            const QByteArray name(s.section.data(), s.section.size());
+            if (!order.contains(name))
+                order.insert(name, order.size());
+        }
         std::stable_sort(rows.begin(), rows.end(), [&](int a, int b) {
             const Setting &x = settings[a];
             const Setting &y = settings[b];

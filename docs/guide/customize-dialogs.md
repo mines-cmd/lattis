@@ -138,7 +138,7 @@ The tab list on the left. Follows the Settings sidebar until set.
 - `read_only_opacity`: fields shown but not editable.
 - `pending_color`: the line under a Steam game's Launch card while changes wait for Steam to close.
 - `placeholder_icon_opacity`: the icon in an art thumbnail that's loading or failed.
-- `check_size`, `check_on`, `check_mark`, `chip_background`: check boxes and result chips in Look up missing info.
+- `check_size`, `check_on`, `check_mark`: check boxes in Look up missing info.
 - `changed_color`: the "changed" mark on art you picked.
 
 ### Rating
@@ -167,7 +167,7 @@ The tab list on the left. Follows the Settings sidebar until set.
 - `confirm_width`: questions before removing a game or restarting Steam.
 - `sign_in_width`, `qr_size`, `qr_quiet_modules`, `qr_dark`, `qr_light`, `qr_radius`: the Steam sign-in window and its QR code. Keep dark on light for phones to read it.
 - `uninstall_width`, `backup_width`: dialogs that show folder paths.
-- `update_width`, `update_notes_height`: the dialog that updates Lattis.
+- `update_width`: the dialog that updates Lattis.
 - `whats_new_width`, `whats_new_height_percent`: the What's new window.
 - `update_notes_background`, `update_notes_text`, `update_notes_padding`, `update_notes_radius`: the release notes box.
 - `progress_height`, `progress_radius`, `progress_track`, `progress_fill`: progress bars (a backup being made).
@@ -299,7 +299,6 @@ The calendar that opens from a date field (Add session). Follows the popovers un
 ## About dialog (`[about]`)
 
 - `width`: the dialog's width.
-- `close_size`, `close_margin`, `close_color`, `close_hover_color`: the × in the corner.
 - `logo_height`, `logo_text`: the logo, and whether its "Lattis" is light or dark (`auto` picks from the background).
 - `page_logo_height`: the logo on Settings → General.
 - `version_color`, `version_font_size`, `version_spacing`: "Version 0.1" beside the logo.

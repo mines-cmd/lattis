@@ -17,6 +17,8 @@ The `src/theme/` folder implements the theme system: every visual setting is dec
 
 Every theme setting is one row in `kThemeSettings` in `themeschema.cpp`. Each row carries the section (`palette`, `rail`, `launch_button`, …), the key, the type, the default value, a description, an optional range (integers and reals), allowed values (enums and string lists), and a fallback color (for color references that can't be resolved). There is no other authoritative list: the loader validates files against it, the Colors and Style pages are generated from it, and `reference.toml` is regenerated from it on each start.
 
+A number setting that follows another (`"@font.title_size"`) takes the target's value through the follower's own range check, so its range must be at least as wide as its target's; a schema test checks every pair. A setting nothing reads is deleted, not kept: `tools/ui-lint.py` fails on a row that no QML or C++ file names and no other row follows (a name built at run time goes in its exemption list).
+
 Types are `Color`, `Int`, `Real`, `Bool`, `String`, `Enum`, `StringList`, and `ColorList`. Defaults are written as they appear in a theme file (`"#rrggbb"`, `"16"`, `"true"`) but without quotes; list defaults are space-separated. A default may be a reference to another setting (`"@accent"`, `"@radius.medium"`).
 
 ## Loading and resolving
@@ -70,6 +72,8 @@ Two small migrations of the old single-file themes still run on start, before re
 ## ThemeSettingsModel
 
 `ThemeSettingsModel` exposes the `ThemeSchema::Setting`s of one half as a filterable list model for the Customize page and the setup guide: the colors model lists the color settings and the style model the rest, so a section with both kinds (`hero`, `tags`, `palette`) is in both lists with its own rows. `changedCount` counts the half's own settings. Each row carries the setting's type, description, range, allowed values, default text, resolved value, raw value as written, source label (`"default"`, `"Mythos.toml"`, `"inherited from custom"`), and whether it's set in its half's active file (the `IsCustom` role, which controls the reset button). The `changedOnly` filter hides everything not set in the active theme — used by the "Changed settings" view.
+
+The sections are numbered once, from the whole schema in its order, so a search, a group or `show` only removes rows and never reorders or splits a section.
 
 `Theme.customizeSchema` is the same model in its third mode, both halves: each section is one run with its colors first, then its style settings, and `half` (`"colors"` or `"style"`) is a role for it. Its `show` property (`"all"`, `"colors"`, `"style"`) trims the rows, and `sections` follows it, so a section with no row of the shown half is gone from the links too. The half models ignore `show`. `changedCount` counts both halves there.
 

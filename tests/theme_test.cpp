@@ -43,6 +43,9 @@ private slots:
     void saveThemeNamesTheActivePair();
     void halfModelsListOnlyTheirOwnSettings();
     void customizeModelListsBothHalves();
+    void customizeSectionsStayInSchemaOrderUnderFilters();
+    void followersAcceptTheirTargetsRange();
+    void deletedSettingsAreUnknownKeys();
     void subHeadingsGroupSettingsIntoCards();
     void previewReadsAnotherTheme();
     void previewCarriesThePopupFields();
@@ -1659,6 +1662,109 @@ void ThemeTest::halfModelsListOnlyTheirOwnSettings()
     // Link targets: a section jumps to its first row in that half's list.
     QCOMPARE(colors->firstRow("radius"), -1);
     QVERIFY(style->firstRow("radius") >= 0);
+}
+
+// With any filter, each section is one run and the runs follow the schema's order.
+void ThemeTest::customizeSectionsStayInSchemaOrderUnderFilters()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+    auto *both = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+
+    QHash<QString, int> schemaOrder;
+    for (const ThemeSchema::Setting &s : ThemeSchema::settings()) {
+        const QString section = QString::fromUtf8(s.section.data(), qsizetype(s.section.size()));
+        if (!schemaOrder.contains(section))
+            schemaOrder.insert(section, schemaOrder.size());
+    }
+
+    const auto check = [&](const QString &what) {
+        QStringList runs;
+        for (int row = 0; row < both->rowCount(); ++row) {
+            const QString s = both->index(row).data(ThemeSettingsModel::SectionRole).toString();
+            if (runs.isEmpty() || runs.last() != s)
+                runs.append(s);
+        }
+        QVERIFY2(QSet<QString>(runs.begin(), runs.end()).size() == runs.size(), qPrintable(what + ": a section is in two runs"));
+        QVERIFY2(both->sections().size() == runs.size(), qPrintable(what + ": sections() disagrees with the rows"));
+        for (int i = 1; i < runs.size(); ++i)
+            QVERIFY2(schemaOrder.value(runs[i - 1]) < schemaOrder.value(runs[i]),
+                     qPrintable(what + ": " + runs[i - 1] + " before " + runs[i]));
+    };
+
+    check("no filter");
+    for (const QString &text : {"width", "size", "text", "hover", "label", "color", "radius", "height", "font",
+                                "background", "border", "opacity", "tag", "a"}) {
+        both->setFilterText(text);
+        check("search " + text);
+    }
+    both->setFilterText("");
+    for (const ThemeSchema::Group &g : ThemeSchema::groups()) {
+        const QString name = QString::fromUtf8(g.name.data(), qsizetype(g.name.size()));
+        both->setGroup(name);
+        check("group " + name);
+    }
+    both->setGroup("");
+    for (const QString &show : {"colors", "style"}) {
+        both->setShow(show);
+        check("show " + show);
+    }
+}
+
+// A setting that follows another takes the target's value, so its range must hold the target's.
+void ThemeTest::followersAcceptTheirTargetsRange()
+{
+    QHash<QString, ThemeSchema::Setting> byKey;
+    const auto nameOf = [](const ThemeSchema::Setting &s) {
+        return QString::fromUtf8(s.section.data(), qsizetype(s.section.size())) + u'.'
+            + QString::fromUtf8(s.key.data(), qsizetype(s.key.size()));
+    };
+    for (const ThemeSchema::Setting &s : ThemeSchema::settings())
+        byKey.insert(nameOf(s), s);
+    int followers = 0;
+    QStringList narrow;
+    for (const ThemeSchema::Setting &s : ThemeSchema::settings()) {
+        if (s.type != ThemeSchema::Type::Int && s.type != ThemeSchema::Type::Real)
+            continue;
+        const QString def = QString::fromUtf8(s.def.data(), qsizetype(s.def.size()));
+        if (!def.startsWith(u'@'))
+            continue;
+        ++followers;
+        QVERIFY2(byKey.contains(def.mid(1)), qPrintable(nameOf(s) + " follows " + def));
+        const ThemeSchema::Setting &target = byKey.value(def.mid(1));
+        if (s.min > target.min || s.max < target.max)
+            narrow.append(QStringLiteral("%1 (%2..%3) follows %4 (%5..%6)")
+                              .arg(nameOf(s)).arg(s.min).arg(s.max).arg(def.mid(1)).arg(target.min).arg(target.max));
+    }
+    QVERIFY(followers > 0);
+    QVERIFY2(narrow.isEmpty(), qPrintable(narrow.join('\n')));
+}
+
+// The settings nothing reads were deleted; a user file that still sets one gets the usual unknown-key problem.
+void ThemeTest::deletedSettingsAreUnknownKeys()
+{
+    QSet<QString> known;
+    for (const ThemeSchema::Setting &s : ThemeSchema::settings())
+        known.insert(QString::fromUtf8(s.section.data(), qsizetype(s.section.size())) + u'.'
+                     + QString::fromUtf8(s.key.data(), qsizetype(s.key.size())));
+    for (const char *full : {"about.close_size", "about.close_margin", "about.close_color",
+                             "about.close_hover_color", "tooltip.background_end", "tooltip.gradient_direction",
+                             "game_editor.update_notes_height", "game_editor.chip_background",
+                             "stat_chip.button_height"})
+        QVERIFY2(!known.contains(QLatin1String(full)), full);
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Old\"\nstyle = \"Old\"\n");
+    write(dataDir + "/themes/colors/Old.toml", "[about]\nclose_color = \"#ff0000\"\n[tooltip]\nbackground_end = \"#00ff00\"\n");
+    write(dataDir + "/themes/styles/Old.toml", "[tooltip]\ngradient_direction = \"right\"\n[stat_chip]\nbutton_height = 40\n");
+    Theme theme(dataDir);
+    const QStringList problems = theme.problems();
+    QCOMPARE(problems.size(), 4);
+    for (const QString &p : problems)
+        QVERIFY2(p.contains("unknown", Qt::CaseInsensitive), qPrintable(p));
 }
 
 void ThemeTest::customizeModelListsBothHalves()
