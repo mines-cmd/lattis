@@ -33,11 +33,14 @@ The narrow bar on the far left with the logo and the navigation icons.
 ### Logo
 
 - `show_logo`: show the app logo at the top of the rail.
-- `logo_style`: what the logo shows (here and on the setup guide's Welcome step): the app icon, the app's mark drawn in `logo_mark` on `logo_background`, or `logo_text`.
+- `logo_style`: what the logo shows (here and on the setup guide's Welcome step): the app icon, the barking dog (`dog`), the app's mark drawn in `logo_mark` on `logo_background`, or `logo_text`.
 - `logo_mark`, `logo_mark_size`: the mark's color and its size as a percentage of the logo (mark style).
 - `logo_text`, `logo_text_color`: the letters shown, and their color (text style).
-- `logo_size`, `logo_radius`: the logo's size and roundness. The rail buttons follow the size.
-- `logo_background`, `logo_border`, `logo_border_width`: the square behind the mark or text, and its outline. The app icon has its own shape and ignores these.
+- `logo_size`, `logo_radius`: the logo's size and roundness (the app icon keeps its own shape). The rail buttons follow the size.
+- `logo_background`, `logo_border`, `logo_border_width`: the square behind the mark or text, and its outline. The app icon and the dog have their own background and ignore these.
+- `dog_background`, `dog_background_end`: the tile behind the dog (dog style). They follow the accent unless the colors set their own, and the gradient runs in `gradient_direction`.
+- `dog_coat`, `dog_coat_end`: the dog's light and shaded sides.
+- `dog_details`: its nose and eye.
 - `logo_hover`: the wash over the logo under the mouse or while its menu is open.
 - `update_dot`, `update_dot_size`: the dot on the logo when a newer version of Lattis (or one of your emulators) is waiting, and its size.
 - `update_dot_corner`, `update_dot_margin`: which corner it sits in, and how far in from the edges (negative pushes it out past the edge).

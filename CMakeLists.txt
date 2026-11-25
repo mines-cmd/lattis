@@ -90,6 +90,7 @@ qt_add_qml_module(lattis
         # Generic building blocks
         qml/components/ActionShortcuts.qml
         qml/components/AppLogo.qml
+        qml/components/DogLogo.qml
         qml/components/ArtPlaceholder.qml
         qml/components/FadeImage.qml
         qml/components/RareGlow.qml

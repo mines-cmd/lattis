@@ -23,6 +23,11 @@ checker_dark = "#30363d"
 background = "#161b227a"
 hover_background = "#adbccd39"
 logo_mark = "@text"
+dog_background = "#f98644"
+dog_background_end = "#dc5418"
+dog_coat = "#fff6ee"
+dog_coat_end = "#e9cdb8"
+dog_details = "#2b3a5a"
 
 [search]
 background = "#161b227a"

@@ -11,6 +11,7 @@ Item {
     property bool highlighted: false
 
     readonly property bool image: Theme.rail.logoStyle === "image"
+    readonly property bool dog: Theme.rail.logoStyle === "dog"
     // The simple mark (no halo, bevel or shadow), so the squircle fills the logo's square, as
     // the app icon's doesn't (it's inset for its halo).
     readonly property url simpleLogo: "qrc:/qt/qml/Launcher/resources/logo/lattis-ember-simple.svg"
@@ -23,7 +24,7 @@ Item {
     Rectangle {
         id: square
         anchors.fill: parent
-        visible: !root.image
+        visible: !root.image && !root.dog
         radius: root.radius
         color: Theme.rail.logoBackground
         border.color: Theme.rail.logoBorder
@@ -47,6 +48,13 @@ Item {
             font.weight: Theme.font.strongWeight
             font.pixelSize: parent.height * 0.38
         }
+    }
+
+    Loader {
+        id: dogLoader
+        anchors.fill: parent
+        active: root.dog
+        sourceComponent: Component { DogLogo { radius: root.radius } }
     }
 
     Image {

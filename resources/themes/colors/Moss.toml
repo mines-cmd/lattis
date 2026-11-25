@@ -12,6 +12,13 @@ running_background_end = "#0379ff"
 background = "#78b922"
 background_end = "#49b018"
 
+[rail]
+dog_background = "@launch_button.background"
+dog_background_end = "@launch_button.background_end"
+dog_coat = "#fcfef4"
+dog_coat_end = "#d6e0bc"
+dog_details = "#1a640e"
+
 [onboarding]
 background = "#050a05"
 
