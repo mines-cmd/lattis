@@ -23,7 +23,7 @@ A **library backup** takes the data dir with three categories of content left ou
 
 - **Regenerated files** (the emulator reference file, the library cache) are always omitted; the app writes them again on the next start.
 - **ROMs kept inside the data dir** — a ROM folder that is the data dir, or a game file's `rom` that points into it — are omitted too. ROMs belong to the user, not the launcher; most live outside the data dir anyway.
-- **The API keys** (`credentials.toml`, which includes `steam_web_key`) are included by default but the user can opt out.
+- **The API keys** (`credentials.toml`, which includes `web_key` in `[steam]`) are included by default but the user can opt out.
 - **Mod managers are in the library backup with no special case.** `library/mod-managers/<id>.toml` is part of the data dir. A restored Proton manager keeps its `shortcut` app ID; Steam's shortcut isn't backed up, so the next Steam sync finds it missing with no record and adds it back (queued until Steam closes). Programs and prefixes aren't backed up. `RestoreTest::libraryHoldsModManagers` covers the round trip.
 - **The Steam sign-in is never in a backup.** Its refresh token lives only in the Secret Service (or in memory), outside the data dir. The fetched whole-library answers (`steam-library-<key>.json`) are in the cache dir and are not backed up either; `steam.toml` (with its `owned`, `shared_by` and `from_api` keys) is, so a restored library shows the games again until the next sync.
 
@@ -130,7 +130,7 @@ Because a library Import restarts the app, the notice data must survive the rest
 
 Archives are `.tar.zst` with pax extended headers (for long names and metadata). Compression is zstd at level 3, on several threads. Symlinks are stored as links and never followed during write or extract. Owners are not stored; permissions and timestamps are.
 
-`Archive::Writer` manages one `libarchive` write context. `addData()` writes bytes directly (for the manifest). `addTree()` walks a folder recursively, applying a `Skip` callback; it follows a folder that is itself a symlink (save folders are sometimes symlinked elsewhere) but does not follow links inside. `addPath()` adds a single entry without descending.
+`Archive::Writer` manages one `libarchive` write context. `addData()` writes bytes directly (for the manifest). `addTree()` walks a folder recursively, applying a `Skip` callback; it follows a folder that is itself a symlink (save folders are sometimes symlinked elsewhere) but does not follow links inside. `SavesBackup` does the same for a saved path that is itself a link to a folder (`isSourceFolder`). `addPath()` adds a single entry without descending.
 
 `Archive::extract()` extracts into multiple `Destination`s in one pass over the archive. It validates every entry:
 

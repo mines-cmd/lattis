@@ -6064,8 +6064,8 @@ void Library::setViewStateFile(const QString &file)
     m_viewStateTimer.setSingleShot(true);
     m_viewStateTimer.setInterval(500);
     connect(&m_viewStateTimer, &QTimer::timeout, this, &Library::saveViewState, Qt::UniqueConnection);
-    if (qGuiApp)
-        connect(qGuiApp, &QGuiApplication::aboutToQuit, this, &Library::saveViewState, Qt::UniqueConnection);
+    if (QCoreApplication::instance())
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &Library::saveViewState, Qt::UniqueConnection);
 
     QFile f(file);
     if (!f.open(QIODevice::ReadOnly))

@@ -344,11 +344,11 @@ void CollectionTest::deletedTagsIgnored()
     QVERIFY(CollectionMatcher(c, &known).isMember(rpg));
     QVERIFY(!CollectionMatcher(c, &known).isMember(other));
 
-    // All the rule's tags deleted: no tag rule is left, as with the tag filter.
+    // All the rule's tags deleted: the rule matches no game, not every game.
     c.rules->tags = {"Gone"};
     QVERIFY(!CollectionMatcher(c).isMember(rpg));
-    QVERIFY(CollectionMatcher(c, &known).isMember(rpg));
-    QVERIFY(CollectionMatcher(c, &known).isMember(other));
+    QVERIFY(!CollectionMatcher(c, &known).isMember(rpg));
+    QVERIFY(!CollectionMatcher(c, &known).isMember(other));
 
     // Match all counts only the tags that exist.
     c.rules->tags = {"RPG", "Racing", "Gone"};

@@ -17,7 +17,7 @@ Q_LOGGING_CATEGORY(lcRomInfo, "launcher.rominfo")
 
 namespace RomInfoReader {
 namespace {
-// The limits are in docs/code/library.md: a few small reads at fixed offsets, never a whole file.
+// The limits are in docs/code/library.md: header reads at fixed offsets, except the checksum of a cartridge ROM, which reads the whole file.
 constexpr qint64 kBudget = 1 << 20;
 constexpr qint64 kSmdhSize = 0x36C0;
 constexpr qint64 kSmdhTitles = 0x2008;

@@ -214,8 +214,8 @@ private slots:
                                         {"interval", 0.01}}));
         m_server->on(kPoll, answer(1, {{"refresh_token", "nonsense"}, {"account_name", "someone"}}));
         m_auth->startSignIn();
-        QTRY_COMPARE(m_auth->status(), SteamAuth::Status::SignedOut);
-        QVERIFY(!m_auth->error().isEmpty());
+        QTRY_VERIFY(!m_auth->error().isEmpty());
+        QCOMPARE(m_auth->status(), SteamAuth::Status::SignedOut);
         QVERIFY(m_auth->challengeUrl().isEmpty());
     }
 

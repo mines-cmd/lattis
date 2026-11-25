@@ -10,7 +10,7 @@ Everything starts with `GameRunner::launch(gameId)`, which returns a message for
 
 ## ROM games
 
-`chooseEmulator()` picks the emulator to use: the game's pinned emulator if it's installed, otherwise the first installed emulator for the platform. If no emulator is installed, `launch()` returns a message saying which one to install, and `missingEmulator()` tells the Emulators page which one to highlight.
+`chooseEmulator()` picks the emulator to use: the game's pinned emulator if it's installed, otherwise the first installed emulator for the platform. If no emulator is installed, `launch()` returns a message saying which one to install, and `missingEmulator()` tells the Emulators page which one to highlight. A ROM game's session is the emulator process alone: unlike a Linux game it doesn't follow the session, so an emulator that starts the game in a second process and exits ends the session early.
 
 `buildLaunchCommand()` fills in the emulator's command template: `{exe}` becomes the emulator's program (or `flatpak run <app id>` for a Flatpak install), `{args}` becomes the emulator's argument list plus the game's `gameArgs`, spliced in, `{rom}` becomes the ROM's path and `{romdir}` the absolute path of its folder (both filled in one pass, so a path that contains `{rom}` stays as it is). Without a ROM (when opening the emulator without a game), `{rom}`, `{romdir}` and the arguments between `{args}` and it are left out — so a template like `-b -e {rom}` becomes just `-b`, not `-b -e`.
 
@@ -80,7 +80,7 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 
 ## The environment
 
-`programEnvironment()` builds the environment for a launched program. It starts from the launcher's own environment, then applies the command's variables on top. When the launcher runs as an AppImage, `programEnvironment()` strips what AppImage adds — `APPDIR`, `APPIMAGE`, `ARGV0`, `OWD`, and the folders inside `APPDIR` that AppImage injected into `PATH`, `LD_LIBRARY_PATH`, `QT_PLUGIN_PATH` and similar — so games and emulators don't accidentally load the launcher's Qt or libraries. It also takes out `QT_QPA_PLATFORMTHEME` when `main()` set it to `xdgdesktopportal` itself (the launcher's file dialogs use the portal), and puts back the value the user had, through `restorePlatformTheme()`; a child never gets a theme the launcher chose for itself.
+`programEnvironment()` builds the environment for a launched program (a game, an emulator, a mod manager; the folder, file and link openers use `childEnvironment()` instead). It starts from the launcher's own environment, then applies the command's variables on top. When the launcher runs as an AppImage, `programEnvironment()` strips what AppImage adds — `APPDIR`, `APPIMAGE`, `ARGV0`, `OWD`, and the folders inside `APPDIR` that AppImage injected into `PATH`, `LD_LIBRARY_PATH`, `QT_PLUGIN_PATH` and similar — so games and emulators don't accidentally load the launcher's Qt or libraries. It also takes out `QT_QPA_PLATFORMTHEME` when `main()` set it to `xdgdesktopportal` itself (the launcher's file dialogs use the portal), and puts back the value the user had, through `restorePlatformTheme()`; a child never gets a theme the launcher chose for itself.
 
 **The rule: every child goes through `programEnvironment`.** Nothing the launcher starts inherits its environment as it is. `childEnvironment()` is `programEnvironment()` of the launcher's own environment as a `QProcessEnvironment`, for `QProcess::setProcessEnvironment`. The starters:
 
@@ -130,6 +130,18 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `problems` | `QStringList` | Settings parse errors |
 | `closingSteam` | `bool` | `closeSteamAndApply()` is waiting for Steam to close |
 | `closingHeroic` | `bool` | `closeHeroicAndApply()` is waiting for Heroic to close |
+| `legendary` | `LegendaryJobs` | The Epic job queue ([heroic.md](heroic.md#legendary-jobs)), constant |
+
+### `GameRunner` signals
+
+| Signal | Description |
+|---|---|
+| `message(text)` | Text for a toast: a problem or result from a queued Epic job, a refused update, Steam not closing in time |
+| `sessionStarted(gameId)` / `sessionEnded(gameId)` | A game's session began or ended (any kind) |
+| `emulatorExited(gameId)` | An emulator opened by `openEmulator` (without the game) exited; no session is kept for it |
+| `copyRequested(text)` | The text to put on the clipboard (an uninstalled Epic game's title, as Heroic can't open its page) |
+| `epicUninstalled(gameId, result)` | An Epic uninstall finished; `result` carries `error`, or `trashless` to ask for a run with files off and permanent on |
+| `epicInstallInfo(appName, plan)` | Legendary's answer for an Install dialog whose `epicInstallPlan` said `checking` |
 
 ### `GameRunner` invokables
 
@@ -157,6 +169,23 @@ When a non-Steam session ends, the runner measures its length. Sessions shorter 
 | `closeSteamAndApply()` | `string` | Close Steam, apply queued edits, restart it; toast or `""` |
 | `closeHeroicAndApply()` | `string` | Close Heroic (SIGTERM to its main processes, polled every 500 ms for up to `kHeroicCloseSeconds`, 15 s), then `Library::applyHeroicPending()`; refused while an Epic game runs (its own session or one Heroic started); doesn't restart Heroic; toast or `""` |
 | `steamRunning()` | `bool` | Whether Steam is running |
+| `update(gameId)` | `string` | Steam: opens what updates the game; Epic: queues `legendary update` (a problem comes as `message`) |
+| `epicJobTitles()` | `stringlist` | Titles of the Epic games whose Legendary job runs or waits, for the quit question |
+| `epicUninstallTitles()` | `stringlist` | Titles of the Epic games being uninstalled (quitting would leave their files half deleted) |
+| `openPath(path)` | Open a folder or file (`~` expanded); "doesn't exist yet" or "Could not open" as the error, else `""` |
+| `problemFile(message)` | The file in a settings problem message of the form `file.toml:12: …`, in the data dir, if it exists; else `""` |
+| `runningTitle(id)` | `string` | What a running id is called: a game's title or a manager's name |
+| `removeModManager(id, files, prefix, shortcut, permanent)` | `map` | Remove a mod manager, as `uninstallProton` does a game; `{error}` or `{trashless}` |
+| `openHeroic()` | `string` | Start Heroic (or raise it); the error, or `""` |
+| `legendaryFound()` | `bool` | Whether Heroic's Legendary program was found |
+| `uninstallEpic(gameId, files, prefix, permanent)` | `string` | Queue an Epic uninstall; the answer comes as `epicUninstalled` |
+| `epicInstallPlan(gameId)` | `map` | The Install dialog's start: `appName`, `folder`, `sizeState` (`known`, `checking`, `unknown`), `downloadSize`, `diskSize`, `platform` |
+| `freeSpace(folder)` | `double` | Bytes free where `folder` is or would be made; -1 when unknown |
+| `sizeText(bytes)` | `string` | A size as text for the dialog |
+| `installEpic(gameId, folder, wine, ownPrefix)` | `string` | Queue `legendary install` into `folder`; `wine` is one of `epicInstallWine`'s `wines[].wine`, `ownPrefix` gives the game its own Wine prefix (both only for a Windows build); the error, or `""` |
+| `epicInstallWine(gameId)` | `map` | The Install dialog's Wine settings: `wines` (`label`, `wine`), `wine` (the default), `prefix` (the game's own would-be prefix folder); empty when Heroic isn't found |
+| `verifyEpic(gameId)` | `string` | Queue `legendary repair`; the error, or `""`; the result comes as `message` |
+| `epicJob(gameId)` | `map` | The game's Legendary job (`appName`, `kind`, `percent`, `state`, `error`), empty when it has none |
 | `openSteamUrl(url)` | error | C++ only: hands a `steam://` URL to Steam, bare (`SteamStatus` uses it) |
 | `setLaunchValue(key, value)` | `string` | Write a `[launch]` key to settings.toml; error or `""` |
 

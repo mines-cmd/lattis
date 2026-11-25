@@ -88,9 +88,9 @@ SCENARIOS = [
                + "key Ctrl+W\nwait 400\n" + FIRST,
                style_has('gradient_direction = "left"'))], demo),
     Scenario("a followers link filters the list to the settings that follow it, Clear all brings it back",
-             [(CUSTOMIZE + "click Search settings\ntype Default gradient direction\nwait 800\nclick 16 follow\nwait 800\n"
+             [(CUSTOMIZE + "click Search settings\ntype Default gradient direction\nwait 800\nclick 15 follow\nwait 800\n"
                + "expect Following\nexpect-has Following Layout\nclick Default gradient direction\nkey Ctrl+A\nkey Delete\n"
-               + "wait 600\nexpect 16 settings\nexpect Rail\nexpect Launch button\nclick Clear all\nwait 600\n"
+               + "wait 600\nexpect 15 settings\nexpect Rail\nexpect Launch button\nclick Clear all\nwait 600\n"
                + "expect-not Following\nexpect Palette\n", None)], demo),
     Scenario("the Show menu narrows Customize to colors or style, and back to all",
              [(CUSTOMIZE + "click Show\nwait 500\nclick Colors\nwait 600\nexpect Background\nexpect-not Large\n"

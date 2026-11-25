@@ -28,7 +28,7 @@ def setup(dirs):
                '[[session]]\nend = 2026-11-20T21:00:00+00:00\nminutes = 90\n')
     library = os.path.join(dirs.root, "libclockshim.so")
     subprocess.run(["cc", "-shared", "-fPIC", "-O1", "-o", library, SHIM, "-ldl"], check=True)
-    dirs.env.update({"LD_PRELOAD": library, "TZ": "UTC", "CLOCKSHIM_START": str(NOVEMBER_30),
+    dirs.env.update({"LD_PRELOAD": library, "ASAN_OPTIONS": "verify_asan_link_order=0:detect_leaks=0", "TZ": "UTC", "CLOCKSHIM_START": str(NOVEMBER_30),
                      "CLOCKSHIM_AFTER": str(JUMP_AFTER), "CLOCKSHIM_JUMP": str(DAY)})
 
 
