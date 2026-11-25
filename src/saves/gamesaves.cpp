@@ -181,9 +181,11 @@ void GameSaves::findPaths(const QString &gameId, std::function<void(const QStrin
 void GameSaves::loadLast(const QString &gameId)
 {
     const int token = ++m_lastToken;
+    m_lastGame = gameId;
     const std::optional<SavesBackup::Input> input = m_setup.input ? m_setup.input(gameId) : std::nullopt;
     auto set = [this, gameId](QVariantMap last) {
         last.insert(QStringLiteral("requested"), gameId);
+        m_lasts.insert(gameId, last);
         if (last == m_last)
             return;
         m_last = last;
@@ -193,6 +195,8 @@ void GameSaves::loadLast(const QString &gameId)
         set({});
         return;
     }
+    if (m_lasts.contains(gameId))
+        set(m_lasts.value(gameId));
     const QString id = SavesBackup::backupKey(*input);
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this, [this, watcher, token, set] {
@@ -213,9 +217,14 @@ void GameSaves::loadLast(const QString &gameId)
 
 void GameSaves::refreshLast()
 {
-    const QString id = m_last.value(QStringLiteral("requested")).toString();
+    const QString id = m_lastGame;
     if (!id.isEmpty())
         loadLast(id);
+}
+
+QVariantMap GameSaves::lastFor(const QString &gameId) const
+{
+    return m_lasts.value(gameId, {{QStringLiteral("pending"), true}});
 }
 
 QString GameSaves::rename(const QString &gameId, const QString &archive, const QString &name)

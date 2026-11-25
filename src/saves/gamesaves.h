@@ -2,6 +2,7 @@
 
 #include "savesbackup.h"
 
+#include <QHash>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -67,6 +68,8 @@ public:
     Q_INVOKABLE void load(const QString &gameId);
     // Only the newest backup (`requested`, `when`, `size`, `name`), for the page's chip: no index is read.
     Q_INVOKABLE void loadLast(const QString &gameId);
+    // What loadLast() last found for the game, or `pending` when it was never read.
+    Q_INVOKABLE QVariantMap lastFor(const QString &gameId) const;
     // The game's saves as a backup would find them now, absolute; `done` runs on this thread.
     void findPaths(const QString &gameId, std::function<void(const QStringList &paths)> done);
     // Reads `last` again for the game it was last read for; for a backup made while its page is open.
@@ -99,6 +102,8 @@ private:
     mutable const SavesIndex *m_foldedFor = nullptr;
     QVariantMap m_state;
     QVariantMap m_last;
+    QHash<QString, QVariantMap> m_lasts;
+    QString m_lastGame;
     int m_lastToken = 0;
     QString m_message;
     QString m_openGame;

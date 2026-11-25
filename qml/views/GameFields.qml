@@ -95,10 +95,13 @@ QtObject {
         if (wantsLastBackup && (game.id ?? "") !== "")
             GameSaves.loadLast(game.id)
     }
-    readonly property var lastBackupField: ({
-        label: qsTr("Last backup"), icon: Icons.save2Line,
-        value: GameSaves.last.requested !== game.id ? "" : (GameSaves.last.when ?? "")
-    })
+    readonly property var lastBackupField: {
+        const latest = GameSaves.last
+        const own = (game.id ?? "") !== "" ? GameSaves.lastFor(game.id) : ({})
+        // Keeps the place the previous game's entry had until the first read ends: leaving and coming back flickers.
+        const held = (own.pending ?? false) && wantsLastBackup && (latest.when ?? "") !== ""
+        return { label: qsTr("Last backup"), icon: Icons.save2Line, value: held ? "…" : own.when ?? "" }
+    }
 
     readonly property int steamGameAppId: {
         const m = /^steam-(\d+)$/.exec(game.id ?? "")
