@@ -1126,7 +1126,13 @@ void ThemeTest::referenceFilesAreWritten()
     QVERIFY(theme.availableStyles().filter("reference").isEmpty());
 }
 
-// Every _end color in the defaults resolves to the same value as its start.
+// The dog's coat has a shaded side by design, so it is not flat out of the box.
+static bool gradientByDefault(const QString &section, const QString &key)
+{
+    return section == u"rail" && key == u"dog_coat_end";
+}
+
+// Every other _end color in the defaults resolves to the same value as its start.
 void ThemeTest::gradientEndDefaultsMatchStart()
 {
     QTemporaryDir dir;
@@ -1143,6 +1149,8 @@ void ThemeTest::gradientEndDefaultsMatchStart()
         if (!key.endsWith(QStringLiteral("_end")))
             continue;
         const QString section = QString::fromUtf8(s.section.data(), qsizetype(s.section.size()));
+        if (gradientByDefault(section, key))
+            continue;
         const QString startKey = key.chopped(4);
         const QColor end = theme.resolvedValue(section, key).value<QColor>();
         const QColor start = theme.resolvedValue(section, startKey).value<QColor>();
@@ -1232,7 +1240,7 @@ void ThemeTest::gradientEndSchemaIntegrity()
         const QString selfDefault = u'@' + section + u'.' + startKey;
         const QString actualDefault = QString::fromUtf8(s.def.data(), qsizetype(s.def.size()));
 
-        if (actualDefault != selfDefault) {
+        if (actualDefault != selfDefault && !gradientByDefault(section, key)) {
             // Also valid: a reference to an existing _end key (cascade via palette or another section).
             const QString refKey = actualDefault.startsWith(u'@') ? actualDefault.mid(1) : QString();
             if (refKey.isEmpty() || !refKey.endsWith(QStringLiteral("_end")) || !knownKeys.contains(refKey))
