@@ -945,6 +945,9 @@ ApplicationWindow {
     }
 
     function run(name) {
+        // The game they'd act on is the one selected in the list under the page, which nothing on screen shows.
+        if (pageCovering && Actions.inGroup(name, "game"))
+            return
         // The viewer's own handler toggles the open item's favorite instead.
         if (name === "toggle_favorite" && ((details?.viewerOpen ?? false) || (galleryPage.item?.viewerOpen ?? false)))
             return
@@ -1076,7 +1079,7 @@ ApplicationWindow {
         case "quit": requestQuit(); break
         default:
             // The list is under a covering page: its keys would move the selection and take focus from the page.
-            if (!(pageCovering && browser.coveredActions.includes(name)))
+            if (!(pageCovering && (browser.coveredActions ?? []).includes(name)))
                 browser.run(name)
         }
     }

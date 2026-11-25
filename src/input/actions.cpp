@@ -434,6 +434,12 @@ void Actions::watch()
         m_watcher.addPath(m_dataDir);
 }
 
+bool Actions::inGroup(const QString &name, const QString &group) const
+{
+    const Action *a = findAction(name);
+    return a && toQString(a->group) == group;
+}
+
 QStringList Actions::names(const QString &scope) const
 {
     QStringList out;
@@ -497,10 +503,10 @@ QString Actions::sequenceFor(int key, int modifiers) const
     return QKeySequence(QKeyCombination(mods, Qt::Key(key))).toString(QKeySequence::PortableText);
 }
 
-void Actions::setKeys(const QString &name, const QStringList &keys)
+QString Actions::setKeys(const QString &name, const QStringList &keys)
 {
     if (!findAction(name))
-        return;
+        return {};
 
     QStringList formatted;
     for (const QString &k : keys) {
@@ -513,14 +519,16 @@ void Actions::setKeys(const QString &name, const QStringList &keys)
 
     QString error;
     if (!TomlPatch::setValueInFile(settingsFile(), QStringLiteral("shortcuts"), name, value, &error))
-        warn(QStringLiteral("could not save shortcut %1: %2").arg(name, error));
+        qCWarning(lcActions).noquote() << "could not save shortcut" << name << error;
     reload();
+    return error;
 }
 
-void Actions::resetKeys(const QString &name)
+QString Actions::resetKeys(const QString &name)
 {
     QString error;
     if (!TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("shortcuts"), name, &error) && !error.isEmpty())
-        warn(QStringLiteral("could not reset shortcut %1: %2").arg(name, error));
+        qCWarning(lcActions).noquote() << "could not reset shortcut" << name << error;
     reload();
+    return error;
 }

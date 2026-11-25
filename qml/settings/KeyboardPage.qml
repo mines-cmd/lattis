@@ -38,6 +38,17 @@ Item {
 
     signal message(string text)
 
+    function showSaved(error) {
+        saveError.text = error === "" ? "" : qsTr("Couldn't save the shortcut: %1").arg(error)
+    }
+
+    // The screenshot hook LATTIS_OPEN_SETTINGS=keyboard/set:<action>:<key>: binds the key as recording it would.
+    function reveal(item) {
+        const parts = item.split(":")
+        if (parts[0] === "set" && parts.length === 3)
+            showSaved(Actions.setKeys(parts[1], [parts[2]]))
+    }
+
     function focusSearch() {
         search.forceActiveFocus()
         search.selectAll()
@@ -96,6 +107,15 @@ Item {
             ProblemsButton {
                 problems: Actions.problems
             }
+        }
+
+        PlainLabel {
+            id: saveError
+            visible: text !== ""
+            Layout.fillWidth: true
+            color: Theme.controls.problemsText
+            font.pixelSize: Theme.controls.descriptionFontSize
+            wrapMode: Text.WordWrap
         }
 
         ListView {
@@ -183,6 +203,7 @@ Item {
                         recording: root.recordingName === model.name
                         onRecordRequested: root.recordingName = model.name
                         onRecordFinished: if (root.recordingName === model.name) root.recordingName = ""
+                        onSaved: error => root.showSaved(error)
                     }
                 }
             }

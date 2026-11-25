@@ -554,7 +554,7 @@ Functions other parts of the app call on the main window (through `window`):
 | `selectGame(id)` | Selects a game in the list |
 | `hideGame(game)` | Hides a game (`Library.removeGame`); the toast's Undo comes from `undoOffered` |
 | `uninstallGame(game)` | Uninstalls a game (hands to Steam, or dialog) |
-| `run(name)` | Handles a named action |
+| `run(name)` | Handles a named action. While a page covers the library (`pageCovering`: the Gallery, Play statistics or the Library overview), it returns at once for every action of the schema's `game` group (`Actions.inGroup(name, "game")`: Launch, favorite, hide, Open folder, Properties…), since they act on the game selected in the list under the page, which nothing on screen shows; the list's keys (`coveredActions`) are dropped too |
 | `runOn(name, game)` | Handles a "selected game" named action on `game` |
 
 Screenshot hooks (`LATTIS_*` env vars) call private functions (`selectAndLaunch`, `selectAndEdit`, etc.) from `main.cpp`; each hook is described in the comment above them in `main.cpp`.
@@ -563,7 +563,7 @@ Screenshot hooks (`LATTIS_*` env vars) call private functions (`selectAndLaunch`
 
 | Function / signal | What it does |
 |---|---|
-| `showCategory(key, item)` | Navigates to `key` and calls `reveal(item)` on the page |
+| `showCategory(key, item)` | Navigates to `key` and calls `reveal(item)` on the page (the Keyboard page's `reveal("set:<action>:<key>")` binds a key, for the screenshot of a failed save) |
 | `lookUpMissing` (signal) | Main window opens BulkLookup |
 | `suggestTagsFromIgdb` (signal) | Main window opens BulkLookup in tags mode |
 | `runSetupGuide` (signal) | Main window hides settings and opens the setup guide |
@@ -593,6 +593,7 @@ Signals: `message(text)` (a toast), `shortcutFound(text)` (already a shortcut in
 | `scrollThrough(pixelsPerSecond)` | Scrolls the list top to bottom at a steady speed (the `LATTIS_SCROLL` hook; Main.qml's `scrollList`) |
 | `focusList()` | Gives keyboard focus to the list |
 | `navigationActions` | Action names this view handles (passed to Main.qml) |
+| `coveredActions` | `navigationActions` and the selection keys (`extend_previous`, `extend_next`, `select_all`, `clear_selection`): the actions `Main.qml`'s `run()` drops while a page covers the library. `GameList` and `GameGrid` both have it, and `run()` reads it as `browser.coveredActions ?? []` |
 | `activeFilters` | `[{text, tagColor, off}]` for the shown filter chips |
 | `gameAction` (signal) | A game menu action to run on `game` |
 

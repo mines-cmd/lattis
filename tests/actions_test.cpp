@@ -6,6 +6,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <unistd.h>
+
 // Loading [shortcuts] from settings.toml, validation, conflicts, and saving edits back.
 // No QML engine involved; Actions is plain C++ here.
 class ActionsTest : public QObject
@@ -20,6 +22,8 @@ private slots:
     void renamedActionsKeepTheirKeys();
     void setKeysSavesAndResetRemoves();
     void setKeysIntoCommentedTemplate();
+    void saveFailuresAreReturned();
+    void inGroupNamesTheSchemaGroup();
     void sequenceForNormalizes();
     void namesAndTrigger();
     void everyActionHasAGroup();
@@ -159,6 +163,40 @@ void ActionsTest::setKeysSavesAndResetRemoves()
     QCOMPARE(actions.keysOf("toggle_favorite"), QStringList{"Ctrl+D"});
     QCOMPARE(actions.isCustom("toggle_favorite"), false);
     QVERIFY(!readSettings(dir).contains("toggle_favorite"));
+}
+
+void ActionsTest::saveFailuresAreReturned()
+{
+    if (geteuid() == 0)
+        QSKIP("root writes into a read-only folder");
+    QTemporaryDir dir;
+    Actions actions(writeSettings(dir, "[shortcuts]\nquit = \"Ctrl+Alt+Q\"\n"));
+    QCOMPARE(actions.keysOf("quit"), QStringList{"Ctrl+Alt+Q"});
+
+    // The file is replaced through a temporary next to it, so a read-only folder refuses the write.
+    QVERIFY(QFile::setPermissions(dir.path(), QFile::ReadOwner | QFile::ExeOwner));
+    const QString setError = actions.setKeys("quit", {"Ctrl+Q"});
+    const QString resetError = actions.resetKeys("quit");
+    QVERIFY(QFile::setPermissions(dir.path(), QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+
+    QVERIFY(!setError.isEmpty());
+    QVERIFY(!resetError.isEmpty());
+    QCOMPARE(actions.keysOf("quit"), QStringList{"Ctrl+Alt+Q"});
+    QVERIFY2(readSettings(dir).contains("Ctrl+Alt+Q"), qPrintable(readSettings(dir)));
+
+    QCOMPARE(actions.setKeys("quit", {"Ctrl+Q"}), QString());
+    QCOMPARE(actions.keysOf("quit"), QStringList{"Ctrl+Q"});
+    QCOMPARE(actions.resetKeys("quit"), QString());
+}
+
+void ActionsTest::inGroupNamesTheSchemaGroup()
+{
+    QTemporaryDir dir;
+    Actions actions(writeSettings(dir, ""));
+    for (const char *name : {"launch", "toggle_favorite", "hide_game", "open_folder", "uninstall_game", "game_menu"})
+        QVERIFY2(actions.inGroup(name, "game"), name);
+    for (const char *name : {"next_game", "focus_search", "quit", "no_such_action"})
+        QVERIFY2(!actions.inGroup(name, "game"), name);
 }
 
 // New data dirs get a [shortcuts] section holding only a commented-out example.

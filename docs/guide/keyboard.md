@@ -116,4 +116,6 @@ The tabs are General, Images, Launch and Saves (Saves & mods for Steam, Windows 
 | Ctrl+E | Open the colors file |
 | Ctrl+Shift+E | Open the style file |
 
-Shortcuts are saved under `[shortcuts]` in `settings.toml`, so a [backup](backups.md) keeps them.
+Shortcuts are saved under `[shortcuts]` in `settings.toml`, so a [backup](backups.md) keeps them. If the file can't be written (the folder is read-only, say), Settings → Keyboard says so in red above the list and keeps the old keys.
+
+While the Gallery, Play statistics or the Library overview covers the library, the keys that act on the selected game (Launch, favorite, Open folder, Properties and the rest of that group) do nothing, and so do the list's navigation keys. The game they would act on is hidden under the page.

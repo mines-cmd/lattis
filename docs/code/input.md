@@ -34,7 +34,7 @@ launch = ["Return", "Enter"]   # a list for several keys
 toggle_favorite = []            # empty list = unbound
 ```
 
-`Actions.setKeys(name, keys)` writes the binding into the file (or removes it for an empty list); `resetKeys(name)` removes the entry so the default applies again. `Actions.keys` is a `QQmlPropertyMap` (`ActionKeys`) that exposes each name as a property: `Actions.keys.launch` is a `QStringList` of portable sequences. QML uses this to build tooltips (`Actions.tip(text, Actions.keys.launch)`) and menu labels (`Actions.label(Actions.keys.launch)`).
+`Actions.setKeys(name, keys)` writes the binding into the file (or removes it for an empty list); `resetKeys(name)` removes the entry so the default applies again. Both return the error text when the file couldn't be written (and leave the bindings as they were), or `""`; the Keyboard page shows it above the list, as the General page shows `General`'s. The error is not put in `problems`, because the `reload()` that follows every write clears that list. `Actions.keys` is a `QQmlPropertyMap` (`ActionKeys`) that exposes each name as a property: `Actions.keys.launch` is a `QStringList` of portable sequences. QML uses this to build tooltips (`Actions.tip(text, Actions.keys.launch)`) and menu labels (`Actions.label(Actions.keys.launch)`).
 
 `sequenceFor(key, modifiers)` converts a raw Qt key event into a portable sequence string — the Keyboard settings page calls it while recording a new binding. Backtab is stored as `Shift+Tab`, since that's what users write.
 
@@ -75,8 +75,9 @@ groupOf(action)       → the group that owns an action
 | `tip(text, keys)` | `"Add to favorites (Ctrl+D)"` — text with the first key appended |
 | `label(keys)` | First key as shown to the user (`"Ctrl+D"`), or `""` when unbound |
 | `sequenceFor(key, modifiers)` | Portable sequence from a Qt key event, for recording |
-| `setKeys(name, keys)` | Write to `[shortcuts]`; empty list unbinds |
-| `resetKeys(name)` | Remove from `[shortcuts]`; default applies again |
+| `setKeys(name, keys)` | Write to `[shortcuts]`; empty list unbinds. Returns the error, or `""` |
+| `resetKeys(name)` | Remove from `[shortcuts]`; default applies again. Returns the error, or `""` |
+| `inGroup(name, group)` | Whether the action is in that schema group (`"game"`: the actions on the selected game, which `Main.qml` refuses while a page covers the library) |
 | `settingsFile()` | Path to `settings.toml` |
 
 Signal: `triggered(name, window)` — only the focused window's handler runs.

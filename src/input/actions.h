@@ -105,14 +105,15 @@ public:
     void setRecording(bool recording);
 
     Q_INVOKABLE QStringList names(const QString &scope) const;
+    Q_INVOKABLE bool inGroup(const QString &name, const QString &group) const;
     Q_INVOKABLE void trigger(const QString &name);
 
     Q_INVOKABLE QString tip(const QString &text, const QStringList &keys) const;
     Q_INVOKABLE QString label(const QStringList &keys) const;
     Q_INVOKABLE QString sequenceFor(int key, int modifiers) const;
 
-    Q_INVOKABLE void setKeys(const QString &name, const QStringList &keys);
-    Q_INVOKABLE void resetKeys(const QString &name);
+    Q_INVOKABLE QString setKeys(const QString &name, const QStringList &keys);
+    Q_INVOKABLE QString resetKeys(const QString &name);
     Q_INVOKABLE QString settingsFile() const;
 
     QStringList keysOf(const QString &name) const { return m_bindings.value(name); }

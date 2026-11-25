@@ -20,6 +20,8 @@ Rectangle {
 
     signal recordRequested()
     signal recordFinished()
+    // The text of a failed save, or "" after a save that worked.
+    signal saved(string error)
 
     color: hover.hovered ? Theme.controls.hover : Qt.alpha(Theme.controls.hover, 0)
 
@@ -49,7 +51,7 @@ Rectangle {
             const key = Actions.sequenceFor(event.key, event.modifiers)
             if (key === "")
                 return // a modifier on its own; wait for the rest
-            Actions.setKeys(root.name, [key])
+            root.saved(Actions.setKeys(root.name, [key]))
             root.recordFinished()
         }
         onActiveFocusChanged: if (!activeFocus && root.recording) root.recordFinished()
@@ -109,7 +111,7 @@ Rectangle {
             icon: Icons.close
             iconColor: Theme.settingsWindow.resetButtonColor
             tip: qsTr("Remove the shortcut")
-            onClicked: Actions.setKeys(root.name, [])
+            onClicked: root.saved(Actions.setKeys(root.name, []))
         }
 
         IconButton {
@@ -125,7 +127,7 @@ Rectangle {
             iconColor: Theme.settingsWindow.resetButtonColor
             tip: root.defaultLabels.length > 0 ? qsTr("Reset to %1").arg(root.defaultLabels.join(", "))
                                                : qsTr("Reset (no shortcut by default)")
-            onClicked: Actions.resetKeys(root.name)
+            onClicked: root.saved(Actions.resetKeys(root.name))
         }
     }
 
