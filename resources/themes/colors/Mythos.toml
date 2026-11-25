@@ -5,6 +5,9 @@
 accent = "#04a5ff"
 accent_end = "#0379ff"
 
+[rail]
+dog_details = "#225877"
+
 [launch_button]
 running_background = "#4fc82f"
 running_background_end = "#18b04e"

@@ -17,7 +17,7 @@ dog_background = "@launch_button.background"
 dog_background_end = "@launch_button.background_end"
 dog_coat = "#fcfef4"
 dog_coat_end = "#d6e0bc"
-dog_details = "#1a640e"
+dog_details = "#207e7c"
 
 [onboarding]
 background = "#050a05"

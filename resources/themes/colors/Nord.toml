@@ -20,6 +20,7 @@ checker_dark = "#3b4252"
 
 [rail]
 background = "#272c36ca"
+dog_details = "#43577f"
 
 [search]
 background = "#272c36ca"
