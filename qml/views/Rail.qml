@@ -493,6 +493,7 @@ Item {
             // padding, which puts it as far from the search box as from the window's edge.
             Layout.leftMargin: Theme.list.padding * (1 - root.shown)
             highlighted: logoMouse.containsMouse || (appMenu.item?.visible ?? false)
+            updateWaiting: root.updateTip !== ""
 
             MouseArea {
                 id: logoMouse
@@ -511,20 +512,6 @@ Item {
                 id: logoDip
                 MotionNumber { target: logo; property: "scale"; to: Theme.motion.pressScale }
                 MotionPop { target: logo; property: "scale"; to: 1; speed: "fast" }
-            }
-
-            Rectangle {
-                visible: root.updateTip !== ""
-                width: Theme.rail.updateDotSize
-                height: width
-                radius: width / 2
-                color: Theme.rail.updateDot
-                border.color: Theme.rail.updateDotBorder
-                border.width: Theme.rail.updateDotBorderWidth
-                readonly property bool atTop: Theme.rail.updateDotCorner.startsWith("top")
-                readonly property bool atLeft: Theme.rail.updateDotCorner.endsWith("left")
-                x: atLeft ? Theme.rail.updateDotMargin : parent.width - width - Theme.rail.updateDotMargin
-                y: atTop ? Theme.rail.updateDotMargin : parent.height - height - Theme.rail.updateDotMargin
             }
 
             ToolTip.visible: logoMouse.containsMouse && !(appMenu.item?.visible ?? false)
