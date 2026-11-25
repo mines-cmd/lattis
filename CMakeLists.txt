@@ -103,6 +103,7 @@ qt_add_qml_module(lattis
         qml/components/RangeHistogram.qml
         qml/components/CalendarPopup.qml
         qml/components/DateInput.js
+        qml/components/DateFieldHost.qml
         qml/components/DateTimeField.qml
         qml/components/DurationField.qml
         qml/components/IconButton.qml

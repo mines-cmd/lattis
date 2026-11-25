@@ -70,7 +70,7 @@ Startup must reach the first frame quickly (the target is 400 ms), so secondary 
 - one-off values go in `onLoaded` or `setSource(url, { … })`;
 - bindings that must stay live go in a `Binding { target: loader.item; … }`.
 
-Loading stays synchronous, so a function can use `loader.item` right after setting `active = true`. A view that only a hidden menu needs gets its own file for the same reason (`LogoMenu.qml`, which the hero's inline menu used to be).
+Loading stays synchronous, so a function can use `loader.item` right after setting `active = true`. A view that only a hidden menu needs gets its own file for the same reason (`LogoMenu.qml`, which the hero's inline menu used to be). `Main.qml`'s `gridLoader` follows the rule (`Connections` for the grid's signals, `Binding`s for `coverFades` and `toolbarLeft`, `onLoaded` for the list's selection it starts from), and so does `dateFieldHost`, whose card is `components/DateFieldHost.qml`. Without them `GameGrid`, `GridPanel`, `DateTimeField` and `CalendarPopup` loaded before the first frame in List view. To check what loads, start the app with `QT_LOGGING_RULES=qt.qml.*=true` and look at the documents it opens.
 
 What is loaded immediately: Rail, GameList, Hero, and Backdrop, plus `GameDetails` in List view or `GameGrid` in Grid view — everything visible on the first frame. Each view creates the other only when it is needed: Main holds `GameDetails` in a `Component`, shown by a `Loader` beside the list (List view only) and by a second one inside the full-window game page that Open game page shows over the grid (created on first use and dropped when the view switches back to List).
 

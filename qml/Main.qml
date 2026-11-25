@@ -1437,26 +1437,33 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 transform: Translate { y: window.viewRise }
-                sourceComponent: GameGrid {
-                    coverFades: !window.viewCovered
-                    // Start from the list's selection; the grid's first own pick replaces these bindings.
-                    selectedId: gameList.selectedId
-                    selection: gameList.selection
-                    onSelectedIdChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
-                    onSelectionChanged: window.gridSelection = { id: selectedId, ids: Object.keys(selection) }
-                    toolbarLeft: toolbar.visible ? toolbar.x - parent.x : -1
-                    onLaunchRequested: window.launch(currentGame)
-                    onStopRequested: window.askForceClose(currentGame)
-                    onMessage: text => toast.show(text)
-                    onEmulatorMessage: (text, gameId) => window.showEmulatorMessage(text, gameId)
-                    onGameAction: (name, game) => window.runOn(name, game)
-                    onGamesAction: (name, ids) => window.runOnMany(name, ids)
-                    onModManagerRequested: id => window.openModManager(id)
-                    onEditRequested: window.editGame(currentGame.id)
-                    onHistoryRequested: window.openPlayHistory(currentGame)
-                    onCustomizeRequested: window.openSettingsAt("game_page")
-                    onPageRequested: window.setGamePageOpen(true)
+                source: "views/GameGrid.qml"
+                onLoaded: {
+                    // Start from the list's selection; the grid's first own pick replaces these.
+                    item.selectedId = gameList.selectedId
+                    item.selection = gameList.selection
+                    window.gridSelection = { id: item.selectedId, ids: Object.keys(item.selection) }
                 }
+            }
+
+            Binding { target: gridLoader.item; property: "coverFades"; value: !window.viewCovered }
+            Binding { target: gridLoader.item; property: "toolbarLeft"; value: toolbar.visible ? toolbar.x - gridLoader.x : -1 }
+
+            Connections {
+                target: gridLoader.item
+                function onSelectedIdChanged() { window.gridSelection = { id: target.selectedId, ids: Object.keys(target.selection) } }
+                function onSelectionChanged() { window.gridSelection = { id: target.selectedId, ids: Object.keys(target.selection) } }
+                function onLaunchRequested() { window.launch(target.currentGame) }
+                function onStopRequested() { window.askForceClose(target.currentGame) }
+                function onMessage(text) { toast.show(text) }
+                function onEmulatorMessage(text, gameId) { window.showEmulatorMessage(text, gameId) }
+                function onGameAction(name, game) { window.runOn(name, game) }
+                function onGamesAction(name, ids) { window.runOnMany(name, ids) }
+                function onModManagerRequested(id) { window.openModManager(id) }
+                function onEditRequested() { window.editGame(target.currentGame.id) }
+                function onHistoryRequested() { window.openPlayHistory(target.currentGame) }
+                function onCustomizeRequested() { window.openSettingsAt("game_page") }
+                function onPageRequested() { window.setGamePageOpen(true) }
             }
 
             GameList {
@@ -1844,31 +1851,7 @@ ApplicationWindow {
         id: dateFieldHost
         active: false
         anchors.horizontalCenter: parent.horizontalCenter
-        sourceComponent: Rectangle {
-            id: hostCard
-
-            property alias field: hostField
-
-            implicitWidth: hostColumn.implicitWidth + 2 * Theme.menu.dialogPadding
-            implicitHeight: hostColumn.implicitHeight + 2 * Theme.menu.dialogPadding
-            color: Theme.menu.popupBackground
-            radius: Theme.controls.inputRadius
-
-            ColumnLayout {
-                id: hostColumn
-                anchors.centerIn: parent
-                spacing: Theme.controls.controlSpacing
-
-                DateTimeField {
-                    id: hostField
-                    maximumDate: new Date()
-                }
-                Label {
-                    text: hostField.valid ? "picked " + Qt.formatDateTime(hostField.value, "yyyy-MM-dd HH:mm") : "nothing picked"
-                    color: Theme.controls.labelColor
-                }
-            }
-        }
+        source: "components/DateFieldHost.qml"
     }
 
     // Stands in for the Add session dialog until it exists: a date field to try the calendar on.
