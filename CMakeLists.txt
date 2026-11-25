@@ -18,8 +18,8 @@ endif()
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-# The app icon at the hicolor sizes (tools/logo/icons.js): the window icon, the logo the
-# rail and Welcome show, and the installed icon.
+# The app icon at the hicolor sizes (tools/logo/icons.js): the window icon and the installed
+# icon.
 set(APP_ICON_SIZES 16 24 32 48 64 128 256 512)
 set(APP_ICONS)
 foreach(size IN LISTS APP_ICON_SIZES)
