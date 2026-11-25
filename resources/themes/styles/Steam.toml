@@ -11,7 +11,6 @@ tiny = 0
 logo_radius = 100
 container = false
 show_logo = true
-logo_mark_size = 50
 button_radius = 4
 
 [search]

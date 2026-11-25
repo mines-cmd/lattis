@@ -20,7 +20,6 @@ checker_dark = "#3c3836"
 
 [rail]
 background = "#1d2021ca"
-logo_mark = "@text"
 
 [search]
 background = "#1d2021ca"

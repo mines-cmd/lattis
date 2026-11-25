@@ -22,7 +22,6 @@ checker_dark = "#30363d"
 [rail]
 background = "#161b227a"
 hover_background = "#adbccd39"
-logo_mark = "@text"
 dog_background = "#f98644"
 dog_background_end = "#dc5418"
 dog_coat = "#fff6ee"

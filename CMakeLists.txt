@@ -541,7 +541,6 @@ qt_add_qml_module(lattis
         ${COVER_IMAGES}
         resources/fonts/InterVariable.ttf
         resources/setup/welcome.webp
-        resources/logo/lattis-ember-simple.svg
         resources/logo/lattis-ember-horizontal.png
         resources/logo/lattis-ember-horizontal-light.png
         ${LIBRARY_RESOURCES}
