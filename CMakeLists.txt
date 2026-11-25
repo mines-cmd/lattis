@@ -551,6 +551,7 @@ qt_add_shaders(lattis "shaders"
     PREFIX "/qt/qml/Launcher"
     FILES
         qml/shaders/backdropfade.frag
+        qml/shaders/backdroplight.frag
         qml/shaders/coverround.frag
         qml/shaders/coverwall.frag
 )

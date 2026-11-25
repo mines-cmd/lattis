@@ -1398,6 +1398,7 @@ ApplicationWindow {
             saturation: window.gridView ? Theme.grid.backdropSaturation : Theme.backdrop.saturation
             blurAmount: window.gridView ? Theme.grid.backdropBlur : Theme.backdrop.blur
             fadeStart: window.gridView ? Theme.grid.backdropFadeStart : Theme.backdrop.fadeStart
+            lightLimit: window.gridView ? Theme.grid.backdropLightLimit : Theme.backdrop.lightLimit
             game: !on ? ({})
                 : window.gridView && !window.gamePageOpen ? window.gridHeroGame
                 : (details?.shownHeroGame ?? ({}))

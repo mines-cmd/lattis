@@ -14,9 +14,13 @@ Item {
     property real heightFraction: Theme.backdrop.height
     property real blurAmount: Theme.backdrop.blur
     property real fadeStart: Theme.backdrop.fadeStart
+    property real lightLimit: Theme.backdrop.lightLimit
     // Swaps without a crossfade, for a change made while a page hides the backdrop.
     property bool instant: false
     readonly property real dim: 1 - strength
+    // On a light background it's dark art that stands out, and holding light art back would only muddy it.
+    readonly property bool limitsLight: lightLimit < 1
+        && 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b < 0.5
 
     clip: true
 
@@ -102,6 +106,12 @@ Item {
                 blur: root.blurAmount
                 blurMax: Theme.backdrop.blurMax
                 saturation: root.saturation
+                layer.enabled: visible && root.limitsLight
+                layer.smooth: true
+                layer.effect: ShaderEffect {
+                    property real limit: root.lightLimit
+                    fragmentShader: "qrc:/qt/qml/Launcher/qml/shaders/backdroplight.frag.qsb"
+                }
             }
         }
     }

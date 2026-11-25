@@ -12,7 +12,8 @@ A blurred, dimmed copy of the selected game's banner behind the window, fading i
 - `height`: how far down it reaches, as a fraction of the window's height.
 - `fade_start`, `fade_curve`: where the fade into the background begins (as a fraction of the backdrop's height) and its shape; `smooth` has no visible edge.
 - `dither`: fine noise in the fade that hides banding near black. 0 turns it off.
-- `opacity`: how strongly the art shows. Lower is darker and subtler; this is the setting to change when the backdrop is too bright.
+- `opacity`: how strongly the art shows. Lower is darker and subtler; this is the setting to change when every game's backdrop is too bright.
+- `light_limit`: how bright light art may get before `opacity` is applied. Lower it when only games with light art are too bright; art darker than about four fifths of the limit isn't changed. 1 turns it off. Only works with a dark background color.
 - `blur`, `blur_max`: how blurred it is (0–1), and the blur radius `blur = 1` means.
 - `saturation`: how colorful it is; −1 is greyscale.
 - `decode_size`: the width the art is loaded at. Small is faster and already soft; raise it only with little blur.
@@ -307,6 +308,7 @@ Grid view's own blurred backdrop; it reaches further and is a little stronger th
 - `backdrop_enabled`: show it.
 - `backdrop_height`, `backdrop_fade_start`: how far down it reaches and where it starts fading.
 - `backdrop_opacity`, `backdrop_blur`, `backdrop_saturation`: its strength, blur and color. Blur and saturation follow `[backdrop]` until set.
+- `backdrop_light_limit`: how bright light art may get, as `light_limit` in `[backdrop]`, which it follows until set.
 
 ### Side panel Launch button
 
