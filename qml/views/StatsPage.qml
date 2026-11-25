@@ -32,7 +32,8 @@ FocusScope {
     readonly property bool compact: Theme.stats.compactWidth > 0 && width < Theme.stats.compactWidth
     readonly property real sideMargin: 2 * Theme.layout.margin
     readonly property real contentWidth: Math.min(Theme.stats.maxWidth, width - 2 * sideMargin)
-    readonly property var today: new Date()
+    // Taken again whenever the page opens: a launcher left running over midnight keeps this page loaded.
+    property var today: new Date()
     readonly property int shownYear: stats.year ?? year
     readonly property int shownMonthYear: monthStats.year ?? year
     readonly property int shownMonth: monthStats.month ?? month
@@ -90,7 +91,10 @@ FocusScope {
     signal closeRequested()
     signal gameRequested(string id)
 
+    onVisibleChanged: if (visible) today = new Date()
+
     function start() {
+        today = new Date()
         resetting = true
         mode = "month"
         year = today.getFullYear()
