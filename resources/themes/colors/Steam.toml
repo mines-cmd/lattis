@@ -20,7 +20,10 @@ dog_details = "#225877"
 background = "#3d4450"
 
 [icon_button]
-background = "#3d4450"
+background = "@surface"
+
+[toolbar]
+background = "@surface"
 
 [launch_button]
 background = "#4fc82f"

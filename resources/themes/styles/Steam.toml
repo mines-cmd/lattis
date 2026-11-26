@@ -5,13 +5,13 @@ description = "Flat and borderless, like the Steam client"
 large = 4
 medium = 2
 small = 0
-tiny = 0
+tiny = 2
 
 [rail]
 logo_radius = 100
 container = false
 show_logo = true
-button_radius = 4
+button_radius = 32
 
 [search]
 border_width = 0
@@ -74,6 +74,7 @@ border_width = 2
 radius = 4
 
 [backdrop]
+enabled = false
 area = "details"
 
 [stats]
