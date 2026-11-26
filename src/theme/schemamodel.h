@@ -109,6 +109,7 @@ private:
     bool sameCard(int row, int other) const;
     void ensureLinks() const;
     void refresh();
+    void updateRows(const QList<int> &rows);
     void updateChangedCount();
     QString activeThemeNames() const;
 

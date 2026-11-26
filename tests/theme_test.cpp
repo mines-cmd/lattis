@@ -254,9 +254,16 @@ void ThemeTest::changedOnlyFiltersToCustomizedSettings()
     theme.setValue("radius", "medium", 31);
     QCOMPARE(resets.count(), 0);
 
+    // Rows come and go without a reset, so the list keeps its scroll position.
+    theme.setValue("radius", "large", 30);
+    QCOMPARE(model->rowCount(), 2);
     theme.resetValue("radius", "medium");
+    QCOMPARE(model->rowCount(), 1);
+    QCOMPARE(model->data(model->index(0), ThemeSettingsModel::KeyRole).toString(), QStringLiteral("large"));
+    theme.resetValue("radius", "large");
     QCOMPARE(model->changedCount(), 0);
     QCOMPARE(model->rowCount(), 0);
+    QCOMPARE(resets.count(), 0);
 
     model->setChangedOnly(false);
     QVERIFY(model->rowCount() > 100);

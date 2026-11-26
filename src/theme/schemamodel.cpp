@@ -168,24 +168,53 @@ void ThemeSettingsModel::refresh()
         m_themeNames = names;
         m_followed.clear();
     }
-    // With "changed only" or "following" on, a reset or theme switch can add or remove rows. Only
-    // reset the model when the rows really change: a reset rebuilds every delegate, which would
-    // close an open color picker in the middle of a drag.
+    // With "changed only" or "following" on, a reset or theme switch can add or remove rows.
     if (m_changedOnly || !m_following.isEmpty()) {
         const QList<int> rows = visibleRows();
-        if (rows != m_visible) {
-            beginResetModel();
-            setVisible(rows);
-            endResetModel();
+        const bool differs = rows != m_visible;
+        if (differs) {
+            updateRows(rows);
             emit sectionsChanged();
-            emit groupsChanged();
-            return;
         }
-        if (m_changedOnly)
+        if (differs || m_changedOnly)
             emit groupsChanged();
     }
     if (rowCount() > 0)
         emit dataChanged(index(0), index(rowCount() - 1));
+}
+
+// Row by row, never a model reset: that would scroll the list back to the top, and rebuild every
+// delegate, closing an open color picker in the middle of a drag. Both lists are in schema order.
+void ThemeSettingsModel::updateRows(const QList<int> &rows)
+{
+    const QSet<int> kept(rows.begin(), rows.end());
+    for (int last = m_visible.size() - 1; last >= 0; --last) {
+        if (kept.contains(m_visible[last]))
+            continue;
+        int first = last;
+        while (first > 0 && !kept.contains(m_visible[first - 1]))
+            --first;
+        beginRemoveRows({}, first, last);
+        QList<int> next = m_visible;
+        next.remove(first, last - first + 1);
+        setVisible(next);
+        endRemoveRows();
+        last = first;
+    }
+    for (int first = 0; first < rows.size(); ++first) {
+        if (first < m_visible.size() && m_visible[first] == rows[first])
+            continue;
+        int end = first + 1;
+        while (end < rows.size() && (first >= m_visible.size() || rows[end] != m_visible[first]))
+            ++end;
+        beginInsertRows({}, first, end - 1);
+        QList<int> next = m_visible;
+        for (int row = first; row < end; ++row)
+            next.insert(row, rows[row]);
+        setVisible(next);
+        endInsertRows();
+        first = end - 1;
+    }
 }
 
 QString ThemeSettingsModel::activeThemeNames() const
