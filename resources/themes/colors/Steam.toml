@@ -42,6 +42,12 @@ scrollbar_handle = "#3d4450"
 scrollbar_handle_hover = "#48505e"
 scrollbar_track = "#2c313a"
 
+[segmented]
+background = "#1f242c"
+checked_background = "@palette.accent_end"
+checked_text = "#ffffff"
+text = "#b8bcbf"
+
 [stat_chip]
 value_color = "#838383"
 label_color = "#cecece"

@@ -1348,8 +1348,10 @@ constexpr Setting kSettings[] = {
     color("toolbar", "status_invisible", "@text_muted", "Status ring: invisible (a hollow dot)"),
     color("toolbar", "status_border", "@palette.surface", "Ring around the status dot, so it reads on the picture"),
 
+    color("segmented", "background", "@palette.surface", "The track behind the choices"),
     color("segmented", "checked_background", "@palette.accent", "The checked segment, drawn at checked_opacity"),
     real("segmented", "checked_opacity", "0.22", 0, 1, "How strong checked_background is"),
+    integer("segmented", "checked_radius", "@radius.tiny", 0, 100, "Corner radius of the checked segment"),
     color("segmented", "checked_text", "@palette.accent", "Text of the checked segment, drawn lighter by light_brightness"),
     color("segmented", "text", "@text_muted", "Text of the unchecked segments"),
     real("segmented", "light_brightness", "@stats.light_brightness", 1, 3,

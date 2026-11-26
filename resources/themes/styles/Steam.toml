@@ -86,3 +86,6 @@ radius = 4
 
 [details]
 padding = 0
+
+[segmented]
+checked_opacity = 1

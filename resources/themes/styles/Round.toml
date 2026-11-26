@@ -7,3 +7,6 @@ large = 16
 medium = 12
 small = 8
 tiny = 4
+
+[segmented]
+checked_radius = "@radius.small"

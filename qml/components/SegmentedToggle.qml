@@ -30,7 +30,7 @@ Rectangle {
     implicitWidth: root.choices.length * segmentWidth + 2 * inset
     implicitHeight: Theme.layout.toolbarHeight
     radius: Theme.iconButton.radius
-    color: Theme.palette.surface
+    color: Theme.segmented.background
     border.color: Theme.iconButton.border
     border.width: Theme.iconButton.borderWidth
     Accessible.role: Accessible.RadioButton
@@ -59,7 +59,7 @@ Rectangle {
         x: row.x + place * width
         y: row.y
         height: row.height
-        radius: Math.max(0, root.radius - root.inset + Theme.iconButton.borderWidth)
+        radius: Theme.segmented.checkedRadius
         color: Qt.alpha(Theme.segmented.checkedBackground, Theme.segmented.checkedOpacity)
         border.color: Qt.alpha(Theme.segmented.checkedText, 0.35)
         border.width: Theme.iconButton.borderWidth

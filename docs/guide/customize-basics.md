@@ -199,6 +199,8 @@ The minimize, maximize and close buttons at the top right of every window, and t
 
 Toggles that pick one of a few choices side by side, like Month | Year on Play statistics or Missing info | All games in Look up missing info.
 
+- `background`: the track behind the choices.
 - `checked_background`, `checked_opacity`: the tint behind the chosen choice and how strong it is.
+- `checked_radius`: how round the chosen choice's corners are (the tiny radius unless set).
 - `checked_text`, `light_brightness`: the chosen choice's text, and how much lighter it's drawn so it reads on the tint.
 - `text`: the other choices' text.
