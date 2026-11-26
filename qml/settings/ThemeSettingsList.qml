@@ -56,6 +56,10 @@ ListView {
     spacing: 0
     model: schema
     boundsBehavior: Flickable.StopAtBounds
+    // A filtered list is mostly section and subsection headers, so row heights vary too much for
+    // ListView's estimate: the content height and bar size changed while scrolling. A short list
+    // makes every row up front so the height is exact; the full list is too long for that.
+    cacheBuffer: count <= 250 ? 1000000 : 320
 
     readonly property alias scrollBar: scrollBar
 
