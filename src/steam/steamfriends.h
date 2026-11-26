@@ -30,7 +30,7 @@ public:
         // The setup guide is still open: nothing is fetched.
         std::function<bool()> held;
         std::function<MetadataHttp *()> http;
-        // LATTIS_STEAM_WEB_FIXTURES: a folder of canned answers; pictures are made on the spot.
+        // LATTIS_STEAM_WEB_FIXTURES: a folder of canned answers; pictures come from its avatars/ or are made on the spot.
         QString fixturesDir;
         // Between two requests of a fetch.
         int requestIntervalMs = 1000;

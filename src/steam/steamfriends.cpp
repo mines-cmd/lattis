@@ -328,10 +328,13 @@ void SteamFriends::fetchAvatars(QStringList urls, std::function<void()> done)
     QDir().mkpath(QFileInfo(path).absolutePath());
 
     if (!m_setup.fixturesDir.isEmpty()) {
-        QImage image(64, 64, QImage::Format_RGB32);
-        image.fill(QColor::fromHsv(int(qHash(url) % 360), 120, 200));
-        // Named like the real files; Qt reads the content, not the extension.
-        image.save(path, "PNG");
+        const QString given = QDir(m_setup.fixturesDir).filePath(QStringLiteral("avatars/") + pictureName(url));
+        if (!QFile::exists(given) || !QFile::copy(given, path)) {
+            QImage image(64, 64, QImage::Format_RGB32);
+            image.fill(QColor::fromHsv(int(qHash(url) % 360), 120, 200));
+            // Named like the real files; Qt reads the content, not the extension.
+            image.save(path, "PNG");
+        }
         fetchAvatars(urls, std::move(done));
         return;
     }
