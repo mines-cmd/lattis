@@ -54,21 +54,25 @@ Menu {
     // For a button's chevron: opened is false while the enter transition runs, and visible stays
     // true through the exit one, so either would turn the chevron late.
     property bool showing: false
-    Component.onCompleted: {
-        aboutToShow.connect(() => {
-            showing = true
-            flatten(false)
-            if (atPointer) {
-                const asked = y
-                popDirection = Qt.binding(() => y < asked ? "up" : "down")
-            }
-        })
-        aboutToHide.connect(() => {
-            showing = false
-            flatten(pops)
-        })
-        closed.connect(() => flatten(false))
+    // For a menu that moves itself as it opens: popDirection is judged from where this leaves it.
+    function place() {}
+
+    // Declared handlers, not connect(): a menu destroyed while open still closes, and connected functions
+    // would then run in a dead context.
+    onAboutToShow: {
+        showing = true
+        flatten(false)
+        place()
+        if (atPointer) {
+            const asked = y
+            popDirection = Qt.binding(() => y < asked ? "up" : "down")
+        }
     }
+    onAboutToHide: {
+        showing = false
+        flatten(pops)
+    }
+    onClosed: flatten(false)
     // Faded as separate items, the entries showed over whatever was behind the see-through panel, so
     // a popping menu closes as one flattened image. Only then: the layer softens text.
     function flatten(on) {

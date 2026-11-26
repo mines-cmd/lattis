@@ -30,7 +30,7 @@ SettingsMenu {
     // under the pointer as it opens. Not created here, as a menu is built when first requested and a
     // handler parented that late crashes.
     property HoverHandler pointer: null
-    onAboutToShow: {
+    function place() {
         if (pointer?.hovered) {
             x = pointer.point.position.x
             y = pointer.point.position.y
