@@ -515,7 +515,7 @@ void ThemeTest::previewCarriesThePopupFields()
     QVERIFY(soft.value("launchRunning").value<QColor>().isValid());
     QVERIFY(soft.value("launchInstall").value<QColor>().isValid());
     QCOMPARE(soft.value("launchInstall").value<QColor>(), theme.resolvedValue("launch_button", "install_background").value<QColor>());
-    QCOMPARE(soft.value("railBorderWidth").toInt(), 2);
+    QCOMPARE(soft.value("railBorderWidth").toInt(), 1);
     QCOMPARE(soft.value("searchRadius").toInt(), 8);
     QCOMPARE(soft.value("launchRadius").toInt(), 8);
     QCOMPARE(soft.value("launchBorderWidth").toInt(), 0);
@@ -525,7 +525,7 @@ void ThemeTest::previewCarriesThePopupFields()
     QCOMPARE(soft.value("railButtonRadius").toInt(), 8);
 
     const QVariantMap steam = theme.preview("Steam", "Steam");
-    QCOMPARE(steam.value("railBorderWidth").toInt(), 2);
+    QCOMPARE(steam.value("railBorderWidth").toInt(), 1);
     QCOMPARE(steam.value("searchBorderWidth").toInt(), 0);
     QCOMPARE(steam.value("launchLabel").toString(), QStringLiteral("▶  PLAY"));
     QCOMPARE(steam.value("launchRunning").value<QColor>(), theme.preview("Steam", "Soft").value("launchRunning").value<QColor>());
@@ -708,16 +708,16 @@ void ThemeTest::builtInStylesDifferWhereDecided()
     };
 
     QCOMPARE(radii(), (QList<int>{12, 8, 6, 4})); // Soft
-    QCOMPARE(theme.resolvedValue("layout", "border_width").toInt(), 2);
+    QCOMPARE(theme.resolvedValue("layout", "border_width").toInt(), 1);
     QCOMPARE(theme.resolvedValue("launch_button", "hover_brightness").toDouble(), 1.1);
     QCOMPARE(theme.resolvedValue("launch_button", "gradient_direction").toString(), QStringLiteral("down"));
     QCOMPARE(theme.resolvedValue("settings_window", "window_border_radius").toInt(), 12);
     QCOMPARE(theme.resolvedValue("font", "family").toString(), QStringLiteral("Inter"));
-    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 420);
+    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 400);
 
     theme.setStyle("Round");
     QCOMPARE(radii(), (QList<int>{16, 12, 8, 4}));
-    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 420);
+    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 400);
 
     theme.setStyle("Sharp");
     QCOMPARE(radii(), (QList<int>{0, 0, 0, 0}));
@@ -729,14 +729,14 @@ void ThemeTest::builtInStylesDifferWhereDecided()
     QCOMPARE(theme.resolvedValue("settings_window", "key_chip_radius").toInt(), 6);
     QCOMPARE(theme.resolvedValue("filters", "chip_radius").toInt(), 12);
     QCOMPARE(theme.resolvedValue("list", "icon_radius").toInt(), 4);
-    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 420);
+    QCOMPARE(theme.resolvedValue("list", "width").toInt(), 400);
 
     theme.setStyle("Steam");
-    QCOMPARE(radii(), (QList<int>{4, 2, 0, 0}));
+    QCOMPARE(radii(), (QList<int>{4, 2, 0, 2}));
     QCOMPARE(theme.resolvedValue("launch_button", "label").toString(), QString::fromUtf8("▶  PLAY"));
     QCOMPARE(theme.resolvedValue("settings_window", "window_border_radius").toInt(), 4);
     QCOMPARE(theme.resolvedValue("settings_window", "window_border_width").toInt(), 0);
-    QCOMPARE(theme.resolvedValue("rail", "border_width").toInt(), 2);
+    QCOMPARE(theme.resolvedValue("rail", "border_width").toInt(), 1);
 }
 
 void ThemeTest::eachHalfLoadsItsOwnSettings()
@@ -2189,7 +2189,7 @@ void ThemeTest::subHeadingsGroupSettingsIntoCards()
     };
     QVERIFY(section("palette").value("subsections").toList().isEmpty());
     const QVariantList sidebar = section("settings_window").value("subsections").toList();
-    QCOMPARE(sidebar.size(), 5);
+    QCOMPARE(sidebar.size(), 6);
     QCOMPARE(sidebar.first().toMap().value("title").toString(), QStringLiteral("Window"));
 
     int total = 0;
