@@ -39,6 +39,8 @@ The narrow bar on the far left with the logo and the navigation icons.
 - `dog_coat`, `dog_coat_end`: the dog's light and shaded sides.
 - `dog_details`: its nose and eye.
 - `dog_bark`: its barks.
+
+The app icon (Settings → General → App icon) is the same dog in a color theme's five `dog_background`…`dog_details` colors, without the barks and with the tile's gradient always running top to bottom; under Match theme it follows your changes to them.
 - `logo_hover`: the wash over the logo under the mouse or while its menu is open.
 - `update_dot`, `update_dot_size`: the dot on the logo when a newer version is waiting, and its size.
 - `update_dot_corner`, `update_dot_margin`: which corner it sits in, and how far in from the edges (negative pushes it out past the edge).

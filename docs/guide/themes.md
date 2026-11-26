@@ -29,6 +29,8 @@ and these styles, named by how round they are:
 - **Round:** rounder corners.
 - **Steam:** Steam's look: nearly square, no borders, "▶  PLAY" on the button.
 
+Each colors file also colors the dog: the rail's logo and, when Settings → General → App icon is on Match theme (the default), the app's icon in the applications menu and on the window, which change with the colors. App icon can also keep one colors' dog whatever you pick here. The dog's colors are in [Rail → Logo](customize-main-window.md#logo).
+
 The built-in themes are Ember, Moss, Mythos, Catppuccin, Gruvbox, Rose Pine and Nord (each with Soft) and Steam (with the Steam style).
 
 Settings → Appearance shows a card for each theme, with your own after the built-in ones, and a picker each for the colors and the style in use. The card of the pair in use is marked; if the pair matches no theme, none is. **Save as theme…** names the pair you've picked (asking before it replaces a theme of the same name). Hover one of your own themes and click the × (or right-click it and choose **Delete**) to move its file to the trash; the colors and style it named stay. Right-click and choose **Rename** to give it another name.
