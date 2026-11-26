@@ -43,6 +43,8 @@ public:
     static SteamLibrary *create(QQmlEngine *, QJSEngine *) { return instance(); }
 
     explicit SteamLibrary(QObject *parent = nullptr);
+    // Tests pass their own sync instead of the app's.
+    explicit SteamLibrary(SteamLibrarySync *sync, QObject *parent = nullptr);
 
     QString authState() const;
     QString accountName() const;
@@ -87,4 +89,5 @@ private:
     QString m_webKey;
     bool m_fixtureWaiting = false;
     bool m_wasWaiting = false;
+    bool m_authConnected = false;
 };

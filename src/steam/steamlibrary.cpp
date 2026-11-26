@@ -26,7 +26,9 @@ SteamLibrary *SteamLibrary::instance()
     return library;
 }
 
-SteamLibrary::SteamLibrary(QObject *parent) : QObject(parent), m_sync(SteamLibrarySync::instance())
+SteamLibrary::SteamLibrary(QObject *parent) : SteamLibrary(SteamLibrarySync::instance(), parent) {}
+
+SteamLibrary::SteamLibrary(SteamLibrarySync *sync, QObject *parent) : QObject(parent), m_sync(sync)
 {
     m_webKey = CredentialsFile::load(m_sync->dataDir()).value.steamWebKey;
     connect(m_sync, &SteamLibrarySync::stateChanged, this, &SteamLibrary::changed);
@@ -177,9 +179,8 @@ void SteamLibrary::signIn()
         return;
     }
     SteamAuth *auth = m_sync->auth();
-    static bool connected = false;
-    if (!connected) {
-        connected = true;
+    if (!m_authConnected) {
+        m_authConnected = true;
         connect(auth, &SteamAuth::challengeUrlChanged, this, [this] {
             updateCode();
             emit changed();

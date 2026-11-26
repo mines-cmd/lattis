@@ -3,6 +3,8 @@
 #include <QDBusAbstractAdaptor>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
+#include <QDBusContext>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusVariant>
 #include <QDir>
@@ -31,6 +33,11 @@ struct FakeState
     QMap<QString, FakeItem> items;
     bool locked = false;
     bool dismissPrompts = false;
+    // The failures a keyring can answer with.
+    bool noDefaultCollection = false;
+    bool refuseCreate = false;
+    bool failGetSecret = false;
+    bool failDelete = false;
     int nextItem = 1;
     QObject *itemRoot = nullptr;
 };
@@ -41,8 +48,11 @@ FakeState &fake()
     return state;
 }
 
-class FakeObject : public QObject
+// Qt sets the context of a call on the exported object, not on its adaptor.
+class FakeObject : public QObject, public QDBusContext
 {
+    Q_OBJECT
+
 public:
     QString path;
 };
@@ -67,7 +77,9 @@ public slots:
 
     void ReadAlias(const QString &name, QDBusObjectPath &collection)
     {
-        collection = QDBusObjectPath(name == QLatin1String("default") ? kCollectionPath : QStringLiteral("/"));
+        QMutexLocker lock(&fake().mutex);
+        const bool found = name == QLatin1String("default") && !fake().noDefaultCollection;
+        collection = QDBusObjectPath(found ? kCollectionPath : QStringLiteral("/"));
     }
 
     void SearchItems(const SecretStore::Attributes &attributes, QList<QDBusObjectPath> &unlocked,
@@ -108,6 +120,11 @@ public slots:
                     QDBusObjectPath &item, QDBusObjectPath &prompt)
     {
         QMutexLocker lock(&fake().mutex);
+        if (fake().refuseCreate) {
+            static_cast<FakeObject *>(parent())->sendErrorReply(
+                QDBusError::AccessDenied, QStringLiteral("the fake keyring refuses new items"));
+            return;
+        }
         FakeItem created;
         created.label = properties.value(QStringLiteral("org.freedesktop.Secret.Item.Label")).toString();
         created.attributes = qdbus_cast<SecretStore::Attributes>(
@@ -141,12 +158,22 @@ public slots:
     void GetSecret(const QDBusObjectPath &session, SecretServiceSecret &secret)
     {
         QMutexLocker lock(&fake().mutex);
+        if (fake().failGetSecret) {
+            static_cast<FakeObject *>(parent())->sendErrorReply(
+                QDBusError::Failed, QStringLiteral("the fake keyring can't read the item"));
+            return;
+        }
         secret = {session, {}, fake().items.value(path()).secret, QStringLiteral("text/plain")};
     }
 
     void Delete(QDBusObjectPath &prompt)
     {
         QMutexLocker lock(&fake().mutex);
+        if (fake().failDelete) {
+            static_cast<FakeObject *>(parent())->sendErrorReply(
+                QDBusError::AccessDenied, QStringLiteral("the fake keyring won't delete the item"));
+            return;
+        }
         fake().items.remove(path());
         QDBusConnection(QStringLiteral("fake-keyring")).unregisterObject(path());
         parent()->deleteLater();
@@ -242,14 +269,49 @@ class SecretStoreTest : public QObject
 
     FakeService *m_service = nullptr;
 
+    static void resetFake()
+    {
+        QMutexLocker lock(&fake().mutex);
+        fake().locked = false;
+        fake().dismissPrompts = false;
+        fake().noDefaultCollection = false;
+        fake().refuseCreate = false;
+        fake().failGetSecret = false;
+        fake().failDelete = false;
+    }
+
 private slots:
     void initTestCase()
     {
-        // Only a private bus (see tests/CMakeLists.txt): anything else could reach the real keyring.
+        // Only a private bus, or none (see tests/CMakeLists.txt): anything else could reach the real keyring.
+        if (qgetenv("LATTIS_TEST_NO_BUS") == "1") {
+            QVERIFY(!QDBusConnection::sessionBus().isConnected());
+            return;
+        }
         if (qgetenv("LATTIS_TEST_PRIVATE_BUS") != "1")
             QSKIP("run through ctest: it starts a private session bus");
         SecretServiceTypes::registerAll();
         QVERIFY(!QDBusConnection::sessionBus().interface()->isServiceRegistered(QStringLiteral("org.freedesktop.secrets")));
+    }
+
+    // ctest runs this one alone, with a session bus address that leads nowhere.
+    void withoutASessionBusNothingIsKept()
+    {
+        if (qgetenv("LATTIS_TEST_NO_BUS") != "1")
+            QSKIP("runs as secretstore_nobus_test");
+        QVERIFY(!SecretServiceStore::serviceAvailable());
+        QVERIFY(!SecretStore::create()->persistent());
+        SecretServiceStore store;
+        QString error;
+        QVERIFY(!store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh", &error));
+        QCOMPARE(error, QStringLiteral("no session bus"));
+        QVERIFY(!store.read(kAttributes));
+        error.clear();
+        QVERIFY(!store.remove(kAttributes, &error));
+        QCOMPARE(error, QStringLiteral("no session bus"));
+        // Without a place for the error, the call still fails cleanly.
+        QVERIFY(!store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh"));
+        QVERIFY(!store.remove(kAttributes));
     }
 
     void withoutAServiceItsMemoryOnly()
@@ -351,6 +413,93 @@ private slots:
         QVERIFY(!store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh", &error));
         QVERIFY(!error.isEmpty());
         QMutexLocker lock(&fake().mutex);
+        QVERIFY(fake().items.isEmpty());
+    }
+
+    void aKeyringWithoutADefaultCollectionStoresNothing()
+    {
+        resetFake();
+        {
+            QMutexLocker lock(&fake().mutex);
+            fake().noDefaultCollection = true;
+        }
+        SecretServiceStore store;
+        QString error;
+        QVERIFY(!store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh", &error));
+        QCOMPARE(error, QStringLiteral("the keyring has no default collection"));
+        QVERIFY(!store.read(kAttributes));
+        QMutexLocker lock(&fake().mutex);
+        QVERIFY(fake().items.isEmpty());
+    }
+
+    void aRefusedCreateItemStoresNothing()
+    {
+        resetFake();
+        {
+            QMutexLocker lock(&fake().mutex);
+            fake().refuseCreate = true;
+        }
+        SecretServiceStore store;
+        QString error;
+        QVERIFY(!store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh", &error));
+        QCOMPARE(error, QStringLiteral("the fake keyring refuses new items"));
+        QVERIFY(!store.read(kAttributes));
+        QMutexLocker lock(&fake().mutex);
+        QVERIFY(fake().items.isEmpty());
+    }
+
+    void aSecretThatCantBeReadIsNone()
+    {
+        resetFake();
+        SecretServiceStore store;
+        QVERIFY(store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh"));
+        {
+            QMutexLocker lock(&fake().mutex);
+            fake().failGetSecret = true;
+        }
+        QVERIFY(!store.read(kAttributes));
+        {
+            QMutexLocker lock(&fake().mutex);
+            QCOMPARE(fake().items.size(), 1);
+            fake().failGetSecret = false;
+        }
+        // Nothing was lost: the next read gets it.
+        QCOMPARE(store.read(kAttributes), std::optional<QByteArray>("refresh"));
+        QVERIFY(store.remove(kAttributes));
+    }
+
+    void aDeleteThatFailsSaysSo()
+    {
+        resetFake();
+        SecretServiceStore store;
+        QVERIFY(store.store(QStringLiteral("Lattis Steam sign-in"), kAttributes, "refresh"));
+        {
+            QMutexLocker lock(&fake().mutex);
+            fake().failDelete = true;
+        }
+        QString error;
+        QVERIFY(!store.remove(kAttributes, &error));
+        QCOMPARE(error, QStringLiteral("the fake keyring won't delete the item"));
+        QVERIFY(!store.remove(kAttributes));
+        QCOMPARE(store.read(kAttributes), std::optional<QByteArray>("refresh"));
+
+        // A delete dismissed at the unlock prompt fails too, and keeps the item.
+        {
+            QMutexLocker lock(&fake().mutex);
+            fake().failDelete = false;
+            fake().locked = true;
+            fake().dismissPrompts = true;
+        }
+        error.clear();
+        QVERIFY(!store.remove(kAttributes, &error));
+        QCOMPARE(error, QStringLiteral("the keyring prompt was dismissed"));
+        QMutexLocker lock(&fake().mutex);
+        QCOMPARE(fake().items.size(), 1);
+        lock.unlock();
+
+        resetFake();
+        QVERIFY(store.remove(kAttributes));
+        lock.relock();
         QVERIFY(fake().items.isEmpty());
     }
 

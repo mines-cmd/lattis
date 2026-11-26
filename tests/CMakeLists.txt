@@ -169,6 +169,10 @@ if(DBUS_RUN_SESSION)
                 $<TARGET_FILE:secretstore_test>)
     set_tests_properties(secretstore_test PROPERTIES ENVIRONMENT "LATTIS_TEST_PRIVATE_BUS=1;QT_QPA_PLATFORM=offscreen")
 endif()
+# A session bus address that leads nowhere: an unset one would fall back to the user's real bus.
+add_test(NAME secretstore_nobus_test COMMAND secretstore_test withoutASessionBusNothingIsKept)
+set_tests_properties(secretstore_nobus_test PROPERTIES ENVIRONMENT
+    "LATTIS_TEST_NO_BUS=1;DBUS_SESSION_BUS_ADDRESS=unix:path=${CMAKE_CURRENT_BINARY_DIR}/no-session-bus;QT_QPA_PLATFORM=offscreen")
 lattis_test(managericon_test OFFSCREEN
     SOURCES ../src/library/managericon.h ../src/library/managericon.cpp
     LIBS Qt6::Gui)
@@ -196,6 +200,26 @@ lattis_test(steamlibrarysync_test OFFSCREEN
             ../src/install/releasesource.h ../src/install/releasesource.cpp
             ${CORE_SOURCES}
     LIBS Qt6::Network Qt6::DBus Qt6::Concurrent Qt6::Gui tomlplusplus::tomlplusplus)
+lattis_test(steamlibrary_test OFFSCREEN
+    SOURCES fakehttpserver.h testfiles.h
+            ../src/steam/steamlibrary.h ../src/steam/steamlibrary.cpp
+            ../src/steam/steamlibrarysync.h ../src/steam/steamlibrarysync.cpp
+            ../src/steam/steamfriends.h ../src/steam/steamfriends.cpp
+            ../src/steam/steamwebapi.h ../src/steam/steamwebapi.cpp
+            ../src/steam/steamauth.h ../src/steam/steamauth.cpp
+            ../src/steam/steampresets.h ../src/steam/steampresets.cpp
+            ../src/launch/launchoptions.h ../src/launch/launchoptions.cpp
+            ../src/core/secretstore.h ../src/core/secretstore.cpp
+            ../src/core/qrcode.h ../src/core/qrcode.cpp
+            ../src/core/pluralfallback.h ../src/core/pluralfallback.cpp
+            ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp
+            ../src/metadata/credentials.h ../src/metadata/credentials.cpp
+            ../src/metadata/metadatahttp.h ../src/metadata/metadatahttp.cpp
+            ../src/library/gameid.h ../src/library/gameid.cpp
+            ../src/library/gamefile.h ../src/library/gamefile.cpp
+            ../src/install/releasesource.h ../src/install/releasesource.cpp
+            ${CORE_SOURCES}
+    LIBS Qt6::Network Qt6::DBus Qt6::Concurrent Qt6::Gui Qt6::Qml tomlplusplus::tomlplusplus)
 lattis_test(steamfriends_test OFFSCREEN
     SOURCES fakehttpserver.h
             ../src/steam/steamfriends.h ../src/steam/steamfriends.cpp
