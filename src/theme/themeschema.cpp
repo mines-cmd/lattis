@@ -1141,7 +1141,7 @@ constexpr Setting kSettings[] = {
     color("toast", "text", "@text", "Text"),
     color("toast", "link", "@accent", "Link after a message (\"Emulators\" after \"Install Azahar to play…\")"),
     color("toast", "link_hover", "@text", "Link under the mouse"),
-    integer("toast", "duration", "2500", 200, 20000, "Milliseconds a message stays visible"),
+    integer("toast", "duration", "2500", 200, 20000, "Milliseconds a message stays visible; one with a link to act on stays at least 15000"),
 
     color("notice", "background", "@background", "Background, under the tint"),
     color("notice", "background_end", "@notice.background", "Gradient end; notice background = flat"),

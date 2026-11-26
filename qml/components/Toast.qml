@@ -13,7 +13,7 @@ Surface {
     // How far it has slid in from the bottom edge: 0 off the window, 1 shown. `open` is what
     // it should be, this is what you see.
     property real shown: 0
-    readonly property int undoDuration: 15000
+    readonly property int actionDuration: 15000
     readonly property string text: label.text
 
     function settle() {
@@ -25,7 +25,8 @@ Surface {
     }
 
     function show(text: string, link, minimum = 0) {
-        root.minimum = minimum
+        // A caller's own time wins: an Undo handed over from a popup has only what's left of it.
+        root.minimum = link && minimum === 0 ? actionDuration : minimum
         label.text = text
         root.link = link ?? null
         open = true
@@ -45,7 +46,7 @@ Surface {
                 if (error !== "")
                     show(error)
             }
-        }, undoDuration)
+        })
     }
 
     function undo() {

@@ -380,4 +380,4 @@ The messages that pop up briefly at the bottom of the window ("Copied", "Install
 - `border`, `border_width`, `radius`: its outline and roundness.
 - `text`: its message.
 - `link`, `link_hover`: a link after the message ("Emulators"), and under the mouse.
-- `duration`: how many milliseconds it stays.
+- `duration`: how many milliseconds it stays. A message with a link to act on (**Undo**, "Emulators") stays at least 15 seconds, however short you set this.

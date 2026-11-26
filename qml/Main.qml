@@ -1427,7 +1427,7 @@ ApplicationWindow {
                 onAction: name => window.run(name)
                 onEditTheme: window.openSettingsAt("appearance")
                 onMessage: text => toast.show(text)
-                onUndoable: (text, link) => toast.show(text, link, toast.undoDuration)
+                onUndoable: (text, link) => toast.show(text, link)
                 onEditPlatform: id => window.openSettingsAt("platforms", id)
             }
 
