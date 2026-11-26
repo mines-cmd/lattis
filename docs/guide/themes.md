@@ -29,7 +29,7 @@ and these styles, named by how round they are:
 - **Round:** rounder corners.
 - **Steam:** Steam's look: nearly square, no borders, "▶  PLAY" on the button.
 
-Each colors file also colors the dog: the rail's logo and, when Settings → General → App icon is on Match theme (the default), the app's icon in the applications menu and on the window, which change with the colors. App icon can also keep one colors' dog whatever you pick here. The dog's colors are in [Rail → Logo](customize-main-window.md#logo).
+Each colors file also colors the dog: the rail's logo and, when Settings → General → App icon is on Match theme (the default), the app's icon in the applications menu and on the window, and the logo in About, Settings → General and the setup guide, which change with the colors. App icon can also keep one colors' dog whatever you pick here. The dog's colors are in [Rail → Logo](customize-main-window.md#logo).
 
 The built-in themes are Ember, Moss, Mythos, Catppuccin, Gruvbox, Rose Pine and Nord (each with Soft) and Steam (with the Steam style).
 

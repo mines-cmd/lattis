@@ -548,8 +548,7 @@ qt_add_qml_module(lattis
         resources/setup/welcome.webp
         resources/logo/dog/lattis-dog-icon.svg
         resources/logo/dog/lattis-dog-icon-16px.svg
-        resources/logo/dog/lattis-dog-horizontal.png
-        resources/logo/dog/lattis-dog-horizontal-light.png
+        resources/logo/dog/lattis-dog-wordmark.svg
         ${LIBRARY_RESOURCES}
 )
 

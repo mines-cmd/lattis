@@ -28,6 +28,8 @@ const QList<int> &sizes();
 QByteArray fill(const QByteArray &svgTemplate, const Colors &colors);
 QByteArray drawing(const Colors &colors, int size);
 QImage render(const Colors &colors, int size);
+// The icon beside the name, for a light or a dark background, at the given height.
+QImage renderWordmark(const Colors &colors, bool lightText, int height);
 
 QString key(const Colors &colors);
 QString fileName(const QString &key, int size);

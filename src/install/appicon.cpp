@@ -20,6 +20,7 @@ namespace {
 
 const QString kFull = QStringLiteral(":/qt/qml/Launcher/resources/logo/dog/lattis-dog-icon.svg");
 const QString kSmall = QStringLiteral(":/qt/qml/Launcher/resources/logo/dog/lattis-dog-icon-16px.svg");
+const QString kWordmark = QStringLiteral(":/qt/qml/Launcher/resources/logo/dog/lattis-dog-wordmark.svg");
 constexpr int kMargin = 14;
 constexpr int kKeyLength = 12;
 
@@ -42,6 +43,12 @@ const QByteArray &fullTemplate()
 const QByteArray &smallTemplate()
 {
     static const QByteArray text = readTemplate(kSmall);
+    return text;
+}
+
+const QByteArray &wordmarkTemplate()
+{
+    static const QByteArray text = readTemplate(kWordmark);
     return text;
 }
 
@@ -216,6 +223,26 @@ QImage render(const Colors &colors, int size)
     QImage image = reader.read();
     if (image.isNull())
         qCWarning(lcAppIcon) << "can't render the icon at" << size << "px:" << reader.errorString();
+    return image.convertToFormat(QImage::Format_ARGB32);
+}
+
+QImage renderWordmark(const Colors &colors, bool lightText, int height)
+{
+    QByteArray svg = wordmarkTemplate();
+    svg.replace("{{text}}", lightText ? "#fff6ee" : "#2b3a5a");
+    svg.replace("{{tittle}}", lightText ? "{{background}}" : "{{background_end}}");
+    svg = fill(svg, colors);
+    if (svg.isEmpty())
+        return {};
+    QBuffer buffer(&svg);
+    QImageReader reader(&buffer, "svg");
+    const QSize natural = reader.size();
+    if (natural.isEmpty())
+        return {};
+    reader.setScaledSize(QSize(qRound(double(height) * natural.width() / natural.height()), height));
+    QImage image = reader.read();
+    if (image.isNull())
+        qCWarning(lcAppIcon) << "can't render the wordmark:" << reader.errorString();
     return image.convertToFormat(QImage::Format_ARGB32);
 }
 
