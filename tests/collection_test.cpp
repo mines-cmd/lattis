@@ -36,6 +36,7 @@ class CollectionTest : public QObject
 private slots:
     void parseAll();
     void parseProblems();
+    void ruleKeysOfTheWrongKind();
     void valuesRoundTrip();
     void handPicked();
     void rulesAndExceptions();
@@ -398,6 +399,41 @@ void CollectionTest::missingIds()
     for (const auto &[key, value] : values.set)
         saved = saved || (key == QLatin1String("added") && value.contains(QLatin1String("gone")));
     QVERIFY(saved);
+}
+
+void CollectionTest::ruleKeysOfTheWrongKind()
+{
+    const auto r = parseCollections(
+        "[[collection]]\nid = \"a\"\nrules = true\nsort = 3\ngroup_by = \"nope\"\nsort_descending = \"yes\"\n"
+        "installed_only = 1\ntags = \"RPG\"\nstatuses = [\"playing\", 2]\nyear_from = 0\nyear_to = 12000\n"
+        "min_rating = 7\nplay_times = [\"forever\"]\nachievements = 3\nlast_played = \"yesterday\"\n\n"
+        "[[collection]]\nid = \"b\"\nrules = \"yes\"\nplatform = \"switch\"\n",
+        QStringLiteral("collections.toml"));
+    QVERIFY(r.ok);
+    QCOMPARE(r.value.size(), 2);
+
+    // Each wrong value is skipped with a warning; what's right is kept.
+    const Collection &a = r.value.at(0);
+    QVERIFY(a.rules);
+    QCOMPARE(a.sort, QString());
+    QVERIFY(!a.sortDescending);
+    QCOMPARE(a.groupBy, QString());
+    CollectionRules expected;
+    expected.statuses = {"playing"};
+    QCOMPARE(*a.rules, expected);
+    const QString all = r.warnings.join(u'\n');
+    for (const char *warning : {"sort must be text in quotes", "group_by must be one of", "sort_descending must be true or false",
+                                "installed_only must be true or false", "tags must be a list like",
+                                "statuses holds only text in quotes; skipping a value", "year_from must be a year",
+                                "year_to must be a year", "min_rating must be a number from 0 to 5",
+                                "unknown value \"forever\" in play_times", "achievements must be a list like",
+                                "last_played must be one of", "rules must be true or false",
+                                "b has rule keys without rules = true"})
+        QVERIFY2(all.contains(QLatin1String(warning)), warning);
+    QVERIFY(all.contains(QStringLiteral("collections.toml:")));
+
+    // rules that isn't true or false is no rules.
+    QVERIFY(!r.value.at(1).rules);
 }
 
 QTEST_APPLESS_MAIN(CollectionTest)

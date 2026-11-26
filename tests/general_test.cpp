@@ -44,6 +44,7 @@ private slots:
     void gamePageOrderKeepsNewNames();
     void gamePageSettersWrite();
     void gamePageMigration();
+    void gamePageMigrationFailuresLeaveNoMarker();
     void startAtLogin();
     void staleAutostartRewritten();
     void loginEntryNamesTheVariableOnlyWhenSet();
@@ -1065,6 +1066,73 @@ void GeneralTest::gamePageMigration()
     rows.insert(QStringLiteral("info_rows"), QVariantList{QStringLiteral("status"), QStringLiteral("platform")});
     QVERIFY(GamePageMigration::run(settings, marker, rows, &error));
     QCOMPARE(parsed().value.infoRows, (QStringList{"status", "platform"}));
+}
+
+void GeneralTest::gamePageMigrationFailuresLeaveNoMarker()
+{
+    QTemporaryDir dir;
+    const QString settings = dir.filePath(QStringLiteral("settings.toml"));
+    const QString marker = dir.filePath(QStringLiteral("state/game-page-migrated"));
+    const auto contents = [&] {
+        QFile f(settings);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray("(missing)");
+    };
+    const auto write = [&](const QByteArray &text) {
+        QFile f(settings);
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(text);
+    };
+    QVariantMap legacy;
+    legacy.insert(QStringLiteral("show_tags"), false);
+    QString error;
+
+    // No settings.toml to copy into: tried again next start.
+    QVERIFY(!GamePageMigration::run(settings, marker, legacy, &error));
+    QCOMPARE(error, QStringLiteral("could not read %1").arg(settings));
+    QVERIFY(!QFileInfo::exists(marker));
+    QCOMPARE(contents(), QByteArray("(missing)"));
+
+    // A settings.toml that doesn't parse is left as it is.
+    const QByteArray broken = "[game_page\nshow_tags = true\n";
+    write(broken);
+    error.clear();
+    QVERIFY(!GamePageMigration::run(settings, marker, legacy, &error));
+    QVERIFY(!error.isEmpty());
+    QVERIFY(!QFileInfo::exists(marker));
+    QCOMPARE(contents(), broken);
+
+    // A folder it can't write in.
+    const QByteArray mine = "[general]\nview = \"grid\"\n";
+    write(mine);
+    QVERIFY(QFile::setPermissions(dir.path(), QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const bool locked = !QFileInfo(dir.path()).isWritable();
+    error.clear();
+    const bool ran = GamePageMigration::run(settings, marker, legacy, &error);
+    QVERIFY(QFile::setPermissions(dir.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+    if (locked) {
+        QVERIFY(!ran);
+        QVERIFY(!error.isEmpty());
+        QVERIFY(!QFileInfo::exists(marker));
+        QCOMPARE(contents(), mine);
+    }
+
+    // The marker can't be made: settings.toml has the values, and the next start finds them there and adds nothing.
+    write(mine);
+    {
+        QFile blocker(dir.filePath(QStringLiteral("state")));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+    }
+    error.clear();
+    QVERIFY(!GamePageMigration::run(settings, marker, legacy, &error));
+    QVERIFY(!error.isEmpty());
+    QVERIFY(QFileInfo(dir.filePath(QStringLiteral("state"))).isFile());
+    const QByteArray once = contents();
+    QVERIFY(once.contains("show_tags = false"));
+    QVERIFY(QFile::remove(dir.filePath(QStringLiteral("state"))));
+    error.clear();
+    QVERIFY(GamePageMigration::run(settings, marker, legacy, &error));
+    QCOMPARE(contents(), once);
+    QVERIFY(QFileInfo::exists(marker));
 }
 
 void GeneralTest::startAtLogin()

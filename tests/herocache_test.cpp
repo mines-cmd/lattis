@@ -28,6 +28,8 @@ private slots:
     void existingCopyIsReused();
     void unreadableSource();
     void failedWriteLeavesNothing();
+    void sourceThatStopsHalfwayLeavesNothing();
+    void readOnlyCacheLeavesNothing();
 
 private:
     QString makeImage(int width, QImage::Format format, const QString &name, int alpha = 255);
@@ -219,6 +221,44 @@ void HeroCacheTest::failedWriteLeavesNothing()
     QVERIFY(!result.error.isEmpty());
     QCOMPARE(QDir(cache).entryList(QDir::AllEntries | QDir::NoDotAndDotDot), QStringList{"heroes"});
     QVERIFY(QFileInfo(cache + "/heroes").isFile());
+}
+
+void HeroCacheTest::sourceThatStopsHalfwayLeavesNothing()
+{
+    QImage image(3840, 1280, QImage::Format_RGB32);
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x)
+            image.setPixel(x, y, qRgb((x * 7 + y) & 255, (x ^ y) & 255, (y * 13) & 255));
+    }
+    const QString path = m_dir->filePath("cut.png");
+    QVERIFY(image.save(path));
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadWrite));
+    QVERIFY(file.resize(file.size() / 2));
+    file.close();
+
+    const QString cache = m_dir->filePath("cache");
+    const HeroCache::Result result = HeroCache::make(path, "game", 5, cache);
+    QVERIFY(result.path.isEmpty());
+    QVERIFY(!result.error.isEmpty());
+    QVERIFY(!QFileInfo::exists(cache));
+}
+
+void HeroCacheTest::readOnlyCacheLeavesNothing()
+{
+    const QString source = makeImage(3840, QImage::Format_RGB32, "wide.png");
+    const QString heroes = m_dir->filePath("cache/heroes");
+    QVERIFY(QDir().mkpath(heroes));
+    QVERIFY(QFile::setPermissions(heroes, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    if (QFileInfo(heroes).isWritable()) {
+        QFile::setPermissions(heroes, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        QSKIP("the folder stays writable (running as root)");
+    }
+    const HeroCache::Result result = HeroCache::make(source, "game", 5, m_dir->filePath("cache"));
+    QFile::setPermissions(heroes, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    QVERIFY(result.path.isEmpty());
+    QVERIFY(!result.error.isEmpty());
+    QVERIFY(QDir(heroes).isEmpty(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden));
 }
 
 QTEST_GUILESS_MAIN(HeroCacheTest)

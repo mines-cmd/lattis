@@ -45,6 +45,9 @@ private slots:
     void expires();
     void discardPutsArtBackAcrossFileSystems();
     void restoreWithUnreadableKeptCopyKeepsBoth();
+    void restoreThatCantRemoveANewFileKeepsOnlyThat();
+    void restoreOfAnOldTokenChangesNothing();
+    void discardThatCantPutBackKeepsTheCopy();
     void removeGameRefusesUnknownIds();
     void refusedSaveLeavesArtAndLinks();
     void refusedProgramKeepsTheUndoUntilItSaves();
@@ -454,6 +457,105 @@ void LibraryUndoTest::refusedProgramKeepsTheUndoUntilItSaves()
     QCOMPARE(lastToken(offered), quint64(0));
     QVERIFY(offered.last().at(1).toString().contains("program"));
     QVERIFY(!library->undoLog().pending());
+}
+
+void LibraryUndoTest::restoreThatCantRemoveANewFileKeepsOnlyThat()
+{
+    const QString added = QStringLiteral("library/games/new.toml");
+    const QString tags = QStringLiteral("library/tags.toml");
+    const QString games = m_dir->filePath(QStringLiteral("library/games"));
+    QVERIFY(QDir().mkpath(games));
+    writeFile(m_dir->filePath(tags), "[[tag]]\nname = \"Before\"\n");
+
+    LibraryUndo undo;
+    undo.setFolders(m_dir->path(), m_dir->filePath(QStringLiteral("undo")));
+    undo.start(QStringLiteral("new"));
+    undo.keepCopy(added);
+    undo.keepCopy(tags);
+    writeFile(m_dir->filePath(added), "title = \"New\"\n");
+    writeFile(m_dir->filePath(tags), "[[tag]]\nname = \"After\"\n");
+    const quint64 token = undo.commit();
+    QVERIFY(token != 0);
+
+    QVERIFY(QFile::setPermissions(games, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const auto writable = [&] {
+        QFile::setPermissions(games, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    };
+    if (QFileInfo(games).isWritable()) {
+        writable();
+        QSKIP("the folder stays writable (running as root)");
+    }
+    QString error;
+    const QStringList put = undo.restore(token, &error);
+    writable();
+    // What could go back did; the new file stays, and so does its undo.
+    QCOMPARE(put, QStringList{tags});
+    QCOMPARE(error, QStringLiteral("Could not put back %1").arg(added));
+    QCOMPARE(readFile(m_dir->filePath(tags)), QByteArray("[[tag]]\nname = \"Before\"\n"));
+    QCOMPARE(readFile(m_dir->filePath(added)), QByteArray("title = \"New\"\n"));
+    QVERIFY(undo.valid(token));
+
+    error.clear();
+    QCOMPARE(undo.restore(token, &error), QStringList{added});
+    QVERIFY(error.isEmpty());
+    QVERIFY(!QFileInfo::exists(m_dir->filePath(added)));
+    QCOMPARE(readFile(m_dir->filePath(tags)), QByteArray("[[tag]]\nname = \"Before\"\n"));
+    QVERIFY(!undo.valid(token));
+    QVERIFY(!QFileInfo::exists(m_dir->filePath(QStringLiteral("undo/%1").arg(token))));
+}
+
+void LibraryUndoTest::restoreOfAnOldTokenChangesNothing()
+{
+    const QString tags = QStringLiteral("library/tags.toml");
+    writeFile(m_dir->filePath(tags), "before\n");
+    LibraryUndo undo;
+    undo.setFolders(m_dir->path(), m_dir->filePath(QStringLiteral("undo")));
+    undo.start();
+    undo.keepCopy(tags);
+    writeFile(m_dir->filePath(tags), "first\n");
+    const quint64 first = undo.commit();
+    undo.start();
+    undo.keepCopy(tags);
+    writeFile(m_dir->filePath(tags), "second\n");
+    const quint64 second = undo.commit();
+    QVERIFY(first != 0 && second != 0 && first != second);
+
+    QString error;
+    QVERIFY(undo.restore(first, &error).isEmpty());
+    QCOMPARE(error, QStringLiteral("Nothing to undo"));
+    QVERIFY(undo.restore(0, &error).isEmpty());
+    QCOMPARE(readFile(m_dir->filePath(tags)), QByteArray("second\n"));
+    QVERIFY(undo.valid(second));
+}
+
+void LibraryUndoTest::discardThatCantPutBackKeepsTheCopy()
+{
+    const QString art = m_dir->filePath(QStringLiteral("art/foo"));
+    writeFile(art + QStringLiteral("/cover.png"), "cover bytes");
+    const QString undoDir = m_dir->filePath(QStringLiteral("undo"));
+    LibraryUndo undo;
+    undo.setFolders(m_dir->path(), undoDir);
+    undo.start(QStringLiteral("foo"));
+    undo.keepMove(QStringLiteral("art/foo"));
+    QVERIFY(!QFileInfo::exists(art));
+
+    const QString parent = m_dir->filePath(QStringLiteral("art"));
+    QVERIFY(QFile::setPermissions(parent, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const auto writable = [&] {
+        QFile::setPermissions(parent, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    };
+    if (QFileInfo(parent).isWritable()) {
+        writable();
+        QSKIP("the folder stays writable (running as root)");
+    }
+    undo.discard();
+    writable();
+    QVERIFY(!undo.pending());
+    QVERIFY(!QFileInfo::exists(art));
+    // The only copy left is the kept one, and it stays for startup to find.
+    QDirIterator it(undoDir, {QStringLiteral("cover.png")}, QDir::Files, QDirIterator::Subdirectories);
+    QVERIFY(it.hasNext());
+    QCOMPARE(readFile(it.next()), QByteArray("cover bytes"));
 }
 
 QTEST_GUILESS_MAIN(LibraryUndoTest)

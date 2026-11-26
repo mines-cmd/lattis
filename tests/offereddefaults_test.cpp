@@ -85,6 +85,9 @@ private slots:
     void offeredWrittenForOldFile();
     void badOfferedIsAnError();
     void unparsableFileIsAnError();
+    void unparsableDefaultsAreAnError();
+    void offeredWithANumberIsAnError();
+    void numbersAndBooleansAreCopiedAsWritten();
     void bootstrapMatchesTheDefaultsToday();
 };
 
@@ -308,6 +311,53 @@ void OfferedDefaultsTest::bootstrapMatchesTheDefaultsToday()
     QCOMPARE(list.size(), 26);
     QVERIFY(list.contains("switch/ryubing"));
     QVERIFY(!list.contains("linux"));
+}
+
+void OfferedDefaultsTest::unparsableDefaultsAreAnError()
+{
+    const QString mine = file(block("a", "[\"x\"]"));
+    QStringList added = {"untouched"};
+    const TomlPatch::Result r = OfferedDefaults::apply(mine, QStringLiteral("[[platform]\nid = \"a\""), kBootstrap, &added);
+    QVERIFY(!r.ok);
+    QVERIFY2(r.error.startsWith(QStringLiteral("the default platforms: ")), qPrintable(r.error));
+    QVERIFY(r.text.isEmpty());
+    QCOMPARE(added, QStringList{"untouched"});
+}
+
+void OfferedDefaultsTest::offeredWithANumberIsAnError()
+{
+    const TomlPatch::Result r
+        = OfferedDefaults::apply(file(block("a", "[]"), "offered = [\"a\", 3]\n\n"), kDefaults, kBootstrap);
+    QVERIFY(!r.ok);
+    QVERIFY2(r.error.startsWith(QStringLiteral("offered must be a list of text")), qPrintable(r.error));
+}
+
+void OfferedDefaultsTest::numbersAndBooleansAreCopiedAsWritten()
+{
+    const QString defaults = QStringLiteral(
+        "[[platform]]\nid = \"a\"\nname = \"A\"\n\n"
+        "[[platform]]\nicon = \"n\"\nplayers = 4\nportable = true\ndocked = false\nratio = 1.5\n"
+        "extensions = [\"nds\", \"zip\"]\nname = \"New\"\nid = \"n\"\n");
+    const TomlPatch::Result r = OfferedDefaults::apply(file(block("a", "[]")), defaults, {"a"});
+    QVERIFY2(r.ok, qPrintable(r.error));
+    const toml::table root = toml::parse(r.text.toStdString());
+    const toml::table *added = nullptr;
+    for (const toml::node &entry : *root["platform"].as_array()) {
+        if (entry.as_table()->get("id")->value_or(std::string()) == "n")
+            added = entry.as_table();
+    }
+    QVERIFY(added);
+    QCOMPARE(added->get("players")->value_or(int64_t(0)), int64_t(4));
+    QCOMPARE(added->get("portable")->value_or(false), true);
+    QCOMPARE(added->get("docked")->value_or(true), false);
+    QCOMPARE(added->get("ratio")->value_or(0.0), 1.5);
+    QCOMPARE(added->get("extensions")->as_array()->size(), size_t(2));
+    // id, then name, then the rest as the defaults list them.
+    const qsizetype id = r.text.indexOf(QStringLiteral("id = \"n\""));
+    QVERIFY(id >= 0);
+    QVERIFY(id < r.text.indexOf(QStringLiteral("name = \"New\"")));
+    QVERIFY(r.text.indexOf(QStringLiteral("name = \"New\"")) < r.text.indexOf(QStringLiteral("icon = \"n\"")));
+    QVERIFY(r.text.indexOf(QStringLiteral("icon = \"n\"")) < r.text.indexOf(QStringLiteral("players = 4")));
 }
 
 QTEST_MAIN(OfferedDefaultsTest)

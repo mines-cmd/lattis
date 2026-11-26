@@ -223,6 +223,7 @@ private slots:
     void epicUpdateAndVerify();
     void epicInstall();
     void epicUninstall();
+    void epicPrefixRemoval();
     void closeHeroicAndApplyRefused();
     void closeHeroicAndApply();
     void heroicDoesNotClose();
@@ -2242,6 +2243,62 @@ void LaunchTest::epicUninstall()
              (QVariantMap{{"error", QStringLiteral("A Short Hike has no Wine prefix of its own")}}));
     QCOMPARE(readFile(legendaryLog()).count('\n'), calls);
     QCOMPARE(trashed.size(), 1);
+}
+
+void LaunchTest::epicPrefixRemoval()
+{
+    openWithEpic(false);
+    const QString home = m_dir->filePath(QStringLiteral("home"));
+    const QString prefixes = home + QStringLiteral("/Games/Heroic/Prefixes");
+    const QString prefix = prefixes + QStringLiteral("/Hike");
+    writeFile(prefix + QStringLiteral("/drive_c/save.dat"), "save");
+    const auto useGamePrefix = [&](const QString &path) {
+        writeFile(heroicRoot() + QStringLiteral("/GamesConfig/HikeApp.json"),
+                  R"({"HikeApp":{"winePrefix":")" + QFile::encodeName(path) + R"("}})");
+    };
+    writeFile(heroicRoot() + QStringLiteral("/config.json"),
+              R"({"defaultSettings":{"winePrefix":")" + QFile::encodeName(prefixes + QStringLiteral("/default")) + R"("}})");
+    QStringList trashed;
+    bool trashWorks = true;
+    m_library->setTrash([&](const QString &path, QString *error) {
+        if (!trashWorks) {
+            *error = QStringLiteral("there's no trash here");
+            return false;
+        }
+        trashed.append(path);
+        return QDir(path).removeRecursively();
+    });
+
+    // A prefix that isn't one to delete: said why, nothing asked of the trash.
+    useGamePrefix(home);
+    QCOMPARE(m_library->removeEpicPrefix(kHike, false),
+             (QVariantMap{{"error", QStringLiteral("The Wine prefix can't be deleted: That's your home folder")}}));
+    QVERIFY(trashed.isEmpty());
+
+    // No trash for it: asked whether to delete it for good.
+    useGamePrefix(prefix);
+    trashWorks = false;
+    QCOMPARE(m_library->removeEpicPrefix(kHike, false),
+             (QVariantMap{{"trashless", QStringLiteral("~/Games/Heroic/Prefixes/Hike")}}));
+    QCOMPARE(readFile(prefix + QStringLiteral("/drive_c/save.dat")), QByteArray("save"));
+
+    // A parent folder it can't change.
+    trashWorks = true;
+    QVERIFY(QFile::setPermissions(prefixes, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const bool locked = !QFileInfo(prefixes).isWritable();
+    const QVariantMap readOnly = m_library->removeEpicPrefix(kHike, false);
+    QFile::setPermissions(prefixes, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    if (locked) {
+        QCOMPARE(readOnly, (QVariantMap{{"error", QStringLiteral("%1 can't be moved: its parent folder is read-only").arg(prefix)}}));
+        QVERIFY(trashed.isEmpty());
+        QCOMPARE(readFile(prefix + QStringLiteral("/drive_c/save.dat")), QByteArray("save"));
+    }
+
+    // Removed: only the prefix, the game's folder kept.
+    QCOMPARE(m_library->removeEpicPrefix(kHike, false), QVariantMap());
+    QCOMPARE(trashed, QStringList{prefix});
+    QVERIFY(!QFileInfo::exists(prefix));
+    QVERIFY(QFileInfo::exists(hikeFolder() + QStringLiteral("/vkd3d-proton.cache")));
 }
 
 void LaunchTest::closeHeroicAndApplyRefused()

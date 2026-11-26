@@ -1,5 +1,7 @@
 #include "tomlpatch.h"
 
+#include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -31,6 +33,9 @@ private slots:
     void removeMissingSectionIsNoop();
     void parseErrorIsReported();
     void fileRoundTrip();
+    void fileThatCantBeReadIsAnError();
+    void fileThatDoesntParseIsLeftAlone();
+    void fileInAReadOnlyFolderIsLeftAlone();
     void rootSetExistingKey();
     void rootAddKeyAfterLastKey();
     void rootAddKeyToCommentOnlyFile();
@@ -872,6 +877,98 @@ void TomlPatchTest::randomDocuments()
         }
     }
     QVERIFY(checked > 5000);
+}
+
+namespace {
+QByteArray contentOf(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+void put(const QString &path, const QByteArray &bytes)
+{
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    QCOMPARE(file.write(bytes), bytes.size());
+}
+}
+
+void TomlPatchTest::fileThatCantBeReadIsAnError()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString missing = dir.filePath("missing.toml");
+    QString error;
+    QVERIFY(!TomlPatch::setValueInFile(missing, "palette", "accent", "\"#ff0000\"", &error));
+    QCOMPARE(error, QStringLiteral("could not read %1").arg(missing));
+    QVERIFY(!QFileInfo::exists(missing));
+    error.clear();
+    QVERIFY(!TomlPatch::removeValueInFile(missing, "palette", "accent", &error));
+    QCOMPARE(error, QStringLiteral("could not read %1").arg(missing));
+    QVERIFY(!QFileInfo::exists(missing));
+
+    // No error to fill in is fine too.
+    QVERIFY(!TomlPatch::setValueInFile(missing, "palette", "accent", "\"#ff0000\""));
+}
+
+void TomlPatchTest::fileThatDoesntParseIsLeftAlone()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath("custom.toml");
+    const QByteArray broken = "[palette\naccent = \"#1a8cff\"\n";
+    put(path, broken);
+    QString error;
+    QVERIFY(!TomlPatch::setValueInFile(path, "palette", "accent", "\"#ff0000\"", &error));
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(contentOf(path), broken);
+    error.clear();
+    QVERIFY(!TomlPatch::removeValueInFile(path, "palette", "accent", &error));
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(contentOf(path), broken);
+
+    // A value that would break the file is refused the same way.
+    put(path, "[palette]\naccent = \"#1a8cff\"\n");
+    error.clear();
+    QVERIFY(!TomlPatch::setValueInFile(path, "palette", "accent", "1\n[evil]", &error));
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(contentOf(path), QByteArray("[palette]\naccent = \"#1a8cff\"\n"));
+}
+
+void TomlPatchTest::fileInAReadOnlyFolderIsLeftAlone()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString folder = dir.filePath("ro");
+    QVERIFY(QDir().mkpath(folder));
+    const QString path = folder + "/custom.toml";
+    const QByteArray before = "[palette]\naccent = \"#1a8cff\"\n";
+    put(path, before);
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const auto writable = [&] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    };
+    if (QFileInfo(folder).isWritable()) {
+        writable();
+        QSKIP("the folder stays writable (running as root)");
+    }
+
+    // Unchanged: nothing to write, so it works.
+    QString error;
+    QVERIFY(TomlPatch::setValueInFile(path, "palette", "accent", "\"#1a8cff\"", &error));
+    QVERIFY(TomlPatch::removeValueInFile(path, "palette", "missing", &error));
+    QVERIFY(error.isEmpty());
+
+    QVERIFY(!TomlPatch::setValueInFile(path, "palette", "accent", "\"#ff0000\"", &error));
+    QVERIFY(!error.isEmpty());
+    error.clear();
+    QVERIFY(!TomlPatch::removeValueInFile(path, "palette", "accent", &error));
+    QVERIFY(!error.isEmpty());
+    const QStringList left = QDir(folder).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+    writable();
+    QCOMPARE(contentOf(path), before);
+    QCOMPARE(left, QStringList{"custom.toml"});
 }
 
 QTEST_MAIN(TomlPatchTest)

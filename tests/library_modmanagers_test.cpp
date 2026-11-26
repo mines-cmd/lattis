@@ -28,6 +28,8 @@ private slots:
     void removeDeletesWhatIsAsked();
     void removeAsksEveryFolderFirst();
     void removeLeavesShortcut();
+    void removeRefusals();
+    void removeThatFailsKeepsTheManager();
 
 private:
     QString shortcutsPath(const QString &root) const
@@ -575,6 +577,69 @@ void LibraryModManagersTest::settingsPage()
         const QString platform = v.toMap().value("platform").toString();
         QVERIFY2(platform == "steam" || platform == "proton" || platform == "linux", qPrintable(platform));
     }
+}
+
+void LibraryModManagersTest::removeRefusals()
+{
+    const QByteArray home = m_installs.home.toUtf8();
+    writeFile(m_installs.home + QStringLiteral("/Vortex.exe"), "MZ");
+    writeFile(managerPath("loose"), "name = \"Loose\"\nexe = \"" + home + "/Vortex.exe\"\ngames = []\n");
+    writeFile(managerPath("gone"), "name = \"Gone\"\nexe = \"" + home + "/Mods/Gone/Gone.exe\"\ngames = []\n");
+    writeFile(m_installs.home + QStringLiteral("/Tools/tool.sh"), "#!/bin/sh\n");
+    writeFile(managerPath("tool"), "name = \"Tool\"\nexe = \"" + home + "/Tools/tool.sh\"\ngames = []\n");
+    auto library = openLibrary();
+    QCOMPARE(library->modManagers().size(), 3);
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+    const auto error = [&](const QString &id, bool files, bool prefix) {
+        return library->uninstallModManager(id, files, prefix, false, false).value("error").toString();
+    };
+
+    QCOMPARE(error(QStringLiteral("nothing"), true, false), QStringLiteral("nothing isn't a mod manager"));
+    // A program loose in the home folder: its folder is the home folder.
+    QCOMPARE(error(QStringLiteral("loose"), true, false),
+             QStringLiteral("The folder can't be deleted: That's your home folder"));
+    QCOMPARE(error(QStringLiteral("gone"), true, false), QStringLiteral("Gone's folder is gone already"));
+    QCOMPARE(error(QStringLiteral("tool"), false, true), QStringLiteral("Tool has no Wine prefix"));
+    // Its folder would go before the refusal of the prefix: neither does.
+    QCOMPARE(error(QStringLiteral("tool"), true, true), QStringLiteral("Tool has no Wine prefix"));
+
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFileInfo::exists(m_installs.home + QStringLiteral("/Vortex.exe")));
+    QVERIFY(QFileInfo::exists(m_installs.home + QStringLiteral("/Tools/tool.sh")));
+    for (const char *id : {"loose", "gone", "tool"})
+        QVERIFY2(QFileInfo::exists(managerPath(QLatin1String(id))), id);
+    QCOMPARE(library->modManagers().size(), 3);
+}
+
+void LibraryModManagersTest::removeThatFailsKeepsTheManager()
+{
+    const QString mods = m_installs.home + QStringLiteral("/Mods");
+    writeFile(mods + QStringLiteral("/Tool/tool.sh"), "#!/bin/sh\n");
+    writeFile(managerPath("tool"), "name = \"Tool\"\nexe = \"" + mods.toUtf8() + "/Tool/tool.sh\"\ngames = []\n");
+    auto library = openLibrary();
+    QStringList trashed;
+    library->setTrash(fakeTrash(&trashed));
+
+    QVERIFY(QFile::setPermissions(mods, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const bool locked = !QFileInfo(mods).isWritable();
+    const QVariantMap r = library->uninstallModManager(QStringLiteral("tool"), true, false, false, false);
+    QFile::setPermissions(mods, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    if (!locked)
+        QSKIP("permissions don't stop this user (root)");
+    QCOMPARE(r.value("error").toString(),
+             QStringLiteral("%1/Tool can't be moved: its parent folder is read-only. Nothing after it was done.").arg(mods));
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFileInfo::exists(mods + QStringLiteral("/Tool/tool.sh")));
+    QVERIFY(QFileInfo::exists(managerPath("tool")));
+    QCOMPARE(library->modManagers().size(), 1);
+
+    // A trash that said it would take it and then doesn't: asked whether to delete it for good, nothing gone.
+    library->setTrash(fakeTrash(&trashed, false), [](const QString &) { return true; });
+    const QVariantMap again = library->uninstallModManager(QStringLiteral("tool"), true, false, false, false);
+    QCOMPARE(again, (QVariantMap{{"trashless", QStringLiteral("~/Mods/Tool")}}));
+    QVERIFY(QFileInfo::exists(mods + QStringLiteral("/Tool/tool.sh")));
+    QVERIFY(QFileInfo::exists(managerPath("tool")));
 }
 
 QTEST_GUILESS_MAIN(LibraryModManagersTest)

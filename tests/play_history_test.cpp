@@ -51,6 +51,8 @@ private slots:
     void deletingKeepsCommentsAboveTheNextBlock();
     void deletingFromAnInlineArrayKeepsTheOthers();
     void brokenFileIsNotTouched();
+    void unreadableFileIsNotTouched();
+    void readOnlyFolderKeepsTheFile();
     void romSessionLandsInBothFiles();
     void shortSessionIsNotRecorded();
     void deleteRomSession();
@@ -1250,6 +1252,68 @@ void PlayHistoryTest::addThenDeleteRestoresTotals()
     QCOMPARE(library->restoreSession(id, deleted.value("session").toMap()), QString());
     QVERIFY(PlayHistory::read(m_data, id).value.sessions.constLast().manual);
     QCOMPARE(game().playMinutes, 2460 + 105);
+}
+
+void PlayHistoryTest::unreadableFileIsNotTouched()
+{
+    const QString id = QStringLiteral("switch-test");
+    QCOMPARE(PlayHistory::append(m_data, id, {at(2026, 10, 11, 9, 0), 20}), QString());
+    const QByteArray before = readFile(historyFile(id));
+    QVERIFY(QFile::setPermissions(historyFile(id), QFileDevice::Permissions{}));
+    if (QFile(historyFile(id)).open(QIODevice::ReadOnly)) {
+        QFile::setPermissions(historyFile(id), QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        QSKIP("the file stays readable (running as root)");
+    }
+
+    const Parsed<PlayHistory::File> read = PlayHistory::read(m_data, id);
+    QVERIFY(!read.ok);
+    QCOMPARE(read.warnings.size(), 1);
+    QVERIFY2(read.warnings.first().startsWith(QStringLiteral("Could not read switch-test.toml: ")),
+             qPrintable(read.warnings.first()));
+    const QString appended = PlayHistory::append(m_data, id, {at(2026, 10, 12, 9, 0), 30});
+    const QString removed = PlayHistory::remove(m_data, id, at(2026, 10, 11, 9, 0), nullptr);
+    const QString minutes = PlayHistory::setDeletedMinutes(m_data, id, 5);
+    QVERIFY(QFile::setPermissions(historyFile(id), QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+    for (const QString &error : {appended, removed, minutes})
+        QVERIFY2(error.startsWith(QStringLiteral("Could not read switch-test.toml")), qPrintable(error));
+    QCOMPARE(readFile(historyFile(id)), before);
+}
+
+void PlayHistoryTest::readOnlyFolderKeepsTheFile()
+{
+    const QString id = QStringLiteral("switch-test");
+    const QString onlyMinutes = QStringLiteral("switch-other");
+    QCOMPARE(PlayHistory::append(m_data, id, {at(2026, 10, 11, 9, 0), 20}), QString());
+    QCOMPARE(PlayHistory::setDeletedMinutes(m_data, onlyMinutes, 5), QString());
+    const QByteArray before = readFile(historyFile(id));
+    const QByteArray beforeMinutes = readFile(historyFile(onlyMinutes));
+    const QString folder = QFileInfo(historyFile(id)).absolutePath();
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const auto writable = [&] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    };
+    if (QFileInfo(folder).isWritable()) {
+        writable();
+        QSKIP("the folder stays writable (running as root)");
+    }
+
+    // Its last session: the file would go.
+    PlayHistory::Session taken;
+    const QString removed = PlayHistory::remove(m_data, id, at(2026, 10, 11, 9, 0), &taken);
+    const QString appended = PlayHistory::append(m_data, id, {at(2026, 10, 12, 9, 0), 30});
+    const QString minutes = PlayHistory::setDeletedMinutes(m_data, id, 5);
+    const QString cleared = PlayHistory::setDeletedMinutes(m_data, onlyMinutes, 0);
+    const QString removedFile = PlayHistory::removeFile(m_data, id);
+    writable();
+    QCOMPARE(removed, QStringLiteral("Could not remove switch-test.toml"));
+    QVERIFY2(appended.startsWith(QStringLiteral("Could not save switch-test.toml: ")), qPrintable(appended));
+    QVERIFY2(minutes.startsWith(QStringLiteral("Could not save switch-test.toml: ")), qPrintable(minutes));
+    QCOMPARE(cleared, QStringLiteral("Could not remove switch-other.toml"));
+    QCOMPARE(removedFile, QStringLiteral("Could not remove switch-test.toml"));
+    QCOMPARE(readFile(historyFile(id)), before);
+    QCOMPARE(readFile(historyFile(onlyMinutes)), beforeMinutes);
+    QCOMPARE(QDir(folder).entryList(QDir::Files | QDir::Hidden),
+             (QStringList{QStringLiteral("switch-other.toml"), QStringLiteral("switch-test.toml")}));
 }
 
 QTEST_GUILESS_MAIN(PlayHistoryTest)

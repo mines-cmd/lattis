@@ -18,6 +18,7 @@ private slots:
     void uninstallRefused();
     void uninstallReadOnly();
     void uninstallRefusals();
+    void removeFailures();
     void uninstallLinuxGame();
     void uninstallAppImage();
 };
@@ -650,6 +651,69 @@ void LibraryUninstallTest::uninstallAppImage()
     QVERIFY(library->uninstallProtonGame(scriptId, true, false, false, QStringLiteral("remove"), false)
                 .value("error").toString().contains(QStringLiteral("can't be deleted")));
     QCOMPARE(trashed, QStringList{dusklight});
+}
+
+void LibraryUninstallTest::removeFailures()
+{
+    const QString games = m_dir->filePath(QStringLiteral("games"));
+    QStringList asked;
+    const Uninstall::Trash noTrash = [&](const QString &path, QString *error) {
+        asked.append(path);
+        *error = QStringLiteral("there's no trash here");
+        return false;
+    };
+
+    // Gone already: done, and the trash isn't asked.
+    QCOMPARE(Uninstall::remove(games + QStringLiteral("/gone"), false, noTrash).error, QString());
+    QVERIFY(asked.isEmpty());
+
+    // No trash: asked to delete it for good, with the trash's reason, and nothing deleted.
+    writeFile(games + QStringLiteral("/Game/data.bin"), "x");
+    Uninstall::Removal r = Uninstall::remove(games + QStringLiteral("/Game"), false, noTrash);
+    QVERIFY(r.needsPermanent);
+    QCOMPARE(r.error, QStringLiteral("there's no trash here"));
+    QVERIFY(QFileInfo::exists(games + QStringLiteral("/Game/data.bin")));
+
+    // For good: the folder, a file, and a link without what it points to.
+    r = Uninstall::remove(games + QStringLiteral("/Game"), true, noTrash);
+    QCOMPARE(r.error, QString());
+    QVERIFY(!r.needsPermanent);
+    QVERIFY(!QFileInfo::exists(games + QStringLiteral("/Game")));
+    writeFile(games + QStringLiteral("/run.sh"), "#!/bin/sh\n");
+    QCOMPARE(Uninstall::remove(games + QStringLiteral("/run.sh"), true, noTrash).error, QString());
+    QVERIFY(!QFileInfo::exists(games + QStringLiteral("/run.sh")));
+    writeFile(games + QStringLiteral("/Real/keep.bin"), "keep");
+    QVERIFY(QFile::link(games + QStringLiteral("/Real"), games + QStringLiteral("/Link")));
+    QCOMPARE(Uninstall::remove(games + QStringLiteral("/Link"), true, noTrash).error, QString());
+    QVERIFY(!QFileInfo(games + QStringLiteral("/Link")).isSymLink());
+    QCOMPARE(readFile(games + QStringLiteral("/Real/keep.bin")), QByteArray("keep"));
+
+    // A read-only parent: refused before the trash is asked.
+    const QString locked = games + QStringLiteral("/Locked");
+    writeFile(locked + QStringLiteral("/Game/data.bin"), "x");
+    QVERIFY(QFile::setPermissions(locked, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    const auto unlock = [](const QString &path) {
+        QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    };
+    if (QFileInfo(locked).isWritable()) {
+        unlock(locked);
+        QSKIP("the folder stays writable (running as root)");
+    }
+    asked.clear();
+    r = Uninstall::remove(locked + QStringLiteral("/Game"), true, noTrash);
+    unlock(locked);
+    QCOMPARE(r.error, QStringLiteral("%1 can't be moved: its parent folder is read-only").arg(locked + QStringLiteral("/Game")));
+    QVERIFY(asked.isEmpty());
+    QVERIFY(QFileInfo::exists(locked + QStringLiteral("/Game/data.bin")));
+
+    // For good, with a folder inside that can't be emptied: said so, and what couldn't go is still there.
+    const QString stuck = games + QStringLiteral("/Stuck");
+    writeFile(stuck + QStringLiteral("/inner/save.dat"), "save");
+    QVERIFY(QFile::setPermissions(stuck + QStringLiteral("/inner"), QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+    r = Uninstall::remove(stuck, true, noTrash);
+    unlock(stuck + QStringLiteral("/inner"));
+    QCOMPARE(r.error, QStringLiteral("Could not delete all of %1").arg(stuck));
+    QCOMPARE(readFile(stuck + QStringLiteral("/inner/save.dat")), QByteArray("save"));
 }
 
 QTEST_GUILESS_MAIN(LibraryUninstallTest)

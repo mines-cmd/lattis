@@ -311,7 +311,8 @@ lattis_test(romdb_test
     LIBS tomlplusplus::tomlplusplus)
 lattis_test(romdbfetch_test
     SOURCES fakehttpserver.h ../src/library/romdbfetch.h ../src/library/romdbfetch.cpp ${LIBRARY_FILE_SOURCES}
-    LIBS Qt6::Network tomlplusplus::tomlplusplus)
+    LIBS Qt6::Network tomlplusplus::tomlplusplus
+    DEFINES "TLS_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/tls\"")
 find_program(PYTHON3 python3)
 if(PYTHON3)
     add_test(NAME romdb_tool_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/../tools/romdb.py --test)
@@ -367,7 +368,7 @@ target_include_directories(library_objects PUBLIC ${TEST_INCLUDES})
 target_link_libraries(library_objects PUBLIC ${LIBRARY_LIBS})
 
 # One test per area, on the fixture in librarytestbase.h.
-foreach(area list edit tags collections rom emulators platforms version steamimport steamlibrary heroic steamsync modmanagers programs uninstall undo hero art media)
+foreach(area list edit tags collections rom emulators platforms version steamimport steamlibrary heroic steamsync modmanagers programs uninstall undo hero art media writes)
     lattis_test(library_${area}_test PRESETS
         SOURCES librarytestbase.h librarytestbase.cpp
         LIBS library_objects

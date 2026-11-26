@@ -25,6 +25,9 @@ private slots:
     void cacheFindsWhatWasMade();
     void makesAThumbnailOnce();
     void aVideoThatWontPlayIsMarkedAndNotRetried();
+    void aMissingVideoIsMarkedAndTheNextGoesOn();
+    void aMarkedVideoIsNotTriedAgainAfterARestart();
+    void aFileThatIsntAVideoIsMarked();
 };
 
 void VideoThumbnailsTest::keyFollowsPathSizeAndTime()
@@ -111,6 +114,64 @@ void VideoThumbnailsTest::aVideoThatWontPlayIsMarkedAndNotRetried()
     const VideoThumbnails::Cache cached(cache.path());
     QVERIFY(cached.find(kBroken).failed);
     QVERIFY(cached.find(kBroken).thumbnail.isEmpty());
+}
+
+void VideoThumbnailsTest::aMissingVideoIsMarkedAndTheNextGoesOn()
+{
+    QTemporaryDir cache;
+    QVERIFY(cache.isValid());
+    const QString gone = cache.filePath(u"gone.mp4"_s);
+    VideoThumbnailMaker maker(cache.path());
+    QSignalSpy made(&maker, &VideoThumbnailMaker::made);
+    maker.request(gone);
+    maker.request(kGood);
+    QVERIFY2(made.wait(20000), "the video after the missing one was never made");
+    QCOMPARE(made.size(), 1);
+    QCOMPARE(made.first().at(0).toString(), kGood);
+    QVERIFY(QFileInfo::exists(VideoThumbnails::failedPath(cache.path(), QFileInfo(gone))));
+}
+
+void VideoThumbnailsTest::aMarkedVideoIsNotTriedAgainAfterARestart()
+{
+    QTemporaryDir cache;
+    QVERIFY(cache.isValid());
+    QFile marker(VideoThumbnails::failedPath(cache.path(), QFileInfo(kGood)));
+    QVERIFY(marker.open(QIODevice::WriteOnly));
+    marker.close();
+
+    const QString other = cache.filePath(u"copy.mp4"_s);
+    QVERIFY(QFile::copy(kGood, other));
+    VideoThumbnailMaker maker(cache.path());
+    QSignalSpy made(&maker, &VideoThumbnailMaker::made);
+    maker.request(kGood);
+    maker.request(other);
+    QVERIFY2(made.wait(20000), "the video after the marked one was never made");
+    QTest::qWait(100);
+    QCOMPARE(made.size(), 1);
+    QCOMPARE(made.first().at(0).toString(), other);
+    QVERIFY(VideoThumbnails::Cache(cache.path()).find(kGood).thumbnail.isEmpty());
+}
+
+void VideoThumbnailsTest::aFileThatIsntAVideoIsMarked()
+{
+    QTemporaryDir cache;
+    QVERIFY(cache.isValid());
+    const QString text = cache.filePath(u"notes.mp4"_s);
+    QFile file(text);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("These are my notes, not a video.\n");
+    file.close();
+
+    VideoThumbnailMaker maker(cache.path() + u"/thumbs"_s);
+    QSignalSpy made(&maker, &VideoThumbnailMaker::made);
+    maker.request(text);
+    maker.request(kGood);
+    QVERIFY2(made.wait(20000), "the video after the text file was never made");
+    QCOMPARE(made.size(), 1);
+    QCOMPARE(made.first().at(0).toString(), kGood);
+    const VideoThumbnails::Cache cached(cache.path() + u"/thumbs"_s);
+    QVERIFY(cached.find(text).failed);
+    QVERIFY(cached.find(text).thumbnail.isEmpty());
 }
 
 QTEST_MAIN(VideoThumbnailsTest)

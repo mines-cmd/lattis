@@ -18,6 +18,7 @@ private slots:
     void steamDownloadsFollowTheLog();
     void mediaListsTheGamesClips();
     void achievementsListTheGamesAchievements();
+    void achievementRaritiesMergeIn();
 };
 
 void LibrarySteamImportTest::steamImportAddsGames()
@@ -480,6 +481,60 @@ void LibrarySteamImportTest::achievementsListTheGamesAchievements()
     library->achievements(QStringLiteral("switch-mario-tennis-aces"));
     QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 3, 5000);
     QVERIFY(ready.last().at(1).toList().isEmpty());
+}
+
+void LibrarySteamImportTest::achievementRaritiesMergeIn()
+{
+    installFakeSteam();
+    auto library = openLibrary();
+    QSignalSpy ready(library.get(), &Library::achievementsReady);
+    QList<qint64> asked;
+    QHash<QString, double> answer;
+    bool answers = true;
+    library->setRarityFetcher([&](qint64 appId, QObject *context, std::function<void(const QHash<QString, double> &)> done) {
+        asked.append(appId);
+        if (answers)
+            QMetaObject::invokeMethod(context, [done, answer] { done(answer); }, Qt::QueuedConnection);
+    });
+
+    // The list first, then again with the percentages for the achievements the answer has.
+    answer = {{QStringLiteral("FIRST_STEP"), 87.5}, {QStringLiteral("SECRET_ROOM"), 1.2}, {QStringLiteral("UNKNOWN"), 50}};
+    library->achievements(QStringLiteral("steam-9001"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 2, 5000);
+    QCOMPARE(asked, QList<qint64>{9001});
+    const QVariantList first = ready.at(0).at(1).toList();
+    const QVariantList merged = ready.at(1).at(1).toList();
+    QCOMPARE(ready.at(1).at(0).toString(), QStringLiteral("steam-9001"));
+    QCOMPARE(merged.size(), first.size());
+    QHash<QString, QVariant> percent;
+    for (int i = 0; i < merged.size(); ++i) {
+        QVariantMap m = merged.at(i).toMap();
+        percent.insert(m.value("apiName").toString(), m.value("percent"));
+        // Nothing else changes.
+        m.remove(QStringLiteral("percent"));
+        QCOMPARE(m, first.at(i).toMap());
+    }
+    QCOMPARE(percent.value(QStringLiteral("FIRST_STEP")).toDouble(), 87.5);
+    QCOMPARE(percent.value(QStringLiteral("SECRET_ROOM")).toDouble(), 1.2);
+    QVERIFY(!percent.value(QStringLiteral("LONG_WALK")).isValid());
+    QVERIFY(!percent.contains(QStringLiteral("UNKNOWN")));
+
+    // An empty answer sends nothing more; a lookup that fails never calls back.
+    answer.clear();
+    library->achievements(QStringLiteral("steam-9001"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 3, 5000);
+    answers = false;
+    library->achievements(QStringLiteral("steam-9001"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 4, 5000);
+    QTest::qWait(100);
+    QCOMPARE(ready.size(), 4);
+    QCOMPARE(asked.size(), 3);
+
+    // No achievements: not asked.
+    library->achievements(QStringLiteral("steam-2231450"));
+    QTRY_COMPARE_WITH_TIMEOUT(ready.size(), 5, 5000);
+    QTest::qWait(50);
+    QCOMPARE(asked.size(), 3);
 }
 
 QTEST_GUILESS_MAIN(LibrarySteamImportTest)
