@@ -12,9 +12,11 @@ The frame everything on the page sits in: margins, gaps, when it switches to a n
 - `margin_right`, `margin_bottom`: the space at the right, and below the content when scrolled to the end.
 - `margin_top`: the space between the toolbar and the banner. 0 puts the banner level with the bottom of the toolbar.
 - `padding`: extra space on both sides of the content, inside the margins.
-- `spacing`: the vertical gap between the banner, the Launch row and the body.
+- `spacing`: the vertical gap between the banner, the Launch row and the description.
+- `panel_spacing`: the gap between the Launch row and the panels on the right (info, friends, achievements). Follows `spacing` unless set; when the page is compact and the panels sit under the description, `spacing` applies.
 - `action_spacing`: the gap between items in the Launch row (the button, the stat chips, the icon buttons).
 - `button_spacing`: the gap between the icon buttons in that row.
+- `button_align`: `center` lines the icon buttons up with the middle of the Launch button, `top` with its top.
 - `column_spacing`: the gap between the description and the info panel.
 - `compact_width`, `compact_margin_right`: when the page is narrower than this, it goes compact: the stats move under the Launch button, the info panel below the description, and the right margin becomes `compact_margin_right`. 0 = never.
 - `min_width`: the narrowest the page may get. Together with the rail and the list, it sets how narrow the window can be.

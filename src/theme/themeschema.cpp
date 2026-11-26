@@ -723,9 +723,13 @@ constexpr Setting kSettings[] = {
             "How far the game page opened from the Grid view rises into place as it opens and sinks as it closes; "
             "0 = fade only"),
     integer("details", "padding", "32", 0, 400, "Extra horizontal padding on both sides of the content, inside the margins"),
-    integer("details", "spacing", "22", 0, 200, "Vertical space between the hero, action row and body"),
+    integer("details", "spacing", "22", 0, 200, "Vertical space between the hero, the action row and the description"),
+    integer("details", "panel_spacing", "@details.spacing", 0, 200,
+            "Vertical space between the action row and the panels on the right (the description keeps details.spacing)"),
     integer("details", "action_spacing", "12", 0, 200, "Space between items in the action row"),
     integer("details", "button_spacing", "6", 0, 200, "Space between the icon buttons of the action row"),
+    choice("details", "button_align", "center", "center top",
+           "Line the icon buttons up with the middle or the top of the Launch button"),
     integer("details", "column_spacing", "64", 0, 400, "Space between the description and the info panel"),
     integer("details", "compact_width", "760", 0, 10000,
             "Narrower than this (between the margins above), the details are compact: the stats go under the "

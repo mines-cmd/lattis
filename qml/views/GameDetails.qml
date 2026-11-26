@@ -795,7 +795,7 @@ Item {
             // moment, and the hero would load its first game at that width.
             width: root.width - Theme.details.marginLeft - 2 * Theme.details.padding
                    - (root.compactAt(root.width) ? Theme.details.compactMarginRight : Theme.details.marginRight)
-            spacing: Theme.details.spacing
+            spacing: 0
 
             Hero {
                 id: hero
@@ -810,6 +810,7 @@ Item {
             RowLayout {
                 visible: root.game.hidden ?? false
                 Layout.fillWidth: true
+                Layout.topMargin: Theme.details.spacing
                 spacing: Theme.details.actionSpacing
 
                 Icon {
@@ -838,6 +839,7 @@ Item {
             // fit), then the stats. Measured, not details.compact_width: the chips' widths vary.
             GridLayout {
                 id: actionRow
+                Layout.topMargin: Theme.details.spacing
 
                 readonly property bool oneLine: content.width >= launchButton.implicitWidth + statsFlow.lineWidth
                     + buttons.implicitWidth + 2 * columnSpacing
@@ -956,7 +958,8 @@ Item {
                     id: buttons
                     Layout.row: actionRow.buttonsBeside ? 0 : 1
                     Layout.column: actionRow.oneLine ? 3 : actionRow.buttonsBeside ? 1 : 0
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                    Layout.alignment: Qt.AlignLeft | (actionRow.buttonsBeside && Theme.details.buttonAlign === "top"
+                                                      ? Qt.AlignTop : Qt.AlignVCenter)
                     spacing: Theme.details.buttonSpacing
 
                     TapHandler {
@@ -987,6 +990,9 @@ Item {
 
             GridLayout {
                 id: body
+                // details.panel_spacing moves only the side panels; whichever column sits higher sets the row's top.
+                readonly property real panelShift: root.compact ? 0 : Theme.details.panelSpacing - Theme.details.spacing
+                Layout.topMargin: Theme.details.spacing + Math.min(0, panelShift)
                 Layout.fillWidth: true
                 columns: root.compact ? 1 : 2
                 columnSpacing: Theme.details.columnSpacing
@@ -994,6 +1000,7 @@ Item {
 
                 TextBlock {
                     id: textColumn
+                    Layout.topMargin: Math.max(0, -body.panelShift)
                     readonly property real exitOpacity: 1 - root.textExit
                     readonly property real flowOpacity: root.textPending ? exitOpacity : root.textIn
                     readonly property real flowShift: root.textPending ? -root.riseDistance * root.textExit
@@ -1032,7 +1039,7 @@ Item {
                             if (item.visible)
                                 others += item.implicitHeight + item.Layout.topMargin + spacing
                         }
-                        return flick.height - content.y - Theme.details.marginBottom - body.y - others
+                        return flick.height - content.y - Theme.details.marginBottom - body.y - Layout.topMargin - others
                             - (root.compact && side.visible ? body.rowSpacing + side.implicitHeight : 0)
                     }
                     readonly property real lineHeightPx: fullText.lineCount > 0 ? fullText.contentHeight / fullText.lineCount : 1
@@ -1066,6 +1073,7 @@ Item {
                 }
                 GridLayout {
                     id: side
+                    Layout.topMargin: Math.max(0, body.panelShift)
                     columns: 1
                     rowSpacing: Theme.achievements.gap
                     columnSpacing: 0
