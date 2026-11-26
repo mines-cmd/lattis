@@ -62,6 +62,10 @@ The button at the right of the toolbar shows the colors and style in use and ope
 
 If your settings name colors or a style that no longer exists, Lattis uses Ember or Soft for that half and lists the missing file under the Problems button. Your settings aren't changed, so putting the file back restores it.
 
+### Unknown settings
+
+A theme file can name a setting Lattis doesn't have: a typo, or one an update removed. The **Problems** button on Appearance and Customize lists each with its file and line. The trash button beside it deletes that line from the file, and with more than one, **Delete … unknown settings** at the top deletes them all. The rest of the file, comments included, stays as it was. A message offers **Undo** (or Ctrl+Z) for 15 seconds, which puts the lines back unless the file has changed since. Check a "did you mean" suggestion before deleting: you may want to correct the name in the file instead.
+
 ## Editing the files
 
 **Open colors file** and **Open style file** open the one in use in your text editor. On a built-in you haven't changed yet, they first write the file with a short comment on what it layers on. Saved changes apply right away, so you can keep Lattis open beside the editor. Each file only needs what it changes from the one it extends:

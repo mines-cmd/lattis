@@ -92,6 +92,8 @@ private slots:
     void rowMenuWrites();
     void schemaModelGroups();
     void schemaModelKeepsEditedFollowers();
+    void unknownSettingsCanBeDeletedAndPutBack();
+    void aFailedDeletionIsReportedAndLeavesTheFile();
     void schemaModelFilterCombinations();
 
 private:
@@ -2356,6 +2358,77 @@ void ThemeTest::rowMenuWrites()
     theme.useDefault("radius", "small");
     QTest::qWait(700);
     QVERIFY(read(dataDir + "/themes/styles/child.toml").contains("small = 6"));
+}
+
+void ThemeTest::unknownSettingsCanBeDeletedAndPutBack()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    const QString colorsPath = dataDir + "/themes/colors/Ember.toml";
+    const QString stylePath = dataDir + "/themes/styles/Soft.toml";
+    const QByteArray colors = "# mine\n[rail]\nlogo_mark = \"#ff0000\"\nbackground = \"#101010\"\n";
+    const QByteArray style = "[rail]\nwidth = 90\n# old\nupdate_dot_border_width = 2\nnope = 1\n[layout]\nspacing = \"x\"\n";
+    write(colorsPath, colors);
+    write(stylePath, style);
+    Theme theme(dataDir);
+    QCOMPARE(theme.problems().size(), 4);
+
+    QStringList unknown;
+    for (const QString &problem : theme.problems()) {
+        if (!theme.unknownSetting(problem).isEmpty())
+            unknown.append(problem);
+    }
+    // The out-of-place value is a problem of another kind.
+    QCOMPARE(unknown.size(), 3);
+    QCOMPARE(theme.unknownSetting(unknown.first()).value("setting").toString(), QStringLiteral("rail.logo_mark"));
+    QCOMPARE(theme.unknownSetting(unknown.first()).value("file").toString(), QStringLiteral("themes/colors/Ember.toml"));
+
+    // Reading the files for a preview records nothing new and forgets nothing.
+    theme.preview("Ember", "Soft");
+    QCOMPARE(theme.unknownSetting(unknown.first()).value("setting").toString(), QStringLiteral("rail.logo_mark"));
+
+    QSignalSpy problemsChanged(&theme, &Theme::problemsChanged);
+    QVariantMap result = theme.removeUnknownSettings(unknown);
+    QCOMPARE(result.value("removed").toInt(), 3);
+    QCOMPARE(result.value("error").toString(), QString());
+    QVERIFY(!problemsChanged.isEmpty());
+    QCOMPARE(theme.problems().size(), 1);
+    QCOMPARE(read(colorsPath), QStringLiteral("# mine\n[rail]\nbackground = \"#101010\"\n"));
+    QCOMPARE(read(stylePath), QStringLiteral("[rail]\nwidth = 90\n# old\n[layout]\nspacing = \"x\"\n"));
+
+    QCOMPARE(theme.undoRemoveUnknownSettings(), QString());
+    QCOMPARE(read(colorsPath), QString::fromUtf8(colors));
+    QCOMPARE(read(stylePath), QString::fromUtf8(style));
+    QCOMPARE(theme.problems().size(), 4);
+
+    // Undo leaves a file edited since the removal alone, and still restores the other.
+    QCOMPARE(theme.removeUnknownSettings(unknown).value("removed").toInt(), 3);
+    write(colorsPath, "[rail]\nbackground = \"#202020\"\n");
+    const QString error = theme.undoRemoveUnknownSettings();
+    QVERIFY2(error.contains("themes/colors/Ember.toml"), qPrintable(error));
+    QCOMPARE(read(colorsPath), QStringLiteral("[rail]\nbackground = \"#202020\"\n"));
+    QCOMPARE(read(stylePath), QString::fromUtf8(style));
+}
+
+void ThemeTest::aFailedDeletionIsReportedAndLeavesTheFile()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    const QString stylePath = dataDir + "/themes/styles/Soft.toml";
+    // A table where a setting goes: taking out its first line alone would break the file.
+    const QByteArray style = "[rail.extra]\na = 1\n";
+    write(stylePath, style);
+    Theme theme(dataDir);
+    QCOMPARE(theme.problems().size(), 1);
+
+    const QVariantMap result = theme.removeUnknownSettings(theme.problems());
+    QCOMPARE(result.value("removed").toInt(), 0);
+    QVERIFY2(result.value("error").toString().startsWith("rail.extra from themes/styles/Soft.toml: "),
+             qPrintable(result.value("error").toString()));
+    QCOMPARE(read(stylePath), QString::fromUtf8(style));
+    QCOMPARE(theme.problems().size(), 1);
 }
 
 QTEST_MAIN(ThemeTest)

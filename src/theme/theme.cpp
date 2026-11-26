@@ -725,11 +725,15 @@ bool Theme::applyHalfFile(Half half, const QString &name, bool builtInOnly, QHas
             if (base.endsWith(QLatin1String("_fallback")))
                 base.chop(9);
             if (!keys.contains(base)) {
-                if (m_collectLegacy && half == Half::Style && section == QLatin1String("details")
+                if (m_loadingActive && half == Half::Style && section == QLatin1String("details")
                     && GamePageMigration::legacyKeys().contains(keyName))
                     m_legacyGamePage.insert(keyName, nodeToVariant(node));
                 if (section != QLatin1String("palette")) {
-                    warn(QStringLiteral("%1: unknown setting %2.%3%4").arg(line, section, keyName, suggestion(keyName, keys)));
+                    const QString problem = QStringLiteral("%1: unknown setting %2.%3%4")
+                                                .arg(line, section, keyName, suggestion(keyName, keys));
+                    warn(problem);
+                    if (m_loadingActive && user)
+                        m_unknown.insert(problem, {path, section, keyName});
                     continue;
                 }
                 const QString hint = suggestion(base, keys);
@@ -751,6 +755,7 @@ bool Theme::applyHalfFile(Half half, const QString &name, bool builtInOnly, QHas
 void Theme::reload()
 {
     m_problems.clear();
+    m_unknown.clear();
 
     const QString colors = readAppearance(Half::Colors);
     const QString style = readAppearance(Half::Style);
@@ -769,10 +774,10 @@ void Theme::reload()
     QStringList colorsChain;
     QStringList styleChain;
     m_legacyGamePage.clear();
-    m_collectLegacy = true;
+    m_loadingActive = true;
     const bool colorsOk = applyHalfFile(Half::Colors, loadedColors, false, merged, colorsChain);
     const bool styleOk = applyHalfFile(Half::Style, loadedStyle, false, merged, styleChain);
-    m_collectLegacy = false;
+    m_loadingActive = false;
     if (!(colorsOk && styleOk) && m_loaded) {
         emit problemsChanged();
         return; // keep the current theme while a file is being edited
@@ -1555,6 +1560,83 @@ void Theme::useDefault(const QString &section, const QString &key)
 void Theme::useOwnValue(const QString &section, const QString &key)
 {
     setValue(section, key, resolvedValue(section, key));
+}
+
+QVariantMap Theme::unknownSetting(const QString &problem) const
+{
+    const auto it = m_unknown.constFind(problem);
+    if (it == m_unknown.constEnd())
+        return {};
+    return {{QStringLiteral("setting"), it->section + u'.' + it->key},
+            {QStringLiteral("file"), QDir(m_dataDir).relativeFilePath(it->path)}};
+}
+
+static std::optional<QByteArray> contentsOf(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return std::nullopt;
+    return file.readAll();
+}
+
+QVariantMap Theme::removeUnknownSettings(const QStringList &problems)
+{
+    m_lastRemoval.clear();
+    int removed = 0;
+    bool found = false;
+    QString error;
+    for (const QString &problem : problems) {
+        const auto it = m_unknown.constFind(problem);
+        if (it == m_unknown.constEnd())
+            continue;
+        found = true;
+        const std::optional<QByteArray> before = contentsOf(it->path);
+        QString failure;
+        const bool ok = TomlPatch::removeValueInFile(it->path, it->section, it->key, &failure);
+        const std::optional<QByteArray> after = contentsOf(it->path);
+        if (!ok || !before || !after) {
+            if (error.isEmpty()) {
+                const QVariantMap what = unknownSetting(problem);
+                error = tr("%1 from %2: %3").arg(what.value(QStringLiteral("setting")).toString(),
+                                                 what.value(QStringLiteral("file")).toString(), failure);
+            }
+            continue;
+        }
+        ++removed;
+        const auto earlier = std::find_if(m_lastRemoval.begin(), m_lastRemoval.end(),
+                                          [&](const Removal &r) { return r.path == it->path; });
+        if (earlier == m_lastRemoval.end())
+            m_lastRemoval.append({it->path, *before, *after});
+        else
+            earlier->after = *after;
+    }
+    if (found) {
+        reload();
+        watch();
+    }
+    return {{QStringLiteral("removed"), removed}, {QStringLiteral("error"), error}};
+}
+
+QString Theme::undoRemoveUnknownSettings()
+{
+    QString error;
+    for (const Removal &removal : std::as_const(m_lastRemoval)) {
+        const QString name = QDir(m_dataDir).relativeFilePath(removal.path);
+        QString failure;
+        if (contentsOf(removal.path) != removal.after) {
+            failure = tr("%1 has changed since, so it was left as it is").arg(name);
+        } else {
+            QSaveFile file(removal.path);
+            if (!file.open(QIODevice::WriteOnly) || file.write(removal.before) < 0 || !file.commit())
+                failure = tr("%1: %2").arg(name, file.errorString());
+        }
+        if (error.isEmpty())
+            error = failure;
+    }
+    m_lastRemoval.clear();
+    reload();
+    watch();
+    return error;
 }
 
 QVariantList Theme::sessionChanges() const

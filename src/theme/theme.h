@@ -101,6 +101,13 @@ public:
     Q_INVOKABLE void useOwnValue(const QString &section, const QString &key);
     QVariantList sessionChanges() const;
 
+    // {setting, file} for a problem of the last load that names an unknown setting in a user's theme
+    // file; empty for any other problem.
+    Q_INVOKABLE QVariantMap unknownSetting(const QString &problem) const;
+    // {removed, error}: how many were taken out of their files, and why the first failure failed.
+    Q_INVOKABLE QVariantMap removeUnknownSettings(const QStringList &problems);
+    Q_INVOKABLE QString undoRemoveUnknownSettings();
+
     Q_INVOKABLE QVariant rawValue(const QString &section, const QString &key) const;
     Q_INVOKABLE QString sourceLabel(const QString &section, const QString &key) const;
     Q_INVOKABLE bool isCustomized(const QString &section, const QString &key) const;
@@ -153,6 +160,21 @@ private:
     {
         QString colors;
         QString style;
+    };
+
+    struct Unknown
+    {
+        QString path;
+        QString section;
+        QString key;
+    };
+
+    // A file as a removal found and left it: Undo only writes over what the removal wrote.
+    struct Removal
+    {
+        QString path;
+        QByteArray before;
+        QByteArray after;
     };
 
     static QString folder(Half half);
@@ -224,7 +246,7 @@ private:
     bool m_loaded = false;
     bool m_savingOwnChange = false;
     bool m_quiet = false;
-    bool m_collectLegacy = false;
+    bool m_loadingActive = false;
     QVariantMap m_legacyGamePage;
 
     QString m_activeColors;
@@ -233,6 +255,9 @@ private:
     QString m_loadedStyle;
     QString m_activeTheme;
     QStringList m_problems;
+    // By problem text.
+    QHash<QString, Unknown> m_unknown;
+    QList<Removal> m_lastRemoval;
 
     QHash<QString, QQmlPropertyMap *> m_sections;
     QHash<QString, Entry> m_merged;

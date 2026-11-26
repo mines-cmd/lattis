@@ -39,6 +39,20 @@ def style_has(*lines):
     return check
 
 
+def unknown_settings(dirs):
+    dirs.use_demo()
+    dirs.write("themes/styles/Soft.toml", "[rail]\nnope_one = 1\nnope_two = 2\nnope_three = 3\n")
+
+
+def style_lacks_only(gone, kept):
+    def check(result, dirs):
+        with open(os.path.join(dirs.data, "themes", "styles", "Soft.toml")) as f:
+            text = f.read()
+        return ([f"Soft.toml still has: {gone}"] if gone in text else []) + [
+            f"Soft.toml lacks: {key}" for key in kept if key not in text]
+    return check
+
+
 def set_value(description, old, new):
     return (f"click Search settings\ntype {description}\nwait 800\nclick {old}\nkey Ctrl+A\ntype {new}\nkey Return\n"
             f"wait 500\nexpect {new}\nclick {description}\nkey Ctrl+A\nkey Delete\nwait 500\n")
@@ -96,6 +110,13 @@ SCENARIOS = [
              [(CUSTOMIZE + "click Show\nwait 500\nclick Colors\nwait 600\nexpect Background\nexpect-not Large\n"
                + "click Style\nwait 600\nexpect Large\nexpect-not Background\n"
                + "click All\nwait 600\nexpect Background\nexpect Large\n", None)], demo),
+    Scenario("the Problems popup deletes one unknown theme setting or all of them, and Undo puts them back",
+             [(CUSTOMIZE + "click 3 problems\nwait 500\n"
+               + "click Delete rail.nope_one from themes/styles/Soft.toml\nwait 600\n"
+               + "expect Deleted rail.nope_one from themes/styles/Soft.toml\nexpect 2 problems\n"
+               + "click Delete 2 unknown settings\nwait 600\nexpect Deleted 2 unknown settings\n"
+               + "expect-not 2 problems\nclick Undo\nwait 600\nexpect 2 problems\n",
+               style_lacks_only("nope_one", ("nope_two", "nope_three")))], unknown_settings),
     Scenario("the minimum session length persists",
              [(OPEN + "click 30\nkey Ctrl+A\ntype 45\nkey Return\nwait 800\n",
                settings_has("min_session_seconds = 45")),

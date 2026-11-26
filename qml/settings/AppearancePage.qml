@@ -263,6 +263,7 @@ Item {
                 Layout.topMargin: Theme.layout.spacing
                 Layout.alignment: Qt.AlignRight
                 problems: Theme.problems
+                onMessage: (text, link) => root.message(text, link)
             }
         }
     }

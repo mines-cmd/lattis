@@ -2164,7 +2164,7 @@ constexpr Setting kSettings[] = {
     integer("settings_window", "entry_icon_size", "20", 6, 60, "Size of each entry's own icon in the Game page lists"),
     integer("settings_window", "list_button_size", "22", 12, 100, "Size of the move up, move down and remove buttons in text lists"),
     integer("settings_window", "list_icon_size", "12", 6, 60, "Icon size in those buttons"),
-    integer("settings_window", "problems_button_size", "24", 12, 100, "Size of the Open the file button in the problems list"),
+    integer("settings_window", "problems_button_size", "24", 12, 100, "Size of the buttons in the problems list"),
     integer("settings_window", "problems_icon_size", "18", 6, 60, "Icon size in that button"),
     real("settings_window", "preview_dot_opacity", "0.4", 0, 1, "Opacity of the rail dots in the Appearance page's theme previews"),
     integer("settings_window", "key_chip_radius", "@radius.small", 0, 100, "Key corner radius"),

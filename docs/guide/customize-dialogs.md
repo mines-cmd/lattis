@@ -77,7 +77,7 @@ Things on individual Settings pages.
 - `key_chip_background`, `key_chip_border`, `key_chip_border_width`, `key_chip_text`, `key_chip_font_size`, `key_chip_height`, `key_chip_padding`, `key_chip_radius`: the keys on the Keyboard page (Ctrl+D).
 - `key_chip_conflict`, `key_chip_recording`: a key another action also uses, and the outline while waiting for a new key.
 - `preview_dot_radius`, `preview_dot_opacity`: the rail dots in the Appearance page's theme previews.
-- `problems_button_size`, `problems_icon_size`: the Open the file button in the problems list.
+- `problems_button_size`, `problems_icon_size`: the buttons in the problems list.
 - `install_found`, `install_missing`, `install_not_found`, `install_offer`: the tags on the Emulators page and in the setup guide (Flatpak, Not found, Install).
 - `install_tile_radius`, `install_tile_padding`, `install_tile_button_background`: the boxes at the top of an emulator's card.
 - `install_error`, `install_error_fill_opacity`: why an emulator couldn't be installed, and the tint behind it.

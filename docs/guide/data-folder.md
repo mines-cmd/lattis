@@ -41,7 +41,7 @@ A game you've never changed has no file of its own: it comes from `library/roms/
 
 ## Problems
 
-When a file has a mistake (a typo in a setting, a value out of range), Lattis uses the default for that value and lists the problem, with the file and line, under **Problems** on Settings → Library. A file with a syntax error keeps its last good version until it's fixed.
+When a file has a mistake (a typo in a setting, a value out of range), Lattis uses the default for that value and lists the problem, with the file and line, under **Problems** on Settings → Library (for theme files, on Appearance and Customize, where [unknown settings](themes.md#unknown-settings) can also be deleted). A file with a syntax error keeps its last good version until it's fixed.
 
 ## A read-only library
 

@@ -71,6 +71,8 @@ Item {
             schema.sharedOnly = true
         else if (item === "session")
             sessionPopup.open()
+        else if (item === "problems")
+            problemsButton.open()
         else if (item === "changed") {
             schema.show = "colors"
             schema.changedOnly = true
@@ -522,7 +524,9 @@ Item {
             }
 
             ProblemsButton {
+                id: problemsButton
                 problems: Theme.problems
+                onMessage: (text, link) => root.message(text, link)
             }
         }
 

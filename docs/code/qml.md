@@ -503,7 +503,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `settings/PathField.qml` | A path shown read-only with `~` for the home folder, elided in the middle, with a copy button (`copyable: false` drops it where copying isn't what you'd want, as in the Epic Install dialog) |
 | `settings/PlatformRow.qml` | One platform row in the Platforms page |
 | `settings/PlatformsPage.qml` | Platforms: order, name, icon |
-| `settings/ProblemsButton.qml` | Problems indicator button; a problem that names a `.toml` file (`GameRunner.problemFile`) gets an open-file button |
+| `settings/ProblemsButton.qml` | Problems indicator button; a problem that names a `.toml` file (`GameRunner.problemFile`) gets an open-file button, and an unknown theme setting (`Theme.unknownSetting`) a delete button, plus one button for all when there are several; it reports through `message(text, link)`, with Undo |
 | `settings/ProgramDialog.qml` | Program/exe file picker dialog |
 | `settings/RomFolderDialog.qml` | ROM folder picker dialog |
 | `settings/Section.qml` | Titled list in an expanded platform or emulator row, with its actions and a note |

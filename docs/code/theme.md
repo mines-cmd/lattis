@@ -33,6 +33,8 @@ References (`@accent`, `@radius.medium`) are resolved recursively. `m_resolving`
 
 A syntax error in any file keeps the current theme in place and reports a problem. Unknown sections and keys are reported with a suggestion (from `src/core/suggestion.*`) for likely typos, including mistyped palette color names.
 
+An unknown key in a user's theme file can be deleted. `reload()` keeps the file, section and key behind each such problem, by its text (`previews` and `rowMenu()`, which read theme files too, record nothing). `removeUnknownSettings()` takes the lines out with `TomlPatch`, which refuses an edit that wouldn't leave the intended file (a `[section.key]` table, say), so the rest of the file is never damaged. It remembers each file as it found and left it, and `undoRemoveUnknownSettings()` writes the old contents back only over what the removal wrote.
+
 ## QML access
 
 `Theme` is a `QQmlPropertyMap` singleton. Each section is a `ThemeSection`, also a `QQmlPropertyMap`, stored as a property of Theme under the camelCase section name. QML reads `Theme.launchButton.fontSize` — `camel()` converts `launch_button` → `launchButton` and `font_size` → `fontSize`. Custom palette colors added by the user are also exposed this way.
@@ -117,6 +119,9 @@ typeName(type)          → "Color", "Int", …
 | `availableColors`, `availableStyles`, `availableThemes` | Built-ins, then the user's files |
 | `builtInColors`, `builtInStyles`, `builtInThemes` | Built-in names (constant) |
 | `problems` | Validation warnings from the last load |
+| `unknownSetting(problem)` | `{setting, file}` when that problem is an unknown setting in a user's theme file, else empty |
+| `removeUnknownSettings(problems)` | Delete those settings from their files and reload; `{removed, error}`, the error naming the first that failed |
+| `undoRemoveUnknownSettings()` | Put back the files the last removal changed, skipping any changed since; the error, or empty |
 | `colorsSchema`, `styleSchema` | `ThemeSettingsModel` of each half's settings |
 | `customizeSchema` | `ThemeSettingsModel` of both halves, for the Customize page |
 | `preview(colors, style)` | `{palette colors…, rail, launch, launchRunning, launchInstall, radius, railBorderWidth, searchRadius, launchLabel, railContainer…, extends}` — no switch |
