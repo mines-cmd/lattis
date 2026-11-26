@@ -120,12 +120,12 @@ bool UiDriver::tryCommand(const Command &command)
         settle();
         return true;
     }
-    if (command.name == u"shift-click") {
+    if (command.name == u"shift-click" || command.name == u"ctrl-click") {
         QQuickItem *item = find(command.argument);
         if (!item)
             return false;
-        click(item, Qt::LeftButton, Qt::ShiftModifier);
-        qInfo().noquote() << "uitest: shift-click" << command.argument;
+        click(item, Qt::LeftButton, command.name == u"ctrl-click" ? Qt::ControlModifier : Qt::ShiftModifier);
+        qInfo().noquote() << "uitest:" << command.name << command.argument;
         settle();
         return true;
     }

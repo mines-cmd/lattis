@@ -53,12 +53,20 @@ class Dirs:
 
 
 class Scenario:
-    """steps: a list of (script, check) runs of the app on the same dirs, in order; check gets the Result."""
+    """steps: a list of (script, check) runs of the app on the same dirs, in order; check gets the Result.
 
-    def __init__(self, name, steps, setup=None):
+    known_bugs: (text, finding) pairs for a bug the scenario shows that isn't fixed yet, as QEXPECT_FAIL does for
+    the C++ tests: a QML warning, a check's problem or a failed command's line containing the text is let through
+    in this scenario only, and the scenario fails once no run shows it any more, so the mark comes out with the
+    fix. A command that fails ends the script, so it goes last; otherwise a check reports the bug."""
+
+    def __init__(self, name, steps, setup=None, known_bugs=(), quits=False):
         self.name = name
         self.steps = steps
         self.setup = setup
+        self.known_bugs = known_bugs
+        # The app quits before the script's end (Quit in the quit prompt): an unfinished script is what it should do.
+        self.quits = quits
 
 
 class Result:
@@ -135,18 +143,31 @@ def run_scenarios(scenarios):
             if scenario.setup:
                 scenario.setup(dirs)
             found = []
+            shown = set()
             for number, (script, check) in enumerate(scenario.steps, 1):
                 result = run_app(binary, dirs, script)
                 step_problems = problems(result)
+                if scenario.quits:
+                    step_problems = [p for p in step_problems if p != "the script didn't finish"]
                 if check:
                     step_problems += check(result, dirs) or []
+                known = [(p, text) for p in step_problems for text, _ in scenario.known_bugs if text in p]
+                shown.update(text for _, text in known)
+                step_problems = [p for p in step_problems if p not in {p for p, _ in known}]
+                # A known bug that failed the script's last expect exits with 1; nothing else went wrong.
+                if any(p.startswith("uitest: FAIL") for p, _ in known) and step_problems == [f"exit code {result.code}"]:
+                    step_problems = []
                 found += [f"run {number}: {p}" for p in step_problems]
                 if step_problems:
                     tail = [line for line in result.output.splitlines()
                             if line.startswith("uitest:") and not any(line in p for p in step_problems)]
                     found += ["    " + line for line in tail[-6:]]
                     break
-        print(("FAIL " if found else "ok   ") + scenario.name)
+            if not found:
+                found += [f"known bug {finding} no longer shows ('{text}'): remove its mark"
+                          for text, finding in scenario.known_bugs if text not in shown]
+        marks = "".join(f" (known bug: {finding})" for _, finding in scenario.known_bugs)
+        print(("FAIL " if found else "ok   ") + scenario.name + ("" if found else marks))
         for line in found:
             print("     " + line)
         failed += bool(found)

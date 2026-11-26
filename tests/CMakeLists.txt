@@ -633,7 +633,7 @@ set_tests_properties(qmltest PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;Q
 
 # Scripted UI tests (tests/ui/): the real app, offscreen, driven by clicks and keys (UiDriver).
 if(PYTHON3)
-    foreach(area startup onboarding overview stats covered calendar addsession dialogs editor library collections checklist copies filters bulk steamstatus protondb friends plain lookup launch heroic settings export updates stress)
+    foreach(area startup onboarding overview stats selection gallery covered calendar addsession dialogs editor library collections checklist copies filters bulk steamstatus protondb friends plain lookup launch heroic settings settingspages export updates stress)
         add_test(NAME ui_${area}_test COMMAND ${PYTHON3} -I ${CMAKE_CURRENT_SOURCE_DIR}/ui/${area}_test.py $<TARGET_FILE:lattis>)
         # Leaks are not checked here: the app exits with Qt Quick objects still alive. Use-after-free, overflow and UBSan still are.
         set_tests_properties(ui_${area}_test PROPERTIES TIMEOUT 600 RUN_SERIAL TRUE
