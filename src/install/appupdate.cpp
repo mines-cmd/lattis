@@ -256,7 +256,7 @@ void AppUpdate::check(bool quiet)
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QCoreApplication::applicationName() + u'/' + QCoreApplication::applicationVersion());
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setTransferTimeout(15000);
+    request.setTransferTimeout(m_transferTimeoutMs);
     setState(State::Checking);
     QNetworkReply *reply = network()->get(request);
     m_reply = reply;

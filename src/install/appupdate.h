@@ -133,6 +133,8 @@ public:
     void setReleaseUrl(const QUrl &url) { m_releaseUrl = url; }
     void setRelaxed(bool relaxed) { m_relaxed = relaxed; }
     void setPace(qint64 bytes, int tickMs);
+    // How long the release request may stall (tests shorten it).
+    void setTransferTimeout(int ms) { m_transferTimeoutMs = ms; }
 
 signals:
     void changed();
@@ -165,6 +167,7 @@ private:
     bool m_relaxed = false;
     qint64 m_paceBytes = 0;
     int m_paceTickMs = 0;
+    int m_transferTimeoutMs = 15000;
 
     State m_state = State::Idle;
     double m_progress = -1;

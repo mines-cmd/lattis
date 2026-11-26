@@ -488,7 +488,8 @@ lattis_test(install_test
             ../src/install/appupdate.h ../src/install/appupdate.cpp
             ../src/install/applocation.h ../src/install/applocation.cpp
             ${LIBRARY_FILE_SOURCES}
-    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus)
+    LIBS Qt6::Network Qt6::Concurrent Qt6::Qml Qt6::Gui LibArchive::LibArchive tomlplusplus::tomlplusplus
+    DEFINES "TLS_FIXTURE=\"${CMAKE_CURRENT_SOURCE_DIR}/data/tls\"")
 
 # Saves manifest
 find_package(yaml-cpp REQUIRED)

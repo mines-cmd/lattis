@@ -8,17 +8,25 @@
 #include "installer.h"
 #include "installrecord.h"
 #include "releasesource.h"
+#include "testfiles.h"
 #include "versions.h"
 
 #include <QCryptographicHash>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <algorithm>
+#include <memory>
+
+#include <unistd.h>
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -191,6 +199,23 @@ private slots:
     void appUpdateRestart();
     void appUpdateWhatsNew();
     void appUpdateDailyCheck();
+
+    void menuEntryRefusals();
+    void menuEntryFromAnAppImage();
+    void menuEntryFollowsLinks();
+    void installerAsksTheReleaseApi();
+    void installerRefusesARedirectToHttp();
+    void installerTimesOut();
+    void appUpdateAsksTheReleaseApi();
+    void appUpdateRefusesARedirectToHttp();
+    void appUpdateTimesOut();
+    void appUpdateUsesTheCachedAnswer();
+    void appUpdateTrashRefuses();
+    void installerUpdateTrashRefuses();
+    void appLocationMoves();
+    void flatpakJobEnvironment();
+    void flatpakJobKillsWhatIgnoresTerm();
+    void ffmpegCancelWhileVerifying();
 };
 
 void InstallTest::sourceParses_data()
@@ -2346,6 +2371,7 @@ struct UpdateHome
     QStringList trashed;
     QStringList skipped;
     QString game;
+    QByteArray releaseJson;
     int restarts = 0;
     bool restartWorks = true;
     bool enabled = true;
@@ -2372,8 +2398,9 @@ struct UpdateHome
                                   {"published_at", "2026-10-29T00:00:00Z"},
                                   {"body", "## What's new\n- a thing"},
                                   {"assets", QJsonArray{zsync, item}}};
+        releaseJson = QJsonDocument(release).toJson();
         server.clear("/release");
-        server.on("/release", {200, QJsonDocument(release).toJson()});
+        server.on("/release", {200, releaseJson});
         server.clear("/d/lattis");
         server.on("/d/lattis", {200, image});
     }
@@ -2757,6 +2784,658 @@ void InstallTest::appUpdateDailyCheck()
     QVERIFY(write(h.state + "/app-update.toml", "last_check = \"2020-01-01T00:00:00Z\"\n"));
     update.startDailyCheck(10);
     QTRY_VERIFY_WITH_TIMEOUT(h.server.requestsTo("/release").size() == 2, 10000);
+}
+
+namespace {
+// Answers `--appimage-extract <pattern>` as an AppImage's runtime does: what matches `pattern` in `payload` is
+// copied into ./squashfs-root, links as links. Each pattern asked for goes to `log`.
+struct FakeAppImage
+{
+    QTemporaryDir dir;
+    QString path = dir.filePath("Emu.AppImage");
+    QString payload = dir.filePath("payload");
+    QString log = dir.filePath("extract.log");
+    QString data = dir.filePath("data");
+
+    explicit FakeAppImage(int exitCode = 0)
+    {
+        QDir().mkpath(payload);
+        writeFile(path,
+                  "#!/bin/sh\n"
+                  "[ \"$1\" = --appimage-extract ] || exit 2\n"
+                  "printf '%s\\n' \"$2\" >> '" + log.toUtf8() + "'\n"
+                  "out=\"$(pwd)/squashfs-root\"\n"
+                  "mkdir -p \"$out\"\n"
+                  "cd '" + payload.toUtf8() + "' || exit 1\n"
+                  "for f in $2; do\n"
+                  "  [ -e \"$f\" ] || [ -L \"$f\" ] || continue\n"
+                  "  mkdir -p \"$out/$(dirname \"$f\")\"\n"
+                  "  rm -f \"$out/$f\"\n"
+                  "  cp -P \"$f\" \"$out/$f\"\n"
+                  "done\n"
+                  "exit " + QByteArray::number(exitCode) + "\n",
+                  true);
+    }
+
+    void file(const QString &name, const QByteArray &bytes) { writeFile(payload + u'/' + name, bytes); }
+
+    void link(const QString &name, const QString &target)
+    {
+        const QString at = payload + u'/' + name;
+        QVERIFY(QDir().mkpath(QFileInfo(at).absolutePath()));
+        QCOMPARE(::symlink(QFile::encodeName(target).constData(), QFile::encodeName(at).constData()), 0);
+    }
+
+    QStringList extracted() const { return QString::fromUtf8(readFile(log)).split(u'\n', Qt::SkipEmptyParts); }
+
+    DesktopEntry::Made make(QString *error) const { return DesktopEntry::make("emu", path, data, error); }
+};
+
+// The application proxy, for code whose https: address is fixed; put back when the test ends.
+struct ProxyThrough
+{
+    explicit ProxyThrough(const QNetworkProxy &proxy) { QNetworkProxy::setApplicationProxy(proxy); }
+    ~ProxyThrough() { QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy); }
+};
+
+struct AppVersion
+{
+    explicit AppVersion(const QString &version) : saved(QCoreApplication::applicationVersion())
+    {
+        QCoreApplication::setApplicationVersion(version);
+    }
+    ~AppVersion() { QCoreApplication::setApplicationVersion(saved); }
+    QString saved;
+};
+
+qsizetype gets(const FakeHttpServer &server)
+{
+    return std::count_if(server.requests.cbegin(), server.requests.cend(),
+                         [](const FakeHttpServer::Request &r) { return r.method == "GET"; });
+}
+
+bool gone(const QString &pid)
+{
+    return !pid.isEmpty() && !QFileInfo::exists(QStringLiteral("/proc/") + pid);
+}
+
+const QByteArray kMgbaApi = "/repos/mgba-emu/mgba/releases/latest";
+const QByteArray kMgbaAsset = "/mgba-emu/mgba/releases/download/x/mGBA-0.10.5-appimage-x64.appimage";
+const QByteArray kLattisApi = "/repos/mines-cmd/lattis/releases/latest";
+}
+
+void InstallTest::menuEntryRefusals()
+{
+    {
+        // An AppImage that won't run.
+        FakeAppImage app(1);
+        app.file("emu.desktop", "[Desktop Entry]\nExec=emu\n");
+        QString error;
+        QVERIFY(app.make(&error).desktop.isEmpty());
+        QCOMPARE(error, QStringLiteral("couldn't read the menu entry out of Emu.AppImage"));
+        QVERIFY(!QFileInfo::exists(app.data));
+    }
+    {
+        // No .desktop file in it.
+        FakeAppImage app;
+        app.file("usr/share/applications/emu.desktop", "[Desktop Entry]\nExec=emu\n");
+        QString error;
+        QVERIFY(app.make(&error).desktop.isEmpty());
+        QCOMPARE(error, QStringLiteral("Emu.AppImage has no .desktop file"));
+        QVERIFY(!QFileInfo::exists(app.data));
+    }
+    {
+        // Links that leave the image are not followed, whether absolute or relative.
+        for (const QString &target : {QStringLiteral("/etc/hostname"), QStringLiteral("../outside.desktop")}) {
+            FakeAppImage app;
+            app.link("emu.desktop", target);
+            writeFile(app.dir.filePath("outside.desktop"), "[Desktop Entry]\nExec=outside\n");
+            QString error;
+            QVERIFY(app.make(&error).desktop.isEmpty());
+            QCOMPARE(error, QStringLiteral("Emu.AppImage has no .desktop file"));
+            QCOMPARE(app.extracted(), QStringList{"*.desktop"});
+            QVERIFY(!QFileInfo::exists(app.data));
+        }
+    }
+    {
+        // A loop of links gives up after a few hops.
+        FakeAppImage app;
+        app.link("a.desktop", "b.desktop");
+        app.link("b.desktop", "a.desktop");
+        QString error;
+        QVERIFY(app.make(&error).desktop.isEmpty());
+        QCOMPARE(error, QStringLiteral("Emu.AppImage has no .desktop file"));
+        QCOMPARE(app.extracted().size(), 5);
+    }
+    {
+        // The entry can't be written: the icon it copied goes too.
+        FakeAppImage app;
+        app.file("emu.desktop", "[Desktop Entry]\nExec=emu\nIcon=emu\n");
+        app.file("emu.png", "PNG");
+        writeFile(app.data + "/applications", "not a folder");
+        QString error;
+        const DesktopEntry::Made made = app.make(&error);
+        QVERIFY(made.desktop.isEmpty());
+        QVERIFY(made.icon.isEmpty());
+        QVERIFY2(error.contains(QStringLiteral("couldn't make")), qPrintable(error));
+        QVERIFY(!QFileInfo::exists(app.data + "/icons/lattis/emu.png"));
+        QCOMPARE(readFile(app.data + "/applications"), QByteArray("not a folder"));
+    }
+    {
+        // An icon that isn't in the image keeps the entry's own Icon line.
+        FakeAppImage app;
+        app.file("emu.desktop", "[Desktop Entry]\nExec=emu\nIcon=emu\n");
+        QString error;
+        const DesktopEntry::Made made = app.make(&error);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        QVERIFY(made.icon.isEmpty());
+        QVERIFY(readFile(made.desktop).contains("\nIcon=emu\n"));
+        QCOMPARE(app.extracted(), (QStringList{"*.desktop", "emu.*", ".DirIcon"}));
+        QVERIFY(!QFileInfo::exists(app.data + "/icons"));
+    }
+    {
+        // An absolute Icon is the system's: nothing is extracted for it.
+        FakeAppImage app;
+        app.file("emu.desktop", "[Desktop Entry]\nExec=emu\nIcon=/usr/share/pixmaps/emu.png\n");
+        QString error;
+        const DesktopEntry::Made made = app.make(&error);
+        QVERIFY(made.icon.isEmpty());
+        QVERIFY(readFile(made.desktop).contains("\nIcon=/usr/share/pixmaps/emu.png\n"));
+        QCOMPARE(app.extracted(), QStringList{"*.desktop"});
+    }
+}
+
+void InstallTest::menuEntryFromAnAppImage()
+{
+    FakeAppImage app;
+    app.file("emu.desktop", "[Desktop Entry]\nName=Emu\nExec=emu %U\nTryExec=emu\nIcon=emu\nX-AppImage-Version=1.0\n\n"
+                            "[Desktop Action Window]\nName=New window\nExec=emu --window\n");
+    app.file("emu.png", "PNG");
+    QString error;
+    const DesktopEntry::Made made = app.make(&error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    const QString entry = app.data + "/applications/lattis-emu.desktop";
+    const QString icon = app.data + "/icons/lattis/emu.png";
+    QCOMPARE(made.desktop, entry);
+    QCOMPARE(made.icon, icon);
+    QCOMPARE(readFile(icon), QByteArray("PNG"));
+    QCOMPARE(readFile(entry), ("[Desktop Entry]\nName=Emu\nExec=\"" + app.path + "\" %U\nIcon=" + icon
+                               + "\n\n[Desktop Action Window]\nName=New window\nExec=\"" + app.path + "\" --window\n")
+                                  .toUtf8());
+    QCOMPARE(app.extracted(), (QStringList{"*.desktop", "emu.*"}));
+
+    // Made again after an update: the new icon replaces the old.
+    app.file("emu.png", "PNG 2");
+    QCOMPARE(app.make(&error).icon, icon);
+    QCOMPARE(readFile(icon), QByteArray("PNG 2"));
+    QCOMPARE(QDir(app.data + "/icons/lattis").entryList(QDir::Files), QStringList{"emu.png"});
+
+    // Lattis's own entry with an icon of its own reads only the .desktop file, once.
+    const QString data = app.dir.filePath("own");
+    const DesktopEntry::Made own = DesktopEntry::ensureOwn(app.path, data, "/icons/given.png", &error);
+    QCOMPARE(own.desktop, data + "/applications/lattis-lattis.desktop");
+    QVERIFY(own.icon.isEmpty());
+    QVERIFY(readFile(own.desktop).contains("\nIcon=/icons/given.png\n"));
+    QCOMPARE(app.extracted().size(), 5);
+    QCOMPARE(app.extracted().last(), QStringLiteral("*.desktop"));
+    QVERIFY(DesktopEntry::ensureOwn(app.path, data, "/icons/given.png", &error).desktop.isEmpty());
+    QCOMPARE(app.extracted().size(), 5);
+}
+
+void InstallTest::menuEntryFollowsLinks()
+{
+    // The usual layout: the root's .desktop and .DirIcon are links into usr/, which the first extraction leaves
+    // dangling.
+    FakeAppImage app;
+    app.file("usr/share/applications/emu-real.desktop", "[Desktop Entry]\nName=Emu\nExec=emu\nIcon=emu\n");
+    app.link("usr/share/applications/emu.desktop", "emu-real.desktop");
+    app.link("emu.desktop", "usr/share/applications/emu.desktop");
+    app.file("usr/share/icons/hicolor/scalable/apps/emu.svg", "SVG");
+    app.link(".DirIcon", "usr/share/icons/hicolor/scalable/apps/emu.svg");
+    QString error;
+    const DesktopEntry::Made made = app.make(&error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    const QString icon = app.data + "/icons/lattis/emu.svg";
+    QCOMPARE(made.icon, icon);
+    QCOMPARE(readFile(icon), QByteArray("SVG"));
+    QVERIFY(!QFileInfo(icon).isSymLink());
+    QCOMPARE(readFile(made.desktop), ("[Desktop Entry]\nName=Emu\nExec=\"" + app.path + "\"\nIcon=" + icon + "\n").toUtf8());
+    QCOMPARE(app.extracted(), (QStringList{"*.desktop", "usr/share/applications/emu.desktop",
+                                           "usr/share/applications/emu-real.desktop", "emu.*", ".DirIcon",
+                                           "usr/share/icons/hicolor/scalable/apps/emu.svg"}));
+}
+
+void InstallTest::installerAsksTheReleaseApi()
+{
+    FakeHttpServer github;
+    QVERIFY(github.useTls(TLS_FIXTURE, true));
+    ProxyThrough proxy(github.proxyAddress());
+    AppVersion version("4.5.6");
+    InstallerHome h;
+    const QByteArray image = "#!/bin/sh\n" + QByteArray(3000, '#');
+    h.release(image);
+    const QByteArray answer = readFile(h.fixtures + "/github-mgba-emu-mgba.json");
+    github.on(kMgbaApi, {200, answer});
+    github.on(kMgbaAsset, {200, image});
+
+    Installer installer(h.setup());
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool() || row().value("state").toString() == "failed", 10000);
+    QVERIFY2(row().value("installedByApp").toBool(), qPrintable(row().value("error").toString()));
+
+    QCOMPARE(github.requests.first().method, QByteArray("CONNECT"));
+    QCOMPARE(github.requests.first().target, QByteArray("api.github.com:443"));
+    const auto api = github.requestsTo(kMgbaApi);
+    QCOMPARE(api.size(), 1);
+    QCOMPARE(api.first().headers.value("accept"), QByteArray("application/vnd.github+json"));
+    QCOMPARE(api.first().headers.value("user-agent"), (QCoreApplication::applicationName() + "/4.5.6").toUtf8());
+    QCOMPARE(fileText(h.home + "/Applications/mGBA-0.10.5-appimage-x64.appimage"), image);
+    // A fresh answer is kept for the quiet checks.
+    QCOMPARE(fileText(h.cache + "/releases/github-mgba-emu-mgba.json"), answer);
+}
+
+void InstallTest::installerRefusesARedirectToHttp()
+{
+    FakeHttpServer github;
+    QVERIFY(github.useTls(TLS_FIXTURE, true));
+    ProxyThrough proxy(github.proxyAddress());
+    InstallerHome h;
+    const QByteArray image = "#!/bin/sh\n" + QByteArray(3000, '#');
+    h.release(image);
+    const QByteArray answer = readFile(h.fixtures + "/github-mgba-emu-mgba.json");
+    github.on(kMgbaApi, {302, {}, 0, "Location: http://api.github.com/moved\r\n"});
+    github.on("/moved", {200, answer});
+    github.on(kMgbaAsset, {200, image});
+
+    Installer installer(h.setup());
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 10000);
+    const QString error = row().value("error").toString();
+    QVERIFY2(error.startsWith(QStringLiteral("Couldn't check the latest release: ")), qPrintable(error));
+    QVERIFY2(error.contains(QStringLiteral("redirect"), Qt::CaseInsensitive), qPrintable(error));
+    QCOMPARE(gets(github), 1);
+    QVERIFY(!QFileInfo::exists(h.home + "/Applications"));
+    QVERIFY(!QFileInfo::exists(h.cache + "/releases/github-mgba-emu-mgba.json"));
+
+    // The rule is about the scheme: a redirect that stays on https is followed.
+    github.clear(kMgbaApi);
+    github.on(kMgbaApi, {302, {}, 0, "Location: https://api.github.com/moved\r\n"});
+    installer.retry("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool() || row().value("state").toString() == "failed", 10000);
+    QVERIFY2(row().value("installedByApp").toBool(), qPrintable(row().value("error").toString()));
+    QCOMPARE(github.requestsTo("/moved").size(), 1);
+}
+
+void InstallTest::installerTimesOut()
+{
+    FakeHttpServer github;
+    QVERIFY(github.useTls(TLS_FIXTURE, true));
+    ProxyThrough proxy(github.proxyAddress());
+    InstallerHome h;
+    h.release("image");
+    github.on(kMgbaApi, {200, readFile(h.fixtures + "/github-mgba-emu-mgba.json"), 5000});
+
+    Installer installer(h.setup());
+    installer.setTransferTimeout(200);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    QElapsedTimer clock;
+    clock.start();
+    installer.install("mgba");
+    // The answer would come after 5 s: failing before that is the timeout's doing.
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("state").toString(), QStringLiteral("failed"), 4000);
+    QVERIFY(clock.elapsed() < 4000);
+    const QString error = row().value("error").toString();
+    QVERIFY2(error.startsWith(QStringLiteral("Couldn't check the latest release: ")) && error.contains(QStringLiteral("timed out")),
+             qPrintable(error));
+    QCOMPARE(github.requestsTo(kMgbaApi).size(), 1);
+    QVERIFY(!QFileInfo::exists(h.home + "/Applications"));
+}
+
+void InstallTest::appUpdateAsksTheReleaseApi()
+{
+    FakeHttpServer tls;
+    QVERIFY(tls.useTls(TLS_FIXTURE));
+    AppVersion version("4.5.6");
+    UpdateHome h;
+    h.release("new image");
+    tls.on("/release", {200, h.releaseJson});
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.setReleaseUrl(tls.url("/release"));
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QCOMPARE(update.latestVersion(), QStringLiteral("1.2.0"));
+    const auto asked = tls.requestsTo("/release");
+    QCOMPARE(asked.size(), 1);
+    QCOMPARE(asked.first().headers.value("accept"), QByteArray("application/vnd.github+json"));
+    QCOMPARE(asked.first().headers.value("user-agent"), (QCoreApplication::applicationName() + "/4.5.6").toUtf8());
+    QVERIFY(h.server.requests.isEmpty());
+}
+
+void InstallTest::appUpdateRefusesARedirectToHttp()
+{
+    FakeHttpServer tls;
+    QVERIFY(tls.useTls(TLS_FIXTURE));
+    UpdateHome h;
+    h.release("new image");
+    tls.on("/release", {302, {}, 0, "Location: " + h.server.url("/release").toEncoded() + "\r\n"});
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.setReleaseUrl(tls.url("/release"));
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("failed"));
+    QVERIFY2(update.error().startsWith(QStringLiteral("Couldn't check for a newer Lattis: ")), qPrintable(update.error()));
+    QVERIFY2(update.error().contains(QStringLiteral("redirect"), Qt::CaseInsensitive), qPrintable(update.error()));
+    QVERIFY(!update.hasUpdate());
+    QVERIFY(h.server.requests.isEmpty());
+
+    // The daily check only logs it.
+    update.check(true);
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("idle"));
+    QVERIFY(update.error().isEmpty());
+    QVERIFY(h.server.requests.isEmpty());
+
+    // A redirect that stays on https is followed.
+    tls.clear("/release");
+    tls.on("/release", {302, {}, 0, "Location: " + tls.url("/moved").toEncoded() + "\r\n"});
+    tls.on("/moved", {200, h.releaseJson});
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QVERIFY(update.hasUpdate());
+}
+
+void InstallTest::appUpdateTimesOut()
+{
+    UpdateHome h;
+    h.release("new image");
+    h.server.clear("/release");
+    h.server.on("/release", {200, h.releaseJson, 5000});
+    AppUpdate update(h.setup());
+    h.use(update);
+    update.setTransferTimeout(200);
+    QElapsedTimer clock;
+    clock.start();
+    update.check();
+    // The answer would come after 5 s: failing before that is the timeout's doing.
+    QTRY_COMPARE_WITH_TIMEOUT(update.state(), QStringLiteral("failed"), 4000);
+    QVERIFY(clock.elapsed() < 4000);
+    QVERIFY2(update.error().startsWith(QStringLiteral("Couldn't check for a newer Lattis: "))
+                 && update.error().contains(QStringLiteral("timed out")),
+             qPrintable(update.error()));
+    QVERIFY(!update.hasUpdate());
+}
+
+void InstallTest::appUpdateUsesTheCachedAnswer()
+{
+    FakeHttpServer github;
+    QVERIFY(github.useTls(TLS_FIXTURE, true));
+    ProxyThrough proxy(github.proxyAddress());
+    UpdateHome h;
+    h.release("new image");
+    const QString cached = h.cache + "/releases/app-update.json";
+    QVERIFY(write(cached, h.releaseJson));
+    AppUpdate update(h.setup());
+    update.setCurrentVersion("1.1.1");
+
+    // Less than an hour old: used without asking.
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QCOMPARE(update.latestVersion(), QStringLiteral("1.2.0"));
+    QVERIFY(github.requests.isEmpty());
+    QVERIFY(QFileInfo::exists(h.state + "/app-update.toml"));
+
+    // Older: asked again, and the answer replaces it.
+    QFile file(cached);
+    QVERIFY(file.open(QIODevice::ReadWrite));
+    QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-7200), QFileDevice::FileModificationTime));
+    file.close();
+    h.release("newer image", "v1.3.0");
+    github.on(kLattisApi, {200, h.releaseJson});
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    QCOMPARE(update.latestVersion(), QStringLiteral("1.3.0"));
+    QCOMPARE(github.requestsTo(kLattisApi).size(), 1);
+    QCOMPARE(fileText(cached), h.releaseJson);
+
+    // One that doesn't read as a release is deleted, and the check says so.
+    QVERIFY(write(cached, "<html>"));
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    QCOMPARE(update.state(), QStringLiteral("failed"));
+    QVERIFY2(update.error().startsWith(QStringLiteral("Couldn't check for a newer Lattis: ")), qPrintable(update.error()));
+    QVERIFY(!QFileInfo::exists(cached));
+    QCOMPARE(github.requestsTo(kLattisApi).size(), 1);
+}
+
+void InstallTest::appUpdateTrashRefuses()
+{
+    UpdateHome h;
+    h.release("new image");
+    AppUpdate::Setup setup = h.setup();
+    setup.trash = [](const QString &, QString *error) {
+        *error = QStringLiteral("no trash on this drive");
+        return false;
+    };
+    AppUpdate update(setup);
+    h.use(update);
+    update.check();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+    update.update();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(update), 10000);
+
+    // The update itself worked; the notice says where the old build is.
+    QCOMPARE(update.state(), QStringLiteral("ready"));
+    QVERIFY2(update.error().isEmpty(), qPrintable(update.error()));
+    const QString aside = h.folder + "/.lattis.appimage.replaced";
+    QVERIFY2(update.notice().contains(QStringLiteral("no trash on this drive")) && update.notice().contains(aside),
+             qPrintable(update.notice()));
+    QCOMPARE(fileText(h.appImage), QByteArray("new image"));
+    QCOMPARE(fileText(aside + "/lattis.appimage"), QByteArray("old"));
+}
+
+void InstallTest::installerUpdateTrashRefuses()
+{
+    InstallerHome h;
+    h.release("the first build");
+    Installer::Setup setup = h.setup();
+    setup.trash = [](const QString &, QString *error) {
+        *error = QStringLiteral("no trash on this drive");
+        return false;
+    };
+    Installer installer(setup);
+    installer.setFixturesDir(h.fixtures);
+    installer.setFixtureDelay(0);
+    installer.setFixtureTick(0);
+    QSignalSpy messages(&installer, &Installer::message);
+    const auto row = [&] { return installer.emulators().value("mgba").toMap(); };
+    installer.install("mgba");
+    QTRY_VERIFY_WITH_TIMEOUT(row().value("installedByApp").toBool(), 10000);
+
+    h.release("the second build", true, "0.10.6", "mGBA-0.10.6-appimage-x64.appimage", 13, "2026-10-01T10:00:00Z");
+    installer.checkUpdates();
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("updateVersion").toString(), QStringLiteral("0.10.6"), 5000);
+    installer.update("mgba");
+    QTRY_COMPARE_WITH_TIMEOUT(row().value("version").toString(), QStringLiteral("0.10.6"), 10000);
+    QCOMPARE(row().value("state").toString(), QStringLiteral("idle"));
+    QCOMPARE(messages.size(), 1);
+    const QString text = messages.first().first().toString();
+    QVERIFY2(text.contains(QStringLiteral("mGBA-0.10.5-appimage-x64.appimage")) && text.contains(QStringLiteral("no trash on this drive"))
+                 && text.contains(h.home + "/Applications"),
+             qPrintable(text));
+    QCOMPARE(names(h.home + "/Applications"),
+             (QStringList{"mGBA-0.10.5-appimage-x64.appimage", "mGBA-0.10.6-appimage-x64.appimage"}));
+}
+
+void InstallTest::appLocationMoves()
+{
+    QTemporaryDir root;
+    const QString home = root.filePath("home");
+    const QString appImage = home + "/Downloads/Lattis.AppImage";
+    const QString applications = root.filePath("applications");
+    QVERIFY(write(appImage, "image"));
+    QStringList moved;
+    const AppLocation::Setup setup{appImage, home, applications, [&](const QString &path) { moved.append(path); }};
+
+    {
+        // Gear Lever keeps it where it is.
+        QVERIFY(write(applications + "/gearlever_lattis.desktop", "Exec=" + appImage.toUtf8() + "\n"));
+        AppLocation location(setup);
+        QVERIFY(location.available());
+        QVERIFY(!location.canMove());
+        QVERIFY2(location.move().contains(QStringLiteral("Gear Lever")), qPrintable(location.blocker()));
+        QCOMPARE(fileText(appImage), QByteArray("image"));
+        QVERIFY(moved.isEmpty());
+        QVERIFY(QFile::remove(applications + "/gearlever_lattis.desktop"));
+    }
+    {
+        // The folder can't be made.
+        QVERIFY(write(home + "/Applications", "a file"));
+        AppLocation location(setup);
+        QCOMPARE(location.folder(), home + "/Applications");
+        QVERIFY(location.canMove());
+        const QString error = location.move();
+        QVERIFY2(error.startsWith(QStringLiteral("Couldn't create")), qPrintable(error));
+        QCOMPARE(fileText(appImage), QByteArray("image"));
+        QVERIFY(moved.isEmpty());
+        QVERIFY(QFile::remove(home + "/Applications"));
+    }
+    {
+        // Moved into the folder that exists; what remembers the old path hears the new one.
+        QVERIFY(QDir().mkpath(home + "/AppImages"));
+        AppLocation location(setup);
+        QCOMPARE(location.folder(), home + "/AppImages");
+        QSignalSpy changed(&location, &AppLocation::changed);
+        QCOMPARE(location.move(), QString());
+        QCOMPARE(moved, QStringList{home + "/AppImages/Lattis.AppImage"});
+        QCOMPARE(fileText(moved.first()), QByteArray("image"));
+        QVERIFY(!QFileInfo::exists(appImage));
+        QVERIFY(location.inFolder());
+        QVERIFY(!location.canMove());
+        QVERIFY(!changed.isEmpty());
+        QCOMPARE(location.move(), QStringLiteral("Lattis is already there"));
+        QCOMPARE(moved.size(), 1);
+    }
+    {
+        // A file that went missing since.
+        AppLocation location(setup);
+        QVERIFY(!location.canMove());
+        QCOMPARE(location.move(), QStringLiteral("The AppImage file isn't there"));
+        QCOMPARE(moved.size(), 1);
+    }
+}
+
+void InstallTest::flatpakJobEnvironment()
+{
+    QTemporaryDir dir;
+    const QString script = dir.filePath("flatpak.sh");
+    const QString out = dir.filePath("env");
+    writeFile(script, "#!/bin/sh\necho \"FOO=$FOO LEAK=$LATTIS_TEST_LEAK\" > '" + out.toUtf8() + "'\n", true);
+    qputenv("LATTIS_TEST_LEAK", "from the app");
+    const auto run = [](FlatpakJob &job) {
+        QSignalSpy done(&job, &FlatpakJob::finished);
+        job.start();
+        if (done.isEmpty())
+            done.wait(5000);
+        return done.isEmpty() ? FlatpakJob::Result{} : done.first().first().value<FlatpakJob::Result>();
+    };
+
+    // Only what it is given; an entry without a name is dropped.
+    FlatpakJob given(script, {{"list"}}, {"FOO=a=b", "noequals", "=x", "PATH=/usr/bin:/bin"});
+    QVERIFY(run(given).ok);
+    QCOMPARE(readFile(out), QByteArray("FOO=a=b LEAK=\n"));
+
+    // None given: the app's own.
+    FlatpakJob own(script, {{"list"}}, {});
+    QVERIFY(run(own).ok);
+    QCOMPARE(readFile(out), QByteArray("FOO= LEAK=from the app\n"));
+    qunsetenv("LATTIS_TEST_LEAK");
+}
+
+void InstallTest::flatpakJobKillsWhatIgnoresTerm()
+{
+    QTemporaryDir dir;
+    const QString script = dir.filePath("flatpak.sh");
+    const QString pidFile = dir.filePath("pid");
+    writeFile(script, "#!/bin/sh\ntrap '' TERM\necho $$ > '" + pidFile.toUtf8() + "'\nexec sleep 30\n", true);
+    const auto started = [&] {
+        if (!QTest::qWaitFor([&] { return readFile(pidFile).endsWith('\n'); }, 5000))
+            return QString();
+        const QString pid = QString::fromLatin1(readFile(pidFile).trimmed());
+        QFile::remove(pidFile);
+        return pid;
+    };
+
+    {
+        // Cancel asks it to stop; it doesn't, and is killed after the grace.
+        FlatpakJob job(script, FlatpakInstall::installSteps("io.mgba.mGBA"), {});
+        QSignalSpy done(&job, &FlatpakJob::finished);
+        job.start();
+        const QString pid = started();
+        QVERIFY(!pid.isEmpty());
+        QElapsedTimer clock;
+        clock.start();
+        job.cancel();
+        QVERIFY(done.wait(6000));
+        QVERIFY(clock.elapsed() >= 2500);
+        const auto result = done.first().first().value<FlatpakJob::Result>();
+        QVERIFY(result.cancelled);
+        QVERIFY(!result.ok);
+        QVERIFY(result.error.isEmpty());
+        QVERIFY(gone(pid));
+        QTest::qWait(50);
+        QCOMPARE(done.size(), 1);
+        // The second step never ran.
+        QVERIFY(!QFileInfo::exists(pidFile));
+    }
+    {
+        // Destroyed while it runs: killed, and nothing is said.
+        auto job = std::make_unique<FlatpakJob>(script, FlatpakInstall::installSteps("io.mgba.mGBA"), QStringList{});
+        QSignalSpy done(job.get(), &FlatpakJob::finished);
+        job->start();
+        const QString pid = started();
+        QVERIFY(!pid.isEmpty());
+        job.reset();
+        QVERIFY(gone(pid));
+        QVERIFY(done.isEmpty());
+    }
+}
+
+void InstallTest::ffmpegCancelWhileVerifying()
+{
+    const QByteArray sleep = QStandardPaths::findExecutable("sleep").toUtf8();
+    QVERIFY(!sleep.isEmpty());
+    PathOverride path("/nonexistent");
+    FfmpegHome h;
+    h.release(makeTarXz(ffmpegArchive()));
+    FfmpegTool tool({h.tools, {}});
+    h.setUp(tool);
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(!busy(tool), 10000);
+    QVERIFY(tool.ownCopy());
+
+    // The new copy is run with -version before it replaces anything; this one hangs there.
+    const QString pidFile = h.dir.filePath("pid");
+    h.release(makeTarXz(ffmpegArchive("#!/bin/sh\necho $$ > '" + pidFile.toUtf8() + "'\nexec " + sleep + " 30\n")));
+    tool.install();
+    QTRY_VERIFY_WITH_TIMEOUT(readFile(pidFile).endsWith('\n'), 10000);
+    QCOMPARE(tool.state(), QStringLiteral("installing"));
+    const QString pid = QString::fromLatin1(readFile(pidFile).trimmed());
+    tool.cancel();
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
+    QVERIFY(tool.error().isEmpty());
+    QVERIFY(gone(pid));
+    QCOMPARE(names(h.tools), QStringList{"ffmpeg"});
+    QCOMPARE(fileText(tool.path()), kGoodFfmpeg);
+    QTest::qWait(100);
+    QCOMPARE(tool.state(), QStringLiteral("idle"));
 }
 
 QTEST_GUILESS_MAIN(InstallTest)

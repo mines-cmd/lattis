@@ -626,7 +626,7 @@ void Installer::begin(const ReleaseTarget &emulator)
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QCoreApplication::applicationName() + u'/' + QCoreApplication::applicationVersion());
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setTransferTimeout(15000);
+    request.setTransferTimeout(m_transferTimeoutMs);
     QNetworkReply *reply = network()->get(request);
     job.reply = reply;
     connect(reply, &QNetworkReply::finished, this, [this, reply, emulator, serial] {

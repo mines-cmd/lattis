@@ -126,6 +126,8 @@ public:
     void setFixtureDelay(int ms) { m_fixtureDelayMs = ms; }
     // 0: the canned download arrives at once.
     void setFixtureTick(int ms) { m_fixtureTickMs = ms; }
+    // How long the release request may stall (tests shorten it).
+    void setTransferTimeout(int ms) { m_transferTimeoutMs = ms; }
 
 signals:
     void emulatorsChanged();
@@ -229,6 +231,7 @@ private:
     QString m_fixturesDir;
     int m_fixtureDelayMs = 400;
     int m_fixtureTickMs = 60;
+    int m_transferTimeoutMs = 15000;
     QNetworkAccessManager *m_network = nullptr;
     QString m_flatpakProgram;
     QHash<QString, Job> m_jobs;
