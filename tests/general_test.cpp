@@ -334,6 +334,10 @@ void GeneralTest::appIconSetting()
     }
 
     QTemporaryDir data;
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::WriteOnly));
+    settings.write("[general]\n");
+    settings.close();
     General general(data.path());
     QSignalSpy changed(&general, &General::appIconChanged);
     QSignalSpy window(&general, &General::settingsChanged);
@@ -341,7 +345,6 @@ void GeneralTest::appIconSetting()
     QCOMPARE(general.appIcon(), QStringLiteral("Nord"));
     QCOMPARE(changed.count(), 1);
     QCOMPARE(window.count(), 0);
-    QFile settings(data.filePath(QStringLiteral("settings.toml")));
     QVERIFY(settings.open(QIODevice::ReadOnly));
     QVERIFY(settings.readAll().contains("app_icon = \"Nord\""));
     settings.close();
