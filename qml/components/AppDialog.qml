@@ -90,6 +90,8 @@ MotionPopup {
             WindowControls {
                 visible: root.windowLike && root.closable && buttons.length > 0
                 Layout.alignment: Qt.AlignTop
+                // A dialog with wider sides (About) still keeps its ✕ as far from the right edge as from the top.
+                Layout.rightMargin: root.topPadding - root.rightPadding
                 dialog: root
             }
         }

@@ -358,7 +358,7 @@ Item {
                         logoHeight: Theme.about.pageLogoHeight
                         backgroundColor: Theme.settingsWindow.cardBackground
                         labelColor: Theme.controls.labelColor
-                        linkColor: Theme.palette.accent
+                        footerInset: Theme.settingsWindow.cardPadding + Theme.settingsWindow.rowPadding
                     }
                 }
 

@@ -56,6 +56,8 @@ class AppUpdate : public QObject
     Q_PROPERTY(bool canReplace READ canReplace NOTIFY changed)
     Q_PROPERTY(QString replaceBlocker READ replaceBlocker NOTIFY changed)
     Q_PROPERTY(QUrl releasePage READ releasePage NOTIFY changed)
+    // Only a release build's version has a tag; other builds get the list of releases.
+    Q_PROPERTY(QUrl installedReleasePage READ installedReleasePage CONSTANT)
     // The title of the game that keeps Restart from running, or "".
     Q_PROPERTY(QString runningGame READ runningGame NOTIFY changed)
     // The version this start follows an update made from the app to, and its notes; "" otherwise or once dismissed.
@@ -103,6 +105,7 @@ public:
     bool canReplace() const { return m_available && m_blocker.isEmpty(); }
     QString replaceBlocker() const { return m_blocker; }
     QUrl releasePage() const;
+    QUrl installedReleasePage() const;
     QString runningGame() const;
     QString whatsNewVersion() const { return m_whatsNewVersion; }
     QString whatsNewNotes() const { return m_whatsNewNotes; }

@@ -298,10 +298,15 @@ The calendar that opens from a date field (Add session). Follows the popovers un
 
 ## About dialog (`[about]`)
 
-- `width`: the dialog's width.
-- `logo_height`, `logo_text`: the logo, and whether its "Lattis" is light or dark (`auto` picks from the background).
+- `width`, `side_padding`: the dialog's width, and the space between its sides and its content.
+- `logo_height`, `logo_text`: the logo, centered at the top, and whether its "Lattis" is light or dark (`auto` picks from the background).
 - `page_logo_height`: the logo on Settings → General.
-- `version_color`, `version_font_size`, `version_spacing`: "Version 0.1" beside the logo.
-- `logo_spacing`, `text_spacing`: the space below the logo and below the description.
-- `label_color`, `label_spacing`, `row_spacing`, `column_spacing`: the credits.
-- `divider`: the line above the credits.
+- `logo_spacing`, `description_width`, `text_spacing`: the space below the logo, how wide the centered description gets, and the space around the line below it.
+- `credits_indent`: how far the credits sit in from the lines above and below them.
+- `label_color`, `label_width`, `label_spacing`, `row_spacing`: the credits: one list, its links lined up after a label column `label_width` wide.
+- `wide_width`, `intro_width`, `column_spacing`, `intro_indent`, `wide_credits_indent`: where there is room (Settings → General), the logo and description sit in a column `intro_width` wide left of the credits, with a line between them; `wide_width` is the content width from which that happens. `intro_indent` moves the logo and description in from the left, and `wide_credits_indent` moves the credits further right of the line.
+- `link_color`, `link_hover_color`, `link_underline`, `link_hover_underline`: a credit's link and the line under it, at rest and under the mouse.
+- `separator_color`, `separator_spacing`: the dots between a credit's links.
+- `divider`: the lines above the credits and above the footer.
+- `footer_spacing`, `footer_padding`, `footer_font_size`, `footer_color`: the footer under the credits, with the version at the left and the note about covers at the right.
+- `version_color`, `version_hover_color`: "Version 0.1" in the footer. Clicking it opens that version's release page.

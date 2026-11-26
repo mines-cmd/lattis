@@ -160,6 +160,12 @@ QUrl AppUpdate::releasePage() const
     return QUrl(m_release.tag.isEmpty() ? base + QStringLiteral("latest") : base + QStringLiteral("tag/") + m_release.tag);
 }
 
+QUrl AppUpdate::installedReleasePage() const
+{
+    const QString base = QStringLiteral("https://github.com/") + ReleaseProject.mid(7) + QStringLiteral("/releases");
+    return QUrl(m_setup.enabled ? base + QStringLiteral("/tag/v") + currentVersion() : base);
+}
+
 QString AppUpdate::runningGame() const
 {
     return m_setup.runningGame ? m_setup.runningGame() : QString();

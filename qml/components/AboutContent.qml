@@ -8,10 +8,12 @@ Item {
 
     property color backgroundColor
     property color labelColor
-    property color linkColor
     property int logoHeight: Theme.about.logoHeight
     property bool showUpdate: true
     property int noticeRightMargin: 0
+    // How far the footer's line reaches past the content on each side, to meet the host's edges.
+    property int footerInset: 0
+    readonly property bool wide: width >= Theme.about.wideWidth
 
     implicitHeight: col.implicitHeight
 
@@ -27,25 +29,9 @@ Item {
         { label: qsTr("Game saves"), links: [["Ludusavi manifest", "https://github.com/mtkennerly/ludusavi-manifest"],
                                              ["PCGamingWiki", "https://www.pcgamingwiki.com"]] },
         { label: qsTr("Icons"), links: [["Tabler Icons", "https://tabler.io/icons"], ["Remix Icon", "https://remixicon.com"]].concat(LicensedIcons.credits) },
-        { label: qsTr("Covers"), text: qsTr("Game covers © their respective owners.") },
     ]
 
-    component Paragraph: Label {
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        color: root.labelColor
-        textFormat: Text.StyledText
-        linkColor: root.linkColor
-        onLinkActivated: link => GameRunner.openUrl(link)
-
-        HoverHandler {
-            enabled: parent.hoveredLink !== ""
-            cursorShape: Qt.PointingHandCursor
-        }
-    }
-
     component Divider: Rectangle {
-        Layout.fillWidth: true
         implicitHeight: 1
         color: Theme.about.divider
     }
@@ -75,84 +61,153 @@ Item {
             }
         }
 
+        GridLayout {
+            Layout.fillWidth: true
+            columns: root.wide ? 3 : 1
+            columnSpacing: Theme.about.columnSpacing
+            rowSpacing: Theme.about.textSpacing
+
+            ColumnLayout {
+                Layout.fillWidth: !root.wide
+                Layout.preferredWidth: root.wide ? Theme.about.introWidth : -1
+                Layout.alignment: root.wide ? Qt.AlignVCenter : Qt.AlignHCenter | Qt.AlignTop
+                Layout.leftMargin: root.wide ? Theme.about.introIndent : 0
+                spacing: Theme.about.logoSpacing
+
+                Wordmark {
+                    Layout.alignment: root.wide ? Qt.AlignLeft : Qt.AlignHCenter
+                    logoHeight: root.logoHeight
+                    text: Theme.about.logoText
+                    background: root.backgroundColor
+                }
+
+                Label {
+                    Layout.alignment: root.wide ? Qt.AlignLeft : Qt.AlignHCenter
+                    Layout.preferredWidth: root.wide ? Theme.about.introWidth
+                                                     : Math.min(implicitWidth, Theme.about.descriptionWidth, col.width)
+                    horizontalAlignment: root.wide ? Text.AlignLeft : Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    color: root.labelColor
+                    text: qsTr("A game launcher for Linux: emulated games, Steam, Epic and Proton in one library.")
+                }
+            }
+
+            Divider {
+                Layout.fillWidth: !root.wide
+                Layout.fillHeight: root.wide
+                implicitWidth: 1
+            }
+
+            GridLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignTop
+                Layout.leftMargin: root.wide ? Theme.about.wideCreditsIndent : Theme.about.creditsIndent
+                columns: 2
+                columnSpacing: Theme.about.labelSpacing
+                rowSpacing: Theme.about.rowSpacing
+
+                Repeater {
+                    model: root.credits
+
+                    delegate: Label {
+                        required property var modelData
+                        required property int index
+                        Layout.row: index
+                        Layout.column: 0
+                        Layout.alignment: Qt.AlignTop
+                        Layout.preferredWidth: Theme.about.labelWidth
+                        text: modelData.label
+                        color: Theme.about.labelColor
+                    }
+                }
+                Repeater {
+                    model: root.credits
+
+                    delegate: Flow {
+                        id: links
+                        required property var modelData
+                        required property int index
+                        Layout.row: index
+                        Layout.column: 1
+                        Layout.fillWidth: true
+
+                        Repeater {
+                            model: links.modelData.links
+
+                            delegate: Row {
+                                id: link
+                                required property var modelData
+                                required property int index
+
+                                Label {
+                                    visible: link.index > 0
+                                    text: "·"
+                                    leftPadding: Theme.about.separatorSpacing
+                                    rightPadding: Theme.about.separatorSpacing
+                                    color: Theme.about.separatorColor
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                TextLink {
+                                    padding: 0
+                                    leftPadding: 0
+                                    rightPadding: 0
+                                    text: link.modelData[0]
+                                    textColor: Theme.about.linkColor
+                                    hoverColor: Theme.about.linkHoverColor
+                                    underlined: true
+                                    underlineColor: Theme.about.linkUnderline
+                                    underlineHoverColor: Theme.about.linkHoverUnderline
+                                    onClicked: GameRunner.openUrl(link.modelData[1])
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Item {
             Layout.fillWidth: true
-            Layout.bottomMargin: Theme.about.logoSpacing
-            implicitHeight: wordmark.height
+            Layout.topMargin: Theme.about.footerSpacing
+            implicitHeight: footer.implicitHeight + 2 * Theme.about.footerPadding
 
-            Wordmark {
-                id: wordmark
-                logoHeight: root.logoHeight
-                text: Theme.about.logoText
-                background: root.backgroundColor
+            Divider {
+                x: -root.footerInset
+                width: parent.width + 2 * root.footerInset
             }
-            Label {
-                x: wordmark.width + Theme.about.versionSpacing
-                anchors.baseline: wordmark.top
-                anchors.baselineOffset: wordmark.textBaseline
-                text: qsTr("Version %1").arg(Qt.application.version)
-                color: Theme.about.versionColor
-                font.pixelSize: Theme.about.versionFontSize
-            }
-        }
 
-        Paragraph {
-            Layout.bottomMargin: Theme.about.textSpacing
-            color: root.labelColor
-            text: qsTr("A game launcher for Linux: emulated games, Steam and Proton in one library.")
-        }
+            RowLayout {
+                id: footer
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.layout.spacing
 
-        Divider {
-            Layout.bottomMargin: Theme.gameEditor.rowSpacing
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.about.columnSpacing
-
-            Repeater {
-                model: 2
-
-                delegate: GridLayout {
-                    id: column
-                    required property int index
-                    readonly property var credits: {
-                        const half = Math.ceil(root.credits.length / 2)
-                        return index === 0 ? root.credits.slice(0, half) : root.credits.slice(half)
-                    }
-                    Layout.alignment: Qt.AlignTop
+                TextLink {
+                    padding: 0
+                    leftPadding: 0
+                    rightPadding: 0
+                    font.pixelSize: Theme.about.footerFontSize
+                    textFormat: Text.StyledText
+                    text: qsTr("Version %1").arg("<font face=\"" + Theme.font.monoFamily + "\">"
+                                                 + Qt.application.version + "</font>")
+                    textColor: Theme.about.versionColor
+                    hoverColor: Theme.about.versionHoverColor
+                    underlined: true
+                    underlineHoverColor: Theme.about.linkHoverUnderline
+                    trailingIcon: Icons.openExternal
+                    ToolTip.visible: hovered
+                    ToolTip.delay: Theme.tooltip.delay
+                    ToolTip.text: qsTr("Release notes")
+                    onClicked: GameRunner.openUrl(AppUpdate.installedReleasePage)
+                }
+                Label {
                     Layout.fillWidth: true
-                    // Without an equal share, the left column takes its unwrapped width and leaves the
-                    // right one narrower than its longest word.
-                    Layout.preferredWidth: 1
-                    columns: 2
-                    columnSpacing: Theme.about.labelSpacing
-                    rowSpacing: Theme.about.rowSpacing
-
-                    Repeater {
-                        model: column.credits
-
-                        delegate: Label {
-                            required property var modelData
-                            required property int index
-                            Layout.row: index
-                            Layout.column: 0
-                            Layout.alignment: Qt.AlignTop
-                            text: modelData.label
-                            color: Theme.about.labelColor
-                        }
-                    }
-                    Repeater {
-                        model: column.credits
-
-                        delegate: Paragraph {
-                            required property var modelData
-                            required property int index
-                            Layout.row: index
-                            Layout.column: 1
-                            text: modelData.text ?? modelData.links.map(l => "<a href=\"" + l[1] + "\">" + l[0] + "</a>").join(" · ")
-                        }
-                    }
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideRight
+                    font.pixelSize: Theme.about.footerFontSize
+                    color: Theme.about.footerColor
+                    text: qsTr("Game covers © their respective owners.")
                 }
             }
         }

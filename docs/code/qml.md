@@ -260,7 +260,7 @@ The General, Game page, Library, Steam, Mod managers, Platforms, Emulators, Meta
 
 **Wordmark** is the horizontal logo lockup: the icon beside "Lattis", in light text on dark backgrounds and dark text on light ones (or forced with `text: "light"/"dark"`). The PNG has a margin; the item is the art's box, so it aligns with what's around it.
 
-**AboutContent** is the About content shared by AboutDialog and Settings → General: the wordmark with the version, description, and credits. The host provides the colors. While `AppUpdate.notify`, unless `showUpdate` is false (Settings → General has its own Updates section), it shows a NoticeBar above the wordmark, "Update available <current> → <latest>", with an Update button (Open release page when the file can't be replaced) that emits `updateRequested`.
+**AboutContent** is the About content shared by AboutDialog and Settings → General: the wordmark centered, the description centered under it (or, from `about.wide_width` on, as on Settings → General, both left-aligned in a column left of the credits with a line between), then the credits in one label/links list (the labels `about.label_width` wide so the links line up), each link a `TextLink` with an underline that takes `about.link_hover_underline` under the mouse. A footer under a line has "Version <x>", a link to `AppUpdate.installedReleasePage` (the release's tag page in a release build, the list of releases otherwise), and the note about covers. The host provides the background and description colors, and `footerInset`, how far the footer's line reaches past the content to meet the host's edges (AboutDialog has no bottom padding, so the footer sits on its bottom edge). AboutDialog has no title: the wordmark names it. While `AppUpdate.notify`, unless `showUpdate` is false (Settings → General has its own Updates section), it shows a NoticeBar above the wordmark, "Update available <current> → <latest>", with an Update button (Open release page when the file can't be replaced) that emits `updateRequested`.
 
 **UpdateRowsDialog** (`views/UpdateRowsDialog.qml`, an `AppDialog`, `game_editor.update_width` wide) is what the Lattis update and the Updates dialog share: everything but the title, the footer and where each row's state comes from. `rows` is `[{id, name, from, version, size, notes, icon?}]` (`icon` an image URL; a row without one shows the vector path `rowIcon(row)` gives, in a box before the name); `stateOf(id)` gives `{status, progress, step, error}` (`status` is `pending`, `waiting`, `active`, `failed` or `done`), and `updateRequested(id)` fires from a row's Update and Try again. One row is plain notes with "<from> → <version> · <size>" under the title (`subtitle` replaces it, `showNotes` folds the notes away) and an `InstallProgress` while active; several are the Platforms page's list (one `settings_window` card, rows told apart by lines, a hover tint on the header, the open row on `OpenRowCard`'s darker panel, its notes in an `Unfold`, one open at a time in `openId`) with a chevron, name, versions and the state on the right. The dialogs built on it set `title`, `rows`, `stateOf`, `rowIcon` and `footer`.
 
@@ -323,7 +323,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | File | Purpose |
 |---|---|
 | `Main.qml` | Main window; launch logic; lazy-loaded views; window-level actions |
-| `components/AboutContent.qml` | About content: logo, version, description, credits |
+| `components/AboutContent.qml` | About content: logo, description, credits, footer with the version link |
 | `components/ActionShortcuts.qml` | One `Shortcut` per action for a window |
 | `components/AppLogo.qml` | Rail logo: the dog, with its hover wash and update dot |
 | `components/DogLogo.qml` | The barking dog on its tile, drawn from paths so every color comes from the theme |
@@ -368,7 +368,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `components/StatChip.qml` | Label/value chip next to Launch |
 | `components/Surface.qml` | Flat or gradient background rectangle |
 | `components/SegmentedToggle.qml` | Pick-one toggle (`choices`, `current`, `picked(id)`), drawn from `[segmented]`; the stats page and the lookup window |
-| `components/TextLink.qml` | Muted text that acts as a button; only the text lights up under the mouse |
+| `components/TextLink.qml` | Muted text that acts as a button; only the text lights up under the mouse. Its colors are properties; `underlined` draws a line under it (`underlineColor`, `underlineHoverColor`), `trailingIcon` an icon after it |
 | `components/JustifiedFlow.qml` | Flow whose full rows end flush: each row's spare width goes to its children in equal shares; `maxRows` hides the rows past it |
 | `components/TagChip.qml` | Tag: filled, outlined (addable), or with a dot |
 | `components/TagPalettePopup.qml` | Color-picker popup for tag palette editing |
