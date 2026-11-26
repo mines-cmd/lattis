@@ -13,6 +13,7 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QProcess>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -74,6 +75,8 @@ private slots:
     void syncRemovedShortcuts();
     void applyShortcuts();
     void applyFirstShortcut();
+    void applyUnreadFiles();
+    void applyFailedWrites();
     void gridArt();
     void gridArtFollowsTheArt();
     void syncShortcutIcon();
@@ -1576,6 +1579,164 @@ void SteamTest::applyFirstShortcut()
     QCOMPARE(after.shortcuts.size(), 1);
     QVERIFY(SteamSync::sameShortcut(after.shortcuts.at(0), hades));
     QVERIFY(!QFileInfo::exists(backups + kShortcutsVdf));
+}
+
+namespace {
+
+SteamShortcut hadesShortcut()
+{
+    SteamShortcut hades;
+    hades.appId = 3400000004u;
+    hades.name = u"Hades"_s;
+    hades.exe = u"/home/user/Games/Hades/Hades.exe"_s;
+    hades.startDir = u"/home/user/Games/Hades/"_s;
+    return hades;
+}
+
+// Steam's three files as they are, to show that a refused apply left every one alone.
+struct SteamFiles
+{
+    QString root;
+    QByteArray local = readAll(root + kLocalConfig);
+    QByteArray config = readAll(root + kConfig);
+    QByteArray shortcuts = readAll(root + kShortcutsVdf);
+
+    bool unchanged() const
+    {
+        return readAll(root + kLocalConfig) == local && readAll(root + kConfig) == config
+            && readAll(root + kShortcutsVdf) == shortcuts;
+    }
+};
+
+} // namespace
+
+void SteamTest::applyUnreadFiles()
+{
+    if (::geteuid() == 0)
+        QSKIP("root reads any file");
+    QTemporaryDir dir;
+    const QString home = makeHome(dir, kNative, true);
+    const QString root = QFileInfo(home + u'/' + kNative).canonicalFilePath();
+    const SteamFiles before{root};
+    const QString backups = dir.filePath("state/steam-backup");
+    const SteamState s = scanHome(home);
+    const QList<SteamSync::Edit> launch = {{2231450, u"launch_options"_s, u"mangohud %command%"_s, {}}};
+    const QList<SteamSync::Edit> proton = {{2231450, u"proton"_s, u"proton_9"_s, {}}};
+    const QList<SteamSync::ShortcutEdit> add = {{SteamSync::ShortcutEdit::Kind::Add, hadesShortcut(), std::nullopt}};
+
+    // A file the scan couldn't read is never written: Steam's values in it are unknown.
+    SteamState unread = s;
+    unread.localConfigOk = false;
+    QCOMPARE(SteamSync::apply(unread, launch, backups, steamClosed).error, u"%1 wasn't read"_s.arg(root + kLocalConfig));
+    unread.localConfigPath.clear();
+    QCOMPARE(SteamSync::apply(unread, launch, backups, steamClosed).error, u"localconfig.vdf wasn't read"_s);
+    unread = s;
+    unread.configOk = false;
+    QCOMPARE(SteamSync::apply(unread, proton, backups, steamClosed).error, u"%1 wasn't read"_s.arg(root + kConfig));
+    // shortcuts.vdf goes first: when it can't be written, neither is config.vdf after it.
+    unread = s;
+    unread.shortcutsOk = false;
+    SteamSync::ApplyResult r = SteamSync::apply(unread, proton, backups, steamClosed, add);
+    QCOMPARE(r.error, u"%1 wasn't read"_s.arg(root + kShortcutsVdf));
+    QVERIFY(r.applied.isEmpty());
+    unread.shortcutsPath.clear();
+    QCOMPARE(SteamSync::apply(unread, proton, backups, steamClosed, add).error, u"shortcuts.vdf wasn't read"_s);
+    QVERIFY(before.unchanged());
+    QVERIFY(!QFileInfo::exists(backups));
+
+    // Unreadable since the scan.
+    QVERIFY(QFile::setPermissions(root + kLocalConfig, QFile::WriteOwner));
+    r = SteamSync::apply(s, launch, backups, steamClosed);
+    QVERIFY2(r.error.startsWith(u"could not read %1: "_s.arg(root + kLocalConfig)), qPrintable(r.error));
+    QVERIFY(r.applied.isEmpty());
+    QVERIFY(QFile::setPermissions(root + kLocalConfig, QFile::ReadOwner | QFile::WriteOwner));
+    QVERIFY(QFile::setPermissions(root + kShortcutsVdf, QFile::WriteOwner));
+    r = SteamSync::apply(s, proton, backups, steamClosed, add);
+    QVERIFY2(r.error.startsWith(u"could not read %1: "_s.arg(root + kShortcutsVdf)), qPrintable(r.error));
+    QVERIFY(r.shortcutsApplied.isEmpty());
+    QVERIFY(r.applied.isEmpty());
+    QVERIFY(QFile::setPermissions(root + kShortcutsVdf, QFile::ReadOwner | QFile::WriteOwner));
+    QVERIFY(before.unchanged());
+    QVERIFY(!QFileInfo::exists(backups));
+
+    // A shortcuts.vdf that stopped parsing since the scan (Steam was writing it).
+    writeFile(root + kShortcutsVdf, before.shortcuts.left(before.shortcuts.size() / 2));
+    r = SteamSync::apply(s, {}, backups, steamClosed, add);
+    QVERIFY2(r.error.startsWith(root + kShortcutsVdf + u": "), qPrintable(r.error));
+    QCOMPARE(readAll(root + kShortcutsVdf), before.shortcuts.left(before.shortcuts.size() / 2));
+    QVERIFY(!QFileInfo::exists(backups));
+
+    // An app whose block is a value: Vdf refuses the edit, and the file isn't written.
+    const QByteArray odd = "\"UserLocalConfigStore\"\n{\n\t\"Software\"\n\t{\n\t\t\"Valve\"\n\t\t{\n\t\t\t\"Steam\"\n\t\t\t{\n"
+                           "\t\t\t\t\"apps\"\n\t\t\t\t{\n\t\t\t\t\t\"2231450\"\t\t\"odd\"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n";
+    writeFile(root + kLocalConfig, odd);
+    r = SteamSync::apply(s, launch, backups, steamClosed);
+    QCOMPARE(r.error, u"%1: app 2231450: \"UserLocalConfigStore/Software/Valve/Steam/apps/2231450\" is a value, "
+                      "not a block"_s.arg(root + kLocalConfig));
+    QVERIFY(r.applied.isEmpty());
+    QCOMPARE(readAll(root + kLocalConfig), odd);
+    QVERIFY(!QFileInfo::exists(backups));
+}
+
+void SteamTest::applyFailedWrites()
+{
+    if (::geteuid() == 0)
+        QSKIP("root writes any folder");
+    QTemporaryDir dir;
+    const QString home = makeHome(dir, kNative, true);
+    const QString root = QFileInfo(home + u'/' + kNative).canonicalFilePath();
+    const SteamFiles before{root};
+    const SteamState s = scanHome(home);
+    const QList<SteamSync::Edit> proton = {{2231450, u"proton"_s, u"proton_9"_s, {}}};
+    const QList<SteamSync::ShortcutEdit> add = {{SteamSync::ShortcutEdit::Kind::Add, hadesShortcut(), std::nullopt}};
+
+    // The backup can't be made (a file where its folder goes): Steam's file isn't written either.
+    const QString blocked = dir.filePath("state/blocked");
+    writeFile(blocked, "a file");
+    SteamSync::ApplyResult r = SteamSync::apply(s, proton, blocked, steamClosed);
+    QVERIFY2(r.error.startsWith(u"could not back up %1 to %2: "_s.arg(root + kConfig, blocked + kConfig)),
+             qPrintable(r.error));
+    QVERIFY(r.applied.isEmpty());
+    QVERIFY(r.log.isEmpty());
+    QVERIFY(before.unchanged());
+
+    // Steam's folder is read-only: backed up, then the write fails and leaves no temporary file.
+    const QString backups = dir.filePath("state/steam-backup");
+    const QString configDir = root + u"/config"_s;
+    const QString userConfigDir = QFileInfo(root + kShortcutsVdf).absolutePath();
+    const QFile::Permissions open = QFile::permissions(configDir);
+    const auto reopen = qScopeGuard([&] {
+        QFile::setPermissions(configDir, open);
+        QFile::setPermissions(userConfigDir, open);
+    });
+    const QStringList configFiles = QDir(configDir).entryList(QDir::Files | QDir::Hidden);
+    QVERIFY(QFile::setPermissions(configDir, QFile::ReadOwner | QFile::ExeOwner));
+    r = SteamSync::apply(s, proton, backups, steamClosed);
+    QVERIFY2(r.error.startsWith(u"could not write %1: "_s.arg(root + kConfig)), qPrintable(r.error));
+    QVERIFY(r.applied.isEmpty());
+    QVERIFY(before.unchanged());
+    QCOMPARE(QDir(configDir).entryList(QDir::Files | QDir::Hidden), configFiles);
+    QCOMPARE(readAll(backups + kConfig), before.config);
+
+    // The same for shortcuts.vdf, and config.vdf after it is left alone too.
+    QVERIFY(QFile::setPermissions(configDir, open));
+    QVERIFY(QFile::setPermissions(userConfigDir, QFile::ReadOwner | QFile::ExeOwner));
+    r = SteamSync::apply(s, proton, backups, steamClosed, add);
+    QVERIFY2(r.error.startsWith(u"could not write %1: "_s.arg(root + kShortcutsVdf)), qPrintable(r.error));
+    QVERIFY(r.shortcutsApplied.isEmpty());
+    QVERIFY(r.applied.isEmpty());
+    QVERIFY(before.unchanged());
+    QCOMPARE(readAll(backups + kShortcutsVdf), before.shortcuts);
+
+    // Writable again: both written, and the backups are still the files as they first were.
+    QVERIFY(QFile::setPermissions(userConfigDir, open));
+    r = SteamSync::apply(s, proton, backups, steamClosed, add);
+    QVERIFY2(r.error.isEmpty(), qPrintable(r.error));
+    QCOMPARE(r.applied, proton);
+    QCOMPARE(r.shortcutsApplied, add);
+    QCOMPARE(scanHome(home, s).compatTools.value(2231450), u"proton_9"_s);
+    QCOMPARE(readAll(backups + kConfig), before.config);
+    QCOMPARE(readAll(backups + kShortcutsVdf), before.shortcuts);
 }
 
 namespace {

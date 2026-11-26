@@ -237,6 +237,9 @@ lattis_test(steamfriends_test OFFSCREEN
 lattis_test(autostart_test OFFSCREEN
     SOURCES ../src/core/autostart.h ../src/core/autostart.cpp
     LIBS Qt6::Gui)
+lattis_test(uidriver_test OFFSCREEN
+    SOURCES ../src/core/uidriver.h ../src/core/uidriver.cpp
+    LIBS Qt6::Quick)
 lattis_test(singleinstance_test
     SOURCES ../src/core/singleinstance.h ../src/core/singleinstance.cpp
     LIBS Qt6::Network)

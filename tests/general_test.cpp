@@ -6,11 +6,15 @@
 #include "overviewsettings.h"
 #include "tomlpatch.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <unistd.h>
 
 class GeneralTest : public QObject
 {
@@ -46,6 +50,7 @@ private slots:
     void gamePageMigration();
     void gamePageMigrationFailuresLeaveNoMarker();
     void startAtLogin();
+    void startAtLoginFailures();
     void staleAutostartRewritten();
     void loginEntryNamesTheVariableOnlyWhenSet();
     void loginEntryBelongsToItsCopy();
@@ -1161,6 +1166,46 @@ void GeneralTest::startAtLogin()
     QCOMPARE(general.setStartAtLogin(false), QString());
     QVERIFY(!file.exists());
     QVERIFY(!general.startAtLogin());
+}
+
+void GeneralTest::startAtLoginFailures()
+{
+    if (::geteuid() == 0)
+        QSKIP("root writes any folder");
+    QTemporaryDir data;
+    const QString folder = Autostart::autostartFolder();
+    QVERIFY(QDir().mkpath(folder));
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+    const auto reopen = qScopeGuard([&] {
+        QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+        Autostart::removeEntry(folder);
+    });
+
+    // On: the error reaches the switch, which stays off.
+    General general(data.path());
+    QSignalSpy changed(&general, &General::loginChanged);
+    const QString error = general.setStartAtLogin(true);
+    QVERIFY2(error.startsWith(QStringLiteral("Could not write %1/lattis.desktop: ").arg(folder)), qPrintable(error));
+    QVERIFY(!general.startAtLogin());
+    QCOMPARE(changed.size(), 0);
+
+    // Off: the entry stays, and so does the switch.
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+    QCOMPARE(general.setStartAtLogin(true), QString());
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+    changed.clear();
+    QCOMPARE(general.setStartAtLogin(false), QStringLiteral("Could not remove %1/lattis.desktop").arg(folder));
+    QVERIFY(general.startAtLogin());
+    QVERIFY(Autostart::readEntry(folder).exists);
+    QCOMPARE(changed.size(), 0);
+
+    // A stale entry that can't be rewritten is left as it is, and still shown as on.
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
+    QCOMPARE(Autostart::writeEntry(folder, QStringLiteral("/old/place/lattis")), QString());
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+    general.refreshAutostart();
+    QCOMPARE(Autostart::readEntry(folder).exec, QStringLiteral("/old/place/lattis"));
+    QVERIFY(general.startAtLogin());
 }
 
 void GeneralTest::staleAutostartRewritten()

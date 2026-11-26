@@ -107,6 +107,7 @@ private slots:
     void steamSearchRequest();
     void clientFindSteamApp();
     void clientCancelAndKeys();
+    void clientTestKeys();
 
     void bulkChoosing();
     void bulkChoiceCounts();
@@ -120,6 +121,8 @@ private slots:
     void bulkSteamLogoStatus();
     void bulkApply();
     void bulkApplyClosedWhileSavingArt();
+    void bulkStopWhileApplying();
+    void bulkMarkUnavailable();
     void bulkArtForGameNotOnIgdb();
     void bulkReplaceExisting();
     void bulkReplaceArt();
@@ -1681,6 +1684,58 @@ void MetadataTest::clientCancelAndKeys()
     QVERIFY(!leftover.exists());
 }
 
+// Settings → Metadata's Test buttons: the error the user sees, or none.
+void MetadataTest::clientTestKeys()
+{
+    QTemporaryDir data;
+    QTemporaryDir cache;
+    FakeHttpServer server;
+    MetadataClient client(data.path(), cache.path(), endpoints(server));
+    QCOMPARE(client.setKey(QStringLiteral("igdb"), QStringLiteral("client_id"), QStringLiteral("client-id")), QString());
+    QCOMPARE(client.setKey(QStringLiteral("igdb"), QStringLiteral("client_secret"), QStringLiteral("client-secret")),
+             QString());
+    QCOMPARE(client.setKey(QStringLiteral("steamgriddb"), QStringLiteral("api_key"), QStringLiteral("grid-key")), QString());
+    const auto tested = [&](const char *service) {
+        const QVariantMap r = result(client, client.testKeys(QString::fromLatin1(service)));
+        return r.value("error").toString();
+    };
+    const QByteArray grid = "/api/v2/search/autocomplete/portal";
+    const auto answer = [&](const QByteArray &path, const FakeHttpServer::Response &response) {
+        server.clear(path);
+        server.on(path, response);
+    };
+
+    // SteamGridDB: a refused key, an answer that isn't one, an error, then a working key.
+    answer(grid, {401, "{}"});
+    QCOMPARE(tested("steamgriddb"), QStringLiteral("SteamGridDB didn't accept your keys"));
+    QCOMPARE(server.requestsTo(grid).first().headers.value("authorization"), QByteArray("Bearer grid-key"));
+    answer(grid, {200, R"({"success": false})"});
+    QCOMPARE(tested("steamgriddb"), QStringLiteral("SteamGridDB sent an answer the launcher couldn't read"));
+    answer(grid, {200, "not json"});
+    QCOMPARE(tested("steamgriddb"), QStringLiteral("SteamGridDB sent an answer the launcher couldn't read"));
+    answer(grid, {500, "{}"});
+    QCOMPARE(tested("steamgriddb"), QStringLiteral("SteamGridDB answered with an error (500)"));
+    answer(grid, {200, R"({"success": true, "data": []})"});
+    QCOMPARE(tested("steamgriddb"), QString());
+
+    // IGDB: each test asks for a fresh token, so a changed secret is checked too.
+    answer("/oauth2/token", {200, kToken1});
+    answer("/v4/games", {200, R"({"message": "not a list"})"});
+    QCOMPARE(tested("igdb"), QStringLiteral("IGDB sent an answer the launcher couldn't read"));
+    answer("/v4/games", {200, "[]"});
+    QCOMPARE(tested("igdb"), QString());
+    QCOMPARE(server.requestsTo("/oauth2/token").size(), 2);
+    answer("/oauth2/token", {403, R"({"status":403,"message":"invalid client secret"})"});
+    QCOMPARE(tested("igdb"), QStringLiteral("IGDB didn't accept your keys"));
+    QCOMPARE(server.requestsTo("/v4/games").size(), 2);
+
+    // No keys: says where to add them, and nothing is asked.
+    QCOMPARE(client.setKey(QStringLiteral("steamgriddb"), QStringLiteral("api_key"), QString()), QString());
+    const qsizetype asked = server.requests.size();
+    QCOMPARE(tested("steamgriddb"), QStringLiteral("Add your SteamGridDB key in Settings → Metadata"));
+    QCOMPARE(server.requests.size(), asked);
+}
+
 namespace {
 
 // The games of the bulk tests: what the canned answers know, and some they don't.
@@ -2287,6 +2342,112 @@ void MetadataTest::bulkApplyClosedWhileSavingArt()
     QCOMPARE(bulk.gamesWithArtLeft(), 0);
     QVERIFY(s.art.isEmpty());
     QVERIFY(bulk.results().isEmpty());
+}
+
+void MetadataTest::bulkStopWhileApplying()
+{
+    BulkSetup s;
+    BulkLookup &bulk = s.bulk;
+    bulk.start();
+    QTRY_VERIFY(!bulk.running());
+    const QString mario = QStringLiteral("switch-mario-tennis-aces");
+    const QString hades = QStringLiteral("steam-1145360");
+
+    s.client.http()->setFixtureDelay(200);
+    QSignalSpy applied(&bulk, &BulkLookup::applied);
+    bulk.apply();
+    QVERIFY(bulk.applying());
+    QVERIFY(bulk.gamesWithArtLeft() > 0);
+
+    // Stop: the values are already written, the art that was coming is dropped, and the game
+    // waiting for it stays in the list with why.
+    bulk.stop();
+    QVERIFY(!bulk.applying());
+    QCOMPARE(bulk.gamesWithArtLeft(), 0);
+    QCOMPARE(applied.size(), 1);
+    QCOMPARE(applied.first().first().toInt(), 1); // Hades: values only, nothing left to come
+    QHash<QString, QVariantMap> written;
+    for (const auto &[id, values] : s.written)
+        written.insert(id, values);
+    QVERIFY(written.contains(mario));
+    QVERIFY(written.contains(hades));
+    QCOMPARE(resultFor(bulk, mario).value("applyError").toString(), QStringLiteral("Stopped before its art was saved"));
+    QVERIFY(resultFor(bulk, hades).isEmpty());
+
+    // The cancelled downloads never arrive.
+    QTest::qWait(300);
+    QVERIFY(s.art.isEmpty());
+    QCOMPARE(s.artBatches, 0);
+    QCOMPARE(applied.size(), 1);
+
+    // Applied again: Mario Tennis's art is fetched and saved this time.
+    s.client.http()->setFixtureDelay(0);
+    bulk.apply();
+    QTRY_COMPARE(applied.size(), 2);
+    QVERIFY(!s.art.isEmpty());
+    QVERIFY(resultFor(bulk, mario).isEmpty());
+}
+
+void MetadataTest::bulkMarkUnavailable()
+{
+    BulkSetup s;
+    BulkLookup &bulk = s.bulk;
+    const QString mario = QStringLiteral("switch-mario-tennis-aces");
+
+    // Nothing checked: nothing written.
+    bulk.setAllChecked(false);
+    QCOMPARE(bulk.markCheckedUnavailable(true), 0);
+    QCOMPARE(s.valueBatches, 0);
+
+    // Only the shown games, and only the categories chosen: Hades is checked but filtered out,
+    // and Mario Tennis's description, year and rating aren't marked.
+    bulk.setAllChecked(true);
+    bulk.setPlatform(QStringLiteral("switch"));
+    bulk.setMissing({QStringLiteral("art")});
+    QCOMPARE(shownIds(bulk), QStringList{mario});
+    QCOMPARE(bulk.markCheckedUnavailable(true), 1);
+    QCOMPARE(s.written.size(), 1);
+    QCOMPARE(s.written.first().first, mario);
+    QCOMPARE(s.written.first().second,
+             (QVariantMap{{"unavailable", QStringList{"cover", "hero", "logo", "icon"}}}));
+
+    // A write that fails isn't counted.
+    s.written.clear();
+    s.failValues.insert(mario, QStringLiteral("Not saved: read-only"));
+    QCOMPARE(bulk.markCheckedUnavailable(true), 0);
+    QCOMPARE(s.written.size(), 1);
+    s.failValues.clear();
+
+    // Unmarked: only the chosen categories come off; what was marked before stays.
+    s.games[0].unavailable = {QStringLiteral("description"), QStringLiteral("cover"), QStringLiteral("logo")};
+    bulk.reload();
+    bulk.setIncludeUnavailable(true);
+    s.written.clear();
+    QCOMPARE(bulk.markCheckedUnavailable(false), 1);
+    QCOMPARE(s.written.first().second, (QVariantMap{{"unavailable", QStringList{"description"}}}));
+    // Already as asked: nothing written.
+    s.written.clear();
+    s.games[0].unavailable = {QStringLiteral("description")};
+    bulk.reload();
+    QCOMPARE(bulk.markCheckedUnavailable(false), 0);
+    QVERIFY(s.written.isEmpty());
+
+    // More games than one write takes: in batches, all counted.
+    bulk.clearFilters();
+    for (int i = 0; i < 60; ++i) {
+        LookupGame copy = s.games.at(0);
+        copy.id = QStringLiteral("switch-copy-%1").arg(i);
+        copy.unavailable.clear();
+        s.games.append(copy);
+    }
+    bulk.reload();
+    bulk.setAllChecked(false);
+    bulk.setSearch(QStringLiteral("Mario"));
+    bulk.setAllChecked(true);
+    s.written.clear();
+    s.valueBatches = 0;
+    QCOMPARE(bulk.markCheckedUnavailable(true), 61);
+    QCOMPARE(s.valueBatches, 2);
 }
 
 void MetadataTest::bulkArtForGameNotOnIgdb()

@@ -71,6 +71,9 @@ private slots:
     void activeThemeIsEmptyWhenThePairMatchesNone();
     void missingFileFallsBackToBuiltIn();
     void newFilesReload();
+    void extendsLoopIsReported();
+    void syntaxErrorKeepsTheCurrentTheme();
+    void misplacedKeysAndSectionsAreReported();
     void deletingRefusesBuiltInsAndUnknownNames();
     void usedByListsThemesAndExtendingFiles();
     void deletingTheActiveColorsSwitchesToEmber();
@@ -1192,6 +1195,87 @@ void ThemeTest::newFilesReload()
     QCOMPARE(theme.resolvedValue("palette", "accent").value<QColor>(), QColor("#00ffaa"));
     write(dataDir + "/themes/colors/Neon.toml", "[palette]\naccent = \"#ffaa00\"\n");
     QTRY_COMPARE(theme.resolvedValue("palette", "accent").value<QColor>(), QColor("#ffaa00"));
+}
+
+void ThemeTest::extendsLoopIsReported()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/colors/Day.toml", "extends = \"Night\"\n[palette]\naccent = \"#112233\"\n");
+    write(dataDir + "/themes/colors/Night.toml",
+          "extends = \"Day\"\n[palette]\naccent = \"#445566\"\nsurface = \"#202020\"\n");
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Day\"\nstyle = \"Soft\"\n");
+
+    // Said once, with the whole loop; each file is still read once, the one chosen last.
+    Theme theme(dataDir);
+    const QStringList problems = theme.problems();
+    QCOMPARE(problems.filter("loop").size(), 1);
+    QVERIFY2(problems.contains(QStringLiteral("colors extend each other in a loop: Day → Night → Day")),
+             qPrintable(problems.join('\n')));
+    QCOMPARE(theme.resolvedValue("palette", "accent").value<QColor>(), QColor("#112233"));
+    QCOMPARE(theme.resolvedValue("palette", "surface").value<QColor>(), QColor("#202020"));
+    QCOMPARE(theme.activeColors(), QStringLiteral("Day"));
+}
+
+void ThemeTest::syntaxErrorKeepsTheCurrentTheme()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/colors/Neon.toml", "[palette]\naccent = \"#00ffaa\"\n");
+    write(dataDir + "/themes/styles/Flat.toml", "[radius\nlarge = 1\n");
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Neon\"\nstyle = \"Flat\"\n");
+
+    // At start: the file and line are named, and the other half still loads.
+    Theme theme(dataDir);
+    const QString problems = theme.problems().join('\n');
+    QVERIFY2(problems.contains(QStringLiteral("themes/styles/Flat.toml:1: ")), qPrintable(problems));
+    QCOMPARE(theme.resolvedValue("palette", "accent").value<QColor>(), QColor("#00ffaa"));
+    QCOMPARE(theme.resolvedValue("radius", "large").toInt(), 12); // the schema default
+    QCOMPARE(theme.activeStyle(), QStringLiteral("Flat"));
+
+    // Fixed by hand: applied.
+    QSignalSpy problemsChanged(&theme, &Theme::problemsChanged);
+    write(dataDir + "/themes/styles/Flat.toml", "[radius]\nlarge = 1\n");
+    QTRY_COMPARE(theme.resolvedValue("radius", "large").toInt(), 1);
+    QVERIFY(theme.problems().isEmpty());
+
+    // Broken again halfway through an edit: said, and the theme on screen stays as it was.
+    problemsChanged.clear();
+    write(dataDir + "/themes/colors/Neon.toml", "[palette]\naccent = \"#ff0000\n");
+    QTRY_VERIFY(!problemsChanged.isEmpty());
+    QVERIFY2(theme.problems().join('\n').contains(QStringLiteral("themes/colors/Neon.toml:2: ")),
+             qPrintable(theme.problems().join('\n')));
+    QCOMPARE(theme.resolvedValue("palette", "accent").value<QColor>(), QColor("#00ffaa"));
+    QCOMPARE(theme.resolvedValue("radius", "large").toInt(), 1);
+    QCOMPARE(theme.activeColors(), QStringLiteral("Neon"));
+}
+
+void ThemeTest::misplacedKeysAndSectionsAreReported()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/colors/Loose.toml",
+          "accent = \"#123456\"\n[pallete]\nsurface = \"#202020\"\n[nothing_like_it]\nx = 1\n"
+          "[palette]\nbackground = \"#0a0b0c\"\n");
+    write(dataDir + "/settings.toml", "[appearance]\ncolors = \"Loose\"\nstyle = \"Soft\"\n");
+
+    Theme theme(dataDir);
+    const QStringList problems = theme.problems();
+    const QString all = problems.join('\n');
+    QVERIFY2(problems.contains(QStringLiteral("themes/colors/Loose.toml:1: \"accent\" must be inside a [section]")),
+             qPrintable(all));
+    QVERIFY2(problems.contains(
+                 QStringLiteral("themes/colors/Loose.toml:2: unknown section [pallete] — did you mean \"palette\"?")),
+             qPrintable(all));
+    QVERIFY2(problems.contains(QStringLiteral("themes/colors/Loose.toml:4: unknown section [nothing_like_it]")),
+             qPrintable(all));
+    // Ignored, and the rest of the file applies.
+    QVERIFY(theme.resolvedValue("palette", "accent").value<QColor>() != QColor("#123456"));
+    QVERIFY(theme.resolvedValue("palette", "surface").value<QColor>() != QColor("#202020"));
+    QCOMPARE(theme.resolvedValue("palette", "background").value<QColor>(), QColor("#0a0b0c"));
 }
 
 void ThemeTest::referenceFilesAreWritten()

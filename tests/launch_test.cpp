@@ -204,6 +204,7 @@ private slots:
     void openUrlKeepsNoAppImageEnvironment();
     void platformThemeGoesBack();
     void restartCommand();
+    void restartStarts();
     void linuxGameSession();
     void linuxGameRunsWhileItsSessionLives();
     void linuxGameQuickFailure();
@@ -548,6 +549,33 @@ void LaunchTest::restartCommand()
                          "/home/u/Launcher.AppImage");
     QCOMPARE(c.program, "/home/u/Launcher.AppImage");
     QCOMPARE(c.arguments, QStringList{Restart::kWaitFlag});
+}
+
+void LaunchTest::restartStarts()
+{
+    QTemporaryDir dir;
+    const QString appImage = dir.filePath("Lattis.AppImage");
+    const QString dump = dir.filePath("env.txt");
+    writeFile(appImage, AppImageEnv::dumpScript(dump, "printf '%s\\n' \"$@\" > '" + dir.filePath("args.txt").toUtf8() + "'\n"),
+              true);
+    AppImageEnv bundle;
+    qputenv("APPIMAGE", QFile::encodeName(appImage));
+
+    // The AppImage file again, with this run's arguments and the wait flag, and without the
+    // variables that point into this copy's mount.
+    QString error;
+    QVERIFY2(Restart::start({"/tmp/.mount_lattistest/usr/bin/lattis", "-platform", "offscreen"}, &error),
+             qPrintable(error));
+    QTRY_VERIFY(QFile::exists(dump));
+    QCOMPARE(QString::fromUtf8(readFile(dir.filePath("args.txt"))).split('\n', Qt::SkipEmptyParts),
+             (QStringList{"-platform", "offscreen", Restart::kWaitFlag}));
+    AppImageEnv::noBundleIn(dump);
+
+    // Gone (moved or deleted since it started): the error, and nothing runs.
+    QVERIFY(QFile::remove(appImage));
+    error.clear();
+    QVERIFY(!Restart::start({"/mount/usr/bin/lattis"}, &error));
+    QVERIFY(!error.isEmpty());
 }
 
 namespace {

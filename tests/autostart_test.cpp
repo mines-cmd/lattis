@@ -1,8 +1,13 @@
 #include "autostart.h"
 
+#include <QCoreApplication>
+#include <QDir>
 #include <QFile>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <unistd.h>
 
 class AutostartTest : public QObject
 {
@@ -18,6 +23,9 @@ private slots:
     void readDisabled();
     void readForeign();
     void staleExecDetected();
+    void writeFailures();
+    void removeFailure();
+    void currentProgramIsTheAppImage();
 };
 
 void AutostartTest::entryExec_data()
@@ -172,6 +180,55 @@ void AutostartTest::staleExecDetected()
     QVERIFY(Autostart::writeEntry(dir.path(), "/new/path/lattis").isEmpty());
     const auto updated = Autostart::readEntry(dir.path());
     QCOMPARE(updated.exec, newExec);
+}
+
+void AutostartTest::writeFailures()
+{
+    if (::geteuid() == 0)
+        QSKIP("root writes any folder");
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    // The folder can't be made: a file is where it goes.
+    const QString blocked = dir.filePath(QStringLiteral("blocked"));
+    QFile file(blocked);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.close();
+    QCOMPARE(Autostart::writeEntry(blocked + QStringLiteral("/autostart"), "/usr/bin/lattis"),
+             QStringLiteral("Could not create %1/autostart").arg(blocked));
+
+    // A read-only folder: the entry that was there stays as it was, and no temporary file is left.
+    const QString folder = dir.filePath(QStringLiteral("autostart"));
+    QVERIFY(Autostart::writeEntry(folder, "/old/lattis").isEmpty());
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+    const auto reopen = qScopeGuard([&] { QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner); });
+    const QString error = Autostart::writeEntry(folder, "/new/lattis");
+    QVERIFY2(error.startsWith(QStringLiteral("Could not write %1/lattis.desktop: ").arg(folder)), qPrintable(error));
+    QCOMPARE(Autostart::readEntry(folder).exec, QStringLiteral("/old/lattis"));
+    QCOMPARE(QDir(folder).entryList(QDir::Files | QDir::Hidden), QStringList{"lattis.desktop"});
+}
+
+void AutostartTest::removeFailure()
+{
+    if (::geteuid() == 0)
+        QSKIP("root writes any folder");
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString folder = dir.filePath(QStringLiteral("autostart"));
+    QVERIFY(Autostart::writeEntry(folder, "/usr/bin/lattis").isEmpty());
+    QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+    const auto reopen = qScopeGuard([&] { QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner); });
+    QCOMPARE(Autostart::removeEntry(folder), QStringLiteral("Could not remove %1/lattis.desktop").arg(folder));
+    QVERIFY(Autostart::readEntry(folder).exists);
+}
+
+void AutostartTest::currentProgramIsTheAppImage()
+{
+    QCOMPARE(Autostart::currentProgram(), QCoreApplication::applicationFilePath());
+    qputenv("APPIMAGE", "/home/u/Lattis.AppImage");
+    const auto unset = qScopeGuard([] { qunsetenv("APPIMAGE"); });
+    // The file, not the program inside its mount, which is gone once it exits.
+    QCOMPARE(Autostart::currentProgram(), QStringLiteral("/home/u/Lattis.AppImage"));
 }
 
 QTEST_MAIN(AutostartTest)

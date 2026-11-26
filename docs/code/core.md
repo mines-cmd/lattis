@@ -174,7 +174,7 @@ Only created when `LATTIS_UI_SCRIPT=<file>` is set (main.cpp); it starts after t
 | `shot <png>` | Saves the window. |
 | `quit` | Ends the script. |
 
-Items are found in the main window and in any other visible window (Settings); the last window opened gets the keys, and `shot` saves it. `click`, `expect` and `expect-not` retry every 50 ms for 2 s; `click`, `key` and `type` then pause 250 ms so the page can settle. A command that can't succeed logs `uitest: FAIL …` with the texts on screen and exits with 1; a finished script logs `uitest: done` and exits with 0. The whole script may take 60 s.
+Items are found in the main window and in any other visible window (Settings); the last window opened gets the keys, and `shot` saves it. `click`, `expect` and `expect-not` retry every 50 ms for 2 s; `click`, `key` and `type` then pause 250 ms so the page can settle. A command that can't succeed logs `uitest: FAIL …` with the texts on screen and exits with 1; a finished script logs `uitest: done` and exits with 0. The whole script may take 60 s. `uidriver_test` runs the driver on a small offscreen window of its own and checks those lines and exit codes: a script that can't be read, an unknown command or key, a `drag` without its offset, an item that never shows.
 
 ### AppPaths
 
