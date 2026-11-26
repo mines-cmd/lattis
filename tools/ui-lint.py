@@ -28,6 +28,7 @@ POPUP_TYPES = {"Popup", "MotionPopup", "Dialog", "Drawer", "Menu"}
 
 # Theme settings whose default stays a fixed number, with why. Keep this short.
 SCHEMA_EXEMPT = {
+    "details.count_font_size": "14 reads better beside a heading than the 13 or 15 step",
     "filters.histogram_bar_radius": "2 px bars; a tier (4 at least) would round them into dots",
     "settings_window.preview_dot_radius": "a 4 px dot; the smallest tier is as wide as the dot",
 }
