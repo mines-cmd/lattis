@@ -34,11 +34,8 @@ The narrow bar on the far left with the logo and the navigation icons.
 ### Logo
 
 - `show_logo`: show the app logo at the top of the rail.
-- `logo_style`: what the logo shows: the barking dog (`dog`, the default), or the letters in `logo_text` on `logo_background` (`text`).
-- `logo_text`, `logo_text_color`: the letters shown, and their color (text style).
 - `logo_size`, `logo_radius`: the logo's size and roundness. The rail buttons follow the size.
-- `logo_background`, `logo_border`, `logo_border_width`: the square behind the letters, and its outline (text style).
-- `dog_background`, `dog_background_end`: the tile behind the dog (dog style). They follow the accent unless the colors set their own, and the gradient runs in `gradient_direction`.
+- `dog_background`, `dog_background_end`: the tile behind the dog. They follow the accent unless the colors set their own, and the gradient runs in `gradient_direction`.
 - `dog_coat`, `dog_coat_end`: the dog's light and shaded sides.
 - `dog_details`: its nose and eye.
 - `dog_bark`: its barks.

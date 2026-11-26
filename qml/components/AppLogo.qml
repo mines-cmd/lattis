@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import QtQuick.Effects
 
 // See docs/code/qml.md.
@@ -10,7 +9,6 @@ Item {
     property bool highlighted: false
     property bool updateWaiting: false
 
-    readonly property bool dog: Theme.rail.logoStyle === "dog"
     readonly property real radius: Theme.rail.logoRadius * size / Theme.rail.logoSize
 
     readonly property real dotSize: Theme.rail.updateDotSize
@@ -42,27 +40,9 @@ Item {
             anchors.fill: parent
             anchors.margins: 2
 
-            Rectangle {
+            DogLogo {
                 anchors.fill: parent
-                visible: !root.dog
                 radius: root.radius
-                color: Theme.rail.logoBackground
-                border.color: Theme.rail.logoBorder
-                border.width: Theme.rail.logoBorderWidth
-
-                Label {
-                    anchors.centerIn: parent
-                    text: Theme.rail.logoText
-                    color: Theme.rail.logoTextColor
-                    font.weight: Theme.font.strongWeight
-                    font.pixelSize: parent.height * 0.38
-                }
-            }
-
-            Loader {
-                anchors.fill: parent
-                active: root.dog
-                sourceComponent: Component { DogLogo { radius: root.radius } }
             }
 
             Rectangle {

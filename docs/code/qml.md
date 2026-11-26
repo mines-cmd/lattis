@@ -325,7 +325,7 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `Main.qml` | Main window; launch logic; lazy-loaded views; window-level actions |
 | `components/AboutContent.qml` | About content: logo, version, description, credits |
 | `components/ActionShortcuts.qml` | One `Shortcut` per action for a window |
-| `components/AppLogo.qml` | Rail logo: the dog, or letters on a square |
+| `components/AppLogo.qml` | Rail logo: the dog, with its hover wash and update dot |
 | `components/DogLogo.qml` | The barking dog on its tile, drawn from paths so every color comes from the theme |
 | `components/ArtPlaceholder.qml` | Hue gradient for a game without hero art |
 | `components/Args.js` | Split/join program argument strings |
