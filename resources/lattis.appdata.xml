@@ -6,7 +6,7 @@
   <name>Lattis</name>
   <summary>A fast, fully themable game launcher for Linux</summary>
   <description>
-    <p>Lattis keeps emulated games, Steam games, Proton games and native Linux games in one library, stored in a single folder you can back up.</p>
+    <p>Lattis keeps emulated games, Steam games, Epic games from Heroic, Proton games and native Linux games in one library, stored in a single folder you can back up.</p>
     <p>Every color, size and radius comes from a theme you can edit, and the launcher is built to start fast and stay out of the way.</p>
   </description>
   <launchable type="desktop-id">lattis.desktop</launchable>
