@@ -17,7 +17,7 @@ QByteArray makeElf(const std::optional<QByteArray> &section, bool appImage = tru
 {
     const QByteArray names = QByteArray("\0.shstrtab\0.upd_info\0", 21);
     QByteArray info = section.value_or(QByteArray());
-    info.resize(1024);
+    info.resize(1024, '\0');
     const quint64 namesAt = 64, infoAt = 128, tableAt = infoAt + 1024;
     const quint16 count = section ? 3 : 2;
 

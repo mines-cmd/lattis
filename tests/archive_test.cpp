@@ -1,4 +1,5 @@
 #include "backuparchive.h"
+#include "testfiles.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -45,14 +46,6 @@ QMap<QString, QString> describe(const QString &folder)
         tree.insert(QDir(folder).relativeFilePath(info.filePath()), text);
     }
     return tree;
-}
-
-void writeFile(const QString &path, const QByteArray &data)
-{
-    QDir().mkpath(QFileInfo(path).path());
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(data);
 }
 
 // An archive written by hand, for what the Writer never writes.

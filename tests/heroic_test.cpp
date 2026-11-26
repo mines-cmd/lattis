@@ -1,5 +1,6 @@
 #include "heroiclocate.h"
 #include "heroicscan.h"
+#include "testfiles.h"
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -20,14 +21,6 @@ QByteArray cache(const QList<QByteArray> &entries)
     for (const QByteArray &entry : entries)
         list += (list.isEmpty() ? "" : ",") + entry;
     return R"({"library": [)" + list + R"(], "__timestamp": {"library": "2026-11-05T22:00:00.000Z"}})";
-}
-
-void writeFile(const QString &path, const QByteArray &content)
-{
-    QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
-    QCOMPARE(file.write(content), content.size());
 }
 
 void writeProgram(const QString &dir, const QString &name)

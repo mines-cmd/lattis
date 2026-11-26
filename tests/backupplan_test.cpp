@@ -1,6 +1,7 @@
 #include "backupplan.h"
 #include "libraryfiles.h"
 #include "savesindex.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -17,20 +18,6 @@ namespace {
 const QString kCompatdata = QStringLiteral(STEAM_DATA_DIR "/steamapps/compatdata");
 const quint32 kCaveStory = 2900000001u; // the fake Steam's prefix
 const QDateTime kCreated(QDate(2026, 9, 28), QTime(21, 4), QTimeZone::fromSecondsAheadOfUtc(-3 * 3600));
-
-void writeFile(const QString &path, qint64 size = 0)
-{
-    QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(QByteArray(size, 'x'));
-}
-
-QByteArray readFile(const QString &path)
-{
-    QFile file(path);
-    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-}
 
 // Every file under `folder`, relative, sorted.
 QStringList files(const QString &folder)

@@ -3,6 +3,7 @@
 #include "steamlocate.h"
 #include "steamscan.h"
 #include "steamsync.h"
+#include "testfiles.h"
 
 #include <QColor>
 #include <QDateTime>
@@ -81,21 +82,6 @@ private slots:
 namespace {
 
 const QString kFakeSteam = QStringLiteral(STEAM_DATA_DIR);
-
-void copyTree(const QString &from, const QString &to)
-{
-    QDir().mkpath(to);
-    QDirIterator it(from, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden,
-                    QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        it.next();
-        const QString target = to + u'/' + QDir(from).relativeFilePath(it.filePath());
-        if (it.fileInfo().isDir())
-            QDir().mkpath(target);
-        else
-            QFile::copy(it.filePath(), target);
-    }
-}
 
 // A home with a copy of the fake Steam tree at `relative`, and ~/.steam/steam linking to it
 // when `link`.

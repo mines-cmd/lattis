@@ -1,4 +1,5 @@
 #include "heroicgameconfig.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QFile>
@@ -14,12 +15,6 @@
 namespace {
 const QString kFixtures = QStringLiteral(HEROIC_FIXTURE);
 const QString kApp = QStringLiteral("d6407c9e6fd54cb492b8c6635480d792");
-
-QByteArray readFile(const QString &path)
-{
-    QFile file(path);
-    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-}
 
 QJsonObject entryOf(const QString &root)
 {

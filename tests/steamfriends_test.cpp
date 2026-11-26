@@ -2,6 +2,7 @@
 #include "credentials.h"
 #include "metadatahttp.h"
 #include "steamfriends.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QJsonArray>
@@ -69,13 +70,6 @@ QJsonObject played(qint64 appId, int total, int recent = 0)
     return g;
 }
 
-void writeFile(const QString &path, const QByteArray &text)
-{
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile f(path);
-    QVERIFY(f.open(QIODevice::WriteOnly));
-    f.write(text);
-}
 }
 
 class SteamFriendsTest : public QObject

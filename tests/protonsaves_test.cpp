@@ -1,5 +1,6 @@
 #include "protonsaves.h"
 #include "libraryfiles.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -22,15 +23,6 @@ Game protonGame(const QString &id, quint32 shortcut)
     game.shortcut = shortcut;
     return game;
 }
-
-void writeFile(const QString &path, const QByteArray &data = {})
-{
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(data);
-}
-
 } // namespace
 
 class ProtonSavesTest : public QObject

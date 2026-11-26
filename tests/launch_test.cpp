@@ -8,6 +8,7 @@
 #include "restart.h"
 #include "appimageenv.h"
 #include "steamshortcuts.h"
+#include "testfiles.h"
 
 #include <QDirIterator>
 #include <QProcess>
@@ -21,34 +22,6 @@
 #include <unistd.h>
 
 namespace {
-
-void copyTree(const QString &from, const QString &to)
-{
-    QDirIterator it(from, QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        const QString source = it.next();
-        const QString target = to + source.mid(from.size());
-        QDir().mkpath(QFileInfo(target).absolutePath());
-        QFile::copy(source, target);
-    }
-}
-
-void writeFile(const QString &path, const QByteArray &text, bool executable = false)
-{
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
-    file.write(text);
-    file.close();
-    if (executable)
-        file.setPermissions(file.permissions() | QFile::ExeOwner);
-}
-
-QByteArray readFile(const QString &path)
-{
-    QFile file(path);
-    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-}
 
 EmulatorDef emulator(const QStringList &command, const QStringList &args = {})
 {

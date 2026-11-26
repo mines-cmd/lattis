@@ -1,4 +1,5 @@
 #include "mediafolders.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -34,20 +35,6 @@ private:
 };
 
 namespace {
-void copyTree(const QString &from, const QString &to)
-{
-    QDir().mkpath(to);
-    QDirIterator it(from, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
-    while (it.hasNext()) {
-        it.next();
-        const QString target = to + u'/' + it.fileName();
-        if (it.fileInfo().isDir())
-            copyTree(it.filePath(), target);
-        else
-            QFile::copy(it.filePath(), target);
-    }
-}
-
 // QFile::setFileTime() needs the file open; appending leaves its contents alone.
 bool setTime(const QString &path, const QDateTime &time)
 {

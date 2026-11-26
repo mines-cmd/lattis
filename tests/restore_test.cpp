@@ -3,6 +3,7 @@
 #include "backups.h"
 #include "libraryfiles.h"
 #include "movedaside.h"
+#include "testfiles.h"
 
 #include <QDate>
 #include <QDir>
@@ -26,41 +27,6 @@ const quint32 kCaveStory = 2900000001u; // the fake Steam's prefix
 const QDateTime kCreated(QDate(2026, 9, 28), QTime(21, 4), QTimeZone::fromSecondsAheadOfUtc(-3 * 3600));
 const QDate kToday(2026, 9, 30);
 const QString kAside = QStringLiteral(".before-import-2026-09-30");
-
-void writeFile(const QString &path, const QByteArray &data)
-{
-    QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(data);
-}
-
-QByteArray readFile(const QString &path)
-{
-    QFile file(path);
-    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("(missing)");
-}
-
-// Copies a folder, keeping links as links.
-void copyTree(const QString &from, const QString &to)
-{
-    QVERIFY(QDir().mkpath(to));
-    const QFileInfoList entries =
-        QDir(from).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
-    for (const QFileInfo &entry : entries) {
-        const QString target = to + u'/' + entry.fileName();
-        if (entry.isSymLink()) {
-            QByteArray link(4096, Qt::Uninitialized);
-            const ssize_t n = ::readlink(QFile::encodeName(entry.filePath()).constData(), link.data(), link.size());
-            QVERIFY(n > 0);
-            QCOMPARE(::symlink(link.left(n).constData(), QFile::encodeName(target).constData()), 0);
-        } else if (entry.isDir()) {
-            copyTree(entry.filePath(), target);
-        } else {
-            QVERIFY(QFile::copy(entry.filePath(), target));
-        }
-    }
-}
 
 // Every path under `folder` with its size or link target, for "nothing changed".
 QStringList snapshot(const QString &folder)

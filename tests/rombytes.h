@@ -9,7 +9,7 @@ namespace RomBytes {
 inline void put(QByteArray &d, qsizetype at, quint64 value, int bytes)
 {
     if (d.size() < at + bytes)
-        d.resize(at + bytes);
+        d.resize(at + bytes, '\0');
     for (int i = 0; i < bytes; ++i)
         d[at + i] = char((value >> (8 * i)) & 0xFF);
 }
@@ -23,7 +23,7 @@ inline void putText16(QByteArray &d, qsizetype at, const QString &text)
 inline void putText(QByteArray &d, qsizetype at, const QByteArray &text)
 {
     if (d.size() < at + text.size())
-        d.resize(at + text.size());
+        d.resize(at + text.size(), '\0');
     d.replace(at, text.size(), text);
 }
 
@@ -73,7 +73,7 @@ inline QByteArray cia(const QByteArray &icon)
     put(d, 0x10, tmd, 4);
     put(d, 0x14, meta, 4);
     // The header's 0x2020 bytes are rounded up to 64: this test's sections follow it directly.
-    d.resize(0x2040);
+    d.resize(0x2040, '\0');
     d.append(QByteArray(cert + ticket + tmd, '\0'));
     d.append(QByteArray(0x400, '\0'));
     d.append(icon);

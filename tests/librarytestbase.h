@@ -11,6 +11,7 @@
 #include "steamdownloads.h"
 #include "steamsync.h"
 #include "vdf.h"
+#include "testfiles.h"
 
 #include <QDirIterator>
 #include <QImage>
@@ -30,31 +31,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-inline void copyTree(const QString &from, const QString &to)
-{
-    QDirIterator it(from, QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        const QString source = it.next();
-        const QString target = to + source.mid(from.size());
-        QDir().mkpath(QFileInfo(target).absolutePath());
-        QFile::copy(source, target);
-    }
-}
-
-inline void writeFile(const QString &path, const QByteArray &text)
-{
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
-    file.write(text);
-}
-
-inline QByteArray readFile(const QString &path)
-{
-    QFile file(path);
-    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-}
 
 // The demo's settings.toml: [steam] path points at its fake Steam, which has its Steam games
 // installed. A test that writes settings.toml keeps it, or those games aren't installed.

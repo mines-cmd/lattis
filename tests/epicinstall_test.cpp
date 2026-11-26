@@ -1,4 +1,5 @@
 #include "epicinstall.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QFile>
@@ -13,14 +14,6 @@ QByteArray capture(const QString &name)
 {
     QFile file(QStringLiteral(LEGENDARY_DATA_DIR) + u'/' + name);
     return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
-}
-
-void writeFile(const QString &path, const QByteArray &content)
-{
-    QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
-    file.write(content);
 }
 }
 

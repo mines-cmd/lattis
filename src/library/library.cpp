@@ -28,7 +28,6 @@
 #include <QFile>
 #include <QImageReader>
 #include <QFileInfo>
-#include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>

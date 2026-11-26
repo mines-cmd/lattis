@@ -1,5 +1,6 @@
 #include "backup.h"
 #include "libraryfiles.h"
+#include "testfiles.h"
 
 #include <QDir>
 #include <QFile>
@@ -19,14 +20,6 @@ namespace {
 const QString kCompatdata = QStringLiteral(STEAM_DATA_DIR "/steamapps/compatdata");
 const quint32 kCaveStory = 2900000001u; // the fake Steam's prefix
 const QDateTime kCreated(QDate(2026, 9, 28), QTime(21, 4), QTimeZone::fromSecondsAheadOfUtc(-3 * 3600));
-
-void writeFile(const QString &path, qint64 size = 1)
-{
-    QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
-    QFile file(path);
-    QVERIFY(file.open(QIODevice::WriteOnly));
-    file.write(QByteArray(size, 'x'));
-}
 
 // Every entry of an archive, in order: folders end in '/', links are "name -> target".
 QStringList entries(const QString &path)
@@ -119,7 +112,7 @@ void BackupTest::init()
                                 QStringLiteral("library/games/gba-emerald.toml"), QStringLiteral("settings.toml"),
                                 QStringLiteral("credentials.toml"), QStringLiteral("art/gba-emerald/cover.png"),
                                 QStringLiteral("themes/colors/reference.toml"), QStringLiteral("themes/styles/reference.toml"), QStringLiteral("roms/gba/Kept.gba")})
-        writeFile(m_data + u'/' + file);
+        writeFile(m_data + u'/' + file, 1);
 
     // Ryubing: a save folder with a link in it, a second one missing, and keys; Cemu: a key
     // file; mGBA: a save next to its ROM.
