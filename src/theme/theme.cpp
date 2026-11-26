@@ -1075,6 +1075,38 @@ QVariantMap Theme::themePair(const QString &name) const
     return {{QStringLiteral("colors"), pair->colors}, {QStringLiteral("style"), pair->style}};
 }
 
+QVariantMap Theme::dogColors(const QString &colors)
+{
+    const QHash<QString, Entry> merged = std::exchange(m_merged, {});
+    const QHash<QString, QVariant> resolved = std::exchange(m_resolved, {});
+    const QStringList problems = m_problems;
+    m_resolving.clear();
+
+    // With the active style, so a reference into it resolves as it would with these colors on.
+    const auto apply = [this](const QString &name) {
+        m_merged.clear();
+        QStringList colorsChain;
+        QStringList styleChain;
+        const QString style = m_loadedStyle.isEmpty() ? kFallbackStyle : m_loadedStyle;
+        return applyHalfFile(Half::Colors, name, false, m_merged, colorsChain)
+               && applyHalfFile(Half::Style, style, false, m_merged, styleChain);
+    };
+    if (halfPath(Half::Colors, colors).isEmpty() || !apply(colors))
+        apply(kFallbackColors);
+
+    QVariantMap out;
+    for (const char *key : {"background", "background_end", "coat", "coat_end", "details"}) {
+        const QString name = QString::fromLatin1(key);
+        out.insert(camel(name), valueOf(*findSetting(QStringLiteral("rail.dog_") + name)));
+    }
+
+    m_merged = merged;
+    m_resolved = resolved;
+    m_resolving.clear();
+    m_problems = problems;
+    return out;
+}
+
 QVariantMap Theme::preview(const QString &colors, const QString &style)
 {
     // The resolver works on the active theme's members; swap them out and back, so nothing of

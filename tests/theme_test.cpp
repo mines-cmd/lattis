@@ -1,3 +1,4 @@
+#include "appicon.h"
 #include "schemamodel.h"
 #include "theme.h"
 #include "themeschema.h"
@@ -49,6 +50,8 @@ private slots:
     void subHeadingsGroupSettingsIntoCards();
     void previewReadsAnotherTheme();
     void previewCarriesThePopupFields();
+    void dogColorsResolveReferences();
+    void brokenColorsGiveEmbersDog();
     void themePopupSettingsHaveTheirDefaults();
     void styleDescriptions();
     void styleSummaryListsWhatDiffers();
@@ -449,6 +452,54 @@ void ThemeTest::previewReadsAnotherTheme()
 }
 
 // What the theme popup draws for a pair: launch states, and the style's corners, borders and rail.
+void ThemeTest::dogColorsResolveReferences()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/colors/mine.toml",
+          "extends = \"Ember\"\n[palette]\naccent = \"#123456\"\n"
+          "[rail]\ndog_background = \"@palette.accent\"\ndog_coat = \"@rail.dog_details\"\ndog_details = \"#abcdef\"\n");
+
+    Theme theme(dataDir);
+    const QString active = theme.activeColors();
+    const QVariantMap mine = theme.dogColors("mine");
+    QCOMPARE(mine.value("background").value<QColor>(), QColor("#123456"));
+    QCOMPARE(mine.value("coat").value<QColor>(), QColor("#abcdef"));
+    QCOMPARE(mine.value("details").value<QColor>(), QColor("#abcdef"));
+    QCOMPARE(mine.value("coatEnd").value<QColor>(), QColor("#e9cdb8"));
+
+    // Moss points its background at the launch button's.
+    const QVariantMap moss = theme.dogColors("Moss");
+    QCOMPARE(moss.value("background").value<QColor>(), QColor("#78b922"));
+    QCOMPARE(moss.value("backgroundEnd").value<QColor>(), QColor("#49b018"));
+    QCOMPARE(moss.value("details").value<QColor>(), QColor("#207e7c"));
+
+    QCOMPARE(theme.activeColors(), active);
+    QCOMPARE(theme.resolvedValue("rail", "dog_details").value<QColor>(), QColor("#2b3a5a"));
+}
+
+void ThemeTest::brokenColorsGiveEmbersDog()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/colors/broken.toml", "[rail\ndog_coat = \"#000000\"\n");
+
+    Theme theme(dataDir);
+    const QStringList problems = theme.problems();
+    const auto same = [](const AppIcon::Colors &a, const AppIcon::Colors &b) {
+        return a.background == b.background && a.backgroundEnd == b.backgroundEnd && a.coat == b.coat
+               && a.coatEnd == b.coatEnd && a.details == b.details;
+    };
+    // AppIcon's own Ember colors are the built-in theme's.
+    QVERIFY(same(AppIcon::fromMap(theme.dogColors("Ember")), AppIcon::ember()));
+    QVERIFY(same(AppIcon::fromMap(theme.dogColors("broken")), AppIcon::ember()));
+    QVERIFY(same(AppIcon::fromMap(theme.dogColors("gone")), AppIcon::ember()));
+    QVERIFY(same(AppIcon::fromMap({}), AppIcon::ember()));
+    QCOMPARE(theme.problems(), problems);
+}
+
 void ThemeTest::previewCarriesThePopupFields()
 {
     QTemporaryDir dir;

@@ -228,7 +228,18 @@ lattis_test(theme_test OFFSCREEN
             ../src/core/gamepagesettings.h ../src/core/gamepagesettings.cpp
             ../src/core/tomlpatch.h ../src/core/tomlpatch.cpp ${CORE_SOURCES}
             ../src/library/uninstall.h ../src/library/uninstall.cpp
+            ../src/install/appicon.h ../src/install/appicon.cpp
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
+lattis_test(appicon_test OFFSCREEN
+    SOURCES ../src/install/appicon.h ../src/install/appicon.cpp
+    LIBS Qt6::Gui)
+qt_add_resources(appicon_test "appicon_test_templates"
+    PREFIX "/qt/qml/Launcher/resources"
+    BASE ../resources
+    FILES
+        ../resources/logo/dog/lattis-dog-icon.svg
+        ../resources/logo/dog/lattis-dog-icon-16px.svg
+)
 # The built-in themes under the app's resource path, so Theme's isBuiltIn() and extends resolve the
 # same as in lattis.
 qt_add_resources(theme_test "theme_test_builtin_themes"

@@ -75,6 +75,16 @@ After an AppImage is in place, `DesktopEntry::make(id, appImage, dataDir)` (`des
 
 `main.cpp` runs it on a worker thread after the first frame, and again when settings change, when `$APPIMAGE` is set and fixture mode is off. `AppUpdates::managedBy(appImage, applicationsDir)` (also behind `replaceBlocker`) names the Gear Lever or AppImageLauncher entry that already points at the file; then nothing is written. `[general] app_menu_entry = false` (Settings → General) calls `removeOwn` instead. A failure is only a warning.
 
+### The app icon in other colors
+
+`AppIcon` (`appicon.*`) renders the dog icon in any color theme's `[rail]` dog colors. `Colors` holds the five (`background`, `backgroundEnd`, `coat`, `coatEnd`, `details`); `fromMap()` takes what `Theme::dogColors()` returns and gives Ember's (`ember()`) when any of them is missing or invalid. Gradient direction and `dog_bark` aren't used.
+
+The drawings are two templates, `resources/logo/dog/lattis-dog-icon.svg` and its 16 px drawing `lattis-dog-icon-16px.svg`, made from `lattis-dog-gradient.svg`. `fill(template, colors)` replaces each `{{…}}` placeholder with a `#rrggbb` color: a name (`{{coat}}`, the five in snake case), `{{mix a b t}}` (a toward b by t), or `{{shade a s v}}` (a with its HSV saturation and value multiplied by s and v, at most 1). The neck, barks and shines are mixes and shades of the five, chosen so Ember's land within a few steps of the original drawing's hand-picked colors. An unknown placeholder gives an empty result. The neck path is already cut to the tile's rounded corner, because Qt's SVG image reader ignores `clip-path`. `drawing(colors, size)` is the filled SVG for a size: the 16 px drawing at 24 px and below, the full one above, with a 14-unit margin around the 256-unit tile from 48 px up. `render()` draws it with Qt's SVG image plugin (`QImageReader`, format `svg`; the AppImage keeps `libqsvg`), so Lattis needs no `Qt6::Svg` link. It works off the main thread.
+
+`tools/logo/icons.js` fills the same templates with `Ember.toml`'s literal `dog_*` colors (the same arithmetic, step for step) and renders `resources/logo/icons/lattis-<size>.png` with `rsvg-convert`; `node tools/logo/icons.js <dir>` writes them elsewhere. Qt's and rsvg's antialiasing differ only along edges.
+
+`write(folder, colors)` renders `lattis-<key>-<size>.png` at every size in `sizes()` (16 to 512) into `folder`, skipping files already there, and returns the 256 px file's path (empty on a failure). `key()` is the first 12 hex digits of a SHA-256 of both filled drawings: new colors, or a changed template, give new file names, since desktops cache icons by path. `cleanUp(folder, keep)` deletes the rendered files whose key isn't in `keep` and returns how many; other files there (`lattis.png`, an emulator's icon) are never touched.
+
 ### Moving Lattis into the applications folder
 
 `AppLocation` (`applocation.*`, a QML singleton) backs the **Move** button in Settings → General and on the setup guide's Done step. `canMove` is true when `$APPIMAGE` is set, the file isn't already in `~/Applications` or `~/AppImages`, and `AppLocations::moveBlocker()` is empty (file missing, folder not writable, a Gear Lever or AppImageLauncher entry names it, or the folder already has a file of that name). `move()` calls `AppLocations::moveInto()`, a rename into `AppImageInstall::targetFolder` that keeps the file name (a copy and delete across filesystems); the running image stays mounted from the old file, so this is safe while Lattis runs. No restart follows: `Setup::moved` (in `main.cpp`) sets `$APPIMAGE` to the new path, calls `AppUpdate::setAppImage()` so updates replace the new file, and then `General::refreshAutostart()` and the menu-entry sync, which rewrite the autostart and menu entries. A Steam shortcut to Lattis is not touched.
@@ -212,6 +222,7 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | `appimageupdateinfo.*` | `AppImageUpdateInfo`: `readSection()`, `parse()`, `read()` |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
 | `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
+| `appicon.*` | `AppIcon::Colors`, `ember()`, `fromMap()`, `fill()`, `drawing()`, `render()`, `key()`, `fileName()`, `write()`, `cleanUp()`: the app icon in a theme's dog colors |
 | `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `remove()`, `ensureOwn()`, `removeOwn()`: the AppImage's menu entry, and Lattis's own |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |
 | `installrecord.*` | `InstallRecord`; reading, writing and judging `installs.toml`; `GameUpdateRecord` for `game-updates.toml` |

@@ -80,6 +80,7 @@ public:
     QObject *customizeSchema() const;
 
     Q_INVOKABLE QVariantMap preview(const QString &colors, const QString &style);
+    Q_INVOKABLE QVariantMap dogColors(const QString &colors);
     Q_INVOKABLE QVariantMap themePair(const QString &name) const;
 
     Q_INVOKABLE QString colorsFilePath();

@@ -126,6 +126,7 @@ typeName(type)          → "Color", "Int", …
 | `customizeSchema` | `ThemeSettingsModel` of both halves, for the Customize page |
 | `preview(colors, style)` | `{palette colors…, rail, launch, launchRunning, launchInstall, radius, railBorderWidth, searchRadius, launchLabel, railContainer…, extends}` — no switch |
 | `themePair(name)` | `{colors, style}` of a theme; empty if there is none |
+| `dogColors(colors)` | `{background, backgroundEnd, coat, coatEnd, details}`: a color theme's `[rail] dog_*` colors, references resolved against the active style; Ember's when the theme is missing or its file doesn't parse — no switch |
 | `setValue(section, key, value)` | Apply immediately; save after 400 ms debounce |
 | `resetValue(section, key)` | Remove from active file; revert to inherited/default |
 | `rowMenu(section, key)` | What a setting row's menu needs, read when it opens: `revert` (the session's value, if changed), `file` and `fallback` (the active file and what removing the value falls back to: the parent theme's value, else the default; only when the active file sets it), `fromParent`, `default` (`target, value` for a link), `defaultTarget` and `defaultValue`, `current` |
