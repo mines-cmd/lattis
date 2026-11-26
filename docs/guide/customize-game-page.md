@@ -302,7 +302,7 @@ The panel under the info panel on a Steam game's page with the friends who play 
 - `title_color`, `title_weight`: the top group's heading.
 - `link_color`, `link_hover_color`: "View all".
 - `group_gap`, `group_color`, `group_weight`: the space between groups and the headings of the groups below the top one ("Played recently 3").
-- `recent_max`, `recent_columns`: how many friends show under Played recently, and how many side by side.
+- `recent_max`, `recent_columns`: how many friends show under Played recently, and how many side by side there and under Playing now.
 
 ### Friends
 

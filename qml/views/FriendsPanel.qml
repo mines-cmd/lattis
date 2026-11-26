@@ -200,11 +200,14 @@ Surface {
             }
         }
 
-        ColumnLayout {
+        GridLayout {
             visible: root.playing.length > 0
             Layout.fillWidth: true
             Layout.topMargin: Theme.friends.rowGap
-            spacing: Theme.friends.rowGap
+            columns: Theme.friends.recentColumns
+            columnSpacing: Theme.friends.nameGap
+            rowSpacing: Theme.friends.rowGap
+            uniformCellWidths: true
 
             Repeater {
                 model: root.playing

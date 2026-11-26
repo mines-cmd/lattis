@@ -1077,7 +1077,7 @@ constexpr Setting kSettings[] = {
     color("friends", "group_color", "@text_muted", "The heading of a group below the top one, such as \"Played recently  3\""),
     integer("friends", "group_weight", "500", 100, 900, "Weight of a group's heading"),
     integer("friends", "recent_max", "8", 1, 100, "Friends listed under played recently"),
-    integer("friends", "recent_columns", "2", 1, 2, "Friends side by side in each row under played recently"),
+    integer("friends", "recent_columns", "2", 1, 2, "Friends side by side in each row under playing now and played recently"),
     heading("friends", "Friends"),
     integer("friends", "avatar_size", "32", 16, 100, "Size of a friend's picture in a list"),
     integer("friends", "avatar_radius", "@radius.small", 0, 100, "Picture corner radius"),
