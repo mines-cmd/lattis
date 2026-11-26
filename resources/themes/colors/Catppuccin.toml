@@ -30,7 +30,7 @@ background = "#181825ca"
 scrim_color = "#1e1e2e8c"
 
 [launch_button]
-running_background = "#a6e3a1"
+running_background = "#65cf5c"
 running_background_end = "#4dbb43"
 install_background = "#5797ff"
 install_background_end = "#4d85d1"
