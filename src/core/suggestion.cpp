@@ -3,6 +3,7 @@
 #include <QList>
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
 int editDistance(const QString &a, const QString &b)
@@ -25,6 +26,10 @@ QString suggestion(const QString &name, const QStringList &candidates)
     QString best;
     int bestDistance = 4;
     for (const QString &c : candidates) {
+        // The length difference is a lower bound on the distance; a theme with thousands of custom
+        // colors would otherwise compare each one in full.
+        if (std::abs(int(c.size() - name.size())) >= bestDistance)
+            continue;
         const int d = editDistance(name, c);
         if (d < bestDistance) {
             bestDistance = d;
