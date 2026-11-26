@@ -11,6 +11,9 @@ Rectangle {
     property string selectedId: ""
     property real reach: 0
     property real extraTop: 0
+    // How far the background continues left of the list.
+    property real bleed: 0
+    Behavior on bleed { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
     Behavior on reach { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
     Behavior on extraTop { enabled: Motion.on && root.ready; MotionNumber { speed: "normal" } }
 
@@ -419,7 +422,7 @@ Rectangle {
 
     Rectangle {
         x: -width
-        width: Math.max(0, root.reach - Math.max(0, Theme.list.padding - Theme.list.railMargin))
+        width: root.bleed
         height: parent.height
         visible: width > 0
         color: Theme.list.background
