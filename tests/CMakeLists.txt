@@ -373,6 +373,24 @@ foreach(area list edit tags collections rom emulators platforms version steamimp
         LIBS library_objects
         DEFINES ${DEMO_DATA} ${STEAM_DATA} ${MEDIA_HOME})
 endforeach()
+# The game page's saves, over the whole library for an emulated game's input.
+lattis_test(gamesaves_test PRESETS
+    SOURCES librarytestbase.h librarytestbase.cpp
+            ../src/saves/gamesaves.h ../src/saves/gamesaves.cpp
+            ../src/saves/savesbackup.h ../src/saves/savesbackup.cpp
+            ../src/saves/savesbackuplibrary.h ../src/saves/savesbackuplibrary.cpp
+            ../src/saves/savesindex.h ../src/saves/savesindex.cpp
+            ../src/saves/savesfinder.h ../src/saves/savesfinder.cpp
+            ../src/saves/savesmanifest.h ../src/saves/savesmanifest.cpp
+            ../src/backup/backupplan.h ../src/backup/backupplan.cpp
+            ../src/backup/besiderom.h ../src/backup/besiderom.cpp
+            ../src/backup/protonsaves.h ../src/backup/protonsaves.cpp
+            ../src/backup/backuparchive.h ../src/backup/backuparchive.cpp
+            ../src/backup/movedaside.h ../src/backup/movedaside.cpp
+            ../src/metadata/credentials.h ../src/metadata/credentials.cpp
+            ../src/core/pluralfallback.h ../src/core/pluralfallback.cpp
+    LIBS library_objects LibArchive::LibArchive yaml-cpp::yaml-cpp
+    DEFINES ${DEMO_DATA} ${STEAM_DATA})
 lattis_test(library_overview_test
     SOURCES ../src/library/libraryoverview.h ../src/library/libraryoverview.cpp)
 lattis_test(play_history_test PRESETS
@@ -562,6 +580,11 @@ lattis_test(savesbackup_test
             ../src/backup/protonsaves.h ../src/backup/protonsaves.cpp
             ../src/backup/movedaside.h ../src/backup/movedaside.cpp
     LIBS Qt6::Network Qt6::Concurrent LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp)
+lattis_test(savessettings_test
+    SOURCES ../src/saves/savessettings.h ../src/saves/savessettings.cpp
+            ${BACKUP_SOURCES}
+    LIBS Qt6::Qml Qt6::Concurrent Qt6::Network LibArchive::LibArchive tomlplusplus::tomlplusplus yaml-cpp::yaml-cpp
+    DEFINES ${SAVES_FIXTURE})
 
 # Backups
 lattis_test(archive_test

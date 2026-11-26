@@ -250,7 +250,8 @@ QString GameSaves::remove(const QString &gameId, const QString &archive)
     if (!SavesBackup::backups(input->options.folder, id).contains(archive))
         return tr("That backup is gone.");
     QString error;
-    if (!MovedAside::moveToTrash(archive, &error))
+    const bool trashed = m_setup.trash ? m_setup.trash(archive, &error) : MovedAside::moveToTrash(archive, &error);
+    if (!trashed)
         return tr("Couldn't delete the backup: %1").arg(error);
     QFile::remove(archive + QStringLiteral(".name"));
     load(gameId);

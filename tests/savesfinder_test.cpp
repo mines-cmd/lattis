@@ -79,6 +79,7 @@ private slots:
     void ownPathsStandAloneAndAddToAMatch();
     void copiesAreOneGame();
     void noMatchNoPaths();
+    void anEpicSaveFolderThatGoesUpIsRefused();
 };
 
 void SavesFinderTest::matchesBySteamIdThenTitle()
@@ -427,6 +428,37 @@ void SavesFinderTest::storeFolderStaysInsideItsPrefix()
 
     q.storeFolders = {m_prefix + "/drive_c/users/steamuser", m_prefix + "/drive_c/../x", "relative/path"};
     QVERIFY(find(matcher, {q}, m_env).paths.isEmpty());
+}
+
+// Epic's CloudSaveFolder is a store folder the finder doesn't write itself: one that climbs out of the install
+// folder with `..` must be refused like any other.
+void SavesFinderTest::anEpicSaveFolderThatGoesUpIsRefused()
+{
+    const QString root = m_dir.filePath("heroic");
+    const QString install = m_env.home + "/Games/Heroic/Game";
+    touch(root + "/GamesConfig/EpicApp.json");
+    QFile config(root + "/GamesConfig/EpicApp.json");
+    QVERIFY(config.open(QIODevice::WriteOnly));
+    config.write(R"({"EpicApp": {"winePrefix": ")" + m_prefix.toUtf8() + R"("}})");
+    config.close();
+    touch(root + "/legendaryConfig/legendary/metadata/EpicApp.json");
+    QFile metadata(root + "/legendaryConfig/legendary/metadata/EpicApp.json");
+    QVERIFY(metadata.open(QIODevice::WriteOnly));
+    metadata.write(R"({"metadata": {"customAttributes": {"CloudSaveFolder": {"value": "{InstallDir}/../../../Documents"}}}})");
+    metadata.close();
+    touch(install + "/game.exe");
+    touch(m_env.home + "/Documents/taxes.pdf");
+
+    Query q;
+    q.id = "epic-app";
+    q.title = "Nobody Listed";
+    q.baseDir = install;
+    q.heroicRoot = root;
+    q.heroicApp = "EpicApp";
+    const SavesIndex none;
+    const Found found = find(Matcher(none), {q}, m_env);
+    QEXPECT_FAIL("", "S3.6: cleanPath collapses the .. before the finder can refuse it", Continue);
+    QVERIFY2(!found.paths.contains(m_env.home + "/Documents"), qPrintable(found.paths.join(", ")));
 }
 
 QTEST_MAIN(SavesFinderTest)

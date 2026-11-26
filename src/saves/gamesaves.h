@@ -39,6 +39,8 @@ public:
         std::function<QList<SavesBackup::Input>()> playedInputs;
         // Writes `saves_game` (empty clears it); returns an error or nothing.
         std::function<QString(const QString &gameId, const QString &name)> choose;
+        // Where remove() sends a backup; empty = the system trash.
+        SavesBackup::Trash trash;
     };
     // Called once at startup; nothing is read until QML uses it.
     static void setup(const Setup &setup) { s_setup = setup; }
