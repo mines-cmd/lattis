@@ -91,6 +91,7 @@ private slots:
     void rowMenuDescribesEachItem();
     void rowMenuWrites();
     void schemaModelGroups();
+    void schemaModelKeepsEditedFollowers();
     void schemaModelFilterCombinations();
 
 private:
@@ -2248,6 +2249,47 @@ void ThemeTest::schemaModelFilterCombinations()
     QCOMPARE(model->following(), QStringLiteral("radius.small"));
     model->setFollowing("");
     QCOMPARE(model->rowCount() > 0, true);
+}
+
+void ThemeTest::schemaModelKeepsEditedFollowers()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dataDir = writeDataDir(dir);
+    write(dataDir + "/themes/styles/own.toml", "[filters]\nsort_radius = 5\n");
+    Theme theme(dataDir);
+    auto *model = qobject_cast<ThemeSettingsModel *>(theme.customizeSchema());
+    model->setFollowing("radius.small");
+    const QStringList followers = rowKeys(model);
+    QVERIFY(followers.contains("filters.sort_radius"));
+
+    // An edit unlinks the setting, but its row stays and nothing is rebuilt.
+    QSignalSpy reset(model, &ThemeSettingsModel::modelReset);
+    theme.setValue("filters", "sort_radius", 3);
+    QCOMPARE(findRow(model, "filters", "sort_radius").data(ThemeSettingsModel::LinkTargetRole).toString(), QString());
+    QCOMPARE(rowKeys(model), followers);
+    QCOMPARE(reset.size(), 0);
+
+    // Other filters narrow the view without forgetting it.
+    model->setShow("colors");
+    QCOMPARE(model->rowCount(), 0);
+    model->setShow("all");
+    QCOMPARE(rowKeys(model), followers);
+
+    // Following again lists the direct followers as they are now.
+    model->setFollowing("");
+    model->setFollowing("radius.small");
+    QCOMPARE(model->rowCount(), followers.size() - 1);
+    QVERIFY(!rowKeys(model).contains("filters.sort_radius"));
+
+    // So does switching themes.
+    theme.useDefault("filters", "sort_radius");
+    theme.setValue("filters", "sort_radius", 3);
+    QVERIFY(rowKeys(model).contains("filters.sort_radius"));
+    theme.setStyle("own");
+    QCOMPARE(theme.activeStyle(), QStringLiteral("own"));
+    QVERIFY(model->rowCount() > 0);
+    QVERIFY(!rowKeys(model).contains("filters.sort_radius"));
 }
 
 void ThemeTest::rowMenuDescribesEachItem()

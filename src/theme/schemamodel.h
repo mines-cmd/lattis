@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QSet>
 #include <QStringList>
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
@@ -109,9 +110,14 @@ private:
     void ensureLinks() const;
     void refresh();
     void updateChangedCount();
+    QString activeThemeNames() const;
 
     Theme *m_theme;
     Mode m_mode;
+    QString m_themeNames;
+    // Every setting listed since `following` was set: editing one unlinks it, and it must not
+    // leave the list under the pointer.
+    QSet<int> m_followed;
     enum class Show { All, Colors, Style } m_show = Show::All;
     QString m_filterText;
     QString m_group = QStringLiteral("everything");

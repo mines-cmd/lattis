@@ -43,7 +43,7 @@ Settings → Customize lists every setting the active colors or style can change
 
 Click a color's swatch to open the picker: the square sets the shade, the strip beside it the hue and the checkered strip the opacity. Below them are your theme's palette colors (your own `[palette]` colors included); clicking one makes the setting follow that color (`@accent`), so it changes when the palette does. Hover one for its name. You can also type a color code or `@name` in the box next to the swatch.
 
-Each setting has a **⋯** button at its right end; right-clicking the setting opens the same menu. It lists only what applies: **Remove from** your theme's file (the value goes back to what the theme extends, or the default; a message offers **Undo**), **Use default**, **Use own value** to stop following another setting, **Follow … again**, **Go to** the setting it follows (the violet tag does the same), and **Show N that follow this**. Each item says on the right what it will do.
+Each setting has a **⋯** button at its right end; right-clicking the setting opens the same menu. It lists only what applies: **Remove from** your theme's file (the value goes back to what the theme extends, or the default; a message offers **Undo**), **Use default**, **Use own value** to stop following another setting, **Follow … again**, **Go to** the setting it follows (the violet tag does the same), and **Show N that follow this**. Each item says on the right what it will do. In that list, a setting you change stops following but stays in view until you leave the list or switch themes.
 
 ### Undoing changes
 

@@ -99,6 +99,7 @@ ThemeSettingsModel::ThemeSettingsModel(Theme *theme, Mode mode, QObject *parent)
     : QAbstractListModel(parent)
     , m_theme(theme)
     , m_mode(mode)
+    , m_themeNames(activeThemeNames())
 {
     const auto settings = ThemeSchema::settings();
     const auto headings = ThemeSchema::headings();
@@ -163,6 +164,10 @@ void ThemeSettingsModel::refresh()
 {
     m_linksDirty = true;
     updateChangedCount();
+    if (const QString names = activeThemeNames(); names != m_themeNames) {
+        m_themeNames = names;
+        m_followed.clear();
+    }
     // With "changed only" or "following" on, a reset or theme switch can add or remove rows. Only
     // reset the model when the rows really change: a reset rebuilds every delegate, which would
     // close an open color picker in the middle of a drag.
@@ -181,6 +186,11 @@ void ThemeSettingsModel::refresh()
     }
     if (rowCount() > 0)
         emit dataChanged(index(0), index(rowCount() - 1));
+}
+
+QString ThemeSettingsModel::activeThemeNames() const
+{
+    return m_theme->activeColors() + u'\n' + m_theme->activeStyle();
 }
 
 void ThemeSettingsModel::updateChangedCount()
@@ -347,6 +357,7 @@ void ThemeSettingsModel::setGroup(const QString &group)
     m_groupBit = bit;
     if (clearsFollowing) {
         m_following.clear();
+        m_followed.clear();
         emit followingChanged();
     }
     if (groupChange)
@@ -361,6 +372,8 @@ void ThemeSettingsModel::setFollowing(const QString &target)
         return;
     const bool followingChange = target != m_following;
     m_following = target;
+    if (followingChange)
+        m_followed.clear();
     if (clearsGroup) {
         m_group = QStringLiteral("everything");
         m_groupBit = -1;
@@ -527,7 +540,7 @@ bool ThemeSettingsModel::passes(int setting, bool withSlot) const
         return false;
     if (withSlot) {
         ensureLinks();
-        if (!m_following.isEmpty() && m_linkTarget[setting] != m_following)
+        if (!m_following.isEmpty() && m_linkTarget[setting] != m_following && !m_followed.contains(setting))
             return false;
         if (m_groupBit >= 0 && !(m_groupMask[setting] & (quint32(1) << m_groupBit)))
             return false;
@@ -600,6 +613,8 @@ void ThemeSettingsModel::rebuildVisibleRows()
 void ThemeSettingsModel::setVisible(const QList<int> &rows)
 {
     m_visible = rows;
+    if (!m_following.isEmpty())
+        m_followed.unite(QSet<int>(rows.begin(), rows.end()));
     m_headingOfRow.resize(rows.size());
     m_cardSize.resize(rows.size());
     for (int row = 0; row < rows.size(); ++row)
