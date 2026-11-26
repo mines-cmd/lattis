@@ -11,7 +11,9 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "
 
 # The daily check starts 10 s after the first frame.
 CHECKED = "wait 11500\n"
-ABOUT = "key F10\nwait 500\nclick About Lattis\nwait 600\nexpect Version " + VERSION + "\n"
+# About's version link is styled text, so the item's text holds the number inside a font tag.
+ABOUT_VERSION = "expect-has >" + VERSION + "</font>\n"
+ABOUT = "key F10\nwait 500\nclick About Lattis\nwait 600\n" + ABOUT_VERSION
 UPDATE_NOTICE = "expect-has Update available\nexpect-has 99.0.0\nexpect Update\n"
 
 
@@ -103,7 +105,7 @@ SCENARIOS = [
              release("99.0.0")),
     scenario("the same release shows no notice",
              [(CHECKED + "key F10\nwait 500\nexpect About Lattis\nexpect-not-has Update to\n"
-               + "click About Lattis\nwait 600\nexpect Version " + VERSION + "\nexpect-not-has Update available\n", None)],
+               + "click About Lattis\nwait 600\n" + ABOUT_VERSION + "expect-not-has Update available\n", None)],
              release("0.0.1")),
     scenario("a release without an AppImage fails the check quietly",
              [(CHECKED + ABOUT + "expect-not-has Update available\n", None)],

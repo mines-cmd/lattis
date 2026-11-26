@@ -162,7 +162,7 @@ private slots:
     void initTestCase()
     {
         QVERIFY(m_root.isValid());
-        QCoreApplication::installTranslator(new PluralFallback(qApp));
+        QCoreApplication::installTranslator(new PluralFallback(QCoreApplication::instance()));
         // setWebKey() and syncNow() also ask the friends list; it shares the test's data folder and server.
         SteamFriends::Setup friends;
         friends.dataDir = data();

@@ -921,8 +921,8 @@ void ThemeTest::aLongChainOfColorsLoads()
     QElapsedTimer timer;
     timer.start();
     Theme theme(dataDir);
-#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_UNDEFINED__)
-    const qint64 limit = 60000; // sanitizers make the 100,000 problem lines about 50 times slower
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_UNDEFINED__) || !defined(__OPTIMIZE__)
+    const qint64 limit = 60000; // sanitized and unoptimized builds are many times slower on 100,000 problem lines
 #else
     const qint64 limit = 1000;
 #endif
