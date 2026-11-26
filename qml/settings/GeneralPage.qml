@@ -359,6 +359,7 @@ Item {
                         backgroundColor: Theme.settingsWindow.cardBackground
                         labelColor: Theme.controls.labelColor
                         footerInset: Theme.settingsWindow.cardPadding + Theme.settingsWindow.rowPadding
+                        footerBottomInset: Theme.settingsWindow.cardPadding + Theme.settingsWindow.rowPadding
                     }
                 }
 

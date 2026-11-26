@@ -13,6 +13,9 @@ Item {
     property int noticeRightMargin: 0
     // How far the footer's line reaches past the content on each side, to meet the host's edges.
     property int footerInset: 0
+    // The host's own padding around the content: taken off the footer's bottom padding, and side by
+    // side the gap above the footer, so the credits have the same space above and below.
+    property int footerBottomInset: 0
     readonly property bool wide: width >= Theme.about.wideWidth
 
     implicitHeight: col.implicitHeight
@@ -168,8 +171,10 @@ Item {
 
         Item {
             Layout.fillWidth: true
-            Layout.topMargin: Theme.about.footerSpacing
-            implicitHeight: footer.implicitHeight + 2 * Theme.about.footerPadding
+            // Side by side, the credits start at the host's padding, so the gap under them matches it.
+            Layout.topMargin: root.wide ? root.footerBottomInset : Theme.about.footerSpacing
+            implicitHeight: footer.implicitHeight + Theme.about.footerPadding
+                            + Math.max(0, Theme.about.footerPadding - root.footerBottomInset)
 
             Divider {
                 x: -root.footerInset
@@ -180,7 +185,8 @@ Item {
                 id: footer
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.top: parent.top
+                anchors.topMargin: Theme.about.footerPadding
                 spacing: Theme.layout.spacing
 
                 TextLink {
