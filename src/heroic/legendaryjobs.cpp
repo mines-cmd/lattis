@@ -298,7 +298,7 @@ void LegendaryJobs::queryInfo(const QString &appName)
         process->deleteLater();
     });
     // Not a download: it should answer in seconds, so a stuck one is stopped rather than left asking forever.
-    QTimer::singleShot(60'000, process, [process] {
+    QTimer::singleShot(m_infoTimeoutMs, process, [process] {
         if (process->state() != QProcess::NotRunning)
             process->kill();
     });

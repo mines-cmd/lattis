@@ -103,6 +103,7 @@ public:
     static QStringList arguments(Kind kind, const QString &appName, const QStringList &extraArgs);
 
     void setCancelGraceMs(int ms) { m_cancelGraceMs = ms; }
+    void setInfoTimeoutMs(int ms) { m_infoTimeoutMs = ms; }
     void setCheckIntervals(int firstMs, int busyMs, int recheckMs);
 
 signals:
@@ -149,6 +150,7 @@ private:
     QTimer m_groupTimer;
     QTimer m_cancelTimer;
     int m_cancelGraceMs = 10'000;
+    int m_infoTimeoutMs = 60'000;
 
     QString m_checkFile;
     std::function<bool()> m_checkEnabled;

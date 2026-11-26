@@ -3,10 +3,13 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <unistd.h>
 
 #ifndef HEROIC_FIXTURE
 #error HEROIC_FIXTURE must name tests/data/heroic
@@ -99,6 +102,51 @@ private slots:
         QVERIFY(!HeroicGameConfig::write(root(), kApp, edits, &error));
         QVERIFY(!error.isEmpty());
         QCOMPARE(readFile(HeroicGameConfig::path(root(), kApp)), before);
+    }
+
+    void writeWithoutAFolderIsRefused()
+    {
+        // GamesConfig is a file, so the folder can't be made.
+        install({});
+        QVERIFY(QDir(root()).rmdir(QStringLiteral("GamesConfig")));
+        writeFile(root() + QStringLiteral("/GamesConfig"), "not a folder");
+        HeroicGameEdits edits;
+        edits.launcherArgs = QStringLiteral("-x");
+        QString error;
+        QVERIFY(!HeroicGameConfig::write(root(), kApp, edits, &error));
+        QVERIFY2(error.endsWith(QStringLiteral(": can't create the folder")), qPrintable(error));
+        QCOMPARE(readFile(root() + QStringLiteral("/GamesConfig")), QByteArray("not a folder"));
+    }
+
+    void writeWithoutAFileIsRefused()
+    {
+        // The game's file is a folder: nothing to read, and nothing can be written in its place.
+        install({});
+        const QString file = HeroicGameConfig::path(root(), kApp);
+        QVERIFY(QDir().mkpath(file));
+        HeroicGameEdits edits;
+        edits.launcherArgs = QStringLiteral("-x");
+        QString error;
+        QVERIFY(!HeroicGameConfig::write(root(), kApp, edits, &error));
+        QVERIFY2(error.endsWith(QStringLiteral(": can't write the file")), qPrintable(error));
+        QVERIFY(QFileInfo(file).isDir());
+        QVERIFY(QDir(file).isEmpty());
+
+        // A folder that can't be written to: the file is left as it was.
+        if (::geteuid() == 0)
+            QSKIP("root writes into a read-only folder");
+        QVERIFY(QDir(file).removeRecursively());
+        QVERIFY(QFile::copy(kFixtures + QStringLiteral("/gamesconfig-full.json"), file));
+        const QByteArray before = readFile(file);
+        const QString folder = root() + QStringLiteral("/GamesConfig");
+        QVERIFY(QFile::setPermissions(folder, QFile::ReadOwner | QFile::ExeOwner));
+        error.clear();
+        const bool written = HeroicGameConfig::write(root(), kApp, edits, &error);
+        QFile::setPermissions(folder, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+        QVERIFY(!written);
+        QVERIFY2(error.endsWith(QStringLiteral(": can't write the file")), qPrintable(error));
+        QCOMPARE(readFile(file), before);
+        QCOMPARE(QDir(folder).entryList(QDir::Files | QDir::Hidden), QStringList{kApp + QStringLiteral(".json")});
     }
 
     void writeChangesOnlyTheEditedKey()

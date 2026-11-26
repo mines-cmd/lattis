@@ -1,5 +1,6 @@
 #include "detachedprocess.h"
 #include "gamerunner.h"
+#include "heroicgameconfig.h"
 #include "heroicscan.h"
 #include "launchcommand.h"
 #include "launchoptions.h"
@@ -16,6 +17,9 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
+
+#include <optional>
 
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -41,8 +45,11 @@ EmulatorInstall installed(EmulatorInstall::Kind kind, const QString &program)
     return i;
 }
 
-// Stands in for an emulator: records what it was given, then runs for FAKE_SECONDS and
-// exits with FAKE_EXIT.
+// The fakes below run for as long as a test needs them by waiting while a file is there (a hold):
+// the test makes it before the start and removes it to let the fake go on, instead of guessing a sleep.
+
+// Stands in for an emulator: records what it was given, then runs for FAKE_SECONDS and while
+// FAKE_HOLD names a file that exists, and exits with FAKE_EXIT.
 const QByteArray kFakeEmulator = R"(#!/bin/sh
 dir=$(dirname "$0")
 printf '%s\n' "$@" > "$dir/args.txt"
@@ -51,23 +58,26 @@ echo $$ > "$dir/pid.txt"
 if [ -n "$FAKE_FD" ] && [ -e "/proc/$$/fd/$FAKE_FD" ]; then echo leaked > "$dir/leak.txt"; fi
 echo "fake emulator: something went wrong" >&2
 sleep "${FAKE_SECONDS:-0}"
+while [ -n "$FAKE_HOLD" ] && [ -e "$FAKE_HOLD" ]; do sleep 0.02; done
 exit "${FAKE_EXIT:-0}"
 )";
 
 // Stands in for Steam's command: appends each call's arguments, one call per line. With
-// FAKE_GAME_SECONDS, a rungameid URL also starts a stand-in game with the command
-// line Steam's reaper has, for that long: AppId is the URL's ID, or FAKE_REAPER_ID.
-// -shutdown kills FAKE_STEAM_PID.
+// FAKE_GAME, a rungameid URL also starts a stand-in game with the command line Steam's reaper
+// has (AppId is the URL's ID, or FAKE_REAPER_ID): a step of Steam's own while step.run is beside
+// this script, then the game while game.run is. -shutdown kills FAKE_STEAM_PID.
 const QByteArray kFakeSteam = R"(#!/bin/sh
-echo "$*" >> "$(dirname "$0")/steam.txt"
+dir=$(dirname "$0")
+echo "$*" >> "$dir/steam.txt"
 for arg in "$@"; do
     case "$arg" in
     steam:*rungameid*)
-        if [ -n "$FAKE_GAME_SECONDS" ]; then
-            # Like a Proton game: a short step of Steam's own under the same AppId, then the game.
+        if [ -n "$FAKE_GAME" ]; then
+            # Like a Proton game: a step of Steam's own under the same AppId, then the game.
             app="AppId=${FAKE_REAPER_ID:-${arg##*[!0-9]}}"
-            (sh -c 'sleep 2; true' SteamLaunch "$app" -- iscriptevaluator; sleep 1
-             sh -c 'sleep "$0"; true' "$FAKE_GAME_SECONDS" SteamLaunch "$app" -- game) >/dev/null 2>&1 &
+            hold='while [ -e "$0" ]; do sleep 0.02; done'
+            (sh -c "$hold" "$dir/step.run" SteamLaunch "$app" -- iscriptevaluator
+             sh -c "$hold" "$dir/game.run" SteamLaunch "$app" -- game) >/dev/null 2>&1 &
         fi ;;
     -shutdown)
         # The running Steam stand-in closes, if the test says which one it is.
@@ -76,12 +86,12 @@ for arg in "$@"; do
 done
 )";
 
-// Stands in for Heroic's command: appends each call's arguments, one call per line, runs for
-// FAKE_HEROIC_SECONDS, then writes FAKE_HEROIC_PLAYED over timestamp.json (as a Heroic that was closed
-// does when the game ends) and exits with FAKE_HEROIC_EXIT.
+// Stands in for Heroic's command: appends each call's arguments, one call per line, runs while
+// FAKE_HEROIC_HOLD names a file that exists, then writes FAKE_HEROIC_PLAYED over timestamp.json (as a
+// Heroic that was closed does when the game ends) and exits with FAKE_HEROIC_EXIT.
 const QByteArray kFakeHeroic = R"(#!/bin/sh
 echo "$*" >> "$(dirname "$0")/heroic.txt"
-sleep "${FAKE_HEROIC_SECONDS:-0}"
+while [ -n "$FAKE_HEROIC_HOLD" ] && [ -e "$FAKE_HEROIC_HOLD" ]; do sleep 0.02; done
 if [ -n "$FAKE_HEROIC_PLAYED" ]; then printf '%s' "$FAKE_HEROIC_PLAYED" > "$FAKE_HEROIC_TIMESTAMP"; fi
 exit "${FAKE_HEROIC_EXIT:-0}"
 )";
@@ -93,19 +103,65 @@ QByteArray heroicTimestamp(int minutes, const QByteArray &lastPlayed)
 }
 
 // Stands in for a Linux game's launcher script: records what it was given and where, the
-// variables the tests look at, then runs for FAKE_SECONDS and exits with FAKE_EXIT. With
-// FAKE_CHILD_SECONDS, it leaves a child behind that runs that long, then writes child.txt.
+// variables the tests look at, then runs for FAKE_SECONDS and while FAKE_HOLD names a file that
+// exists, and exits with FAKE_EXIT. With FAKE_CHILD_HOLD, it leaves a child behind that runs while
+// that file exists, then writes child.txt.
 const QByteArray kFakeGame = R"(#!/bin/sh
 dir=$(dirname "$0")
 printf '%s\n' "$@" > "$dir/args.txt"
 pwd > "$dir/cwd.txt"
 printf 'FOO=%s\nAPPDIR=%s\nLD_LIBRARY_PATH=%s\n' "$FOO" "${APPDIR-unset}" "${LD_LIBRARY_PATH-unset}" > "$dir/env.txt"
-if [ -n "$FAKE_CHILD_SECONDS" ]; then
-    (sleep "$FAKE_CHILD_SECONDS"; echo done > "$dir/child.txt") &
+if [ -n "$FAKE_CHILD_HOLD" ]; then
+    (while [ -e "$FAKE_CHILD_HOLD" ]; do sleep 0.02; done; echo done > "$dir/child.txt") &
 fi
 sleep "${FAKE_SECONDS:-0}"
+while [ -n "$FAKE_HOLD" ] && [ -e "$FAKE_HOLD" ]; do sleep 0.02; done
 exit "${FAKE_EXIT:-0}"
 )";
+
+// Stands in for Heroic's Legendary: appends each call's arguments and LEGENDARY_CONFIG_PATH, one call
+// per line, runs while FAKE_LEGENDARY_HOLD names a file that exists, then fails with
+// FAKE_LEGENDARY_ERROR as Legendary's last line, or succeeds. `info` answers with a Windows game's
+// sizes; `repair` reports FAKE_LEGENDARY_REPAIRED broken files.
+const QByteArray kFakeLegendary = R"(#!/bin/sh
+echo "$* [$LEGENDARY_CONFIG_PATH]" >> "$(dirname "$0")/legendary.txt"
+while [ -n "$FAKE_LEGENDARY_HOLD" ] && [ -e "$FAKE_LEGENDARY_HOLD" ]; do sleep 0.02; done
+if [ -n "$FAKE_LEGENDARY_ERROR" ]; then
+    echo "[cli] INFO: starting" >&2
+    echo "[cli] ERROR: $FAKE_LEGENDARY_ERROR" >&2
+    exit 1
+fi
+if [ "$1" = info ]; then
+    echo '{"game": {"platform_versions": {"Windows": "1"}}, "manifest": {"download_size": 1000, "disk_size": 3000}}'
+    exit 0
+fi
+if [ "$1" = repair ] && [ -n "$FAKE_LEGENDARY_REPAIRED" ]; then
+    echo "[cli] ERROR: Verification failed, $FAKE_LEGENDARY_REPAIRED file(s) corrupted, 0 file(s) are missing." >&2
+fi
+echo "[cli] INFO: done" >&2
+exit 0
+)";
+
+// Stands in for a running program the launcher looks for in its /proc folder: runs while `hold`
+// exists, and on SIGTERM writes `hold`.term and exits (or ignores it, `stubborn`). Started, it waits
+// until its trap is set (`hold`.ready), so a signal sent at once is still caught.
+void startHeld(QProcess &process, const QString &hold, bool stubborn = false)
+{
+    const QString onTerm = stubborn ? QStringLiteral("''") : QStringLiteral("'echo term > \"$0.term\"; exit 0'");
+    process.start(QStringLiteral("sh"),
+                  {QStringLiteral("-c"),
+                   QStringLiteral("trap %1 TERM; : > \"$0.ready\"; while [ -e \"$0\" ]; do sleep 0.02; done").arg(onTerm),
+                   hold});
+    QVERIFY(process.waitForStarted());
+    QTRY_VERIFY(QFile::exists(hold + QStringLiteral(".ready")));
+}
+
+// Whether the process is there and not a zombie nobody has reaped yet.
+bool alive(qint64 pid)
+{
+    const QByteArray stat = readFile(QStringLiteral("/proc/%1/stat").arg(pid));
+    return !stat.isEmpty() && !stat.contains(") Z ");
+}
 
 // Stands in for a wrapper like mangohud: records its arguments, then runs them.
 const QByteArray kFakeWrapper = R"(#!/bin/sh
@@ -161,6 +217,15 @@ private slots:
     void heroicForceClose();
     void heroicQuickFailure();
     void heroicNotFound();
+    void heroicForceCloseKillsTheGame();
+    void epicJobsRefused();
+    void epicJobsOnAReadOnlyLibrary();
+    void epicUpdateAndVerify();
+    void epicInstall();
+    void epicUninstall();
+    void closeHeroicAndApplyRefused();
+    void closeHeroicAndApply();
+    void heroicDoesNotClose();
     void steamGames();
     void openSteamUrl();
     void steamUpdates();
@@ -168,6 +233,8 @@ private slots:
     void steamGameRunning();
     void steamCommand();
     void closeSteamAndApply();
+    void steamForceClose();
+    void killTreeEndsOnlyItsTree();
     void launchWithQueuedEdits();
     void openEmulatorAndFolder();
     void saveFolder();
@@ -177,6 +244,9 @@ private slots:
     void nativeModManager();
     void modManagerRefused();
     void protonModManager();
+    void flatpakModManager();
+    void openFiles();
+    void openSaveFolderAfterTheSearch();
     void gameOutlivesTheLauncher();
     void setLaunchValue_data();
     void setLaunchValue();
@@ -195,6 +265,18 @@ private:
     // Starts that copy as the running Steam (in steam.pid).
     void startFakeSteam(const QString &root, QProcess &steam);
     QString fakeDir() const { return m_dir->filePath(QStringLiteral("fake")); }
+    // A Heroic with A Short Hike installed in the scratch home (a leftover file in its folder, and an
+    // update waiting unless not asked for, as Launch then updates it) and Fez not installed, and the fake
+    // Legendary.
+    void openWithEpic(bool updateWaiting = true);
+    void writeEpicUpdate();
+    QString hikeFolder() const { return m_dir->filePath(QStringLiteral("home/Games/Heroic/Hike")); }
+    QString legendaryLog() const { return fakeDir() + QStringLiteral("/legendary.txt"); }
+    // Makes a hold file (see the fakes) and returns its path.
+    QString hold(const QString &name);
+    // The runner's /proc: empty until a test lists a process of its own there.
+    QString procDir() const { return m_dir->filePath(QStringLiteral("proc")); }
+    void listProcess(qint64 pid, const QList<QByteArray> &cmdline);
 
     std::unique_ptr<QTemporaryDir> m_dir;
     QString m_data;
@@ -512,14 +594,15 @@ void LaunchTest::linuxGameRunsWhileItsSessionLives()
     writeFile(m_data + "/linux-games/SuperTuxKart/run_game.sh", kFakeGame, true);
     openLibrary("[launch]\nmin_session_seconds = 0\n");
     m_runner->setSessionPollInterval(100);
-    qputenv("FAKE_CHILD_SECONDS", "2");
+    const QString child = hold(QStringLiteral("child"));
+    qputenv("FAKE_CHILD_HOLD", QFile::encodeName(child));
 
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
-    QElapsedTimer timer;
-    timer.start();
     QCOMPARE(m_runner->launch(kLinuxGame), QString());
     // Not uninstalled while it runs, even once its script has exited: nothing moved.
     QTest::qWait(500);
+    QCOMPARE(ended.count(), 0);
+    QCOMPARE(m_runner->running(), QStringList{kLinuxGame});
     bool trashed = false;
     m_library->setTrash([&trashed](const QString &, QString *) { return trashed = true; });
     QCOMPARE(m_runner->uninstallProton(kLinuxGame, true, false, false, QStringLiteral("remove"), false)
@@ -527,10 +610,12 @@ void LaunchTest::linuxGameRunsWhileItsSessionLives()
              QStringLiteral("SuperTuxKart is running; close it first"));
     QVERIFY(!trashed);
     QVERIFY(QFile::exists(m_data + "/library/games/linux-supertuxkart.toml"));
+    QTest::qWait(300);
+    QCOMPARE(ended.count(), 0);
+    // The game ends: so does the session.
+    QFile::remove(child);
     QVERIFY(ended.wait(10000));
-    QVERIFY2(timer.elapsed() >= 1900, qPrintable(QString::number(timer.elapsed())));
     QVERIFY(QFile::exists(m_data + "/linux-games/SuperTuxKart/child.txt"));
-    qunsetenv("FAKE_CHILD_SECONDS");
 }
 
 void LaunchTest::linuxGameQuickFailure()
@@ -741,11 +826,9 @@ void LaunchTest::init()
               "args = [\"--fullscreen\"]\n");
     qputenv("FAKE_SECONDS", "0");
     qputenv("FAKE_EXIT", "0");
-    qunsetenv("FAKE_FD");
-    qunsetenv("FAKE_GAME_SECONDS");
-    qunsetenv("FAKE_STEAM_PID");
-    qunsetenv("FAKE_CHILD_SECONDS");
-    qunsetenv("FAKE_HEROIC_SECONDS");
+    for (const char *name : {"FAKE_FD", "FAKE_HOLD", "FAKE_GAME", "FAKE_REAPER_ID", "FAKE_STEAM_PID", "FAKE_CHILD_HOLD",
+                             "FAKE_HEROIC_HOLD", "FAKE_LEGENDARY_HOLD", "FAKE_LEGENDARY_ERROR", "FAKE_LEGENDARY_REPAIRED"})
+        qunsetenv(name);
     qunsetenv("FAKE_HEROIC_PLAYED");
     qunsetenv("FAKE_HEROIC_TIMESTAMP");
     qunsetenv("FAKE_HEROIC_EXIT");
@@ -784,7 +867,47 @@ void LaunchTest::startRunner()
     m_runner->setSteamProgram({fakeDir() + "/steam.sh", QStringLiteral("--prefix")});
     writeFile(fakeDir() + "/heroic.sh", kFakeHeroic, true);
     m_runner->setHeroicProgram({fakeDir() + "/heroic.sh", {QStringLiteral("--no-gui")}, true});
+    // Nothing the user runs (their Heroic, their games, their Legendary) can be taken for the test's,
+    // and so signalled or started.
+    QVERIFY(QDir().mkpath(procDir()));
+    m_runner->setProcDir(procDir());
+    m_runner->setLegendaryProgram(QString());
     m_runner->start();
+}
+
+QString LaunchTest::hold(const QString &name)
+{
+    const QString path = m_dir->filePath(QStringLiteral("holds/") + name);
+    writeFile(path, {});
+    return path;
+}
+
+void LaunchTest::listProcess(qint64 pid, const QList<QByteArray> &cmdline)
+{
+    writeFile(procDir() + QStringLiteral("/%1/cmdline").arg(pid), cmdline.join('\0') + '\0');
+}
+
+void LaunchTest::writeEpicUpdate()
+{
+    writeFile(HeroicScan::assetsPath(heroicRoot()), R"({"Windows":[{"app_name":"HikeApp","build_version":"2"}]})");
+}
+
+void LaunchTest::openWithEpic(bool updateWaiting)
+{
+    writeFile(hikeFolder() + "/vkd3d-proton.cache", "cache");
+    writeFile(HeroicScan::libraryPath(heroicRoot()),
+              R"({"library":[{"app_name":"HikeApp","title":"A Short Hike","install":{}},
+                             {"app_name":"Fez App","title":"Fez","install":{}}]})");
+    writeFile(HeroicScan::installedPath(heroicRoot()),
+              R"({"HikeApp":{"title":"A Short Hike","install_path":")" + QFile::encodeName(hikeFolder())
+                  + R"(","install_size":1000,"version":"1","platform":"Windows"}})");
+    if (updateWaiting)
+        writeEpicUpdate();
+    writeFile(HeroicScan::playTimePath(heroicRoot()), heroicTimestamp(5, "2026-11-01T10:00:00.000Z"));
+    qputenv("FAKE_HEROIC_TIMESTAMP", HeroicScan::playTimePath(heroicRoot()).toLocal8Bit());
+    writeFile(fakeDir() + "/legendary", kFakeLegendary, true);
+    openLibrary();
+    m_runner->setLegendaryProgram(fakeDir() + "/legendary");
 }
 
 void LaunchTest::openWithHeroic()
@@ -805,13 +928,17 @@ void LaunchTest::heroicClosed()
     const QString id = QStringLiteral("epic-a-short-hike");
     const QString gameFile = m_data + QStringLiteral("/library/games/epic-a-short-hike.toml");
     QVERIFY(readFile(gameFile).contains("play_minutes = 5"));
-    qputenv("FAKE_HEROIC_SECONDS", "1");
+    const QString heroic = hold(QStringLiteral("heroic"));
+    qputenv("FAKE_HEROIC_HOLD", QFile::encodeName(heroic));
     qputenv("FAKE_HEROIC_PLAYED", heroicTimestamp(7, "2026-11-02T10:00:00.000Z"));
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
 
     QCOMPARE(m_runner->launch(id), QString());
     QCOMPARE(m_runner->running(), QStringList{id});
     QCOMPARE(m_runner->launch(id), QString()); // already running: no second one
+    QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
+    QCOMPARE(ended.count(), 0);
+    QFile::remove(heroic);
     QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 1, 5000);
     QCOMPARE(m_runner->running(), QStringList());
     QCOMPARE(readFile(heroicLog()), QByteArray("--no-gui heroic://launch?appName=HikeApp&runner=legendary&gui=false\n"));
@@ -891,14 +1018,14 @@ void LaunchTest::heroicForceClose()
     const QString id = QStringLiteral("epic-a-short-hike");
 
     // Our process is the Heroic that runs the game: it goes, with what's in its session.
-    qputenv("FAKE_HEROIC_SECONDS", "30");
+    qputenv("FAKE_HEROIC_HOLD", QFile::encodeName(hold(QStringLiteral("heroic"))));
     QCOMPARE(m_runner->launch(id), QString());
     QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
     QCOMPARE(m_runner->forceClose(id), QString());
     QTRY_COMPARE_WITH_TIMEOUT(m_runner->running(), QStringList(), 5000);
 
     // It already exited: a launch that stopped early would otherwise stay Running.
-    qunsetenv("FAKE_HEROIC_SECONDS");
+    qunsetenv("FAKE_HEROIC_HOLD");
     QCOMPARE(m_runner->launch(id), QString());
     QTRY_COMPARE_WITH_TIMEOUT(readFile(heroicLog()).count('\n'), 2, 5000);
     QTest::qWait(300);
@@ -1008,12 +1135,14 @@ void LaunchTest::quickFailureIsReported()
 void LaunchTest::sameGameDoesNotStartTwice()
 {
     openLibrary();
-    qputenv("FAKE_SECONDS", "1");
+    const QString emulator = hold(QStringLiteral("emulator"));
+    qputenv("FAKE_HOLD", QFile::encodeName(emulator));
     QSignalSpy started(m_runner.get(), &GameRunner::sessionStarted);
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
     QCOMPARE(m_runner->launch(QStringLiteral("switch-tetris")), QString());
     QCOMPARE(m_runner->launch(QStringLiteral("switch-tetris")), QString());
     QCOMPARE(started.size(), 1);
+    QFile::remove(emulator);
     QVERIFY(ended.wait(10000));
 }
 
@@ -1175,19 +1304,22 @@ void LaunchTest::protonGameRunning()
 {
     // Steam runs a shortcut's reaper under its app ID, not the game ID in the URL.
     openLibrary();
-    qputenv("FAKE_GAME_SECONDS", "2");
+    // The fake Steam's game is a process of this test's, found among all of them.
+    m_runner->setProcDir(QStringLiteral("/proc"));
+    m_runner->setSteamGoneTimeout(1500);
+    writeFile(fakeDir() + "/step.run", {});
+    qputenv("FAKE_GAME", "1");
     qputenv("FAKE_REAPER_ID", "2458135266");
     QSignalSpy started(m_runner.get(), &GameRunner::sessionStarted);
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
     const QString ffxiv = QStringLiteral("proton-final-fantasy-xiv-online");
     QCOMPARE(m_runner->launch(ffxiv), QString());
     QTRY_COMPARE_WITH_TIMEOUT(started.count(), 1, 5000);
+    QFile::remove(fakeDir() + "/step.run");
     QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 1, 12000);
     QVERIFY(m_runner->running().isEmpty());
     // Steam records the play time, not the launcher.
     QVERIFY(!readFile(m_data + "/library/games/" + ffxiv + ".toml").contains("play_minutes"));
-    qunsetenv("FAKE_GAME_SECONDS");
-    qunsetenv("FAKE_REAPER_ID");
 }
 
 void LaunchTest::nativeModManager()
@@ -1199,7 +1331,8 @@ void LaunchTest::nativeModManager()
               "launch_options = \"--mods\"\ngames = [\"linux-supertuxkart\"]\n");
     openLibrary("[launch]\nmin_session_seconds = 0\n");
     m_runner->setSessionPollInterval(100);
-    qputenv("FAKE_SECONDS", "2");
+    const QString running = hold(QStringLiteral("running"));
+    qputenv("FAKE_HOLD", QFile::encodeName(running));
     const QByteArray gameFile = readFile(m_data + "/library/games/linux-supertuxkart.toml");
 
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
@@ -1225,6 +1358,7 @@ void LaunchTest::nativeModManager()
     QCOMPARE(m_runner->launch(kLinuxGame), QString());
     QCOMPARE(m_runner->running().size(), 2);
 
+    QFile::remove(running);
     QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 2, 10000);
     QVERIFY(m_runner->running().isEmpty());
 
@@ -1537,7 +1671,12 @@ void LaunchTest::downloadBar()
 void LaunchTest::steamGameRunning()
 {
     openLibrary();
-    qputenv("FAKE_GAME_SECONDS", "2");
+    // The fake Steam's game is a process of this test's, found among all of them.
+    m_runner->setProcDir(QStringLiteral("/proc"));
+    m_runner->setSteamGoneTimeout(1500);
+    writeFile(fakeDir() + "/step.run", {});
+    writeFile(fakeDir() + "/game.run", {});
+    qputenv("FAKE_GAME", "1");
     QSignalSpy started(m_runner.get(), &GameRunner::sessionStarted);
     QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
     QCOMPARE(m_runner->launch(QStringLiteral("steam-1145360")), QString());
@@ -1548,10 +1687,12 @@ void LaunchTest::steamGameRunning()
     QCOMPARE(started.first().first().toString(), QStringLiteral("steam-1145360"));
     // Launch again while it runs: nothing new is handed to Steam.
     QCOMPARE(m_runner->launch(QStringLiteral("steam-1145360")), QString());
-    // Steam's setup step exits, and the game takes over a second later: still one session.
-    QTest::qWait(3500);
+    // Steam's setup step exits, and the game takes over: still one session, past the next look for it.
+    QFile::remove(fakeDir() + "/step.run");
+    QTest::qWait(1200);
     QCOMPARE(ended.count(), 0);
     QCOMPARE(m_runner->running(), QStringList{"steam-1145360"});
+    QFile::remove(fakeDir() + "/game.run");
     QTRY_COMPARE_WITH_TIMEOUT(ended.count(), 1, 12000);
     QCOMPARE(started.count(), 1);
     QVERIFY(m_runner->running().isEmpty());
@@ -1559,7 +1700,6 @@ void LaunchTest::steamGameRunning()
     // Steam records the play time, not the launcher.
     QVERIFY(!QFile::exists(m_data + "/library/games/steam-1145360.toml")
             || !readFile(m_data + "/library/games/steam-1145360.toml").contains("play_minutes"));
-    qunsetenv("FAKE_GAME_SECONDS");
 }
 
 void LaunchTest::steamCommand()
@@ -1705,7 +1845,7 @@ void LaunchTest::launchWithQueuedEdits()
 void LaunchTest::gameOutlivesTheLauncher()
 {
     openLibrary("[launch]\nmin_session_seconds = 0\n");
-    qputenv("FAKE_SECONDS", "3");
+    qputenv("FAKE_HOLD", QFile::encodeName(hold(QStringLiteral("emulator"))));
     QCOMPARE(m_runner->launch(QStringLiteral("switch-tetris")), QString());
     QTRY_VERIFY_WITH_TIMEOUT(!readFile(fakeDir() + "/pid.txt").isEmpty(), 5000);
     const pid_t pid = readFile(fakeDir() + "/pid.txt").trimmed().toInt();
@@ -1785,6 +1925,645 @@ void LaunchTest::setLaunchValue()
     } else if (key == QLatin1String("min_session_seconds")) {
         QCOMPARE(parsed.value.minSessionSeconds, value.toInt());
     }
+}
+
+namespace {
+
+const QString kHike = QStringLiteral("epic-a-short-hike");
+const QString kFez = QStringLiteral("epic-fez");
+
+// Swaps environment variables for one test and puts them back however it ends.
+class EnvSwap
+{
+public:
+    void set(const char *name, const QByteArray &value)
+    {
+        keep(name);
+        qputenv(name, value);
+    }
+    void unset(const char *name)
+    {
+        keep(name);
+        qunsetenv(name);
+    }
+    ~EnvSwap()
+    {
+        for (const auto &[name, value] : std::as_const(m_saved)) {
+            if (value)
+                qputenv(name, *value);
+            else
+                qunsetenv(name);
+        }
+    }
+
+private:
+    void keep(const char *name)
+    {
+        for (const auto &saved : std::as_const(m_saved))
+            if (qstrcmp(saved.first, name) == 0)
+                return;
+        m_saved.append({name, qEnvironmentVariableIsSet(name) ? std::optional(qgetenv(name)) : std::nullopt});
+    }
+    QList<std::pair<const char *, std::optional<QByteArray>>> m_saved;
+};
+
+} // namespace
+
+void LaunchTest::heroicForceCloseKillsTheGame()
+{
+    openWithEpic(false);
+    qputenv("FAKE_HEROIC_HOLD", QFile::encodeName(hold(QStringLiteral("heroic"))));
+    QCOMPARE(m_runner->launch(kHike), QString());
+    QTRY_VERIFY_WITH_TIMEOUT(!readFile(heroicLog()).isEmpty(), 5000);
+
+    // The game Heroic started, with a child of its own, is found by its -epicapp argument.
+    QProcess game;
+    const QString child = m_dir->filePath(QStringLiteral("game-child.pid"));
+    game.start(QStringLiteral("sh"), {QStringLiteral("-c"), QStringLiteral("sleep 30 & echo $! > \"$0\"; wait"), child});
+    QVERIFY(game.waitForStarted());
+    QTRY_VERIFY(!readFile(child).trimmed().isEmpty());
+    const qint64 childPid = readFile(child).trimmed().toLongLong();
+    const qint64 gamePid = game.processId();
+    listProcess(gamePid, {"C:\\Hike\\Hike.exe", "-epicapp=HikeApp", "-epicenv=Prod"});
+
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+    QCOMPARE(m_runner->forceClose(kHike), QString());
+    QVERIFY(game.waitForFinished(5000));
+    QCOMPARE(game.exitStatus(), QProcess::CrashExit);
+    QTRY_VERIFY(!alive(childPid));
+    // Heroic ends the session once it writes the game's finish time; until then it runs.
+    QCOMPARE(ended.count(), 0);
+    QCOMPARE(m_runner->running(), QStringList{kHike});
+
+    // Without the game, our Heroic process goes instead.
+    QVERIFY(QDir(procDir() + QStringLiteral("/%1").arg(gamePid)).removeRecursively());
+    QCOMPARE(m_runner->forceClose(kHike), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(m_runner->running(), QStringList(), 5000);
+}
+
+void LaunchTest::epicJobsRefused()
+{
+    openWithEpic();
+    const QString folder = m_dir->filePath(QStringLiteral("home/Games/Epic"));
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
+    QSignalSpy uninstalled(m_runner.get(), &GameRunner::epicUninstalled);
+
+    // No Legendary: each says where to do it instead.
+    m_runner->setLegendaryProgram(QString());
+    QVERIFY(!m_runner->legendaryFound());
+    QCOMPARE(m_runner->update(kHike), QString());
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(),
+             QStringLiteral("Heroic's Legendary isn't found; update A Short Hike in Heroic"));
+    QCOMPARE(m_runner->verifyEpic(kHike), QStringLiteral("Heroic's Legendary isn't found; verify A Short Hike in Heroic"));
+    QCOMPARE(m_runner->installEpic(kFez, folder), QStringLiteral("Heroic's Legendary isn't found; install Fez in Heroic"));
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, false, false),
+             QStringLiteral("Heroic's Legendary isn't found; uninstall the game in Heroic"));
+    QCOMPARE(m_runner->epicInstallPlan(kFez).value("sizeState").toString(), QStringLiteral("unknown"));
+
+    // Not an Epic game, or not in the state the job needs.
+    m_runner->setLegendaryProgram(fakeDir() + "/legendary");
+    QVERIFY(m_runner->legendaryFound());
+    QCOMPARE(m_runner->verifyEpic(QStringLiteral("switch-tetris")), QStringLiteral("Heroic isn't found"));
+    QCOMPARE(m_runner->installEpic(QStringLiteral("switch-tetris"), folder), QStringLiteral("Heroic isn't found"));
+    QCOMPARE(m_runner->uninstallEpic(QStringLiteral("switch-tetris"), true, false, false),
+             QStringLiteral("Heroic isn't found"));
+    QCOMPARE(m_runner->verifyEpic(kFez), QStringLiteral("Fez isn't installed"));
+    QCOMPARE(m_runner->installEpic(kHike, folder), QStringLiteral("A Short Hike is installed already"));
+    QCOMPARE(m_runner->installEpic(kFez, QStringLiteral("  ")), QStringLiteral("Choose a folder to install into"));
+    QCOMPARE(m_runner->update(kFez), QString()); // no update waiting: nothing to do, nothing said
+
+    // Running (launched before Heroic found the update, as Launch updates a game that has one): nothing is
+    // started, and Heroic isn't closed under it.
+    const auto rescan = [this] {
+        m_library->store().refresh();
+        m_library->store().waitForIdle();
+        QCoreApplication::processEvents();
+    };
+    QVERIFY(QFile::remove(HeroicScan::assetsPath(heroicRoot())));
+    rescan();
+    qputenv("FAKE_HEROIC_HOLD", QFile::encodeName(hold(QStringLiteral("heroic"))));
+    QCOMPARE(m_runner->launch(kHike), QString());
+    QCOMPARE(m_runner->running(), QStringList{kHike});
+    writeEpicUpdate();
+    rescan();
+    QCOMPARE(m_library->gameAt(m_library->rowOfGame(kHike)).value("steamUpdate").toString(), QStringLiteral("waiting"));
+    QCOMPARE(m_runner->update(kHike), QString());
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("A Short Hike is running; close it first"));
+    QCOMPARE(m_runner->verifyEpic(kHike), QStringLiteral("A Short Hike is running; close it first"));
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, true, false), QStringLiteral("A Short Hike is running; close it first"));
+    QCOMPARE(m_runner->uninstallEpic(kHike, false, true, false), QStringLiteral("A Short Hike is running; close it first"));
+    QCOMPARE(m_runner->forceClose(kHike), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(m_runner->running(), QStringList(), 5000);
+
+    QVERIFY(!QFile::exists(legendaryLog()));
+    QVERIFY(m_runner->legendary()->jobs().isEmpty());
+    QVERIFY(uninstalled.isEmpty());
+    QVERIFY(messages.isEmpty());
+    QCOMPARE(readFile(hikeFolder() + "/vkd3d-proton.cache"), QByteArray("cache"));
+}
+
+void LaunchTest::epicJobsOnAReadOnlyLibrary()
+{
+    writeFile(m_data + "/library/library.toml", "version = 99\n");
+    openWithEpic();
+    QVERIFY(m_library->readOnly());
+    QSignalSpy uninstalled(m_runner.get(), &GameRunner::epicUninstalled);
+    bool trashed = false;
+    m_library->setTrash([&trashed](const QString &, QString *) { return trashed = true; });
+
+    QCOMPARE(m_runner->verifyEpic(kHike), QStringLiteral("The library is read-only; nothing was verified"));
+    QCOMPARE(m_runner->installEpic(kFez, m_dir->filePath(QStringLiteral("home/Games/Epic"))),
+             QStringLiteral("The library is read-only; nothing was installed"));
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, true, false), QStringLiteral("The library is read-only; nothing was deleted"));
+    QCOMPARE(m_runner->uninstallEpic(kHike, false, true, false), QStringLiteral("The library is read-only; nothing was deleted"));
+    QVERIFY(!QFile::exists(legendaryLog()));
+    QVERIFY(uninstalled.isEmpty());
+    QVERIFY(!trashed);
+    QVERIFY(QFile::exists(hikeFolder() + "/vkd3d-proton.cache"));
+    QVERIFY(m_library->epicInstallFolder().isEmpty());
+}
+
+void LaunchTest::epicUpdateAndVerify()
+{
+    openWithEpic();
+    const QByteArray config = " [" + QFile::encodeName(heroicRoot()) + "/legendaryConfig/legendary]";
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
+    QSignalSpy finished(m_runner->legendary(), &LegendaryJobs::finished);
+    QCOMPARE(m_library->gameAt(m_library->rowOfGame(kHike)).value("steamUpdate").toString(), QStringLiteral("waiting"));
+
+    // Failures say which game and why, and the job stays as failed until it's tried again.
+    qputenv("FAKE_LEGENDARY_ERROR", "The disk is full");
+    QCOMPARE(m_runner->update(kHike), QString());
+    QTRY_COMPARE(finished.count(), 1);
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("Couldn't update A Short Hike: The disk is full"));
+    QCOMPARE(m_runner->epicJob(kHike).value("state").toString(), QStringLiteral("failed"));
+    QCOMPARE(m_runner->verifyEpic(kHike), QString());
+    QTRY_COMPARE(finished.count(), 2);
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("Couldn't verify A Short Hike: The disk is full"));
+    QCOMPARE(readFile(legendaryLog()), "update HikeApp -y" + config + "\nrepair HikeApp -y" + config + "\n");
+
+    // A cancel is the user's own: nothing said.
+    qunsetenv("FAKE_LEGENDARY_ERROR");
+    const QString running = hold(QStringLiteral("legendary"));
+    qputenv("FAKE_LEGENDARY_HOLD", QFile::encodeName(running));
+    QCOMPARE(m_runner->update(kHike), QString());
+    QCOMPARE(m_runner->epicJobTitles(), QStringList{QStringLiteral("A Short Hike")});
+    QTRY_VERIFY(readFile(legendaryLog()).count('\n') == 3);
+    m_runner->legendary()->cancel(QStringLiteral("HikeApp"));
+    QTRY_COMPARE(finished.count(), 3);
+    QVERIFY(messages.isEmpty());
+    QVERIFY(m_runner->epicJob(kHike).isEmpty());
+    qunsetenv("FAKE_LEGENDARY_HOLD");
+
+    // Done: an update says nothing (the list shows it); a check says what it found.
+    QCOMPARE(m_runner->update(kHike), QString());
+    QTRY_COMPARE(finished.count(), 4);
+    QVERIFY(messages.isEmpty());
+    QVERIFY(m_runner->epicJob(kHike).isEmpty());
+    QCOMPARE(m_runner->verifyEpic(kHike), QString());
+    QTRY_COMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("A Short Hike: all files are fine"));
+    qputenv("FAKE_LEGENDARY_REPAIRED", "1");
+    QCOMPARE(m_runner->verifyEpic(kHike), QString());
+    QTRY_COMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("A Short Hike: fixed 1 file"));
+    qputenv("FAKE_LEGENDARY_REPAIRED", "3");
+    QCOMPARE(m_runner->verifyEpic(kHike), QString());
+    QTRY_COMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("A Short Hike: fixed 3 files"));
+}
+
+void LaunchTest::epicInstall()
+{
+    openWithEpic();
+    const QString folder = m_dir->filePath(QStringLiteral("home/Games/Epic"));
+    QSignalSpy info(m_runner.get(), &GameRunner::epicInstallInfo);
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
+    QSignalSpy finished(m_runner->legendary(), &LegendaryJobs::finished);
+
+    // The size is asked of Legendary; when it can't say, the dialog is told it's unknown and it asks again next time.
+    qputenv("FAKE_LEGENDARY_ERROR", "Could not find the game");
+    QVariantMap plan = m_runner->epicInstallPlan(kFez);
+    QCOMPARE(plan.value("appName").toString(), QStringLiteral("Fez App"));
+    QCOMPARE(plan.value("sizeState").toString(), QStringLiteral("checking"));
+    QTRY_COMPARE(info.count(), 1);
+    QCOMPARE(info.first().at(0).toString(), QStringLiteral("Fez App"));
+    QCOMPARE(info.first().at(1).toMap().value("sizeState").toString(), QStringLiteral("unknown"));
+    QCOMPARE(info.first().at(1).toMap().value("downloadSize").toDouble(), -1.0);
+    qunsetenv("FAKE_LEGENDARY_ERROR");
+    QCOMPARE(m_runner->epicInstallPlan(kFez).value("sizeState").toString(), QStringLiteral("checking"));
+    QTRY_COMPARE(info.count(), 2);
+    plan = info.last().at(1).toMap();
+    QCOMPARE(plan.value("sizeState").toString(), QStringLiteral("known"));
+    QCOMPARE(plan.value("downloadSize").toDouble(), 1000.0);
+    QCOMPARE(plan.value("diskSize").toDouble(), 3000.0);
+    QCOMPARE(plan.value("platform").toString(), QStringLiteral("Windows"));
+    // Known for the rest of the run: not asked again.
+    QCOMPARE(m_runner->epicInstallPlan(kFez).value("sizeState").toString(), QStringLiteral("known"));
+    QCOMPARE(readFile(legendaryLog()).count("info Fez App --json"), 2);
+
+    // A failed install says why.
+    qputenv("FAKE_LEGENDARY_ERROR", "The disk is full");
+    QCOMPARE(m_runner->installEpic(kFez, folder), QString());
+    QTRY_COMPARE(finished.count(), 1);
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("Couldn't install Fez: The disk is full"));
+    QVERIFY(readFile(legendaryLog())
+                .endsWith("install Fez App --base-path " + QFile::encodeName(folder) + " --platform Windows --skip-sdl -y ["
+                          + QFile::encodeName(heroicRoot()) + "/legendaryConfig/legendary]\n"));
+    // The folder is remembered for the next install.
+    QCOMPARE(m_library->epicInstallFolder(), folder);
+
+    qunsetenv("FAKE_LEGENDARY_ERROR");
+    QCOMPARE(m_runner->installEpic(kFez, folder), QString());
+    QTRY_COMPARE(finished.count(), 2);
+    QCOMPARE(messages.size(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), QStringLiteral("Fez installed"));
+}
+
+void LaunchTest::epicUninstall()
+{
+    openWithEpic();
+    QStringList trashed;
+    m_library->setTrash([&trashed](const QString &path, QString *) {
+        trashed.append(path);
+        return true;
+    });
+    QSignalSpy uninstalled(m_runner.get(), &GameRunner::epicUninstalled);
+    const QString leftover = hikeFolder() + "/vkd3d-proton.cache";
+
+    // Legendary fails: the error, and the folder stays.
+    qputenv("FAKE_LEGENDARY_ERROR", "Permission denied");
+    const QString running = hold(QStringLiteral("legendary"));
+    qputenv("FAKE_LEGENDARY_HOLD", QFile::encodeName(running));
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, false, false), QString());
+    // One at a time, and quitting is asked about.
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, false, false), QStringLiteral("A Short Hike is being uninstalled"));
+    QCOMPARE(m_runner->epicUninstallTitles(), QStringList{QStringLiteral("A Short Hike")});
+    QVERIFY(m_runner->epicJobTitles().isEmpty()); // not a job the list shows
+    QFile::remove(running);
+    QTRY_COMPARE(uninstalled.count(), 1);
+    QCOMPARE(uninstalled.first().at(0).toString(), kHike);
+    QCOMPARE(uninstalled.first().at(1).toMap(),
+             (QVariantMap{{"error", QStringLiteral("Legendary could not uninstall it: Permission denied")}}));
+    QVERIFY(trashed.isEmpty());
+    QVERIFY(QFile::exists(leftover));
+    QVERIFY(m_runner->epicUninstallTitles().isEmpty());
+
+    // Legendary that doesn't start: why, alone.
+    qunsetenv("FAKE_LEGENDARY_ERROR");
+    m_runner->setLegendaryProgram(m_dir->filePath(QStringLiteral("nowhere/legendary")));
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, false, false), QString());
+    QTRY_COMPARE(uninstalled.count(), 2);
+    const QString error = uninstalled.last().at(1).toMap().value("error").toString();
+    QVERIFY2(error.startsWith(QStringLiteral("Could not start")), qPrintable(error));
+    QVERIFY(trashed.isEmpty());
+
+    // Done: what Legendary leaves in the folder (a shader cache it didn't install) goes too.
+    m_runner->setLegendaryProgram(fakeDir() + "/legendary");
+    QCOMPARE(m_runner->uninstallEpic(kHike, true, false, false), QString());
+    QTRY_COMPARE(uninstalled.count(), 3);
+    QCOMPARE(uninstalled.last().at(1).toMap(), QVariantMap());
+    QCOMPARE(trashed, QStringList{hikeFolder()});
+    QVERIFY(readFile(legendaryLog()).endsWith("uninstall HikeApp -y [" + QFile::encodeName(heroicRoot())
+                                              + "/legendaryConfig/legendary]\n"));
+
+    // Files kept: Legendary isn't asked, and a prefix it doesn't have is said so.
+    const qsizetype calls = readFile(legendaryLog()).count('\n');
+    QCOMPARE(m_runner->uninstallEpic(kHike, false, true, false), QString());
+    QCOMPARE(uninstalled.count(), 4);
+    QEXPECT_FAIL("", "New, not a finding of the review: removeEpicPrefix takes the title from the game files, "
+                     "which an Epic game has none of, so the message starts with a blank", Continue);
+    QCOMPARE(uninstalled.last().at(1).toMap(),
+             (QVariantMap{{"error", QStringLiteral("A Short Hike has no Wine prefix of its own")}}));
+    QCOMPARE(readFile(legendaryLog()).count('\n'), calls);
+    QCOMPARE(trashed.size(), 1);
+}
+
+void LaunchTest::closeHeroicAndApplyRefused()
+{
+    openWithEpic(false);
+    QSignalSpy closing(m_runner.get(), &GameRunner::closingHeroicChanged);
+    QProcess heroic;
+    const QString heroicHold = hold(QStringLiteral("heroic-main"));
+    startHeld(heroic, heroicHold);
+    listProcess(heroic.processId(), {"/opt/Heroic/heroic", "--no-sandbox"});
+
+    // A game it runs for us.
+    qputenv("FAKE_HEROIC_HOLD", QFile::encodeName(hold(QStringLiteral("heroic"))));
+    QCOMPARE(m_runner->launch(kHike), QString());
+    QCOMPARE(m_runner->closeHeroicAndApply(), QStringLiteral("A Short Hike is running; close it first"));
+    QCOMPARE(m_runner->forceClose(kHike), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(m_runner->running(), QStringList(), 5000);
+
+    // A game started from Heroic itself, which the launcher only sees in the process list.
+    listProcess(4'000'000'000, {"C:\\Hike\\Hike.exe", "-epicapp=HikeApp"});
+    QCOMPARE(m_runner->closeHeroicAndApply(), QStringLiteral("A Short Hike is running; close it first"));
+
+    QVERIFY(!m_runner->closingHeroic());
+    QCOMPARE(closing.count(), 0);
+    QTest::qWait(100);
+    QCOMPARE(heroic.state(), QProcess::Running);
+    QVERIFY(!QFile::exists(heroicHold + ".term"));
+    QFile::remove(heroicHold);
+    QVERIFY(heroic.waitForFinished(5000));
+}
+
+void LaunchTest::closeHeroicAndApply()
+{
+    openWithEpic();
+    const QString config = HeroicGameConfig::path(heroicRoot(), QStringLiteral("HikeApp"));
+    QProcess heroic;
+    const QString heroicHold = hold(QStringLiteral("heroic-main"));
+    m_library->setHeroicRunningCheck([&heroic] { return heroic.state() != QProcess::NotRunning; });
+    HeroicGameEdits edits;
+    edits.launcherArgs = QStringLiteral("-windowed");
+
+    // Heroic isn't running: an edit is written at once, and there's nothing to close.
+    QCOMPARE(m_library->queueHeroicEdits(QStringLiteral("HikeApp"), edits), QString());
+    QVERIFY(readFile(config).contains("\"launcherArgs\": \"-windowed\""));
+    QCOMPARE(m_runner->closeHeroicAndApply(), QString());
+    QVERIFY(!m_runner->closingHeroic());
+
+    // Heroic runs: its main process gets SIGTERM, its helpers don't, and the edit waits for it to go.
+    startHeld(heroic, heroicHold);
+    QProcess helper;
+    const QString helperHold = hold(QStringLiteral("heroic-helper"));
+    startHeld(helper, helperHold);
+    listProcess(heroic.processId(), {"/opt/Heroic/heroic", "--no-sandbox"});
+    listProcess(helper.processId(), {"/opt/Heroic/heroic", "--type=renderer"});
+    edits.launcherArgs = QStringLiteral("-fullscreen");
+    QCOMPARE(m_library->queueHeroicEdits(QStringLiteral("HikeApp"), edits), QString());
+    QVERIFY(!readFile(config).contains("-fullscreen"));
+
+    QSignalSpy closing(m_runner.get(), &GameRunner::closingHeroicChanged);
+    QCOMPARE(m_runner->closeHeroicAndApply(), QString());
+    QVERIFY(m_runner->closingHeroic());
+    QCOMPARE(closing.count(), 1);
+    QCOMPARE(m_runner->closeHeroicAndApply(), QString()); // already closing: not sent again
+    QVERIFY(heroic.waitForFinished(5000));
+    QCOMPARE(readFile(heroicHold + ".term"), QByteArray("term\n"));
+    QTRY_VERIFY_WITH_TIMEOUT(!m_runner->closingHeroic(), 5000);
+    QCOMPARE(closing.count(), 2);
+    QVERIFY(readFile(config).contains("\"launcherArgs\": \"-fullscreen\""));
+    QCOMPARE(helper.state(), QProcess::Running);
+    QVERIFY(!QFile::exists(helperHold + ".term"));
+    QFile::remove(helperHold);
+    QVERIFY(helper.waitForFinished(5000));
+}
+
+void LaunchTest::heroicDoesNotClose()
+{
+    openWithEpic();
+    const QString config = HeroicGameConfig::path(heroicRoot(), QStringLiteral("HikeApp"));
+    QProcess heroic;
+    const QString heroicHold = hold(QStringLiteral("heroic-main"));
+    startHeld(heroic, heroicHold, true);
+    listProcess(heroic.processId(), {"/opt/Heroic/heroic"});
+    m_library->setHeroicRunningCheck([&heroic] { return heroic.state() != QProcess::NotRunning; });
+    HeroicGameEdits edits;
+    edits.launcherArgs = QStringLiteral("-windowed");
+    QCOMPARE(m_library->queueHeroicEdits(QStringLiteral("HikeApp"), edits), QString());
+
+    m_runner->setHeroicCloseTimeout(300);
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
+    QCOMPARE(m_runner->closeHeroicAndApply(), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(messages.count(), 1, 5000);
+    QCOMPARE(messages.first().first().toString(), QStringLiteral("Heroic didn't close within 15 seconds; nothing was applied"));
+    QVERIFY(!m_runner->closingHeroic());
+    QCOMPARE(heroic.state(), QProcess::Running);
+    QVERIFY(!readFile(config).contains("-windowed"));
+    QFile::remove(heroicHold);
+    QVERIFY(heroic.waitForFinished(5000));
+}
+
+void LaunchTest::steamForceClose()
+{
+    openLibrary();
+    m_runner->setSteamGoneTimeout(60'000);
+    const QString hades = QStringLiteral("steam-1145360");
+    QSignalSpy started(m_runner.get(), &GameRunner::sessionStarted);
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+
+    // Not started yet: closing only stops waiting for it.
+    QCOMPARE(m_runner->launch(hades), QString());
+    QCOMPARE(m_runner->running(), QStringList{hades});
+    QCOMPARE(m_runner->forceClose(hades), QString());
+    QVERIFY(m_runner->running().isEmpty());
+    QCOMPARE(ended.count(), 0);
+
+    // Running: the game and what it started are killed.
+    QProcess game;
+    const QString child = m_dir->filePath(QStringLiteral("game-child.pid"));
+    game.start(QStringLiteral("sh"), {QStringLiteral("-c"), QStringLiteral("sleep 30 & echo $! > \"$0\"; wait"), child});
+    QVERIFY(game.waitForStarted());
+    QTRY_VERIFY(!readFile(child).trimmed().isEmpty());
+    const qint64 childPid = readFile(child).trimmed().toLongLong();
+    const qint64 gamePid = game.processId();
+    listProcess(gamePid, {"reaper", "SteamLaunch", "AppId=1145360", "--", "Hades.exe"});
+    QCOMPARE(m_runner->launch(hades), QString());
+    QTRY_COMPARE_WITH_TIMEOUT(started.count(), 1, 5000);
+    QCOMPARE(m_runner->forceClose(hades), QString());
+    QVERIFY(game.waitForFinished(5000));
+    QCOMPARE(game.exitStatus(), QProcess::CrashExit);
+    QTRY_VERIFY(!alive(childPid));
+
+    // Gone and not back: closing again ends the session without waiting longer.
+    QVERIFY(QDir(procDir() + QStringLiteral("/%1").arg(gamePid)).removeRecursively());
+    QCOMPARE(ended.count(), 0);
+    QCOMPARE(m_runner->forceClose(hades), QString());
+    QCOMPARE(ended.count(), 1);
+    QVERIFY(m_runner->running().isEmpty());
+}
+
+void LaunchTest::killTreeEndsOnlyItsTree()
+{
+    // Each tree: a root, its child, and the child's child, each writing its pid.
+    const QString script = m_dir->filePath(QStringLiteral("tree.sh"));
+    writeFile(script,
+              "#!/bin/sh\n"
+              "sh -c 'echo $$ > \"$0.child\"; sleep 30 & echo $! > \"$0.grandchild\"; wait' \"$1\" &\n"
+              "wait\n",
+              true);
+    const auto start = [&](QProcess &root, const QString &name) {
+        root.start(script, {m_dir->filePath(name)});
+        QVERIFY(root.waitForStarted());
+        QTRY_VERIFY(!readFile(m_dir->filePath(name + ".grandchild")).trimmed().isEmpty());
+    };
+    const auto pids = [&](QProcess &root, const QString &name) {
+        return QList<qint64>{root.processId(), readFile(m_dir->filePath(name + ".child")).trimmed().toLongLong(),
+                             readFile(m_dir->filePath(name + ".grandchild")).trimmed().toLongLong()};
+    };
+    QProcess tree;
+    QProcess bystander;
+    start(tree, QStringLiteral("tree"));
+    start(bystander, QStringLiteral("bystander"));
+    const QList<qint64> doomed = pids(tree, QStringLiteral("tree"));
+    const QList<qint64> spared = pids(bystander, QStringLiteral("bystander"));
+    for (const qint64 pid : doomed + spared)
+        QVERIFY(alive(pid));
+
+    DetachedProcess::killTree(tree.processId());
+    QVERIFY(tree.waitForFinished(5000));
+    QCOMPARE(tree.exitStatus(), QProcess::CrashExit);
+    for (const qint64 pid : doomed)
+        QTRY_VERIFY(!alive(pid));
+    for (const qint64 pid : spared)
+        QVERIFY(alive(pid));
+
+    DetachedProcess::killTree(bystander.processId());
+    QVERIFY(bystander.waitForFinished(5000));
+    for (const qint64 pid : spared)
+        QTRY_VERIFY(!alive(pid));
+}
+
+void LaunchTest::flatpakModManager()
+{
+    // `flatpak` is the fake on a PATH with nothing else on it.
+    const QString bin = m_dir->filePath(QStringLiteral("bin"));
+    const QByteArray out = QFile::encodeName(fakeDir());
+    writeFile(bin + "/flatpak",
+              "#!/bin/sh\nprintf '%s\\n' \"$@\" > '" + out + "/flatpak.txt'\npwd > '" + out + "/flatpak-cwd.txt'\n", true);
+    writeFile(fakeDir() + "/wrap.sh", "#!/bin/sh\nprintf '%s\\n' \"$@\" > '" + out + "/wrapper.txt'\nexec \"$@\"\n", true);
+    writeFile(m_data + "/library/mod-managers/flat.toml",
+              "name = \"Flat\"\nexe = \"com.example.ModTool\"\nlaunch_options = \"--portable\"\n");
+    writeFile(m_data + "/library/mod-managers/wrapped.toml",
+              "name = \"Wrapped\"\nexe = \"com.example.ModTool\"\nlaunch_options = '\"" + out
+                  + "/wrap.sh\" %command% --verbose'\n");
+    QVERIFY(QDir().mkpath(m_dir->filePath(QStringLiteral("home"))));
+    EnvSwap env;
+    env.set("PATH", QFile::encodeName(bin));
+    openLibrary("[launch]\nmin_session_seconds = 0\n");
+    QSignalSpy ended(m_runner.get(), &GameRunner::sessionEnded);
+
+    // Run as `flatpak run <app id>` with its options, from the home folder.
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("flat")), QString());
+    QCOMPARE(m_runner->runningManagers(), QStringList{QStringLiteral("flat")});
+    QVERIFY(ended.wait(10000));
+    QCOMPARE(readFile(fakeDir() + "/flatpak.txt"), QByteArray("run\ncom.example.ModTool\n--portable\n"));
+    QCOMPARE(readFile(fakeDir() + "/flatpak-cwd.txt").trimmed(), QFile::encodeName(m_dir->filePath(QStringLiteral("home"))));
+
+    // A wrapper goes first, and runs flatpak with the rest.
+    QCOMPARE(m_runner->launchModManager(QStringLiteral("wrapped")), QString());
+    QVERIFY(ended.wait(10000));
+    QCOMPARE(readFile(fakeDir() + "/wrapper.txt"), QByteArray("flatpak\nrun\ncom.example.ModTool\n--verbose\n"));
+    QCOMPARE(readFile(fakeDir() + "/flatpak.txt"), QByteArray("run\ncom.example.ModTool\n--verbose\n"));
+}
+
+void LaunchTest::openFiles()
+{
+    // xdg-open, xdg-mime and a terminal are fakes on a PATH with nothing else on it, and the desktop
+    // entries are the test's own.
+    const QString bin = m_dir->filePath(QStringLiteral("bin"));
+    const QString share = m_dir->filePath(QStringLiteral("share"));
+    const QByteArray out = QFile::encodeName(fakeDir());
+    const QString opened = fakeDir() + "/opened.txt";
+    writeFile(bin + "/xdg-open", "#!/bin/sh\necho \"$1\" >> '" + out + "/opened.txt'\n", true);
+    writeFile(bin + "/xdg-mime",
+              "#!/bin/sh\necho \"$3\" >> '" + out + "/mime.txt'\n"
+              "if [ \"$1 $2\" = 'query default' ] && [ -n \"$FAKE_MIME_DEFAULT\" ]; then echo \"$FAKE_MIME_DEFAULT\"; fi\n",
+              true);
+    writeFile(bin + "/xdg-terminal-exec", "#!/bin/sh\nprintf '%s\\n' \"$@\" > '" + out + "/terminal.txt'\n", true);
+    writeFile(share + "/applications/lattis-test-vim.desktop",
+              "[Desktop Entry]\nType=Application\nName=Vim\nExec=vim --remote-tab %F\nTerminal=true\n"
+              "[Desktop Action new]\nExec=vim --new\n");
+    writeFile(share + "/applications/lattis-test-gedit.desktop",
+              "[Desktop Entry]\nType=Application\nName=Gedit\nExec=gedit %U\nTerminal=false\n");
+    const QString home = m_dir->filePath(QStringLiteral("home"));
+    QVERIFY(QDir().mkpath(home + "/Saves"));
+    EnvSwap env;
+    env.set("PATH", QFile::encodeName(bin));
+    env.set("HOME", QFile::encodeName(home));
+    env.set("XDG_DATA_HOME", QFile::encodeName(share));
+    env.set("XDG_DATA_DIRS", QFile::encodeName(m_dir->filePath(QStringLiteral("no-share"))));
+    env.unset("TERMINAL");
+    env.unset("FAKE_MIME_DEFAULT");
+    openLibrary();
+    const QString settings = m_data + "/library/games/linux-supertuxkart.toml";
+    const auto lastOpened = [&] { return readFile(opened).trimmed().split('\n').last(); };
+
+    // A problem's file, when the message names one that is there.
+    QCOMPARE(m_runner->problemFile(QStringLiteral("library/games/linux-supertuxkart.toml:3: expected a value")), settings);
+    QCOMPARE(m_runner->problemFile(QStringLiteral("library/games/gone.toml:3: expected a value")), QString());
+    QCOMPARE(m_runner->problemFile(QStringLiteral("Steam isn't found")), QString());
+
+    // A text file with an editor that runs in a terminal: in a terminal, not through xdg-open.
+    env.set("FAKE_MIME_DEFAULT", "lattis-test-vim.desktop");
+    QCOMPARE(m_runner->openFile(settings), QString());
+    QTRY_COMPARE(readFile(fakeDir() + "/terminal.txt"), "vim\n--remote-tab\n" + QFile::encodeName(settings) + "\n");
+    QVERIFY(!QFile::exists(opened));
+    // One that doesn't, or none at all: xdg-open.
+    env.set("FAKE_MIME_DEFAULT", "lattis-test-gedit.desktop");
+    QCOMPARE(m_runner->openFile(settings), QString());
+    QTRY_COMPARE(lastOpened(), QUrl::fromLocalFile(settings).toEncoded());
+    env.unset("FAKE_MIME_DEFAULT");
+    QCOMPARE(m_runner->openFile(m_data + "/settings.toml"), QString());
+    QTRY_COMPARE(lastOpened(), QUrl::fromLocalFile(m_data + "/settings.toml").toEncoded());
+    // With no default for the file's own type, text/plain's was asked for too.
+    QVERIFY2(readFile(fakeDir() + "/mime.txt").contains("text/plain\n"), readFile(fakeDir() + "/mime.txt").constData());
+
+    // Folders and links.
+    QCOMPARE(m_runner->openDataFolder(), QString());
+    QTRY_COMPARE(lastOpened(), QUrl::fromLocalFile(m_data).toEncoded());
+    QCOMPARE(m_runner->openPath(QStringLiteral("~/Saves")), QString());
+    QTRY_COMPARE(lastOpened(), QUrl::fromLocalFile(home + "/Saves").toEncoded());
+    QCOMPARE(m_runner->openPath(QStringLiteral("~/Later")), QStringLiteral("~/Later doesn't exist yet"));
+    QVERIFY(m_runner->openUrl(QUrl(QStringLiteral("https://example.org/a b"))));
+    QTRY_COMPARE(lastOpened(), QByteArray("https://example.org/a%20b"));
+    const qsizetype count = readFile(opened).count('\n');
+
+    // No xdg-open: each says what it couldn't open.
+    QVERIFY(QFile::remove(bin + "/xdg-open"));
+    QCOMPARE(m_runner->openDataFolder(), "Could not open " + m_data);
+    QCOMPARE(m_runner->openPath(QStringLiteral("~/Saves")), QStringLiteral("Could not open ~/Saves"));
+    QVERIFY(!m_runner->openUrl(QUrl(QStringLiteral("https://example.org"))));
+    QCOMPARE(m_runner->openFile(settings), settings);
+    QCOMPARE(readFile(opened).count('\n'), count);
+}
+
+void LaunchTest::openSaveFolderAfterTheSearch()
+{
+    const QString bin = m_dir->filePath(QStringLiteral("bin"));
+    const QString opened = fakeDir() + "/opened.txt";
+    writeFile(bin + "/xdg-open", "#!/bin/sh\necho \"$1\" >> '" + QFile::encodeName(opened) + "'\n", true);
+    const QString saves = m_dir->filePath(QStringLiteral("home/.local/share/supertuxkart"));
+    writeFile(saves + "/config.xml", "<config/>");
+    EnvSwap env;
+    env.set("PATH", QFile::encodeName(bin));
+    openLibrary();
+    QStringList found;
+    QStringList asked;
+    m_runner->setFindSaves([&](const QString &gameId, std::function<void(const QStringList &)> done) {
+        asked.append(gameId);
+        QTimer::singleShot(0, m_runner.get(), [&found, done] { done(found); });
+    });
+    QSignalSpy messages(m_runner.get(), &GameRunner::message);
+
+    // Found: the folder of the first save that is there opens, a moment later.
+    found = {m_dir->filePath(QStringLiteral("home/gone/save.dat")), saves + "/config.xml"};
+    QCOMPARE(m_runner->openSaveFolder(kLinuxGame), QString());
+    QCOMPARE(asked, QStringList{kLinuxGame});
+    QTRY_COMPARE(readFile(opened).trimmed(), QUrl::fromLocalFile(saves).toEncoded());
+    QVERIFY(messages.isEmpty());
+
+    // Nothing found, and a Linux game has no folder to guess: said so.
+    found.clear();
+    QCOMPARE(m_runner->openSaveFolder(kLinuxGame), QString());
+    QTRY_COMPARE(messages.count(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(),
+             QStringLiteral("SuperTuxKart's save folder isn't found; add its save location in its properties"));
+
+    // Found, but nothing opens it.
+    QVERIFY(QFile::remove(bin + "/xdg-open"));
+    found = {saves + "/config.xml"};
+    QCOMPARE(m_runner->openSaveFolder(kLinuxGame), QString());
+    QTRY_COMPARE(messages.count(), 1);
+    QCOMPARE(messages.takeFirst().first().toString(), "Could not open " + saves);
+    QCOMPARE(readFile(opened).count('\n'), 1);
 }
 
 QTEST_GUILESS_MAIN(LaunchTest)

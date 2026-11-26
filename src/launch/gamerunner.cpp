@@ -540,10 +540,10 @@ QString GameRunner::closeHeroicAndApply()
     // Games started from Heroic itself have no session here.
     for (const HeroicEntry &entry : m_library->store().snapshot().content.heroic) {
         const Game *game = m_library->game(entry.id);
-        if (game && game->installed && HeroicLocate::gamePid(entry.appName) > 0)
+        if (game && game->installed && HeroicLocate::gamePid(entry.appName, m_procDir) > 0)
             return tr("%1 is running; close it first").arg(game->title);
     }
-    const QList<qint64> pids = HeroicLocate::mainPids();
+    const QList<qint64> pids = HeroicLocate::mainPids(m_procDir);
     if (pids.isEmpty()) {
         m_library->applyHeroicPending();
         return {};
@@ -609,7 +609,7 @@ void GameRunner::pollSteamGames()
         SteamSession &session = m_steamSessions[id];
         if (session.watch)
             continue;
-        const qint64 pid = SteamLocate::gamePid(session.steam.reaperId);
+        const qint64 pid = SteamLocate::gamePid(session.steam.reaperId, m_procDir);
         auto *watch = pid > 0 ? new SteamExitWatch(this) : nullptr;
         if (watch && watch->watch(pid)) {
             qCInfo(lcLaunch).noquote() << QStringLiteral("%1 is running through Steam (pid %2)").arg(id).arg(pid);
@@ -622,7 +622,7 @@ void GameRunner::pollSteamGames()
         }
         delete watch; // it exited before the pidfd was opened
         if (session.gone.isValid()) {
-            if (session.gone.elapsed() > kSteamGoneSeconds * 1000)
+            if (session.gone.elapsed() > m_steamGoneMs)
                 endSteamSession(id);
             else
                 waiting = true;
@@ -715,7 +715,7 @@ QString GameRunner::openHeroic()
 
 QString GameRunner::legendaryProgram() const
 {
-    return m_legendary.isEmpty() ? HeroicLocate::findLegendary(HeroicLocations::system()) : m_legendary;
+    return m_legendary ? *m_legendary : HeroicLocate::findLegendary(HeroicLocations::system());
 }
 
 bool GameRunner::legendaryFound() const
@@ -951,7 +951,7 @@ GameRunner::GameRunner(Library *library, const QString &dataDir, const QString &
             m_heroicCloseTimer.stop();
             emit closingHeroicChanged();
             m_library->applyHeroicPending();
-        } else if (m_heroicCloseSince.hasExpired(kHeroicCloseSeconds * 1000)) {
+        } else if (m_heroicCloseSince.hasExpired(m_heroicCloseMs)) {
             m_heroicCloseTimer.stop();
             emit closingHeroicChanged();
             emit message(tr("Heroic didn't close within %1 seconds; nothing was applied").arg(kHeroicCloseSeconds));
@@ -1150,7 +1150,7 @@ QString GameRunner::forceClose(const QString &gameId)
     }
     if (const auto session = m_heroicSessions.find(gameId); session != m_heroicSessions.end()) {
         // Heroic ends the session itself once it writes the game's finish time.
-        if (const qint64 pid = HeroicLocate::gamePid(session->appName); pid > 0) {
+        if (const qint64 pid = HeroicLocate::gamePid(session->appName, m_procDir); pid > 0) {
             qCInfo(lcLaunch).noquote() << QStringLiteral("force closing %1 (pid %2)").arg(gameId).arg(pid);
             DetachedProcess::killTree(pid);
             return {};
@@ -1168,7 +1168,7 @@ QString GameRunner::forceClose(const QString &gameId)
         return {};
     }
     if (const auto session = m_steamSessions.constFind(gameId); session != m_steamSessions.constEnd()) {
-        const qint64 pid = SteamLocate::gamePid(session->steam.reaperId);
+        const qint64 pid = SteamLocate::gamePid(session->steam.reaperId, m_procDir);
         // Steam may never start it (borrowed by a family member, an update, a dialog), so
         // closing a game that hasn't appeared stops waiting for it instead.
         if (pid <= 0) {

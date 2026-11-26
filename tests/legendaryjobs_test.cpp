@@ -1,5 +1,6 @@
 #include "appimageenv.h"
 #include "legendaryjobs.h"
+#include "testfiles.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -46,6 +47,10 @@ const QByteArray kFake = R"(#!/bin/sh
 echo "$* [$LEGENDARY_CONFIG_PATH]" >> "$(dirname "$0")/calls.txt"
 if [ "$1" = info ]; then
     echo "[Core] INFO: Trying to re-use existing login session..." >&2
+    if [ "$2" = Hang ]; then
+        echo $$ > "$(dirname "$0")/info.pid"
+        exec sleep 30
+    fi
     if [ "$2" = Bad ]; then
         echo "[cli] ERROR: Could not find the game" >&2
         exit 1
@@ -126,6 +131,8 @@ private slots:
     void failureKeepsTheJobAndTheLine();
     void infoAnswersWithItsStdout();
     void infoFailureGivesTheLine();
+    void infoThatCannotStart();
+    void infoThatHangsIsStopped();
     void noLegendary();
     void aGameHasOneJob();
     void uninstallAndCheckAreHidden();
@@ -522,6 +529,49 @@ void LegendaryJobsTest::infoFailureGivesTheLine()
     m_jobs->queryInfo(u"App"_s);
     QVERIFY(waitFor([&] { return none.count() == 1; }));
     QVERIFY(!none.first().at(2).toString().isEmpty());
+}
+
+void LegendaryJobsTest::infoThatCannotStart()
+{
+    const QString plain = m_dir.filePath(u"plain"_s);
+    QFile f(plain);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("#!/bin/sh\n");
+    f.close();
+    for (const QString &program : {m_dir.filePath(u"nowhere/legendary"_s), plain}) {
+        m_jobs = std::make_unique<LegendaryJobs>([program] { return LegendaryJobs::Tool{program, {}}; });
+        QSignalSpy ready(m_jobs.get(), &LegendaryJobs::infoReady);
+        m_jobs->queryInfo(u"App"_s);
+        QVERIFY(waitFor([&] { return ready.count() == 1; }));
+        QCOMPARE(ready.first().at(0).toString(), u"App"_s);
+        QVERIFY(ready.first().at(1).toByteArray().isEmpty());
+        QVERIFY2(ready.first().at(2).toString().startsWith(u"Could not start Legendary: "_s),
+                 qPrintable(ready.first().at(2).toString()));
+        // Not left marked as being asked: the next ask runs again.
+        m_jobs->queryInfo(u"App"_s);
+        QVERIFY(waitFor([&] { return ready.count() == 2; }));
+        QVERIFY(m_jobs->jobs().isEmpty());
+    }
+}
+
+void LegendaryJobsTest::infoThatHangsIsStopped()
+{
+    LegendaryJobs *jobs = make();
+    jobs->setInfoTimeoutMs(300);
+    QSignalSpy ready(jobs, &LegendaryJobs::infoReady);
+    jobs->queryInfo(u"Hang"_s);
+    QVERIFY(waitFor([&] { return QFile::exists(m_dir.filePath(u"info.pid"_s)); }));
+    const qint64 pid = readFile(m_dir.filePath(u"info.pid"_s)).trimmed().toLongLong();
+    QVERIFY(pid > 0);
+    QVERIFY(waitFor([&] { return ready.count() == 1; }, 5000));
+    QVERIFY(ready.first().at(1).toByteArray().isEmpty());
+    QCOMPARE(ready.first().at(2).toString(), u"Legendary stopped unexpectedly"_s);
+    QVERIFY(waitFor([&] { return processGone(pid); }, 2000));
+
+    // Asked again, it runs again.
+    QFile::remove(m_dir.filePath(u"info.pid"_s));
+    jobs->queryInfo(u"Hang"_s);
+    QVERIFY(waitFor([&] { return ready.count() == 2; }, 5000));
 }
 
 void LegendaryJobsTest::noLegendary()

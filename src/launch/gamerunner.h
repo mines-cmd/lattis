@@ -18,6 +18,7 @@
 #include <QtQml/qqmlregistration.h>
 
 #include <functional>
+#include <optional>
 
 class DetachedProcess;
 struct LaunchCommand;
@@ -116,6 +117,7 @@ public:
     // comes as `message`. epicJob is the game's job (appName, kind, percent, state, error), empty when it has none.
     Q_INVOKABLE QString verifyEpic(const QString &gameId);
     Q_INVOKABLE QVariantMap epicJob(const QString &gameId) const;
+    // Replaces the Legendary found in Heroic's install; an empty one means none is found.
     void setLegendaryProgram(const QString &program) { m_legendary = program; }
     LegendaryJobs *legendary() { return &m_legendaryJobs; }
     bool closingSteam() const { return m_steamClosing != nullptr; }
@@ -159,6 +161,10 @@ public:
     static constexpr int kSteamCloseSeconds = 30;
     static constexpr int kHeroicCloseSeconds = 15;
     void setSteamCloseTimeout(int ms) { m_steamCloseTimer.setInterval(ms); }
+    void setSteamGoneTimeout(int ms) { m_steamGoneMs = ms; }
+    void setHeroicCloseTimeout(int ms) { m_heroicCloseMs = ms; }
+    // Where Steam's and Heroic's games and Heroic itself are looked for (`/proc`).
+    void setProcDir(const QString &dir) { m_procDir = dir; }
     void setSessionPollInterval(int ms) { m_sessionPollMs = ms; }
 
 signals:
@@ -261,7 +267,7 @@ private:
     QTimer m_steamCloseTimer;
     QString m_launchAfterClose;
     HeroicProgram m_heroicProgram;
-    QString m_legendary;
+    std::optional<QString> m_legendary;
     struct EpicUninstall
     {
         QString appName;
@@ -289,4 +295,7 @@ private:
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;
     int m_sessionPollMs = 2000;
+    int m_steamGoneMs = kSteamGoneSeconds * 1000;
+    int m_heroicCloseMs = kHeroicCloseSeconds * 1000;
+    QString m_procDir = QStringLiteral("/proc");
 };
