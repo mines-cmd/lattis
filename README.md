@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logo/lattis-ember-horizontal.png">
-  <img src="resources/logo/lattis-ember-horizontal-light.png" alt="Lattis" height="200">
+  <source media="(prefers-color-scheme: dark)" srcset="resources/logo/dog/lattis-dog-horizontal.png">
+  <img src="resources/logo/dog/lattis-dog-horizontal-light.png" alt="Lattis" height="200">
 </picture>
 
 <br>

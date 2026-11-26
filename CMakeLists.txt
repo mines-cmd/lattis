@@ -542,8 +542,8 @@ qt_add_qml_module(lattis
         ${COVER_IMAGES}
         resources/fonts/InterVariable.ttf
         resources/setup/welcome.webp
-        resources/logo/lattis-ember-horizontal.png
-        resources/logo/lattis-ember-horizontal-light.png
+        resources/logo/dog/lattis-dog-horizontal.png
+        resources/logo/dog/lattis-dog-horizontal-light.png
         ${LIBRARY_RESOURCES}
 )
 

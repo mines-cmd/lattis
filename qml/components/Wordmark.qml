@@ -16,12 +16,12 @@ Item {
         return 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b < 0.5
     }
 
-    // Where the art sits in the PNG (tools/logo/export.js), as fractions of its height: the
-    // margin (the icon's left edge; the same above and below), the wordmark's right edge from
-    // the right, and its baseline.
+    // Where the art sits in the PNG (its viewBox in resources/logo/dog/lattis-dog-horizontal.svg),
+    // as fractions of its height: the margin (the icon's left edge; the same above and below),
+    // the wordmark's right edge from the right, and its baseline.
     readonly property real artLeft: 44 / 422
     readonly property real artRight: 32 / 422
-    readonly property real artBaseline: 307 / 422
+    readonly property real artBaseline: 334.9 / 422
     readonly property real textBaseline: logoHeight * (artBaseline - artLeft)
 
     implicitWidth: logo.width - logoHeight * (artLeft + artRight)
@@ -33,8 +33,8 @@ Item {
         y: -root.logoHeight * root.artLeft
         height: root.logoHeight
         width: root.logoHeight * implicitWidth / Math.max(1, implicitHeight)
-        source: root.lightText ? "qrc:/qt/qml/Launcher/resources/logo/lattis-ember-horizontal.png"
-                               : "qrc:/qt/qml/Launcher/resources/logo/lattis-ember-horizontal-light.png"
+        source: root.lightText ? "qrc:/qt/qml/Launcher/resources/logo/dog/lattis-dog-horizontal.png"
+                               : "qrc:/qt/qml/Launcher/resources/logo/dog/lattis-dog-horizontal-light.png"
         sourceSize.height: Math.ceil(root.logoHeight * root.pixelScale)
         fillMode: Image.PreserveAspectFit
         smooth: true
