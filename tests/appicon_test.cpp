@@ -294,6 +294,22 @@ void AppIconTest::userCopyFollowsTheChoice()
     job.colors = AppIcon::ember();
     AppIconSync::run(job);
     QCOMPARE(readText(copy), QByteArray("[Desktop Entry]\nName=Lattis\nExec=/home/me/.local/bin/lattis\nIcon=lattis\n"));
+
+    // The entry Lattis's own install rule wrote there: its Icon follows, and Ember puts the installed one back.
+    const QByteArray installedHere = "[Desktop Entry]\nName=Lattis\nExec=/home/me/.local/bin/lattis\n"
+                                     "Icon=/home/me/.local/share/icons/hicolor/256x256/apps/lattis.png\n"
+                                     "StartupWMClass=lattis\n";
+    writeText(copy, installedHere);
+    job.colors = other();
+    const AppIconSync::Result switched = AppIconSync::run(job);
+    QVERIFY2(switched.error.isEmpty(), qPrintable(switched.error));
+    QVERIFY(readText(copy).contains("\nIcon=" + switched.icon.toUtf8() + '\n'));
+    QVERIFY(readText(copy).contains("\nExec=/home/me/.local/bin/lattis\n"));
+    QVERIFY(DesktopEntry::isInstalledEntry(copy));
+    QVERIFY(!DesktopEntry::isUserCopy(copy));
+    job.colors = AppIcon::ember();
+    QVERIFY(AppIconSync::run(job).error.isEmpty());
+    QCOMPARE(readText(copy), installedHere);
 }
 
 void AppIconTest::deletedThemeFallsBack()

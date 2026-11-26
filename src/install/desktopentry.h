@@ -35,4 +35,9 @@ bool isUserCopy(const QString &path);
 QString systemEntry(const QStringList &dataDirs);
 bool ensureUserCopy(const QString &systemEntry, const QString &dataDir, const QString &icon, QString *error);
 void removeUserCopy(const QString &dataDir);
+
+// The entry `cmake --install --prefix ~/.local` puts where the user copy would go. Its Icon is switched in place,
+// and an empty `icon` puts the installed one back.
+bool isInstalledEntry(const QString &path);
+bool setInstalledIcon(const QString &path, const QString &icon, QString *error);
 }

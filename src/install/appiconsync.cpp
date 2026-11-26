@@ -42,10 +42,13 @@ Result run(const Job &job)
     } else if (job.entries) {
         // The system entry can't be changed; a copy in the user's applications folder overrides it,
         // but only while it has something to add. A `cmake --install --prefix ~/.local` puts the
-        // installed entry itself there, which stays as it is.
+        // installed entry itself there; only its Icon changes, and any other entry there stays as it is.
         const QString copy = DesktopEntry::userCopyPath(job.dataHome);
         const bool installedHere = QFileInfo::exists(copy) && !DesktopEntry::isUserCopy(copy);
-        if (out.key == AppIcon::key(AppIcon::ember())) {
+        const bool ember = out.key == AppIcon::key(AppIcon::ember());
+        if (installedHere && DesktopEntry::isInstalledEntry(copy)) {
+            DesktopEntry::setInstalledIcon(copy, ember ? QString() : out.icon, &out.error);
+        } else if (ember) {
             DesktopEntry::removeUserCopy(job.dataHome);
         } else if (const QString system = DesktopEntry::systemEntry(job.dataDirs); !system.isEmpty() && !installedHere) {
             DesktopEntry::ensureUserCopy(system, job.dataHome, out.icon, &out.error);

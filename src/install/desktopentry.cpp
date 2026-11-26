@@ -302,6 +302,69 @@ void removeUserCopy(const QString &dataDir)
         QFile::remove(path);
 }
 
+namespace {
+constexpr QByteArrayView kInstalledIconKey = "X-Lattis-Installed-Icon=";
+
+// Only the entry Lattis's own install rule wrote: it points Icon at the installed hicolor PNG. Once switched,
+// the original is kept under kInstalledIconKey.
+QByteArray installedIconOf(const QByteArray &bytes)
+{
+    QByteArray icon;
+    bool inMain = false;
+    for (QByteArray line : bytes.split('\n')) {
+        line = line.trimmed();
+        if (line.startsWith('['))
+            inMain = line == "[Desktop Entry]";
+        else if (inMain && line.startsWith(kInstalledIconKey))
+            return line.mid(kInstalledIconKey.size());
+        else if (inMain && icon.isEmpty() && line.startsWith("Icon="))
+            icon = line.mid(5);
+    }
+    return icon.endsWith("/icons/hicolor/256x256/apps/lattis.png") ? icon : QByteArray();
+}
+} // namespace
+
+bool isInstalledEntry(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) && !installedIconOf(file.readAll()).isEmpty();
+}
+
+bool setInstalledIcon(const QString &path, const QString &icon, QString *error)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        *error = QStringLiteral("can't read %1").arg(path);
+        return false;
+    }
+    const QByteArray bytes = file.readAll();
+    file.close();
+    const QByteArray original = installedIconOf(bytes);
+    if (original.isEmpty()) {
+        *error = QStringLiteral("%1 wasn't written by Lattis's install").arg(path);
+        return false;
+    }
+    const bool restore = icon.isEmpty();
+    QByteArrayList out;
+    bool inMain = false;
+    for (QByteArray line : bytes.split('\n')) {
+        if (line.endsWith('\r'))
+            line.chop(1);
+        if (line.startsWith('[')) {
+            inMain = line == "[Desktop Entry]";
+        } else if (inMain && line.startsWith(kInstalledIconKey)) {
+            continue;
+        } else if (inMain && line.startsWith("Icon=")) {
+            line = "Icon=" + (restore ? original : icon.toUtf8());
+        }
+        out.append(line);
+        if (inMain && line == "[Desktop Entry]" && !restore)
+            out.append(kInstalledIconKey.toByteArray() + original);
+    }
+    const QByteArray text = out.join('\n');
+    return text == bytes || writeFile(path, text, error);
+}
+
 void remove(const Made &made)
 {
     if (!made.desktop.isEmpty())
