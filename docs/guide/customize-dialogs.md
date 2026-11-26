@@ -63,6 +63,18 @@ The panel the theme button on Customize opens, with a column for colors and one 
 - `theme_popup_button_height`: the New and Open file buttons.
 - `theme_popup_fade_height`, `theme_popup_scrollbar_width`: the fade at the bottom of the lists and their scroll bar.
 
+### App icon picker
+
+The App icon field on the General page and the grid of dogs it opens.
+
+- `app_icon_field_width`, `app_icon_field_icon_size`: the field's narrowest width and the dog in front of its name.
+- `app_icon_columns`, `app_icon_max_rows`: choices per row, and how many rows show before the grid scrolls.
+- `app_icon_padding`, `app_icon_spacing`: the space inside the picker's edge and between the choices.
+- `app_icon_tile_width`, `app_icon_tile_icon_size`, `app_icon_tile_padding_top`, `app_icon_tile_padding_bottom`, `app_icon_tile_padding_side`, `app_icon_tile_spacing`, `app_icon_tile_radius`: each choice, its dog and the space around its name.
+- `app_icon_name_font_size`: the name under each dog.
+- `app_icon_tile_hover`: behind the choice under the mouse.
+- `app_icon_selected_border`, `app_icon_selected_border_width`: the outline of the choice in use (its name is bold too).
+
 ### Pages
 
 Things on individual Settings pages.

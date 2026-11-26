@@ -118,6 +118,29 @@ Colors fromMap(const QVariantMap &colors)
     return out;
 }
 
+QString imageId(const Colors &colors)
+{
+    QStringList parts;
+    for (const QColor &c : {colors.background, colors.backgroundEnd, colors.coat, colors.coatEnd, colors.details})
+        parts.append((c.alpha() == 255 ? c.name(QColor::HexRgb) : c.name(QColor::HexArgb)).mid(1));
+    return parts.join(u'/');
+}
+
+Colors fromImageId(const QString &id)
+{
+    const QStringList parts = id.split(u'/');
+    if (parts.size() != 5)
+        return ember();
+    QList<QColor> c;
+    for (const QString &part : parts) {
+        const QColor color(u'#' + part);
+        if (!color.isValid())
+            return ember();
+        c.append(color);
+    }
+    return {c[0], c[1], c[2], c[3], c[4]};
+}
+
 const QList<int> &sizes()
 {
     static const QList<int> list{16, 24, 32, 48, 64, 128, 256, 512};

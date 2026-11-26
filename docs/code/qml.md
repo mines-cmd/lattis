@@ -515,7 +515,8 @@ The `friends_playing` field in `GameFields` is the chip and info row: `FriendsAc
 | `settings/SettingsCard.qml` | Rounded card that groups a settings section |
 | `settings/RowCard.qml` | The card of expandable rows (Emulators page, setup guide's Emulators step): padding `card_padding` only, so a row's hover reaches it; the rows add their own dividers and corner radii. `panel` takes the setup guide's panel colors |
 | `settings/SettingsCheckBox.qml` | Check box in settings style; `bordered` (on by default) turns off the outline except under the mouse |
-| `settings/SettingsComboBox.qml` | Combo box in settings style |
+| `settings/SettingsComboBox.qml` | Combo box in settings style; `leadingSource` (with `leadingSize` and `leadingSourceSize`) puts an image in front of the text; a replacement `popup` sets `popupShowing` in its `onAboutToShow` and `onAboutToHide` so the chevron turns |
+| `settings/AppIconField.qml` | The App icon field on Settings → General: a `SettingsComboBox` with the chosen dog in front of its name, whose popup is a popover grid of every choice (Match theme, then `Theme.availableColors`), each the dog from `image://appicon` with its name under it; the rows grow to `[settings_window] app_icon_max_rows`, then scroll. Picking one calls `General.setAppIcon()`; `failed(error)` reports an error |
 | `settings/SettingsMenuItem.qml` | One entry in a settings menu; `keepOpen` makes it emit `activated` instead of `triggered` and leave the menu open |
 | `settings/SettingsMenuSlider.qml` | A row in a settings menu with a slider and its value (`changed` live, `committed` on release or 400 ms after Left and Right steps), so the menu stays open while it's dragged |
 | `settings/SettingsMenuSeparator.qml` | A divider in a settings menu, taking no room while hidden |

@@ -1,5 +1,6 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/appiconimage.h"
 #include "install/appiconsync.h"
 #include "install/applocation.h"
 #include "install/appupdate.h"
@@ -457,6 +458,7 @@ int main(int argc, char *argv[])
     ThumbnailCache thumbnails(AppPaths::cacheDir());
     QQmlApplicationEngine engine;
     engine.setNetworkAccessManagerFactory(&thumbnails);
+    engine.addImageProvider(QStringLiteral("appicon"), new AppIconImageProvider);
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);

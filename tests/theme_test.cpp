@@ -53,6 +53,7 @@ private slots:
     void dogColorsResolveReferences();
     void brokenColorsGiveEmbersDog();
     void themePopupSettingsHaveTheirDefaults();
+    void appIconPickerSettingsHaveTheirDefaults();
     void styleDescriptions();
     void styleSummaryListsWhatDiffers();
     void builtInsResolveWithoutProblems();
@@ -561,6 +562,32 @@ void ThemeTest::themePopupSettingsHaveTheirDefaults()
     QCOMPARE(color("theme_popup_selected_border"), theme.resolvedValue("palette", "accent").value<QColor>());
     QCOMPARE(color("theme_popup_header_color"), theme.resolvedValue("palette", "text_muted").value<QColor>());
     QCOMPARE(color("theme_popup_scene_background"), theme.resolvedValue("palette", "background").value<QColor>());
+}
+
+void ThemeTest::appIconPickerSettingsHaveTheirDefaults()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    Theme theme(writeDataDir(dir));
+
+    const auto number = [&](const char *key) { return theme.resolvedValue("settings_window", key).toInt(); };
+    QCOMPARE(number("app_icon_field_width"), 170);
+    QCOMPARE(number("app_icon_field_icon_size"), 20);
+    QCOMPARE(number("app_icon_columns"), 5);
+    QCOMPARE(number("app_icon_max_rows"), 4);
+    QCOMPARE(number("app_icon_padding"), theme.resolvedValue("layout", "spacing").toInt());
+    QCOMPARE(number("app_icon_spacing"), theme.resolvedValue("layout", "spacing_small").toInt());
+    QCOMPARE(number("app_icon_tile_width"), 96);
+    QCOMPARE(number("app_icon_tile_icon_size"), 48);
+    QCOMPARE(number("app_icon_tile_padding_top"), 10);
+    QCOMPARE(number("app_icon_tile_spacing"), 6);
+    QCOMPARE(number("app_icon_tile_radius"), theme.resolvedValue("radius", "small").toInt());
+    QCOMPARE(number("app_icon_name_font_size"), theme.resolvedValue("font", "size").toInt());
+    QCOMPARE(number("app_icon_selected_border_width"), theme.resolvedValue("layout", "hairline_width").toInt());
+
+    const auto color = [&](const char *key) { return theme.resolvedValue("settings_window", key).value<QColor>(); };
+    QCOMPARE(color("app_icon_selected_border"), theme.resolvedValue("palette", "accent").value<QColor>());
+    QCOMPARE(color("app_icon_tile_hover"), QColor(0xff, 0xff, 0xff, 0x0f));
 }
 
 void ThemeTest::styleDescriptions()

@@ -17,6 +17,7 @@ private slots:
     void colorsReplaceThePlaceholders();
     void eachSizeHasItsDrawing();
     void unknownPlaceholdersFail();
+    void imageIdRoundTrips();
     void sameColorsReuseTheFiles();
     void cleanUpKeepsWhatIsUsed();
     void entryRewrittenWhenOnlyTheIconDiffers();
@@ -72,6 +73,27 @@ void AppIconTest::eachSizeHasItsDrawing()
     // Inside the margin at the top edge's middle; the tile starts below it.
     QCOMPARE(qAlpha(large.pixel(256, 10)), 0);
     QCOMPARE(qAlpha(large.pixel(256, 40)), 255);
+}
+
+void AppIconTest::imageIdRoundTrips()
+{
+    // The picker builds the id in QML from the colors' names without the '#'.
+    QCOMPARE(AppIcon::imageId(other()), QStringLiteral("112233/445566/778899/aabbcc/ddeeff"));
+    const AppIcon::Colors back = AppIcon::fromImageId(AppIcon::imageId(other()));
+    QCOMPARE(back.background, other().background);
+    QCOMPARE(back.details, other().details);
+
+    AppIcon::Colors seeThrough = other();
+    seeThrough.coat = QColor(0x77, 0x88, 0x99, 0x80);
+    QVERIFY(AppIcon::imageId(seeThrough).contains(QLatin1String("/80778899/")));
+    QCOMPARE(AppIcon::fromImageId(AppIcon::imageId(seeThrough)).coat, seeThrough.coat);
+
+    const AppIcon::Colors ember = AppIcon::ember();
+    for (const QString &broken : {QStringLiteral(""), QStringLiteral("112233/445566"),
+                                  QStringLiteral("112233/445566/778899/aabbcc/nothex")}) {
+        QCOMPARE(AppIcon::fromImageId(broken).background, ember.background);
+        QCOMPARE(AppIcon::fromImageId(broken).coat, ember.coat);
+    }
 }
 
 void AppIconTest::unknownPlaceholdersFail()

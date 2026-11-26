@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Window
 
 ComboBox {
     id: root
@@ -8,6 +9,12 @@ ComboBox {
     property color hoverBackground: Theme.controls.buttonHoverBackground
     property color textColor: Theme.controls.inputText
     property color iconColor: Theme.controls.iconColor
+    // An image in front of the text, such as the App icon field's dog.
+    property url leadingSource
+    property int leadingSize: Theme.controls.iconSize
+    property size leadingSourceSize: Qt.size(leadingSize * Screen.devicePixelRatio, leadingSize * Screen.devicePixelRatio)
+    // A replacement popup sets it in its onAboutToShow and onAboutToHide, so the chevron turns with it.
+    property bool popupShowing: false
 
     implicitHeight: Theme.controls.inputHeight
     leftPadding: Theme.layout.spacing
@@ -16,11 +23,31 @@ ComboBox {
 
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 
-    contentItem: PlainLabel {
-        text: root.displayText
-        color: root.textColor
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
+    contentItem: Item {
+        implicitWidth: label.x + label.implicitWidth
+        implicitHeight: Math.max(label.implicitHeight, leading.visible ? leading.height : 0)
+
+        Image {
+            id: leading
+            visible: root.leadingSource.toString() !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            width: root.leadingSize
+            height: root.leadingSize
+            source: root.leadingSource
+            sourceSize: root.leadingSourceSize
+            smooth: true
+            mipmap: true
+        }
+        PlainLabel {
+            id: label
+            x: leading.visible ? leading.width + Theme.layout.spacing : 0
+            width: parent.width - x
+            height: parent.height
+            text: root.displayText
+            color: root.textColor
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
     }
 
     indicator: Icon {
@@ -29,7 +56,7 @@ ComboBox {
         path: Icons.chevronRight
         size: Theme.controls.iconSize
         color: root.iconColor
-        rotation: dropdown.showing ? -90 : 90
+        rotation: root.popupShowing ? -90 : 90
 
         Behavior on rotation { enabled: Motion.on; MotionNumber {} }
     }
@@ -79,9 +106,8 @@ ComboBox {
         height: implicitHeight * reveal
         enter: DropdownEnter {}
         exit: DropdownExit {}
-        property bool showing: false
-        onAboutToShow: showing = true
-        onAboutToHide: showing = false
+        onAboutToShow: root.popupShowing = true
+        onAboutToHide: root.popupShowing = false
         width: root.width
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
         padding: Theme.layout.spacingSmall

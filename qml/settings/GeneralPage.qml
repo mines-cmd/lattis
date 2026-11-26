@@ -13,6 +13,14 @@ Item {
     function jumpBy(step) {}
     function focusSearch() {}
     function clearSearch() { return false }
+    // For screenshots (LATTIS_OPEN_SETTINGS=general/app_icon).
+    function reveal(item) {
+        if (item !== "app_icon")
+            return
+        const y = appIconField.mapToItem(content, 0, 0).y
+        flick.contentY = Math.max(0, Math.min(y - flick.height / 2, flick.contentHeight - flick.height))
+        appIconField.popup.open()
+    }
 
     Component.onCompleted: General.reload()
     onVisibleChanged: if (visible) General.reload()
@@ -158,6 +166,16 @@ Item {
                                 const err = General.setRailHidden(!checked)
                                 if (err !== "") error.text = err
                             }
+                        }
+                    }
+                    LabeledRow {
+                        label: qsTr("App icon")
+                        note: General.appIconManagedBy !== ""
+                              ? qsTr("The icon on the window. %1 manages your applications menu entry, so the icon there stays as it set it.").arg(General.appIconManagedBy)
+                              : qsTr("The icon in your applications menu and on the window.")
+                        AppIconField {
+                            id: appIconField
+                            onFailed: err => error.text = err
                         }
                     }
                 }

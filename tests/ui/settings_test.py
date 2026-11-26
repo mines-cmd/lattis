@@ -23,6 +23,13 @@ def settings_has(*lines):
     return check
 
 
+def settings_lack(key):
+    def check(result, dirs):
+        with open(os.path.join(dirs.data, "settings.toml")) as f:
+            return [f"settings.toml still has {key}"] if f"{key} =" in f.read() else []
+    return check
+
+
 THEMES = ("Moss", "Mythos", "Steam", "Catppuccin", "Gruvbox", "Rose Pine", "Nord", "Ember")
 CUSTOMIZE = OPEN + "click Customize\nwait 800\n"
 
@@ -117,6 +124,15 @@ SCENARIOS = [
                + "click Delete 2 unknown settings\nwait 600\nexpect Deleted 2 unknown settings\n"
                + "expect-not 2 problems\nclick Undo\nwait 600\nexpect 2 problems\n",
                style_lacks_only("nope_one", ("nope_two", "nope_three")))], unknown_settings),
+    Scenario("the App icon picker lists every color theme, Escape leaves it unchanged, a pick persists, and Match theme "
+             "removes it",
+             [(OPEN + "expect The icon in your applications menu and on the window.\n"
+               + "click Match theme\nwait 500\n" + "".join(f"expect {name}\n" for name in THEMES)
+               + "key Escape\nwait 500\nexpect-not Catppuccin\nexpect General\n"
+               + "click Match theme\nwait 500\nclick Moss\nwait 600\nexpect-not Catppuccin\nexpect Moss\n",
+               settings_has('app_icon = "Moss"')),
+              (OPEN + "expect Moss\nexpect-not Match theme\nclick Moss\nwait 500\nclick Match theme\nwait 600\n"
+               + "expect-not Catppuccin\nexpect Match theme\n", settings_lack("app_icon"))], demo),
     Scenario("the minimum session length persists",
              [(OPEN + "click 30\nkey Ctrl+A\ntype 45\nkey Return\nwait 800\n",
                settings_has("min_session_seconds = 45")),

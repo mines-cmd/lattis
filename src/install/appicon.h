@@ -21,6 +21,8 @@ struct Colors
 
 Colors ember();
 Colors fromMap(const QVariantMap &colors);
+QString imageId(const Colors &colors);
+Colors fromImageId(const QString &id);
 
 const QList<int> &sizes();
 QByteArray fill(const QByteArray &svgTemplate, const Colors &colors);

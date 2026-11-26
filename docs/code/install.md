@@ -95,6 +95,8 @@ The drawings are two templates, `resources/logo/dog/lattis-dog-icon.svg` and its
 
 `tools/logo/icons.js` fills the same templates with `Ember.toml`'s literal `dog_*` colors (the same arithmetic, step for step) and renders `resources/logo/icons/lattis-<size>.png` with `rsvg-convert`; `node tools/logo/icons.js <dir>` writes them elsewhere. Qt's and rsvg's antialiasing differ only along edges.
 
+`imageId(colors)` gives the five as `rrggbb` (or `aarrggbb` when not opaque) joined by `/`, and `fromImageId(id)` reads them back, giving Ember's for anything else. `AppIconImageProvider` (`appiconimage.*`), registered as `image://appicon/<id>`, renders that drawing at the requested size off the main thread; Settings → General's App icon picker draws its dogs with it.
+
 `write(folder, colors)` renders `lattis-<key>-<size>.png` at every size in `sizes()` (16 to 512) into `folder`, skipping files already there, and returns the 256 px file's path (empty on a failure). `key()` is the first 12 hex digits of a SHA-256 of both filled drawings: new colors, or a changed template, give new file names, since desktops cache icons by path. `cleanUp(folder, keep)` deletes the rendered files whose key isn't in `keep` and returns how many; other files there (`lattis.png`, an emulator's icon) are never touched.
 
 ### Moving Lattis into the applications folder
@@ -234,7 +236,8 @@ Tests and screenshots set `HOME` to a scratch folder, so nothing is installed fo
 | `appimageupdateinfo.*` | `AppImageUpdateInfo`: `readSection()`, `parse()`, `read()` |
 | `appimageinstall.*` | `AppImageDownload`; `targetFolder()`, `isArchive()`, `extractOne()` |
 | `applocation.*` | `AppLocation` and `AppLocations::moveInto()`, `moveBlocker()`: moving Lattis's own AppImage into the applications folder |
-| `appicon.*` | `AppIcon::Colors`, `ember()`, `fromMap()`, `fill()`, `drawing()`, `render()`, `key()`, `fileName()`, `write()`, `cleanUp()`: the app icon in a theme's dog colors |
+| `appicon.*` | `AppIcon::Colors`, `ember()`, `fromMap()`, `imageId()`, `fromImageId()`, `fill()`, `drawing()`, `render()`, `key()`, `fileName()`, `write()`, `cleanUp()`: the app icon in a theme's dog colors |
+| `appiconimage.*` | `AppIconImageProvider`: `image://appicon/<colors>`, the app icon in those colors at any size |
 | `appiconsync.*` | `AppIconSync::chosenColors()`, `Job`, `Result`, `run()`, and `AppIconUpdater`: applying `app_icon` to the menu entries and the window |
 | `desktopentry.*` | `DesktopEntry::make()`, `rewrite()`, `withIcon()`, `remove()`, `ensureOwn()`, `removeOwn()`, and the user copy (`userCopyPath()`, `isUserCopy()`, `systemEntry()`, `ensureUserCopy()`, `removeUserCopy()`): the AppImage's menu entry, and Lattis's own |
 | `flatpakinstall.*` | `FlatpakJob` and the `FlatpakInstall` helpers |

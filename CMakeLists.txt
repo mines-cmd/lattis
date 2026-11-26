@@ -365,6 +365,7 @@ qt_add_qml_module(lattis
         qml/settings/RowCard.qml
         qml/settings/SettingsNote.qml
         qml/settings/SettingsComboBox.qml
+        qml/settings/AppIconField.qml
         qml/settings/SettingsTextField.qml
         qml/settings/SettingsSearchField.qml
         qml/settings/SettingsSlider.qml
@@ -438,6 +439,7 @@ qt_add_qml_module(lattis
         src/install/applocation.h src/install/applocation.cpp
         src/install/appicon.h src/install/appicon.cpp
         src/install/appiconsync.h src/install/appiconsync.cpp
+        src/install/appiconimage.h src/install/appiconimage.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp
