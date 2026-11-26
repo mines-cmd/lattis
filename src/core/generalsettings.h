@@ -6,6 +6,8 @@
 #include <QString>
 #include <QStringList>
 
+inline const QString kAppIconMatchTheme = QStringLiteral("theme");
+
 // See docs/code/core.md.
 struct GeneralSettings
 {
@@ -27,6 +29,7 @@ struct GeneralSettings
     int gridCoverWidth = 220;
     bool gridPanel = true;
     bool gridShowTitles = false;
+    QString appIcon = kAppIconMatchTheme;
 
     bool operator==(const GeneralSettings &) const = default;
 };

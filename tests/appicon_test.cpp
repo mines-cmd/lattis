@@ -1,7 +1,10 @@
 #include "appicon.h"
+#include "appiconsync.h"
+#include "desktopentry.h"
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QTemporaryDir>
 #include <QTest>
@@ -16,6 +19,10 @@ private slots:
     void unknownPlaceholdersFail();
     void sameColorsReuseTheFiles();
     void cleanUpKeepsWhatIsUsed();
+    void entryRewrittenWhenOnlyTheIconDiffers();
+    void managedEntryLeftAlone();
+    void userCopyFollowsTheChoice();
+    void deletedThemeFallsBack();
 
 private:
     static AppIcon::Colors other()
@@ -127,6 +134,154 @@ void AppIconTest::cleanUpKeepsWhatIsUsed()
     QVERIFY(left.contains(AppIcon::fileName(keep, 512)));
     QVERIFY(!left.contains(AppIcon::fileName(AppIcon::key(other()), 512)));
     QCOMPARE(AppIcon::cleanUp(folder, {keep}), 0);
+}
+
+namespace {
+void writeText(const QString &path, const QByteArray &text)
+{
+    QDir().mkpath(QFileInfo(path).path());
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write(text);
+}
+
+QByteArray readText(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+QString gearLever(const QString &appImage, const QString &applicationsDir)
+{
+    const QDir dir(applicationsDir);
+    for (const QString &name : dir.entryList({QStringLiteral("gearlever_*.desktop")}, QDir::Files)) {
+        if (readText(dir.filePath(name)).contains(appImage.toUtf8()))
+            return QStringLiteral("Gear Lever");
+    }
+    return {};
+}
+}
+
+void AppIconTest::entryRewrittenWhenOnlyTheIconDiffers()
+{
+    QTemporaryDir data;
+    // Missing on purpose: reading the AppImage again would fail.
+    const QString appImage = data.filePath(QStringLiteral("My Apps/Lattis.AppImage"));
+    const QString entry = data.filePath(QStringLiteral("applications/lattis-lattis.desktop"));
+    const QString extracted = data.filePath(QStringLiteral("icons/lattis/lattis.png"));
+    writeText(entry, ("[Desktop Entry]\nName=Lattis\nExec=\"" + appImage + "\" %U\nIcon=" + extracted
+                      + "\n\n[Desktop Action New]\nName=New\nExec=\"" + appImage + "\" --new\n")
+                         .toUtf8());
+    writeText(extracted, "old");
+
+    AppIconSync::Job job;
+    job.colors = other();
+    job.dataHome = data.path();
+    job.appImage = appImage;
+    job.managedBy = gearLever;
+    const AppIconSync::Result result = AppIconSync::run(job);
+    QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+    QCOMPARE(result.icon, data.filePath(QStringLiteral("icons/lattis/") + AppIcon::fileName(AppIcon::key(other()), 256)));
+    const QByteArray text = readText(entry);
+    QVERIFY(text.contains("\nIcon=" + result.icon.toUtf8() + '\n'));
+    QVERIFY(text.contains(("Exec=\"" + appImage + "\" %U\n").toUtf8()));
+    QVERIFY(text.contains(("Exec=\"" + appImage + "\" --new\n").toUtf8()));
+    QVERIFY(text.contains("[Desktop Action New]\nName=New\n"));
+    QCOMPARE(text.count("Icon="), 1);
+    QVERIFY(!QFile::exists(extracted));
+
+    QString error;
+    QVERIFY(DesktopEntry::ensureOwn(appImage, data.path(), result.icon, &error).desktop.isEmpty());
+    QVERIFY(error.isEmpty());
+
+    // Back to Ember: the entry follows, and the other colors' files go.
+    job.colors = AppIcon::ember();
+    const AppIconSync::Result ember = AppIconSync::run(job);
+    QVERIFY(readText(entry).contains("\nIcon=" + ember.icon.toUtf8() + '\n'));
+    QVERIFY(!QFile::exists(result.icon));
+    QCOMPARE(QDir(ember.folder).entryList(QDir::Files).size(), AppIcon::sizes().size());
+
+    // Turned off: the entry goes, the icon stays for the window and the login entry.
+    job.menuEntry = false;
+    AppIconSync::run(job);
+    QVERIFY(!QFile::exists(entry));
+    QVERIFY(QFile::exists(ember.icon));
+}
+
+void AppIconTest::managedEntryLeftAlone()
+{
+    QTemporaryDir data;
+    const QString appImage = data.filePath(QStringLiteral("Apps/Lattis.AppImage"));
+    const QString entry = data.filePath(QStringLiteral("applications/lattis-lattis.desktop"));
+    const QByteArray original = ("[Desktop Entry]\nName=Lattis\nExec=\"" + appImage + "\"\nIcon=lattis\n").toUtf8();
+    writeText(entry, original);
+    const QString manager = data.filePath(QStringLiteral("applications/gearlever_lattis_1234.desktop"));
+    const QByteArray managed = ("[Desktop Entry]\nName=Lattis\nExec=" + appImage + "\nIcon=gearlever\n").toUtf8();
+    writeText(manager, managed);
+
+    AppIconSync::Job job;
+    job.colors = other();
+    job.dataHome = data.path();
+    job.appImage = appImage;
+    job.managedBy = gearLever;
+    const AppIconSync::Result result = AppIconSync::run(job);
+    QVERIFY(result.error.isEmpty());
+    QCOMPARE(result.managedBy, QStringLiteral("Gear Lever"));
+    QVERIFY(QFile::exists(result.icon));
+    QCOMPARE(readText(entry), original);
+    QCOMPARE(readText(manager), managed);
+}
+
+void AppIconTest::userCopyFollowsTheChoice()
+{
+    QTemporaryDir home;
+    QTemporaryDir system;
+    const QString installed = system.filePath(QStringLiteral("applications/lattis.desktop"));
+    writeText(installed, "[Desktop Entry]\nType=Application\nName=Lattis\nExec=/usr/bin/lattis %U\nTryExec=lattis\n"
+                         "Icon=lattis\n\n[Desktop Action New]\nName=New\nIcon=document-new\nExec=lattis --new\n");
+    const QString copy = DesktopEntry::userCopyPath(home.path());
+
+    AppIconSync::Job job;
+    job.colors = AppIcon::ember();
+    job.dataHome = home.path();
+    job.dataDirs = {system.path()};
+    AppIconSync::run(job);
+    QVERIFY(!QFile::exists(copy));
+
+    job.colors = other();
+    const AppIconSync::Result result = AppIconSync::run(job);
+    QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+    QVERIFY(DesktopEntry::isUserCopy(copy));
+    const QByteArray text = readText(copy);
+    QVERIFY(text.contains("\nExec=/usr/bin/lattis %U\n"));
+    QVERIFY(text.contains("\nTryExec=lattis\n"));
+    QVERIFY(text.contains("\nIcon=" + result.icon.toUtf8() + '\n'));
+    QVERIFY(text.contains("\nIcon=document-new\n"));
+    QCOMPARE(DesktopEntry::systemEntry({home.path(), system.path()}), installed);
+
+    // Back to Ember: the copy is deleted and the system entry shows again.
+    job.colors = AppIcon::ember();
+    AppIconSync::run(job);
+    QVERIFY(!QFile::exists(copy));
+    QVERIFY(QFile::exists(installed));
+
+    // An entry there that Lattis didn't write (an install with the home folder as its prefix) stays.
+    writeText(copy, "[Desktop Entry]\nName=Lattis\nExec=/home/me/.local/bin/lattis\nIcon=lattis\n");
+    job.colors = other();
+    QVERIFY(AppIconSync::run(job).error.isEmpty());
+    job.colors = AppIcon::ember();
+    AppIconSync::run(job);
+    QCOMPARE(readText(copy), QByteArray("[Desktop Entry]\nName=Lattis\nExec=/home/me/.local/bin/lattis\nIcon=lattis\n"));
+}
+
+void AppIconTest::deletedThemeFallsBack()
+{
+    const QStringList available = {QStringLiteral("Ember"), QStringLiteral("Nord"), QStringLiteral("Mine")};
+    QCOMPARE(AppIconSync::chosenColors(QStringLiteral("theme"), QStringLiteral("Nord"), available), QStringLiteral("Nord"));
+    QCOMPARE(AppIconSync::chosenColors(QStringLiteral("Mine"), QStringLiteral("Nord"), available), QStringLiteral("Mine"));
+    // Deleted or renamed: Match theme.
+    QCOMPARE(AppIconSync::chosenColors(QStringLiteral("Gone"), QStringLiteral("Nord"), available), QStringLiteral("Nord"));
+    QCOMPARE(AppIconSync::chosenColors(QStringLiteral("mine"), QStringLiteral("Ember"), available), QStringLiteral("Ember"));
 }
 
 QTEST_MAIN(AppIconTest)

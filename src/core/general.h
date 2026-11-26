@@ -36,6 +36,8 @@ class General : public QObject
     Q_PROPERTY(bool checkForUpdates READ checkForUpdates NOTIFY settingsChanged)
     Q_PROPERTY(bool appMenuEntry READ appMenuEntry NOTIFY settingsChanged)
     Q_PROPERTY(bool isAppImage READ isAppImage CONSTANT)
+    Q_PROPERTY(QString appIcon READ appIcon NOTIFY appIconChanged)
+    Q_PROPERTY(QString appIconManagedBy READ appIconManagedBy NOTIFY appIconChanged)
     Q_PROPERTY(QString skippedUpdate READ skippedUpdate NOTIFY settingsChanged)
     Q_PROPERTY(QStringList railHiddenButtons READ railHiddenButtons NOTIFY railHiddenButtonsChanged)
     Q_PROPERTY(QStringList railButtonOrder READ railButtonOrder NOTIFY railButtonOrderChanged)
@@ -100,6 +102,8 @@ public:
     bool checkForUpdates() const { return m_settings.checkForUpdates; }
     bool appMenuEntry() const { return m_settings.appMenuEntry; }
     bool isAppImage() const { return !qEnvironmentVariableIsEmpty("APPIMAGE"); }
+    QString appIcon() const { return m_settings.appIcon; }
+    QString appIconManagedBy() const { return m_appIconManagedBy; }
     QString skippedUpdate() const { return m_settings.skippedUpdate; }
     QStringList railHiddenButtons() const { return m_settings.railHiddenButtons; }
     QStringList railButtonOrder() const { return orderedRailButtons(m_settings.railButtonOrder); }
@@ -182,8 +186,10 @@ public:
     Q_INVOKABLE QString setOverviewRows(const QStringList &above, const QStringList &below);
     Q_INVOKABLE QString resetOverviewLayout();
     Q_INVOKABLE QString setStartAtLogin(bool on);
+    Q_INVOKABLE QString setAppIcon(const QString &choice);
     Q_INVOKABLE void reload();
     void refreshAutostart();
+    void setAppIconApplied(const QString &icon, const QString &managedBy);
 
 signals:
     void settingsChanged();
@@ -202,6 +208,7 @@ signals:
     void galleryChanged();
     void overviewChanged();
     void loginChanged();
+    void appIconChanged();
 
 private:
     void load();
@@ -232,4 +239,7 @@ private:
     bool m_loginOurs = false;
     bool m_loginEnabled = true;
     QString m_loginExec;
+    QString m_loginIcon;
+    QString m_appIconPath;
+    QString m_appIconManagedBy;
 };

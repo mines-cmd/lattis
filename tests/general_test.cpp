@@ -26,6 +26,7 @@ private slots:
     void downloadBarCollapsedSetting();
     void clipVolumeSetting();
     void updateSettings();
+    void appIconSetting();
     void railHiddenSetting();
     void systemLocaleSetting();
     void reduceMotionSetting();
@@ -317,6 +318,38 @@ void GeneralTest::updateSettings()
     QVERIFY(!cleared.contains("check_for_updates"));
     QVERIFY(!cleared.contains("skipped_update"));
     QVERIFY(general.problems().isEmpty());
+}
+
+void GeneralTest::appIconSetting()
+{
+    const auto parse = [](const char *text) {
+        return parseGeneralSettings(text, QStringLiteral("settings.toml"));
+    };
+    QCOMPARE(parse("[general]\n").value.appIcon, QStringLiteral("theme"));
+    QCOMPARE(parse("[general]\napp_icon = \"Nord\"\n").value.appIcon, QStringLiteral("Nord"));
+    for (const char *bad : {"[general]\napp_icon = 3\n", "[general]\napp_icon = \"\"\n"}) {
+        const auto parsed = parse(bad);
+        QCOMPARE(parsed.value.appIcon, QStringLiteral("theme"));
+        QCOMPARE(parsed.warnings.size(), 1);
+    }
+
+    QTemporaryDir data;
+    General general(data.path());
+    QSignalSpy changed(&general, &General::appIconChanged);
+    QSignalSpy window(&general, &General::settingsChanged);
+    QCOMPARE(general.setAppIcon(QStringLiteral("Nord")), QString());
+    QCOMPARE(general.appIcon(), QStringLiteral("Nord"));
+    QCOMPARE(changed.count(), 1);
+    QCOMPARE(window.count(), 0);
+    QFile settings(data.filePath(QStringLiteral("settings.toml")));
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    QVERIFY(settings.readAll().contains("app_icon = \"Nord\""));
+    settings.close();
+
+    QCOMPARE(general.setAppIcon(QStringLiteral("theme")), QString());
+    QCOMPARE(general.appIcon(), QStringLiteral("theme"));
+    QVERIFY(settings.open(QIODevice::ReadOnly));
+    QVERIFY(!settings.readAll().contains("app_icon"));
 }
 
 void GeneralTest::railHiddenSetting()
@@ -1072,6 +1105,13 @@ void GeneralTest::staleAutostartRewritten()
         general.refreshAutostart();
         QCOMPARE(Autostart::readEntry(folder).exec, current);
         QVERIFY(general.startAtLoginOurs());
+        QCOMPARE(Autostart::readEntry(folder).icon, QStringLiteral("lattis"));
+
+        // The app icon changed: only the icon is rewritten.
+        const QString icon = data.filePath(QStringLiteral("icons/lattis/lattis-0123456789ab-256.png"));
+        general.setAppIconApplied(icon, {});
+        QCOMPARE(Autostart::readEntry(folder).icon, icon);
+        QCOMPARE(Autostart::readEntry(folder).exec, current);
     }
 
     // Someone else's entry of the same name: left as it is.

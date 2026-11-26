@@ -587,7 +587,8 @@ QString General::setStartAtLogin(bool on)
     const QString folder = Autostart::autostartFolder();
     QString error;
     if (on) {
-        error = Autostart::writeEntry(folder, Autostart::currentProgram(), dataDirFromEnv() ? m_dataDir : QString());
+        error = Autostart::writeEntry(folder, Autostart::currentProgram(), dataDirFromEnv() ? m_dataDir : QString(),
+                                      m_appIconPath);
     } else {
         error = Autostart::removeEntry(folder);
     }
@@ -614,11 +615,39 @@ void General::refreshAutostart()
                                       : QDir::cleanPath(named) == QDir::cleanPath(m_dataDir);
     if (!mine)
         return;
-    if (m_loginExec == Autostart::entryExec(Autostart::currentProgram(), named))
+    const bool execRight = m_loginExec == Autostart::entryExec(Autostart::currentProgram(), named);
+    const bool iconRight = m_appIconPath.isEmpty() || m_loginIcon == m_appIconPath;
+    if (execRight && iconRight)
         return;
     qCInfo(lcGeneral) << "rewriting stale autostart entry";
-    Autostart::writeEntry(Autostart::autostartFolder(), Autostart::currentProgram(), named);
+    Autostart::writeEntry(Autostart::autostartFolder(), Autostart::currentProgram(), named, m_appIconPath);
     loadAutostart();
+}
+
+QString General::setAppIcon(const QString &choice)
+{
+    QString error;
+    if (choice.isEmpty() || choice == kAppIconMatchTheme) {
+        TomlPatch::removeValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("app_icon"), &error);
+    } else {
+        TomlPatch::setValueInFile(settingsFile(), QStringLiteral("general"), QStringLiteral("app_icon"),
+                                  tomlQuote(choice), &error);
+    }
+    if (error.isEmpty())
+        load();
+    return error;
+}
+
+void General::setAppIconApplied(const QString &icon, const QString &managedBy)
+{
+    const bool changed = managedBy != m_appIconManagedBy;
+    m_appIconManagedBy = managedBy;
+    if (icon != m_appIconPath) {
+        m_appIconPath = icon;
+        refreshAutostart();
+    }
+    if (changed)
+        emit appIconChanged();
 }
 
 void General::load()
@@ -650,7 +679,7 @@ void General::load()
 
     // The main window's visibility bindings listen to settingsChanged; re-evaluating them makes Qt
     // show the window again, which on some compositors (Hyprland) unmaps the settings window above it.
-    // systemLocale, reduceMotion, railHidden, railHiddenButtons, railButtonOrder, the toolbar's three keys, the grid's four and clipVolume have their own signals so that
+    // systemLocale, reduceMotion, railHidden, railHiddenButtons, railButtonOrder, the toolbar's three keys, the grid's four, clipVolume and appIcon have their own signals so that
     // flipping them leaves the window alone.
     GeneralSettings prevWindow = prev;
     prevWindow.clipVolume = m_settings.clipVolume;
@@ -666,6 +695,7 @@ void General::load()
     prevWindow.gridCoverWidth = m_settings.gridCoverWidth;
     prevWindow.gridPanel = m_settings.gridPanel;
     prevWindow.gridShowTitles = m_settings.gridShowTitles;
+    prevWindow.appIcon = m_settings.appIcon;
     if (m_settings != prevWindow || m_problems != prevProblems)
         emit settingsChanged();
     if (m_gamePage != prevPage || m_gamePageProblems != prevPageProblems)
@@ -697,6 +727,8 @@ void General::load()
         emit gridChanged();
     if (m_settings.clipVolume != prev.clipVolume)
         emit clipVolumeChanged();
+    if (m_settings.appIcon != prev.appIcon)
+        emit appIconChanged();
     for (const QString &w : std::as_const(m_problems))
         qCWarning(lcGeneral).noquote() << w;
 }
@@ -711,6 +743,7 @@ void General::loadAutostart()
     m_loginOurs = entry.ours;
     m_loginEnabled = entry.enabled;
     m_loginExec = entry.exec;
+    m_loginIcon = entry.icon;
 
     if (m_loginExists != prevExists || m_loginOurs != prevOurs || m_loginEnabled != prevEnabled)
         emit loginChanged();

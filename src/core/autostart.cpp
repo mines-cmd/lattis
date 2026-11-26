@@ -127,11 +127,13 @@ Entry readEntry(const QString &folder)
             out.enabled = false;
         else if (trimmed.startsWith(u"Exec="))
             out.exec = trimmed.mid(5).toString();
+        else if (trimmed.startsWith(u"Icon="))
+            out.icon = trimmed.mid(5).toString();
     }
     return out;
 }
 
-QString writeEntry(const QString &folder, const QString &program, const QString &dataDir)
+QString writeEntry(const QString &folder, const QString &program, const QString &dataDir, const QString &icon)
 {
     if (!QDir().mkpath(folder))
         return QStringLiteral("Could not create %1").arg(folder);
@@ -144,7 +146,7 @@ QString writeEntry(const QString &folder, const QString &program, const QString 
     out << "[Desktop Entry]\n";
     out << "Type=Application\n";
     out << "Name=Lattis\n";
-    out << "Icon=lattis\n";
+    out << "Icon=" << (icon.isEmpty() ? QStringLiteral("lattis") : icon) << "\n";
     out << "Exec=" << entryExec(program, dataDir) << "\n";
     out << "X-Lattis-Autostart=true\n";
 

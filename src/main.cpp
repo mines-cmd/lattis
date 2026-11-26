@@ -1,8 +1,8 @@
 #include "dateformat.h"
 #include "backup/backups.h"
+#include "install/appiconsync.h"
 #include "install/applocation.h"
 #include "install/appupdate.h"
-#include "install/desktopentry.h"
 #include "install/ffmpegtool.h"
 #include "install/installer.h"
 #include "saves/gamesaves.h"
@@ -53,7 +53,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 
-#include <atomic>
+#include <memory>
+#include <utility>
 
 #ifdef __GLIBC__
 #include <malloc.h>
@@ -396,29 +397,47 @@ int main(int argc, char *argv[])
         };
         AppUpdate::setup(update);
     }
-    const auto syncMenuEntry = [&general] {
-        const QString appImage = qEnvironmentVariable("APPIMAGE");
-        if (appImage.isEmpty() || !qEnvironmentVariableIsEmpty("LATTIS_INSTALL_FIXTURES"))
-            return;
-        static std::atomic_bool busy = false;
-        if (busy.exchange(true))
-            return;
-        const bool wanted = general.appMenuEntry();
-        const QString dataHome = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-        // Extracting the AppImage takes a moment; a manager's own entry is left alone.
-        (void)QtConcurrent::run([appImage, wanted, dataHome] {
-            if (!wanted) {
-                DesktopEntry::removeOwn(dataHome);
-            } else if (AppUpdates::managedBy(appImage, dataHome + QStringLiteral("/applications")).isEmpty()) {
-                QString error;
-                DesktopEntry::ensureOwn(appImage, dataHome, &error);
-                if (!error.isEmpty())
-                    qWarning().noquote() << "can't make the applications menu entry:" << error;
-            }
-            busy = false;
+    // A screenshot or UI test run on the user's own data folder would render into, and clean up,
+    // their real icons folder.
+    const bool scratchRun = !qEnvironmentVariableIsEmpty("LATTIS_SCREENSHOT") || !qEnvironmentVariableIsEmpty("LATTIS_UI_SCRIPT");
+    std::unique_ptr<AppIconUpdater> appIcon;
+    if (!scratchRun || !qEnvironmentVariableIsEmpty("XDG_DATA_HOME")) {
+        AppIconUpdater::Setup setup;
+        setup.choice = [&general] { return general.appIcon(); };
+        setup.menuEntry = [&general] { return general.appMenuEntry(); };
+        setup.activeColors = [&theme] { return theme.activeColors(); };
+        setup.availableColors = [&theme] { return theme.availableColors(); };
+        setup.dogColors = [&theme](const QString &name) { return theme.dogColors(name); };
+        setup.applied = [&general](const QString &icon, const QString &managedBy) {
+            general.setAppIconApplied(icon, managedBy);
+        };
+        setup.dataHome = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+        setup.dataDirs = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+        setup.dataDirs.removeAll(setup.dataHome);
+        setup.entries = qEnvironmentVariableIsEmpty("LATTIS_INSTALL_FIXTURES");
+        setup.managedBy = &AppUpdates::managedBy;
+        appIcon = std::make_unique<AppIconUpdater>(setup);
+        AppIconUpdater *updater = appIcon.get();
+        QObject::connect(&general, &General::appIconChanged, updater, [updater] { updater->request(); });
+        QObject::connect(&general, &General::settingsChanged, updater,
+                         [updater, &general, menuEntry = general.appMenuEntry()]() mutable {
+                             if (std::exchange(menuEntry, general.appMenuEntry()) != menuEntry)
+                                 updater->request();
+                         });
+        // Dragging through themes in the picker switches the theme many times; only where it
+        // settles gets an icon.
+        const auto settled = [updater] { updater->request(AppIconUpdater::kSettleMs); };
+        QObject::connect(&theme, &Theme::activeColorsChanged, updater, settled);
+        QObject::connect(&theme, &Theme::availableChanged, updater, settled);
+        QObject::connect(&theme, &Theme::valueChanged, updater, [settled](const QString &section, const QString &key) {
+            if (section == QLatin1String("rail") && key.startsWith(QLatin1String("dog_")))
+                settled();
         });
+    }
+    const auto syncMenuEntry = [updater = appIcon.get()] {
+        if (updater)
+            updater->request();
     };
-    QObject::connect(&general, &General::settingsChanged, &app, syncMenuEntry);
     {
         AppLocation::Setup location;
         location.appImage = qEnvironmentVariable("APPIMAGE");
@@ -448,13 +467,14 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
         QObject::connect(
             window, &QQuickWindow::frameSwapped, window,
-            [&startup, &library, &runner, &general, &instance, window, syncMenuEntry] {
+            [&startup, &library, &runner, &general, &instance, window, updater = appIcon.get()] {
                 qInfo() << "first frame after" << startup.elapsed() << "ms";
                 window->setProperty("startedUp", true);
                 QTimer::singleShot(0, &library, &Library::startRefresh);
                 QTimer::singleShot(0, &runner, &GameRunner::start);
                 QTimer::singleShot(0, &general, &General::refreshAutostart);
-                QTimer::singleShot(0, syncMenuEntry);
+                if (updater)
+                    QTimer::singleShot(0, updater, &AppIconUpdater::begin);
                 // Not before the first frame, and its own 10 s after it.
                 QTimer::singleShot(0, [] { AppUpdate::instance()->startDailyCheck(); });
                 QTimer::singleShot(0, [&general] {

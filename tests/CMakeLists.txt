@@ -232,7 +232,10 @@ lattis_test(theme_test OFFSCREEN
     LIBS Qt6::Qml Qt6::Gui tomlplusplus::tomlplusplus)
 lattis_test(appicon_test OFFSCREEN
     SOURCES ../src/install/appicon.h ../src/install/appicon.cpp
-    LIBS Qt6::Gui)
+            ../src/install/appiconsync.h ../src/install/appiconsync.cpp
+            ../src/install/desktopentry.h ../src/install/desktopentry.cpp
+            ../src/launch/launchcommand.h ../src/launch/launchcommand.cpp
+    LIBS Qt6::Gui Qt6::Qml Qt6::Concurrent tomlplusplus::tomlplusplus)
 qt_add_resources(appicon_test "appicon_test_templates"
     PREFIX "/qt/qml/Launcher/resources"
     BASE ../resources

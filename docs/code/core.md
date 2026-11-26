@@ -77,6 +77,8 @@ The style used to set `details.stats`, `action_buttons`, `info_rows`, `show_desc
 
 `General::refreshAutostart()` runs after the first frame. If the entry's `Exec` line is stale — the program path changed, e.g. after an AppImage update — it rewrites it, keeping the data dir the entry names. The entry belongs to the copy that set it, so it is rewritten only when it names this copy's data dir, or names none and this copy runs on the default dir (`LATTIS_DATA` unset); an entry that names another dir, or none while this copy has a custom dir, is left as it is. Foreign entries are never touched.
 
+The entry's `Icon` is the app icon's rendered 256 px file ([install](install.md#applying-the-app-icon)), or `lattis` until the first one is applied. `General::setAppIconApplied(icon, managedBy)`, called each time the app icon is applied, keeps the path for `setStartAtLogin()` and calls `refreshAutostart()`, which also rewrites the entry when only its `Icon` differs, under the same rules.
+
 ---
 
 ## Editing settings files
@@ -189,8 +191,8 @@ Items are found in the main window and in any other visible window (Settings); t
 | Function | Returns |
 |---|---|
 | `entryExec(program, dataDir)` | The `Exec=` value for our entry |
-| `readEntry(folder)` | `Entry{exists, ours, enabled, exec}` |
-| `writeEntry(folder, program, dataDir)` | Error string, or `""` |
+| `readEntry(folder)` | `Entry{exists, ours, enabled, exec, icon}` |
+| `writeEntry(folder, program, dataDir, icon)` | Error string, or `""`; an empty `icon` writes `Icon=lattis` |
 | `removeEntry(folder)` | Error string, or `""` |
 | `autostartFolder()` | `QStandardPaths::ConfigLocation + "/autostart"` |
 | `currentProgram()` | `$APPIMAGE` if set, else the app binary |
@@ -210,6 +212,7 @@ Items are found in the main window and in any other visible window (Settings); t
 | `toolbar`, `toolbarHiddenButtons`, `toolbarButtonOrder` | The top toolbar: `[general] toolbar` (default false) shows it; `toolbar_hidden_buttons` and `toolbar_button_order` are the rail's two lists for its own buttons, with the same names, validation and warnings. `setToolbar(bool)`, `setToolbarButtonShown(name, shown)` and `setToolbarButtonOrder(order)` write them, removing a key at its default |
 | `view`, `gridCoverWidth`, `gridPanel`, `gridShowTitles` | The library view and the Grid view's saved state: `[general] view` (`"list"` by default, or `"grid"`), `grid_cover_width` (target cover width, 80 to 600, default 220), `grid_panel` (the side panel shows, default true) and `grid_show_titles` (default false). `setView(view)`, `setGridCoverWidth(width)` (clamped), `setGridPanel(bool)` and `setGridShowTitles(bool)` write them, removing a key at its default. `view` has its own signal, `viewChanged`, and the other three `gridChanged`, so a switch leaves the window alone |
 | `appMenuEntry`, `isAppImage` | `[general] app_menu_entry` (default true; written only as `false`) keeps Lattis's own applications-menu entry ([install](install.md#lattiss-own-menu-entry)). `isAppImage` is true when `$APPIMAGE` is set. `setAppMenuEntry(bool)` |
+| `appIcon`, `appIconManagedBy` | `[general] app_icon`: `"theme"` (Match theme, the default; the key is then left out) or a color theme's name, whose `[rail] dog_*` colors the app icon takes ([install](install.md#applying-the-app-icon)); any other string, such as a deleted theme's name, is kept and counts as Match theme. `appIconManagedBy` names Gear Lever or AppImageLauncher when one owns the AppImage's menu entry, which the icon then leaves alone, else `""`. `setAppIcon(choice)`; its own signal, `appIconChanged`, so a change leaves the window alone |
 | `checkForUpdates`, `skippedUpdate` | `[general] check_for_updates` (default true; the key is written only as `false`) turns the daily check for a newer Lattis off ([install](install.md#updating-lattis)); `skipped_update = "1.2"` is the version the user skipped. `setCheckForUpdates(bool)` and `setSkippedUpdate(version)` (empty removes the key) |
 | `clipVolume` | The clip viewer's volume, 0 to 1 (`clip_volume`, default 1). `setClipVolume(value)` rounds to hundredths and removes the key at 1; its own signal, `clipVolumeChanged` |
 | `gamePageChips`, `gamePageButtons`, `gamePageInfoRows`, `gamePageSections`, `gamePagePanels` | The game page's shown chips, buttons, info rows, sections and panels, in order (`[game_page]`, above) |
@@ -237,6 +240,7 @@ Items are found in the main window and in any other visible window (Settings); t
 | `setGalleryGroup(group)`, `setGallerySort(sort)`, `setGalleryTileWidth(width)`, `setGalleryCaptions(on)`, `setGallerySectionFolded(name, folded)` | Error string, or `""`; a default removes the key (the width has none, so any width is written) |
 | `setOverviewHidden(names)`, `setOverviewColumns(left, right)`, `setOverviewRows(above, below)`, `resetOverviewLayout()` | Error string, or `""`; names that aren't cards are dropped, and the columns and rows are written complete (the resolved lists), so a card added later doesn't move what the user placed. A list at its default (nothing hidden, the default `above`) removes its key; `resetOverviewLayout()` removes all five |
 | `setStartAtLogin(bool)` | Error string, or `""` |
+| `setAppIcon(choice)` | Error string, or `""`; `"theme"` or `""` removes the key |
 | `reload()` | — re-reads settings and autostart |
 
 ### SingleInstance

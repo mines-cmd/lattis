@@ -39,6 +39,8 @@ bool extract(const QString &appImage, const QString &pattern, const QString &fol
     return process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
 }
 
+constexpr QByteArrayView kUserCopyMark = "X-Lattis-Icon-Copy=true";
+
 QString iconNameOf(const QByteArray &source)
 {
     for (const QByteArray &line : source.split('\n')) {
@@ -46,6 +48,26 @@ QString iconNameOf(const QByteArray &source)
             return QString::fromUtf8(line.mid(5)).trimmed();
     }
     return {};
+}
+
+bool writeFile(const QString &path, const QByteArray &bytes, QString *error)
+{
+    if (!QDir().mkpath(QFileInfo(path).path())) {
+        *error = QStringLiteral("couldn't make %1").arg(QFileInfo(path).path());
+        return false;
+    }
+    QSaveFile out(path);
+    if (out.open(QIODevice::WriteOnly) && out.write(bytes) == bytes.size() && out.commit())
+        return true;
+    *error = QStringLiteral("couldn't write %1: %2").arg(path, out.errorString());
+    return false;
+}
+
+void removeExtractedIcon(const QString &dataDir)
+{
+    const QDir icons(QDir(dataDir).filePath(QStringLiteral("icons/lattis")));
+    for (const QString &name : icons.entryList({QStringLiteral("lattis.*")}, QDir::Files))
+        QFile::remove(icons.filePath(name));
 }
 
 // Many AppImages keep the root .desktop and .DirIcon as links into usr/, which the first extraction leaves dangling.
@@ -109,7 +131,7 @@ QByteArray rewrite(const QByteArray &source, const QString &appImage, const QStr
     return out.join('\n') + '\n';
 }
 
-Made make(const QString &id, const QString &appImage, const QString &dataDir, QString *error)
+Made make(const QString &id, const QString &appImage, const QString &dataDir, QString *error, const QString &icon)
 {
     if (dataDir.isEmpty())
         return {};
@@ -132,7 +154,7 @@ Made make(const QString &id, const QString &appImage, const QString &dataDir, QS
 
     Made made;
     const QString iconName = iconNameOf(original);
-    if (!iconName.isEmpty() && !QFileInfo(iconName).isAbsolute()) {
+    if (icon.isEmpty() && !iconName.isEmpty() && !QFileInfo(iconName).isAbsolute()) {
         extract(appImage, iconName + QStringLiteral(".*"), work.path());
         QString icon = firstRootFile(appImage, work.path(), {iconName + QStringLiteral(".svg"), iconName + QStringLiteral(".png"),
                                             iconName + QStringLiteral(".xpm")});
@@ -151,11 +173,7 @@ Made make(const QString &id, const QString &appImage, const QString &dataDir, QS
 
     const QString applications = QDir(dataDir).filePath(QStringLiteral("applications"));
     const QString target = QDir(applications).filePath(QStringLiteral("lattis-%1.desktop").arg(id));
-    QSaveFile out(target);
-    const QByteArray bytes = rewrite(original, appImage, made.icon);
-    if (!QDir().mkpath(applications) || !out.open(QIODevice::WriteOnly) || out.write(bytes) != bytes.size()
-        || !out.commit()) {
-        *error = QStringLiteral("couldn't write %1: %2").arg(target, out.errorString());
+    if (!writeFile(target, rewrite(original, appImage, icon.isEmpty() ? made.icon : icon), error)) {
         remove(made);
         return {};
     }
@@ -163,21 +181,125 @@ Made make(const QString &id, const QString &appImage, const QString &dataDir, QS
     return made;
 }
 
-Made ensureOwn(const QString &appImage, const QString &dataDir, QString *error)
+QByteArray withIcon(const QByteArray &source, const QString &icon)
+{
+    QByteArrayList out;
+    bool inMain = false;
+    bool iconDone = false;
+    for (QByteArray line : source.split('\n')) {
+        if (line.endsWith('\r'))
+            line.chop(1);
+        if (line.startsWith('[')) {
+            inMain = line == "[Desktop Entry]";
+        } else if (inMain && line.startsWith("Icon=")) {
+            if (iconDone)
+                continue;
+            line = "Icon=" + icon.toUtf8();
+            iconDone = true;
+        } else if (line == kUserCopyMark) {
+            continue;
+        }
+        out.append(line);
+        if (inMain && line == "[Desktop Entry]")
+            out.append(kUserCopyMark.toByteArray());
+    }
+    while (!out.isEmpty() && out.last().isEmpty())
+        out.removeLast();
+    if (!iconDone) {
+        const qsizetype group = out.indexOf("[Desktop Entry]");
+        if (group < 0)
+            return {};
+        out.insert(group + 1, "Icon=" + icon.toUtf8());
+    }
+    return out.join('\n') + '\n';
+}
+
+Made ensureOwn(const QString &appImage, const QString &dataDir, const QString &icon, QString *error)
 {
     const QString id = QStringLiteral("lattis");
-    QFile existing(QDir(dataDir).filePath(QStringLiteral("applications/lattis-%1.desktop").arg(id)));
-    if (existing.open(QIODevice::ReadOnly) && existing.readAll().contains(("Exec=" + quoted(appImage)).toUtf8()))
-        return {};
-    return make(id, appImage, dataDir, error);
+    const QString path = QDir(dataDir).filePath(QStringLiteral("applications/lattis-%1.desktop").arg(id));
+    QFile existing(path);
+    if (existing.open(QIODevice::ReadOnly)) {
+        const QByteArray bytes = existing.readAll();
+        existing.close();
+        if (bytes.contains(("Exec=" + quoted(appImage)).toUtf8())) {
+            if (icon.isEmpty() || iconNameOf(bytes) == icon)
+                return {};
+            // Only the icon differs: no need to read the AppImage again.
+            if (!writeFile(path, rewrite(bytes, appImage, icon), error))
+                return {};
+            removeExtractedIcon(dataDir);
+            return {path, {}};
+        }
+    }
+    Made made = make(id, appImage, dataDir, error, icon);
+    if (!made.desktop.isEmpty() && !icon.isEmpty())
+        removeExtractedIcon(dataDir);
+    return made;
 }
 
 void removeOwn(const QString &dataDir)
 {
     QFile::remove(QDir(dataDir).filePath(QStringLiteral("applications/lattis-lattis.desktop")));
-    const QDir icons(QDir(dataDir).filePath(QStringLiteral("icons/lattis")));
-    for (const QString &name : icons.entryList({QStringLiteral("lattis.*")}, QDir::Files))
-        QFile::remove(icons.filePath(name));
+    removeExtractedIcon(dataDir);
+}
+
+QString userCopyPath(const QString &dataDir)
+{
+    return QDir(dataDir).filePath(QStringLiteral("applications/lattis.desktop"));
+}
+
+bool isUserCopy(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return false;
+    for (const QByteArray &line : file.readAll().split('\n')) {
+        if (line.trimmed() == kUserCopyMark)
+            return true;
+    }
+    return false;
+}
+
+QString systemEntry(const QStringList &dataDirs)
+{
+    for (const QString &dir : dataDirs) {
+        const QString path = QDir(dir).filePath(QStringLiteral("applications/lattis.desktop"));
+        if (QFileInfo(path).isFile() && !isUserCopy(path))
+            return path;
+    }
+    return {};
+}
+
+bool ensureUserCopy(const QString &systemEntry, const QString &dataDir, const QString &icon, QString *error)
+{
+    const QString target = userCopyPath(dataDir);
+    if (QFileInfo::exists(target) && !isUserCopy(target)) {
+        *error = QStringLiteral("%1 wasn't written by Lattis").arg(target);
+        return false;
+    }
+    QFile source(systemEntry);
+    if (!source.open(QIODevice::ReadOnly)) {
+        *error = QStringLiteral("can't read %1").arg(systemEntry);
+        return false;
+    }
+    const QByteArray bytes = withIcon(source.readAll(), icon);
+    if (bytes.isEmpty()) {
+        *error = QStringLiteral("%1 has no [Desktop Entry] group").arg(systemEntry);
+        return false;
+    }
+    QFile existing(target);
+    if (existing.open(QIODevice::ReadOnly) && existing.readAll() == bytes)
+        return true;
+    existing.close();
+    return writeFile(target, bytes, error);
+}
+
+void removeUserCopy(const QString &dataDir)
+{
+    const QString path = userCopyPath(dataDir);
+    if (isUserCopy(path))
+        QFile::remove(path);
 }
 
 void remove(const Made &made)

@@ -437,6 +437,7 @@ qt_add_qml_module(lattis
         src/install/appupdate.h src/install/appupdate.cpp
         src/install/applocation.h src/install/applocation.cpp
         src/install/appicon.h src/install/appicon.cpp
+        src/install/appiconsync.h src/install/appiconsync.cpp
         src/library/parsed.h
         src/library/romfoldermatch.h src/library/romfoldermatch.cpp
         src/library/romscan.h src/library/romscan.cpp

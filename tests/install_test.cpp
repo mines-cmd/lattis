@@ -530,7 +530,7 @@ void InstallTest::ownEntry()
     icon.close();
 
     QString error;
-    QVERIFY(DesktopEntry::ensureOwn(appImage, data.path(), &error).desktop.isEmpty());
+    QVERIFY(DesktopEntry::ensureOwn(appImage, data.path(), {}, &error).desktop.isEmpty());
     QVERIFY(error.isEmpty());
 
     DesktopEntry::removeOwn(data.path());

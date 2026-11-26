@@ -10,13 +10,15 @@ struct Entry
     bool ours = false;
     bool enabled = true;
     QString exec;
+    QString icon;
 };
 
 QString entryExec(const QString &program, const QString &dataDir = {});
 // The LATTIS_DATA an entry's Exec line sets ("env LATTIS_DATA=<dir> <program>"), or empty.
 QString execDataDir(const QString &exec);
 Entry readEntry(const QString &folder);
-QString writeEntry(const QString &folder, const QString &program, const QString &dataDir = {});
+QString writeEntry(const QString &folder, const QString &program, const QString &dataDir = {},
+                   const QString &icon = {});
 QString removeEntry(const QString &folder);
 QString autostartFolder();
 QString currentProgram();

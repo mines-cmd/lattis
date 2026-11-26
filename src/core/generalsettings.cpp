@@ -60,9 +60,19 @@ Parsed<GeneralSettings> parseGeneralSettings(const QByteArray &bytes, const QStr
                                  QStringLiteral("app_menu_entry"), QStringLiteral("toolbar"),
                                  QStringLiteral("toolbar_hidden_buttons"), QStringLiteral("toolbar_button_order"),
                                  QStringLiteral("view"), QStringLiteral("grid_cover_width"),
-                                 QStringLiteral("grid_panel"), QStringLiteral("grid_show_titles")};
+                                 QStringLiteral("grid_panel"), QStringLiteral("grid_show_titles"),
+                                 QStringLiteral("app_icon")};
     for (auto &&[k, node] : *table) {
         const QString key = toQString(k.str());
+        if (key == known.at(18)) {
+            const auto *s = node.as_string();
+            if (s && !s->get().empty())
+                out.value.appIcon = toQString(s->get());
+            else
+                out.warnings.append(QStringLiteral("%1: app_icon must be \"theme\" or a color theme's name in quotes")
+                                        .arg(section.where(node)));
+            continue;
+        }
         if (key == known.at(9)) {
             if (const auto *s = node.as_string())
                 out.value.skippedUpdate = toQString(s->get());
