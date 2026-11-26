@@ -24,20 +24,23 @@ Item {
     readonly property real artBaseline: 334.9 / 422
     readonly property real textBaseline: logoHeight * (artBaseline - artLeft)
 
-    implicitWidth: logo.width - logoHeight * (artLeft + artRight)
-    implicitHeight: logoHeight * (1 - 2 * artLeft)
+    // Whole pixels throughout: the PNG is decoded at its drawn size, and a fractional offset
+    // would resample it again and blur it.
+    readonly property int margin: Math.round(logoHeight * artLeft)
+
+    implicitWidth: logo.width - margin - Math.round(logoHeight * artRight)
+    implicitHeight: logo.height - 2 * margin
 
     Image {
         id: logo
-        x: -root.logoHeight * root.artLeft
-        y: -root.logoHeight * root.artLeft
-        height: root.logoHeight
-        width: root.logoHeight * implicitWidth / Math.max(1, implicitHeight)
+        x: -root.margin
+        y: -root.margin
+        height: Math.round(root.logoHeight)
+        width: Math.round(root.logoHeight * implicitWidth / Math.max(1, implicitHeight))
         source: root.lightText ? "qrc:/qt/qml/Launcher/resources/logo/dog/lattis-dog-horizontal.png"
                                : "qrc:/qt/qml/Launcher/resources/logo/dog/lattis-dog-horizontal-light.png"
         sourceSize.height: Math.ceil(root.logoHeight * root.pixelScale)
         fillMode: Image.PreserveAspectFit
         smooth: true
-        mipmap: true
     }
 }
