@@ -20,6 +20,8 @@ AppDialog {
 
     property var pendingUndo: null
     property var addable: []
+    // Rows made while the model syncs are new sessions; rows the list makes while scrolling are not.
+    property bool syncing: false
 
     signal message(string text)
     signal undoHandedOver(string text, var link, int duration)
@@ -85,7 +87,9 @@ AppDialog {
         }
         selection = kept
         sessionModel.scope = gameId
+        syncing = true
         sessionModel.source = sessions.map(s => Object.assign({ gameId: "", source: "", manual: false }, s))
+        syncing = false
     }
 
     function durationText(minutes: int): string {
@@ -438,8 +442,8 @@ AppDialog {
                                                   minutes: model.minutes })
 
                 // A session that comes back while the popup is open unfolds, the way a deleted one
-                // folds away; the rows made on opening, or for another game, are there at once.
-                property bool present: !root.opened || sessionModel.rebuilt
+                // folds away; the rows made on opening, for another game, or by scrolling are there at once.
+                property bool present: !root.opened || !root.syncing || sessionModel.rebuilt
                 Component.onCompleted: present = true
 
                 width: ListView.view.width
