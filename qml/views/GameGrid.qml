@@ -8,7 +8,8 @@ Item {
     id: root
 
     property var currentGame: ({})
-    property string selectedId: ""
+    // Set before Component.onCompleted picks a game, or the first game's backdrop flashes at startup.
+    property string selectedId: WindowState.selectedGame()
     readonly property bool allCollapsed: false
 
     signal launchRequested()
@@ -31,14 +32,37 @@ Item {
     property real toolbarLeft: -1
     // Level with the top of the hero in the list view.
     readonly property real contentTop: Theme.layout.margin + Theme.layout.toolbarHeight + Theme.details.marginTop
-    readonly property real leftEdge: General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Math.max(0, Theme.grid.margin - Theme.rail.containerMargin)
+    // Covers off the device-pixel grid are resampled by their corner mask and look blurry.
+    readonly property real dpr: Screen.devicePixelRatio
+    function snap(v: real): real { return Math.floor(v * dpr) / dpr }
+    readonly property real leftEdge: snap(General.railHidden ? (Theme.rail.width - Theme.rail.logoSize + Theme.list.padding) / 2 : Math.max(0, Theme.grid.margin - Theme.rail.containerMargin))
     // The scrollbar sits in the right margin, centered in it, so it touches neither the covers nor the panel.
     readonly property real barGap: Math.max(0, (Theme.grid.margin - gridBar.thickness) / 2)
     readonly property real usable: grid.width - leftEdge - (Theme.grid.margin - barGap) + Theme.grid.gap
     readonly property int columns: Math.max(1, Math.floor(usable / (coverWidth + Theme.grid.gap)))
-    readonly property real cellW: usable / columns
+    readonly property real cellW: snap(usable / columns)
     readonly property real coverW: cellW - Theme.grid.gap
-    readonly property real coverH: coverW * 1.5
+    readonly property real coverH: Math.round(coverW * 1.5 * dpr) / dpr
+    // Decoded at the exact size on screen, or the GPU shrinks it and blurs it; while shown covers
+    // change size, only once it settles, so a slider drag doesn't redecode every cover each frame.
+    property size coverDecode: Qt.size(0, 0)
+    // Sources are set only after the size: an Image given its source first starts decoding the
+    // whole picture at once, before its sourceSize binding catches up.
+    property bool coversArmed: false
+    function settleDecode() {
+        if (coverW > 0) {
+            coverDecode = Qt.size(Math.round(coverW * dpr), Math.round(coverH * dpr))
+            coversArmed = true
+        }
+    }
+    onCoverHChanged: {
+        // Covers still loading would restart anyway, and waiting would leave their placeholders up.
+        if (ready && coversLoaded())
+            decodeSettle.restart()
+        else
+            settleDecode()
+    }
+    Timer { id: decodeSettle; interval: 250; onTriggered: root.settleDecode() }
     readonly property real titleH: General.gridShowTitles ? Math.ceil(Theme.grid.titleSize * 1.4) + Theme.layout.spacingSmall : 0
     readonly property real cellH: coverH + titleH + Theme.grid.gap
     readonly property real pillHeight: Theme.grid.pillButtonSize + 2 * Theme.layout.spacingSmall
@@ -48,8 +72,10 @@ Item {
 
     // The covers in sight and the panel's logo have loaded.
     function artReady(): bool {
-        if (panel.visible && panel.logoLoading)
-            return false
+        return !(panel.visible && panel.logoLoading) && coversLoaded()
+    }
+
+    function coversLoaded(): bool {
         const top = grid.contentY
         const bottom = top + grid.height
         const cells = grid.contentItem.children
@@ -493,6 +519,8 @@ Item {
     }
 
     Component.onCompleted: {
+        // A size known at creation sends no change signal.
+        settleDecode()
         syncSelection()
         grid.forceActiveFocus()
         Qt.callLater(() => { ready = true })
@@ -599,6 +627,7 @@ Item {
             readonly property real fadeBottom: Math.min(Theme.grid.edgeFade,
                 Math.max(0, contentHeight + originY + bottomMargin - contentY - height))
             layer.enabled: fadeTop > 0 || fadeBottom > 0
+            layer.textureSize: Qt.size(Math.ceil(width * root.dpr), Math.ceil(height * root.dpr))
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: gridFadeMask
@@ -781,6 +810,8 @@ Item {
                             id: art
                             anchors.fill: parent
                             layer.enabled: true
+                            // The default texture comes out short of the device pixels and blurs the cover.
+                            layer.textureSize: Qt.size(Math.ceil(width * root.dpr), Math.ceil(height * root.dpr))
                             layer.effect: MultiEffect {
                                 maskEnabled: true
                                 maskSource: artMask
@@ -802,6 +833,8 @@ Item {
                                     Label {
                                         anchors.fill: parent
                                         anchors.margins: Theme.layout.spacing
+                                        // Only for a game without a cover: a loading one would flash its title.
+                                        visible: cell.coverUrl.toString() === "" || image.status === Image.Error
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
                                         wrapMode: Text.Wrap
@@ -816,9 +849,8 @@ Item {
                                 FadeImage {
                                     id: image
                                     anchors.fill: parent
-                                    source: cell.coverUrl
-                                    sourceSize: Qt.size(Math.ceil(width * Screen.devicePixelRatio / 32) * 32,
-                                                        Math.ceil(height * Screen.devicePixelRatio / 32) * 32)
+                                    source: root.coversArmed ? cell.coverUrl : ""
+                                    sourceSize: root.coverDecode
                                     fillMode: Image.PreserveAspectCrop
                                     smooth: true
                                     cache: true
