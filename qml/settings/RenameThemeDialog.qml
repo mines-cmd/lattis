@@ -15,9 +15,13 @@ AppDialog {
     readonly property var themes: usage.themes ?? []
     readonly property var files: usage.files ?? []
     property string failure
+    // Its own name is taken by itself: nothing to rename yet, and no error.
+    readonly property bool unchanged: field.text.trim() === name
     readonly property string error: {
         if (failure !== "")
             return failure
+        if (unchanged)
+            return ""
         const text = field.text.trim()
         const base = Theme.nameError(kind, text)
         if (base !== "")
@@ -87,7 +91,7 @@ AppDialog {
             id: renameButton
             primary: true
             text: qsTr("Rename")
-            enabled: root.error === ""
+            enabled: !root.unchanged && root.error === ""
             onClicked: root.rename()
         }
     ]

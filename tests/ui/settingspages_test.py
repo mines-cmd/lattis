@@ -240,9 +240,7 @@ SCENARIOS = [
              two_own_themes),
     Scenario("Themes: the Rename dialog opens with no error on the theme's own name",
              [(APPEARANCE + "rightclick Mine\nwait 400\nclick Rename\nwait 500\nexpect Rename Mine\n"
-               + "expect-not-has There is already a theme called Mine\n", exists("themes/Mine.toml"))], own_theme,
-             known_bugs=[("expect-not-has There is already a theme called Mine didn't happen",
-                          "RenameThemeDialog counts the theme's own name as taken")]),
+               + "expect-not-has There is already a theme called Mine\n", exists("themes/Mine.toml"))], own_theme),
     Scenario("Themes: a theme of your own is deleted from its card's menu, to the trash",
              [(APPEARANCE + "rightclick Mine\nwait 400\nclick Delete\nwait 500\nexpect Delete Mine?\n"
                + "expect-has This moves\nclick Delete\nwait 800\nexpect-not Mine\nexpect-has Moved Mine to the trash\n",
