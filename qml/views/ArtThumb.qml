@@ -36,6 +36,7 @@ Rectangle {
         id: picture
         readonly property real insetX: Math.max(0, (thumb.width - thumbImage.shownWidth) / 2)
         readonly property real insetY: Math.max(0, (thumb.height - thumbImage.shownHeight) / 2)
+        readonly property real fillScale: thumbImage.fitScale * thumb.zoom * Screen.devicePixelRatio
         anchors.fill: parent
         visible: thumbImage.loaded
         opacity: thumbImage.opacity
@@ -44,7 +45,7 @@ Rectangle {
             strokeWidth: -1
             fillItem: thumbImage
             // The fill is the picture's texture at its own pixel size, so it's scaled and centered here.
-            fillTransform: PlanarTransform.fromAffineMatrix(thumbImage.fitScale * thumb.zoom, 0, 0, thumbImage.fitScale * thumb.zoom,
+            fillTransform: PlanarTransform.fromAffineMatrix(picture.fillScale, 0, 0, picture.fillScale,
                                                             (thumb.width - thumbImage.shownWidth * thumb.zoom) / 2,
                                                             (thumb.height - thumbImage.shownHeight * thumb.zoom) / 2)
             PathRectangle {
