@@ -94,12 +94,11 @@ SCENARIOS = [
              [(OPEN + "click Clips\nwait 600\nexpect Nothing matches these filters\nexpect-not May 2026\n"
                + "click Clear all filters\nwait 600\nexpect 3 items\nclick Screenshots\nwait 600\n"
                + "expect 3 of 3 items\n", None)], setup),
-    # With a game picked and let go first, the empty grid leaves the sticky heading pointing at a row that is gone.
+    # With a game picked and let go first, emptying the grid has the sticky heading look up a row that is gone.
     Scenario("a type with nothing after a game filter was lifted",
              [(OPEN + "click Beta Run\nwait 600\nclick Beta Run\nwait 600\nclick Clips\nwait 600\n"
                + "expect Nothing matches these filters\nclick Clear all filters\nwait 600\nexpect 3 items\n", None)],
-             setup, known_bugs=[("GalleryPage.qml:1077:13: Unable to assign [undefined] to int",
-                                 "the Gallery's sticky heading reads past headerOfRow when the grid empties")]),
+             setup),
     Scenario("the game search narrows the filter's list of games and says when none has media",
              [(OPEN + "click Search games\ntype Alp\nwait 600\nexpect Alp\nexpect 3 items\nclick Alpha Quest\nwait 600\nexpect 2 of 3 items\n"
                + "click Alp\ntype zz\nwait 600\nexpect No game by that name has media\nexpect 2 of 3 items\n", None)], setup),

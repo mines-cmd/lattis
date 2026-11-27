@@ -1074,7 +1074,8 @@ FocusScope {
         Item {
             id: sticky
             readonly property int topRow: root.grouped && root.rows.length > 0 ? list.indexAt(0, list.contentY + 1) : -1
-            readonly property int headerRow: sticky.topRow >= 0 ? root.headerOfRow[sticky.topRow] : -1
+            // relayout() replaces headerOfRow before rows, so topRow can still name a row of the old layout.
+            readonly property int headerRow: root.headerOfRow[sticky.topRow] ?? -1
             readonly property int nextHeader: {
                 if (sticky.headerRow < 0)
                     return -1
