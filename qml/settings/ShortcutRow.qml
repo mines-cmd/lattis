@@ -36,7 +36,12 @@ Rectangle {
 
     HoverHandler { id: hover }
 
-    onRecordingChanged: if (recording) capture.forceActiveFocus()
+    onRecordingChanged: {
+        if (recording)
+            capture.forceActiveFocus()
+        else
+            capture.focus = false
+    }
 
     // Takes the next key press while recording. Actions.recording turns shortcuts off, so
     // the key reaches here instead of running its action.

@@ -117,11 +117,10 @@ DEMO_PLATFORMS = ["switch", "3ds", "steam", "proton", "linux"]
 
 
 SCENARIOS = [
-    # Clicking the search field takes the focus from the recorded row, which keeps it (the next scenario).
     Scenario("Keyboard: a recorded shortcut is saved and works in the main window, the old one doesn't",
              [(KEYBOARD + "expect Add to / remove from favorites\nclick Ctrl+D\nwait 300\nexpect Press keys…\n"
                + "expect Press the new keys; Escape cancels\nkey Ctrl+Alt+F\nwait 600\nexpect Ctrl+Alt+F\n"
-               + "expect-not Ctrl+D\nclick favorite\n" + CLOSE,
+               + "expect-not Ctrl+D\n" + CLOSE,
                has("settings.toml", 'toggle_favorite = "Ctrl+Alt+F"')),
               (FIRST + "click Pikmin 4\nkey Ctrl+D\nwait 400\nclick Mario Kart 8 Deluxe\nkey Ctrl+Alt+F\nwait 600\n",
                both(has(f"library/games/{MARIO_KART}", "favorite = true"),
@@ -129,12 +128,11 @@ SCENARIOS = [
               (KEYBOARD + "expect Ctrl+Alt+F\n", None)], demo),
     Scenario("Keyboard: the key after a recorded one isn't recorded too",
              [(KEYBOARD + "click Ctrl+D\nwait 300\nkey Ctrl+Alt+F\nwait 600\nexpect Ctrl+Alt+F\nkey Ctrl+W\nwait 600\n",
-               has("settings.toml", 'toggle_favorite = "Ctrl+Alt+F"'))], demo,
-             known_bugs=[('lacks: toggle_favorite = "Ctrl+Alt+F"',
-                          "the recorded row keeps the key focus, so Ctrl+W becomes the shortcut")]),
+               has("settings.toml", 'toggle_favorite = "Ctrl+Alt+F"'))], demo),
     Scenario("Keyboard: Escape while recording keeps the shortcut",
              [(KEYBOARD + "click Ctrl+D\nwait 300\nexpect Press keys…\nkey Escape\nwait 400\nexpect-not Press keys…\n"
-               + "expect Ctrl+D\nwait 400\n", has("settings.toml", absent=("toggle_favorite",)))], demo),
+               + "expect Ctrl+D\nkey Ctrl+Alt+F\nwait 400\nexpect Ctrl+D\n",
+               has("settings.toml", absent=("toggle_favorite",)))], demo),
     Scenario("Keyboard: keys another action uses are marked as a conflict",
              [(KEYBOARD + "click Ctrl+D\nwait 300\nkey Ctrl+G\nwait 600\nexpect Another action uses the same keys\n"
                + "click Reset to Ctrl+D\nwait 600\nexpect-not Another action uses the same keys\nexpect Ctrl+D\n",
