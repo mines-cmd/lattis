@@ -98,6 +98,13 @@ ApplicationWindow {
         reviewing = true
     }
 
+    function lookUpOnly(ids) {
+        lookupModel.setAllChecked(false)
+        for (const id of ids)
+            lookupModel.setChecked(id, true)
+        lookUp()
+    }
+
     function suggestTagsForEveryGame() {
         show()
         if (lookupModel.running || lookupModel.applying || lookupModel.resultModel.count > 0)

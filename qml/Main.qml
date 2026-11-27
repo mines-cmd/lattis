@@ -890,7 +890,10 @@ ApplicationWindow {
             bulkLookupWindow.width = Number(wh[0])
             bulkLookupWindow.height = Number(wh[1])
         }
-        if (mode.endsWith("look_up"))
+        const [action, ids] = mode.split(":")
+        if (action.endsWith("look_up") && ids)
+            bulkLookupWindow.lookUpOnly(ids.split(","))
+        else if (action.endsWith("look_up"))
             bulkLookupWindow.lookUp()
     }
 
