@@ -1073,6 +1073,9 @@ QString GameRunner::missingEmulator(const QString &gameId) const
     const Game *game = m_library->game(gameId);
     if (!game || !game->launcher().isEmpty() || game->platform == kLinuxPlatform)
         return {};
+    // Installs aren't cached: until the first scan finds them, every emulator looks missing.
+    if (!m_library->store().snapshot().installsDetected)
+        return {};
     QString chosen;
     chooseEmulator(gameId, &chosen);
     if (!chosen.isEmpty())
