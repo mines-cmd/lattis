@@ -329,7 +329,7 @@ Item {
     // The view keeps the current game on screen while the cells change size under it.
     onCoverWidthChanged: {
         reflow()
-        Qt.callLater(() => grid.positionViewAtIndex(grid.currentIndex, GridView.Contain))
+        Qt.callLater(() => root.showIndex(grid.currentIndex))
     }
 
     Timer {
@@ -349,7 +349,7 @@ Item {
     function selectGame(id) {
         selectedId = id
         syncSelection()
-        grid.positionViewAtIndex(grid.currentIndex, GridView.Contain)
+        root.showIndex(grid.currentIndex)
     }
 
     function revealGame(id) {
@@ -409,7 +409,7 @@ Item {
         gameMenu.button = null
         let below
         if (x === undefined) {
-            grid.positionViewAtIndex(row, GridView.Contain)
+            root.showIndex(row)
             const item = grid.itemAtIndex(row)
             if (item === null)
                 return
@@ -526,6 +526,34 @@ Item {
         Qt.callLater(() => { ready = true })
     }
 
+    // The grid's size, margins and rows settle over several frames at startup (and the library may
+    // reload), so the restored game is scrolled into view again on each change until the user scrolls.
+    property bool startReveal: true
+    function revealStart() {
+        if (startReveal && cellH > 0 && grid.height > 0 && grid.currentIndex >= 0)
+            showIndex(grid.currentIndex)
+    }
+
+    // GridView.Contain ignores topMargin and bottomMargin: it scrolls a first-row cover up into the
+    // top margin and lets a cover end under the zoom pill.
+    function showIndex(index) {
+        grid.positionViewAtIndex(index, GridView.Contain)
+        const item = grid.itemAtIndex(index)
+        if (item === null)
+            return
+        const top = item.y - grid.topMargin
+        const bottom = item.y + item.height + grid.bottomMargin - grid.height
+        const lowest = grid.originY - grid.topMargin
+        const highest = Math.max(lowest, grid.contentHeight + grid.originY + grid.bottomMargin - grid.height)
+        let y = grid.contentY
+        if (bottom > y)
+            y = bottom
+        if (top < y)
+            y = top
+        grid.contentY = Math.max(lowest, Math.min(highest, y))
+    }
+    onCellHChanged: Qt.callLater(revealStart)
+
     property real contentYBeforeReset: 0
 
     Connections {
@@ -536,6 +564,10 @@ Item {
         function onRowsRemoved() { Qt.callLater(root.syncSelection) }
         function onRowsMoved() { Qt.callLater(root.syncSelection) }
         function onReloaded() {
+            if (root.startReveal) {
+                Qt.callLater(root.revealStart)
+                return
+            }
             grid.contentY = Math.min(root.contentYBeforeReset,
                                      Math.max(grid.originY, grid.contentHeight - grid.height + grid.originY))
         }
@@ -642,13 +674,18 @@ Item {
                 trackless: true
                 handleColor: Theme.list.scrollbarHandle
                 handleHoverColor: Theme.list.scrollbarHandleHover
+                onPressedChanged: if (pressed) root.startReveal = false
             }
 
             // Instant: keys repeat too often to animate a scroll.
             onCurrentIndexChanged: {
                 root.updateCurrent()
-                positionViewAtIndex(currentIndex, GridView.Contain)
+                root.showIndex(currentIndex)
             }
+            onHeightChanged: Qt.callLater(root.revealStart)
+            onTopMarginChanged: Qt.callLater(root.revealStart)
+            onContentHeightChanged: Qt.callLater(root.revealStart)
+            onMovementStarted: root.startReveal = false
 
             WheelHandler {
                 acceptedModifiers: Qt.ControlModifier
