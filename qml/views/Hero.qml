@@ -21,6 +21,9 @@ Item {
     // Set for a pick that follows the last one closely (details.rapid_switch): the new art and logo
     // replace the old without fading, zooming or rising. The art is still waited for.
     property bool instant: false
+    // Until the first game shows, it just appears: the art's fade and zoom and the logo's rise are for switches.
+    property bool opened: false
+    readonly property bool still: instant || !opened
     // Set while the view switch hides the hero until its art is in, so the art shows whole.
     property bool entering: false
     readonly property bool loading: shown?.loading ?? false
@@ -328,7 +331,7 @@ Item {
                         return
                     cancel()
                     root.awaitingArt = false
-                    root.settling = game.id !== undefined && !root.instant && (Theme.hero.animateArt || Theme.hero.animateLogo) && Motion.duration(Theme.hero.fadeDuration) > 0
+                    root.settling = game.id !== undefined && !root.still &&(Theme.hero.animateArt || Theme.hero.animateLogo) && Motion.duration(Theme.hero.fadeDuration) > 0
                     if (root.settling) {
                         arrival = 0
                         arrivalAnimation.restart()
@@ -338,6 +341,8 @@ Item {
                     root.current = index
                     if (root.settling)
                         settleTimer.restart()
+                    if (game.id !== undefined)
+                        root.opened = true
                 }
                 onLoadingChanged: {
                     if (!loading)
@@ -357,7 +362,7 @@ Item {
                 // once the new one covers it: two half-transparent layers would show the window
                 // background as a dark dip.
                 Behavior on opacity {
-                    enabled: Motion.fades && !root.instant && Theme.hero.fadeDuration > 0 && (layer.isCurrent || root.logoOnly)
+                    enabled: Motion.fades && !root.still && Theme.hero.fadeDuration > 0 && (layer.isCurrent || root.logoOnly)
                         && (root.logoOnly ? Theme.hero.animateLogo : Theme.hero.animateArt)
                     MotionNumber { fade: true; duration: Motion.fadeDuration(Theme.hero.fadeDuration) }
                 }
@@ -390,7 +395,7 @@ Item {
                     opacity: status === Image.Ready ? 1 : 0
                     // Only for art arriving after the switch timed out; otherwise the layer fades.
                     Behavior on opacity {
-                        enabled: Motion.fades && !root.instant && !root.entering && Theme.hero.fadeDuration > 0 && layer.isCurrent && Theme.hero.animateArt
+                        enabled: Motion.fades && !root.still && !root.entering && Theme.hero.fadeDuration > 0 && layer.isCurrent && Theme.hero.animateArt
                         MotionNumber { fade: true; duration: Motion.fadeDuration(Theme.hero.fadeDuration) }
                     }
                 }

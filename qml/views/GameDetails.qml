@@ -822,6 +822,8 @@ Item {
 
             Hero {
                 id: hero
+                // Only a page made at start shows its first game still; one opened later switches in as usual.
+                Component.onCompleted: opened = root.startedUp
                 readonly property real artHeight: Math.min(content.width / Theme.hero.aspect, Theme.hero.maxHeight)
                 Layout.fillWidth: true
                 Layout.preferredHeight: logoOnly ? Theme.hero.logoOnlyHeight : artHeight
