@@ -1,5 +1,7 @@
 # Finding games
 
+Lattis opens on the game you had selected when you last closed it. If that game is gone or hidden by a filter, it opens on the first game in the list.
+
 ## Search
 
 Start typing anywhere in the main window, or press Ctrl+F or /, to search. The search matches titles:

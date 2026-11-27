@@ -147,7 +147,7 @@ The tests (`secretstore_test`) run a fake Secret Service on a private session bu
 | `tomlstring.h` | `tomlQuote()`, the one way to write a string into a TOML file |
 | `tomlsection.*` | A settings section parsed: the table, its warnings, `where()`; `toQString()` |
 | `uidriver.*` | `UiDriver`: replays a UI test script of clicks and keys in the running app |
-| `windowstate.*` | Window size and maximized state across starts |
+| `windowstate.*` | Window size, maximized state and the selected game across starts |
 
 ---
 
@@ -286,6 +286,7 @@ Block{ array: "platform", key: "id", value: "switch" }
 | `maximized(name)` | Whether the window was maximized |
 | `fillsScreen(window)` | True if the window fills its screen (guards maximized check) |
 | `track(window, name)` | Watch and persist this window's state |
+| `selectedGame()` / `setSelectedGame(id)` | The game selected in the list or grid, kept as `selected_game` in the same file so the next start opens on it (the first game when it's gone or filtered out) |
 | `releaseMemory(context)` | Runs the JS garbage collector of `context`'s engine, then `malloc_trim(0)` a second later (glibc only), so a window that just dropped a lot of QML gives the memory back instead of glibc keeping it |
 | `compositorRounding()` | Hyprland's `decoration:rounding` (asked once through `hyprctl`), or -1 outside Hyprland or when it can't be read |
 

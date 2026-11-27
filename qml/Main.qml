@@ -265,6 +265,8 @@ ApplicationWindow {
     // Here rather than in GameGrid: a Binding destroyed with its Loader item doesn't restore the value.
     Binding { target: Library; property: "flat"; value: window.gridView }
     readonly property Item browser: gridLoader.item ?? gameList
+    readonly property string browserSelectedId: browser.selectedId
+    onBrowserSelectedIdChanged: WindowState.setSelectedGame(browserSelectedId)
     readonly property Item details: gridView ? pageDetails.item : listDetails.item
     property bool gamePageOpen: false
     // 0 shows the grid, 1 the game page. They take turns over the shared backdrop rather than

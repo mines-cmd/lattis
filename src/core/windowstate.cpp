@@ -111,6 +111,14 @@ void WindowState::track(QWindow *window, const QString &name)
     connect(window, &QWindow::windowStateChanged, this, changed);
 }
 
+void WindowState::setSelectedGame(const QString &id)
+{
+    if (id.isEmpty() || id == m_selectedGame)
+        return;
+    m_selectedGame = id;
+    m_saveTimer.start();
+}
+
 void WindowState::load()
 {
     toml::table table;
@@ -119,6 +127,8 @@ void WindowState::load()
     } catch (const toml::parse_error &) {
         return;
     }
+    if (const auto selected = table["selected_game"].value<std::string>())
+        m_selectedGame = QString::fromStdString(*selected);
     for (const auto &[key, node] : table) {
         const toml::table *section = node.as_table();
         if (!section)
@@ -185,6 +195,8 @@ void WindowState::capture()
 void WindowState::save()
 {
     toml::table table;
+    if (!m_selectedGame.isEmpty())
+        table.insert("selected_game", m_selectedGame.toStdString());
     for (auto it = m_entries.cbegin(); it != m_entries.cend(); ++it) {
         toml::table section;
         if (it->size.isValid()) {
@@ -195,7 +207,7 @@ void WindowState::save()
         table.insert(it.key().toStdString(), std::move(section));
     }
     std::ostringstream out;
-    out << "# Window sizes, remembered between starts. Safe to delete.\n\n" << table << '\n';
+    out << "# Window sizes and the selected game, remembered between starts. Safe to delete.\n\n" << table << '\n';
     const std::string text = out.str();
 
     if (!QDir().mkpath(QFileInfo(m_file).absolutePath())) {

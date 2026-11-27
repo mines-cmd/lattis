@@ -37,6 +37,9 @@ public:
 
     Q_INVOKABLE void track(QWindow *window, const QString &name);
 
+    Q_INVOKABLE QString selectedGame() const { return m_selectedGame; }
+    Q_INVOKABLE void setSelectedGame(const QString &id);
+
     // For a window that just dropped a lot of QML: runs the JS garbage collector, then hands
     // the freed heap back to the system, which glibc otherwise keeps for reuse.
     Q_INVOKABLE void releaseMemory(QObject *context);
@@ -54,6 +57,7 @@ private:
 
     QString m_file;
     QHash<QString, Entry> m_entries;
+    QString m_selectedGame;
     QHash<QString, QPointer<QWindow>> m_windows;
     QTimer m_saveTimer;
 

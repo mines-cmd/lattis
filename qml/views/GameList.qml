@@ -8,7 +8,7 @@ Rectangle {
     id: root
 
     property var currentGame: ({})
-    property string selectedId: ""
+    property string selectedId: WindowState.selectedGame()
     property real reach: 0
     property real extraTop: 0
     // How far the background continues left of the list.
