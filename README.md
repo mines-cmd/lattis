@@ -19,7 +19,7 @@ Emulators, Steam, Proton and native games in one library, kept in one folder you
 </div>
 
 <p align="center">
-  <img src="resources/screenshots/hades.webp" alt="The Lattis library: a sidebar of games grouped by platform and the page for Hades, with its hero art, a Launch button, play time, rating and tags" width="900">
+  <img src="resources/screenshots/hades.webp" alt="The Lattis library: a sidebar of games grouped by platform and the page for Hades, with its hero art, a Launch button, play time, media, friends who play it and achievements" width="900">
 </p>
 
 ---
@@ -27,6 +27,19 @@ Emulators, Steam, Proton and native games in one library, kept in one folder you
 ## About
 
 Lattis brings every game you own on Linux into a single, fast library: games for fourteen emulators, your installed Steam games, Windows games run through Proton, and native Linux games. It's written in C++20 with a Qt Quick interface, starts in a fraction of a second, and lets you change almost everything you see.
+
+## Screenshots
+
+|                                                                                                                                                                           |                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![The page for Baldur's Gate 3 in the Steam theme, with games grouped by when they were last played](resources/screenshots/steam-theme.webp)                              | ![Grid view in the Catppuccin theme: a wall of game covers, with the selected game's art, Launch button and details in a side panel](resources/screenshots/grid.webp) |
+| **8 bundled themes, including Steam**                                                                                                                                     | **Grid view**                                                                                                                                 |
+| ![Library overview in the Rose Pine theme: games, hours played, backlog and achievements, the games to continue, storage by platform and games by platform](resources/screenshots/overview.webp) | ![Gallery in the Nord theme: every screenshot in the library by month, with filters for type, platform, game and date](resources/screenshots/gallery.webp)      |
+| **Library overview**                                                                                                                                                      | **A gallery with your screenshots and clips**                                                                                                 |
+| ![Play statistics for November in the Moss theme: hours per day, by platform and week, and the most played games](resources/screenshots/stats.webp)                                         | ![Customize: the Ember palette, each color with a swatch and its value](resources/screenshots/customize.webp)                                 |
+| **Play statistics**                                                                                                                                                       | **Edit any color live**                                                                                                                       |
+| ![Look up missing info: matched games with a description, year, rating, tags and new art to apply](resources/screenshots/lookup.webp)                                           | ![The setup guide's first step, over a wall of game covers](resources/screenshots/setup-1.webp)                                               |
+| **Review metadata and art before anything is saved**                                                                                                                      | **A guided first start**                                                                                                                      |
 
 ## Features
 
@@ -40,20 +53,12 @@ Lattis brings every game you own on Linux into a single, fast library: games for
 - **One folder to back up.** Your library, settings, themes and art live in a single data folder. Copy it, or use the built-in backup and import of your library and saves, and back up a game's saves automatically when it closes.
 - **Guided first start.** A short setup guide imports Steam, finds your emulators and ROM folders, and sets up art lookups and your look.
 
-## Screenshots
-
-| | |
-|---|---|
-| ![Customize: the Ember palette, each color with a swatch and its value](resources/screenshots/customize.webp) | ![Look up missing info: matched games with a description, year, rating and new art to apply](resources/screenshots/lookup.webp) |
-| **Edit any color live, with undo** | **Review metadata and art before anything is saved** |
-| ![Play statistics: hours per day, by platform and week, and the most played games](resources/screenshots/stats.webp) | ![The setup guide's first step, over a wall of game covers](resources/screenshots/setup-1.webp) |
-| **Play statistics** | **A guided first start** |
-
 ## Installation
 
 Lattis ships as an AppImage: a single file with everything it needs, which runs on x86_64 Ubuntu 22.04, Debian 12, Fedora 36, SteamOS 3 or newer.
 
 1. Download `Lattis-<version>-x86_64.AppImage` from the [latest release](https://github.com/mines-cmd/lattis/releases/latest).
+
 2. Make it executable: right-click it → Properties → "Allow executing as a program", or run:
 
    ```sh
@@ -62,7 +67,14 @@ Lattis ships as an AppImage: a single file with everything it needs, which runs 
 
 3. Double-click it to start. A setup guide walks you through the first start.
 
-Keeping it in `~/Applications` is a good habit; tools like [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) can add it to your app menu. To open Lattis when you log in, turn on **Start at login** in Settings → General. The AppImage updates itself from the app: once a day it checks the latest release (one request to GitHub; switch it off in Settings → General) and offers to replace itself. If Gear Lever manages the file, update it there. See [Getting started](docs/guide/getting-started.md) in the user guide for more.
+Lattis takes care of the rest itself:
+
+- **Menu entry.** The first time it runs, it adds itself to your applications menu, with its icon. If you move the file, the entry follows it.
+- **A place for it.** **Move** in Settings → General, or on the setup guide's last step, puts the AppImage in `~/Applications`, next to the emulators it installs. The menu entry follows it.
+- **Updates.** Once a day it checks for a new release (one request to GitHub). When there is one, the app menu offers **Update to &lt;version&gt;** with the release notes. Lattis downloads it, replaces its own file in place, and restarts when you're ready. Turn the check off with **Check for updates** in Settings → General.
+- **Start at login.** Turn it on in Settings → General.
+
+See [Getting started](docs/guide/getting-started.md) in the user guide for more.
 
 ## Building from source
 
@@ -99,24 +111,24 @@ ctest --test-dir build
 
 Everything Lattis stores lives in `~/.local/share/lattis/`:
 
-| Path | Contents |
-|---|---|
-| `settings.toml` | The active colors and style, list sorting and filters, launch settings, and Steam options |
-| `library/` | Your games, one file each, plus platforms and tags |
-| `art/<game id>/` | Each game's hero, cover, logo and icon |
-| `themes/colors/`, `themes/styles/` | Your colors and styles, and your changes to the built-in ones |
-| `themes/*.toml` | Your themes, each naming a pair of colors and a style |
-| `credentials.toml` | Your IGDB and SteamGridDB keys, readable only by you |
+| Path                               | Contents                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `settings.toml`                    | The active colors and style, list sorting and filters, launch settings, and Steam options |
+| `library/`                         | Your games, one file each, plus platforms and tags                                        |
+| `art/<game id>/`                   | Each game's hero, cover, logo and icon                                                    |
+| `themes/colors/`, `themes/styles/` | Your colors and styles, and your changes to the built-in ones                             |
+| `themes/*.toml`                    | Your themes, each naming a pair of colors and a style                                     |
+| `credentials.toml`                 | Your IGDB and SteamGridDB keys, readable only by you                                      |
 
 `themes/colors/reference.toml` and `themes/styles/reference.toml` list every setting with its default and a description. See [Themes](docs/guide/themes.md) and [The data folder](docs/guide/data-folder.md) for details.
 
 ## Documentation
 
-| | |
-|---|---|
-| [User guide](docs/guide/README.md) | How to use every part of the app |
-| [Roadmap](docs/guide/roadmap.md) | The bigger features planned next |
-| [Code documentation](docs/code/) | How the code works, one page per part: library, launching, Steam, themes, QML and more |
+|                                    |                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------- |
+| [User guide](docs/guide/README.md) | How to use every part of the app                                                       |
+| [Roadmap](docs/guide/roadmap.md)   | The bigger features planned next                                                       |
+| [Code documentation](docs/code/)   | How the code works, one page per part: library, launching, Steam, themes, QML and more |
 
 ## Disclaimer
 
