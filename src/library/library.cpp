@@ -6877,8 +6877,10 @@ QVariantMap Library::removeEpicPrefix(const QString &id, bool permanent)
     const LibrarySnapshot &s = m_store.snapshot();
     const QString appName = epicAppName(id);
     const QString prefix = appName.isEmpty() ? QString() : HeroicSaves::ownPrefix(s.heroic.install.root, appName);
-    if (prefix.isEmpty() || !QFileInfo(prefix).isDir())
-        return withError(tr("%1 has no Wine prefix of its own").arg(s.content.games.value(id).title));
+    if (prefix.isEmpty() || !QFileInfo(prefix).isDir()) {
+        const Game *game = gameIncludingHidden(id);
+        return withError(tr("%1 has no Wine prefix of its own").arg(game ? game->title : id));
+    }
     if (const QString why = Uninstall::refusal(prefix, uninstallPlaces(id)); !why.isEmpty())
         return withError(tr("The Wine prefix can't be deleted: %1").arg(why));
     const Uninstall::Removal r = Uninstall::remove(prefix, permanent, m_trash);

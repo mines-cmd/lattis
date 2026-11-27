@@ -2265,8 +2265,6 @@ void LaunchTest::epicUninstall()
     const qsizetype calls = readFile(legendaryLog()).count('\n');
     QCOMPARE(m_runner->uninstallEpic(kHike, false, true, false), QString());
     QCOMPARE(uninstalled.count(), 4);
-    QEXPECT_FAIL("", "New, not a finding of the review: removeEpicPrefix takes the title from the game files, "
-                     "which an Epic game has none of, so the message starts with a blank", Continue);
     QCOMPARE(uninstalled.last().at(1).toMap(),
              (QVariantMap{{"error", QStringLiteral("A Short Hike has no Wine prefix of its own")}}));
     QCOMPARE(readFile(legendaryLog()).count('\n'), calls);
