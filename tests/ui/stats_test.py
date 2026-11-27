@@ -83,9 +83,7 @@ SCENARIOS = [
     Scenario("Play statistics: the month picker opens a month, and All of a year opens the year",
              [(OPEN + "click November 2026\nwait 500\nexpect Oct\nclick Oct\nwait 600\nexpect October 2026\n"
                + "click October 2026\nwait 500\nclick All of 2026\nwait 600\nexpect 2026\nexpect-not October 2026\n"
-               + "expect Played Game\n", None)], history,
-             known_bugs=[("Member rotation of the object PageButton overrides",
-                          "StatsPeriodPicker's PageButton declares its own rotation")]),
+               + "expect Played Game\n", None)], history),
     Scenario("Play statistics: a Most played tile opens its game in the library",
              [(OPEN + "click Played Game\nwait 1000\nexpect-not November 2026\nexpect Played Game\nkey Ctrl+D\nwait 600\n",
                favorite_only("linux-played.toml", ("linux-old.toml", "switch-mario-kart-8-deluxe.toml")))], history),

@@ -162,7 +162,6 @@ MotionPopup {
 
     component PageButton: Cell {
         property string icon
-        property int rotation: 0
 
         implicitWidth: root.cellHeight
         text: ""
@@ -172,7 +171,6 @@ MotionPopup {
             size: Theme.iconButton.iconSize
             color: Theme.stats.toggleText
             path: parent.icon
-            rotation: parent.rotation
         }
     }
 
@@ -234,8 +232,7 @@ MotionPopup {
                 spacing: 0
 
                 PageButton {
-                    icon: Icons.chevronRight
-                    rotation: 180
+                    icon: Icons.chevronLeft
                     enabled: root.gridYear > root.firstYear
                     onClicked: root.pageYear(-1)
                 }
