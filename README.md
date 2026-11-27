@@ -26,7 +26,7 @@ Emulators, Steam, Proton and native games in one library, kept in one folder you
 
 ## About
 
-Lattis brings every game you own on Linux into a single, fast library: games for fourteen emulators, your installed Steam games, Windows games run through Proton, and native Linux games. It's written in C++20 with a Qt Quick interface, starts in a fraction of a second, and lets you change almost everything you see.
+Lattis brings every game you own on Linux into a single, fast library: games for fourteen emulators, your Steam games, Epic games through Heroic, Windows games run through Proton, and native Linux games. It's written in C++20 with a Qt Quick interface, starts in a fraction of a second, and lets you change almost everything you see.
 
 ## Screenshots
 
