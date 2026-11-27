@@ -113,10 +113,14 @@ void SteamFriends::dailyCheck()
         const qint64 age = m_cache.fetched.isValid() && m_cache.steamId == id
             ? m_cache.fetched.secsTo(QDateTime::currentDateTimeUtc())
             : kDaySeconds;
-        if (age >= kDaySeconds)
+        if (age >= kDaySeconds) {
             begin();
-        else
+        } else {
             wait = kDaySeconds - age;
+            // Pictures removed since the last fetch (a cleared cache) would stay blank for a day.
+            if (const QStringList missing = missingAvatars(); !missing.isEmpty() && m_state != State::Syncing)
+                fetchAvatars(missing, [this] { emit changed(); });
+        }
     }
     m_daily.start(int(qMin<qint64>(wait, kDaySeconds) * 1000));
 }
@@ -304,13 +308,7 @@ void SteamFriends::finishFetch(const std::shared_ptr<Job> &job)
     applyPlaying(job->summaries);
     emit changed();
 
-    QStringList urls;
-    for (const SteamWebApi::Friend &f : std::as_const(m_cache.friends)) {
-        if (const QString name = pictureName(f.avatarUrl); !name.isEmpty() && !QFile::exists(avatarFile(f.avatarUrl))
-            && !urls.contains(f.avatarUrl))
-            urls.append(f.avatarUrl);
-    }
-    fetchAvatars(urls, [this, job] {
+    fetchAvatars(missingAvatars(), [this, job] {
         pruneAvatars();
         emit changed();
         finish(Outcome::Synced, job->failed ? job->error : QString());
@@ -358,14 +356,34 @@ void SteamFriends::fetchAvatars(QStringList urls, std::function<void()> done)
     });
 }
 
+QStringList SteamFriends::missingAvatars() const
+{
+    QStringList urls;
+    for (const SteamWebApi::Friend &f : std::as_const(m_cache.friends)) {
+        if (const QString name = pictureName(f.avatarUrl); !name.isEmpty() && !QFile::exists(avatarFile(f.avatarUrl))
+            && !urls.contains(f.avatarUrl))
+            urls.append(f.avatarUrl);
+    }
+    return urls;
+}
+
 void SteamFriends::pruneAvatars()
 {
+    // Every data dir shares the pictures folder: keep the ones another data dir's friends use.
     QSet<QString> used;
-    for (const SteamWebApi::Friend &f : std::as_const(m_cache.friends)) {
-        if (const QString name = pictureName(f.avatarUrl); !name.isEmpty())
-            used.insert(name);
+    const QDir cacheDir(m_setup.cacheDir);
+    for (const QString &name :
+         cacheDir.entryList({QStringLiteral("steam-friends-*.json")}, QDir::Files)) {
+        SteamWebApi::FriendsCache other;
+        if (SteamWebApi::loadFriendsCache(cacheDir.filePath(name), &other)) {
+            for (const SteamWebApi::Friend &f : std::as_const(other.friends))
+                used.insert(pictureName(f.avatarUrl));
+        }
     }
-    const QDir dir(QDir(m_setup.cacheDir).filePath(QStringLiteral("steam-avatars")));
+    for (const SteamWebApi::Friend &f : std::as_const(m_cache.friends))
+        used.insert(pictureName(f.avatarUrl));
+    used.remove(QString());
+    const QDir dir(cacheDir.filePath(QStringLiteral("steam-avatars")));
     for (const QString &name : dir.entryList(QDir::Files)) {
         if (!used.contains(name))
             QFile::remove(dir.filePath(name));

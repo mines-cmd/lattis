@@ -122,6 +122,7 @@ private:
     void fetchGames(const std::shared_ptr<Job> &job, qsizetype index);
     void finishFetch(const std::shared_ptr<Job> &job);
     void fetchAvatars(QStringList urls, std::function<void()> done);
+    QStringList missingAvatars() const;
     void pruneAvatars();
     void finish(Outcome outcome, const QString &error = {});
     bool applyPlaying(const QList<SteamWebApi::FriendSummary> &summaries);
