@@ -39,6 +39,9 @@ public:
 
     Q_INVOKABLE QString selectedGame() const { return m_selectedGame; }
     Q_INVOKABLE void setSelectedGame(const QString &id);
+    // The Media row loads after the first frame; the height it last had keeps the rows below still until then.
+    Q_INVOKABLE qreal openingMediaHeight(const QString &id) const { return id == m_mediaGame ? m_mediaHeight : 0; }
+    Q_INVOKABLE void setOpeningMedia(const QString &id, qreal height);
 
     // For a window that just dropped a lot of QML: runs the JS garbage collector, then hands
     // the freed heap back to the system, which glibc otherwise keeps for reuse.
@@ -58,6 +61,8 @@ private:
     QString m_file;
     QHash<QString, Entry> m_entries;
     QString m_selectedGame;
+    QString m_mediaGame;
+    qreal m_mediaHeight = 0;
     QHash<QString, QPointer<QWindow>> m_windows;
     QTimer m_saveTimer;
 

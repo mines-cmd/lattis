@@ -27,7 +27,21 @@ Item {
     // A refresh of the same game (a download's progress, every few seconds) must not
     // crossfade: while both layers are partly transparent the window background shows
     // through as a dark flash.
+    // The first game goes straight into the shown layer, decoded at once: a crossfade from nothing
+    // brought the backdrop in a few hundred ms after the rest of the window.
+    property bool started: false
+    function start(): bool {
+        const layer = layers.itemAt(current)
+        if (started || !layer || game.id === undefined)
+            return false
+        started = true
+        layer.loadAtOnce(game)
+        return true
+    }
+
     onGameChanged: {
+        if (start())
+            return
         const shown = layers.itemAt(current)?.game
         if (shown && shown.id === game.id && shown.heroArt === game.heroArt && shown.hue === game.hue)
             return
@@ -40,7 +54,7 @@ Item {
         // With a warm library cache the first game arrives before the layers exist, so
         // onGameChanged finds none: the visible layer picks it up when it's created.
         onItemAdded: (index, item) => {
-            if (index === root.current)
+            if (index === root.current && !root.start())
                 item.load(root.game)
         }
 
@@ -50,7 +64,13 @@ Item {
             required property int index
             property var game: ({})
             property bool pending: false
+            property bool atOnce: false
 
+            function loadAtOnce(g) {
+                atOnce = true
+                load(g)
+                atOnce = false
+            }
             function load(g) {
                 pending = true
                 game = g
@@ -89,7 +109,7 @@ Item {
                 source: layer.game.heroUrl ?? ""
                 sourceSize.width: Theme.backdrop.decodeSize
                 fillMode: Image.PreserveAspectCrop
-                asynchronous: true
+                asynchronous: !layer.atOnce
                 smooth: true
                 onStatusChanged: {
                     if (status !== Image.Loading)

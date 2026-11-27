@@ -119,6 +119,15 @@ void WindowState::setSelectedGame(const QString &id)
     m_saveTimer.start();
 }
 
+void WindowState::setOpeningMedia(const QString &id, qreal height)
+{
+    if (id.isEmpty() || (id == m_mediaGame && qFuzzyCompare(height + 1, m_mediaHeight + 1)))
+        return;
+    m_mediaGame = id;
+    m_mediaHeight = height;
+    m_saveTimer.start();
+}
+
 void WindowState::load()
 {
     toml::table table;
@@ -129,6 +138,10 @@ void WindowState::load()
     }
     if (const auto selected = table["selected_game"].value<std::string>())
         m_selectedGame = QString::fromStdString(*selected);
+    if (const auto media = table["media_game"].value<std::string>()) {
+        m_mediaGame = QString::fromStdString(*media);
+        m_mediaHeight = qMax(0.0, table["media_height"].value_or(0.0));
+    }
     for (const auto &[key, node] : table) {
         const toml::table *section = node.as_table();
         if (!section)
@@ -197,6 +210,10 @@ void WindowState::save()
     toml::table table;
     if (!m_selectedGame.isEmpty())
         table.insert("selected_game", m_selectedGame.toStdString());
+    if (!m_mediaGame.isEmpty()) {
+        table.insert("media_game", m_mediaGame.toStdString());
+        table.insert("media_height", double(m_mediaHeight));
+    }
     for (auto it = m_entries.cbegin(); it != m_entries.cend(); ++it) {
         toml::table section;
         if (it->size.isValid()) {

@@ -18,6 +18,8 @@ ColumnLayout {
     property bool installDismissed: false
     readonly property bool installing: FfmpegTool.state !== "idle" && FfmpegTool.state !== "failed"
     property bool active: true
+    // The game whose list came back last; until it's this game's, the row's height isn't known yet.
+    property string readyId: ""
     readonly property bool wanted: active && General.showClips && ((game.platform ?? "") === "steam" || (game.platform ?? "") === "proton" || (game.platform ?? "") === "linux" || (game.rom ?? false)) && (game.id ?? "") !== ""
 
     signal mediaRequested(var item, var list)
@@ -34,8 +36,10 @@ ColumnLayout {
     function reload() {
         if (wanted)
             Library.media(game.id)
-        else
+        else {
             items = []
+            readyId = game.id ?? ""
+        }
     }
 
     onGameChanged: reload()
@@ -58,6 +62,7 @@ ColumnLayout {
             root.items = root.wanted ? list : []
             root.limited = root.limitedNext
             root.limitedNext = false
+            root.readyId = id
         }
     }
 

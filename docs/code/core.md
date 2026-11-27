@@ -287,6 +287,7 @@ Block{ array: "platform", key: "id", value: "switch" }
 | `fillsScreen(window)` | True if the window fills its screen (guards maximized check) |
 | `track(window, name)` | Watch and persist this window's state |
 | `selectedGame()` / `setSelectedGame(id)` | The game selected in the list or grid, kept as `selected_game` in the same file so the next start opens on it (the first game when it's gone or filtered out) |
+| `openingMediaHeight(id)` / `setOpeningMedia(id, height)` | The height the game page's Media row last had and for which game (`media_game`, `media_height`), so the opening game's page keeps that room until its media list arrives |
 | `releaseMemory(context)` | Runs the JS garbage collector of `context`'s engine, then `malloc_trim(0)` a second later (glibc only), so a window that just dropped a lot of QML gives the memory back instead of glibc keeping it |
 | `compositorRounding()` | Hyprland's `decoration:rounding` (asked once through `hyprctl`), or -1 outside Hyprland or when it can't be read |
 

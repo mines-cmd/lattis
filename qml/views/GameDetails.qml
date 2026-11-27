@@ -91,7 +91,23 @@ Item {
         property bool liveMedia: true
         property real heldMediaHeight: 0
         readonly property alias mediaRow: media
-        readonly property bool mediaShown: liveMedia ? media.visible : heldMediaHeight > 0
+        readonly property bool mediaShown: liveMedia ? media.visible || holdingOpeningMedia : heldMediaHeight > 0
+        // The opening game's list arrives a few hundred ms after the first frame; without the room it
+        // last took, the Media row would push the tags down then.
+        readonly property string openingId: liveMedia ? WindowState.selectedGame() : ""
+        readonly property real openingMediaHeight: WindowState.openingMediaHeight(openingId)
+        property bool openingSettled: !liveMedia
+        readonly property bool holdingOpeningMedia: !openingSettled && openingMediaHeight > 0
+            && game.id === openingId && media.readyId !== openingId
+        property real mediaIn: holdingOpeningMedia ? 0 : 1
+        Behavior on mediaIn { enabled: Motion.fades; MotionNumber { fade: true } }
+        function rememberMediaHeight() {
+            if (!liveMedia || holdingOpeningMedia || media.readyId !== (game.id ?? "") || game.id === undefined)
+                return
+            if (media.readyId === openingId)
+                openingSettled = true
+            WindowState.setOpeningMedia(game.id, media.visible ? media.height : 0)
+        }
         property real spacing: 10
 
         signal moreClicked()
@@ -185,7 +201,11 @@ Item {
             tagModel.scope = game.id
             tagModel.source = (game.tags ?? []).map(t => ({ key: t.name, name: t.name, color: t.color }))
         }
-        onGameChanged: showTags()
+        onGameChanged: {
+            showTags()
+            if (game.id !== undefined && game.id !== openingId)
+                openingSettled = true
+        }
         Component.onCompleted: showTags()
 
         Flow {
@@ -252,18 +272,21 @@ Item {
             Layout.row: rowOf("clips", 0)
             Layout.topMargin: gapBefore("clips")
             Layout.fillWidth: true
-            opacity: contentOpacity
+            opacity: contentOpacity * mediaIn
             game: block.game
+            onReadyIdChanged: block.rememberMediaHeight()
+            onHeightChanged: block.rememberMediaHeight()
+            onVisibleChanged: block.rememberMediaHeight()
             onFailed: text => block.failed(text)
             onMediaRequested: (item, list) => block.mediaRequested(item, list)
             onShowAllRequested: id => block.galleryRequested(id)
             onMenuRequested: (clip, tile, position) => block.clipMenuRequested(clip, tile, position)
         }
         Item {
-            visible: !liveMedia && heldMediaHeight > 0
+            visible: (!liveMedia && heldMediaHeight > 0) || holdingOpeningMedia
             Layout.row: rowOf("clips", 0)
             Layout.topMargin: gapBefore("clips")
-            Layout.preferredHeight: heldMediaHeight
+            Layout.preferredHeight: holdingOpeningMedia ? openingMediaHeight : heldMediaHeight
         }
     }
 
